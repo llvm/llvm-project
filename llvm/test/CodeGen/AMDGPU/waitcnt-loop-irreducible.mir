@@ -1,0 +1,103 @@
+# RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+
+--- |
+
+  define amdgpu_ps void @irreducible_loop() {
+    ret void
+  }
+  define amdgpu_ps void @irreducible_loop_extended() {
+    ret void
+  }
+
+...
+---
+
+# GCN-LABEL: name: irreducible_loop{{$}}
+# GCN: S_LOAD_DWORDX4_IMM
+# GFX8: S_WAITCNT 127{{$}}
+# GFX9: S_WAITCNT 49279{{$}}
+# GCN: S_BUFFER_LOAD_DWORD_IMM
+# GFX8: S_WAITCNT 127{{$}}
+# GFX9: S_WAITCNT 49279{{$}}
+# GCN: S_CMP_GE_I32
+name:            irreducible_loop
+body:             |
+  bb.0:
+    successors: %bb.3, %bb.2
+
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+    S_BRANCH %bb.3
+
+  bb.1:
+    successors: %bb.3, %bb.2
+
+    S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+
+  bb.2:
+    successors: %bb.3
+
+    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0
+    renamable $sgpr3 = S_BUFFER_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0
+
+  bb.3:
+    successors: %bb.1, %bb.4
+
+    S_CMP_GE_I32 renamable $sgpr2, renamable $sgpr3, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.1, implicit killed $scc
+
+  bb.4:
+
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: irreducible_loop_extended
+
+# GCN: S_LOAD_DWORDX4_IMM
+# GFX8: S_WAITCNT 127{{$}}
+# GFX9: S_WAITCNT 49279{{$}}
+# GCN: BUFFER_STORE_DWORD_OFFEN_exact
+# GFX8: S_WAITCNT 127{{$}}
+# GFX9: S_WAITCNT 49279{{$}}
+# GCN: BUFFER_STORE_DWORD_OFFEN_exact
+# GCN: S_LOAD_DWORDX4_IMM
+# GFX8: S_WAITCNT 127{{$}}
+# GFX9: S_WAITCNT 49279{{$}}
+# GCN: BUFFER_ATOMIC_ADD_OFFSET_RTN
+# GCN: S_WAITCNT 3952
+# GCN: FLAT_STORE_DWORD
+# GCN: S_ENDPGM 0
+name: irreducible_loop_extended
+
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 0, 0
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+
+  bb.1:
+    successors: %bb.2
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, renamable $vgpr2, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+
+  bb.2:
+    successors: %bb.3, %bb.6
+    S_CBRANCH_VCCNZ %bb.6, implicit $vcc
+
+  bb.3:
+    successors: %bb.4, %bb.5
+    BUFFER_STORE_DWORD_OFFEN_exact killed renamable $vgpr3, killed renamable $vgpr2, killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
+    S_CBRANCH_VCCNZ %bb.5, implicit $vcc
+
+  bb.4:
+    successors: %bb.5
+    renamable $sgpr12_sgpr13_sgpr14_sgpr15 = S_LOAD_DWORDX4_IMM killed renamable $sgpr2_sgpr3, 64, 0
+    renamable $vgpr2 = BUFFER_ATOMIC_ADD_OFFSET_RTN killed renamable $vgpr2, killed renamable $sgpr12_sgpr13_sgpr14_sgpr15, 0, 0, 1, implicit $exec
+
+  bb.5:
+    successors: %bb.6
+
+  bb.6:
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...

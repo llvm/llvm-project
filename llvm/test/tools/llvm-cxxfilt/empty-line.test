@@ -1,0 +1,9 @@
+# Show that llvm-cxxfilt can handle empty lines in the input.
+RUN: echo "" > %t
+RUN: echo "_Z3foov" >> %t
+RUN: echo "" >> %t
+RUN: llvm-cxxfilt -n < %t | FileCheck %s
+
+CHECK:       {{^$}}
+CHECK-NEXT:  foo()
+CHECK-EMPTY:

@@ -1,0 +1,54 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-dualcu-loclist-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-dualcu-loclist-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -O2 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-MAIN %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-MAIN %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-HELPER %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-HELPER %s
+
+; Testing dwarf5 split dwarf for two CUs. Making sure DW_AT_location [DW_FORM_loclistx] is updated correctly.
+
+; PRE-BOLT-DWO-MAIN: version = 0x0005
+; PRE-BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000014:
+; PRE-BOLT-DWO-MAIN-NEXT: DW_LLE_base_addressx   (0x0000000000000002)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x0000000000000010, 0x0000000000000024)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x0000000000000024, 0x0000000000000029)
+; PRE-BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]
+; PRE-BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000024:
+; PRE-BOLT-DWO-MAIN-NEXT: DW_LLE_base_addressx   (0x0000000000000002)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x0000000000000010, 0x000000000000001c)
+; PRE-BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x000000000000001c, 0x0000000000000029)
+
+; BOLT-DWO-MAIN: version = 0x0005
+; BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]
+; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000014:
+; BOLT-DWO-MAIN-NEXT: DW_LLE_base_addressx   (0x0000000000000003)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000014)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x0000000000000014, 0x0000000000000019)
+; BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]
+; BOLT-DWO-MAIN-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000024:
+; BOLT-DWO-MAIN-NEXT: DW_LLE_base_addressx   (0x0000000000000003)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x0000000000000000, 0x000000000000000c)
+; BOLT-DWO-MAIN-NEXT: DW_LLE_offset_pair     (0x000000000000000c, 0x0000000000000019)
+
+
+; PRE-BOLT-DWO-HELPER: version = 0x0005
+; PRE-BOLT-DWO-HELPER: DW_TAG_formal_parameter [5]
+; PRE-BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000010:
+; PRE-BOLT-DWO-HELPER-NEXT: DW_LLE_base_addressx   (0x0000000000000002)
+; PRE-BOLT-DWO-HELPER-NEXT: DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000008)
+; PRE-BOLT-DWO-HELPER-NEXT: DW_LLE_offset_pair     (0x0000000000000008, 0x000000000000001e)
+
+; BOLT-DWO-HELPER: version = 0x0005
+; BOLT-DWO-HELPER: DW_TAG_formal_parameter [5]
+; BOLT-DWO-HELPER-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000010:
+; BOLT-DWO-HELPER-NEXT: DW_LLE_base_addressx   (0x0000000000000002)
+; BOLT-DWO-HELPER-NEXT: DW_LLE_offset_pair     (0x0000000000000000, 0x0000000000000008)
+; BOLT-DWO-HELPER-NEXT: DW_LLE_offset_pair     (0x0000000000000008, 0x000000000000001e)

@@ -1,0 +1,10 @@
+RUN: llvm-symbolizer --build-id=abad 0x1234 0x5678 > %t.stdout 2> %t.stderr
+RUN: FileCheck %s --check-prefix=STDOUT < %t.stdout
+RUN: FileCheck %s --check-prefix=STDERR < %t.stderr
+
+STDOUT: ??
+STDOUT: ??:0:0
+STDOUT: ??
+STDOUT: ??:0:0
+
+STDERR-COUNT-2: llvm-symbolizer{{.*}}: error: 'ABAD': could not find build ID

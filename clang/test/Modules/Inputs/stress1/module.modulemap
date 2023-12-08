@@ -1,0 +1,7 @@
+module m00 { header "Inputs/stress1/m00.h" export * }
+module m01 { header "Inputs/stress1/m01.h" export * }
+module m02 { header "Inputs/stress1/m02.h" export * }
+module m03 { header "Inputs/stress1/m03.h" export * }
+
+module merge_no_reexport { header "Inputs/stress1/merge_no_reexport.h" }
+module merge00 { header "Inputs/stress1/merge00.h" export * }

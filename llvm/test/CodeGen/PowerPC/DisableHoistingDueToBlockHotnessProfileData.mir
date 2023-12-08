@@ -1,0 +1,251 @@
+# NOTE: This test verifies disable/enable instruction hoisting to hot blocks
+#       based on profile data
+# RUN: llc -run-pass early-machinelicm -verify-machineinstrs \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -disable-hoisting-to-hotter-blocks=pgo \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-NO-HOIST
+# RUN: llc -run-pass early-machinelicm -verify-machineinstrs \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -disable-hoisting-to-hotter-blocks=pgo \
+# RUN:   -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
+# RUN: llc -run-pass early-machinelicm -verify-machineinstrs \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -disable-hoisting-to-hotter-blocks=none \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
+
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+
+  ; Function Attrs: nounwind
+  define dso_local void @test(ptr nocapture %fp, i32 signext %Arg, i32 signext %Len, ptr nocapture %Ptr) local_unnamed_addr #0 !prof !29 !section_prefix !30 {
+  entry:
+    tail call void asm sideeffect "#NOTHING", "~{r2}"() #1, !srcloc !31
+    %cmp6 = icmp sgt i32 %Len, 0
+    br i1 %cmp6, label %for.body.lr.ph, label %for.cond.cleanup, !prof !32
+
+  for.body.lr.ph:                                   ; preds = %entry
+    %cmp1 = icmp sgt i32 %Arg, 10
+    br label %for.body
+
+  for.cond.cleanup:                                 ; preds = %for.inc, %entry
+    ret void
+
+  for.body:                                         ; preds = %for.inc, %for.body.lr.ph
+    %i.07 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
+    %0 = load i32, ptr %Ptr, align 4, !tbaa !33
+    %1 = add i32 %i.07, %0
+    store i32 %1, ptr %Ptr, align 4, !tbaa !33
+    br i1 %cmp1, label %if.then, label %for.inc, !prof !37
+
+  if.then:                                          ; preds = %for.body
+    tail call void asm sideeffect "#NOTHING", "~{r2}"() #1, !srcloc !31
+    tail call void %fp(i32 signext %Arg) #1, !prof !38
+    br label %for.inc
+
+  for.inc:                                          ; preds = %if.then, %for.body
+    %inc = add nuw nsw i32 %i.07, 1
+    %exitcond = icmp eq i32 %Len, %inc
+    br i1 %exitcond, label %for.cond.cleanup, label %for.body, !prof !39
+  }
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr) #1
+
+  attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind }
+
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!28}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 1, !"ProfileSummary", !2}
+  !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}
+  !3 = !{!"ProfileFormat", !"InstrProf"}
+  !4 = !{!"TotalCount", i64 25405000087}
+  !5 = !{!"MaxCount", i64 21000000020}
+  !6 = !{!"MaxInternalCount", i64 200000003}
+  !7 = !{!"MaxFunctionCount", i64 21000000020}
+  !8 = !{!"NumCounts", i64 15}
+  !9 = !{!"NumFunctions", i64 7}
+  !10 = !{!"DetailedSummary", !11}
+  !11 = !{!12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27}
+  !12 = !{i32 10000, i64 21000000020, i32 1}
+  !13 = !{i32 100000, i64 21000000020, i32 1}
+  !14 = !{i32 200000, i64 21000000020, i32 1}
+  !15 = !{i32 300000, i64 21000000020, i32 1}
+  !16 = !{i32 400000, i64 21000000020, i32 1}
+  !17 = !{i32 500000, i64 21000000020, i32 1}
+  !18 = !{i32 600000, i64 21000000020, i32 1}
+  !19 = !{i32 700000, i64 21000000020, i32 1}
+  !20 = !{i32 800000, i64 21000000020, i32 1}
+  !21 = !{i32 900000, i64 4203000000, i32 2}
+  !22 = !{i32 950000, i64 4203000000, i32 2}
+  !23 = !{i32 990000, i64 4203000000, i32 2}
+  !24 = !{i32 999000, i64 200000003, i32 3}
+  !25 = !{i32 999900, i64 200000003, i32 3}
+  !26 = !{i32 999990, i64 2000000, i32 4}
+  !27 = !{i32 999999, i64 2000000, i32 4}
+  !28 = !{!"clang version 9.0.0 (git@github.ibm.com:compiler/llvm-project.git 01fc2fc8e690ee427cab149cb0bfd63568bed89b)"}
+  !29 = !{!"function_entry_count", i64 200000003}
+  !30 = !{!"function_section_prefix", !".hot"}
+  !31 = !{i32 65}
+  !32 = !{!"branch_weights", i32 -94967292, i32 40000000}
+  !33 = !{!34, !34, i64 0}
+  !34 = !{!"int", !35, i64 0}
+  !35 = !{!"omnipotent char", !36, i64 0}
+  !36 = !{!"Simple C/C++ TBAA"}
+  !37 = !{!"branch_weights", i32 4, i32 -94967296}
+  !38 = !{!"VP", i32 0, i64 20, i64 -3706093650706652785, i64 20}
+  !39 = !{!"branch_weights", i32 40000000, i32 -94967292}
+
+...
+---
+name:            test
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: crbitrc, preferred-register: '' }
+  - { id: 1, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+  - { id: 5, class: g8rc, preferred-register: '' }
+  - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 7, class: gprc, preferred-register: '' }
+  - { id: 8, class: gprc, preferred-register: '' }
+  - { id: 9, class: crrc, preferred-register: '' }
+  - { id: 10, class: gprc, preferred-register: '' }
+  - { id: 11, class: crrc, preferred-register: '' }
+  - { id: 12, class: gprc, preferred-register: '' }
+  - { id: 13, class: gprc, preferred-register: '' }
+  - { id: 14, class: g8rc, preferred-register: '' }
+  - { id: 15, class: g8rc, preferred-register: '' }
+  - { id: 16, class: crrc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$x4', virtual-reg: '%4' }
+  - { reg: '$x5', virtual-reg: '%5' }
+  - { reg: '$x6', virtual-reg: '%6' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x7ecade30), %bb.2(0x013521d0)
+    liveins: $x3, $x4, $x5, $x6
+
+    %6:g8rc_and_g8rc_nox0 = COPY $x6
+    %5:g8rc = COPY $x5
+    %4:g8rc = COPY $x4
+    %3:g8rc = COPY $x3
+    %7:gprc = COPY %4.sub_32
+    %8:gprc = COPY %5.sub_32
+    INLINEASM &"#NOTHING", 1, 12, implicit-def early-clobber $r2, !31
+    %9:crrc = CMPWI %8, 1
+    BCC 12, killed %9, %bb.2
+    B %bb.1
+
+  bb.1.for.body.lr.ph:
+    successors: %bb.3(0x80000000)
+
+    INLINEASM &"#NOTHING", 1, 12, implicit-def early-clobber $r2, !31
+    %11:crrc = CMPWI %7, 10
+    %0:crbitrc = COPY %11.sub_gt
+    %10:gprc = LI 0
+    B %bb.3
+
+  bb.2.for.cond.cleanup:
+    BLR8 implicit $lr8, implicit $rm
+
+  bb.3.for.body:
+    successors: %bb.4(0x00000002), %bb.5(0x7ffffffe)
+
+    %1:gprc_and_gprc_nor0 = PHI %10, %bb.1, %2, %bb.5
+    %12:gprc = LWZ 0, %6 :: (load (s32) from %ir.Ptr, !tbaa !33)
+    %13:gprc = ADD4 %1, killed %12
+    STW killed %13, 0, %6 :: (store (s32) into %ir.Ptr, !tbaa !33)
+    BCn %0, %bb.5
+    B %bb.4
+
+  bb.4.if.then:
+    successors: %bb.5(0x80000000)
+
+    INLINEASM &"#NOTHING", 1, 12, implicit-def early-clobber $r2, !31
+    ADJCALLSTACKDOWN 32, 0, implicit-def dead $r1, implicit $r1
+    %14:g8rc = COPY $x2
+    STD %14, 24, $x1 :: (store (s64) into stack + 24)
+    %15:g8rc = EXTSW_32_64 %7
+    $x3 = COPY %15
+    $x12 = COPY %3
+    MTCTR8 %3, implicit-def $ctr8
+    BCTRL8_LDinto_toc 24, $x1, csr_ppc64_altivec, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x3, implicit $x12, implicit $x2, implicit-def $r1
+    ADJCALLSTACKUP 32, 0, implicit-def dead $r1, implicit $r1
+
+  bb.5.for.inc:
+    successors: %bb.2(0x013521d0), %bb.3(0x7ecade30)
+
+    %2:gprc = nuw nsw ADDI %1, 1
+    %16:crrc = CMPLW %8, %2
+    BCC 76, killed %16, %bb.2
+    B %bb.3
+
+...
+
+# CHECK for enabling instruction hoisting
+#CHECK-LABEL: test
+#CHECK-HOIST: bb.1.for.body.lr.ph:
+#CHECK-HOIST: %14:g8rc = COPY $x2
+#CHECK-HOIST: STD %14, 24, $x1 :: (store (s64) into stack + 24)
+#CHECK-HOIST: %15:g8rc = EXTSW_32_64 %7
+#CHECK-HOIST: B %bb.3
+
+#CHECK-HOIST: bb.4.if.then:
+#CHECK-HOIST-NOT: %14:g8rc = COPY $x2
+#CHECK-HOIST-NOT: STD %14, 24, $x1 :: (store (s64) into stack + 24)
+#CHECK-HOIST-NOT: %15:g8rc = EXTSW_32_64 %7
+#CHECK-HOIST: bb.5.for.inc:
+
+# CHECK for disabling instruction hoisting due to block hotness
+#CHECK-LABEL: test
+#CHECK-NO-HOIST: bb.1.for.body.lr.ph:
+#CHECK-NO-HOIST-NOT: %14:g8rc = COPY $x2
+#CHECK-NO-HOIST-NOT: STD %14, 24, $x1 :: (store (s64) into stack + 24)
+#CHECK-NO-HOIST-NOT: %15:g8rc = EXTSW_32_64 %7
+#CHECK-NO-HOIST: B %bb.3
+
+#CHECK-NO-HOIST: bb.4.if.then:
+#CHECK-NO-HOIST: %14:g8rc = COPY $x2
+#CHECK-NO-HOIST: STD %14, 24, $x1 :: (store (s64) into stack + 24)
+#CHECK-NO-HOIST: %15:g8rc = EXTSW_32_64 %7
+#CHECK-NO-HOIST: bb.5.for.inc:
+

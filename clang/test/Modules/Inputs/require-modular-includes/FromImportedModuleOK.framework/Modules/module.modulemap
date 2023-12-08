@@ -1,0 +1,4 @@
+framework module FromImportedModuleOK {
+  header "FromImportedModuleOK.h"
+  header "FromImportedModuleOK2.h"
+}

@@ -1,0 +1,23 @@
+// FIXME: Actually, "perl".
+REQUIRES: shell
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -plist -o %t.output_dir %clang -S %S/Inputs/single_null_dereference.c \
+RUN:     | FileCheck %s -check-prefix CHECK-STDOUT
+
+// Test plist output
+
+CHECK-STDOUT: scan-build: Using '{{.*}}' for static analysis
+CHECK-STDOUT: scan-build: Analysis run complete.
+CHECK-STDOUT: scan-build: Analysis results (plist files) deposited in '{{.*}}'
+
+// We expect a single plist file
+RUN: ls %t.output_dir/*/ | FileCheck %s -check-prefix CHECK-FILENAMES
+
+CHECK-FILENAMES: report-{{.*}}.plist
+
+// The report should describe the issue.
+RUN: cat %t.output_dir/*/report-*.plist \
+RUN:     | FileCheck %s -check-prefix CHECK-REPORT-PLIST-CONTENTS
+
+CHECK-REPORT-PLIST-CONTENTS: <key>type</key><string>Dereference of null pointer</string>

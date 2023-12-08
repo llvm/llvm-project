@@ -1,0 +1,2 @@
+; RUN: llvm-pdbutil export -stream=2 -out=%t.tpi.bin %p/Inputs/InjectedSource.pdb
+; RUN: diff %t.tpi.bin %p/Inputs/tpi.bin

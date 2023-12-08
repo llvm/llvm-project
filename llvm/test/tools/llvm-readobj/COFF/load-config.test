@@ -1,0 +1,110 @@
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-load-config-x86.dll | FileCheck %s --check-prefix=X86
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-load-config-x64.dll | FileCheck %s --check-prefix=X64
+
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-load-config-data-end.exe | FileCheck %s --check-prefix=DATAEND
+
+RUN: llvm-readobj --coff-load-config %S/Inputs/coff-no-load-config.exe | FileCheck %s --check-prefix=NOCONFIG
+
+X86: LoadConfig [
+X86:   Size: 0x5C
+X86:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+X86:   MajorVersion: 0x0
+X86:   MinorVersion: 0x0
+X86:   GlobalFlagsClear: 0x0
+X86:   GlobalFlagsSet: 0x0
+X86:   CriticalSectionDefaultTimeout: 0x0
+X86:   DeCommitFreeBlockThreshold: 0x0
+X86:   DeCommitTotalFreeThreshold: 0x0
+X86:   LockPrefixTable: 0x0
+X86:   MaximumAllocationSize: 0x0
+X86:   VirtualMemoryThreshold: 0x0
+X86:   ProcessHeapFlags: 0x0
+X86:   ProcessAffinityMask: 0x0
+X86:   CSDVersion: 0x0
+X86:   DependentLoadFlags: 0x0
+X86:   EditList: 0x0
+X86:   SecurityCookie: 0x10003004
+X86:   SEHandlerTable: 0x100021C0
+X86:   SEHandlerCount: 2
+X86:   GuardCFCheckFunction: 0x1000207C
+X86:   GuardCFCheckDispatch: 0x0
+X86:   GuardCFFunctionTable: 0x100020A4
+X86:   GuardCFFunctionCount: 11
+X86:   GuardFlags [ (0x13500)
+X86:     CF_FUNCTION_TABLE_PRESENT (0x400)
+X86:     CF_INSTRUMENTED (0x100)
+X86:     CF_LONGJUMP_TABLE_PRESENT (0x10000)
+X86:     DELAYLOAD_IAT_IN_ITS_OWN_SECTION (0x2000)
+X86:     PROTECT_DELAYLOAD_IAT (0x1000)
+X86:   ]
+X86: ]
+X86: SEHTable [
+X86:   0x10001BE0
+X86:   0x10001E30
+X86: ]
+X86: GuardFidTable [
+X86:   0x10001000
+X86:   0x10001040
+X86:   0x10001060
+X86:   0x10001100
+X86:   0x10001120
+X86:   0x10001150
+X86:   0x10001460
+X86:   0x100019B0
+X86:   0x10001B40
+X86:   0x10001BE0
+X86:   0x10001DC0
+X86: ]
+
+X64: LoadConfig [
+X64:   Size: 0x94
+X64:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+X64:   MajorVersion: 0x0
+X64:   MinorVersion: 0x0
+X64:   GlobalFlagsClear: 0x0
+X64:   GlobalFlagsSet: 0x0
+X64:   CriticalSectionDefaultTimeout: 0x0
+X64:   DeCommitFreeBlockThreshold: 0x0
+X64:   DeCommitTotalFreeThreshold: 0x0
+X64:   LockPrefixTable: 0x0
+X64:   MaximumAllocationSize: 0x0
+X64:   VirtualMemoryThreshold: 0x0
+X64:   ProcessHeapFlags: 0x0
+X64:   ProcessAffinityMask: 0x0
+X64:   CSDVersion: 0x0
+X64:   DependentLoadFlags: 0x0
+X64:   EditList: 0x0
+X64:   SecurityCookie: 0x180003018
+X64:   SEHandlerTable: 0
+X64:   SEHandlerCount: 0
+X64:   GuardCFCheckFunction: 0x180002100
+X64:   GuardCFCheckDispatch: 0x180002108
+X64:   GuardCFFunctionTable: 0x180002158
+X64:   GuardCFFunctionCount: 9
+X64:  GuardFlags [ (0x13500)
+X64:    CF_FUNCTION_TABLE_PRESENT (0x400)
+X64:    CF_INSTRUMENTED (0x100)
+X64:    CF_LONGJUMP_TABLE_PRESENT (0x10000)
+X64:    DELAYLOAD_IAT_IN_ITS_OWN_SECTION (0x2000)
+X64:    PROTECT_DELAYLOAD_IAT (0x1000)
+X64:  ]
+X64: ]
+X64-NOT: SEHTable
+X64: GuardFidTable [
+X64:   0x180001000
+X64:   0x180001050
+X64:   0x180001070
+X64:   0x1800010E0
+X64:   0x180001110
+X64:   0x180001460
+X64:   0x180001970
+X64:   0x180001B50
+X64:   0x180001D90
+X64: ]
+
+DATAEND: SEHTable [
+DATAEND-NEXT:   0x402006
+DATAEND-NEXT: ]
+
+NOCONFIG: Format: COFF-x86-64
+NOCONFIG-NOT: LoadConfig

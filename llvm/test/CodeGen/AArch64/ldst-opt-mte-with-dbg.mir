@@ -1,0 +1,377 @@
+# Strip out debug info, then run ldst-opt with limit=1.
+# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -mattr=+mte -run-pass mir-strip-debug,aarch64-ldst-opt -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
+#
+# Run ldst-opt with limit=1, then strip out debug info.
+# RUN: llc -aarch64-load-store-scan-limit=1 -mtriple=aarch64-none-linux-gnu -mattr=+mte -run-pass aarch64-ldst-opt,mir-strip-debug -mir-strip-debugify-only=0 -verify-machineinstrs  -o - %s | FileCheck %s
+---
+
+### STG and its offset limits
+
+# CHECK-LABEL: name: test_STG_post
+# CHECK: STGPostIndex $x0, $x0, 7
+name: test_STG_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post_same_reg
+# CHECK: STGPostIndex $x1, $x0, 7
+name: test_STG_post_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    STGi $x1, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post_unaligned
+# CHECK:      STGi $x0, $x0, 0
+# CHECK-NEXT: ADDXri $x0, 8, 0
+name: test_STG_post_unaligned
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 8, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post2
+# CHECK: STGPostIndex $x0, $x0, -256
+name: test_STG_post2
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = SUBXri $x0, 4096, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post3
+# CHECK:      STGi $x0, $x0, 0
+# CHECK-NEXT: SUBXri $x0, 4112, 0
+name: test_STG_post3
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = SUBXri $x0, 4112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post4
+# CHECK: STGPostIndex $x0, $x0, 255
+name: test_STG_post4
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 4080, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STG_post5
+# CHECK:      STGi $x0, $x0, 0
+# CHECK-NEXT: ADDXri $x0, 4096, 0
+name: test_STG_post5
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 4096, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+### The rest of ST*G variants.
+
+# CHECK-LABEL: name: test_STZG_post
+# CHECK: STZGPostIndex $x0, $x0, 7
+name: test_STZG_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STZGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_ST2G_post
+# CHECK: ST2GPostIndex $x0, $x0, 7
+name: test_ST2G_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    ST2Gi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STZ2G_post
+# CHECK: STZ2GPostIndex $x0, $x0, 7
+name: test_STZ2G_post
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STZ2Gi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+### STGP and its offset limits
+
+# CHECK-LABEL: name: test_STGP_post
+# CHECK: STGPpost $x1, $x2, $x0, 7
+name: test_STGP_post
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post2
+# CHECK: STGPpost $x1, $x2, $x0, -64
+name: test_STGP_post2
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = SUBXri $x0, 1024, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post3
+# CHECK:      STGPi $x1, $x2, $x0, 0
+# CHECK-NEXT: SUBXri $x0, 1040, 0
+name: test_STGP_post3
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = SUBXri $x0, 1040, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post4
+# CHECK: STGPpost $x1, $x2, $x0, 63
+name: test_STGP_post4
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 1008, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_post5
+# CHECK:      STGPi $x1, $x2, $x0, 0
+# CHECK-NEXT: ADDXri $x0, 1024, 0
+name: test_STGP_post5
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 1024, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+### Pre-indexed forms
+
+# CHECK-LABEL: name: test_STG_pre
+# CHECK: STGPreIndex $x0, $x0, 10
+name: test_STG_pre
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGi $x0, $x0, 10
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 160, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_pre
+# CHECK: STGPpre $x1, $x2, $x0, 10
+name: test_STGP_pre
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    STGPi $x1, $x2, $x0, 10
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 160, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+### Pre-indexed forms with add/sub coming before the store.
+
+# CHECK-LABEL: name: test_STG_pre_back
+# CHECK: STGPreIndex $x0, $x0, 2
+name: test_STG_pre_back
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    $x0 = ADDXri $x0, 32, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    STGi $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_pre_back
+# CHECK: STGPpre $x1, $x2, $x0, -3
+name: test_STGP_pre_back
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    $x0 = SUBXri $x0, 48, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    STGPi $x1, $x2, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+### STGP with source register == address register
+
+# CHECK-LABEL: name: test_STGP_post_same_reg
+# CHECK: STGPpost $x0, $x0, $x0, 7
+name: test_STGP_post_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGPi $x0, $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# CHECK-LABEL: name: test_STGP_pre_same_reg
+# CHECK: STGPpre $x0, $x0, $x0, 7
+name: test_STGP_pre_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    STGPi $x0, $x0, $x0, 7
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    $x0 = ADDXri $x0, 112, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...
+
+# This case can not be merged because the source register is always read before writeback.
+# CHECK-LABEL: name: test_STGP_pre_back_same_reg
+# CHECK:      SUBXri $x0, 48, 0
+# CHECK-NEXT: STGPi $x0, $x0, $x0, 0
+name: test_STGP_pre_back_same_reg
+body: |
+  bb.0.entry:
+    liveins: $x0
+
+    $x0 = SUBXri $x0, 48, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    STGPi $x0, $x0, $x0, 0
+    DBG_VALUE $x0, 0
+    DBG_VALUE $x0, 0
+    RET_ReallyLR implicit $x0
+...

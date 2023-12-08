@@ -1,0 +1,25 @@
+RUN: rm -rf %t
+REQUIRES: x86-registered-target
+
+RUN: %clang_cc1 -triple=x86_64-linux-gnu -fmodules-codegen -x c++ -fmodules -emit-module -fmodule-name=foo %S/Inputs/codegen-flags/foo.modulemap -o %t/foo-cg.pcm
+RUN: %clang_cc1 -triple=x86_64-linux-gnu -fmodules-debuginfo -x c++ -fmodules -emit-module -fmodule-name=foo %S/Inputs/codegen-flags/foo.modulemap -o %t/foo-di.pcm
+
+RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -debug-info-kind=limited -o - %t/foo-cg.pcm | FileCheck --check-prefix=CG %s
+RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -debug-info-kind=limited -o - %t/foo-di.pcm | FileCheck --check-prefix=DI %s
+
+RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -debug-info-kind=limited -o - -fmodules -fmodule-file=%t/foo-cg.pcm %S/Inputs/codegen-flags/use.cpp | FileCheck --check-prefix=CG-USE %s
+RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -debug-info-kind=limited -o - -fmodules -fmodule-file=%t/foo-di.pcm %S/Inputs/codegen-flags/use.cpp | FileCheck --check-prefix=DI-USE %s
+
+CG: define weak_odr void @_Z2f1v
+CG: DICompileUnit
+CG-NOT: DICompositeType
+
+CG-USE: declare void @_Z2f1v
+CG-USE: DICompileUnit
+CG-USE: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
+
+DI-NOT: define
+DI: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
+
+DI-USE: define linkonce_odr void @_Z2f1v
+DI-USE: = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", {{.*}}, flags: DIFlagFwdDecl

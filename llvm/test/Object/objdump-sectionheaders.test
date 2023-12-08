@@ -1,0 +1,42 @@
+# RUN: yaml2obj %s -o %t.elf-x86-64
+# RUN: llvm-objdump -h %t.elf-x86-64 | FileCheck %s
+
+# To verify this, use readelf -S, not objdump -h. Binutils objdump filters the
+# results in a way that we don't emulate.
+
+# CHECK: Sections:
+# CHECK: Idx Name          Size     VMA              Type
+# CHECK:   0               00000000 0000000000000000
+# CHECK:   1 .text         00000026 0000000000000000 TEXT
+# CHECK:   2 .rodata.str1.1 0000000d 0000000000000026 DATA
+# CHECK:   3 .note.GNU-stack 00000000 0000000000000033
+# CHECK:   4 .rela.text    00000000 0000000000000038
+# CHECK:   5 .symtab       00000018 0000000000000000
+# CHECK:   6 .strtab       00000001 0000000000000000
+# CHECK:   7 .shstrtab     00000045 0000000000000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:    0x26
+  - Name:    .rodata.str1.1
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    Address: 0x0000000000000026
+    Size:    0xd
+  - Name:    .note.GNU-stack
+    Type:    SHT_PROGBITS
+    Address: 0x0000000000000033
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Address: 0x0000000000000038
+    Info:    .text
+    Relocations:
+Symbols: []

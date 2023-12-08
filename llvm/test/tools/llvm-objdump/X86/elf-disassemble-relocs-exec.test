@@ -1,0 +1,73 @@
+## Check that 'llvm-objdump --no-print-imm-hex -dr' correctly prints relocations in executables.
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-objdump --no-print-imm-hex -dr %t | FileCheck %s --match-full-lines --strict-whitespace
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-leading-addr %t | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-addresses %t | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
+
+# RUN: yaml2obj -DBITS=32 %s -o %t.32
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-leading-addr %t.32 | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
+
+#      CHECK:0000000000400000 <.text>:
+# CHECK-NEXT:  400000: 90                           	nop
+# CHECK-NEXT:  400001: bf 10 00 40 00               	movl	$4194320, %edi          # imm = 0x400010
+# CHECK-NEXT:		0000000000400002:  R_X86_64_32	.rodata
+# CHECK-NEXT:  400006: e8 fc fe ff ff               	callq	0x3fff07 <puts+0x3fff07>
+# CHECK-NEXT:		0000000000400007:  R_X86_64_PLT32	puts-0x4
+# CHECK-NEXT:  40000b: 90                           	nop
+
+#      NOADDR:<.text>:
+# NOADDR-NEXT: 90                                    	nop
+# NOADDR-NEXT: bf 10 00 40 00                        	movl	$4194320, %edi          # imm = 0x400010
+# NOADDR-NEXT:		R_X86_64_32	.rodata
+# NOADDR-NEXT: e8 fc fe ff ff                        	callq	0x3fff07 <puts+0x3fff07>
+# NOADDR-NEXT:		R_X86_64_PLT32	puts-0x4
+# NOADDR-NEXT: 90                                    	nop
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS[[BITS=64]]
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .rodata
+    VAddr:           0x400000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x400000
+    AddressAlign:    0x10
+    Content:         90BF10004000E8FCFEFFFF90
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         00
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x400002
+        Symbol:          .rodata
+        Type:            R_X86_64_32
+        Addend:          0
+      - Offset:          0x400007
+        Symbol:          puts
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+Symbols:
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x400628
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+...

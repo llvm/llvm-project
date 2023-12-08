@@ -1,0 +1,264 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.4a,+xs -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.7a -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.4a -disassemble %s | FileCheck --check-prefix=CHECK-NO-XS %s
+
+[0x3f,0x32,0x03,0xd5]
+[0x3f,0x36,0x03,0xd5]
+[0x3f,0x3a,0x03,0xd5]
+[0x3f,0x3e,0x03,0xd5]
+# CHECK: dsb oshnxs
+# CHECK: dsb nshnxs
+# CHECK: dsb ishnxs
+# CHECK: dsb synxs
+# CHECK-NO-XS: msr S0_3_C3_C2_1, xzr
+# CHECK-NO-XS: msr S0_3_C3_C6_1, xzr
+# CHECK-NO-XS: msr S0_3_C3_C10_1, xzr
+# CHECK-NO-XS: msr S0_3_C3_C14_1, xzr
+
+[0x3f,0x30,0x03,0xd5]
+[0x3f,0x35,0x03,0xd5]
+[0x3f,0x3f,0x03,0xd5]
+# CHECK: msr S0_3_C3_C0_1, xzr
+# CHECK: msr S0_3_C3_C5_1, xzr
+# CHECK: msr S0_3_C3_C15_1, xzr
+# CHECK-NO-XS: msr S0_3_C3_C0_1, xzr
+# CHECK-NO-XS: msr S0_3_C3_C5_1, xzr
+# CHECK-NO-XS: msr S0_3_C3_C15_1, xzr
+
+[0x21,0x90,0x0c,0xd5]
+[0xa1,0x90,0x0c,0xd5]
+[0x1f,0x93,0x08,0xd5]
+[0x1f,0x93,0x0c,0xd5]
+[0x1f,0x93,0x0e,0xd5]
+[0x21,0x93,0x08,0xd5]
+[0x21,0x93,0x0c,0xd5]
+[0x21,0x93,0x0e,0xd5]
+[0x41,0x93,0x08,0xd5]
+[0x61,0x93,0x08,0xd5]
+[0x9f,0x93,0x0c,0xd5]
+[0xa1,0x93,0x08,0xd5]
+[0xa1,0x93,0x0c,0xd5]
+[0xa1,0x93,0x0e,0xd5]
+[0xdf,0x93,0x0c,0xd5]
+[0xe1,0x93,0x08,0xd5]
+[0x21,0x94,0x0c,0xd5]
+[0xa1,0x94,0x0c,0xd5]
+[0x1f,0x97,0x08,0xd5]
+[0x1f,0x97,0x0c,0xd5]
+[0x1f,0x97,0x0e,0xd5]
+[0x21,0x97,0x08,0xd5]
+[0x21,0x97,0x0c,0xd5]
+[0x21,0x97,0x0e,0xd5]
+[0x41,0x97,0x08,0xd5]
+[0x61,0x97,0x08,0xd5]
+[0x9f,0x97,0x0c,0xd5]
+[0xa1,0x97,0x08,0xd5]
+[0xa1,0x97,0x0c,0xd5]
+[0xa1,0x97,0x0e,0xd5]
+[0xdf,0x97,0x0c,0xd5]
+[0xe1,0x97,0x08,0xd5]
+# CHECK: tlbi ipas2e1isnxs, x1
+# CHECK: tlbi ipas2le1isnxs, x1
+# CHECK: tlbi vmalle1isnxs
+# CHECK: tlbi alle2isnxs
+# CHECK: tlbi alle3isnxs
+# CHECK: tlbi vae1isnxs, x1
+# CHECK: tlbi vae2isnxs, x1
+# CHECK: tlbi vae3isnxs, x1
+# CHECK: tlbi aside1isnxs, x1
+# CHECK: tlbi vaae1isnxs, x1
+# CHECK: tlbi alle1isnxs
+# CHECK: tlbi vale1isnxs, x1
+# CHECK: tlbi vale2isnxs, x1
+# CHECK: tlbi vale3isnxs, x1
+# CHECK: tlbi vmalls12e1isnxs
+# CHECK: tlbi vaale1isnxs, x1
+# CHECK: tlbi ipas2e1nxs, x1
+# CHECK: tlbi ipas2le1nxs, x1
+# CHECK: tlbi vmalle1nxs
+# CHECK: tlbi alle2nxs
+# CHECK: tlbi alle3nxs
+# CHECK: tlbi vae1nxs, x1
+# CHECK: tlbi vae2nxs, x1
+# CHECK: tlbi vae3nxs, x1
+# CHECK: tlbi aside1nxs, x1
+# CHECK: tlbi vaae1nxs, x1
+# CHECK: tlbi alle1nxs
+# CHECK: tlbi vale1nxs, x1
+# CHECK: tlbi vale2nxs, x1
+# CHECK: tlbi vale3nxs, x1
+# CHECK: tlbi vmalls12e1nxs
+# CHECK: tlbi vaale1nxs, x1
+# CHECK_NO_XS: sys #4, c9, c0, #1, x1
+# CHECK_NO_XS: sys #4, c9, c0, #5, x1
+# CHECK_NO_XS: sys #0, c9, c3, #0
+# CHECK_NO_XS: sys #4, c9, c3, #0
+# CHECK_NO_XS: sys #6, c9, c3, #0
+# CHECK_NO_XS: sys #0, c9, c3, #1, x1
+# CHECK_NO_XS: sys #4, c9, c3, #1, x1
+# CHECK_NO_XS: sys #6, c9, c3, #1, x1
+# CHECK_NO_XS: sys #0, c9, c3, #2, x1
+# CHECK_NO_XS: sys #0, c9, c3, #3, x1
+# CHECK_NO_XS: sys #4, c9, c3, #4
+# CHECK_NO_XS: sys #0, c9, c3, #5, x1
+# CHECK_NO_XS: sys #4, c9, c3, #5, x1
+# CHECK_NO_XS: sys #6, c9, c3, #5, x1
+# CHECK_NO_XS: sys #4, c9, c3, #6
+# CHECK_NO_XS: sys #0, c9, c3, #7, x1
+# CHECK_NO_XS: sys #4, c9, c4, #1, x1
+# CHECK_NO_XS: sys #4, c9, c4, #5, x1
+# CHECK_NO_XS: sys #0, c9, c7, #0
+# CHECK_NO_XS: sys #4, c9, c7, #0
+# CHECK_NO_XS: sys #6, c9, c7, #0
+# CHECK_NO_XS: sys #0, c9, c7, #1, x1
+# CHECK_NO_XS: sys #4, c9, c7, #1, x1
+# CHECK_NO_XS: sys #6, c9, c7, #1, x1
+# CHECK_NO_XS: sys #0, c9, c7, #2, x1
+# CHECK_NO_XS: sys #0, c9, c7, #3, x1
+# CHECK_NO_XS: sys #4, c9, c7, #4
+# CHECK_NO_XS: sys #0, c9, c7, #5, x1
+# CHECK_NO_XS: sys #4, c9, c7, #5, x1
+# CHECK_NO_XS: sys #6, c9, c7, #5, x1
+# CHECK_NO_XS: sys #4, c9, c7, #6
+# CHECK_NO_XS: sys #0, c9, c7, #7, x1
+
+[0x1f,0x91,0x08,0xd5]
+[0x21,0x91,0x08,0xd5]
+[0x41,0x91,0x08,0xd5]
+[0x61,0x91,0x08,0xd5]
+[0xa1,0x91,0x08,0xd5]
+[0xe1,0x91,0x08,0xd5]
+[0x01,0x94,0x0c,0xd5]
+[0x81,0x94,0x0c,0xd5]
+[0x21,0x91,0x0c,0xd5]
+[0xa1,0x91,0x0c,0xd5]
+[0xdf,0x91,0x0c,0xd5]
+[0x21,0x91,0x0e,0xd5]
+[0xa1,0x91,0x0e,0xd5]
+[0x1f,0x91,0x0c,0xd5]
+[0x9f,0x91,0x0c,0xd5]
+[0x1f,0x91,0x0e,0xd5]
+[0x21,0x96,0x08,0xd5]
+[0x61,0x96,0x08,0xd5]
+[0xa1,0x96,0x08,0xd5]
+[0xe1,0x96,0x08,0xd5]
+[0x21,0x92,0x08,0xd5]
+[0x61,0x92,0x08,0xd5]
+[0xa1,0x92,0x08,0xd5]
+[0xe1,0x92,0x08,0xd5]
+[0x21,0x95,0x08,0xd5]
+[0x61,0x95,0x08,0xd5]
+[0xa1,0x95,0x08,0xd5]
+[0xe1,0x95,0x08,0xd5]
+[0x41,0x90,0x0c,0xd5]
+[0xc1,0x90,0x0c,0xd5]
+[0x41,0x94,0x0c,0xd5]
+[0xc1,0x94,0x0c,0xd5]
+[0x61,0x94,0x0c,0xd5]
+[0xe1,0x94,0x0c,0xd5]
+[0x21,0x96,0x0c,0xd5]
+[0xa1,0x96,0x0c,0xd5]
+[0x21,0x92,0x0c,0xd5]
+[0xa1,0x92,0x0c,0xd5]
+[0x21,0x95,0x0c,0xd5]
+[0xa1,0x95,0x0c,0xd5]
+[0x21,0x96,0x0e,0xd5]
+[0xa1,0x96,0x0e,0xd5]
+[0x21,0x92,0x0e,0xd5]
+[0xa1,0x92,0x0e,0xd5]
+[0x21,0x95,0x0e,0xd5]
+[0xa1,0x95,0x0e,0xd5]
+# CHECK: tlbi vmalle1osnxs
+# CHECK: tlbi vae1osnxs, x1
+# CHECK: tlbi aside1osnxs, x1
+# CHECK: tlbi vaae1osnxs, x1
+# CHECK: tlbi vale1osnxs, x1
+# CHECK: tlbi vaale1osnxs, x1
+# CHECK: tlbi ipas2e1osnxs, x1
+# CHECK: tlbi ipas2le1osnxs, x1
+# CHECK: tlbi vae2osnxs, x1
+# CHECK: tlbi vale2osnxs, x1
+# CHECK: tlbi vmalls12e1osnxs
+# CHECK: tlbi vae3osnxs, x1
+# CHECK: tlbi vale3osnxs, x1
+# CHECK: tlbi alle2osnxs
+# CHECK: tlbi alle1osnxs
+# CHECK: tlbi alle3osnxs
+# CHECK: tlbi rvae1nxs, x1
+# CHECK: tlbi rvaae1nxs, x1
+# CHECK: tlbi rvale1nxs, x1
+# CHECK: tlbi rvaale1nxs, x1
+# CHECK: tlbi rvae1isnxs, x1
+# CHECK: tlbi rvaae1isnxs, x1
+# CHECK: tlbi rvale1isnxs, x1
+# CHECK: tlbi rvaale1isnxs, x1
+# CHECK: tlbi rvae1osnxs, x1
+# CHECK: tlbi rvaae1osnxs, x1
+# CHECK: tlbi rvale1osnxs, x1
+# CHECK: tlbi rvaale1osnxs, x1
+# CHECK: tlbi ripas2e1isnxs, x1
+# CHECK: tlbi ripas2le1isnxs, x1
+# CHECK: tlbi ripas2e1nxs, x1
+# CHECK: tlbi ripas2le1nxs, x1
+# CHECK: tlbi ripas2e1osnxs, x1
+# CHECK: tlbi ripas2le1osnxs, x1
+# CHECK: tlbi rvae2nxs, x1
+# CHECK: tlbi rvale2nxs, x1
+# CHECK: tlbi rvae2isnxs, x1
+# CHECK: tlbi rvale2isnxs, x1
+# CHECK: tlbi rvae2osnxs, x1
+# CHECK: tlbi rvale2osnxs, x1
+# CHECK: tlbi rvae3nxs, x1
+# CHECK: tlbi rvale3nxs, x1
+# CHECK: tlbi rvae3isnxs, x1
+# CHECK: tlbi rvale3isnxs, x1
+# CHECK: tlbi rvae3osnxs, x1
+# CHECK: tlbi rvale3osnxs, x1
+# CHECK_NO_XS: sys #0, c9, c1, #0
+# CHECK_NO_XS: sys #0, c9, c1, #1, x1
+# CHECK_NO_XS: sys #0, c9, c1, #2, x1
+# CHECK_NO_XS: sys #0, c9, c1, #3, x1
+# CHECK_NO_XS: sys #0, c9, c1, #5, x1
+# CHECK_NO_XS: sys #0, c9, c1, #7, x1
+# CHECK_NO_XS: sys #4, c9, c4, #0, x1
+# CHECK_NO_XS: sys #4, c9, c4, #4, x1
+# CHECK_NO_XS: sys #4, c9, c1, #1, x1
+# CHECK_NO_XS: sys #4, c9, c1, #5, x1
+# CHECK_NO_XS: sys #4, c9, c1, #6
+# CHECK_NO_XS: sys #6, c9, c1, #1, x1
+# CHECK_NO_XS: sys #6, c9, c1, #5, x1
+# CHECK_NO_XS: sys #4, c9, c1, #0
+# CHECK_NO_XS: sys #4, c9, c1, #4
+# CHECK_NO_XS: sys #6, c9, c1, #0
+# CHECK_NO_XS: sys #0, c9, c6, #1, x1
+# CHECK_NO_XS: sys #0, c9, c6, #3, x1
+# CHECK_NO_XS: sys #0, c9, c6, #5, x1
+# CHECK_NO_XS: sys #0, c9, c6, #7, x1
+# CHECK_NO_XS: sys #0, c9, c2, #1, x1
+# CHECK_NO_XS: sys #0, c9, c2, #3, x1
+# CHECK_NO_XS: sys #0, c9, c2, #5, x1
+# CHECK_NO_XS: sys #0, c9, c2, #7, x1
+# CHECK_NO_XS: sys #0, c9, c5, #1, x1
+# CHECK_NO_XS: sys #0, c9, c5, #3, x1
+# CHECK_NO_XS: sys #0, c9, c5, #5, x1
+# CHECK_NO_XS: sys #0, c9, c5, #7, x1
+# CHECK_NO_XS: sys #4, c9, c0, #2, x1
+# CHECK_NO_XS: sys #4, c9, c0, #6, x1
+# CHECK_NO_XS: sys #4, c9, c4, #2, x1
+# CHECK_NO_XS: sys #4, c9, c4, #6, x1
+# CHECK_NO_XS: sys #4, c9, c4, #3, x1
+# CHECK_NO_XS: sys #4, c9, c4, #7, x1
+# CHECK_NO_XS: sys #4, c9, c6, #1, x1
+# CHECK_NO_XS: sys #4, c9, c6, #5, x1
+# CHECK_NO_XS: sys #4, c9, c2, #1, x1
+# CHECK_NO_XS: sys #4, c9, c2, #5, x1
+# CHECK_NO_XS: sys #4, c9, c5, #1, x1
+# CHECK_NO_XS: sys #4, c9, c5, #5, x1
+# CHECK_NO_XS: sys #6, c9, c6, #1, x1
+# CHECK_NO_XS: sys #6, c9, c6, #5, x1
+# CHECK_NO_XS: sys #6, c9, c2, #1, x1
+# CHECK_NO_XS: sys #6, c9, c2, #5, x1
+# CHECK_NO_XS: sys #6, c9, c5, #1, x1
+# CHECK_NO_XS: sys #6, c9, c5, #5, x1
+# CHECK_NO_XS: sys #0, c9, c1, #0
+# CHECK_NO_XS: sys #4, c9, c0, #1, x1

@@ -1,0 +1,137 @@
+# RUN: not llvm-mc -disassemble -triple=thumbv8m.main -mattr=+cdecp0 -mattr=+cdecp1 < %s 2>%t | FileCheck %s
+# RUN: FileCheck <%t --check-prefix=ERROR %s
+
+# GCP instructions
+
+# CHECK: mrc p3, #1, r3, c15, c15, #5
+[0x3f,0xee,0xbf,0x33]
+# CHECK-NEXT: mcr2 p3, #2, r2, c7, c11, #7
+[0x47,0xfe,0xfb,0x23]
+
+# Predication
+
+# CHECK: itte eq
+[0x06,0xbf]
+itte eq
+# CHECK-NEXT: cx1aeq p0, r3, #8191
+[0x3f,0xfe,0xbf,0x30]
+# CHECK-NEXT: cx2aeq p0, r2, r3, #123
+[0x43,0xfe,0xbb,0x20]
+# CHECK-NEXT: cx3ane p0, r1, r5, r7, #63
+[0xf5,0xfe,0xb1,0x70]
+# CHECK-NEXT: itte eq
+[0x06,0xbf]
+# CHECK-NEXT: cx1daeq p0, r0, r1, #8191
+[0x3f,0xfe,0xff,0x00]
+# CHECK-NEXT: cx2daeq p0, r0, r1, r3, #123
+[0x43,0xfe,0xfb,0x00]
+# CHECK-NEXT: cx3dane p0, r0, r1, r5, r7, #63
+[0xf5,0xfe,0xf0,0x70]
+
+# CX1
+
+# CHECK-NEXT: cx1	p0, r3, #8191
+[0x3f,0xee,0xbf,0x30]
+# CHECK-NEXT: cx1a	p1, r2, #0
+[0x00,0xfe,0x00,0x21]
+# CHECK-NEXT: cx1d     p0, r4, r5, #1234
+[0x09,0xee,0xd2,0x40]
+# CHECK-NEXT: cx1da	p1, r2, r3, #1234
+[0x09,0xfe,0xd2,0x21]
+# CHECK-NEXT: cx1	p0, apsr_nzcv, #8191
+[0x3f,0xee,0xbf,0xf0]
+
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: warning: potentially undefined instruction encoding
+# CHECK-NEXT: cx1 p0, sp, #8191
+[0x3f,0xee,0xbf,0xd0]
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: warning: potentially undefined instruction encoding
+# CHECK-NEXT: cx1d p0, r12, sp, #1234
+[0x09,0xee,0xd2,0xc0]
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: warning: potentially undefined instruction encoding
+# CHECK-NEXT: cx1d p0, r2, r3, #1234
+[0x09,0xee,0xd2,0x30]
+
+# CX2
+
+# CHECK-NEXT: cx2	p0, r3, r7, #0
+[0x47,0xee,0x00,0x30]
+# CHECK-NEXT: cx2a	p0, r1, r4, #511
+[0x74,0xfe,0xbf,0x10]
+# CHECK-NEXT: cx2d	p0, r2, r3, r1, #123
+[0x41,0xee,0xfb,0x20]
+# CHECK-NEXT: cx2da p0, r2, r3, r7, #123
+[0x47,0xfe,0xfb,0x20]
+# CHECK-NEXT: cx2da p1, r10, r11, apsr_nzcv, #123
+[0x4f,0xfe,0xfb,0xa1]
+
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: warning: potentially undefined instruction encoding
+# CHECK-NEXT: cx2a	p0, r1, sp, #511
+[0x7d,0xfe,0xbf,0x10]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x4f,0xfe,0xfb,0xe1]
+
+# CX3
+
+# CHECK-NEXT: cx3 p0, r1, r2, r3, #0
+[0x82,0xee,0x01,0x30]
+# CHECK-NEXT: cx3a p0, r1, r5, r7, #63
+[0xf5,0xfe,0xb1,0x70]
+# CHECK-NEXT: cx3d p1, r0, r1, r7, r1, #12
+[0x97,0xee,0xc0,0x11]
+# CHECK-NEXT: cx3da p0, r8, r9, r2, r3, #12
+[0x92,0xfe,0xc8,0x30]
+# CHECK-NEXT: cx3	p1, apsr_nzcv, r7, apsr_nzcv, #12
+[0x97,0xee,0x8f,0xf1]
+# CHECK-NEXT: cx3d	p0, r8, r9, apsr_nzcv, apsr_nzcv, #12
+[0x9f,0xee,0xc8,0xf0]
+
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: warning: potentially undefined instruction encoding
+# CHECK-NEXT: cx3 p0, r1, r2, sp, #0
+[0x82,0xee,0x01,0xd0]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x9f,0xee,0xce,0xf0]
+
+# VCX1
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x69,0xec,0x92,0x50]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x6f,0xfc,0xbf,0x31]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x20,0xed,0x00,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x2f,0xfd,0xbf,0x31]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x29,0xec,0xd2,0x20]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x2f,0xfd,0xff,0xa1]
+
+# VCX2
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x33,0xec,0x2f,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x7f,0xfc,0xb0,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x30,0xed,0x2f,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x3f,0xfd,0xb6,0x10]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x3e,0xed,0xfe,0x01]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x3f,0xfd,0xde,0x61]
+
+# VCX3
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x8f,0xec,0x90,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xf8,0xfc,0xb5,0x01]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x8f,0xed,0x87,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xb6,0xfd,0xb6,0x11]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xae,0xed,0xc0,0x00]
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xbe,0xfd,0x7e,0x61]

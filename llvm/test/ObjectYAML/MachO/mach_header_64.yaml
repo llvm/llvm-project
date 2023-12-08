@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00218085
+  reserved:        0x00000000
+...
+
+# CHECK: --- !mach-o
+# CHECK: FileHeader:      
+# CHECK:   magic:           0xFEEDFACF
+# CHECK:   cputype:         0x1000007
+# CHECK:   cpusubtype:      0x80000003
+# CHECK:   filetype:        0x2
+# CHECK:   ncmds:           0
+# CHECK:   sizeofcmds:      0
+# CHECK:   flags:           0x218085
+# CHECK:   reserved:        0x0
+# CHECK: ...

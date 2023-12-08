@@ -1,0 +1,4 @@
+# RUN: %lldb -s %s --script-language lua 2>&1 | FileCheck %s
+b main
+breakpoint command add -s lua -o '1234_foo'
+# CHECK: error: {{.*}} {{unexpected symbol near '1234'|malformed number near '1234_'}}

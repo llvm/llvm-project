@@ -1,0 +1,680 @@
+# RUN: llc -march=amdgcn -amdgpu-enable-merge-m0 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: merge-m0-many-init
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.2:
+# GCN:      SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.3:
+# GCN:      SI_INIT_M0 3
+
+# GCN:    bb.4:
+# GCN-NOT:  SI_INIT_M0
+# GCN:      DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 4
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.5:
+# GCN-NOT: SI_INIT_M0
+# GCN:     DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 4
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.6:
+# GCN:      SI_INIT_M0 -1,
+# GCN-NEXT: DS_WRITE_B32
+# GCN:      SI_INIT_M0 %2
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 %2
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+---
+name: merge-m0-many-init
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_32_xm0 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4, %bb.5
+    S_CBRANCH_VCCZ %bb.4, implicit undef $vcc
+    S_BRANCH %bb.5
+
+  bb.4:
+    successors: %bb.6
+    SI_INIT_M0 3, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 4, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.6
+
+  bb.5:
+    successors: %bb.6
+    SI_INIT_M0 3, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 4, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.6
+
+  bb.6:
+    successors: %bb.0.entry, %bb.6
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 %2, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 %2, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.6, implicit undef $vcc
+    S_BRANCH %bb.0.entry
+
+...
+
+# GCN-LABEL: name: merge-m0-dont-hoist-past-init-with-different-initializer
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 65536
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN-NOT:  SI_INIT_M0 65536
+# GCN-NOT:  SI_INIT_M0 -1
+
+# GCN:    bb.2:
+# GCN:      SI_INIT_M0 -1
+
+# GCN:    bb.3:
+# GCN:      SI_INIT_M0 -1
+---
+name: merge-m0-dont-hoist-past-init-with-different-initializer
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.4
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.4
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: merge-m0-after-prologue
+# GCN:    bb.0.entry:
+# GCN-NOT:  SI_INIT_M0
+# GCN:      S_OR_B64
+# GCN-NEXT: SI_INIT_M0
+
+# GCN:     bb.1:
+# GCN-NOT:   SI_INIT_M0 -1
+
+# GCN:     bb.2:
+# GCN-NOT:   SI_INIT_MO -1
+---
+name: merge-m0-after-prologue
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: move-m0-avoid-hazard
+# GCN: $m0 = S_MOV_B32 -1
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+---
+name: move-m0-avoid-hazard
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $m0 = S_MOV_B32 -1
+    DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+...
+
+# GCN-LABEL: name: move-m0-with-prologue
+# GCN: $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+# GCN: $m0 = S_MOV_B32 -1
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+---
+name: move-m0-with-prologue
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $m0 = S_MOV_B32 -1
+    DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+...
+
+# GCN-LABEL: name: move-m0-different-initializer
+# GCN: SI_INIT_M0 -1
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN: SI_INIT_M0 65536
+# GCN-NEXT: S_NOP
+---
+name: move-m0-different-initializer
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_NOP 0
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+...
+
+# GCN-LABEL: name: move-m0-schedule-boundary
+# GCN: S_SETREG
+# GCN-NEXT: SI_INIT_M0 -1
+---
+name: move-m0-schedule-boundary
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+...
+
+
+# GCN-LABEL: name: m0-in-loop-0
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: $m0 = COPY %2
+
+---
+name: m0-in-loop-0
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-1
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN-NOT:      SI_INIT_M0 -1
+# GCN: DS_WRITE_B32
+
+---
+name: m0-in-loop-1
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-2
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN: $m0 = COPY %2
+# GCN-NEXT:      SENDMSG
+# GCN-NEXT:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+
+---
+name: m0-in-loop-2
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-3
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN: $m0 = COPY %2
+# GCN-NEXT:      SENDMSG
+# GCN-NEXT:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+
+---
+name: m0-in-loop-3
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-4
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:  SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: $m0 = COPY %2
+# GCN-NEXT:      SENDMSG
+
+---
+name: m0-in-loop-4
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-5
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:  SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT:  SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: $m0 = COPY %2
+# GCN-NEXT:      SENDMSG
+
+---
+name: m0-in-loop-5
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-6
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:  SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: $m0 = COPY %2
+# GCN-NEXT:      SENDMSG
+
+---
+name: m0-in-loop-6
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3, %bb.1
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.3
+
+
+  bb.3:
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: m0-in-loop-7
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.1:
+# GCN:  SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+
+# GCN:    bb.2:
+# GCN: $m0 = COPY %2
+# GCN-NEXT:      SENDMSG
+
+---
+name: m0-in-loop-7
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3, %bb.1
+    $m0 = COPY %2:sgpr_32
+    S_SENDMSG 34, implicit $exec, implicit $m0
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...

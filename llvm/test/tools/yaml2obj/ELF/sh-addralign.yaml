@@ -1,0 +1,29 @@
+## Check that yaml2obj takes in account section AddressAlign field.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -S %t | FileCheck %s
+
+# CHECK:      Section {
+# CHECK:        Index:
+# CHECK:        Name: .data
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x0
+# CHECK-NEXT:   Offset: 0x{{[0-9A-F]*}}00
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment: 256
+# CHECK-NEXT:   EntrySize:
+# CHECK-NEXT: }
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    AddressAlign: 256

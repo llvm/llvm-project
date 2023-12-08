@@ -1,0 +1,13 @@
+# REQUIRES: x86-registered-target
+
+## Check that --filter works properly.
+# RUN: cp -f %S/Inputs/x86-filter.ll %t.ll && %update_analyze_test_checks --filter="(vf4|vf16)" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-filter.ll.filter.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_analyze_test_checks --filter="(vf4|vf16)" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-filter.ll.filter.expected
+
+## Check that running the script again, without arguments, does not change the result:
+# RUN: %update_analyze_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-filter.ll.filter.expected

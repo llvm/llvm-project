@@ -1,0 +1,6 @@
+RUN: echo -e "a{{{symbol:foo}}}b\n{{{symbol:bar}}}\n" > %t.input
+RUN: llvm-symbolizer --filter-markup < %t.input > %t.output
+RUN: FileCheck %s --input-file=%t.output --match-full-lines --implicit-check-not {{.}}
+
+CHECK: afoob
+CHECK: bar

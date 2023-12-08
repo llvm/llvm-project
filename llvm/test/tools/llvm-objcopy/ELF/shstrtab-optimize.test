@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
+
+## Check we have the correct size of the .shstrtab section
+## after the strings tail merge optimization.
+
+# CHECK:      Name: .shstrtab
+# CHECK-NEXT: Type: SHT_STRTAB
+# CHECK-NEXT: Flags [
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size: 28
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bar
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+  - Name:            .foo.bar
+    Type:            SHT_PROGBITS
+    Flags:           [ ]

@@ -1,0 +1,54 @@
+## Test that note values are interpreted correctly for NetBSD core files.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU --strict-whitespace
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM --strict-whitespace
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Name: NetBSD-CORE
+        Type: NT_NETBSDCORE_PROCINFO
+      - Name: NetBSD-CORE
+        Type: NT_NETBSDCORE_AUXV
+      - Name: NetBSD-CORE@3615
+        Type: NT_NETBSDCORE_LWPSTATUS
+
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo
+
+# GNU:      Displaying notes found at file offset 0x00000078 with length 0x00000050:
+# GNU-NEXT:   Owner                Data size 	Description
+# GNU-NEXT:   NetBSD-CORE          0x00000000	NT_NETBSDCORE_PROCINFO (procinfo structure)
+# GNU-NEXT:   NetBSD-CORE          0x00000000	NT_NETBSDCORE_AUXV (ELF auxiliary vector data)
+# GNU-NEXT:   NetBSD-CORE@3615     0x00000000	PT_LWPSTATUS (ptrace_lwpstatus structure)
+
+# LLVM:      Notes [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: <?>
+# LLVM-NEXT:     Offset: 0x78
+# LLVM-NEXT:     Size: 0x50
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: NetBSD-CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_NETBSDCORE_PROCINFO (procinfo structure)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: NetBSD-CORE
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: NT_NETBSDCORE_AUXV (ELF auxiliary vector data)
+# LLVM-NEXT:     }
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: NetBSD-CORE@3615
+# LLVM-NEXT:       Data size: 0x0
+# LLVM-NEXT:       Type: PT_LWPSTATUS (ptrace_lwpstatus structure)
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]

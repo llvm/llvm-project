@@ -1,0 +1,6 @@
+# RUN: modularize %s -x c++
+# RUN: modularize -prefix=%p %s -x c++
+# RUN: modularize -no-coverage-check %S/Inputs/NoProblems.modulemap -x c++
+
+Inputs/SomeTypes.h
+Inputs/SomeDecls.h

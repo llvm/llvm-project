@@ -1,0 +1,25 @@
+:IR
+foo
+# Func Hash:
+72057649435042473
+# Num Counters:
+2
+# Counter Values:
+30000
+20000
+# Num Value Kinds:
+2
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+1
+2
+bar1:30000
+bar2:20000
+# ValueKind = IPVK_MemOPSize:
+1
+# NumValueSites:
+1
+2
+1:3000
+4:2000

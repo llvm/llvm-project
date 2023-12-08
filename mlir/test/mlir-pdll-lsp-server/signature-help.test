@@ -1,0 +1,231 @@
+// RUN: mlir-pdll-lsp-server -pdll-extra-dir %S -pdll-extra-dir %S/../../include -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.pdll",
+  "languageId":"pdll",
+  "version":1,
+  "text":"#include \"include/included.td\"\nConstraint ValueCst(value: Value, value2: Value);\nPattern {\nlet root = op<test.multi>(val: Value, val) -> (ty: Type, ty);\nValueCst(root.result, root.result2);\nerase root;\n}"
+}}}
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":3,"character":26}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "activeParameter": 0,
+// CHECK-NEXT:    "activeSignature": 0,
+// CHECK-NEXT:    "signatures": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "documentation": "`op<test.multi>` ODS operand specification",
+// CHECK-NEXT:        "label": "(operand: Value, operand2: Value)",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              1,
+// CHECK-NEXT:              15
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              17,
+// CHECK-NEXT:              32
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "documentation": "Generic operation operand specification",
+// CHECK-NEXT:        "label": "(<operands>: ValueRange)",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "All of the operands of the operation.",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              1,
+// CHECK-NEXT:              23
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":3,"character":38}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "activeParameter": 1,
+// CHECK-NEXT:    "activeSignature": 0,
+// CHECK-NEXT:    "signatures": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "documentation": "`op<test.multi>` ODS operand specification",
+// CHECK-NEXT:        "label": "(operand: Value, operand2: Value)",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              1,
+// CHECK-NEXT:              15
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              17,
+// CHECK-NEXT:              32
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":3,"character":47}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "activeParameter": 0,
+// CHECK-NEXT:    "activeSignature": 0,
+// CHECK-NEXT:    "signatures": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "documentation": "`op<test.multi>` ODS result specification",
+// CHECK-NEXT:        "label": "(result: Type, result2: Type)",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              1,
+// CHECK-NEXT:              13
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              15,
+// CHECK-NEXT:              28
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "documentation": "Generic operation result specification",
+// CHECK-NEXT:        "label": "(<results>: TypeRange)",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "All of the results of the operation.",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              1,
+// CHECK-NEXT:              21
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":3,"character":57}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "activeParameter": 1,
+// CHECK-NEXT:    "activeSignature": 0,
+// CHECK-NEXT:    "signatures": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "documentation": "`op<test.multi>` ODS result specification",
+// CHECK-NEXT:        "label": "(result: Type, result2: Type)",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              1,
+// CHECK-NEXT:              13
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "documentation": "64-bit signless integer",
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              15,
+// CHECK-NEXT:              28
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":4,"character":9}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "activeParameter": 0,
+// CHECK-NEXT:    "activeSignature": 0,
+// CHECK-NEXT:    "signatures": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "label": "ValueCst(value: Value, value2: Value) -> Tuple<>",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              9,
+// CHECK-NEXT:              21
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              23,
+// CHECK-NEXT:              36
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":4,"character":21}
+}}
+//      CHECK:  "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "activeParameter": 1,
+// CHECK-NEXT:    "activeSignature": 0,
+// CHECK-NEXT:    "signatures": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "label": "ValueCst(value: Value, value2: Value) -> Tuple<>",
+// CHECK-NEXT:        "parameters": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              9,
+// CHECK-NEXT:              21
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "label": [
+// CHECK-NEXT:              23,
+// CHECK-NEXT:              36
+// CHECK-NEXT:            ]
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

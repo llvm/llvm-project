@@ -1,0 +1,81 @@
+# RUN: llc -march=hexagon -run-pass early-if-predicator %s -o - -verify-machineinstrs | FileCheck %s
+
+# Check that the store gets predicated
+# CHECK: S4_storeirit_io %2, %0, 0, 1
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+
+  define void @if-cvt(ptr %p, i1 %c) {
+  entry:
+    br i1 %c, label %if, label %endif
+
+  if:                                               ; preds = %entry
+    store i32 1, ptr %p, align 4
+    br label %endif
+  
+  endif:                                            ; preds = %if, %entry
+    ret void
+  }
+
+...
+---
+name:            if-cvt
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: intregs, preferred-register: '' }
+  - { id: 1, class: intregs, preferred-register: '' }
+  - { id: 2, class: predregs, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$r1', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1
+
+    %1:intregs = COPY $r1
+    %2:predregs = S2_tstbit_i %1, 0
+    %0:intregs = COPY $r0
+    J2_jumpf %2, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1.if:
+    successors: %bb.2(0x80000000)
+    S4_storeiri_io %0, 0, 1 :: (store (s32) into %ir.p)
+
+  bb.2.endif:
+    PS_jmpret $r31, implicit-def dead $pc
+
+...

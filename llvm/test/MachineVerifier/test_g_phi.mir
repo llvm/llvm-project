@@ -1,0 +1,79 @@
+#RUN: not --crash llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-unknown"
+  
+  define i32 @test_phi(i32 %argc) {
+  entry:
+    %cmp = icmp ugt i32 %argc, 0
+    br i1 %cmp, label %case1, label %case2
+  
+  case1:                                            ; preds = %entry
+    %tmp11 = add i32 %argc, 1
+    br label %return
+  
+  case2:                                            ; preds = %entry
+    %tmp22 = add i32 %argc, 2
+    br label %return
+  
+  return:                                           ; preds = %case2, %case1
+    %res = phi i32 [ %tmp11, %case1 ], [ %tmp22, %case2 ]
+    ret i32 %res
+  }
+
+...
+---
+name:            test_phi
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+liveins:         
+body:             |
+  bb.1.entry:
+    successors: %bb.2.case1(0x40000000), %bb.3.case2(0x40000000)
+    liveins: $w0
+    ; This test makes sure that the Verifier catches G_PHI with mismatching types.
+    ; CHECK: Bad machine code: Generic Instruction G_PHI has operands with incompatible/missing types
+  
+    %0(s32) = COPY $w0
+    %1(s32) = G_CONSTANT i32 0
+    %3(s32) = G_CONSTANT i32 1
+    %5(s32) = G_CONSTANT i32 2
+    %8(s32) = G_ICMP intpred(ugt), %0(s32), %1
+    %2(s1) = G_TRUNC %8(s32)
+    G_BRCOND %2(s1), %bb.2.case1
+    G_BR %bb.3.case2
+  
+  bb.2.case1:
+    successors: %bb.4.return(0x80000000)
+  
+    %4(s32) = G_ADD %0, %3
+    %9(s16) = G_TRUNC %4(s32)
+    G_BR %bb.4.return
+  
+  bb.3.case2:
+    successors: %bb.4.return(0x80000000)
+  
+    %6(s32) = G_ADD %0, %5
+  
+  bb.4.return:
+    %7(s32) = G_PHI %9(s16), %bb.2.case1, %6(s32), %bb.3.case2
+    $w0 = COPY %7(s32)
+    RET_ReallyLR implicit $w0
+
+...

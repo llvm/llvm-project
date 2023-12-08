@@ -1,0 +1,38 @@
+[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]:1467299:11
+ 0: 6
+ 1: 6
+ 3: 287884
+ 4: 287864 _Z3fibi:315608
+ 15: 23
+[main:3.1 @ _Z5funcBi:1 @ _Z8funcLeafi]:500853:20
+ 0: 15
+ 1: 15
+ 3: 74946
+ 4: 74941 _Z3fibi:82359
+ 10: 23324
+ 11: 23327 _Z3fibi:25228
+ 15: 11
+ !Attributes: 1
+[external:12 @ main]:154:12
+ 2: 12
+ 3: 10 _Z5funcAi:7
+ 3.1: 10 _Z5funcBi:11
+[main]:154:0
+ 2: 12
+ 3: 18 _Z5funcAi:11
+ 3.1: 18 _Z5funcBi:19
+[external:10 @ _Z5funcBi]:120:10
+ 0: 10
+ 1: 10
+[externalA:17 @ _Z5funcBi]:120:3
+ 0: 3
+ 1: 3
+[main:3.1 @ _Z5funcBi]:120:19
+ 0: 19
+ 1: 19 _Z8funcLeafi:20
+ 3: 12
+ !Attributes: 1
+[main:3 @ _Z5funcAi]:99:11
+ 0: 10
+ 1: 10 _Z8funcLeafi:11
+ 3: 24

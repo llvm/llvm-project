@@ -1,0 +1,206 @@
+# RUN: llc -verify-machineinstrs -run-pass=machine-outliner -run-pass=aarch64-ptrauth %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-arm-linux-gnu"
+
+  @v = common dso_local global i32* null, align 8
+
+  ; Function Attrs: nounwind
+  define dso_local void @legal0() #0 {
+    %1 = alloca i32, align 4
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  define dso_local void @legal1() #0 {
+    %1 = alloca i32, align 4
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  define dso_local void @illegal0() #0 {
+    %1 = alloca i32, align 4
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  define dso_local void @illegal1() #0 {
+    %1 = alloca i32, align 4
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    store volatile i32* %1, i32** @v, align 8
+    ret void
+  }
+
+  attributes #0 = { nounwind uwtable "sign-return-address"="all" "sign-return-address-key"="a_key" noinline noredzone "frame-pointer"="all" }
+
+...
+---
+name:            legal0
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+  liveins: $lr
+    frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
+    $sp = frame-setup SUBXri $sp, 16, 0
+    renamable $x8 = ADRP target-flags(aarch64-page) @v
+    $x9 = ADDXri $sp, 12, 0
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
+    RET undef $lr
+
+# CHECK-LABEL:    name:            legal0
+# CHECK:          body:             |
+# CHECK-NEXT:         bb.0 (%ir-block.0):
+# CHECK-NEXT:           liveins: $lr
+# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                BL @[[OUTLINED_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           RET undef $lr
+
+...
+---
+name:            legal1
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+  liveins: $lr
+    frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
+    $sp = frame-setup SUBXri $sp, 16, 0
+    renamable $x8 = ADRP target-flags(aarch64-page) @v
+    $x9 = ADDXri $sp, 12, 0
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
+    RET undef $lr
+
+# CHECK-LABEL:    name:            legal1
+# CHECK:          body:             |
+# CHECK-NEXT:         bb.0 (%ir-block.0):
+# CHECK-NEXT:           liveins: $lr
+# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK:                BL @[[OUTLINED_FUNC]]
+# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           RET undef $lr
+
+...
+---
+name:            illegal0
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+  liveins: $lr
+    frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
+    $sp = frame-setup SUBXri $sp, 16, 0
+    renamable $x8 = ADRP target-flags(aarch64-page) @v
+    $x9 = ADDXri $sp, 12, 0
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    $sp = frame-destroy ADDXri $sp, 12, 0
+    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
+    RET undef $lr
+
+...
+---
+name:            illegal1
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+  liveins: $lr
+    frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
+    $sp = frame-setup SUBXri $sp, 16, 0
+    renamable $x8 = ADRP target-flags(aarch64-page) @v
+    $x9 = ADDXri $sp, 12, 0
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    $sp = frame-destroy ADDXri $sp, 12, 0
+    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
+    RET undef $lr
+
+# CHECK-LABEL:    name:            illegal0
+# CHECK:          body:             |
+# CHECK-NEXT:         bb.0 (%ir-block.0):
+# CHECK-NEXT:           liveins: $lr
+# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NOT:            BL @OUTLINED_FUNCTION_{{.*}}
+# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           RET undef $lr
+
+# CHECK-LABEL:    name:            illegal1
+# CHECK:          body:             |
+# CHECK-NEXT:         bb.0 (%ir-block.0):
+# CHECK-NEXT:           liveins: $lr
+# CHECK:                frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NOT:            BL @OUTLINED_FUNCTION_{{.*}}
+# CHECK:                frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:           frame-destroy CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:           RET undef $lr
+
+# Outlined function that contains only legal sp modifications
+# CHECK:          name:            [[OUTLINED_FUNC]]
+# CHECK:          body:             |
+# CHECK-NEXT:       bb.0:
+# CHECK-NEXT: liveins: $lr
+# CHECK-NEXT: {{^  $}}
+# CHECK-NEXT:         frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:         frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:         $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK:              $sp = frame-destroy ADDXri $sp, 16, 0
+# CHECK-NEXT:         frame-destroy AUTIASP implicit-def $lr, implicit $lr, implicit $sp
+# CHECK-NEXT:         RET $lr

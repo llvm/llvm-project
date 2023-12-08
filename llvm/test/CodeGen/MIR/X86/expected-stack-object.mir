@@ -1,0 +1,67 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+
+--- |
+  @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
+  @__stack_chk_guard = external global i8*
+
+  define i32 @test() #0 {
+  entry:
+    %StackGuardSlot = alloca i8*
+    %StackGuard = load i8*, i8** @__stack_chk_guard
+    call void @llvm.stackprotector(i8* %StackGuard, i8** %StackGuardSlot)
+    %test = alloca i8*, align 8
+    %a = alloca i8, i64 5
+    store i8* %a, i8** %test, align 8
+    %b = load i8*, i8** %test, align 8
+    %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* %b)
+    call void @llvm.stackprotectorcheck(i8** @__stack_chk_guard)
+    ret i32 %call
+  }
+
+  declare i32 @printf(i8*, ...)
+
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  declare void @llvm.stackprotectorcheck(i8**) #2
+
+  attributes #0 = { ssp "stack-protector-buffer-size"="5" }
+  attributes #1 = { nounwind }
+  attributes #2 = { nounwind argmemonly }
+...
+---
+name:            test
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       40
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+# CHECK: [[@LINE+1]]:21: expected a stack object
+  stackProtector:  '0'
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16,
+      callee-saved-register: '$rbx' }
+stack:
+  - { id: 0, name: StackGuardSlot, offset: -24, size: 8, alignment: 8 }
+  - { id: 1, name: test, offset: -40, size: 8, alignment: 8 }
+  - { id: 2, name: a, offset: -29, size: 5, alignment: 1 }
+body: |
+  bb.0.entry:
+    liveins: $rbx, $rbx
+
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbx = LOAD_STACK_GUARD :: (invariant load 8 from %ir.__stack_chk_guard)
+    MOV64mr $rsp, 1, _, 24, _, $rbx
+    $rsi = LEA64r $rsp, 1, _, 19, _
+    MOV64mr $rsp, 1, _, 8, _, $rsi
+    $rdi = LEA64r $rip, 1, _, @.str, _
+    dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al
+    CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $rsi, implicit $al, implicit-def $rsp, implicit-def $eax
+    CMP64rm killed $rbx, $rsp, 1, _, 24, _, implicit-def $eflags
+    $rsp = ADD64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+...

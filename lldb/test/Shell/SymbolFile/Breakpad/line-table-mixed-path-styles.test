@@ -1,0 +1,11 @@
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/line-table-mixed-path-styles.out
+# RUN: %lldb %T/line-table-mixed-path-styles.out \
+# RUN:   -o "target symbols add -s line-table-mixed-path-styles.out %S/Inputs/line-table-mixed-path-styles.syms" \
+# RUN:   -s %s -o exit | FileCheck %s
+
+image dump line-table a.c
+# CHECK-LABEL: Line table for /tmp/a.c
+# CHECK-NEXT: 0x00000000004000b0: /tmp/a.c:1
+# CHECK-NEXT: 0x00000000004000b1: c:\tmp\b.c:1
+# CHECK-NEXT: 0x00000000004000b2:
+# CHECK-EMPTY:

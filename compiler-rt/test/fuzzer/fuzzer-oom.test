@@ -1,0 +1,27 @@
+UNSUPPORTED: target=aarch64{{.*}}, ios
+# Tests break on windows unless exe extension is used (because there are periods
+# in expansion of %t, the string after the period is interpreted as the file
+# extension, so each compilation will clobber the previous one's lib and exp
+# files causing symbolization to break).
+RUN: %cpp_compiler %S/OutOfMemoryTest.cpp -o %t-OutOfMemoryTest.exe
+RUN: %cpp_compiler %S/OutOfMemorySingleLargeMallocTest.cpp -o %t-OutOfMemorySingleLargeMallocTest.exe
+RUN: %cpp_compiler %S/AccumulateAllocationsTest.cpp -o %t-AccumulateAllocationsTest.exe
+
+RUN: not %run %t-OutOfMemoryTest.exe -rss_limit_mb=300 2>&1 | FileCheck %s
+
+CHECK: ERROR: libFuzzer: out-of-memory (used: {{.*}}; limit: 300Mb)
+CHECK: Test unit written to ./oom-
+SUMMARY: libFuzzer: out-of-memory
+
+RUN: not %run %t-OutOfMemorySingleLargeMallocTest.exe -rss_limit_mb=300    2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
+RUN: not %run %t-OutOfMemorySingleLargeMallocTest.exe -malloc_limit_mb=300 2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
+RUN: not %run %t-OutOfMemorySingleLargeMallocTest.exe -rss_limit_mb=1000 -malloc_limit_mb=300 2>&1 | FileCheck %s --check-prefix=SINGLE_LARGE_MALLOC
+
+We used to check for "out-of-memory (malloc(53{{.*}}))", but that would fail
+sometimes, so now we accept any OOM message.
+
+SINGLE_LARGE_MALLOC: libFuzzer: out-of-memory
+SINGLE_LARGE_MALLOC: in LLVMFuzzerTestOneInput
+
+# Check that -rss_limit_mb=0 means no limit.
+RUN: %run %t-AccumulateAllocationsTest.exe -runs=1000 -rss_limit_mb=0

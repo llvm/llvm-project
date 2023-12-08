@@ -1,0 +1,179 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -start-before=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test that regalloc manages (via regalloc hints) to avoid a LOCRMux jump
+# sequence expansion, and a SELR/LOCR instuction is emitted.
+
+--- |
+  ; ModuleID = 'tc.ll'
+  source_filename = "tc.ll"
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+
+  @globvar = external global i32
+
+  declare void @fun() #0
+
+  define void @fun1() #0 {
+  bb5:
+    br label %bb6
+
+  bb6:                                              ; preds = %bb33, %bb5
+    %tmp = phi i1 [ %tmp34, %bb33 ], [ undef, %bb5 ]
+    br label %bb7
+
+  bb7:                                              ; preds = %bb7, %bb6
+    %lsr.iv1 = phi [512 x i32]* [ %0, %bb7 ], [ undef, %bb6 ]
+    %tmp8 = phi i32 [ %tmp27, %bb7 ], [ -1000000, %bb6 ]
+    %tmp9 = phi i64 [ %tmp28, %bb7 ], [ 0, %bb6 ]
+    %lsr3 = trunc i64 %tmp9 to i32
+    %lsr.iv12 = bitcast [512 x i32]* %lsr.iv1 to i32*
+    %tmp11 = load i32, i32* %lsr.iv12
+    %tmp12 = icmp sgt i32 %tmp11, undef
+    %tmp13 = trunc i64 %tmp9 to i32
+    %tmp14 = select i1 %tmp12, i32 %lsr3, i32 0
+    %tmp15 = select i1 %tmp12, i32 %tmp13, i32 %tmp8
+    %tmp16 = load i32, i32* undef
+    %tmp17 = select i1 false, i32 undef, i32 %tmp14
+    %tmp18 = select i1 false, i32 undef, i32 %tmp15
+    %tmp19 = select i1 false, i32 %tmp16, i32 undef
+    %tmp20 = select i1 undef, i32 undef, i32 %tmp17
+    %tmp21 = select i1 undef, i32 undef, i32 %tmp18
+    %tmp22 = select i1 undef, i32 undef, i32 %tmp19
+    %tmp23 = or i64 %tmp9, 3
+    %tmp24 = icmp sgt i32 undef, %tmp22
+    %tmp25 = trunc i64 %tmp23 to i32
+    %tmp26 = select i1 %tmp24, i32 %tmp25, i32 %tmp20
+    %tmp27 = select i1 %tmp24, i32 %tmp25, i32 %tmp21
+    %tmp28 = add nuw nsw i64 %tmp9, 4
+    %tmp29 = icmp eq i64 undef, 0
+    %scevgep = getelementptr [512 x i32], [512 x i32]* %lsr.iv1, i64 0, i64 4
+    %0 = bitcast i32* %scevgep to [512 x i32]*
+    br i1 %tmp29, label %bb30, label %bb7
+
+  bb30:                                             ; preds = %bb7
+    %tmp32 = icmp sgt i32 %tmp27, -1000000
+    br i1 %tmp32, label %bb33, label %bb35
+
+  bb33:                                             ; preds = %bb30
+    call void @fun()
+    store i32 %tmp26, i32* @globvar
+    %tmp34 = icmp ugt i32 undef, 1
+    br label %bb6
+
+  bb35:                                             ; preds = %bb30
+    br i1 %tmp, label %bb37, label %bb38
+
+  bb37:                                             ; preds = %bb35
+    unreachable
+
+  bb38:                                             ; preds = %bb35
+    unreachable
+  }
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  attributes #0 = { "target-cpu"="z15" }
+  attributes #1 = { nounwind }
+
+...
+
+# CHECK: locr
+# CHECK-NOT: risblg
+
+---
+name:            fun1
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: grx32bit }
+  - { id: 1, class: addr64bit }
+  - { id: 2, class: grx32bit }
+  - { id: 3, class: addr64bit }
+  - { id: 4, class: gr32bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: gr64bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: grx32bit }
+  - { id: 9, class: grx32bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: grx32bit }
+  - { id: 12, class: gr64bit }
+  - { id: 13, class: grx32bit }
+  - { id: 14, class: gr32bit }
+  - { id: 15, class: gr32bit }
+  - { id: 16, class: grx32bit }
+  - { id: 17, class: grx32bit }
+  - { id: 18, class: gr32bit }
+  - { id: 19, class: addr64bit }
+  - { id: 20, class: grx32bit }
+  - { id: 21, class: gr32bit }
+  - { id: 22, class: gr64bit }
+  - { id: 23, class: grx32bit }
+  - { id: 24, class: grx32bit }
+  - { id: 25, class: grx32bit }
+  - { id: 26, class: addr64bit }
+  - { id: 27, class: grx32bit }
+  - { id: 28, class: addr64bit }
+frameInfo:
+  hasCalls:        true
+body:             |
+  bb.0.bb5:
+    %25:grx32bit = IMPLICIT_DEF
+
+  bb.1.bb6:
+    %28:addr64bit = LGHI 0
+    %27:grx32bit = IIFMux 4293967296
+    %26:addr64bit = IMPLICIT_DEF
+
+  bb.2.bb7:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %14:gr32bit = LMux %26, 0, $noreg :: (load (s32) from %ir.lsr.iv12)
+    CR %14, undef %15:gr32bit, implicit-def $cc
+    %16:grx32bit = COPY %28.subreg_l32
+    %16:grx32bit = LOCHIMux %16, 0, 14, 12, implicit $cc
+    %17:grx32bit = SELRMux %27, %28.subreg_l32, 14, 2, implicit killed $cc
+    %18:gr32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `i32* undef`)
+    %20:grx32bit = COPY %28.subreg_l32
+    %20:grx32bit = OILMux %20, 3, implicit-def dead $cc
+    CR undef %21:gr32bit, %18, implicit-def $cc
+    %4:gr32bit = SELRMux %16, %20, 14, 2, implicit $cc
+    %27:grx32bit = SELRMux %17, %20, 14, 2, implicit killed $cc
+    %28:addr64bit = nuw nsw LA %28, 4, $noreg
+    %26:addr64bit = LA %26, 16, $noreg
+    CGHI undef %22:gr64bit, 0, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.3
+
+  bb.3.bb30:
+    successors: %bb.4(0x7fffffff), %bb.5(0x00000001)
+
+    CFIMux %27, -999999, implicit-def $cc
+    BRC 14, 4, %bb.5, implicit killed $cc
+    J %bb.4
+
+  bb.4.bb33:
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @fun, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
+    ADJCALLSTACKUP 0, 0
+    STRL %4, @globvar :: (store (s32) into @globvar)
+    CLFIMux undef %23:grx32bit, 1, implicit-def $cc
+    %25:grx32bit = LHIMux 0
+    %25:grx32bit = LOCHIMux %25, 1, 14, 2, implicit killed $cc
+    J %bb.1
+
+  bb.5.bb35:
+    successors: %bb.6, %bb.7
+
+    TMLMux %25, 1, implicit-def $cc
+    BRC 15, 8, %bb.7, implicit killed $cc
+    J %bb.6
+
+  bb.6.bb37:
+    successors:
+
+
+  bb.7.bb38:
+
+...

@@ -1,0 +1,20 @@
+## Check that we support response files.
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo "--strip-debug %t.o" > %t-response
+# RUN: llvm-objcopy @%t-response %t2.o
+# RUN: llvm-strip @%t-response
+
+# RUN: llvm-readobj -S %t.o | FileCheck %s
+# RUN: cmp %t.o %t2.o
+
+# CHECK-NOT: .debug_foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_foo
+    Type: SHT_PROGBITS

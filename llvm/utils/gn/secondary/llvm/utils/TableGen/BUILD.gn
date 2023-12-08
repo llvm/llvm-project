@@ -1,0 +1,86 @@
+source_set("llvm-min-tblgen-sources") {
+  sources = [
+    "Attributes.cpp",
+    "CodeGenIntrinsics.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "SDNodeProperties.cpp",
+    "TableGen.cpp",
+    "VTEmitter.cpp",
+  ]
+  deps = [ "//llvm/lib/Support" ]
+}
+
+executable("llvm-min-tblgen") {
+  deps = [
+    ":llvm-min-tblgen-sources",
+    "//llvm/lib/TableGen",
+  ]
+}
+
+executable("llvm-tblgen") {
+  deps = [
+    ":llvm-min-tblgen-sources",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/CodeGen:CodeGenTypes",
+    "//llvm/lib/Support",
+    "//llvm/lib/TableGen",
+    "//llvm/utils/TableGen/GlobalISel",
+  ]
+  sources = [
+    "AsmMatcherEmitter.cpp",
+    "AsmWriterEmitter.cpp",
+    "AsmWriterInst.cpp",
+    "CTagsEmitter.cpp",
+    "CallingConvEmitter.cpp",
+    "CodeEmitterGen.cpp",
+    "CodeGenDAGPatterns.cpp",
+    "CodeGenHwModes.cpp",
+    "CodeGenInstAlias.cpp",
+    "CodeGenInstruction.cpp",
+    "CodeGenMapTable.cpp",
+    "CodeGenRegisters.cpp",
+    "CodeGenSchedule.cpp",
+    "CodeGenTarget.cpp",
+    "CompressInstEmitter.cpp",
+    "DAGISelEmitter.cpp",
+    "DAGISelMatcher.cpp",
+    "DAGISelMatcherEmitter.cpp",
+    "DAGISelMatcherGen.cpp",
+    "DAGISelMatcherOpt.cpp",
+    "DFAEmitter.cpp",
+    "DFAPacketizerEmitter.cpp",
+    "DXILEmitter.cpp",
+    "DecoderEmitter.cpp",
+    "DisassemblerEmitter.cpp",
+    "ExegesisEmitter.cpp",
+    "FastISelEmitter.cpp",
+    "GlobalISelEmitter.cpp",
+    "GlobalISelMatchTable.cpp",
+    "GlobalISelCombinerEmitter.cpp",
+    "GlobalISelMatchTableExecutorEmitter.cpp",
+    "InfoByHwMode.cpp",
+    "InstrDocsEmitter.cpp",
+    "InstrInfoEmitter.cpp",
+    "OptEmitter.cpp",
+    "OptParserEmitter.cpp",
+    "OptRSTEmitter.cpp",
+    "PredicateExpander.cpp",
+    "PseudoLoweringEmitter.cpp",
+    "RegisterBankEmitter.cpp",
+    "RegisterInfoEmitter.cpp",
+    "SearchableTableEmitter.cpp",
+    "SubtargetEmitter.cpp",
+    "SubtargetFeatureInfo.cpp",
+    "Types.cpp",
+    "VarLenCodeEmitterGen.cpp",
+    "WebAssemblyDisassemblerEmitter.cpp",
+    "X86DisassemblerTables.cpp",
+    "X86EVEX2VEXTablesEmitter.cpp",
+    "X86FoldTablesEmitter.cpp",
+    "X86MnemonicTables.cpp",
+    "X86ModRMFilters.cpp",
+    "X86RecognizableInstr.cpp",
+  ]
+}

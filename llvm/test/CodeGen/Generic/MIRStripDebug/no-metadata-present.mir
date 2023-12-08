@@ -1,0 +1,13 @@
+# RUN: llc -run-pass=mir-strip-debug -mir-strip-debugify-only=0 -o - %s | FileCheck %s
+
+# CHECK: name: test
+# CHECK: body: |
+# CHECK-NEXT: bb.0:
+# CHECK-EMPTY:
+# CHECK-NEXT: ...
+
+---
+name:            test
+body:             |
+  bb.0:
+...

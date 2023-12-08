@@ -1,0 +1,66 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
+add_clang_library(clangTidyModernizeModule
+  AvoidBindCheck.cpp
+  AvoidCArraysCheck.cpp
+  ConcatNestedNamespacesCheck.cpp
+  DeprecatedHeadersCheck.cpp
+  DeprecatedIosBaseAliasesCheck.cpp
+  IntegralLiteralExpressionMatcher.cpp
+  LoopConvertCheck.cpp
+  LoopConvertUtils.cpp
+  MacroToEnumCheck.cpp
+  MakeSharedCheck.cpp
+  MakeSmartPtrCheck.cpp
+  MakeUniqueCheck.cpp
+  ModernizeTidyModule.cpp
+  PassByValueCheck.cpp
+  RawStringLiteralCheck.cpp
+  RedundantVoidArgCheck.cpp
+  ReplaceAutoPtrCheck.cpp
+  ReplaceDisallowCopyAndAssignMacroCheck.cpp
+  ReplaceRandomShuffleCheck.cpp
+  ReturnBracedInitListCheck.cpp
+  ShrinkToFitCheck.cpp
+  TypeTraitsCheck.cpp
+  UnaryStaticAssertCheck.cpp
+  UseAutoCheck.cpp
+  UseBoolLiteralsCheck.cpp
+  UseConstraintsCheck.cpp
+  UseDefaultMemberInitCheck.cpp
+  UseEmplaceCheck.cpp
+  UseEqualsDefaultCheck.cpp
+  UseEqualsDeleteCheck.cpp
+  UseNodiscardCheck.cpp
+  UseNoexceptCheck.cpp
+  UseNullptrCheck.cpp
+  UseOverrideCheck.cpp
+  UseStartsEndsWithCheck.cpp
+  UseStdNumbersCheck.cpp
+  UseStdPrintCheck.cpp
+  UseTrailingReturnTypeCheck.cpp
+  UseTransparentFunctorsCheck.cpp
+  UseUncaughtExceptionsCheck.cpp
+  UseUsingCheck.cpp
+
+  LINK_LIBS
+  clangTidy
+  clangTidyReadabilityModule
+  clangTidyUtils
+
+  DEPENDS
+  omp_gen
+  ClangDriverOptions
+  )
+
+clang_target_link_libraries(clangTidyModernizeModule
+  PRIVATE
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangLex
+  clangTooling
+  )

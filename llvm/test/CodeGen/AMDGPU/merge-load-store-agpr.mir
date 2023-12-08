@@ -1,0 +1,94 @@
+# RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+
+# GCN-LABEL: name: ds_read_b32_v_v
+# GCN: vreg_64_align2 = DS_READ2_B32
+name: ds_read_b32_v_v
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = DS_READ_B32_gfx9 %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    %2:vgpr_32 = DS_READ_B32_gfx9 %0, 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_read_b32_a_a
+# GCN: areg_64_align2 = DS_READ2_B32
+name: ds_read_b32_a_a
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:agpr_32 = DS_READ_B32_gfx9 %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    %2:agpr_32 = DS_READ_B32_gfx9 %0, 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_read_b32_v_a
+# GCN: vgpr_32 = DS_READ_B32
+# GCN: agpr_32 = DS_READ_B32
+name: ds_read_b32_v_a
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = DS_READ_B32_gfx9 %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    %2:agpr_32 = DS_READ_B32_gfx9 %0, 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_read_b32_a_v
+# GCN: agpr_32 = DS_READ_B32
+# GCN: vgpr_32 = DS_READ_B32
+name: ds_read_b32_a_v
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:agpr_32 = DS_READ_B32_gfx9 %0, 8, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    %2:vgpr_32 = DS_READ_B32_gfx9 %0, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_write_b32_v_v
+# GCN: DS_WRITE2_B32_gfx9 %0, undef %1:vgpr_32, undef %2:vgpr_32
+name: ds_write_b32_v_v
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    DS_WRITE_B32_gfx9 %0, undef %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+    DS_WRITE_B32_gfx9 %0, undef %2:vgpr_32, 8, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_write_b32_a_a
+# GCN: DS_WRITE_B32_gfx9 %0, undef %1:agpr_32
+# GCN: DS_WRITE_B32_gfx9 %0, undef %2:agpr_32
+name: ds_write_b32_a_a
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    DS_WRITE_B32_gfx9 %0, undef %1:agpr_32, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+    DS_WRITE_B32_gfx9 %0, undef %2:agpr_32, 8, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_write_b32_v_a
+# GCN: DS_WRITE_B32_gfx9 %0, undef %1:vgpr_32
+# GCN: DS_WRITE_B32_gfx9 %0, undef %2:agpr_32
+name: ds_write_b32_v_a
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    DS_WRITE_B32_gfx9 %0, undef %1:vgpr_32, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+    DS_WRITE_B32_gfx9 %0, undef %2:agpr_32, 8, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+...
+
+# GCN-LABEL: name: ds_write_b32_a_v
+# GCN: DS_WRITE_B32_gfx9 %0, undef %1:agpr_32
+# GCN: DS_WRITE_B32_gfx9 %0, undef %2:vgpr_32
+name: ds_write_b32_a_v
+body:             |
+  bb.0:
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    DS_WRITE_B32_gfx9 %0, undef %1:agpr_32, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+    DS_WRITE_B32_gfx9 %0, undef %2:vgpr_32, 8, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
+...

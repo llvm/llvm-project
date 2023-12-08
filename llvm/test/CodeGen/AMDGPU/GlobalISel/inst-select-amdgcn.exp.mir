@@ -1,0 +1,21 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+
+---
+name: exp0
+legalized:       true
+regBankSelected: true
+
+# CHECK: name: exp0
+body: |
+  bb.0:
+    liveins: $vgpr0
+    %0:vgpr(s32) = COPY $vgpr0
+
+    ; CHECK: EXP 1, %0, %0, %0, %0, 0, 0, 15, implicit $exec
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp),1, 15, %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), 0, 0
+
+    ; CHECK: EXP_DONE 1, %0, %0, %0, %0, 0, 0, 15, implicit $exec
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 1, 15, %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), %0:vgpr(s32), -1, 0
+
+...

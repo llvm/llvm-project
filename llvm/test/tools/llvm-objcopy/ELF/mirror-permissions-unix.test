@@ -1,0 +1,63 @@
+## Test that permissions for ouput files are mirrored
+## from their input files.
+
+## The Unix version of this test must use umask(1) because
+## llvm-objcopy respects the umask in setting output permissions.
+## Setting the umask to 0 ensures deterministic permissions across
+## test environments.
+# UNSUPPORTED: system-windows
+# REQUIRES: shell
+
+# RUN: touch %t
+# RUN: chmod 0777 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0777
+# RUN: chmod 0666 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0666
+# RUN: chmod 0640 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0640
+
+## Set umask to be permissive of all permissions,
+## only test mirroring of permissions.
+# RUN: umask 0
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: chmod 0777 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0777
+
+# RUN: chmod 0666 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0666
+
+# RUN: chmod 0640 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0640
+
+## Drop S_ISUID/S_ISGID bits.
+# RUN: chmod 6640 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0640
+
+## Don't set the permission of a character special file, otherwise there will
+## be an EPERM error (or worse: root may change the permission).
+# RUN: ls -l /dev/null | cut -f 1 -d ' ' > %tnull.perms
+# RUN: llvm-objcopy %t /dev/null
+# RUN: ls -l /dev/null | cut -f 1 -d ' ' | diff - %tnull.perms
+
+## Ignore umask if the output filename is the same as the input filename.
+# RUN: umask 022
+# RUN: cp %t %t1 && chmod 0777 %t1 && llvm-objcopy %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0777
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64

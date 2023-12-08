@@ -1,0 +1,355 @@
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -objcmt-migrate-ns-macros -mt-migrate-directory %t %s -x objective-c -fobjc-runtime-has-weak -fobjc-arc -triple x86_64-apple-darwin11
+// RUN: c-arcmt-test -mt-migrate-directory %t | arcmt-test -verify-transformed-files %s.result
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c -fobjc-runtime-has-weak -fobjc-arc %s.result
+
+typedef signed char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+typedef long NSInteger;
+typedef long long int64_t;
+
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned long NSUInteger;
+typedef unsigned long long uint64_t;
+
+#define NS_ENUM(_type, _name) enum _name : _type _name; enum _name : _type
+#define NS_OPTIONS(_type, _name) enum _name : _type _name; enum _name : _type
+#define DEPRECATED  __attribute__((deprecated))
+
+typedef NS_ENUM(NSInteger, wibble) {
+  blah,
+  blarg
+};
+
+typedef NS_ENUM(NSUInteger, UITableViewCellStyle) {
+    UIViewAutoresizingNone                 = 0,
+    UIViewAutoresizingFlexibleLeftMargin,
+    UIViewAutoresizingFlexibleWidth,
+    UIViewAutoresizingFlexibleRightMargin,
+    UIViewAutoresizingFlexibleTopMargin,
+    UIViewAutoresizingFlexibleHeight,
+    UIViewAutoresizingFlexibleBottomMargin
+};
+
+typedef NS_ENUM(unsigned int, UIViewAnimationTransition) {
+    UIViewAnimationTransitionNone,
+    UIViewAnimationTransitionFlipFromLeft,
+    UIViewAnimationTransitionFlipFromRight,
+    UIViewAnimationTransitionCurlUp,
+    UIViewAnimationTransitionCurlDown,
+};
+
+typedef NS_OPTIONS(unsigned int, UITableView) {
+    UIViewOne   = 0,
+    UIViewTwo   = 1 << 0,
+    UIViewThree = 1 << 1,
+    UIViewFour  = 1 << 2,
+    UIViewFive  = 1 << 3,
+    UIViewSix   = 1 << 4,
+    UIViewSeven = 1 << 5
+};
+
+typedef NS_OPTIONS(NSUInteger, UI) {
+  UIOne = 0,
+  UITwo = 0x1,
+  UIthree = 0x8,
+  UIFour = 0x100
+};
+
+typedef NS_OPTIONS(unsigned int, UIPOWER2) {
+  UIP2One = 0,
+  UIP2Two = 0x1,
+  UIP2three = 0x8,
+  UIP2Four = 0x100
+};
+
+enum {
+  UNOne,
+  UNTwo
+};
+
+// Should use NS_ENUM even though it is all power of 2.
+typedef NS_ENUM(NSInteger, UIK) {
+  UIKOne = 1,
+  UIKTwo = 2,
+};
+
+typedef NS_ENUM(unsigned int, NSTickMarkPosition) {
+    NSTickMarkBelow = 0,
+    NSTickMarkAbove = 1,
+    NSTickMarkLeft = NSTickMarkAbove,
+    NSTickMarkRight = NSTickMarkBelow
+};
+
+typedef NS_OPTIONS(NSUInteger, UITableStyle) {
+    UIViewNone         = 0x0,
+    UIViewMargin       = 0x1,
+    UIViewWidth        = 0x2,
+    UIViewRightMargin  = 0x3,
+    UIViewBottomMargin = 0xbadbeef
+};
+
+typedef NS_OPTIONS(NSUInteger, UIStyle) {
+    UIView0         = 0,
+    UIView1 = 0XBADBEEF
+};
+
+typedef NS_ENUM(NSUInteger, NSBitmapImageFileType) {
+    NSTIFFFileType,
+    NSBMPFileType,
+    NSGIFFileType,
+    NSJPEGFileType,
+    NSPNGFileType,
+    NSJPEG2000FileType
+};
+
+typedef NS_ENUM(NSUInteger, NSAlertStyle) {
+    NSWarningAlertStyle = 0,
+    NSInformationalAlertStyle = 1,
+    NSCriticalAlertStyle = 2
+};
+
+enum {
+    D_NSTIFFFileType,
+    D_NSBMPFileType,
+    D_NSGIFFileType,
+    D_NSJPEGFileType,
+    D_NSPNGFileType,
+    D_NSJPEG2000FileType
+};
+typedef NSUInteger D_NSBitmapImageFileType DEPRECATED;
+
+typedef enum  {
+    D_NSTickMarkBelow = 0,
+    D_NSTickMarkAbove = 1
+} D_NSTickMarkPosition DEPRECATED;
+
+
+#define NS_ENUM_AVAILABLE(X,Y)
+
+
+typedef NS_OPTIONS(NSUInteger, NSFOptions) {
+    NSFStrongMemory NS_ENUM_AVAILABLE(10_5, 6_0) = (0UL << 0),       
+    NSFOpaqueMemory NS_ENUM_AVAILABLE(10_5, 6_0) = (2UL << 0),
+    NSFMallocMemory NS_ENUM_AVAILABLE(10_5, 6_0) = (3UL << 0),       
+    NSFMachVirtualMemory NS_ENUM_AVAILABLE(10_5, 6_0) = (4UL << 0),
+    NSFWeakMemory NS_ENUM_AVAILABLE(10_8, 6_0) = (5UL << 0),         
+
+    NSFObjectPersonality NS_ENUM_AVAILABLE(10_5, 6_0) = (0UL << 8),         
+    NSFOpaquePersonality NS_ENUM_AVAILABLE(10_5, 6_0) = (1UL << 8),         
+    NSFObjectPointerPersonality NS_ENUM_AVAILABLE(10_5, 6_0) = (2UL << 8),  
+    NSFCStringPersonality NS_ENUM_AVAILABLE(10_5, 6_0) = (3UL << 8),        
+    NSFStructPersonality NS_ENUM_AVAILABLE(10_5, 6_0) = (4UL << 8),         
+    NSFIntegerPersonality NS_ENUM_AVAILABLE(10_5, 6_0) = (5UL << 8),        
+    NSFCopyIn NS_ENUM_AVAILABLE(10_5, 6_0) = (1UL << 16),      
+};
+
+typedef NS_ENUM(unsigned int, UIP) {
+  UIP0One = 0,
+  UIP0Two = 1,
+  UIP0Three = 2,
+  UIP0Four = 10,
+  UIP0Last = 0x100
+};
+
+typedef NS_OPTIONS(unsigned int, UIP_3) {
+  UIPZero = 0x0,
+  UIPOne = 0x1,
+  UIPTwo = 0x2,
+  UIP10 = 0x10,
+  UIPHundred = 0x100
+};
+
+typedef NS_ENUM(unsigned int, UIP4_3) {
+  UIP4Zero = 0x0,
+  UIP4One = 0x1,
+  UIP4Two = 0x2,
+  UIP410 = 0x10,
+  UIP4Hundred = 100
+};
+
+typedef NS_OPTIONS(unsigned int, UIP5_3) {
+  UIP5Zero = 0x0,
+  UIP5Two = 0x2,
+  UIP510 = 0x3,
+  UIP5Hundred = 0x4
+};
+
+typedef NS_ENUM(unsigned int, UIP6_3) {
+  UIP6Zero = 0x0,
+  UIP6One = 0x1,
+  UIP6Two = 0x2,
+  UIP610 = 10,
+  UIP6Hundred = 0x100
+};
+
+typedef NS_ENUM(unsigned int, UIP7_3) {
+  UIP7Zero = 0x0,
+  UIP7One = 1,
+  UIP7Two = 0x2,
+  UIP710 = 10,
+  UIP7Hundred = 100
+};
+
+
+typedef NS_ENUM(unsigned int, UIP8_3) {
+  Random = 0,
+  Random1 = 2,
+  Random2 = 4,
+  Random3 = 0x12345,
+  Random4 = 0x3444444,
+  Random5 = 0xbadbeef,
+  Random6
+};
+
+#define NS_AVAILABLE_MAC(X)  __attribute__((availability(macosx,introduced=X)))
+#define NS_ENUM_AVAILABLE_MAC(X) __attribute__((availability(macosx,introduced=X)))
+
+typedef NS_ENUM(NSInteger, NSModalResponse) {
+    NSModalResponseStop                 = (-1000), // Also used as the default response for sheets
+    NSModalResponseAbort                = (-1001),
+    NSModalResponseContinue             = (-1002), 
+} NS_ENUM_AVAILABLE_MAC(10.9);
+
+typedef NSUInteger FarFarAwayOptions;
+
+typedef NS_OPTIONS(NSUInteger, FarAwayOptions) {
+  FarAway1    = 1 << 1,
+  FarAway2    = 1 << 2
+};
+typedef NS_OPTIONS(NSUInteger, NSWorkspaceLaunchOptions) {
+     NSWorkspaceLaunchAndPrint =                 0x00000002,
+     NSWorkspaceLaunchWithErrorPresentation    = 0x00000040,
+     NSWorkspaceLaunchInhibitingBackgroundOnly = 0x00000080,
+     NSWorkspaceLaunchWithoutAddingToRecents   = 0x00000100,
+     NSWorkspaceLaunchWithoutActivation        = 0x00000200,
+     NSWorkspaceLaunchAsync                    = 0x00010000,
+     NSWorkspaceLaunchAllowingClassicStartup   = 0x00020000,
+     NSWorkspaceLaunchPreferringClassic        = 0x00040000,
+     NSWorkspaceLaunchNewInstance              = 0x00080000,
+     NSWorkspaceLaunchAndHide                  = 0x00100000,
+     NSWorkspaceLaunchAndHideOthers            = 0x00200000,
+     NSWorkspaceLaunchDefault = NSWorkspaceLaunchAsync | 
+     NSWorkspaceLaunchAllowingClassicStartup
+};
+
+typedef NS_OPTIONS(NSUInteger, NSExcludeOptions) {
+    NSExcludeQuickDrawElementsIconCreationOption    = 1 << 1,
+    NSExclude10_4ElementsIconCreationOption         = 1 << 2
+};
+
+typedef NS_OPTIONS(NSUInteger, NSExcludeCreationOption) {
+    NSExcludeQuickDrawElementsCreationOption    = 1 << 1,
+    NSExclude10_4ElementsCreationOption         = 1 << 2
+};
+
+
+typedef NS_OPTIONS(NSUInteger, NSExcludeIconOptions) {
+    NSExcludeQuickDrawElementsIconOption    = 1 << 1,
+    NSExclude10_4ElementsIconOption         = 1 << 2
+};
+
+@interface INTF {
+  NSExcludeIconOptions I1;
+  NSExcludeIconOptions I2;
+}
+@end
+
+enum {
+  FarFarAway1    = 1 << 1,
+  FarFarAway2    = 1 << 2
+};
+
+typedef NS_OPTIONS(NSUInteger, NSWindowOcclusionState) {
+    NSWindowOcclusionStateVisible = 1UL << 1,
+};
+
+typedef NS_ENUM(NSUInteger, NSWindowNumberListOptions) {
+    NSWindowCloseButton,
+    NSWindowMiniaturizeButton,
+    NSWindowZoomButton,
+    NSWindowToolbarButton,
+    NSWindowDocumentIconButton
+};
+
+typedef NS_ENUM(NSUInteger, NSSelectionDirection) {
+    NSDirectSelection = 0,
+    NSSelectingNext,
+    NSSelectingPrevious
+};
+
+// standard window buttons
+
+typedef NS_ENUM(NSUInteger, Thing) {
+   ThingOne,
+   ThingTwo,
+   ThingThree,
+};
+
+typedef NS_ENUM(unsigned int, NumericEnum) {
+    one = 1
+};
+
+typedef NS_ENUM(unsigned int, NumericEnum2) {
+    Two = 2
+};
+
+typedef NS_ENUM(unsigned int, NumericEnum3) {
+    Three = 3
+};
+
+typedef NS_OPTIONS(unsigned int, NumericEnum4) {
+    Four = 4
+};
+
+typedef NS_ENUM(int8_t, MyEnumeratedType)
+{
+  UI8one = 1
+};
+
+
+typedef NS_OPTIONS(uint16_t, UI16) {
+  UI16One = 0,
+  UI16Two = 0x1,
+  UI16three = 0x8,
+  UI16Four = 0x100
+};
+
+typedef NS_ENUM(uint32_t, UI32TableViewCellStyle) {
+    UI32ViewAutoresizingNone                 = 0,
+    UI32ViewAutoresizingFlexibleLeftMargin,
+    UI32ViewAutoresizingFlexibleWidth,
+    UI32ViewAutoresizingFlexibleRightMargin,
+    UI32ViewAutoresizingFlexibleTopMargin,
+    UI32ViewAutoresizingFlexibleHeight,
+    UI32ViewAutoresizingFlexibleBottomMargin
+};
+
+typedef NS_ENUM(uint8_t, UI8Type)
+{
+        UIU8one = 1
+};
+
+typedef NS_ENUM(NSInteger, MyEnum) {zero};
+
+typedef NS_ENUM(NSUInteger, MyEnumNSUInteger) {two};
+
+typedef NS_ENUM(int, MyEnumint) {three, four};
+
+typedef NS_ENUM(unsigned long, MyEnumlonglong) {five};
+
+typedef NS_ENUM(unsigned long long, MyEnumunsignedlonglong) {
+  ll1,
+  ll2= 0xff,
+  ll3,
+  ll4
+};
+
+typedef NS_ENUM(int8_t, MyOneEnum) {int8_one};
+
+typedef NS_ENUM(int16_t, Myint16_tEnum) {
+          int16_t_one,
+          int16_t_two };

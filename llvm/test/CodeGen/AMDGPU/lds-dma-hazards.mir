@@ -1,0 +1,49 @@
+# RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
+
+# GCN-LABEL: name: buffer_load_dword_lds
+# GCN:      $m0 = S_MOV_B32 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_ADDR64
+---
+name: buffer_load_dword_lds
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_ADDR64 $vgpr0_vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec, implicit $m0
+...
+
+# GCN-LABEL: name: buffer_store_lds_dword
+# GCN:      $m0 = S_MOV_B32 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: BUFFER_STORE_LDS_DWORD
+---
+name: buffer_store_lds_dword
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_STORE_LDS_DWORD $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec, implicit $m0
+...
+
+# GCN-LABEL: name: global_load_lds_dword
+# GCN:      $m0 = S_MOV_B32 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: GLOBAL_LOAD_LDS_DWORD
+---
+name: global_load_lds_dword
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    GLOBAL_LOAD_LDS_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $m0
+...
+
+# GCN-LABEL: name: scratch_load_lds_dword
+# GCN:      $m0 = S_MOV_B32 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: SCRATCH_LOAD_LDS_DWORD
+---
+name: scratch_load_lds_dword
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    SCRATCH_LOAD_LDS_DWORD $vgpr2, 0, 0, implicit $exec, implicit $m0
+...

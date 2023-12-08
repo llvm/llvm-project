@@ -1,0 +1,24 @@
+; RUN: llvm-profdata show -sample -detailed-summary %S/Inputs/sample-profile.proftext | FileCheck %s
+
+; CHECK: Total functions: 3
+; CHECK-NEXT: Maximum function count: 1437
+; CHECK-NEXT: Maximum block count: 2080
+; CHECK-NEXT: Total number of blocks: 11
+; CHECK-NEXT: Total count: 12943
+; CHECK-NEXT: Detailed summary:
+; CHECK-NEXT: 1 blocks with count >= 2080 account for 1 percentage of the total counts.
+; CHECK-NEXT: 1 blocks with count >= 2080 account for 10 percentage of the total counts.
+; CHECK-NEXT: 2 blocks with count >= 2064 account for 20 percentage of the total counts.
+; CHECK-NEXT: 2 blocks with count >= 2064 account for 30 percentage of the total counts.
+; CHECK-NEXT: 3 blocks with count >= 2000 account for 40 percentage of the total counts.
+; CHECK-NEXT: 4 blocks with count >= 1437 account for 50 percentage of the total counts.
+; CHECK-NEXT: 6 blocks with count >= 1075 account for 60 percentage of the total counts.
+; CHECK-NEXT: 6 blocks with count >= 1075 account for 70 percentage of the total counts.
+; CHECK-NEXT: 7 blocks with count >= 1000 account for 80 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 90 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 95 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 99 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 99.9 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 99.99 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 99.999 percentage of the total counts.
+; CHECK-NEXT: 11 blocks with count >= 534 account for 99.9999 percentage of the total counts.

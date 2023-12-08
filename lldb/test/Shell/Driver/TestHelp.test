@@ -1,0 +1,65 @@
+UNSUPPORTED: lldb-repro
+
+RUN: %lldb --help | FileCheck %s
+RUN: cat %S/../../../docs/man/lldb.rst | FileCheck %s
+
+CHECK: ATTACHING
+CHECK: --attach-name
+CHECK: --attach-pid
+CHECK: -n <value>
+CHECK: -p <value>
+CHECK: --wait-for
+CHECK: -w
+
+CHECK: COMMANDS
+CHECK: --batch
+CHECK: -b
+CHECK: -K <value>
+CHECK: -k <value>
+CHECK: --local-lldbinit
+CHECK: --no-lldbinit
+CHECK: --one-line-before-file
+CHECK: --one-line-on-crash
+CHECK: --one-line
+CHECK: -O
+CHECK: -o
+CHECK: -Q
+CHECK: --source-before-file
+CHECK: --source-on-crash
+CHECK: --source-quietly
+CHECK: --source
+CHECK: -S
+CHECK: -s
+CHECK: -x
+
+CHECK: OPTIONS
+CHECK: --arch
+CHECK: -a
+CHECK: --core
+CHECK: -c
+CHECK: --debug
+CHECK: -d
+CHECK: --editor
+CHECK: -e
+CHECK: --file
+CHECK: -f
+CHECK: --help
+CHECK: -h
+CHECK: --no-use-colors
+CHECK: --version
+CHECK: -v
+CHECK: -X
+
+CHECK: REPL
+CHECK: -r
+CHECK: --repl-language
+CHECK: --repl
+CHECK: -R
+CHECK: -r
+
+CHECK: SCRIPTING
+CHECK: -l
+CHECK: --print-script-interpreter-info
+CHECK: --python-path
+CHECK: -P
+CHECK: --script-language

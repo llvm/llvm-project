@@ -1,0 +1,79 @@
+## Test that the -x alias can be used flexibly. Create a baseline and ensure
+## all other combinations are identical.
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readelf --file-header --hex-dump=.shstrtab %t > %t.hexdump.out
+# RUN: llvm-readelf -h --hex-dump .shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -h -x .shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -h -x.shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -hx .shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -hx.shstrtab %t | cmp %t.hexdump.out -
+
+## A basic correctness check to verify that the .shstrtab section has index 2.
+# RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=ELF-SEC
+# ELF-SEC: [ 2] .shstrtab
+
+## Test we dump the section only once when the option is specified multiple times for the same section.
+# RUN: llvm-readobj -x 2 -x 2 -x .shstrtab -x .shstrtab %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ELF
+## Test warnings reported when an unknown section name and index are specified.
+# RUN: llvm-readobj -x 2 -x .shstrtab -x 3 -x not_exist %t 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t --check-prefixes=ELF-WARN,ELF
+
+# ELF-WARN: warning: '[[FILE]]': could not find section 'not_exist'
+# ELF-WARN: warning: '[[FILE]]': could not find section 3
+# ELF:      Hex dump of section '.shstrtab':
+# ELF-NEXT: 0x00000000 002e7368 73747274 6162002e 73747274 ..shstrtab..strt
+# ELF-NEXT: 0x00000010 616200                              ab.
+# ELF-NOT:  {{.}}
+
+## This test shows that we include the tool name in an error/warning message.
+# RUN: llvm-readelf -x 10 %t 2>&1 | FileCheck --check-prefix=WARN %s -DTOOL=readelf
+# RUN: llvm-readobj -x 10 %t 2>&1 | FileCheck --check-prefix=WARN %s -DTOOL=readobj
+
+# WARN: llvm-[[TOOL]]{{(\.exe)?}}: warning: '{{.*}}': could not find section 10
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+
+## Test that llvm-readelf emits the correct number of spaces between the hex data
+## and its ascii representation.
+
+## a) When the hex data doesn't fill a column other than the last one.
+# RUN: yaml2obj --docnum=2 -DSIZE=18 %s -o %t2.out1
+# RUN: llvm-readelf --hex-dump=.sec %t2.out1 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES1
+
+#      SPACES1:Hex dump of section '.sec':
+# SPACES1-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
+# SPACES1-NEXT:0x00000010 0000                                ..
+
+## b) When the hex data doesn't fill the last column.
+# RUN: yaml2obj --docnum=2 -DSIZE=30 %s -o %t2.out2
+# RUN: llvm-readelf --hex-dump=.sec %t2.out2 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES2
+
+#      SPACES2:Hex dump of section '.sec':
+# SPACES2-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
+# SPACES2-NEXT:0x00000010 00000000 00000000 00000000 0000     ..............
+
+## c) When the hex data fills a column.
+# RUN: yaml2obj --docnum=2 -DSIZE=28 %s -o %t2.out3
+# RUN: llvm-readelf --hex-dump=.sec %t2.out3 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SPACES3
+
+#      SPACES3:Hex dump of section '.sec':
+# SPACES3-NEXT:0x00000000 00000000 00000000 00000000 00000000 ................
+# SPACES3-NEXT:0x00000010 00000000 00000000 00000000          ............
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .sec
+    Type: SHT_PROGBITS
+    Size: [[SIZE]]

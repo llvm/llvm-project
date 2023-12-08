@@ -1,0 +1,63 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+--- |
+  define amdgpu_ps <4 x float> @exp_done_waitcnt(<4 x i32> inreg, <4 x
+  i32> inreg, i32 inreg %w, float %v) #0 {
+    %a = load volatile float, ptr addrspace(1) undef
+    %b = load volatile float, ptr addrspace(1) undef
+    %c = load volatile float, ptr addrspace(1) undef
+    %d = load volatile float, ptr addrspace(1) undef
+    call void @llvm.amdgcn.exp.f32(i32 15, i32 1, float %a, float %b, float %c, float %d, i1 true, i1 false)
+    ret <4 x float> <float 5.000000e-01, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>
+  }
+
+  declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
+
+  attributes #0 = { nounwind }
+
+...
+---
+
+# CHECK-LABEL: name: exp_done_waitcnt{{$}}
+# CHECK: EXP_DONE
+# CHECK-NEXT: S_WAITCNT 3855
+# CHECK: $vgpr0 = V_MOV_B32
+# CHECK: $vgpr1 = V_MOV_B32
+# CHECK: $vgpr2 = V_MOV_B32
+# CHECK: $vgpr3 = V_MOV_B32
+name:            exp_done_waitcnt
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.2):
+    $sgpr3 = S_MOV_B32 61440
+    $sgpr2 = S_MOV_B32 -1
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    $vgpr3 = BUFFER_LOAD_DWORD_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    EXP_DONE 0, killed $vgpr0, killed $vgpr1, killed $vgpr2, killed $vgpr3, -1, -1, 15, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 1056964608, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 1065353216, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 1073741824, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 1082130432, implicit $exec
+    SI_RETURN_TO_EPILOG killed $vgpr0, killed $vgpr1, killed $vgpr2, killed $vgpr3
+
+...

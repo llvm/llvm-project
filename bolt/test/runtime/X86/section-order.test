@@ -1,0 +1,10 @@
+REQUIRES: system-linux,bolt-runtime
+
+RUN: %clang %p/Inputs/basic-instrumentation.s -Wl,-q -o %t.exe
+RUN: llvm-bolt %t.exe -o %t --instrument
+RUN: llvm-readelf --section-headers %t | FileCheck %s
+
+## Verify that llvm-bolt outputs new sections in expected order.
+CHECK: .text.bolt.extra.1
+CHECK: .rodata.bolt.extra.1
+CHECK: .data.bolt.extra.1

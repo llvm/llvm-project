@@ -1,0 +1,47 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s --check-prefix COFF-I386
+
+# COFF-I386: Characteristics: 0
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_LINE_NUMS_STRIPPED, IMAGE_FILE_32BIT_MACHINE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     5589E583E4F0E800000000B800000000C9C39090
+    Relocations:     
+      - VirtualAddress:  7
+        SymbolName:      ___main
+        Type:            IMAGE_REL_I386_REL32
+symbols:
+  - Name:            .file
+    Value:           0
+    SectionNumber:   65534
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_FILE
+    File:            'file'
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          18
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            ___main
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+    WeakExternal:    
+      TagIndex:        0
+      Characteristics: 0
+...

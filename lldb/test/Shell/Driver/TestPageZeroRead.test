@@ -1,0 +1,6 @@
+# REQUIRES: system-darwin
+# Ensure that the read from memory command doesn't try and read from page zero.
+# RUN: %clang_host %p/Inputs/hello.c -g -o a.out
+# RUN: %lldb -b a.out -o 'settings set interpreter.stop-command-source-on-error false' -s %s 2>&1 | FileCheck %s
+x 0
+# CHECK: error: error reading data from section __PAGEZERO

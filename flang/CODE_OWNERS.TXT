@@ -1,0 +1,18 @@
+This file is a list of the people responsible for ensuring that patches for a
+particular part of Flang are reviewed, either by themself or by someone else.
+They are also the gatekeepers for their part of Flang, with the final word on
+what goes in or not.
+
+The list is sorted by surname and formatted to allow easy grepping and
+beautification by scripts. The fields are: name (N), email (E), web-address
+(W), PGP key ID and fingerprint (P), description (D), snail-mail address
+(S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
+(D) fields.
+
+N: Steve Scalpone
+E: sscalpone@nvidia.com
+D: Anything not covered by others
+
+N: Andrzej Warzynski
+E: andrzej.warzynski@arm.com
+D: Driver

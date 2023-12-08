@@ -1,0 +1,11 @@
+# RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+---
+name: empty_stack_ptr_offset_reg
+machineFunctionInfo:
+  stackPtrOffsetReg:  ''
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: expected a named register
+body:             |
+  bb.0:
+
+    S_ENDPGM
+...

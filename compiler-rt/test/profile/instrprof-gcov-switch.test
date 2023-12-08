@@ -1,0 +1,16 @@
+RUN: mkdir -p %t.d
+RUN: cd %t.d
+
+RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-switch1.c -dumpdir ./
+RUN: test -f instrprof-gcov-switch1.gcno
+RUN: rm -f instrprof-gcov-switch1.gcda
+RUN: %run %t
+RUN: llvm-cov gcov instrprof-gcov-switch1.gcda
+RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-switch1.c.gcov %S/Inputs/instrprof-gcov-switch1.c.gcov
+
+RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-switch2.c -dumpdir ./
+RUN: test -f instrprof-gcov-switch2.gcno
+RUN: rm -f instrprof-gcov-switch2.gcda
+RUN: %run %t
+RUN: llvm-cov gcov instrprof-gcov-switch2.gcda
+RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-switch2.c.gcov %S/Inputs/instrprof-gcov-switch2.c.gcov

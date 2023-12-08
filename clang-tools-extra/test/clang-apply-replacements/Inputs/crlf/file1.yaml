@@ -1,0 +1,14 @@
+---
+MainSourceFile:      source1.cpp
+Diagnostics:
+  - DiagnosticName:  test-crlf
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/crlf.cpp
+      FileOffset: 79
+      Replacements:
+        - FilePath:        $(path)/crlf.cpp
+          Offset:          79
+          Length:          1
+          ReplacementText: nullptr
+...

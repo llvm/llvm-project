@@ -1,0 +1,25 @@
+; RUN: llvm-xray fdr-dump --verify %S/Inputs/fdr-log-arg1-version-3.xray \
+; RUN:     | FileCheck %s
+
+; CHECK:      [New Block]
+; CHECK-NEXT: Preamble:
+; CHECK-NEXT: <Thread ID: 2631>
+; CHECK-NEXT: <Wall Time: seconds = 599605.032403>
+; CHECK-NEXT: <PID: 2631>
+; CHECK-EMPTY:
+; CHECK-NEXT: Body:
+; CHECK-NEXT:  <CPU: id = 6, tsc = 2034042117104344>
+; CHECK-NEXT:  <CPU: id = 6, tsc = 2034042117104344>
+; CHECK-NEXT:  <TSC Wrap: base = 2034042117104344>
+; CHECK-EMPTY:
+; CHECK-NEXT: -  <Function Enter: #3 delta = +0>
+; CHECK-NEXT: -  <Function Exit: #3 delta = +94744>
+; CHECK-NEXT: -  <Function Enter: #2 delta = +1028487290>
+; CHECK-NEXT: -  <Function Exit: #2 delta = +75822>
+; CHECK-EMPTY:
+; CHECK-NEXT: Metadata: <TSC Wrap: base = 2034049739853430>
+; CHECK-EMPTY:
+; CHECK-NEXT: -  <Function Enter: #1 delta = +0>
+; CHECK-NEXT:  : <Call Argument: data = 67 (hex = 0x43)>
+; CHECK-NEXT: -  <Function Exit: #1 delta = +24724>
+

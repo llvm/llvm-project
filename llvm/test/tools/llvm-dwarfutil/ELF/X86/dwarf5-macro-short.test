@@ -1,0 +1,219 @@
+## This test checks DWARFv5 DW_MACRO_start_file,
+## DW_MACRO_end_file, DW_MACRO_define, DW_MACRO_undef,
+## DW_MACRO_define_strp, DW_MACRO_undef_strp,
+## DW_MACRO_define_strx, DW_MACRO_undef_strx attributes.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfutil %t.o %t1 2>&1 | FileCheck --check-prefix=WARN %s
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck --check-prefix=VERIFY %s
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --linker llvm %t.o %t1 2>&1 | FileCheck --check-prefix=WARN %s
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck --check-prefix=VERIFY %s
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# WARN: warning: DW_MACRO_define_strx unsupported yet. Convert to DW_MACRO_define_strp.
+# WARN: warning: DW_MACRO_undef_strx unsupported yet. Convert to DW_MACRO_undef_strp.
+# WARN: warning: DW_MACRO_import and DW_MACRO_import_sup are unsupported yet. remove.
+
+# VERIFY: No errors.
+
+##  Content:        "05000003000201004400020144000503000000000604000000000b03000c040007000000000400":
+#
+##  .short  5    # Macro information version
+##  .byte   0    # Flags: 32 bit
+##  .byte   3    # DW_MACRO_start_file
+##  .byte   0    # Line Number
+##  .byte   2    # File Number
+##  .byte   1    # DW_MACRO_define
+##  .byte   0    # Line Number
+##  .asciz  "D"  # Macro String
+##  .byte   2    # DW_MACRO_undef
+##  .byte   1    # Line Number
+##  .asciz  "D"  # Macro String
+##  .byte   5    # DW_MACRO_define_strp
+##  .byte   3    # Line Number
+##  .int  00000000  # Macro String
+##  .byte   6    # DW_MACRO_undef_strp
+##  .byte   4    # Line Number
+##  .int  00000000  # Macro String
+##  .byte   11   # DW_MACRO_define_strx
+##  .byte   3    # Line Number
+##  .byte   00   # Macro String
+##  .byte   12   # DW_MACRO_undef_strx
+##  .byte   4    # Line Number
+##  .byte   00   # Macro String
+##  .byte   7    # DW_MACRO_import
+##  .int    0    # Offset
+##  .byte   4    # DW_MACRO_end_file
+##  .byte   0    # End Of Macro List Mark
+
+#CHECK: .debug_info contents:
+#CHECK:  DW_TAG_compile_unit
+#CHECK:    DW_AT_name        ("CU1")
+#CHECK:    DW_AT_macros  (0x00000000)
+#CHECK: .debug_macro contents:
+#CHECK: 0x00000000:
+#CHECK: DW_MACRO_start_file - lineno: 0 filenum: 2
+#CHECK-NEXT: DW_MACRO_define - lineno: 0 macro: D
+#CHECK-NEXT: DW_MACRO_undef - lineno: 1 macro: D
+#CHECK-NEXT:   DW_MACRO_define_strp - lineno: 3 macro: aa
+#CHECK-NEXT:   DW_MACRO_undef_strp - lineno: 4 macro: aa
+#CHECK-NEXT:   DW_MACRO_define_strp - lineno: 3 macro: aa
+#CHECK-NEXT:   DW_MACRO_undef_strp - lineno: 4 macro: aa
+#CHECK-NEXT: DW_MACRO_end_file
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    Size:            0x1b
+  - Name:            .debug_macro
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "05000003000201004400020144000503000000000604000000000b03000c040007000000000400"
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "080000000500000000000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_macros
+            Form:      DW_FORM_sec_offset
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version: 5
+      UnitType:   DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x1b
+            - Value:  0x0
+            - Value:  0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: class1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000056
+            - CStr: member1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x0000005c
+            - CStr: member2
+        - AbbrCode: 0
+        - AbbrCode: 7
+          Values:
+            - CStr: int
+        - AbbrCode: 7
+          Values:
+            - CStr: char
+        - AbbrCode: 7
+          Values:
+            - CStr: float
+        - AbbrCode: 8
+          Values:
+            - Value:  0x00000033
+        - AbbrCode: 9
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x00000056
+        - AbbrCode: 10
+          Values:
+            - CStr: foo1
+            - Value:  0x1000
+            - Value:  0x10
+            - Value:  0x00000033
+        - AbbrCode: 0
+        - AbbrCode: 0
+  debug_str:
+    - 'aa'
+...

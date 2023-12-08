@@ -1,0 +1,16 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t --mattr=help 2>&1 | FileCheck %s
+# RUN: llvm-objdump -d %t --mcpu=help 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
+
+# CHECK: Available CPUs for this target:
+# CHECK: Available features for this target:
+## To check we still disassemble the file:
+# CHECK: file format elf64-x86-64
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64

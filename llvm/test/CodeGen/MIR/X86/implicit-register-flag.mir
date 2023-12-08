@@ -1,0 +1,68 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the 'implicit' and 'implicit-def'
+# register flags correctly.
+
+--- |
+
+  define i32 @foo(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+  define i1 @implicit_subregister1() {
+  entry:
+    ret i1 false
+  }
+
+  define i16 @implicit_subregister2() {
+  entry:
+    ret i16 0
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    ; CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
+    ; CHECK-NEXT: JCC_1 %bb.2, 15, implicit $eflags
+    CMP32ri8 $edi, 10, implicit-def $eflags
+    JCC_1 %bb.2, 15, implicit $eflags
+
+  bb.1.less:
+    ; CHECK: $eax = MOV32r0 implicit-def $eflags
+    $eax = MOV32r0 implicit-def $eflags
+    RET64 $eax
+
+  bb.2.exit:
+    $eax = COPY $edi
+    RET64 $eax
+...
+---
+name:            implicit_subregister1
+body: |
+  bb.0.entry:
+  ; Verify that the implicit register verifier won't report an error on implicit
+  ; subregisters.
+  ; CHECK-LABEL: name: implicit_subregister1
+  ; CHECK: dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
+    RET64 killed $al
+...
+---
+name:            implicit_subregister2
+body: |
+  bb.0.entry:
+  ; CHECK-LABEL: name: implicit_subregister2
+  ; CHECK: dead $r15 = XOR64rr undef $r15, undef $r15, implicit-def dead $eflags, implicit-def $r15w
+    dead $r15 = XOR64rr undef $r15, undef $r15, implicit-def dead $eflags, implicit-def $r15w
+    RET64 killed $r15w
+...

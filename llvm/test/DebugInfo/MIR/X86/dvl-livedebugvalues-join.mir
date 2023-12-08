@@ -1,0 +1,160 @@
+# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
+#
+# Test a series of joins, where:
+#  * The locations agree, although registers have changed,
+#  * A register down one of the predecessors has been def'd,
+#  * The register operands to DBG_VALUE_LIST have been swapped,
+#  * A spurious additional operand has been added to one path,
+#  * The expressions are not the same (plus -> minus).
+#
+# Each join block below checks for one DBG_VALUE_LIST: either we re-state the var
+# location in a block for the next test, or it's created as a live-in and we
+# use that for the next test. Two DBG_VALUE_LISTs in a block would represent
+# a live-in that we didn't expect, and a test failure.
+#
+# Each conditional block should have at least one, possibly two.
+#
+# CHECK: ![[VAR:[0-9]+]] = !DILocalVariable(name: "c"
+# 
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-LABEL: bb.1:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-LABEL: bb.2:
+# CHECK:       DBG_VALUE_LIST ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0,
+# CHECK-SAME:                        DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi
+# CHECK-LABEL: bb.3:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-LABEL: bb.4:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-SAME:        $rdi, $rsi
+# CHECK-LABEL: bb.5:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-SAME:        $rsi, $rdi
+# CHECK-LABEL: bb.6:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-LABEL: bb.7:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-SAME:        $rdi, $rsi, $rax
+# CHECK-LABEL: bb.8:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-LABEL: bb.9:
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK:       DBG_VALUE_LIST ![[VAR]],
+# CHECK-SAME:        DW_OP_minus
+# CHECK-LABEL: bb.10:
+--- |
+  ; ModuleID = 'test.cpp'
+  source_filename = "test.cpp"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  ; Function Attrs: norecurse nounwind readnone uwtable
+  define dso_local i32 @_Z3fooii(i32 %a, i32 %b) local_unnamed_addr !dbg !7 {
+  entry:
+    ret i32 0, !dbg !17
+  }
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5}
+  !llvm.ident = !{!6}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{!"clang version 11.0.0"}
+  !7 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooii", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{!10, !10, !10}
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !{!12, !13, !14}
+  !12 = !DILocalVariable(name: "a", arg: 1, scope: !7, file: !1, line: 2, type: !10)
+  !13 = !DILocalVariable(name: "b", arg: 2, scope: !7, file: !1, line: 2, type: !10)
+  !14 = !DILocalVariable(name: "c", scope: !7, file: !1, line: 3, type: !10)
+  !15 = !DILocation(line: 0, scope: !7)
+  !16 = !DILocation(line: 4, column: 12, scope: !7)
+  !17 = !DILocation(line: 4, column: 3, scope: !7)
+
+...
+---
+name:            _Z3fooii
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+  
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, debug-location !15
+    CMP64ri8 $rdi, 0, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+
+  bb.1:
+    liveins: $rdi, $rsi
+    $rdi = MOV64ri 0
+    $rsi = MOV64ri 0
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, debug-location !15
+
+  bb.2:
+    liveins: $rdi, $rsi
+    ; Should be a live-in loc here,
+    CMP64ri8 $rdi, 0, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+    
+  bb.3:
+    liveins: $rdi, $rsi
+    $rsi = MOV64ri 0
+
+  bb.4:
+    liveins: $rdi, $rsi
+    ; Should _not_ be a live-in loc here.
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, debug-location !15
+    CMP64ri8 $rdi, 0, implicit-def $eflags
+    JCC_1 %bb.6, 4, implicit $eflags
+
+  bb.5:
+    liveins: $rdi, $rsi
+    ; Flip some args,
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rsi, $rdi, debug-location !15
+
+  bb.6:
+    liveins: $rdi, $rsi
+    ; Should _not_ be a live-in loc here.
+    $rax = MOV64ri 0
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, debug-location !15
+    CMP64ri8 $rdi, 0, implicit-def $eflags
+    JCC_1 %bb.8, 4, implicit $eflags
+
+  bb.7:
+    liveins: $rdi, $rsi
+    ; Add an extra, spurious, unused argument
+    $rax = MOV64ri 1
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, $rax, debug-location !15
+
+  bb.8:
+    liveins: $rdi, $rsi
+    ; Should _not_ be a live-in loc here.
+    $rax = MOV64ri 0
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, debug-location !15
+    CMP64ri8 $rdi, 0, implicit-def $eflags
+    JCC_1 %bb.10, 4, implicit $eflags
+
+  bb.9:
+    liveins: $rdi, $rsi
+    ; Replace add with sub in the expr
+    $rax = MOV64ri 1
+    DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus), $rdi, $rsi, debug-location !15
+
+  bb.10:
+    liveins: $rdi, $rsi
+    ; Should _not_ be a live-in loc here.
+    RET64
+
+...
+

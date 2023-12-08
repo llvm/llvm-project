@@ -1,0 +1,6 @@
+# REQUIRES: llvm-driver, lld
+
+# RUN: %llvm ld.lld --help | FileCheck %s
+# RUN: %llvm lld -flavor ld.lld --help | FileCheck %s
+
+# CHECK: supported targets: elf

@@ -1,0 +1,42 @@
+This file is a partial list of people who have contributed to Polly.
+If you have contributed a patch or made some other contribution to
+Polly, please submit a patch to this file to add yourself, and it will be
+done!
+
+The list is sorted by surname and formatted to allow easy grepping and
+beautification by scripts.  The fields are: name (N), email (E), web-address
+(W), PGP key ID and fingerprint (P), description (D), and snail-mail address
+(S).
+
+N: Raghesh Aloor
+E: raghesh.a@gmail.com
+D: OpenMP code generation
+D: Google Summer of Code student 2011
+
+N: Tobias Grosser
+E: tobias@grosser.es
+W: http://www.grosser.es
+D: Co-founder, design of the overall architecture
+
+N: Yabin Hu
+E: yabin.hwu@gmail.com
+D: GPGPU code generation
+D: Google Summer of Code student 2012, 2014
+
+N: Andreas Simbuerger
+E: simbuerg@fim.uni-passau.de
+W: http://www.infosun.fim.uni-passau.de/cl/staff/simbuerger/
+D: Profiling infrastructure
+
+N: Hongbin Zheng
+E: etherzhhb@gmail.com
+D: Co-founder
+D: scop detection, automake/cmake infrastructure, scopinfo, scoppasses, ...
+D: Google Summer of Code student 2010
+
+N: Johannes Doerfert
+E: doerfert@cs.uni-saarland.de
+E: jdoerfert@codeaurora.org
+W: http://www.cdl.uni-saarland.de/people/doerfert/
+P: http://www.cdl.uni-saarland.de/people/doerfert/JohannesDoerfert.asc
+D: reductions, general infrastructure

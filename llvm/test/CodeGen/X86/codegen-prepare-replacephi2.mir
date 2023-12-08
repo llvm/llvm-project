@@ -1,0 +1,66 @@
+# RUN: llc -run-pass=codegenprepare -o - %s | FileCheck %s
+
+# REQUIRES: default_triple
+
+# This testcase without the accompanying fix triggers the assert
+# "Replacement PHI node is already replaced."
+
+--- |
+
+  define void @f1() {
+  entry:
+    %arrayidx = getelementptr inbounds [2 x i16], ptr undef, i16 0, i16 2
+    br label %for.cond
+
+  for.cond.loopexit:
+    br label %for.cond
+
+  for.cond:
+    %0 = phi ptr [ %arrayidx, %entry ], [ %10, %for.cond.loopexit ]
+    %1 = phi ptr [ %arrayidx, %entry ], [ %12, %for.cond.loopexit ]
+    br label %for.body
+
+  for.body:
+    %2 = phi ptr [ %1, %for.cond ], [ %12, %cleanup ]
+    %3 = phi ptr [ %0, %for.cond ], [ %11, %cleanup ]
+    %4 = phi ptr [ %0, %for.cond ], [ %10, %cleanup ]
+    br i1 undef, label %for.cond2.preheader, label %if.then
+
+  for.cond2.preheader:
+    br label %for.cond2
+
+  if.then:
+    store i32 undef, ptr %2, align 1
+    br label %cleanup
+
+  for.cond2:
+    %5 = phi ptr [ %8, %for.inc ], [ %4, %for.cond2.preheader ]
+    %6 = phi ptr [ %9, %for.inc ], [ %3, %for.cond2.preheader ]
+    %7 = phi ptr [ %9, %for.inc ], [ %2, %for.cond2.preheader ]
+    br i1 undef, label %for.inc, label %if.then5
+
+  if.then5:
+    br i1 icmp ne (i16 2, i16 0), label %cleanup.loopexit, label %if.end
+
+  if.end:
+    br label %for.inc
+
+  for.inc:
+    %8 = phi ptr [ %5, %if.end ], [ undef, %for.cond2 ]
+    %9 = phi ptr [ %6, %if.end ], [ undef, %for.cond2 ]
+    br label %for.cond2
+
+  cleanup.loopexit:
+    br label %cleanup
+
+  cleanup:
+    %10 = phi ptr [ %4, %if.then ], [ %5, %cleanup.loopexit ]
+    %11 = phi ptr [ %3, %if.then ], [ %6, %cleanup.loopexit ]
+    %12 = phi ptr [ %2, %if.then ], [ %7, %cleanup.loopexit ]
+    br i1 true, label %for.cond.loopexit, label %for.body
+  }
+
+...
+
+# A check to verify that something got through.
+# CHECK-LABEL: entry:

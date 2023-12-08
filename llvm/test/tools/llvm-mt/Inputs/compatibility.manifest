@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <application>
+    <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+      <supportedOS Id="FooOS"/>
+      <supportedOS Id="BarOS"/>
+    </compatibility>
+  </application>
+</assembly>

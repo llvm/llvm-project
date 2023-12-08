@@ -1,0 +1,136 @@
+# RUN: llc -emit-call-site-info -mtriple aarch64-linux-gnu -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+#
+# Based on the following C reproducer:
+#
+# #include <stdint.h>
+#
+# extern void call1(int64_t);
+# extern void call2(int64_t);
+# extern void call3(int64_t);
+# extern void call4(int64_t);
+#
+# void caller() {
+#   call1(UINT64_C(1) << 0);
+#   call2(UINT64_C(1) << 16);
+#   call3(UINT64_C(1) << 32);
+#   call4(UINT64_C(1) << 48);
+# }
+#
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "call1"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_lit1)
+# CHECK-EMPTY:
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "call2"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_constu 0x10000)
+# CHECK-EMPTY:
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "call3"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_constu 0x100000000)
+# CHECK-EMPTY:
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "call4"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_constu 0x1000000000000)
+#
+--- |
+  ; ModuleID = '1.c'
+  source_filename = "1.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64"
+
+  ; Function Attrs: nounwind
+  define dso_local void @caller() local_unnamed_addr #0 !dbg !15 {
+  entry:
+    tail call void @call1(i64 1), !dbg !18
+    tail call void @call2(i64 65536), !dbg !19
+    tail call void @call3(i64 4294967296), !dbg !20
+    tail call void @call4(i64 281474976710656), !dbg !21
+    ret void, !dbg !22
+  }
+
+  declare !dbg !4 dso_local void @call1(i64) local_unnamed_addr
+
+  declare !dbg !8 dso_local void @call2(i64) local_unnamed_addr
+
+  declare !dbg !9 dso_local void @call3(i64) local_unnamed_addr
+
+  declare !dbg !10 dso_local void @call4(i64) local_unnamed_addr
+
+  attributes #0 = { nounwind "frame-pointer"="all" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!11, !12, !13}
+  !llvm.ident = !{!14}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "1.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{!4, !8, !9, !10}
+  !4 = !DISubprogram(name: "call1", scope: !1, file: !1, line: 3, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7}
+  !7 = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)
+  !8 = !DISubprogram(name: "call2", scope: !1, file: !1, line: 4, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !9 = !DISubprogram(name: "call3", scope: !1, file: !1, line: 5, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !10 = !DISubprogram(name: "call4", scope: !1, file: !1, line: 6, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !11 = !{i32 2, !"Dwarf Version", i32 4}
+  !12 = !{i32 2, !"Debug Info Version", i32 3}
+  !13 = !{i32 1, !"wchar_size", i32 4}
+  !14 = !{!"clang version 10.0.0"}
+  !15 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 8, type: !16, scopeLine: 8, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !16 = !DISubroutineType(types: !17)
+  !17 = !{null}
+  !18 = !DILocation(line: 9, column: 7, scope: !15)
+  !19 = !DILocation(line: 10, column: 7, scope: !15)
+  !20 = !DILocation(line: 11, column: 7, scope: !15)
+  !21 = !DILocation(line: 12, column: 7, scope: !15)
+  !22 = !DILocation(line: 13, column: 4, scope: !15)
+
+...
+---
+name:            caller
+alignment:       4
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 6, fwdArgRegs:
+      - { arg: 0, reg: '$x0' } }
+  - { bb: 0, offset: 8, fwdArgRegs:
+      - { arg: 0, reg: '$x0' } }
+  - { bb: 0, offset: 10, fwdArgRegs:
+      - { arg: 0, reg: '$x0' } }
+  - { bb: 0, offset: 13, fwdArgRegs:
+      - { arg: 0, reg: '$x0' } }
+body:             |
+  bb.0.entry:
+    liveins: $lr
+
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !18
+    frame-setup CFI_INSTRUCTION offset $w29, -16, debug-location !18
+    dead $w0 = MOVZWi 1, 0, implicit-def $x0, debug-location !18
+    BL @call1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !18
+    dead $w0 = MOVZWi 1, 16, implicit-def $x0, debug-location !19
+    BL @call2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !19
+    $x0 = MOVZXi 1, 32, debug-location !20
+    BL @call3, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !20
+    $x0 = MOVZXi 1, 48, debug-location !21
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !21 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    TCRETURNdi @call4, 0, csr_aarch64_aapcs, implicit $sp, implicit killed $x0, debug-location !21
+
+...

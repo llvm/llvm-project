@@ -1,0 +1,12 @@
+import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
+
+config("terminfo_config") {
+  visibility = [ ":terminfo" ]
+  libs = [ "ncurses" ]
+}
+
+group("terminfo") {
+  if (llvm_enable_terminfo) {
+    public_configs = [ ":terminfo_config" ]
+  }
+}

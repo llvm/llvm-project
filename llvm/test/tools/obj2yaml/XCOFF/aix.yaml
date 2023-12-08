@@ -1,0 +1,186 @@
+## This is a basic test to check if we can parse the XCOFF object file correctly.
+# RUN: yaml2obj %s -DMAGIC=0x01DF -o %t-32
+# RUN: obj2yaml %t-32 | FileCheck %s --check-prefix=CHECK32
+# RUN: yaml2obj %s -DMAGIC=0x01F7 -o %t-64
+# RUN: obj2yaml %t-64 -o %t-64.yaml 2>&1 | count 0
+# RUN: FileCheck --input-file %t-64.yaml %s --check-prefix=CHECK64
+
+# CHECK32:      --- !XCOFF
+# CHECK32-NEXT: FileHeader:
+# CHECK32-NEXT:   MagicNumber:     0x1DF
+# CHECK32-NEXT:   NumberOfSections: 2
+# CHECK32-NEXT:   CreationTime:    0
+# CHECK32-NEXT:   OffsetToSymbolTable: 0x80
+# CHECK32-NEXT:   EntriesInSymbolTable: 4
+# CHECK32-NEXT:   AuxiliaryHeaderSize: 0
+# CHECK32-NEXT:   Flags:           0x0
+# CHECK32-NEXT: Sections:
+# CHECK32-NEXT:   - Name:            .text
+# CHECK32-NEXT:     Address:         0x0
+# CHECK32-NEXT:     Size:            0x4
+# CHECK32-NEXT:     FileOffsetToData: 0x64
+# CHECK32-NEXT:     FileOffsetToRelocations: 0x6C
+# CHECK32-NEXT:     FileOffsetToLineNumbers: 0x0
+# CHECK32-NEXT:     NumberOfRelocations: 0x1
+# CHECK32-NEXT:     NumberOfLineNumbers: 0x0
+# CHECK32-NEXT:     Flags:           [ STYP_TEXT ]
+# CHECK32-NEXT:     SectionData:     '00007400'
+# CHECK32-NEXT:     Relocations:
+# CHECK32-NEXT:       - Address:         0xE
+# CHECK32-NEXT:         Symbol:          0x12
+# CHECK32-NEXT:         Info:            0xF
+# CHECK32-NEXT:         Type:            0x3
+# CHECK32-NEXT:   - Name:            .data
+# CHECK32-NEXT:     Address:         0x4
+# CHECK32-NEXT:     Size:            0x4
+# CHECK32-NEXT:     FileOffsetToData: 0x68
+# CHECK32-NEXT:     FileOffsetToRelocations: 0x76
+# CHECK32-NEXT:     FileOffsetToLineNumbers: 0x0
+# CHECK32-NEXT:     NumberOfRelocations: 0x1
+# CHECK32-NEXT:     NumberOfLineNumbers: 0x0
+# CHECK32-NEXT:     Flags:           [ STYP_DATA ]
+# CHECK32-NEXT:     SectionData:     '00007700'
+# CHECK32-NEXT:     Relocations:
+# CHECK32-NEXT:       - Address:         0x60
+# CHECK32-NEXT:         Symbol:          0x8
+# CHECK32-NEXT:         Info:            0x1F
+# CHECK32-NEXT:         Type:            0x0
+# CHECK32-NEXT: Symbols:
+# CHECK32-NEXT:   - Name:            TestforXcoff
+# CHECK32-NEXT:     Value:           0x0
+# CHECK32-NEXT:     Section:         N_UNDEF
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_EXT
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_CSECT
+# CHECK32-NEXT:         ParameterHashIndex: 0
+# CHECK32-NEXT:         TypeChkSectNum:  0
+# CHECK32-NEXT:         SymbolAlignmentAndType: 0
+# CHECK32-NEXT:         StorageMappingClass: XMC_PR
+# CHECK32-NEXT:         SectionOrLength: 0
+# CHECK32-NEXT:         StabInfoIndex:   0
+# CHECK32-NEXT:         StabSectNum:     0
+# CHECK32-NEXT:   - Name:            .data
+# CHECK32-NEXT:     Value:           0x70
+# CHECK32-NEXT:     Section:         .data
+# CHECK32-NEXT:     Type:            0x0
+# CHECK32-NEXT:     StorageClass:    C_HIDEXT
+# CHECK32-NEXT:     NumberOfAuxEntries: 1
+# CHECK32-NEXT:     AuxEntries:
+# CHECK32-NEXT:       - Type:            AUX_CSECT
+# CHECK32-NEXT:         ParameterHashIndex: 0
+# CHECK32-NEXT:         TypeChkSectNum:  0
+# CHECK32-NEXT:         SymbolAlignmentAndType: 0
+# CHECK32-NEXT:         StorageMappingClass: XMC_PR
+# CHECK32-NEXT:         SectionOrLength: 0
+# CHECK32-NEXT:         StabInfoIndex:   0
+# CHECK32-NEXT:         StabSectNum:     0
+
+# CHECK64:      --- !XCOFF
+# CHECK64-NEXT: FileHeader:
+# CHECK64-NEXT:   MagicNumber:     0x1F7
+# CHECK64-NEXT:   NumberOfSections: 2
+# CHECK64-NEXT:   CreationTime:    0
+# CHECK64-NEXT:   OffsetToSymbolTable: 0xCC
+# CHECK64-NEXT:   EntriesInSymbolTable: 4
+# CHECK64-NEXT:   AuxiliaryHeaderSize: 0
+# CHECK64-NEXT:   Flags:           0x0
+# CHECK64-NEXT: Sections:
+# CHECK64-NEXT:   - Name:            .text
+# CHECK64-NEXT:     Address:         0x0
+# CHECK64-NEXT:     Size:            0x4
+# CHECK64-NEXT:     FileOffsetToData: 0xA8
+# CHECK64-NEXT:     FileOffsetToRelocations: 0xB0
+# CHECK64-NEXT:     FileOffsetToLineNumbers: 0x0
+# CHECK64-NEXT:     NumberOfRelocations: 0x1
+# CHECK64-NEXT:     NumberOfLineNumbers: 0x0
+# CHECK64-NEXT:     Flags:           [ STYP_TEXT ]
+# CHECK64-NEXT:     SectionData:     '00007400'
+# CHECK64-NEXT:     Relocations:
+# CHECK64-NEXT:       - Address:         0xE
+# CHECK64-NEXT:         Symbol:          0x12
+# CHECK64-NEXT:         Info:            0xF
+# CHECK64-NEXT:         Type:            0x3
+# CHECK64-NEXT:   - Name:            .data
+# CHECK64-NEXT:     Address:         0x4
+# CHECK64-NEXT:     Size:            0x4
+# CHECK64-NEXT:     FileOffsetToData: 0xAC
+# CHECK64-NEXT:     FileOffsetToRelocations: 0xBE
+# CHECK64-NEXT:     FileOffsetToLineNumbers: 0x0
+# CHECK64-NEXT:     NumberOfRelocations: 0x1
+# CHECK64-NEXT:     NumberOfLineNumbers: 0x0
+# CHECK64-NEXT:     Flags:           [ STYP_DATA ]
+# CHECK64-NEXT:     SectionData:     '00007700'
+# CHECK64-NEXT:     Relocations:
+# CHECK64-NEXT:       - Address:         0x60
+# CHECK64-NEXT:         Symbol:          0x8
+# CHECK64-NEXT:         Info:            0x1F
+# CHECK64-NEXT:         Type:            0x0
+# CHECK64-NEXT: Symbols:
+# CHECK64-NEXT:   - Name:            TestforXcoff
+# CHECK64-NEXT:     Value:           0x0
+# CHECK64-NEXT:     Section:         N_UNDEF
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_EXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolAlignmentAndType: 0
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 0
+# CHECK64-NEXT:         SectionOrLengthHi: 0
+# CHECK64-NEXT:   - Name:            .data
+# CHECK64-NEXT:     Value:           0x70
+# CHECK64-NEXT:     Section:         .data
+# CHECK64-NEXT:     Type:            0x0
+# CHECK64-NEXT:     StorageClass:    C_HIDEXT
+# CHECK64-NEXT:     NumberOfAuxEntries: 1
+# CHECK64-NEXT:     AuxEntries:
+# CHECK64-NEXT:       - Type:            AUX_CSECT
+# CHECK64-NEXT:         ParameterHashIndex: 0
+# CHECK64-NEXT:         TypeChkSectNum:  0
+# CHECK64-NEXT:         SymbolAlignmentAndType: 0
+# CHECK64-NEXT:         StorageMappingClass: XMC_PR
+# CHECK64-NEXT:         SectionOrLengthLo: 0
+# CHECK64-NEXT:         SectionOrLengthHi: 0
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC]]
+Sections:
+  - Name:        .text
+    Flags:       [ STYP_TEXT ]
+    SectionData: '00007400'
+    Relocations:
+      - Address: 0xE
+        Symbol:  0x12
+        Info:    0xF
+        Type:    0x3
+  - Name:        .data
+    Flags:       [ STYP_DATA ]
+    SectionData: '00007700'
+    Relocations:
+      - Address: 0x60
+        Symbol:  0x8
+        Info:    0x1F
+        Type:    0x0
+Symbols:
+  - Name:               TestforXcoff
+    Value:              0x0
+    Section:            N_UNDEF
+    Type:               0x0
+    StorageClass:       C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+       - Type:          AUX_CSECT
+  - Name:               .data
+    Value:              0x70
+    Section:            .data
+    Type:               0x0
+    StorageClass:       C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+       - Type:          AUX_CSECT

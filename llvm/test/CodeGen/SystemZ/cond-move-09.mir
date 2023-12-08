@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -O0 -start-after=regallocfast %s \
+# RUN: -o - | FileCheck %s
+#
+# Test that LOCRMux expansion works at -O0.
+
+--- |
+  define internal i32 @fun(i16 %arg) { bb: ret i32 0 }
+...
+
+# CHECK-LABEL: fun
+# CHECK: risbhg  %r13, %r13, 0, 159, 32
+
+---
+name:            'fun'
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    8
+machineFunctionInfo: {}
+body:             |
+  bb.0.bb:
+    renamable $r0d = IMPLICIT_DEF
+    CGHI killed renamable $r0d, 8, implicit-def $cc
+    renamable $r13l = LHIMux 0
+    renamable $r13h = LHIMux -1
+    renamable $r13h = LOCRMux renamable $r13h, killed renamable $r13l, 14, 10, implicit $cc
+    renamable $r2l = COPY killed renamable $r13h
+    Return implicit killed $r2l
+...

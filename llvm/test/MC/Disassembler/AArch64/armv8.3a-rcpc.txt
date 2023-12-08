@@ -1,0 +1,40 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a -mattr=+rcpc --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-r82 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a55 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a65 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a65ae --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a75 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a77 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-a78 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=cortex-x1 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-e1 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-n1 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=neoverse-n2 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=ampere1 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mcpu=ampere1a --disassemble < %s | FileCheck %s
+
+# CHECK: ldaprb w0, [x0]
+# CHECK: ldaprh w0, [x0]
+# CHECK: ldapr w0, [x0]
+# CHECK: ldapr x0, [x0]
+[0x00,0xc0,0xbf,0x38]
+[0x00,0xc0,0xbf,0x78]
+[0x00,0xc0,0xbf,0xb8]
+[0x00,0xc0,0xbf,0xf8]
+
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a --disassemble < %s 2>&1 | FileCheck --check-prefix=CHECK-V8_2A %s
+
+# CHECK-V8_2A: warning: invalid instruction encoding
+# CHECK-V8_2A: [0x00,0xc0,0xbf,0x38]
+# CHECK-V8_2A:  ^
+# CHECK-V8_2A: warning: invalid instruction encoding
+# CHECK-V8_2A: [0x00,0xc0,0xbf,0x78]
+# CHECK-V8_2A:  ^
+# CHECK-V8_2A: warning: invalid instruction encoding
+# CHECK-V8_2A: [0x00,0xc0,0xbf,0xb8]
+# CHECK-V8_2A:  ^
+# CHECK-V8_2A: warning: invalid instruction encoding
+# CHECK-V8_2A: [0x00,0xc0,0xbf,0xf8]
+# CHECK-V8_2A:  ^

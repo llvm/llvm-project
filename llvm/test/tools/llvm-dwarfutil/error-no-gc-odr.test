@@ -1,0 +1,6 @@
+## This test checks the error message displayed if ODR deduplication
+## is enabled while debug info garbage collection is disabled.
+
+# RUN: not llvm-dwarfutil --no-garbage-collection --odr-deduplication - - 2>&1 | FileCheck --check-prefix CHECK %s
+
+# CHECK: error: cannot use --odr-deduplication without --garbage-collection

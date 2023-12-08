@@ -1,0 +1,11 @@
+UNSUPPORTED: darwin, target=aarch64{{.*}}
+RUN: %cpp_compiler %S/PrintFuncTest.cpp -o %t
+RUN: %run %t -seed=1 -runs=100000 2>&1 | FileCheck %s
+RUN: %run %t -seed=1 -runs=100000 -print_funcs=0 2>&1 | FileCheck %s --check-prefix=NO
+CHECK: NEW_FUNC{{.*}} FunctionA
+CHECK: NEW_FUNC{{.*}} FunctionB
+CHECK: NEW_FUNC{{.*}} FunctionC
+CHECK: BINGO
+
+NO-NOT: NEW_FUNC
+NO: BINGO

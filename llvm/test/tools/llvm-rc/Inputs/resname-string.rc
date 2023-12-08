@@ -1,0 +1,2 @@
+stringname RCDATA { "foo" }
+name-with-dashes/and/slashes RCDATA { "foo" }

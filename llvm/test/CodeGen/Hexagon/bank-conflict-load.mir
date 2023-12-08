@@ -1,0 +1,28 @@
+# RUN: llc -march=hexagon -run-pass post-RA-sched %s -o - | FileCheck %s
+
+# The two loads from %a ($r0) can cause a bank conflict. Check that they
+# are not scheduled next to each other.
+
+# CHECK: L2_loadri_io $r0, 8
+# CHECK: L2_loadri_io killed $r1, 0
+# CHECK: L2_loadri_io killed $r0, 12
+
+--- |
+  define void @foo(ptr %a, ptr %b) {
+    ret void
+  }
+...
+
+---
+name: foo
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1
+
+    $r2 = L2_loadri_io $r0, 8 :: (load (s32) from %ir.a)
+    $r3 = L2_loadri_io killed $r0, 12 :: (load (s32) from %ir.a)
+    $r4 = L2_loadri_io killed $r1, 0 :: (load (s32) from %ir.b)
+...
+

@@ -1,0 +1,3 @@
+# RUN: modularize %s -x c++
+
+Inputs/NestedMacro.h

@@ -1,0 +1,27 @@
+## Show that the --defined-only option omits undefined symbols.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm %t.o --defined-only > %t.defonly.txt
+# RUN: llvm-nm %t.o -U > %t.U.txt
+
+# RUN: cmp %t.defonly.txt %t.U.txt
+
+# RUN: FileCheck %s --input-file=%t.defonly.txt --implicit-check-not={{.}}
+
+# CHECK: 0000000000000000 T defined
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    defined
+    Section: .text
+    Binding: STB_GLOBAL
+  - Name:    undefined
+    Binding: STB_GLOBAL

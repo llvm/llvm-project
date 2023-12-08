@@ -1,0 +1,26 @@
+# This is a simple instrumentation map with bogus addresses and offsets, but
+# follow the recommended format.
+---
+- { id: 1, address: 0x1, function: 0x1, kind: function-enter, always-instrument: true}
+- { id: 1, address: 0x2, function: 0x1, kind: function-exit, always-instrument: true}
+- { id: 2, address: 0x2, function: 0x2, kind: function-enter, always-instrument: true}
+- { id: 2, address: 0x3, function: 0x2, kind: function-exit, always-instrument: true}
+- { id: 3, address: 0x3, function: 0x3, kind: function-enter, always-instrument: true}
+- { id: 3, address: 0x4, function: 0x3, kind: function-exit, always-instrument: true}
+- { id: 4, address: 0x4, function: 0x4, kind: function-enter, always-instrument: true}
+- { id: 4, address: 0x5, function: 0x4, kind: function-exit, always-instrument: true}
+- { id: 5, address: 0x5, function: 0x5, kind: function-enter, always-instrument: true}
+- { id: 5, address: 0x6, function: 0x5, kind: function-exit, always-instrument: true}
+- { id: 6, address: 0x6, function: 0x6, kind: function-enter, always-instrument: true}
+- { id: 6, address: 0x7, function: 0x6, kind: function-exit, always-instrument: true}
+- { id: 7, address: 0x7, function: 0x7, kind: function-enter, always-instrument: true}
+- { id: 7, address: 0x8, function: 0x7, kind: function-exit, always-instrument: true}
+- { id: 8, address: 0x8, function: 0x8, kind: function-enter, always-instrument: true}
+- { id: 8, address: 0x9, function: 0x8, kind: function-exit, always-instrument: true}
+- { id: 9, address: 0x9, function: 0x9, kind: function-enter, always-instrument: true}
+- { id: 9, address: 0xA, function: 0x9, kind: function-exit, always-instrument: true}
+- { id: 10, address: 0xA, function: 0xA, kind: function-enter, always-instrument: true}
+- { id: 10, address: 0xB, function: 0xA, kind: function-exit, always-instrument: true}
+- { id: 11, address: 0xB, function: 0xB, kind: function-enter, always-instrument: true}
+- { id: 11, address: 0xC, function: 0xB, kind: function-exit, always-instrument: true}
+...

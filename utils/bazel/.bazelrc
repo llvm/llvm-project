@@ -1,0 +1,198 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+###############################################################################
+# Common flags that apply to all configurations.
+# Use sparingly for things common to all compilers and platforms.
+###############################################################################
+# Prevent invalid caching if input files are modified during a build.
+build --experimental_guard_against_concurrent_changes
+
+# In opt mode, bazel by default builds both PIC and non-PIC object files for
+# tests vs binaries. We don't need this feature and it slows down opt builds
+# considerably.
+build --force_pic
+
+# Shared objects take up more space. With fast linkers and binaries that aren't
+# super large, the benefits of shared objects are minimal.
+build --dynamic_mode=off
+
+# Rely on compiler flags to compile with debug info/strip rather than stripping
+# based on compilation_mode.
+build --strip=never
+
+# Add layering check to all projects.
+build --features=layering_check
+
+# Opt out of legacy lax behavior implicitly exporting files that are rule inputs
+# with default visibility.
+# See: https://bazel.build/reference/be/functions#exports_files
+build --incompatible_no_implicit_file_export
+
+###############################################################################
+# Options to select different strategies for linking potential dependent
+# libraries. The default leaves it disabled.
+###############################################################################
+
+build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
+build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
+
+build:terminfo_external --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=external
+build:terminfo_system --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=system
+
+###############################################################################
+# Options for "generic_clang" builds: these options should generally apply to
+# builds using a Clang-based compiler, and default to the `clang` executable on
+# the `PATH`. While these are provided for convenience and may serve as a
+# reference, it would be preferable for users to configure an explicit C++
+# toolchain instead of relying on `.bazelrc` files.
+###############################################################################
+
+# Set the default compiler to the `clang` binary on the `PATH`.
+build:generic_clang --repo_env=CC=clang
+
+# C++17 standard version is required.
+build:generic_clang --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+
+# Use `-Wall` for Clang.
+build:generic_clang --copt=-Wall --host_copt=-Wall
+
+# The Clang available on MacOS has a warning that isn't clean on MLIR code. The
+# warning doesn't show up with more recent Clangs, so just disable for now.
+build:generic_clang --cxxopt=-Wno-range-loop-analysis --host_cxxopt=-Wno-range-loop-analysis
+
+# Build errors are not a helpful way to enforce deprecation in-repo and it is
+# not the point of the Bazel build to catch usage of deprecated APIs.
+build:generic_clang --copt=-Wno-deprecated --host_copt=-Wno-deprecated
+
+# lld links faster than other linkers. Assume that anybody using clang also has
+# lld available.
+build:generic_clang --linkopt=-fuse-ld=lld --host_linkopt=-fuse-ld=lld
+
+###############################################################################
+# Options for "generic_gcc" builds: these options should generally apply to
+# builds using a GCC-based compiler, and default to the `gcc` executable on
+# the `PATH`. While these are provided for convenience and may serve as a
+# reference, it would be preferable for users to configure an explicit C++
+# toolchain instead of relying on `.bazelrc` files.
+###############################################################################
+
+# Set the default compiler to the `gcc` binary on the `PATH`.
+build:generic_gcc --repo_env=CC=gcc
+
+# C++17 standard version is required.
+build:generic_gcc --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
+
+# Build errors are not a helpful way to enforce deprecation in-repo and it is
+# not the point of the Bazel build to catch usage of deprecated APIs.
+build:generic_gcc --copt=-Wno-deprecated --host_copt=-Wno-deprecated
+
+# Disable GCC warnings that are noisy and/or false positives on LLVM code.
+# These need to be global as some code triggering these is in header files.
+build:generic_gcc --copt=-Wno-unused-parameter --host_copt=-Wno-unused-parameter
+build:generic_gcc --copt=-Wno-comment --host_copt=-Wno-comment
+build:generic_gcc --cxxopt=-Wno-class-memaccess --host_cxxopt=-Wno-class-memaccess
+build:generic_gcc --copt=-Wno-maybe-uninitialized --host_copt=-Wno-maybe-uninitialized
+build:generic_gcc --copt=-Wno-misleading-indentation --host_copt=-Wno-misleading-indentation
+
+###############################################################################
+# Generic Windows flags common to both MSVC and Clang.
+###############################################################################
+
+# C++17 standard version is required.
+build:windows --cxxopt=/std:c++17 --host_cxxopt=/std:c++17
+
+# Other generic dialect flags.
+build:windows --copt=/Zc:strictStrings --host_copt=/Zc:strictStrings
+build:windows --copt=/Oi --host_copt=/Oi
+build:windows --cxxopt=/Zc:rvalueCast --host_cxxopt=/Zc:rvalueCast
+
+# Use the more flexible bigobj format for C++ files that have lots of symbols.
+build:windows --cxxopt=/bigobj --host_cxxopt=/bigobj
+
+###############################################################################
+# Windows specific flags for building with MSVC.
+###############################################################################
+
+build:msvc --config=windows
+
+build:msvc --copt=/WX --host_copt=/WX    # Treat warnings as errors...
+# ...but disable the ones that are violated
+build:msvc --copt=/wd4141 --host_copt=/wd4141 # inline used more than once
+build:msvc --copt=/wd4244 --host_copt=/wd4244 # conversion type -> type
+build:msvc --copt=/wd4267 --host_copt=/wd4267 # conversion size_t -> type
+build:msvc --copt=/wd4273 --host_copt=/wd4273 # multiple definitions with different dllimport
+build:msvc --copt=/wd4319 --host_copt=/wd4319 # zero-extending after complement
+build:msvc --copt=/wd4624 --host_copt=/wd4624 # destructor was implicitly defined as deleted
+build:msvc --copt=/wd4804 --host_copt=/wd4804 # comparisons between bool and int
+build:msvc --copt=/wd4805 --host_copt=/wd4805 # comparisons between bool and int
+
+build:msvc --linkopt=/WX --host_linkopt=/WX # Treat warnings as errors...
+# ...but disable the ones that are violated.
+build:msvc --linkopt=/IGNORE:4001 --host_linkopt=/IGNORE:4001 # no object files
+
+###############################################################################
+# Options for Windows `clang-cl` builds.
+###############################################################################
+
+# We just start with the baseline Windows config as `clang-cl` doesn't accept
+# some of the generic Clang flags.
+build:clang-cl --config=windows
+
+# Switch from MSVC to the `clang-cl` compiler.
+build:clang-cl --compiler=clang-cl
+
+# Use Clang's internal warning flags instead of the ones that sometimes map
+# through to MSVC's flags.
+build:clang-cl --copt=/clang:-Wall --host_copt=/clang:-Wall
+build:clang-cl --copt=/clang:-Werror --host_copt=/clang:-Werror
+
+# This doesn't appear to be enforced by any upstream bot.
+build:clang-cl --copt=/clang:-Wno-unused --host_copt=/clang:-Wno-unused
+
+# There appears to be an unused constant in GoogleTest on Windows.
+build:clang-cl --copt=/clang:-Wno-unused-const-variable --host_copt=/clang:-Wno-unused-const-variable
+
+# Disable some warnings hit even with `clang-cl` in Clang's own code.
+build:clang-cl --copt=/clang:-Wno-inconsistent-dllimport --host_copt=/clang:-Wno-inconsistent-dllimport
+build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c++11-narrowing
+
+###############################################################################
+# Options for continuous integration.
+###############################################################################
+
+# -O1 tries to provide a reasonable tradeoff between compile times and runtime
+# performance. However, if we start running more tests (e.g. all of
+# check-clang) we may want more optimizations.
+# Note for anybody considering using --compilation_mode=opt in CI, it builds
+# most files twice, one PIC version for shared libraries in tests, and one
+# non-PIC version for binaries.
+build:ci --copt=-O1
+
+# Use clang.
+build:ci --config=generic_clang
+
+# Speedup bazel using a ramdisk.
+build:ci --sandbox_base=/dev/shm
+
+# Use system's mpfr and pfm instead of building it from source.
+# This is non hermetic but helps with compile time.
+build:ci --@llvm-project//libc:mpfr=system
+build:ci --@llvm-project//llvm:pfm=system
+
+# Don't build/test targets tagged with "nobuildkite".
+build:ci --build_tag_filters=-nobuildkite
+build:ci --test_tag_filters=-nobuildkite
+
+# Show as many errors as possible.
+build:ci --keep_going
+
+# Show test errors.
+build:ci --test_output=errors
+
+###############################################################################
+
+# The user.bazelrc file is not checked in but available for local mods.
+# Always keep this at the end of the file so that user flags override.
+try-import %workspace%/user.bazelrc

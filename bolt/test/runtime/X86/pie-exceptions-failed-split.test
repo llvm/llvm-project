@@ -1,0 +1,36 @@
+REQUIRES: system-linux,bolt-runtime
+
+RUN: %clangxx %cxxflags -pie -fPIC %p/Inputs/pie-exceptions-failed-split.s \
+RUN:   -Wl,-q -o %t
+RUN: llvm-bolt %t -o %t.instr --instrument --instrumentation-file=%t.fdata
+
+## Record profile with invocation that does not throw exceptions.
+RUN: %t.instr
+
+RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp \
+RUN:   --split-functions --split-eh --print-after-lowering \
+RUN:   --print-only=_Z10throw_testiPPc 2>&1 | FileCheck %s
+
+## Hot code in the test case gets larger after splitting because of jump
+## instruction relaxation. Check that BOLT reverts the split correctly.
+CHECK: Binary Function "_Z10throw_testiPPc"
+CHECK: IsSplit :
+CHECK-SAME: 0
+
+## Check that the landing pad trampoline was created, but contains no
+## instructions and falls to the real landing pad.
+CHECK: {{^[^[:space:]]+}} (0 instructions
+CHECK-NEXT: Landing Pad{{$}}
+CHECK: Exec Count
+CHECK-SAME: : 0
+CHECK: Successors:
+CHECK-SAME: [[LP:[^[:space:]]+]]
+CHECK-EMPTY:
+CHECK-NEXT: [[LP]]
+CHECK-DAG: Exec Count
+CHECK-NOT: Exec Count
+CHECK-DAG: callq   __cxa_begin_catch
+
+## Verify the output still executes correctly when the exception path is being
+## taken.
+RUN: %t.bolt arg1 arg2 arg3

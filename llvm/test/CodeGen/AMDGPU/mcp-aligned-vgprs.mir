@@ -1,0 +1,28 @@
+# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass=machine-cp -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+
+# GCN-LABEL: name: mcp_aligned_vgprs
+# GCN: $vgpr0_vgpr1 = V_PK_MUL_F32 0, $sgpr0_sgpr1
+# GCN: $vgpr3_vgpr4 = COPY killed renamable $vgpr0_vgpr1
+---
+name:            mcp_aligned_vgprs
+body:             |
+  bb.0.entry:
+
+    renamable $vgpr0_vgpr1 = V_PK_MUL_F32 0, $sgpr0_sgpr1, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $vgpr3_vgpr4 = COPY killed renamable $vgpr0_vgpr1
+    S_ENDPGM 0, implicit $vgpr3_vgpr4
+...
+
+# GCN-LABEL: name: mcp_aligned_agprs
+# GCN: $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2_SADDR $sgpr0_sgpr1, $vgpr10
+# GCN: $agpr3_agpr4 = COPY killed renamable $agpr0_agpr1
+---
+name:            mcp_aligned_agprs
+body:             |
+  bb.0.entry:
+
+    renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2_SADDR $sgpr0_sgpr1, $vgpr10, 0, 0, implicit $exec
+    renamable $agpr3_agpr4 = COPY killed renamable $agpr0_agpr1
+    S_ENDPGM 0, implicit $agpr3_agpr4
+
+...

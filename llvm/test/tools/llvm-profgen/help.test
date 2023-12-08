@@ -1,0 +1,7 @@
+# RUN: llvm-profgen --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW: llvm SPGO profile generator
+# HELP: USAGE
+# HELP: Color Options
+# HELP: Generic Options
+# HELP: ProfGen Options

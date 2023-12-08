@@ -1,0 +1,28 @@
+# RUN: llc -run-pass=xray-instrumentation -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+#
+# Make sure we can handle multiple ret instructions in a single basic block for
+# XRay.
+
+--- |
+
+  define i32 @foo() noinline uwtable "function-instrument"="xray-always" {
+    ret i32 0
+    ret i32 1
+  }
+
+...
+
+---
+name: foo
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi'}
+body:            |
+  bb.0:
+    liveins: $edi
+    ; CHECK: PATCHABLE_FUNCTION_ENTER
+    RET64
+    ; CHECK-NEXT: PATCHABLE_RET
+    RET64
+    ; CHECK-NEXT: PATCHABLE_RET
+...

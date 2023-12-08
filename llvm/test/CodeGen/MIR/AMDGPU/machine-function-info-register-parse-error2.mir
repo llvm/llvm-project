@@ -1,0 +1,11 @@
+# RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+---
+name: invalid_rsrc_reg
+machineFunctionInfo:
+  scratchRSrcReg:  '$not_a_register_name'
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: unknown register name 'not_a_register_name'
+body:             |
+  bb.0:
+
+    S_ENDPGM
+...

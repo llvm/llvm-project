@@ -1,0 +1,64 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=slm -run-pass post-RA-sched -o - %s | FileCheck %s
+#
+# Verify that the critical antidependence breaker does not partially
+# replace tied operands
+
+--- |
+
+  define void @main() { ret void }
+
+...
+---
+# CHECK-LABEL: main
+name:            main
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+  - { reg: '$esi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $edi, $esi
+
+    $eax = MOV32rr $esi
+    $eax = LEA64_32r $rdi, 1, $rsi, 0, $noreg
+    $edi = MOV32rr $esi
+    $esi = MOV32ri 4
+    ; Verify that XOR is untouched by the dependency breaker
+    ; CHECK: $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags, implicit-def $rsi
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags, implicit-def $rsi
+    RET64 killed $eax
+
+...

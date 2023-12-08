@@ -1,0 +1,399 @@
+# RUN: llc -run-pass=machine-combiner -o - -simplify-mir -mtriple=arm64-apple-iphoneos %s | FileCheck %s
+
+# Can create FMADD, because both the fmul and fadd have all fast-math flags.
+#
+# CHECK-LABEL: name: scalar_fmadd_fast
+# CHECK:        [[C:%.*]]:fpr32 = COPY $s2
+# CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
+# CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
+# CHECK-NEXT:   :fpr32 = nnan ninf nsz arcp contract afn reassoc FMADDSrrr [[B]], [[A]], [[C]], implicit $fpcr
+---
+name:            scalar_fmadd_fast
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2
+
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %3:fpr32 = nnan ninf nsz arcp contract afn reassoc FMULSrr %1, %0, implicit $fpcr
+    %4:fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr killed %3, %2, implicit $fpcr
+    $s0 = COPY %4
+    RET_ReallyLR implicit $s0
+
+...
+
+# Can create FMADD, because both the fmul and fadd have the contract fast-math flag.
+#
+# CHECK-LABEL: name: scalar_fmadd_contract
+# CHECK:        [[C:%.*]]:fpr32 = COPY $s2
+# CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
+# CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
+# CHECK-NEXT:   :fpr32 = contract FMADDSrrr [[B]], [[A]], [[C]], implicit $fpcr
+
+---
+name:            scalar_fmadd_contract
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2
+
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %3:fpr32 = contract FMULSrr %1, %0, implicit $fpcr
+    %4:fpr32 = contract FADDSrr killed %3, %2, implicit $fpcr
+    $s0 = COPY %4
+    RET_ReallyLR implicit $s0
+
+...
+
+# Do not create FMADD, because we don't have the contract flag on the FADD.
+
+# CHECK-LABEL: name: scalar_fmadd_contract_op0
+# CHECK:        [[C:%.*]]:fpr32 = COPY $s2
+# CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
+# CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
+# CHECK-NEXT:   [[MUL:%.*]]:fpr32 = contract FMULSrr [[B]], [[A]], implicit $fpcr
+# CHECK-NEXT:   fpr32 = FADDSrr killed [[MUL]], [[C]], implicit $fpcr
+---
+name:            scalar_fmadd_contract_op0
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2
+
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %3:fpr32 = contract FMULSrr %1, %0, implicit $fpcr
+    %4:fpr32 = FADDSrr killed %3, %2, implicit $fpcr
+    $s0 = COPY %4
+    RET_ReallyLR implicit $s0
+
+...
+
+# Do create FMADD, because we have the contract flag on the FADD.
+#
+# CHECK-LABEL: name: scalar_fmadd_contract_op1
+# CHECK:        [[C:%.*]]:fpr32 = COPY $s2
+# CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
+# CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
+# CHECK-NEXT:   :fpr32 = contract FMADDSrrr [[B]], [[A]], [[C]], implicit $fpcr
+
+---
+name:            scalar_fmadd_contract_op1
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2
+
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %3:fpr32 = FMULSrr %1, %0, implicit $fpcr
+    %4:fpr32 = contract FADDSrr killed %3, %2, implicit $fpcr
+    $s0 = COPY %4
+    RET_ReallyLR implicit $s0
+
+...
+
+# Do not create FMADD, as nsz flag does not allow it.
+#
+# CHECK-LABEL: name: scalar_fmadd_nsz
+# CHECK:        [[C:%.*]]:fpr32 = COPY $s2
+# CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
+# CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
+# CHECK-NEXT:   [[MUL:%.*]]:fpr32 = nsz FMULSrr [[B]], [[A]], implicit $fpcr
+# CHECK-NEXT:   fpr32 = nsz FADDSrr killed [[MUL]], [[C]], implicit $fpcr
+
+---
+name:            scalar_fmadd_nsz
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr32 }
+  - { id: 1, class: fpr32 }
+  - { id: 2, class: fpr32 }
+  - { id: 3, class: fpr32 }
+  - { id: 4, class: fpr32 }
+liveins:
+  - { reg: '$s0', virtual-reg: '%0' }
+  - { reg: '$s1', virtual-reg: '%1' }
+  - { reg: '$s2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $s2
+
+    %2:fpr32 = COPY $s2
+    %1:fpr32 = COPY $s1
+    %0:fpr32 = COPY $s0
+    %3:fpr32 = nsz FMULSrr %1, %0, implicit $fpcr
+    %4:fpr32 = nsz FADDSrr killed %3, %2, implicit $fpcr
+    $s0 = COPY %4
+    RET_ReallyLR implicit $s0
+
+...
+
+# Can create FMLA, because both the fmul and fadd have all fast-math flags.
+#
+# CHECK-LABEL: name: vector_fmadd_fast
+# CHECK:       [[C:%.*]]:fpr128 = COPY $q2
+# CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
+# CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
+# CHECK-NEXT:  fpr128 = nnan ninf nsz arcp contract afn reassoc FMLAv2f64 [[C]], [[B]], [[A]], implicit $fpcr
+---
+name:            vector_fmadd_fast
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128 }
+  - { id: 1, class: fpr128 }
+  - { id: 2, class: fpr128 }
+  - { id: 3, class: fpr128 }
+  - { id: 4, class: fpr128 }
+liveins:
+  - { reg: '$q0', virtual-reg: '%0' }
+  - { reg: '$q1', virtual-reg: '%1' }
+  - { reg: '$q2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $q2
+
+    %2:fpr128 = COPY $q2
+    %1:fpr128 = COPY $q1
+    %0:fpr128 = COPY $q0
+    %3:fpr128 = nnan ninf nsz arcp contract afn reassoc FMULv2f64 %1, %0, implicit $fpcr
+    %4:fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed %3, %2, implicit $fpcr
+    $q0 = COPY %4
+    RET_ReallyLR implicit $q0
+
+...
+
+# Can create FMLA, because both the fmul and fadd have the contract fast-math flag.
+#
+# CHECK-LABEL: name: vector_fmadd_contract
+# CHECK:       [[C:%.*]]:fpr128 = COPY $q2
+# CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
+# CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
+# CHECK-NEXT:  fpr128 = contract FMLAv2f64 [[C]], [[B]], [[A]], implicit $fpcr
+---
+name:            vector_fmadd_contract
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128 }
+  - { id: 1, class: fpr128 }
+  - { id: 2, class: fpr128 }
+  - { id: 3, class: fpr128 }
+  - { id: 4, class: fpr128 }
+liveins:
+  - { reg: '$q0', virtual-reg: '%0' }
+  - { reg: '$q1', virtual-reg: '%1' }
+  - { reg: '$q2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $q2
+
+    %2:fpr128 = COPY $q2
+    %1:fpr128 = COPY $q1
+    %0:fpr128 = COPY $q0
+    %3:fpr128 = contract FMULv2f64 %1, %0, implicit $fpcr
+    %4:fpr128 = contract FADDv2f64 killed %3, %2, implicit $fpcr
+    $q0 = COPY %4
+    RET_ReallyLR implicit $q0
+
+...
+
+# Do not create FMLA, because we don't have the contract flag on the FADD.
+#
+# CHECK-LABEL: name: vector_fmadd_contract_op0
+# CHECK:       [[C:%.*]]:fpr128 = COPY $q2
+# CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
+# CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
+# CHECK-NEXT:  [[MUL:%.*]]:fpr128 = contract FMULv2f64 [[B]], [[A]], implicit $fpcr
+# CHECK-NEXT:  fpr128 = FADDv2f64 killed [[MUL]], [[C]], implicit $fpcr
+---
+name:            vector_fmadd_contract_op0
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128 }
+  - { id: 1, class: fpr128 }
+  - { id: 2, class: fpr128 }
+  - { id: 3, class: fpr128 }
+  - { id: 4, class: fpr128 }
+liveins:
+  - { reg: '$q0', virtual-reg: '%0' }
+  - { reg: '$q1', virtual-reg: '%1' }
+  - { reg: '$q2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $q2
+
+    %2:fpr128 = COPY $q2
+    %1:fpr128 = COPY $q1
+    %0:fpr128 = COPY $q0
+    %3:fpr128 = contract FMULv2f64 %1, %0, implicit $fpcr
+    %4:fpr128 = FADDv2f64 killed %3, %2, implicit $fpcr
+    $q0 = COPY %4
+    RET_ReallyLR implicit $q0
+
+...
+
+# Do create FMLA, because we have the contract flag on the FADD.
+#
+# CHECK-LABEL: name: vector_fmadd_contract_op1
+# CHECK:       [[C:%.*]]:fpr128 = COPY $q2
+# CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
+# CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
+# CHECK-NEXT:  fpr128 = contract FMLAv2f64 [[C]], [[B]], [[A]], implicit $fpcr
+
+---
+name:            vector_fmadd_contract_op1
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128 }
+  - { id: 1, class: fpr128 }
+  - { id: 2, class: fpr128 }
+  - { id: 3, class: fpr128 }
+  - { id: 4, class: fpr128 }
+liveins:
+  - { reg: '$q0', virtual-reg: '%0' }
+  - { reg: '$q1', virtual-reg: '%1' }
+  - { reg: '$q2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $q2
+
+    %2:fpr128 = COPY $q2
+    %1:fpr128 = COPY $q1
+    %0:fpr128 = COPY $q0
+    %3:fpr128 = FMULv2f64 %1, %0, implicit $fpcr
+    %4:fpr128 = contract FADDv2f64 killed %3, %2, implicit $fpcr
+    $q0 = COPY %4
+    RET_ReallyLR implicit $q0
+
+...
+
+# Do not create FMLA, as nsz flag does not allow it.
+#
+# CHECK-LABEL: name: vector_fmadd_nsz
+# CHECK:       [[C:%.*]]:fpr128 = COPY $q2
+# CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
+# CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
+# CHECK-NEXT:  [[MUL:%.*]]:fpr128 = nsz FMULv2f64 [[B]], [[A]], implicit $fpcr
+# CHECK-NEXT:  fpr128 = nsz FADDv2f64 killed [[MUL]], [[C]], implicit $fpcr
+---
+name:            vector_fmadd_nsz
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128 }
+  - { id: 1, class: fpr128 }
+  - { id: 2, class: fpr128 }
+  - { id: 3, class: fpr128 }
+  - { id: 4, class: fpr128 }
+liveins:
+  - { reg: '$q0', virtual-reg: '%0' }
+  - { reg: '$q1', virtual-reg: '%1' }
+  - { reg: '$q2', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $q2
+
+    %2:fpr128 = COPY $q2
+    %1:fpr128 = COPY $q1
+    %0:fpr128 = COPY $q0
+    %3:fpr128 = nsz FMULv2f64 %1, %0, implicit $fpcr
+    %4:fpr128 = nsz FADDv2f64 killed %3, %2, implicit $fpcr
+    $q0 = COPY %4
+    RET_ReallyLR implicit $q0
+
+...

@@ -1,0 +1,103 @@
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -objcmt-migrate-instancetype -mt-migrate-directory %t %s -x objective-c -fobjc-runtime-has-weak -fobjc-arc -triple x86_64-apple-darwin11
+// RUN: c-arcmt-test -mt-migrate-directory %t | arcmt-test -verify-transformed-files %s.result
+// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -x objective-c -fobjc-runtime-has-weak -fobjc-arc %s.result
+
+typedef unsigned int NSUInteger;
+typedef int NSInteger;
+typedef char BOOL;
+@class NSData, NSError, NSProtocolChecker, NSObject;
+@class NSPortNameServer, NSTimeZone;
+
+@interface NSMutableString
+@end
+
+@interface NSString @end
+
+@class NSString, NSURL;
+@interface NSString (NSStringDeprecated)
++ (id)stringWithContentsOfFile:(NSString *)path __attribute__((availability(macosx,introduced=10.0 ,message="" )));
++ (id)stringWithContentsOfURL:(NSURL *)url __attribute__((availability(macosx,introduced=10.0 ,message="" )));
++ (id)stringWithCString:(const char *)bytes length:(NSUInteger)length __attribute__((availability(macosx,introduced=10.0 ,message="" )));
++ (id)stringWithCString:(const char *)bytes __attribute__((availability(macosx,introduced=10.0 ,message="" )));
+@end
+
+
+typedef enum NSURLBookmarkResolutionOptions {
+                Bookmark
+} NSURLBookmarkResolutionOptions;
+
+@interface NSURL
++ (instancetype)URLWithString:(NSString *)URLString;
++ (instancetype)URLWithString:(NSString *)URLString relativeToURL:(NSURL *)baseURL;
++ (instancetype)URLByResolvingBookmarkData:(NSData *)bookmarkData options:(NSURLBookmarkResolutionOptions)options relativeToURL:(NSURL *)relativeURL bookmarkDataIsStale:(BOOL *)isStale error:(NSError **)error __attribute__((availability(macosx,introduced=10.6)));
+@end
+
+@class NSDictionary;
+@interface NSError
++ (instancetype)errorWithDomain:(NSString *)domain code:(NSInteger)code userInfo:(NSDictionary *)dict;
+@end
+
+
+@interface NSMutableString (NSMutableStringExtensionMethods)
++ (instancetype)stringWithCapacity:(NSUInteger)capacity;
+@end
+
+@interface NSMutableData
++ (instancetype)dataWithCapacity:(NSUInteger)aNumItems;
++ (instancetype)dataWithLength:(NSUInteger)length;
+@end
+
+@interface NSMutableDictionary @end
+
+@interface NSMutableDictionary (NSSharedKeySetDictionary)
++ (instancetype )dictionaryWithSharedKeySet:(id)keyset __attribute__((availability(macosx,introduced=10.8)));
+@end
+
+@interface NSProtocolChecker
++ (instancetype)protocolCheckerWithTarget:(NSObject *)anObject protocol:(Protocol *)aProtocol;
+@end
+
+@interface NSConnection
++ (instancetype)connectionWithRegisteredName:(NSString *)name host:(NSString *)hostName;
++ (instancetype)connectionWithRegisteredName:(NSString *)name host:(NSString *)hostName usingNameServer:(NSPortNameServer *)server;
+@end
+
+@interface NSDate
++ (instancetype)dateWithString:(NSString *)aString __attribute__((availability(macosx,introduced=10.4)));
+@end
+
+@interface NSCalendarDate : NSDate
++ (instancetype)calendarDate __attribute__((availability(macosx,introduced=10.4)));
++ (instancetype)dateWithString:(NSString *)description calendarFormat:(NSString *)format locale:(id)locale __attribute__((availability(macosx,introduced=10.4)));
++ (instancetype)dateWithString:(NSString *)description calendarFormat:(NSString *)format __attribute__((availability(macosx,introduced=10.4)));
++ (instancetype)dateWithYear:(NSInteger)year month:(NSUInteger)month day:(NSUInteger)day hour:(NSUInteger)hour minute:(NSUInteger)minute second:(NSUInteger)second timeZone:(NSTimeZone *)aTimeZone __attribute__((availability(macosx,introduced=10.4)));
+@end
+
+@interface NSUserDefaults
++ (instancetype) standardUserDefaults;
+@end
+
+@interface NSNotificationCenter
++ (NSNotificationCenter*) defaultCenter;
++ (NSNotificationCenter*)  sharedCenter;
+@end
+
+@interface UIApplication
++ (UIApplication*)sharedApplication;
++ (UIApplication*) defaultApplication;
+@end
+
+//===----------------------------------------------------------------------===//
+// Method name that has a null IdentifierInfo* for its first selector slot.
+// This test just makes sure that we handle it.
+//===----------------------------------------------------------------------===//
+@interface TestNullIdentifier
+@end
+
+@implementation TestNullIdentifier
++ (id):(int)x, ... {
+  return 0;
+}
+@end
+

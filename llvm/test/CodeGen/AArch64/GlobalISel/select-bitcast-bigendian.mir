@@ -1,0 +1,18 @@
+# RUN: llc -O0 -mtriple=arm64eb-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+---
+name:            bitcast_v2f32_to_s64
+legalized:       true
+regBankSelected: true
+
+body:             |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: bitcast_v2f32_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $x0
+    ; CHECK: [[REV:%[0-9]+]]:fpr64 = REV64v2i32 [[COPY]]
+    ; CHECK: $x0 = COPY [[REV]]
+    %0:fpr(<2 x s32>) = COPY $x0
+    %1:fpr(s64) = G_BITCAST %0
+    $x0 = COPY %1(s64)
+...

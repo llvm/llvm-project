@@ -1,0 +1,118 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=x86_64-- -run-pass=register-coalescer -late-remat-update-threshold=1 -stats %s -o /dev/null 2>&1 | FileCheck %s
+# Check the test will rematerialize for three copies, but will call shrinkToUses
+# only once to update live range because of late rematerialization update.
+# CHECK: 3 regalloc - Number of instructions re-materialized
+# CHECK: 1 regalloc - Number of shrinkToUses called
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  ; Function Attrs: noreturn uwtable
+  define void @_Z3fooi(i32 %value) local_unnamed_addr #0 {
+  entry:
+    br label %do.body
+  
+  do.body:                                          ; preds = %do.body, %sw.bb2, %entry
+    tail call void asm sideeffect "", "~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"() #2, !srcloc !3
+    switch i32 %value, label %do.body [
+      i32 0, label %sw.bb
+      i32 1, label %sw.bb1
+      i32 2, label %sw.bb2
+    ]
+  
+  sw.bb:                                            ; preds = %do.body
+    tail call void @_Z3gooi(i32 2122)
+    br label %sw.bb1
+  
+  sw.bb1:                                           ; preds = %sw.bb, %do.body
+    tail call void @_Z3gooi(i32 2122)
+    br label %sw.bb2
+  
+  sw.bb2:                                           ; preds = %sw.bb1, %do.body
+    tail call void @_Z3gooi(i32 2122)
+    br label %do.body
+  }
+  
+  declare void @_Z3gooi(i32) local_unnamed_addr #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr) #2
+  
+  attributes #0 = { noreturn uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{!"clang version 7.0.0 (trunk 335057)"}
+  !3 = !{i32 82}
+
+...
+---
+name:            _Z3fooi
+alignment:       16
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+  - { id: 4, class: gr32 }
+  - { id: 5, class: gr32 }
+liveins:         
+  - { reg: '$edi', virtual-reg: '%0' }
+frameInfo:       
+  hasCalls:        true
+body:             |
+  bb.0.entry:
+    liveins: $edi
+  
+    %0:gr32 = COPY killed $edi
+    %5:gr32 = MOV32ri 2122
+  
+  bb.1.do.body:
+    successors: %bb.6(0x15555555), %bb.2(0x6aaaaaab)
+  
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !3
+    CMP32ri8 %0, 2, implicit-def $eflags
+    JCC_1 %bb.6, 4, implicit killed $eflags
+    JMP_1 %bb.2
+  
+  bb.2.do.body:
+    successors: %bb.5(0x19999999), %bb.3(0x66666667)
+  
+    CMP32ri8 %0, 1, implicit-def $eflags
+    JCC_1 %bb.5, 4, implicit killed $eflags
+    JMP_1 %bb.3
+  
+  bb.3.do.body:
+    successors: %bb.4(0x20000000), %bb.1(0x60000000)
+  
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags
+    JMP_1 %bb.4
+  
+  bb.4.sw.bb:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %5
+    CALL64pcrel32 @_Z3gooi, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.5.sw.bb1:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %5
+    CALL64pcrel32 @_Z3gooi, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.6.sw.bb2:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %5
+    CALL64pcrel32 @_Z3gooi, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    JMP_1 %bb.1
+
+...

@@ -1,0 +1,30 @@
+# RUN: llc -march=hexagon -run-pass amode-opt %s -o - | FileCheck %s
+
+# Check that the addasl is not propagated into the addressing mode.
+# CHECK-NOT: L4_loadri_ur
+
+--- |
+  @g = global i32 zeroinitializer
+  define void @fred() { ret void }
+...
+
+---
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $p0
+    $r0 = A2_tfrsi @g
+    $r1 = A2_tfrsi 1
+    $r2 = S2_addasl_rrri $r0, $r1, 1
+    J2_jumpt $p0, %bb.2, implicit-def $pc
+
+  bb.1:
+    liveins: $r0, $r2
+    $r1 = A2_tfrsi 2
+
+  bb.2:
+    liveins: $r0, $r2
+    $r3 = L2_loadri_io $r2, 0
+...

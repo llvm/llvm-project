@@ -1,0 +1,24 @@
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
+
+; Verify we can parse large integers such as when we ask for 2G of total
+; memory.
+RUN: wasm-ld %t.o -o %t1.wasm --max-memory=2147483648
+RUN: obj2yaml %t1.wasm | FileCheck %s --check-prefixes=CHECK,CHECK-2G
+
+; And also 4G of total memory
+RUN: wasm-ld %t.o -o %t2.wasm --max-memory=4294967296
+RUN: obj2yaml %t2.wasm | FileCheck %s --check-prefixes=CHECK,CHECK-4G
+
+CHECK:      - Type:            MEMORY
+CHECK-NEXT:   Memories:
+CHECK-NEXT:     - Flags:           [ HAS_MAX ]
+CHECK-NEXT:       Minimum:         0x2
+CHECK-2G-NEXT:    Maximum:         0x8000
+CHECK-4G-NEXT:    Maximum:         0x10000
+
+; Test error for more than 4G of memory
+RUN: not wasm-ld %t.o -o %t3.wasm --initial-memory=4295032832 2>&1 | FileCheck %s --check-prefix INIT-ERROR
+RUN: not wasm-ld %t.o -o %t4.wasm --max-memory=4295032832 2>&1 | FileCheck %s --check-prefix MAX-ERROR
+
+INIT-ERROR: initial memory too large, cannot be greater than 4294967296
+MAX-ERROR: maximum memory too large, cannot be greater than 4294967296

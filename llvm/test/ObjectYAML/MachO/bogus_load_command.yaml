@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           2
+  sizeofcmds:      56
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             0xDEADBEEF
+    cmdsize:         32
+    ZeroPadBytes:    24
+  - cmd:             0xDEADBEEF
+    cmdsize:         24
+    PayloadBytes:
+      - 0x01
+      - 0x02
+      - 0x03
+      - 0x04
+      - 0x05
+      - 0x06
+      - 0x07
+      - 0x08
+      - 0x09
+      - 0x0A
+      - 0x0B
+      - 0x0C
+...
+
+#CHECK:   - cmd:             0xDEADBEEF
+#CHECK:     cmdsize:         32
+#CHECK:     ZeroPadBytes:
+#CHECK:   - cmd:             0xDEADBEEF
+#CHECK:     cmdsize:         24
+#CHECK:     PayloadBytes:    [ 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA,
+#CHECK:                        0xB, 0xC, 0x0, 0x0, 0x0, 0x0 ]
+#CHECK-NOT: LinkEditData:

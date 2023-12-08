@@ -1,0 +1,268 @@
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=register-coalescer -o - %s | FileCheck -check-prefix=GCN %s
+
+# With one version of the D48102 fix, this test failed with
+# Assertion failed: (Id != S.end() && T != S.end() && T->valno == Id->valno), function pruneSubRegValues, file ../lib/CodeGen/RegisterCoalescer.cpp, line 2875.
+
+# GCN: {{^body}}
+
+--- |
+  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+  target triple = "amdgcn--amdpal"
+
+  ; Function Attrs: nounwind
+  define amdgpu_ps void @_amdgpu_ps_main(float %arg) #0 {
+    ret void
+  }
+
+  attributes #0 = { nounwind "InitialPSInputAddr"="3842" "target-cpu"="gfx803" }
+...
+
+---
+name:            _amdgpu_ps_main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    %0:sreg_64 = COPY $exec
+    %1:sgpr_32 = S_MOV_B32 0
+    undef %2.sub0:sgpr_128 = COPY %1
+    %2.sub1:sgpr_128 = COPY %1
+    %2.sub2:sgpr_128 = COPY %1
+    %2.sub3:sgpr_128 = COPY %1
+    $exec = S_WQM_B64 $exec, implicit-def dead $scc
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+    %3:sgpr_128 = COPY killed %2
+    %4:vreg_128 = COPY killed %3
+    %5:vreg_128 = COPY killed %4
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+    %6:vgpr_32 = nofpexcept V_MUL_F32_e32 1031798784, undef %7:vgpr_32, implicit $mode, implicit $exec
+    %8:vgpr_32 = nofpexcept V_FLOOR_F32_e32 killed %6, implicit $mode, implicit $exec
+    %9:vgpr_32 = nofpexcept V_ADD_F32_e32 0, killed %8, implicit $mode, implicit $exec
+    %10:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 killed %9, implicit $mode, implicit $exec
+    %11:vgpr_32 = V_LSHLREV_B32_e32 1, killed %10, implicit $exec
+    %12:sreg_64 = S_MOV_B64 0
+    %13:sgpr_128 = COPY killed %2
+    %14:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %15:vreg_128 = COPY killed %13
+    %16:sreg_64 = COPY killed %12
+    %17:vreg_128 = IMPLICIT_DEF
+    %18:vgpr_32 = COPY killed %14
+    %19:vreg_128 = COPY killed %15
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.17(0x80000000)
+    %20:vreg_128 = COPY killed %5
+    S_BRANCH %bb.17
+
+  bb.4:
+    successors: %bb.8(0x40000000), %bb.9(0x40000000)
+    %21:vreg_128 = COPY killed %19
+    %22:vgpr_32 = COPY killed %18
+    %23:vreg_128 = COPY killed %17
+    %24:sreg_64 = COPY killed %16
+    %25:vgpr_32 = V_OR_B32_e32 %22, %11, implicit $exec
+    %26:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %25, undef %27:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
+    %28:vgpr_32 = V_LSHRREV_B32_e32 30, killed %26.sub0, implicit $exec
+    %29:vreg_128 = COPY killed %21
+    %29.sub0:vreg_128 = COPY %1
+    %30:sreg_64 = V_CMP_NE_U32_e64 0, %28, implicit $exec
+    %31:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %28, implicit $exec
+    dead %32:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %31, implicit $exec
+    %33:vreg_128 = COPY %29
+    %33.sub1:vreg_128 = COPY undef %32
+    %34:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    %35:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %36:sreg_64 = COPY %24
+    %37:vreg_128 = COPY %23
+    %38:vreg_128 = IMPLICIT_DEF
+    %39:vreg_128 = IMPLICIT_DEF
+    %40:vgpr_32 = IMPLICIT_DEF
+    %41:vgpr_32 = COPY killed %35
+    %42:vgpr_32 = COPY killed %34
+    %43:sreg_64 = COPY $exec, implicit-def $exec
+    %44:sreg_64 = S_AND_B64 %43, %30, implicit-def dead $scc
+    %45:sreg_64 = S_XOR_B64 %44, %43, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed %44
+    S_CBRANCH_EXECZ %bb.9, implicit $exec
+    S_BRANCH %bb.8
+
+  bb.5:
+    successors: %bb.9(0x80000000)
+    $exec = S_OR_B64 $exec, %46, implicit-def $scc
+    %47:vgpr_32 = COPY killed %48
+    %49:vgpr_32 = COPY killed %50
+    %51:vreg_128 = COPY killed %52
+    %53:vreg_128 = COPY killed %54
+    %55:sreg_64 = COPY killed %56
+    %57:sreg_64 = S_AND_B64 $exec, %46, implicit-def $scc
+    %57:sreg_64 = S_OR_B64 %57, killed %55, implicit-def $scc
+    %58:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %36:sreg_64 = COPY killed %57
+    %37:vreg_128 = COPY killed %53
+    %38:vreg_128 = COPY killed %59
+    %39:vreg_128 = COPY killed %51
+    %40:vgpr_32 = COPY killed %49
+    %41:vgpr_32 = COPY killed %47
+    %42:vgpr_32 = COPY killed %58
+    S_BRANCH %bb.9
+
+  bb.6:
+    successors: %bb.7(0x40000000), %bb.13(0x40000000)
+    $exec = S_OR_B64 $exec, killed %60, implicit-def $scc
+    %61:sreg_64 = V_CMP_NE_U32_e64 0, killed %62, implicit $exec
+    %63:vreg_128 = COPY killed %64
+    %65:vgpr_32 = COPY killed %66
+    %67:sreg_64 = COPY $exec, implicit-def $exec
+    %68:sreg_64 = S_AND_B64 %67, %61, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed %68
+    S_CBRANCH_EXECZ %bb.13, implicit $exec
+    S_BRANCH %bb.7
+
+  bb.7:
+    successors: %bb.13(0x80000000)
+    %69:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    %70:vreg_128 = COPY killed %33
+    %63:vreg_128 = COPY killed %70
+    %65:vgpr_32 = COPY killed %69
+    S_BRANCH %bb.13
+
+  bb.8:
+    successors: %bb.10(0x80000000)
+    %71:sreg_64 = S_MOV_B64 0
+    %72:vreg_128 = COPY %33
+    %73:sreg_64 = COPY killed %71
+    %74:vreg_128 = COPY killed %72
+    %75:vreg_128 = COPY killed %29
+    S_BRANCH %bb.10
+
+  bb.9:
+    successors: %bb.6(0x04000000), %bb.4(0x7c000000)
+    $exec = S_OR_B64 $exec, %45, implicit-def $scc
+    %62:vgpr_32 = COPY killed %42
+    %66:vgpr_32 = COPY killed %41
+    %76:vgpr_32 = COPY killed %40
+    %77:vreg_128 = COPY killed %39
+    %64:vreg_128 = COPY killed %38
+    %78:vreg_128 = COPY killed %37
+    %79:sreg_64 = COPY killed %36
+    %60:sreg_64 = S_AND_B64 $exec, %45, implicit-def $scc
+    %60:sreg_64 = S_OR_B64 %60, killed %79, implicit-def $scc
+    %80:vreg_128 = COPY %78
+    %16:sreg_64 = COPY %60
+    %17:vreg_128 = COPY killed %80
+    %18:vgpr_32 = COPY killed %76
+    %19:vreg_128 = COPY killed %77
+    $exec = S_ANDN2_B64_term $exec, %60, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.4, implicit $exec
+    S_BRANCH %bb.6
+
+  bb.10:
+    successors: %bb.11(0x80000000)
+    %81:vreg_128 = COPY killed %75
+    %82:vreg_128 = COPY killed %74
+    %83:sreg_64 = COPY killed %73
+
+  bb.11:
+    successors: %bb.12(0x04000000), %bb.10(0x7c000000)
+    undef %59.sub0:vreg_128 = COPY %81.sub0
+    %59.sub2:vreg_128 = COPY %82.sub2
+    %59.sub3:vreg_128 = COPY killed %82.sub3
+    %84:sreg_64 = V_CMP_GE_U32_e64 killed %81.sub0, %28, implicit $exec
+    %85:sreg_64 = S_OR_B64 killed %84, killed %83, implicit-def $scc
+    %86:vreg_128 = COPY %59
+    %73:sreg_64 = COPY %85
+    %74:vreg_128 = COPY %59
+    %75:vreg_128 = COPY killed %86
+    $exec = S_ANDN2_B64_term $exec, %85, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.10, implicit $exec
+    S_BRANCH %bb.12
+
+  bb.12:
+    successors: %bb.15(0x40000000), %bb.5(0x40000000)
+    $exec = S_OR_B64 $exec, killed %85, implicit-def $scc
+    %87:sreg_64 = V_CMP_LT_U32_e64 11, killed %28, implicit $exec
+    %88:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+    %56:sreg_64 = COPY %24
+    %54:vreg_128 = COPY killed %23
+    %52:vreg_128 = IMPLICIT_DEF
+    %50:vgpr_32 = IMPLICIT_DEF
+    %48:vgpr_32 = COPY killed %88
+    %89:sreg_64 = COPY $exec, implicit-def $exec
+    %90:sreg_64 = S_AND_B64 %89, %87, implicit-def dead $scc
+    %46:sreg_64 = S_XOR_B64 %90, %89, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed %90
+    S_CBRANCH_EXECZ %bb.5, implicit $exec
+    S_BRANCH %bb.15
+
+  bb.13:
+    successors: %bb.14(0x40000000), %bb.16(0x40000000)
+    $exec = S_OR_B64 $exec, killed %67, implicit-def $scc
+    %91:vgpr_32 = COPY killed %65
+    %92:vreg_128 = COPY killed %63
+    %93:sreg_64 = V_CMP_NE_U32_e64 0, killed %91, implicit $exec
+    %94:vreg_128 = COPY killed %78
+    %95:sreg_64 = COPY $exec, implicit-def $exec
+    %96:sreg_64 = S_AND_B64 %95, %93, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed %96
+    S_CBRANCH_EXECZ %bb.16, implicit $exec
+    S_BRANCH %bb.14
+
+  bb.14:
+    successors: %bb.16(0x80000000)
+    %97:vreg_128 = COPY killed %92
+    %94:vreg_128 = COPY killed %97
+    S_BRANCH %bb.16
+
+  bb.15:
+    successors: %bb.5(0x80000000)
+    %98:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %99:sreg_64 = V_CMP_NE_U32_e64 0, killed %22, implicit $exec
+    %100:sreg_64 = S_OR_B64 killed %99, killed %24, implicit-def $scc
+    %101:vreg_128 = COPY %59
+    %102:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %56:sreg_64 = COPY killed %100
+    %54:vreg_128 = COPY killed %101
+    %52:vreg_128 = COPY %59
+    %50:vgpr_32 = COPY killed %102
+    %48:vgpr_32 = COPY killed %98
+    S_BRANCH %bb.5
+
+  bb.16:
+    successors: %bb.3(0x80000000)
+    $exec = S_OR_B64 $exec, killed %95, implicit-def $scc
+    %103:vreg_128 = COPY killed %94
+    %104:vreg_128 = COPY killed %103
+    %5:vreg_128 = COPY killed %104
+    S_BRANCH %bb.3
+
+  bb.17:
+    %105:vgpr_32 = nofpexcept V_ADD_F32_e32 target-flags(amdgpu-rel32-lo) 0, %20.sub3, implicit $mode, implicit $exec
+    %106:vgpr_32 = nofpexcept V_ADD_F32_e32 target-flags(amdgpu-gotprel32-hi) 0, killed %20.sub2, implicit $mode, implicit $exec
+    undef %107.sub0:vreg_64 = COPY killed %106
+    %107.sub1:vreg_64 = COPY killed %105
+    $exec = S_AND_B64 $exec, killed %0, implicit-def dead $scc
+    %108:sreg_32_xm0 = S_MOV_B32 0
+    undef %109.sub0:sgpr_256 = COPY %108
+    %109.sub1:sgpr_256 = COPY %108
+    %109.sub2:sgpr_256 = COPY %108
+    %109.sub3:sgpr_256 = COPY %108
+    %109.sub4:sgpr_256 = COPY %108
+    %109.sub5:sgpr_256 = COPY %108
+    %109.sub6:sgpr_256 = COPY %108
+    %109.sub7:sgpr_256 = COPY killed %108
+    %110:vgpr_32 = IMAGE_SAMPLE_V1_V2 killed %107, killed %109, undef %111:sgpr_128, 8, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
+    %112:vgpr_32 = nofpexcept V_MUL_F32_e32 0, killed %110, implicit $mode, implicit $exec
+    %113:vgpr_32 = nofpexcept V_MUL_F32_e32 0, killed %112, implicit $mode, implicit $exec
+    %114:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %113, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %115:vgpr_32 = nofpexcept V_MAX_F32_e32 0, killed %114, implicit $mode, implicit $exec
+    %116:vgpr_32 = nofpexcept V_CVT_PKRTZ_F16_F32_e64 0, killed %115, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
+    EXP 0, undef %117:vgpr_32, killed %116, undef %118:vgpr_32, undef %119:vgpr_32, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...

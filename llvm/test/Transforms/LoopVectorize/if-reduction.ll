@@ -1,0 +1,962 @@
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck %s
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
+; Float pattern:
+;   Check vectorization of reduction code which has an fadd instruction after
+;   an fcmp instruction which compares an array element and 0.
+;
+; float fcmp_0_fadd_select1(ptr restrict x, const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > (float)0.)
+;       sum += x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fadd_select1(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = fadd fast <4 x float> %[[V0]], %[[V2:.*]]
+; CHECK: select <4 x i1> %[[V1]], <4 x float> %[[V3]], <4 x float> %[[V2]]
+define float @fcmp_0_fadd_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt float %0, 0.000000e+00
+  %add = fadd fast float %0, %sum.1
+  %sum.2 = select i1 %cmp.2, float %add, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %1
+}
+
+; Double pattern:
+;   Check vectorization of reduction code which has an fadd instruction after
+;   an fcmp instruction which compares an array element and 0.
+;
+; double fcmp_0_fadd_select2(ptr restrict x, const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > 0.)
+;       sum += x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fadd_select2(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = fadd fast <4 x double> %[[V0]], %[[V2:.*]]
+; CHECK: select <4 x i1> %[[V1]], <4 x double> %[[V3]], <4 x double> %[[V2]]
+define double @fcmp_0_fadd_select2(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt double %0, 0.000000e+00
+  %add = fadd fast double %0, %sum.1
+  %sum.2 = select i1 %cmp.2, double %add, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %1
+}
+
+; Float pattern:
+;   Check vectorization of reduction code which has an fadd instruction after
+;   an fcmp instruction which compares an array element and a floating-point
+;   value.
+;
+; float fcmp_val_fadd_select1(ptr restrict x, float y, const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > y)
+;       sum += x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_val_fadd_select1(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], %broadcast.splat
+; CHECK: %[[V3:.*]] = fadd fast <4 x float> %[[V0]], %[[V2:.*]]
+; CHECK: select <4 x i1> %[[V1]], <4 x float> %[[V3]], <4 x float> %[[V2]]
+define float @fcmp_val_fadd_select1(ptr noalias %x, float %y, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt float %0, %y
+  %add = fadd fast float %0, %sum.1
+  %sum.2 = select i1 %cmp.2, float %add, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %1
+}
+
+; Double pattern:
+;   Check vectorization of reduction code which has an fadd instruction after
+;   an fcmp instruction which compares an array element and a floating-point
+;   value.
+;
+; double fcmp_val_fadd_select2(ptr restrict x, double y, const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > y)
+;       sum += x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_val_fadd_select2(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], %broadcast.splat
+; CHECK: %[[V3:.*]] = fadd fast <4 x double> %[[V0]], %[[V2:.*]]
+; CHECK: select <4 x i1> %[[V1]], <4 x double> %[[V3]], <4 x double> %[[V2]]
+define double @fcmp_val_fadd_select2(ptr noalias %x, double %y, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt double %0, %y
+  %add = fadd fast double %0, %sum.1
+  %sum.2 = select i1 %cmp.2, double %add, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %1
+}
+
+; Float pattern:
+;   Check vectorization of reduction code which has an fadd instruction after
+;   an fcmp instruction which compares an array element and another array
+;   element.
+;
+; float fcmp_array_elm_fadd_select1(ptr restrict x, ptr restrict y,
+;                                   const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > y[i])
+;       sum += x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_array_elm_fadd_select1(
+; CHECK: %[[V2:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], %[[V1:.*]]
+; CHECK: %[[V4:.*]] = fadd fast <4 x float> %[[V0]], %[[V3:.*]]
+; CHECK: select <4 x i1> %[[V2]], <4 x float> %[[V4]], <4 x float> %[[V3]]
+define float @fcmp_array_elm_fadd_select1(ptr noalias %x, ptr noalias %y, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx.1 = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx.1, align 4
+  %arrayidx.2 = getelementptr inbounds float, ptr %y, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx.2, align 4
+  %cmp.2 = fcmp fast ogt float %0, %1
+  %add = fadd fast float %0, %sum.1
+  %sum.2 = select i1 %cmp.2, float %add, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %2 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %2
+}
+
+; Double pattern:
+;   Check vectorization of reduction code which has an fadd instruction after
+;   an fcmp instruction which compares an array element and another array
+;   element.
+;
+; double fcmp_array_elm_fadd_select2(ptr restrict x, ptr restrict y,
+;                                    const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > y[i])
+;       sum += x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_array_elm_fadd_select2(
+; CHECK: %[[V2:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], %[[V1:.*]]
+; CHECK: %[[V4:.*]] = fadd fast <4 x double> %[[V0]], %[[V3:.*]]
+; CHECK: select <4 x i1> %[[V2]], <4 x double> %[[V4]], <4 x double> %[[V3]]
+define double @fcmp_array_elm_fadd_select2(ptr noalias %x, ptr noalias %y, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx.1 = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx.1, align 4
+  %arrayidx.2 = getelementptr inbounds double, ptr %y, i64 %indvars.iv
+  %1 = load double, ptr %arrayidx.2, align 4
+  %cmp.2 = fcmp fast ogt double %0, %1
+  %add = fadd fast double %0, %sum.1
+  %sum.2 = select i1 %cmp.2, double %add, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %2 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %2
+}
+
+; Float pattern:
+;   Check vectorization of reduction code which has an fsub instruction after
+;   an fcmp instruction which compares an array element and 0.
+;
+; float fcmp_0_fsub_select1(ptr restrict x, const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > (float)0.)
+;       sum -= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fsub_select1(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = fsub fast <4 x float> %[[V2:.*]], %[[V0]]
+; CHECK: select <4 x i1> %[[V1]], <4 x float> %[[V3]], <4 x float> %[[V2]]
+define float @fcmp_0_fsub_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt float %0, 0.000000e+00
+  %sub = fsub fast float %sum.1, %0
+  %sum.2 = select i1 %cmp.2, float %sub, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %1
+}
+
+; Float pattern:
+;   Check that is not vectorized if fp-instruction has no fast-math property.
+; float fcmp_0_fsub_select1_novectorize(ptr restrict x, const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > (float)0.)
+;       sum -= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fsub_select1_novectorize(
+; CHECK-NOT: <4 x float>
+define float @fcmp_0_fsub_select1_novectorize(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %sub = fsub float %sum.1, %0
+  %sum.2 = select i1 %cmp.2, float %sub, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %1
+}
+
+; Double pattern:
+;   Check vectorization of reduction code which has an fsub instruction after
+;   an fcmp instruction which compares an array element and 0.
+;
+; double fcmp_0_fsub_select2(ptr restrict x, const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > 0.)
+;       sum -= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fsub_select2(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = fsub fast <4 x double> %[[V2:.*]], %[[V0]]
+; CHECK: select <4 x i1> %[[V1]], <4 x double> %[[V3]], <4 x double> %[[V2]]
+define double @fcmp_0_fsub_select2(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt double %0, 0.000000e+00
+  %sub = fsub fast double %sum.1, %0
+  %sum.2 = select i1 %cmp.2, double %sub, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %1
+}
+
+; Double pattern:
+; Check that is not vectorized if fp-instruction has no fast-math property.
+;
+; double fcmp_0_fsub_select2_notvectorize(ptr restrict x, const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > 0.)
+;       sum -= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fsub_select2_notvectorize(
+; CHECK-NOT: <4 x doubole>
+define double @fcmp_0_fsub_select2_notvectorize(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt double %0, 0.000000e+00
+  %sub = fsub double %sum.1, %0
+  %sum.2 = select i1 %cmp.2, double %sub, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %1
+}
+
+; Float pattern:
+;   Check vectorization of reduction code which has an fmul instruction after
+;   an fcmp instruction which compares an array element and 0.
+;
+; float fcmp_0_fmult_select1(ptr restrict x, const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > (float)0.)
+;       sum *= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fmult_select1(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = fmul fast <4 x float> %[[V2:.*]], %[[V0]]
+; CHECK: select <4 x i1> %[[V1]], <4 x float> %[[V3]], <4 x float> %[[V2]]
+define float @fcmp_0_fmult_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt float %0, 0.000000e+00
+  %mult = fmul fast float %sum.1, %0
+  %sum.2 = select i1 %cmp.2, float %mult, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %1
+}
+
+; Float pattern:
+;   Check that is not vectorized if fp-instruction has no fast-math property.
+;
+; float fcmp_0_fmult_select1_notvectorize(ptr restrict x, const int N) {
+;   float sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > (float)0.)
+;       sum *= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fmult_select1_notvectorize(
+; CHECK-NOT: <4 x float>
+define float @fcmp_0_fmult_select1_notvectorize(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi float [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %mult = fmul float %sum.1, %0
+  %sum.2 = select i1 %cmp.2, float %mult, float %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi float [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret float %1
+}
+
+; Double pattern:
+;   Check vectorization of reduction code which has an fmul instruction after
+;   an fcmp instruction which compares an array element and 0.
+;
+; double fcmp_0_fmult_select2(ptr restrict x, const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > 0.)
+;       sum *= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fmult_select2(
+; CHECK: %[[V1:.*]] = fcmp fast ogt <4 x double> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = fmul fast <4 x double> %[[V2:.*]], %[[V0]]
+; CHECK: select <4 x i1> %[[V1]], <4 x double> %[[V3]], <4 x double> %[[V2]]
+define double @fcmp_0_fmult_select2(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 4
+  %cmp.2 = fcmp fast ogt double %0, 0.000000e+00
+  %mult = fmul fast double %sum.1, %0
+  %sum.2 = select i1 %cmp.2, double %mult, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %1
+}
+
+; Double pattern:
+;   Check that is not vectorized if fp-instruction has no fast-math property.
+;
+; double fcmp_0_fmult_select2_notvectorize(ptr restrict x, const int N) {
+;   double sum = 0.
+;   for (int i = 0; i < N; ++i)
+;     if (x[i] > 0.)
+;       sum *= x[i];
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_0_fmult_select2_notvectorize(
+; CHECK-NOT: <4 x double>
+define double @fcmp_0_fmult_select2_notvectorize(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi double [ 0.000000e+00, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt double %0, 0.000000e+00
+  %mult = fmul double %sum.1, %0
+  %sum.2 = select i1 %cmp.2, double %mult, double %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi double [ 0.000000e+00, %entry ], [ %sum.2, %for.body ]
+  ret double %1
+}
+
+; Float multi pattern
+;   Check vectorisation of reduction code with a pair of selects to different
+;   fadd patterns.
+;
+; float fcmp_multi(ptr a, int n) {
+;   float sum=0.0;
+;   for (int i=0;i<n;i++) {
+;     if (a[i]>1.0)
+;       sum+=a[i];
+;     else if (a[i]<3.0)
+;       sum+=2*a[i];
+;     else
+;       sum+=3*a[i];
+;   }
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_multi(
+; CHECK: %[[C1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], <float 1.000000e+00,
+; CHECK: %[[C2:.*]] = fcmp olt <4 x float> %[[V0]], <float 3.000000e+00,
+; CHECK-DAG: %[[M1:.*]] = fmul fast <4 x float> %[[V0]], <float 3.000000e+00,
+; CHECK-DAG: %[[M2:.*]] = fmul fast <4 x float> %[[V0]], <float 2.000000e+00,
+; CHECK: %[[C11:.*]] = xor <4 x i1> %[[C1]], <i1 true,
+; CHECK-DAG: %[[C12:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C2]], <4 x i1> zeroinitializer
+; CHECK-DAG: %[[C21:.*]] = xor <4 x i1> %[[C2]], <i1 true,
+; CHECK: %[[C22:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C21]], <4 x i1> zeroinitializer
+; CHECK: %[[S1:.*]] = select <4 x i1> %[[C22]], <4 x float> %[[M1]], <4 x float> %[[M2]]
+; CHECK: %[[S2:.*]] = select <4 x i1> %[[C1]], <4 x float> %[[V0]], <4 x float> %[[S1]]
+; CHECK: fadd fast <4 x float> %[[S2]],
+define float @fcmp_multi(ptr nocapture readonly %a, i32 %n) nounwind readonly {
+entry:
+  %cmp10 = icmp sgt i32 %n, 0
+  br i1 %cmp10, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %for.body.preheader
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
+  %sum.011 = phi float [ 0.000000e+00, %for.body.preheader ], [ %sum.1, %for.inc ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp1 = fcmp ogt float %0, 1.000000e+00
+  br i1 %cmp1, label %for.inc, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %cmp8 = fcmp olt float %0, 3.000000e+00
+  br i1 %cmp8, label %if.then10, label %if.else14
+
+if.then10:                                        ; preds = %if.else
+  %mul = fmul fast float %0, 2.000000e+00
+  br label %for.inc
+
+if.else14:                                        ; preds = %if.else
+  %mul17 = fmul fast float %0, 3.000000e+00
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.else14, %if.then10
+  %.pn = phi float [ %mul, %if.then10 ], [ %mul17, %if.else14 ], [ %0, %for.body ]
+  %sum.1 = fadd fast float %.pn, %sum.011
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.inc, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %sum.1, %for.inc ]
+  ret float %sum.0.lcssa
+}
+
+; Float fadd + fsub patterns
+;   Check vectorisation of reduction code with a pair of selects to different
+;   instructions { fadd, fsub } but equivalent (change in constant).
+;
+; float fcmp_multi(ptr a, int n) {
+;   float sum=0.0;
+;   for (int i=0;i<n;i++) {
+;     if (a[i]>1.0)
+;       sum+=a[i];
+;     else if (a[i]<3.0)
+;       sum-=a[i];
+;   }
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_fadd_fsub(
+; CHECK: %[[C1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], <float 1.000000e+00,
+; CHECK: %[[C2:.*]] = fcmp olt <4 x float> %[[V0]], <float 3.000000e+00,
+; CHECK-DAG: %[[SUB:.*]] = fsub fast <4 x float>
+; CHECK-DAG: %[[ADD:.*]] = fadd fast <4 x float>
+; CHECK: %[[C11:.*]] = xor <4 x i1> %[[C1]], <i1 true,
+; CHECK-DAG: %[[C12:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C2]], <4 x i1> zeroinitializer
+; CHECK-DAG: %[[C21:.*]] = xor <4 x i1> %[[C2]], <i1 true,
+; CHECK: %[[C22:.*]] = select <4 x i1> %[[C11]], <4 x i1> %[[C21]], <4 x i1> zeroinitializer
+; CHECK: %[[S1:.*]] = select <4 x i1> %[[C12]], <4 x float> %[[SUB]], <4 x float> %[[ADD]]
+; CHECK: %[[S2:.*]] = select <4 x i1> %[[C22]], {{.*}} <4 x float> %[[S1]]
+define float @fcmp_fadd_fsub(ptr nocapture readonly %a, i32 %n) nounwind readonly {
+entry:
+  %cmp9 = icmp sgt i32 %n, 0
+  br i1 %cmp9, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %for.body.preheader
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
+  %sum.010 = phi float [ 0.000000e+00, %for.body.preheader ], [ %sum.1, %for.inc ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp1 = fcmp ogt float %0, 1.000000e+00
+  br i1 %cmp1, label %if.then, label %if.else
+
+if.then:                                          ; preds = %for.body
+  %add = fadd fast float %0, %sum.010
+  br label %for.inc
+
+if.else:                                          ; preds = %for.body
+  %cmp8 = fcmp olt float %0, 3.000000e+00
+  br i1 %cmp8, label %if.then10, label %for.inc
+
+if.then10:                                        ; preds = %if.else
+  %sub = fsub fast float %sum.010, %0
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.then, %if.then10, %if.else
+  %sum.1 = phi float [ %add, %if.then ], [ %sub, %if.then10 ], [ %sum.010, %if.else ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.inc, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %sum.1, %for.inc ]
+  ret float %sum.0.lcssa
+}
+
+; Float fadd + fmul patterns
+;   Check lack of vectorisation of reduction code with a pair of non-compatible
+;   instructions { fadd, fmul }.
+;
+; float fcmp_multi(ptr a, int n) {
+;   float sum=0.0;
+;   for (int i=0;i<n;i++) {
+;     if (a[i]>1.0)
+;       sum+=a[i];
+;     else if (a[i]<3.0)
+;       sum*=a[i];
+;   }
+;   return sum;
+; }
+
+; CHECK-LABEL: @fcmp_fadd_fmul(
+; CHECK-NOT: <4 x float>
+define float @fcmp_fadd_fmul(ptr nocapture readonly %a, i32 %n) nounwind readonly {
+entry:
+  %cmp9 = icmp sgt i32 %n, 0
+  br i1 %cmp9, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %for.body.preheader
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
+  %sum.010 = phi float [ 0.000000e+00, %for.body.preheader ], [ %sum.1, %for.inc ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp1 = fcmp ogt float %0, 1.000000e+00
+  br i1 %cmp1, label %if.then, label %if.else
+
+if.then:                                          ; preds = %for.body
+  %add = fadd fast float %0, %sum.010
+  br label %for.inc
+
+if.else:                                          ; preds = %for.body
+  %cmp8 = fcmp olt float %0, 3.000000e+00
+  br i1 %cmp8, label %if.then10, label %for.inc
+
+if.then10:                                        ; preds = %if.else
+  %mul = fmul fast float %0, %sum.010
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.then, %if.then10, %if.else
+  %sum.1 = phi float [ %add, %if.then ], [ %mul, %if.then10 ], [ %sum.010, %if.else ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.inc, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %sum.1, %for.inc ]
+  ret float %sum.0.lcssa
+}
+
+; Float fadd + store patterns
+;   Check lack of vectorisation of reduction code with a store back, given it
+;   has loop dependency on a[i].
+;
+; float fcmp_store_back(float a[], int LEN) {
+;     float sum = 0.0;
+;     for (int i = 0; i < LEN; i++) {
+;       sum += a[i];
+;       a[i] = sum;
+;     }
+;     return sum;
+; }
+
+define float @fcmp_store_back(ptr nocapture %a, i32 %LEN) nounwind readonly {
+; CHECK-LABEL: @fcmp_store_back(
+; CHECK-NOT:     <4 x float>
+;
+entry:
+  %cmp7 = icmp sgt i32 %LEN, 0
+  br i1 %cmp7, label %for.body.preheader, label %for.end
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %LEN to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.body.preheader
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %sum.08 = phi float [ 0.000000e+00, %for.body.preheader ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %add = fadd fast float %0, %sum.08
+  store float %add, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
+  ret float %sum.0.lcssa
+}
+
+; CHECK-LABEL: @fcmp_0_add_select2(
+; CHECK: %[[V1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = add <4 x i64> %[[V2:.*]], <i64 2, i64 2, i64 2, i64 2>
+; CHECK: select <4 x i1> %[[V1]], <4 x i64> %[[V3]], <4 x i64> %[[V2]]
+define i64 @fcmp_0_add_select2(ptr noalias %x, i64 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i64 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi i64 [ 0, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %add = add nsw i64 %sum.1, 2
+  %sum.2 = select i1 %cmp.2, i64 %add, i64 %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi i64 [ 0, %entry ], [ %sum.2, %for.body ]
+  ret i64 %1
+}
+
+; CHECK-LABEL: @fcmp_0_sub_select1(
+; CHECK: %[[V1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = sub <4 x i32> %[[V2:.*]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK: select <4 x i1> %[[V1]], <4 x i32> %[[V3]], <4 x i32> %[[V2]]
+define i32 @fcmp_0_sub_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %header, %for.body
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi i32 [ 0, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %sub = sub nsw i32 %sum.1, 2
+  %sum.2 = select i1 %cmp.2, i32 %sub, i32 %sum.1
+  %indvars.iv.next = sub nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
+  ret i32 %1
+}
+
+; CHECK-LABEL: @fcmp_0_mult_select1(
+; CHECK: %[[V1:.*]] = fcmp ogt <4 x float> %[[V0:.*]], zeroinitializer
+; CHECK: %[[V3:.*]] = mul <4 x i32> %[[V2:.*]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK: select <4 x i1> %[[V1]], <4 x i32> %[[V3]], <4 x i32> %[[V2]]
+define i32 @fcmp_0_mult_select1(ptr noalias %x, i32 %N) nounwind readonly {
+entry:
+  %cmp.1 = icmp sgt i32 %N, 0
+  br i1 %cmp.1, label %for.header, label %for.end
+
+for.header:                                       ; preds = %entry
+  %zext = zext i32 %N to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.header
+  %indvars.iv = phi i64 [ 0, %for.header ], [ %indvars.iv.next, %for.body ]
+  %sum.1 = phi i32 [ 0, %for.header ], [ %sum.2, %for.body ]
+  %arrayidx = getelementptr inbounds float, ptr %x, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp.2 = fcmp ogt float %0, 0.000000e+00
+  %mult = mul nsw i32 %sum.1, 2
+  %sum.2 = select i1 %cmp.2, i32 %mult, i32 %sum.1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, %zext
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  %1 = phi i32 [ 0, %entry ], [ %sum.2, %for.body ]
+  ret i32 %1
+}
+
+@table = constant [13 x i16] [i16 10, i16 35, i16 69, i16 147, i16 280, i16 472, i16 682, i16 1013, i16 1559, i16 2544, i16 4553, i16 6494, i16 10000], align 1 
+
+; CHECK-LABEL: @non_reduction_index(
+; CHECK-NOT:     <4 x i16>
+define i16 @non_reduction_index(i16 noundef %val) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
+  ret i16 %spec.select.lcssa
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
+  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
+  %0 = load i16, ptr %arrayidx, align 1
+  %cmp1 = icmp ugt i16 %0, %val
+  %sub = add nsw i16 %i.05, -1
+  %spec.select = select i1 %cmp1, i16 %sub, i16 %k.04
+  %cmp.not = icmp eq i16 %sub, 0
+  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+}
+
+@tablef = constant [13 x half] [half 10.0, half 35.0, half 69.0, half 147.0, half 280.0, half 472.0, half 682.0, half 1013.0, half 1559.0, half 2544.0, half 4556.0, half 6496.0, half 10000.0], align 1 
+
+; CHECK-LABEL: @non_reduction_index_half(
+; CHECK-NOT:     <4 x half>
+define i16 @non_reduction_index_half(half noundef %val) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
+  ret i16 %spec.select.lcssa
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
+  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
+  %0 = load half, ptr %arrayidx, align 1
+  %fcmp1 = fcmp ugt half %0, %val
+  %sub = add nsw i16 %i.05, -1
+  %spec.select = select i1 %fcmp1, i16 %sub, i16 %k.04
+  %cmp.not = icmp eq i16 %sub, 0
+  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+}
+
+; Make sure any check-not directives are not triggered by function declarations.
+; CHECK: declare

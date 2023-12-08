@@ -1,0 +1,15 @@
+You need a checkout of clang with compiler-rt to generate the
+binary file here.  These shell commands can be used to regenerate
+it.
+$ SRC=path/to/llvm
+$ CFE=$SRC/tools/clang
+$ TESTDIR=$SRC/test/tools/llvm-profdata
+$ CFE_TESTDIR=$CFE/test/Profile
+$ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
+$ LLVM_PROFILE_FILE=$TESTDIR/Inputs/compressed.profraw ./a.out
+
+RUN: not llvm-profdata show %p/Inputs/compressed.profraw -o %t 2>&1 | FileCheck %s
+
+REQUIRES: !zlib
+
+CHECK: error: {{.+}}: profile uses zlib compression but the profile reader was built without zlib support

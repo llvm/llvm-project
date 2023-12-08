@@ -1,0 +1,41 @@
+! RUN: %python %S/test_modfile.py %s %flang_fc1
+! Sanity check for CUDA Fortran attributes in module files
+module m
+  attributes(device) dd
+  real, managed, allocatable :: md
+  real, pinned, allocatable :: mp
+  attributes(constant) cd
+ contains
+  attributes(global) subroutine globsub(x,y,z)
+    real, value :: x
+    real, device :: y
+    real, managed :: z
+  end subroutine
+  attributes(host,device) real function foo(x)
+    foo = x + 1.
+  end function
+end
+
+!Expect: m.mod
+!module m
+!real(4)::dd
+!attributes(device) dd
+!real(4),allocatable::md
+!attributes(managed) md
+!real(4),allocatable::mp
+!attributes(pinned) mp
+!real(4)::cd
+!attributes(constant) cd
+!contains
+!attributes(global) subroutine globsub(x,y,z)
+!real(4),value::x
+!real(4)::y
+!attributes(device) y
+!real(4)::z
+!attributes(managed) z
+!end
+!attributes(host,device) function foo(x)
+!real(4)::x
+!real(4)::foo
+!end
+!end

@@ -1,0 +1,18 @@
+# RUN: not --crash llc -march=amdgcn -run-pass=amdgpu-regbankselect  -regbankselect-fast  %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not --crash llc -march=amdgcn -run-pass=amdgpu-regbankselect  -regbankselect-greedy  %s -o /dev/null 2>&1 | FileCheck %s
+
+# Check behavior for illegal copies.
+
+# CHECK: LLVM ERROR: unable to map instruction: $sgpr0 = COPY %0:vgpr(s32) (in function: illegal_copy_s32_v_to_s)
+
+---
+name: illegal_copy_s32_v_to_s
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    %0:_(s32) = COPY $vgpr0
+    $sgpr0 = COPY %0
+...

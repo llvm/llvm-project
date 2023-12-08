@@ -1,0 +1,2 @@
+RUN: llc -O0 -mtriple=i686-- -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll
+RUN: llc -O0 -mtriple=x86_64-- -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll

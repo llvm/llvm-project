@@ -1,0 +1,188 @@
+// clang-format off
+// REQUIRES: lld, x86
+
+// Test various interesting cases for AST reconstruction.
+// RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
+// RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
+// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN:     %p/Inputs/ast-types.lldbinit 2>&1 | FileCheck %s
+
+// Test trivial versions of each tag type.
+class TrivialC {};
+struct TrivialS {};
+union TrivialU {};
+enum TrivialE {TE_A};
+
+// Test reconstruction of DeclContext hierarchies.
+namespace A {
+  namespace B {
+    template<typename T>
+    struct C {
+      T ABCMember;
+    };
+
+    // Let's try a template specialization with a different implementation
+    template<>
+    struct C<void> {
+      void *ABCSpecializationMember;
+    };
+  }
+
+  // Let's make sure we can distinguish classes and namespaces.  Also let's try
+  // a non-type template parameter.
+  template<int N>
+  struct C {
+    class D {
+      int ACDMember = 0;
+      C<N - 1> *CPtr = nullptr;
+    };
+  };
+
+  struct D {
+    // Let's make a nested class with the same name as another nested class
+    // elsewhere, and confirm that they appear in the right DeclContexts in
+    // the AST.
+    struct E {
+      int ADDMember;
+    };
+  };
+}
+
+
+// Let's try an anonymous namespace.
+namespace {
+  template<typename T>
+  struct Anonymous {
+    int AnonymousMember;
+    // And a nested class within an anonymous namespace
+    struct D {
+      int AnonymousDMember;
+    };
+  };
+}
+
+TrivialC TC;
+TrivialS TS;
+TrivialU TU;
+TrivialE TE;
+
+A::B::C<int> ABCInt;
+A::B::C<float> ABCFloat;
+A::B::C<void> ABCVoid;
+
+A::C<0> AC0;
+A::C<-1> ACNeg1;
+
+// FIXME: The type `D` is located now at the level of the translation unit.
+// FIXME: Should be located in the namespace `A`, in the struct `C<1>`.
+A::C<1>::D AC1D;
+
+A::C<0>::D AC0D;
+A::C<-1>::D ACNeg1D;
+A::D AD;
+A::D::E ADE;
+
+Anonymous<int> AnonInt;
+Anonymous<A::B::C<void>> AnonABCVoid;
+Anonymous<A::B::C<void>>::D AnonABCVoidD;
+
+// The following tests that MSInheritanceAttr are set for record decls.
+class  SI { int si; };
+struct SI2 { int si2; };
+class  MI : SI, SI2 { int mi; };
+class MI2 : MI { int mi2; };
+class VI : virtual MI { int vi; };
+class VI2 : virtual SI, virtual SI2 { int vi; };
+class/* __unspecified_inheritance*/ UI;
+
+typedef void (SI::*SITYPE)();
+typedef void (MI::*MITYPE)();
+typedef void (MI2::*MI2TYPE)();
+typedef void (VI::*VITYPE)();
+typedef void (VI2::*VI2TYPE)();
+typedef void (UI::*UITYPE)();
+SITYPE mp1 = nullptr;
+MITYPE mp2 = nullptr;
+MI2TYPE mp3 = nullptr;
+VITYPE mp4 = nullptr;
+VI2TYPE mp5 = nullptr;
+UITYPE mp6 = nullptr;
+MITYPE *mp7 = nullptr;
+VI2TYPE *mp8 = nullptr;
+int SI::*mp9 = nullptr;
+
+// FIXME: Enum size isn't being correctly determined.
+// FIXME: Can't read memory for variable values.
+
+// CHECK: (TrivialC) TC = {}
+// CHECK: (TrivialS) TS = {}
+// CHECK: (TrivialU) TU = {}
+// CHECK: (TrivialE) TE = TE_A
+// CHECK: (A::B::C<int>) ABCInt = (ABCMember = 0)
+// CHECK: (A::B::C<float>) ABCFloat = (ABCMember = 0)
+// CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = 0x{{0+}})
+// CHECK: (A::C<0>) AC0 = {}
+// CHECK: (A::C<-1>) ACNeg1 = {}
+// CHECK: (A::C<1>::D) AC1D = (ACDMember = 0, CPtr = 0x{{0+}})
+// CHECK: (A::C<0>::D) AC0D = (ACDMember = 0, CPtr = 0x{{0+}})
+// CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = 0, CPtr = 0x{{0+}})
+// CHECK: (A::D) AD = {}
+// CHECK: (A::D::E) ADE = (ADDMember = 0)
+// CHECK: (Anonymous<int>) AnonInt = (AnonymousMember = 0)
+// CHECK: (Anonymous<A::B::C<void>>) AnonABCVoid = (AnonymousMember = 0)
+// CHECK: (Anonymous<A::B::C<void>>::D) AnonABCVoidD = (AnonymousDMember = 0)
+// CHECK: (void (SI::*)()) mp1 = 0x0000000000000000
+// CHECK: (void (MI::*)()) mp2 = 0x0000000000000000
+// CHECK: (void (MI2::*)()) mp3 = 0x0000000000000000
+// CHECK: (void (VI::*)()) mp4 = 0x0000000000000000
+// CHECK: (void (VI2::*)()) mp5 = 0x0000000000000000
+// CHECK: (void (UI::*)()) mp6 = 0x0000000000000000
+// CHECK: (void (MI::**)()) mp7 = 0x0000000000000000
+// CHECK: (void (VI2::**)()) mp8 = 0x0000000000000000
+// CHECK: (int SI::*) mp9 = 0xffffffff
+// CHECK: Dumping clang ast for 1 modules.
+// CHECK: TranslationUnitDecl {{.*}}
+// CHECK: |-CXXRecordDecl {{.*}} class TrivialC definition
+// CHECK: |-CXXRecordDecl {{.*}} struct TrivialS definition
+// CHECK: |-CXXRecordDecl {{.*}} union TrivialU definition
+// CHECK: |-EnumDecl {{.*}} TrivialE
+// CHECK: | `-EnumConstantDecl {{.*}} TE_A 'TrivialE'
+// CHECK: |-NamespaceDecl {{.*}} A
+// CHECK: | |-NamespaceDecl {{.*}} B
+// CHECK: | | |-CXXRecordDecl {{.*}} struct C<int> definition
+// CHECK: | | | `-FieldDecl {{.*}} ABCMember 'int'
+// CHECK: | | |-CXXRecordDecl {{.*}} struct C<float> definition
+// CHECK: | | | `-FieldDecl {{.*}} ABCMember 'float'
+// CHECK: | | `-CXXRecordDecl {{.*}} struct C<void> definition
+// CHECK: | |   `-FieldDecl {{.*}} ABCSpecializationMember 'void *'
+// FIXME: | |-CXXRecordDecl {{.*}} struct C<1> definition
+// FIXME: | | `-CXXRecordDecl {{.*}} class D definition
+// FIXME: | |   |-FieldDecl {{.*}} ACDMember 'int'
+// FIXME: | |   `-FieldDecl {{.*}} CPtr 'A::C<1> *'
+// CHECK: | |-CXXRecordDecl {{.*}} struct C<0> definition
+// CHECK: | | `-CXXRecordDecl {{.*}} class D definition
+// CHECK: | |   |-FieldDecl {{.*}} ACDMember 'int'
+// CHECK: | |   `-FieldDecl {{.*}} CPtr 'A::C<-1> *'
+// CHECK: | |-CXXRecordDecl {{.*}} struct C<-1> definition
+// CHECK: | | `-CXXRecordDecl {{.*}} class D definition
+// CHECK: | |   |-FieldDecl {{.*}} ACDMember 'int'
+// CHECK: | |   `-FieldDecl {{.*}} CPtr 'A::C<-2> *'
+// CHECK: | |-CXXRecordDecl {{.*}} struct C<-2>
+// CHECK: | `-CXXRecordDecl {{.*}} struct D definition
+// CHECK: |   `-CXXRecordDecl {{.*}} struct E definition
+// CHECK: |     `-FieldDecl {{.*}} ADDMember 'int'
+// CHECK: |-NamespaceDecl
+// CHECK: | |-CXXRecordDecl {{.*}} struct Anonymous<int> definition
+// CHECK: | | `-FieldDecl {{.*}} AnonymousMember 'int'
+// CHECK: | `-CXXRecordDecl {{.*}} struct Anonymous<A::B::C<void>> definition
+// CHECK: |   |-FieldDecl {{.*}} AnonymousMember 'int'
+// CHECK: |   `-CXXRecordDecl {{.*}} struct D definition
+// CHECK: |     `-FieldDecl {{.*}} AnonymousDMember 'int'
+
+int main(int argc, char **argv) {
+  AnonInt.AnonymousMember = 1;
+  AnonABCVoid.AnonymousMember = 2;
+  AnonABCVoidD.AnonymousDMember = 3;
+
+  return 0;
+}

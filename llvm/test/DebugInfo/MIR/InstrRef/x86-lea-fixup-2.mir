@@ -1,0 +1,65 @@
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=i386 -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s
+#
+# Test that several LEA => ADD transforms get substitutions applied to them,
+# for corner cases that we can only hit with -mtriple=i386.
+---
+name:            test2add_32
+# CHECK: name: test2add_32
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$eax' }
+  - { reg: '$ebp' }
+# CHECK:       debugValueSubstitutions:
+# CHECK-NAME:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $eax, $ebp
+
+    ; CHECK: $eax = ADD32ri {{.*}} debug-instr-number 2
+    $eax = LEA32r killed $eax, 1, killed $ebp, -5, $noreg, debug-instr-number 1
+    RET64 $eax
+
+...
+---
+name:            testleais_ebp_32
+# CHECK-LABEL: name: testleais_ebp_32
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$eax' }
+  - { reg: '$ebx' }
+  - { reg: '$ebp' }
+# CHECK:       debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $eax, $ebp, $ebx
+
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 0, $noreg, debug-instr-number 2
+    $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg, debug-instr-number 1
+    RET64 $ebx
+
+...
+---
+name:            testleabid_ebp_leaisd_32
+# CHECK-LABEL: name: testleabid_ebp_leaisd_32
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$ebx' }
+  - { reg: '$ebp' }
+# CHECK:       debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $eax, $ebp, $ebx
+
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 5, $noreg, debug-instr-number 2
+    $ebx = LEA32r $ebp, 1, $ebp, 5, $noreg, debug-instr-number 1
+    RET64 $ebx
+
+...

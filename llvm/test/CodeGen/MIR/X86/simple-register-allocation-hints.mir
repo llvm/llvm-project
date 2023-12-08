@@ -1,0 +1,34 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses simple register allocation hints
+# correctly.
+
+--- |
+
+  define i32 @test(i32 %a, i32 %b) {
+  body:
+    %c = mul i32 %a, %b
+    ret i32 %c
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+# CHECK: registers:
+# CHECK-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gr32, preferred-register: '$esi' }
+# CHECK-NEXT:  - { id: 2, class: gr32, preferred-register: '$edi' }
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32, preferred-register: '$esi' }
+  - { id: 2, class: gr32, preferred-register: '$edi' }
+body: |
+  bb.0.body:
+    liveins: $edi, $esi
+
+    %1 = COPY $esi
+    %2 = COPY $edi
+    %2 = IMUL32rr %2, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET64 killed $eax
+...

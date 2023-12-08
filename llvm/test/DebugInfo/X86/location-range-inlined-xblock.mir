@@ -1,0 +1,172 @@
+# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN:   | llvm-dwarfdump -v --name local - \
+# RUN:   | FileCheck %s
+#
+## Generated with opt -inline -mem2reg, llc -stop-after=livedebugvalues from:
+## int glob;
+## int ext1(int);
+## int ext2(int);
+##
+## __attribute__((always_inline))
+## static int inline_me() {
+##   int local = glob;
+##   int r = 0;
+##   if (local)
+##     r = ext1(local);
+##   else
+##     r = ext2(local);
+##   return r * local;
+## }
+##
+## int fun(int p) {
+##   glob = p;
+##   glob = inline_me();
+##   return 0;
+## }
+##
+## Check that the location for inlined variable 'local' (RBX), which spans
+## multiple basic blocks, is given a single location.
+#
+# CHECK:      DW_AT_location [DW_FORM_exprloc] (DW_OP_reg3 RBX)
+# CHECK-NEXT: DW_AT_abstract_origin [DW_FORM_ref4] ({{.*}}"local")
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  @glob = dso_local global i32 0, align 4, !dbg !0
+
+  define dso_local i32 @_Z3funi(i32 %p) !dbg !11 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %p, metadata !15, metadata !DIExpression()), !dbg !16
+    store i32 %p, i32* @glob, align 4, !dbg !17
+    %0 = load i32, i32* @glob, align 4, !dbg !22
+    call void @llvm.dbg.value(metadata i32 %0, metadata !27, metadata !DIExpression()), !dbg !30
+    call void @llvm.dbg.value(metadata i32 0, metadata !28, metadata !DIExpression()), !dbg !30
+    %tobool.i = icmp ne i32 %0, 0, !dbg !31
+    br i1 %tobool.i, label %if.then.i, label %if.else.i, !dbg !33
+
+  if.then.i:                                        ; preds = %entry
+    %call.i = call i32 @_Z4ext1i(i32 %0), !dbg !34
+    call void @llvm.dbg.value(metadata i32 %call.i, metadata !28, metadata !DIExpression()), !dbg !30
+    br label %_ZL9inline_mev.exit, !dbg !35
+
+  if.else.i:                                        ; preds = %entry
+    %call1.i = call i32 @_Z4ext2i(i32 %0), !dbg !36
+    call void @llvm.dbg.value(metadata i32 %call1.i, metadata !28, metadata !DIExpression()), !dbg !30
+    br label %_ZL9inline_mev.exit
+
+  _ZL9inline_mev.exit:                              ; preds = %if.else.i, %if.then.i
+    %r.0.i = phi i32 [ %call.i, %if.then.i ], [ %call1.i, %if.else.i ], !dbg !37
+    call void @llvm.dbg.value(metadata i32 %r.0.i, metadata !28, metadata !DIExpression()), !dbg !30
+    %mul.i = mul nsw i32 %r.0.i, %0, !dbg !38
+    store i32 %mul.i, i32* @glob, align 4, !dbg !39
+    ret i32 0, !dbg !40
+  }
+
+  declare !dbg !41 dso_local i32 @_Z4ext1i(i32)
+  declare !dbg !42 dso_local i32 @_Z4ext2i(i32)
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!7, !8, !9}
+  !llvm.ident = !{!10}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "glob", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "test.cpp", directory: "/")
+  !4 = !{}
+  !5 = !{!0}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 7, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 1, !"wchar_size", i32 4}
+  !10 = !{!"clang version 12.0.0"}
+  !11 = distinct !DISubprogram(name: "fun", linkageName: "_Z3funi", scope: !3, file: !3, line: 16, type: !12, scopeLine: 16, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{!6, !6}
+  !14 = !{!15}
+  !15 = !DILocalVariable(name: "p", arg: 1, scope: !11, file: !3, line: 16, type: !6)
+  !16 = !DILocation(line: 0, scope: !11)
+  !17 = !DILocation(line: 17, column: 8, scope: !11)
+  !22 = !DILocation(line: 7, column: 15, scope: !23, inlinedAt: !29)
+  !23 = distinct !DISubprogram(name: "inline_me", linkageName: "_ZL9inline_mev", scope: !3, file: !3, line: 6, type: !24, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !26)
+  !24 = !DISubroutineType(types: !25)
+  !25 = !{!6}
+  !26 = !{!27, !28}
+  !27 = !DILocalVariable(name: "local", scope: !23, file: !3, line: 7, type: !6)
+  !28 = !DILocalVariable(name: "r", scope: !23, file: !3, line: 8, type: !6)
+  !29 = distinct !DILocation(line: 18, column: 10, scope: !11)
+  !30 = !DILocation(line: 0, scope: !23, inlinedAt: !29)
+  !31 = !DILocation(line: 9, column: 7, scope: !32, inlinedAt: !29)
+  !32 = distinct !DILexicalBlock(scope: !23, file: !3, line: 9, column: 7)
+  !33 = !DILocation(line: 9, column: 7, scope: !23, inlinedAt: !29)
+  !34 = !DILocation(line: 10, column: 9, scope: !32, inlinedAt: !29)
+  !35 = !DILocation(line: 10, column: 5, scope: !32, inlinedAt: !29)
+  !36 = !DILocation(line: 12, column: 9, scope: !32, inlinedAt: !29)
+  !37 = !DILocation(line: 0, scope: !32, inlinedAt: !29)
+  !38 = !DILocation(line: 13, column: 12, scope: !23, inlinedAt: !29)
+  !39 = !DILocation(line: 18, column: 8, scope: !11)
+  !40 = !DILocation(line: 19, column: 3, scope: !11)
+  !41 = !DISubprogram(name: "ext1", linkageName: "_Z4ext1i", scope: !3, file: !3, line: 2, type: !12, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !4)
+  !42 = !DISubprogram(name: "ext2", linkageName: "_Z4ext2i", scope: !3, file: !3, line: 3, type: !12, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !4)
+
+...
+---
+name:            _Z3funi
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $edi, $rbx
+
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !16
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $ebx = MOV32rr $edi
+    DBG_VALUE $ebx, $noreg, !15, !DIExpression(), debug-location !16
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, $edi, debug-location !17 :: (store (s32) into @glob)
+    DBG_VALUE $ebx, $noreg, !27, !DIExpression(), debug-location !30
+    DBG_VALUE 0, $noreg, !28, !DIExpression(), debug-location !30
+    TEST32rr $edi, $edi, implicit-def $eflags, debug-location !31
+    JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !33
+
+  bb.1.if.then.i:
+    successors: %bb.3(0x80000000)
+    liveins: $ebx
+
+    DBG_VALUE $ebx, $noreg, !27, !DIExpression(), debug-location !30
+    DBG_VALUE $ebx, $noreg, !15, !DIExpression(), debug-location !16
+    DBG_VALUE 0, $noreg, !28, !DIExpression(), debug-location !30
+    $edi = MOV32rr $ebx, debug-location !34
+    CALL64pcrel32 @_Z4ext1i, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !34
+    DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
+    JMP_1 %bb.3
+
+  bb.2.if.else.i:
+    successors: %bb.3(0x80000000)
+    liveins: $ebx
+
+    DBG_VALUE $ebx, $noreg, !27, !DIExpression(), debug-location !30
+    DBG_VALUE $ebx, $noreg, !15, !DIExpression(), debug-location !16
+    DBG_VALUE 0, $noreg, !28, !DIExpression(), debug-location !30
+    $edi = MOV32rr $ebx, debug-location !36
+    CALL64pcrel32 @_Z4ext2i, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !36
+    DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
+
+  bb.3._ZL9inline_mev.exit:
+    liveins: $eax, $ebx
+
+    DBG_VALUE $ebx, $noreg, !27, !DIExpression(), debug-location !30
+    DBG_VALUE $ebx, $noreg, !15, !DIExpression(), debug-location !16
+    DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
+    DBG_VALUE $eax, $noreg, !28, !DIExpression(), debug-location !30
+    renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $ebx, implicit-def dead $eflags, debug-location !38
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $eax, debug-location !39 :: (store (s32) into @glob)
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !40
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !40
+    DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !40
+    RET64 $eax, debug-location !40
+
+...

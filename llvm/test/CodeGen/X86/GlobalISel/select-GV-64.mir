@@ -1,0 +1,84 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                          -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64
+# RUN: llc -mtriple=x86_64-apple-darwin -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64_DARWIN_PIC
+
+--- |
+
+  @g_int = dso_local global i32 0, align 4
+
+  define dso_local void @test_global_ptrv() {
+  entry:
+    store ptr @g_int, ptr undef
+    ret void
+  }
+
+  define dso_local i32 @test_global_valv() {
+  entry:
+    %0 = load i32, ptr @g_int, align 4
+    ret i32 %0
+  }
+
+...
+---
+name:            test_global_ptrv
+# CHECK-LABEL: name:  test_global_ptrv
+alignment:       16
+legalized:       true
+regBankSelected: true
+# X64ALL:              registers:
+# X64ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
+# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '' }
+#
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# X64:                     %0:gr64 = IMPLICIT_DEF
+# X64-NEXT:                %1:gr64 = LEA64r $noreg, 1, $noreg, @g_int, $noreg
+# X64-NEXT:                MOV64mr %0, 1, $noreg, 0, $noreg, %1 :: (store (p0) into `ptr undef`)
+# X64-NEXT:                RET 0
+#
+# X64_DARWIN_PIC:          %0:gr64 = IMPLICIT_DEF
+# X64_DARWIN_PIC-NEXT:     %1:gr64 = LEA64r $rip, 1, $noreg, @g_int, $noreg
+# X64_DARWIN_PIC-NEXT:     MOV64mr %0, 1, $noreg, 0, $noreg, %1 :: (store (p0) into `ptr undef`)
+# X64_DARWIN_PIC-NEXT:     RET 0
+#
+body:             |
+  bb.1.entry:
+    liveins: $rdi
+
+    %0(p0) = IMPLICIT_DEF
+    %1(p0) = G_GLOBAL_VALUE @g_int
+    G_STORE %1(p0), %0(p0) :: (store (p0) into `ptr undef`)
+    RET 0
+
+...
+---
+name:            test_global_valv
+# CHECK-LABEL: name:  test_global_valv
+alignment:       16
+legalized:       true
+regBankSelected: true
+# X64ALL:              registers:
+# X64ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '' }
+# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '' }
+#
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# X64:                     %1:gr64 = LEA64r $noreg, 1, $noreg, @g_int, $noreg
+# X64-NEXT:                %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from @g_int)
+# X64-NEXT:                $eax = COPY %0
+# X64-NEXT:                RET 0, implicit $eax
+#
+# X64_DARWIN_PIC:          %1:gr64 = LEA64r $rip, 1, $noreg, @g_int, $noreg
+# X64_DARWIN_PIC-NEXT:     %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from @g_int)
+# X64_DARWIN_PIC-NEXT:     $eax = COPY %0
+# X64_DARWIN_PIC-NEXT:     RET 0, implicit $eax
+#
+body:             |
+  bb.1.entry:
+    %1(p0) = G_GLOBAL_VALUE @g_int
+    %0(s32) = G_LOAD %1(p0) :: (load (s32) from @g_int)
+    $eax = COPY %0(s32)
+    RET 0, implicit $eax
+
+...

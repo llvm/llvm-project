@@ -1,0 +1,98 @@
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=register-coalescer,rename-independent-subregs %s -o - | FileCheck -check-prefix=GCN %s
+
+# This test is for a bug where the following happens:
+#
+# Inside the loop, %29.sub2 is used in a V_LSHLREV whose result is then used
+# in an LDS read. %29 is a 128 bit value that is linked by copies to
+# %45 (from phi elimination), %28 (the value in the loop pre-header),
+# %31 (defined and subreg-modified in the loop, and used after the loop)
+# and %30:
+#
+#     %45:vreg_128 = COPY killed %28
+# bb.1:
+#     %29:vreg_128 = COPY killed %45
+#     %39:vgpr_32 = V_LSHLREV_B32_e32 2, %29.sub2, implicit $exec
+#     %31:vreg_128 = COPY killed %29
+#     %31.sub1:vreg_128 = COPY %34
+#     %30:vreg_128 = COPY %31
+#     %45:vreg_128 = COPY killed %30
+#     S_CBRANCH_EXECNZ %bb.39, implicit $exec
+#     S_BRANCH %bb.40
+# bb.2:
+#     undef %32.sub0:vreg_128 = COPY killed %31.sub0
+#
+# So this coalesces together into a single 128 bit value whose sub1 is modified
+# in the loop, but the sub2 used in the V_LSHLREV is not modified in the loop.
+#
+# The bug is that the coalesced value has a L00000004 subrange (for sub2) that
+# says that it is not live up to the end of the loop block. The symptom is that
+# Rename Independent Subregs separates sub2 into its own register, and it is
+# not live round the loop, so that pass adds an IMPLICIT_DEF for it just before
+# the loop backedge.
+
+# GCN: bb.1:
+# GCN: V_LSHLREV_B32_e32 2, [[val:%[0-9][0-9]*]].sub2
+# GCN-NOT: [[val]]:vreg_128 = IMPLICIT_DEF
+
+---
+name: _amdgpu_cs_main
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+
+    %3:sgpr_32 = S_MOV_B32 0
+    undef %19.sub1:vreg_128 = COPY undef %3
+    %4:sgpr_32 = S_MOV_B32 1
+    %5:sgpr_32 = S_MOV_B32 2
+    %11:sreg_32_xm0 = S_MOV_B32 255
+    undef %28.sub0:vreg_128 = COPY killed %3
+    %28.sub1:vreg_128 = COPY killed %4
+    %28.sub2:vreg_128 = COPY killed %11
+    %28.sub3:vreg_128 = COPY killed %5
+    %2:sreg_64 = S_MOV_B64 0
+    %34:sreg_32 = S_MOV_B32 7
+    %37:vreg_128 = COPY undef %42:vreg_128
+    %43:sreg_64 = COPY killed %2
+    %44:vreg_128 = COPY killed %37
+    %45:vreg_128 = COPY killed %28
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    %29:vreg_128 = COPY killed %45
+    %36:vreg_128 = COPY killed %44
+    %0:sreg_64 = COPY killed %43
+    %39:vgpr_32 = V_LSHLREV_B32_e32 2, %29.sub2, implicit $exec
+    %41:vgpr_32 = V_ADD_CO_U32_e32 1152, %39, implicit-def dead $vcc, implicit $exec
+    $m0 = S_MOV_B32 -1
+    %12:vreg_64 = DS_READ2_B32 killed %41, 0, 1, 0, implicit $m0, implicit $exec
+    %13:vreg_64 = DS_READ2_B32 %39, -112, -111, 0, implicit $m0, implicit $exec
+    %14:vreg_64 = DS_READ2_B32 %39, 0, 1, 0, implicit $m0, implicit $exec
+    %40:vgpr_32 = V_ADD_CO_U32_e32 1160, %39, implicit-def dead $vcc, implicit $exec
+    %15:vreg_64 = DS_READ2_B32 killed %40, 0, 1, 0, implicit $m0, implicit $exec
+    %16:vreg_64 = DS_READ2_B32 %39, -110, -109, 0, implicit $m0, implicit $exec
+    %17:vreg_64 = DS_READ2_B32 %39, 2, 3, 0, implicit $m0, implicit $exec
+    undef %35.sub1:vreg_128 = COPY undef %34
+    %31:vreg_128 = COPY killed %29
+    %31.sub1:vreg_128 = COPY %34
+    %38:vgpr_32 = V_ADD_CO_U32_e32 1, %36.sub0, implicit-def dead $vcc, implicit $exec
+    %18:sreg_64 = V_CMP_LT_I32_e64 5, %38, implicit $exec
+    %1:sreg_64 = S_OR_B64 killed %18, killed %0, implicit-def $scc
+    %30:vreg_128 = COPY %31
+    %43:sreg_64 = COPY %1
+    %44:vreg_128 = COPY %35
+    %45:vreg_128 = COPY killed %30
+    $exec = S_ANDN2_B64_term $exec, %1, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    $exec = S_OR_B64 $exec, killed %1, implicit-def $scc
+    %33:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    undef %32.sub0:vreg_128 = COPY killed %31.sub0
+    %32.sub2:vreg_128 = COPY %33
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %32:vreg_128
+    S_ENDPGM 0
+
+...

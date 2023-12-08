@@ -1,0 +1,3 @@
+module cstd { module stdint { header "stdint.h" } }
+module LLVMSupport { module Blah { header "Blah.h" export * } module AIX { header "AIX.h" } }
+module LLVMTarget { module Blah { header "TBlah.h" export * } module Foo { header "TFoo.h" } }

@@ -1,0 +1,103 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck -check-prefixes=SHARE,GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -no-stack-slot-sharing -o - %s | FileCheck -check-prefixes=NOSHARE,GCN %s
+
+# -run-pass is used to artifically avoid using split register allocation, which would avoid stressing StackSlotColoring.
+
+
+# Make sure that stack slot coloring doesn't try to merge frame
+# indexes used for SGPR spilling with those that aren't.
+# Even when stack slot sharing was disabled, it was still moving the
+# FI ID used for an SGPR spill to a normal frame index.
+
+--- |
+
+  define void @sgpr_spill_wrong_stack_id(ptr addrspace(1) nocapture readnone %arg, ptr addrspace(1) noalias %arg1) {
+  bb:
+    %tmp = load i32, ptr addrspace(1) null, align 4
+    call void @func(i32 undef)
+    call void @func(i32 %tmp)
+    unreachable
+  }
+
+  declare void @func(i32)
+
+...
+---
+
+# GCN-LABEL: name:            sgpr_spill_wrong_stack_id
+# SHARE: stack:
+# SHARE:   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+# SHARE:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# SHARE:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# SHARE:   - { id: 1, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
+# SHARE:       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+# SHARE:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# SHARE:   - { id: 2, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+# SHARE:       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+# SHARE:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+
+# SHARE: SI_SPILL_S32_SAVE $sgpr32, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.2, addrspace 5)
+# SHARE: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+# SHARE: SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
+# SHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
+# SHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit undef $vgpr0
+# SHARE: $sgpr32 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.2, addrspace 5)
+# SHARE: $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+# SHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
+# SHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit $vgpr0
+# SHARE:  $sgpr32 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.2, addrspace 5)
+
+# NOSHARE: stack:
+# NOSHARE: - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+# NOSHARE: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# NOSHARE: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# NOSHARE: - { id: 1, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
+# NOSHARE: stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+# NOSHARE: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# NOSHARE: - { id: 2, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+# NOSHARE: stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+# NOSHARE: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# NOSHARE: - { id: 3, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+# NOSHARE: stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+# NOSHARE: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+
+# NOSHARE: SI_SPILL_S32_SAVE $sgpr32, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.2, addrspace 5)
+# NOSHARE: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+# NOSHARE: SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
+# NOSHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
+# NOSHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit undef $vgpr0
+# NOSHARE: $sgpr32 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.2, addrspace 5)
+# NOSHARE: SI_SPILL_S32_SAVE $sgpr32, %stack.3, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.3, addrspace 5)
+# NOSHARE: $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+# NOSHARE: renamable $sgpr4_sgpr5 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
+# NOSHARE: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @func, csr_amdgpu, implicit $vgpr0
+# NOSHARE: $sgpr32 = SI_SPILL_S32_RESTORE %stack.3, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.3, addrspace 5)
+
+...
+
+name:            sgpr_spill_wrong_stack_id
+tracksRegLiveness: true
+frameInfo:
+  hasCalls:        true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  frameOffsetReg: $sgpr32
+  stackPtrOffsetReg: $sgpr32
+body:             |
+  bb.0:
+    %0:sreg_32_xm0 = COPY $sgpr32
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vgpr_32 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr
+    %3:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @func + 4, target-flags(amdgpu-rel32-hi) @func + 4, implicit-def dead $scc
+    ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
+    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu, implicit undef $vgpr0
+    $sgpr32 = COPY %0
+    %4:sreg_32_xm0 = COPY $sgpr32
+    ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
+    ADJCALLSTACKUP 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
+    $vgpr0 = COPY %2
+    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu, implicit killed $vgpr0
+    $sgpr32 = COPY %4
+    ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr32
+
+...

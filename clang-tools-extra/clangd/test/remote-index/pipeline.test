@@ -1,0 +1,44 @@
+# RUN: rm -rf %t
+# RUN: clangd-indexer %S/Inputs/Source.cpp > %t.idx
+# RUN: %python %S/pipeline_helper.py --input-file-name=%s --project-root=%S --index-file=%t.idx | FileCheck %s
+# REQUIRES: clangd-remote-index
+
+#      CHECK:  "uptime_seconds": "{{.*}}",
+# CHECK-NEXT:  "index_age_seconds": "{{.*}}",
+# CHECK-NEXT:  "index_commit_hash": "{{.*}}",
+# CHECK-NEXT:  "index_link": "{{.*}}"
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+#      CHECK:  "id": 0,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+---
+{"jsonrpc":"2.0","id":1,"method":"workspace/symbol","params":{"query":"Character"}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:    "result": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "containerName": "clang::clangd::remote",
+# CHECK-NEXT:        "kind": 13,
+# CHECK-NEXT:        "location": {
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "uri": "file://{{.*}}/Header.h"
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "name": "Character",
+# CHECK-NEXT:        "score": {{.*}}
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:}
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+---

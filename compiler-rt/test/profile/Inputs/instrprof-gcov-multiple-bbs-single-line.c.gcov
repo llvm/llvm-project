@@ -1,0 +1,34 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-gcov-multiple-bbs-single-line.c
+// CHECK-NEXT:        -:    0:Graph:instrprof-gcov-multiple-bbs-single-line.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-gcov-multiple-bbs-single-line.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    0:Programs:1
+// CHECK-NEXT:function main called 1 returned 100% blocks executed 77%
+// CHECK-NEXT:        1:    1:int main(void)
+// CHECK-NEXT:        -:    2:{
+// CHECK-NEXT:        -:    3:  int var;
+// CHECK-NEXT:        -:    4:
+// CHECK-NEXT:        1:    5:  int a = 1;
+// CHECK-NEXT:        1:    6:  if (a) {
+// CHECK-NEXT:branch  0 taken 0
+// CHECK-NEXT:branch  1 taken 1
+// CHECK-NEXT:        1:    7:    var++;
+// CHECK-NEXT:        1:    8:  }
+// CHECK-NEXT:        -:    9:
+// CHECK-NEXT:        1:   10:  if (a) {}
+// CHECK-NEXT:branch  0 taken 0
+// CHECK-NEXT:branch  1 taken 1
+// CHECK-NEXT:        -:   11:
+// CHECK-NEXT:        1:   12:  int b = 0;
+// CHECK-NEXT:        1:   13:  if (b) {
+// CHECK-NEXT:branch  0 taken 1
+// CHECK-NEXT:branch  1 taken 0
+// CHECK-NEXT:    #####:   14:    var++;
+// CHECK-NEXT:    #####:   15:  }
+// CHECK-NEXT:        -:   16:
+// CHECK-NEXT:        1:   17:  if (b) {}
+// CHECK-NEXT:branch  0 taken 1
+// CHECK-NEXT:branch  1 taken 0
+// CHECK-NEXT:        -:   18:
+// CHECK-NEXT:        1:   19:  return 0;
+// CHECK-NEXT:        -:   20:}

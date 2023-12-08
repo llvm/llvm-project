@@ -1,0 +1,42 @@
+RUN: yaml2obj %p/Inputs/x86_64-exe.yaml -o %t.in123.exe
+
+# Using a debuglink filename with a length that is a multiple of 4, to
+# showcase padding in CONTENTS below.
+
+RUN: llvm-objcopy --add-gnu-debuglink=%t.in123.exe %t.in123.exe %t.out.exe
+RUN: llvm-readobj --sections %t.out.exe | FileCheck %s --check-prefix=SECTIONS
+RUN: llvm-objdump -s %t.out.exe | FileCheck %s --check-prefix=CONTENTS
+
+# Show the last of the preexisting sections, which is used for choosing
+# a virtual address for the generated one.
+
+SECTIONS:        Section {
+SECTIONS:          Number: 4
+SECTIONS-NEXT:     Name: .pdata
+SECTIONS-NEXT:     VirtualSize: 0x18
+SECTIONS-NEXT:     VirtualAddress: 0x4000
+SECTIONS-NEXT:     RawDataSize: 512
+SECTIONS:        Section {
+SECTIONS-NEXT:     Number: 5
+SECTIONS-NEXT:     Name: .gnu_debuglink
+SECTIONS-NEXT:     VirtualSize: 0x2C
+SECTIONS-NEXT:     VirtualAddress: 0x5000
+SECTIONS-NEXT:     RawDataSize: 512
+SECTIONS-NEXT:     PointerToRawData:
+SECTIONS-NEXT:     PointerToRelocations:
+SECTIONS-NEXT:     PointerToLineNumbers:
+SECTIONS-NEXT:     RelocationCount:
+SECTIONS-NEXT:     LineNumberCount:
+SECTIONS-NEXT:     Characteristics [ (0x42000040)
+SECTIONS-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+SECTIONS-NEXT:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+SECTIONS-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+SECTIONS-NEXT:     ]
+
+# Note: The last 4 bytes here are the crc of the referenced file - if the
+# yaml2obj generated file changes, this crc changes.
+
+CONTENTS: Contents of section .gnu_debuglink:
+CONTENTS:  40005000 6164642d 676e752d 64656275 676c696e  add-gnu-debuglin
+CONTENTS:  40005010 6b2e7465 73742e74 6d702e69 6e313233  k.test.tmp.in123
+CONTENTS:  40005020 2e657865 00000000 7929adc3           .exe

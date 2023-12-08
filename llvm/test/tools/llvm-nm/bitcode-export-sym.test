@@ -1,0 +1,12 @@
+# REQUIRES: powerpc-registered-target
+## Test the "--export-symbols" option with bitcode input files.
+
+# RUN: llvm-as -o %t32.bc %p/Inputs/bitcode-sym32.ll
+# RUN: llvm-as -o %t64.bc %p/Inputs/bitcode-sym64.ll
+
+# RUN: llvm-nm --export-symbols %t32.bc %t64.bc | FileCheck %s --check-prefixes=CHECK --implicit-check-not={{.}}
+
+# CHECK:      C32
+# CHECK-NEXT: C64
+# CHECK-NEXT: bar64
+# CHECK-NEXT: foo32

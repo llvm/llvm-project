@@ -1,0 +1,7 @@
+expr a
+expr b.c
+expr b.u.c
+expr b.u.i
+expr c
+type lookup C
+exit

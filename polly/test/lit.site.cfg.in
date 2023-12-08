@@ -1,0 +1,56 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.polly_obj_root = "@POLLY_BINARY_DIR@"
+config.polly_lib_dir = "@POLLY_LIB_DIR@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
+config.targets_to_build = "@TARGETS_TO_BUILD@"
+config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
+
+## Check the current platform with regex
+import re
+EAT_ERR_ON_X86 = ' '
+if (re.match(r'^x86_64*', '@LLVM_TARGET_TRIPLE@') == None) :
+  EAT_ERR_ON_X86 = '|| echo \"error is eaten\"'
+
+for arch in config.targets_to_build.split():
+    config.available_features.add(arch.lower() + '-registered-target')
+
+# excludes: A list of directories to exclude from the testsuite. The 'Inputs'
+# subdirectories contain auxiliary inputs for various tests in their parent
+# directories.
+config.excludes = ['Inputs']
+
+commonOpts = ' -polly-process-unprofitable ' \
+             + ' -polly-remarks-minimal ' \
+             + ' -polly-use-llvm-names ' \
+             + ' -polly-import-jscop-dir=%S ' \
+             + ' -polly-codegen-verify '
+if config.llvm_polly_link_into_tools == '' or \
+   config.llvm_polly_link_into_tools.lower() == '0' or \
+   config.llvm_polly_link_into_tools.lower() == 'n' or \
+   config.llvm_polly_link_into_tools.lower() == 'no' or \
+   config.llvm_polly_link_into_tools.lower() == 'off' or \
+   config.llvm_polly_link_into_tools.lower() == 'false' or \
+   config.llvm_polly_link_into_tools.lower() == 'notfound' or \
+   config.llvm_polly_link_into_tools.lower() == 'llvm_polly_link_into_tools-notfound':
+    config.substitutions.append(('%loadPolly', '-load '
+                                 + config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
+                                 + commonOpts ))
+    config.substitutions.append(('%loadNPMPolly', '-load-pass-plugin '
+                                 + config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
+                                 + commonOpts ))
+else:
+    config.substitutions.append(('%loadPolly', commonOpts ))
+    config.substitutions.append(('%loadNPMPolly', commonOpts ))
+
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@POLLY_SOURCE_DIR@/test/lit.cfg")

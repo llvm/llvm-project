@@ -1,0 +1,397 @@
+# Generated with
+#
+# clang -g -O1 -S -emit-llvm test.c
+# llc -stop-before=branch-folder test.ll
+#
+# typedef struct bar {
+#   int data;
+# } bar;
+#
+# int foo(int a)
+# {
+#   return a;
+# }
+#
+# int baz(int *out)
+# {
+#   int ret;
+#
+#   if ((ret = foo(*out)) < 0)
+#     return ret;
+#   if (out)
+#     *out = 1;
+#
+#   return 0;
+# }
+#
+# int test(bar *s)
+# {
+#   int idx, ret;
+#
+# retry:
+#   do {
+#     ret = baz(&idx);
+#     if (ret < 0)
+#       return ret;
+#   } while (idx < 0 || !s->data);
+#
+#   goto retry;
+# }
+#
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=branch-folder | FileCheck %s
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  
+  %struct.bar = type { i32 }
+  
+  define i32 @foo(i32 returned %a) local_unnamed_addr {
+  entry:
+    ret i32 %a
+  }
+  
+  define i32 @baz(i32* %out) local_unnamed_addr !dbg !4 {
+  entry:
+    %0 = load i32, i32* %out, align 4
+    %call = tail call i32 @foo(i32 %0), !dbg !9
+    %cmp = icmp slt i32 %call, 0
+    br i1 %cmp, label %cleanup, label %if.then1
+  
+  if.then1:                                         ; preds = %entry
+    store i32 1, i32* %out, align 4
+    br label %cleanup
+  
+  cleanup:                                          ; preds = %if.then1, %entry
+    %retval.0 = phi i32 [ %call, %entry ], [ 0, %if.then1 ]
+    ret i32 %retval.0
+  }
+  
+  define i32 @test(%struct.bar* nocapture readonly %s) local_unnamed_addr !dbg !11 {
+  entry:
+    %idx = alloca i32, align 4
+    call void @llvm.dbg.label(metadata !20), !dbg !21
+    %call58 = call i32 @baz(i32* nonnull %idx), !dbg !22
+    %cmp69 = icmp slt i32 %call58, 0
+    br i1 %cmp69, label %if.then, label %do.cond.lr.ph.lr.ph
+  
+  do.cond.lr.ph.lr.ph:                              ; preds = %entry
+    br label %do.cond
+  
+  retry.loopexit:                                   ; preds = %lor.rhs
+    call void @llvm.dbg.label(metadata !20), !dbg !21
+    %call5 = call i32 @baz(i32* nonnull %idx), !dbg !22
+    %cmp6 = icmp slt i32 %call5, 0
+    br i1 %cmp6, label %if.then, label %do.cond
+  
+  if.then:                                          ; preds = %do.body.backedge, %retry.loopexit, %entry
+    %call.lcssa = phi i32 [ %call58, %entry ], [ %call, %do.body.backedge ], [ %call5, %retry.loopexit ]
+    ret i32 %call.lcssa
+  
+  do.cond:                                          ; preds = %retry.loopexit, %do.body.backedge, %do.cond.lr.ph.lr.ph
+    %0 = load i32, i32* %idx, align 4
+    %cmp1 = icmp slt i32 %0, 0
+    br i1 %cmp1, label %do.body.backedge, label %lor.rhs
+  
+  lor.rhs:                                          ; preds = %do.cond
+    %1 = bitcast %struct.bar* %s to i32*
+    %2 = load i32, i32* %1, align 4
+    %tobool = icmp eq i32 %2, 0
+    br i1 %tobool, label %do.body.backedge, label %retry.loopexit
+  
+  do.body.backedge:                                 ; preds = %lor.rhs, %do.cond
+    %call = call i32 @baz(i32* nonnull %idx), !dbg !22
+    %cmp = icmp slt i32 %call, 0
+    br i1 %cmp, label %if.then, label %do.cond
+  }
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.label(metadata) #0
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { nounwind readnone speculatable }
+  attributes #1 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: GNU)
+  !1 = !DIFile(filename: "test.c", directory: "/home/users")
+  !2 = !{}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 10, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7, !8}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
+  !9 = !DILocation(line: 14, column: 14, scope: !10)
+  !10 = distinct !DILexicalBlock(scope: !4, file: !1, line: 14, column: 7)
+  !11 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 22, type: !12, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !19)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{!7, !14}
+  !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 64)
+  !15 = !DIDerivedType(tag: DW_TAG_typedef, name: "bar", file: !1, line: 3, baseType: !16)
+  !16 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "bar", file: !1, line: 1, size: 32, elements: !17)
+  !17 = !{!18}
+  !18 = !DIDerivedType(tag: DW_TAG_member, name: "data", scope: !16, file: !1, line: 2, baseType: !7, size: 32)
+  !19 = !{!20}
+  !20 = !DILabel(scope: !11, name: "retry", file: !1, line: 26)
+  !21 = !DILocation(line: 26, column: 1, scope: !11)
+  !22 = !DILocation(line: 28, column: 11, scope: !23)
+  !23 = distinct !DILexicalBlock(scope: !11, file: !1, line: 27, column: 6)
+
+...
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       
+liveins:         
+  - { reg: '$edi', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: $edi
+  
+    renamable $eax = COPY $edi
+    RET 0, $eax
+
+...
+---
+name:            baz
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 8
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $rdi, $rbx
+  
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    renamable $rbx = COPY $rdi
+    renamable $edi = MOV32rm $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.out)
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !9
+    TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
+    JCC_1 %bb.2, 9, implicit killed $eflags
+  ; CHECK: JCC_1 %bb.2, 8, implicit $eflags
+  
+  bb.1:
+    successors: %bb.3(0x80000000)
+    liveins: $eax
+  
+    JMP_1 %bb.3
+  
+  bb.2.if.then1:
+    successors: %bb.3(0x80000000)
+    liveins: $rbx
+  
+    MOV32mi killed renamable $rbx, 1, $noreg, 0, $noreg, 1 :: (store (s32) into %ir.out)
+    renamable $eax = MOV32r0 implicit-def dead $eflags
+  
+  bb.3.cleanup:
+    liveins: $eax
+  
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 8
+    RET 0, $eax
+
+...
+---
+name:            test
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       24
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r14', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:           
+  - { id: 0, name: idx, type: default, offset: -28, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $rdi, $r14, $rbx
+  
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 24
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 32
+    CFI_INSTRUCTION offset $rbx, -24
+    CFI_INSTRUCTION offset $r14, -16
+    renamable $rbx = COPY $rdi
+    DBG_LABEL !20, debug-location !21
+    renamable $rdi = LEA64r $rsp, 1, $noreg, 4, $noreg
+    CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
+    TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
+    JCC_1 %bb.2, 9, implicit killed $eflags
+  ; CHECK: JCC_1 %bb.5, 8, implicit $eflags
+  
+  bb.1:
+    successors: %bb.5(0x80000000)
+    liveins: $eax
+  
+    JMP_1 %bb.5
+  
+  bb.2:
+    successors: %bb.6(0x80000000)
+    liveins: $rbx
+  
+    renamable $r14 = LEA64r $rsp, 1, $noreg, 4, $noreg
+    JMP_1 %bb.6
+  
+  bb.3.retry.loopexit:
+    successors: %bb.4(0x04000000), %bb.6(0x7c000000)
+    liveins: $rbx, $r14
+  
+    DBG_LABEL !20, debug-location !21
+    $rdi = COPY renamable $r14, debug-location !22
+    CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
+    TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
+    JCC_1 %bb.6, 9, implicit killed $eflags
+  
+  bb.4:
+    successors: %bb.5(0x80000000)
+    liveins: $eax
+  
+  
+  bb.5.if.then:
+    liveins: $eax
+  
+    $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
+    CFI_INSTRUCTION def_cfa_offset 24
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 8
+    RET 0, $eax
+  
+  bb.6.do.cond:
+    successors: %bb.8(0x30000000), %bb.7(0x50000000)
+    liveins: $rbx, $r14
+  
+    CMP32mi $rsp, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s32) from %ir.idx)
+    JCC_1 %bb.8, 8, implicit killed $eflags
+    JMP_1 %bb.7
+  
+  bb.7.lor.rhs:
+    successors: %bb.8(0x30000000), %bb.3(0x50000000)
+    liveins: $rbx, $r14
+  
+    CMP32mi renamable $rbx, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.1)
+    JCC_1 %bb.3, 5, implicit killed $eflags
+    JMP_1 %bb.8
+  
+  bb.8.do.body.backedge:
+    successors: %bb.9(0x04000000), %bb.6(0x7c000000)
+    liveins: $rbx, $r14
+  
+    $rdi = COPY renamable $r14, debug-location !22
+    CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
+    TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
+    JCC_1 %bb.6, 9, implicit killed $eflags
+  
+  bb.9:
+    successors: %bb.5(0x80000000)
+    liveins: $eax
+  
+    JMP_1 %bb.5
+
+...

@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s
+
+# CHECK:      r myrodata0_local
+# CHECK-NEXT: r myrodata1_local
+# CHECK-NEXT: r myrodata2_local
+# CHECK-NEXT: R myrodata0_global
+# CHECK-NEXT: R myrodata1_global
+# CHECK-NEXT: R myrodata2_global
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: myrodata0
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+  - Name: myrodata1
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_MERGE ]
+  - Name: myrodata2
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+Symbols:
+  - Name:    myrodata0_local
+    Section: myrodata0
+  - Name:    myrodata1_local
+    Section: myrodata1
+  - Name:    myrodata2_local
+    Section: myrodata2
+
+  - Name:    myrodata0_global
+    Binding: STB_GLOBAL
+    Section: myrodata0
+  - Name:    myrodata1_global
+    Binding: STB_GLOBAL
+    Section: myrodata1
+  - Name:    myrodata2_global
+    Binding: STB_GLOBAL
+    Section: myrodata2

@@ -1,0 +1,4 @@
+module "test-base2" {
+  export *
+  textual header "Inputs/dependency-gen-included2.h"
+}

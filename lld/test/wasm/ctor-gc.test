@@ -1,0 +1,16 @@
+; Verify that constructors from a .o file which it initially depends on but
+; doesn't ultimately contribute to the final link are not included.
+;
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ctor-ctor.s -o %t.ctor.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ctor-lib.s -o %t.lib.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ctor-start.s -o %t.start.o
+; RUN: rm -f %t.lib.a
+; RUN: llvm-ar rcs %t.lib.a %t.lib.o %t.ctor.o
+; RUN: wasm-ld %t.start.o %t.lib.a -o %t.wasm
+; RUN: wasm-ld %t.start.o --whole-archive %t.lib.a -o %t2.wasm
+; RUN: obj2yaml %t.wasm | FileCheck %s
+; RUN: obj2yaml %t2.wasm | FileCheck %s -check-prefix=WHOLEARCHIVE
+
+; CHECK-NOT: __wasm_call_ctors
+
+; WHOLEARCHIVE: __wasm_call_ctors

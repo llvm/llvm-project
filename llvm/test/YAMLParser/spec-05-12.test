@@ -1,0 +1,18 @@
+# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s
+#
+# FIXME: This test should actually fail. Yaml-bench should report an error
+# that a tab is being used to indent a plain scalar at line 15.
+# We don't currently reject tabs as indentation.
+
+# Tabs do's and don'ts:
+# comment:
+quoted: "Quoted		"
+block: |
+  void main() {
+  	printf("Hello, world!\n");
+  }
+elsewhere:	# separation
+	indentation, in	plain scalar
+
+
+# CHECK: !!str "Quoted\t\t"

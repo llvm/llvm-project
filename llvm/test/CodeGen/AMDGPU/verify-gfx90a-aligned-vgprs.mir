@@ -1,0 +1,150 @@
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx90a -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck %s
+
+# Implicit uses are OK.
+---
+name: implicit_use
+body:            |
+  bb.0:
+    $vgpr1_vgpr2 = IMPLICIT_DEF
+    S_NOP 0, implicit $vgpr1_vgpr2
+    %0:vreg_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %0
+
+    %1:sreg_64_xexec = IMPLICIT_DEF
+    %2:sreg_64_xexec = SI_CALL %1, 0, csr_amdgpu, implicit $vgpr1_vgpr2
+
+    ; noreg is OK
+    DS_WRITE_B64_gfx9 $noreg, $noreg, 0, 0, implicit $exec
+...
+
+# The unaligned registers are allowed to exist, just not on any tuple instructions.
+
+---
+name: copy_like_generic
+body:            |
+  bb.0:
+    $vgpr1_vgpr2 = IMPLICIT_DEF
+    $vgpr3_vgpr4 = COPY $vgpr1_vgpr2
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = COPY %0
+...
+
+---
+name: mov_32_unaligned_super
+body:            |
+  bb.0:
+    undef %0.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 undef %2.sub1:vreg_64, implicit $exec
+...
+
+# Well-aligned subregister indexes are OK
+---
+name: aligned_sub_reg
+body:            |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_128_align2 = IMPLICIT_DEF
+    GLOBAL_STORE_DWORDX2 %0, %1.sub0_sub1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %1.sub2_sub3, 0, 0, implicit $exec
+...
+
+---
+name: unaligned_registers
+body:            |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5_vgpr6
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vreg_96 = IMPLICIT_DEF
+    %3:vreg_128 = IMPLICIT_DEF
+    %4:areg_64 = IMPLICIT_DEF
+    %5:vreg_128_align2 = IMPLICIT_DEF
+
+    ; Check virtual register uses
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    GLOBAL_STORE_DWORDX2 %0, %1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %0, %3, 0, 0, implicit $exec
+
+    ; Check virtual registers with subregisters
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    GLOBAL_STORE_DWORDX2 %0, %3.sub0_sub1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %3.sub2_sub3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %3.sub1_sub2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %5.sub1_sub2, 0, 0, implicit $exec
+
+    ; Check physical register uses
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr3_vgpr4, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5_vgpr6, 0, 0, implicit $exec
+
+    ; Check virtual register defs
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    %6:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    %7:vreg_96 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    $vgpr1_vgpr2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    $vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    $vgpr1_vgpr2_vgpr3_vgpr4 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
+
+    ; Check AGPRs
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:areg_64 = IMPLICIT_DEF
+    %11:areg_128_align2 = IMPLICIT_DEF
+    DS_WRITE_B64_gfx9 %9, %10, 0, 0, implicit $exec
+    DS_WRITE_B64_gfx9 %9, %11.sub1_sub2, 0, 0, implicit $exec
+
+    ; Check aligned vgprs for FP32 Packed Math instructions.
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    %12:vreg_64 = IMPLICIT_DEF
+    %13:vreg_64_align2 = IMPLICIT_DEF
+    %14:areg_96_align2 = IMPLICIT_DEF
+    $vgpr3_vgpr4 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1 = V_PK_ADD_F32 0, %12, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13, 11, %12, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_ADD_F32 0, %14.sub1_sub2, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_MUL_F32 0, %12, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13, 11, %12, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_PK_MUL_F32 0, %14.sub1_sub2, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %12, 8, %13, 11, %14.sub0_sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13, 8, %12, 11, %14.sub0_sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13, 8, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+# FIXME: Inline asm is not verified
+# ; Check inline asm
+# ; XCHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+# ; XCHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+# ; XCHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+# INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 9 /* reguse */, $vgpr1_vgpr2
+# INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 9 /* reguse */, %4
+# INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 9 /* reguse */, %5.sub1_sub2

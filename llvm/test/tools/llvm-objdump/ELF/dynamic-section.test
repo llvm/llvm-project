@@ -1,0 +1,472 @@
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-objdump -p %t1 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=ELF64
+
+#      ELF64:Dynamic Section:
+# ELF64-NEXT:  NEEDED               D
+# ELF64-NEXT:  PLTRELSZ             0x0000000000000010
+# ELF64-NEXT:  PLTGOT               0x0000000000001000
+# ELF64-NEXT:  HASH                 0x0000000000001000
+# ELF64-NEXT:  STRTAB               0x0000000000001000
+# ELF64-NEXT:  SYMTAB               0x0000000000001000
+# ELF64-NEXT:  RELA                 0x0000000000001000
+# ELF64-NEXT:  RELASZ               0x0000000000000010
+# ELF64-NEXT:  RELAENT              0x0000000000000789
+# ELF64-NEXT:  STRSZ                0x0000000000000010
+# ELF64-NEXT:  SYMENT               0x0000000000000987
+# ELF64-NEXT:  INIT                 0x0000000000001000
+# ELF64-NEXT:  FINI                 0x0000000000001000
+# ELF64-NEXT:  SONAME               U
+# ELF64-NEXT:  RPATH                f
+# ELF64-NEXT:  SYMBOLIC             0x1234567890abcdef
+# ELF64-NEXT:  REL                  0x0000000000001000
+# ELF64-NEXT:  RELSZ                0x0000000000000010
+# ELF64-NEXT:  RELENT               0x0000000000000123
+# ELF64-NEXT:  PLTREL               0x0000000000000007
+# ELF64-NEXT:  DEBUG                0xfedcba0987654321
+# ELF64-NEXT:  TEXTREL              0x1122334455667788
+# ELF64-NEXT:  JMPREL               0x0000000000001000
+# ELF64-NEXT:  BIND_NOW             0x8877665544332211
+# ELF64-NEXT:  INIT_ARRAY           0x0000000000001000
+# ELF64-NEXT:  FINI_ARRAY           0x0000000000001000
+# ELF64-NEXT:  INIT_ARRAYSZ         0x0000000000000010
+# ELF64-NEXT:  FINI_ARRAYSZ         0x0000000000000010
+# ELF64-NEXT:  RUNPATH              w
+# ELF64-NEXT:  FLAGS                0xaabbccddeeff9900
+# ELF64-NEXT:  PREINIT_ARRAY        0x0000000000001000
+# ELF64-NEXT:  PREINIT_ARRAYSZ      0x0000000000000010
+# ELF64-NEXT:  SYMTAB_SHNDX         0x0000000000001000
+# ELF64-NEXT:  RELRSZ               0x0000000000000010
+# ELF64-NEXT:  RELR                 0x0000000000001000
+# ELF64-NEXT:  RELRENT              0x0000000000004321
+# ELF64-NEXT:  ANDROID_REL          0x0000000000001000
+# ELF64-NEXT:  ANDROID_RELSZ        0x0000000000000010
+# ELF64-NEXT:  ANDROID_RELA         0x0000000000001000
+# ELF64-NEXT:  ANDROID_RELASZ       0x0000000000000010
+# ELF64-NEXT:  ANDROID_RELR         0x0000000000001000
+# ELF64-NEXT:  ANDROID_RELRSZ       0x0000000000000010
+# ELF64-NEXT:  ANDROID_RELRENT      0x0000000000001234
+# ELF64-NEXT:  GNU_HASH             0x0000000000001000
+# ELF64-NEXT:  TLSDESC_PLT          0x0000000000001000
+# ELF64-NEXT:  TLSDESC_GOT          0x0000000000001000
+# ELF64-NEXT:  RELACOUNT            0x0000000000000000
+# ELF64-NEXT:  RELCOUNT             0x0000000000000000
+# ELF64-NEXT:  FLAGS_1              0x0000000087654321
+# ELF64-NEXT:  VERSYM               0x0000000000001000
+# ELF64-NEXT:  VERDEF               0x0000000000001000
+# ELF64-NEXT:  VERDEFNUM            0x0000000000000000
+# ELF64-NEXT:  VERNEED              0x0000000000001000
+# ELF64-NEXT:  VERNEEDNUM           0x0000000000000000
+# ELF64-NEXT:  AUXILIARY            D
+# ELF64-NEXT:  FILTER               U
+# ELF64-NEXT:  <unknown:>0x12345678 0x8765432187654321
+# ELF64-NEXT:  <unknown:>0x6abcdef0 0x9988776655443322
+# ELF64-NEXT:  <unknown:>0x76543210 0x5555666677778888
+# ELF64-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Link:    1
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_PLTRELSZ
+       Value: 0x10
+     - Tag:   DT_PLTGOT
+       Value: 0x1000
+     - Tag:   DT_HASH
+       Value: 0x1000
+     - Tag:   DT_STRTAB
+       Value: 0x1000
+     - Tag:   DT_SYMTAB
+       Value: 0x1000
+     - Tag:   DT_RELA
+       Value: 0x1000
+     - Tag:   DT_RELASZ
+       Value: 0x10
+     - Tag:   DT_RELAENT
+       Value: 0x789
+     - Tag:   DT_STRSZ
+       Value: 0x10
+     - Tag:   DT_SYMENT
+       Value: 0x987
+     - Tag:   DT_INIT
+       Value: 0x1000
+     - Tag:   DT_FINI
+       Value: 0x1000
+     - Tag:   DT_SONAME
+       Value: 0x3
+     - Tag:   DT_RPATH
+       Value: 0x5
+     - Tag:   DT_SYMBOLIC
+       Value: 0x1234567890abcdef
+     - Tag:   DT_REL
+       Value: 0x1000
+     - Tag:   DT_RELSZ
+       Value: 0x10
+     - Tag:   DT_RELENT
+       Value: 0x123
+     - Tag:   DT_PLTREL
+       Value: 0x7
+     - Tag:   DT_DEBUG
+       Value: 0xfedcba0987654321
+     - Tag:   DT_TEXTREL
+       Value: 0x1122334455667788
+     - Tag:   DT_JMPREL
+       Value: 0x1000
+     - Tag:   DT_BIND_NOW
+       Value: 0x8877665544332211
+     - Tag:   DT_INIT_ARRAY
+       Value: 0x1000
+     - Tag:   DT_FINI_ARRAY
+       Value: 0x1000
+     - Tag:   DT_INIT_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_FINI_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_RUNPATH
+       Value: 0x7
+     - Tag:   DT_FLAGS
+       Value: 0xaabbccddeeff9900
+     - Tag:   DT_PREINIT_ARRAY
+       Value: 0x1000
+     - Tag:   DT_PREINIT_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_SYMTAB_SHNDX
+       Value: 0x1000
+     - Tag:   DT_RELRSZ
+       Value: 0x10
+     - Tag:   DT_RELR
+       Value: 0x1000
+     - Tag:   DT_RELRENT
+       Value: 0x4321
+     - Tag:   DT_ANDROID_REL
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELSZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELA
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELASZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELR
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELRSZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELRENT
+       Value: 0x1234
+     - Tag:   DT_GNU_HASH
+       Value: 0x1000
+     - Tag:   DT_TLSDESC_PLT
+       Value: 0x1000
+     - Tag:   DT_TLSDESC_GOT
+       Value: 0x1000
+     - Tag:   DT_RELACOUNT
+       Value: 0x0
+     - Tag:   DT_RELCOUNT
+       Value: 0x0
+     - Tag:   DT_FLAGS_1
+       Value: 0x87654321
+     - Tag:   DT_VERSYM
+       Value: 0x1000
+     - Tag:   DT_VERDEF
+       Value: 0x1000
+     - Tag:   DT_VERDEFNUM
+       Value: 0x0
+     - Tag:   DT_VERNEED
+       Value: 0x1000
+     - Tag:   DT_VERNEEDNUM
+       Value: 0x0
+     - Tag:   DT_AUXILIARY
+       Value: 0x1
+     - Tag:   DT_FILTER
+       Value: 0x3
+## Show behaviour for unknown values in special and unmarked ranges.
+## An arbitrary unknown value outside of the special ranges.
+     - Tag:   0x12345678
+       Value: 0x8765432187654321
+## An OS specific tag.
+     - Tag:   0x6abcdef0
+       Value: 0x9988776655443322
+## A processor specific tags.
+     - Tag:   0x76543210
+       Value: 0x5555666677778888
+     - Tag:   DT_NULL
+       Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-objdump -p %t2 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=ELF32
+
+#      ELF32:Dynamic Section:
+# ELF32-NEXT:  NEEDED               D
+# ELF32-NEXT:  PLTRELSZ             0x00000010
+# ELF32-NEXT:  PLTGOT               0x00001000
+# ELF32-NEXT:  HASH                 0x00001000
+# ELF32-NEXT:  STRTAB               0x00001000
+# ELF32-NEXT:  SYMTAB               0x00001000
+# ELF32-NEXT:  RELA                 0x00001000
+# ELF32-NEXT:  RELASZ               0x00000010
+# ELF32-NEXT:  RELAENT              0x00000789
+# ELF32-NEXT:  STRSZ                0x00000010
+# ELF32-NEXT:  SYMENT               0x00000987
+# ELF32-NEXT:  INIT                 0x00001000
+# ELF32-NEXT:  FINI                 0x00001000
+# ELF32-NEXT:  SONAME               U
+# ELF32-NEXT:  RPATH                f
+# ELF32-NEXT:  SYMBOLIC             0x12345678
+# ELF32-NEXT:  REL                  0x00001000
+# ELF32-NEXT:  RELSZ                0x00000010
+# ELF32-NEXT:  RELENT               0x00000123
+# ELF32-NEXT:  PLTREL               0x00000007
+# ELF32-NEXT:  DEBUG                0xfedcba09
+# ELF32-NEXT:  TEXTREL              0x11223344
+# ELF32-NEXT:  JMPREL               0x00001000
+# ELF32-NEXT:  BIND_NOW             0x88776655
+# ELF32-NEXT:  INIT_ARRAY           0x00001000
+# ELF32-NEXT:  FINI_ARRAY           0x00001000
+# ELF32-NEXT:  INIT_ARRAYSZ         0x00000010
+# ELF32-NEXT:  FINI_ARRAYSZ         0x00000010
+# ELF32-NEXT:  RUNPATH              w
+# ELF32-NEXT:  FLAGS                0xaabbccdd
+# ELF32-NEXT:  PREINIT_ARRAY        0x00001000
+# ELF32-NEXT:  PREINIT_ARRAYSZ      0x00000010
+# ELF32-NEXT:  SYMTAB_SHNDX         0x00001000
+# ELF32-NEXT:  RELRSZ               0x00000010
+# ELF32-NEXT:  RELR                 0x00001000
+# ELF32-NEXT:  RELRENT              0x00004321
+# ELF32-NEXT:  ANDROID_REL          0x00001000
+# ELF32-NEXT:  ANDROID_RELSZ        0x00000010
+# ELF32-NEXT:  ANDROID_RELA         0x00001000
+# ELF32-NEXT:  ANDROID_RELASZ       0x00000010
+# ELF32-NEXT:  ANDROID_RELR         0x00001000
+# ELF32-NEXT:  ANDROID_RELRSZ       0x00000010
+# ELF32-NEXT:  ANDROID_RELRENT      0x00001234
+# ELF32-NEXT:  GNU_HASH             0x00001000
+# ELF32-NEXT:  TLSDESC_PLT          0x00001000
+# ELF32-NEXT:  TLSDESC_GOT          0x00001000
+# ELF32-NEXT:  RELACOUNT            0x00000000
+# ELF32-NEXT:  RELCOUNT             0x00000000
+# ELF32-NEXT:  FLAGS_1              0x87654321
+# ELF32-NEXT:  VERSYM               0x00001000
+# ELF32-NEXT:  VERDEF               0x00001000
+# ELF32-NEXT:  VERDEFNUM            0x00000000
+# ELF32-NEXT:  VERNEED              0x00001000
+# ELF32-NEXT:  VERNEEDNUM           0x00000000
+# ELF32-NEXT:  AUXILIARY            D
+# ELF32-NEXT:  FILTER               U
+# ELF32-NEXT:  <unknown:>0x12345678 0x87654321
+# ELF32-NEXT:  <unknown:>0x6abcdef0 0x99887766
+# ELF32-NEXT:  <unknown:>0x76543210 0x55556666
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Link:    1
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_PLTRELSZ
+       Value: 0x10
+     - Tag:   DT_PLTGOT
+       Value: 0x1000
+     - Tag:   DT_HASH
+       Value: 0x1000
+     - Tag:   DT_STRTAB
+       Value: 0x1000
+     - Tag:   DT_SYMTAB
+       Value: 0x1000
+     - Tag:   DT_RELA
+       Value: 0x1000
+     - Tag:   DT_RELASZ
+       Value: 0x10
+     - Tag:   DT_RELAENT
+       Value: 0x789
+     - Tag:   DT_STRSZ
+       Value: 0x10
+     - Tag:   DT_SYMENT
+       Value: 0x987
+     - Tag:   DT_INIT
+       Value: 0x1000
+     - Tag:   DT_FINI
+       Value: 0x1000
+     - Tag:   DT_SONAME
+       Value: 0x3
+     - Tag:   DT_RPATH
+       Value: 0x5
+     - Tag:   DT_SYMBOLIC
+       Value: 0x12345678
+     - Tag:   DT_REL
+       Value: 0x1000
+     - Tag:   DT_RELSZ
+       Value: 0x10
+     - Tag:   DT_RELENT
+       Value: 0x123
+     - Tag:   DT_PLTREL
+       Value: 0x7
+     - Tag:   DT_DEBUG
+       Value: 0xfedcba09
+     - Tag:   DT_TEXTREL
+       Value: 0x11223344
+     - Tag:   DT_JMPREL
+       Value: 0x1000
+     - Tag:   DT_BIND_NOW
+       Value: 0x88776655
+     - Tag:   DT_INIT_ARRAY
+       Value: 0x1000
+     - Tag:   DT_FINI_ARRAY
+       Value: 0x1000
+     - Tag:   DT_INIT_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_FINI_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_RUNPATH
+       Value: 0x7
+     - Tag:   DT_FLAGS
+       Value: 0xaabbccdd
+     - Tag:   DT_PREINIT_ARRAY
+       Value: 0x1000
+     - Tag:   DT_PREINIT_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_SYMTAB_SHNDX
+       Value: 0x1000
+     - Tag:   DT_RELRSZ
+       Value: 0x10
+     - Tag:   DT_RELR
+       Value: 0x1000
+     - Tag:   DT_RELRENT
+       Value: 0x4321
+     - Tag:   DT_ANDROID_REL
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELSZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELA
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELASZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELR
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELRSZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELRENT
+       Value: 0x1234
+     - Tag:   DT_GNU_HASH
+       Value: 0x1000
+     - Tag:   DT_TLSDESC_PLT
+       Value: 0x1000
+     - Tag:   DT_TLSDESC_GOT
+       Value: 0x1000
+     - Tag:   DT_RELACOUNT
+       Value: 0x0
+     - Tag:   DT_RELCOUNT
+       Value: 0x0
+     - Tag:   DT_FLAGS_1
+       Value: 0x87654321
+     - Tag:   DT_VERSYM
+       Value: 0x1000
+     - Tag:   DT_VERDEF
+       Value: 0x1000
+     - Tag:   DT_VERDEFNUM
+       Value: 0x0
+     - Tag:   DT_VERNEED
+       Value: 0x1000
+     - Tag:   DT_VERNEEDNUM
+       Value: 0x0
+     - Tag:   DT_AUXILIARY
+       Value: 0x1
+     - Tag:   DT_FILTER
+       Value: 0x3
+## Show behaviour for unknown values in special and unmarked ranges.
+## An arbitrary unknown value outside of the special ranges.
+     - Tag:   0x12345678
+       Value: 0x87654321
+## An OS specific tag.
+     - Tag:   0x6abcdef0
+       Value: 0x99887766
+## A processor specific tags.
+     - Tag:   0x76543210
+       Value: 0x55556666
+     - Tag:   DT_NULL
+       Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## When printing the value column we want to have the minimal possible indentation.
+## Use an arbitrary dynamic tag to demonstrate that.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-objdump -p %t3 | FileCheck %s --strict-whitespace --check-prefix=INDENT
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objdump -p %t4 | FileCheck %s --strict-whitespace --check-prefix=INDENT
+
+# INDENT: {{^}}Dynamic Section:
+# INDENT: {{^}}  NEEDED 0x
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0

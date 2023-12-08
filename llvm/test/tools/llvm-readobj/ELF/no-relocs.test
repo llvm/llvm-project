@@ -1,0 +1,45 @@
+# Show that llvm-readobj can handle no relocations when --relocations is
+# requested, both for LLVM and GNU output, both for no relocation sections and
+# for empty relocation sections.
+
+# RUN: yaml2obj %s -o %t.no_relocs
+# RUN: llvm-readobj %t.no_relocs --relocations | FileCheck %s --check-prefix NO-RELOCS-LLVM
+# RUN: llvm-readelf %t.no_relocs --relocations | FileCheck %s --check-prefix NO-RELOCS-GNU
+
+# RUN: llvm-objcopy -R .rela.text -R .rel.text %t.no_relocs %t.no_sec
+# RUN: llvm-readobj %t.no_sec --relocations | FileCheck %s --check-prefix NO-SEC-LLVM
+# RUN: llvm-readelf %t.no_sec --relocations | FileCheck %s --check-prefix NO-SEC-GNU
+
+# NO-RELOCS-LLVM:      Relocations [
+# NO-RELOCS-LLVM-NEXT:   Section (2) .rela.text {
+# NO-RELOCS-LLVM-NEXT:   }
+# NO-RELOCS-LLVM-NEXT:   Section (3) .rel.text {
+# NO-RELOCS-LLVM-NEXT:   }
+# NO-RELOCS-LLVM-NEXT: ]
+
+# NO-RELOCS-GNU:       Relocation section '.rela.text' at offset {{.*}} contains 0 entries:
+# NO-RELOCS-GNU-NEXT:    Offset Info Type Symbol's Value Symbol's Name + Addend
+# NO-RELOCS-GNU-EMPTY:
+# NO-RELOCS-GNU-NEXT:  Relocation section '.rel.text' at offset {{.*}} contains 0 entries:
+# NO-RELOCS-GNU-NEXT:   Offset Info Type Symbol's Value Symbol's Name
+# NO-RELOCS-GNU-EMPTY:
+
+# NO-SEC-LLVM:      Relocations [
+# NO-SEC-LLVM-NEXT: ]
+
+# NO-SEC-GNU: There are no relocations in this file.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+  - Name: .rel.text
+    Type: SHT_REL
+    Info: .text

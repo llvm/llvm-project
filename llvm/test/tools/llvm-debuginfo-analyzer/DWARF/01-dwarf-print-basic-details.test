@@ -1,0 +1,69 @@
+; REQUIRES: x86-registered-target
+
+; Test case 1 - General options.
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Print basic details.
+; The following command prints basic details for all the logical elements
+; sorted by the debug information internal offset; it includes its lexical
+; level and debug info format.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=scopes,symbols,types,lines,instructions \
+; RUN:                         %p/Inputs/test-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN:                         --output-sort=offset \
+; RUN:                         --print=elements \
+; RUN:                         %p/Inputs/test-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} 'test-dwarf-clang.o' -> elf64-x86-64
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'test.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
+; ONE-NEXT: [003]     2           {Parameter} 'ParamBool' -> 'bool'
+; ONE-NEXT: [003]                 {Block}
+; ONE-NEXT: [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
+; ONE-NEXT: [004]     5             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	$0x7, -0x1c(%rbp)'
+; ONE-NEXT: [004]     6             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	$0x7, -0x4(%rbp)'
+; ONE-NEXT: [004]                   {Code} 'jmp	0x6'
+; ONE-NEXT: [004]     8             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	-0x14(%rbp), %eax'
+; ONE-NEXT: [003]     4           {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; ONE-NEXT: [003]                 {Code} 'movb	%dl, %al'
+; ONE-NEXT: [003]                 {Code} 'movq	%rdi, -0x10(%rbp)'
+; ONE-NEXT: [003]                 {Code} 'movl	%esi, -0x14(%rbp)'
+; ONE-NEXT: [003]                 {Code} 'andb	$0x1, %al'
+; ONE-NEXT: [003]                 {Code} 'movb	%al, -0x15(%rbp)'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'testb	$0x1, -0x15(%rbp)'
+; ONE-NEXT: [003]                 {Code} 'je	0x13'
+; ONE-NEXT: [003]     8           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	%eax, -0x4(%rbp)'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'retq'
+; ONE-NEXT: [003]     9           {Line}
+; ONE-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'

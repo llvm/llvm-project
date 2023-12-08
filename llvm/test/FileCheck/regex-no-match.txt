@@ -1,0 +1,5 @@
+// RUN: not FileCheck -input-file %s %s
+
+foobar
+; CHECK: fooba{{[a-b]}}
+

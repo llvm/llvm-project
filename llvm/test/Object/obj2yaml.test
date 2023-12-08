@@ -1,0 +1,823 @@
+# RUN: obj2yaml %p/Inputs/trivial-object-test.coff-i386 | FileCheck %s --check-prefix COFF-I386
+
+# COFF-I386: header:
+# COFF-I386-NEXT:  Machine: IMAGE_FILE_MACHINE_I386
+
+# COFF-I386: sections:
+# COFF-I386-NEXT:  - Name: .text
+# COFF-I386-NEXT:    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+# COFF-I386-NEXT:    Alignment: 16
+# COFF-I386-NEXT:    SectionData:  83EC0CC744240800000000C7042400000000E800000000E8000000008B44240883C40CC3
+
+# COFF-I386:    Relocations:
+# COFF-I386-NEXT:      - VirtualAddress: 14
+# COFF-I386-NEXT:        SymbolName: L_.str
+# COFF-I386-NEXT:        Type: IMAGE_REL_I386_DIR32
+
+# COFF-I386:           - VirtualAddress: 19
+# COFF-I386-NEXT:        SymbolName: _puts
+# COFF-I386-NEXT:        Type: IMAGE_REL_I386_REL32
+
+# COFF-I386:           - VirtualAddress: 24
+# COFF-I386-NEXT:        SymbolName: _SomeOtherFunction
+# COFF-I386-NEXT:        Type: IMAGE_REL_I386_REL32
+
+# COFF-I386:       - Name: .data
+# COFF-I386-NEXT:    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+# COFF-I386-NEXT:    Alignment: 1
+# COFF-I386-NEXT:    SectionData: 48656C6C6F20576F726C642100
+
+# COFF-I386: symbols:
+# COFF-I386-NEXT:  - Name: .text
+# COFF-I386-NEXT:    Value: 0
+# COFF-I386-NEXT:    SectionNumber: 1
+# COFF-I386-NEXT:    SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-I386-NEXT:    ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-I386-NEXT:    StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          36
+# COFF-I386-NEXT:      NumberOfRelocations: 3
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386-NEXT:      CheckSum:        0
+# COFF-I386-NEXT:      Number:          1
+
+# COFF-I386:       - Name: .data
+# COFF-I386-NEXT:    Value: 0
+# COFF-I386-NEXT:    SectionNumber: 2
+# COFF-I386-NEXT:    SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-I386-NEXT:    ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-I386-NEXT:    StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          13
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386-NEXT:      CheckSum:        0
+# COFF-I386-NEXT:      Number:          2
+
+# COFF-I386:       - Name: _main
+# COFF-I386-NEXT:    Value: 0
+# COFF-I386-NEXT:    SectionNumber: 1
+# COFF-I386-NEXT:    SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-I386-NEXT:    ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+# COFF-I386-NEXT:    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-I386:       - Name: L_.str
+# COFF-I386-NEXT:    Value: 0
+# COFF-I386-NEXT:    SectionNumber: 2
+# COFF-I386-NEXT:    SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-I386-NEXT:    ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-I386-NEXT:    StorageClass: IMAGE_SYM_CLASS_STATIC
+
+# COFF-I386:       - Name: _puts
+# COFF-I386-NEXT:    Value: 0
+# COFF-I386-NEXT:    SectionNumber: 0
+# COFF-I386-NEXT:    SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-I386-NEXT:    ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-I386-NEXT:    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-I386:       - Name: _SomeOtherFunction
+# COFF-I386-NEXT:    Value: 0
+# COFF-I386-NEXT:    SectionNumber: 0
+# COFF-I386-NEXT:    SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-I386-NEXT:    ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-I386-NEXT:    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.coff-x86-64 | FileCheck %s --check-prefix COFF-X86-64
+
+# COFF-X86-64: header:
+# COFF-X86-64-NEXT:  Machine: IMAGE_FILE_MACHINE_AMD64
+
+# COFF-X86-64: sections:
+# COFF-X86-64-NEXT:   - Name: .text
+# COFF-X86-64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+# COFF-X86-64-NEXT:     Alignment: 16
+# COFF-X86-64-NEXT:     SectionData: 4883EC28C744242400000000488D0D00000000E800000000E8000000008B4424244883C428C3
+
+# COFF-X86-64:     Relocations:
+# COFF-X86-64-NEXT:       - VirtualAddress: 15
+# COFF-X86-64-NEXT:         SymbolName: L.str
+# COFF-X86-64-NEXT:         Type: IMAGE_REL_AMD64_REL32
+
+# COFF-X86-64:            - VirtualAddress: 20
+# COFF-X86-64-NEXT:         SymbolName: puts
+# COFF-X86-64-NEXT:         Type: IMAGE_REL_AMD64_REL32
+
+# COFF-X86-64:            - VirtualAddress: 25
+# COFF-X86-64-NEXT:         SymbolName: SomeOtherFunction
+# COFF-X86-64-NEXT:         Type: IMAGE_REL_AMD64_REL32
+
+# COFF-X86-64:        - Name: .data
+# COFF-X86-64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+# COFF-X86-64-NEXT:     Alignment: 1
+# COFF-X86-64-NEXT:     SectionData: 48656C6C6F20576F726C642100
+
+# COFF-X86-64:        - Name: '.CRT$XCU'
+# COFF-X86-64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+# COFF-X86-64-NEXT:     Alignment: 8
+# COFF-X86-64-NEXT:     SectionData:  '0000000000000000'
+
+# COFF-X86-64:     Relocations:
+# COFF-X86-64-NEXT:       - VirtualAddress: 0
+# COFF-X86-64-NEXT:         SymbolName: '??__Ex@@YAXXZ'
+# COFF-X86-64-NEXT:         Type: IMAGE_REL_AMD64_ADDR64
+
+# COFF-X86-64: symbols:
+# COFF-X86-64-NEXT:   - Name: .text
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 1
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-X86-64-NEXT:    SectionDefinition:
+# COFF-X86-64-NEXT:      Length:          38
+# COFF-X86-64-NEXT:      NumberOfRelocations: 3
+# COFF-X86-64-NEXT:      NumberOfLinenumbers: 0
+# COFF-X86-64-NEXT:      CheckSum:        0
+# COFF-X86-64-NEXT:      Number:          1
+
+# COFF-X86-64:        - Name: .data
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 2
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-X86-64-NEXT:    SectionDefinition:
+# COFF-X86-64-NEXT:      Length:          13
+# COFF-X86-64-NEXT:      NumberOfRelocations: 0
+# COFF-X86-64-NEXT:      NumberOfLinenumbers: 0
+# COFF-X86-64-NEXT:      CheckSum:        0
+# COFF-X86-64-NEXT:      Number:          2
+
+# COFF-X86-64:        - Name: main
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 1
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-X86-64:        - Name: L.str
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 2
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+
+# COFF-X86-64:        - Name: puts
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 0
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-X86-64:        - Name: SomeOtherFunction
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 0
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-X86-64:        - Name: '??__Ex@@YAXXZ'
+# COFF-X86-64-NEXT:     Value: 0
+# COFF-X86-64-NEXT:     SectionNumber: 3
+# COFF-X86-64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-X86-64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_FUNCTION
+# COFF-X86-64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.coff-armnt | FileCheck %s --check-prefix COFF-ARMNT
+
+# COFF-ARMNT: header:
+# COFF-ARMNT-NEXT:  Machine: IMAGE_FILE_MACHINE_ARMNT
+
+# COFF-ARMNT: sections:
+# COFF-ARMNT-NEXT:   - Name: .text
+# COFF-ARMNT-NEXT:     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_PURGEABLE, IMAGE_SCN_MEM_16BIT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+# COFF-ARMNT-NEXT:     Alignment: 4
+# COFF-ARMNT-NEXT:     SectionData: 00F000F87047
+
+# COFF-ARMNT:     Relocations:
+# COFF-ARMNT-NEXT:       - VirtualAddress: 0
+# COFF-ARMNT-NEXT:         SymbolName: otherFunc
+# COFF-ARMNT-NEXT:         Type: IMAGE_REL_ARM_BLX23T
+
+# COFF-ARMNT:        - Name: .data
+# COFF-ARMNT-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+# COFF-ARMNT-NEXT:     Alignment: 4
+# COFF-ARMNT-NEXT:     SectionData: ''
+
+# COFF-ARMNT:        - Name: .bss
+# COFF-ARMNT-NEXT:     Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+# COFF-ARMNT-NEXT:     Alignment: 4
+# COFF-ARMNT-NEXT:     SectionData: ''
+
+# COFF-ARMNT: symbols:
+# COFF-ARMNT-NEXT:   - Name: .text
+# COFF-ARMNT-NEXT:     Value: 0
+# COFF-ARMNT-NEXT:     SectionNumber: 1
+# COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-ARMNT-NEXT:     SectionDefinition:
+# COFF-ARMNT-NEXT:       Length:          6
+# COFF-ARMNT-NEXT:       NumberOfRelocations: 1
+# COFF-ARMNT-NEXT:       NumberOfLinenumbers: 0
+# COFF-ARMNT-NEXT:       CheckSum:        879026160
+# COFF-ARMNT-NEXT:       Number:          1
+
+# COFF-ARMNT:        - Name: .data
+# COFF-ARMNT-NEXT:     Value: 0
+# COFF-ARMNT-NEXT:     SectionNumber: 2
+# COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-ARMNT-NEXT:     SectionDefinition:
+# COFF-ARMNT-NEXT:       Length:          0
+# COFF-ARMNT-NEXT:       NumberOfRelocations: 0
+# COFF-ARMNT-NEXT:       NumberOfLinenumbers: 0
+# COFF-ARMNT-NEXT:       CheckSum:        0
+# COFF-ARMNT-NEXT:       Number:          2
+
+# COFF-ARMNT:        - Name: .bss
+# COFF-ARMNT-NEXT:     Value: 0
+# COFF-ARMNT-NEXT:     SectionNumber: 3
+# COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-ARMNT-NEXT:     SectionDefinition:
+# COFF-ARMNT-NEXT:       Length:          0
+# COFF-ARMNT-NEXT:       NumberOfRelocations: 0
+# COFF-ARMNT-NEXT:       NumberOfLinenumbers: 0
+# COFF-ARMNT-NEXT:       CheckSum:        0
+# COFF-ARMNT-NEXT:       Number:          3
+
+# COFF-ARMNT:        - Name: main
+# COFF-ARMNT-NEXT:     Value: 0
+# COFF-ARMNT-NEXT:     SectionNumber: 1
+# COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-ARMNT:        - Name: otherFunc
+# COFF-ARMNT-NEXT:     Value: 0
+# COFF-ARMNT-NEXT:     SectionNumber: 0
+# COFF-ARMNT-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARMNT-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARMNT-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.coff-arm64 | FileCheck %s --check-prefix COFF-ARM64
+
+# COFF-ARM64: header:
+# COFF-ARM64-NEXT:  Machine: IMAGE_FILE_MACHINE_ARM64
+
+# COFF-ARM64: sections:
+# COFF-ARM64-NEXT:   - Name: .text
+# COFF-ARM64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+# COFF-ARM64-NEXT:     Alignment: 4
+# COFF-ARM64-NEXT:     SectionData: 00000094C0035FD6
+
+# COFF-ARM64:     Relocations:
+# COFF-ARM64-NEXT:       - VirtualAddress: 0
+# COFF-ARM64-NEXT:         SymbolName: otherFunc
+# COFF-ARM64-NEXT:         Type: IMAGE_REL_ARM64_BRANCH26
+
+# COFF-ARM64:        - Name: .data
+# COFF-ARM64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+# COFF-ARM64-NEXT:     Alignment: 4
+# COFF-ARM64-NEXT:     SectionData: ''
+
+# COFF-ARM64:        - Name: .bss
+# COFF-ARM64-NEXT:     Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+# COFF-ARM64-NEXT:     Alignment: 4
+# COFF-ARM64-NEXT:     SectionData: ''
+
+# COFF-ARM64: symbols:
+# COFF-ARM64-NEXT:   - Name: .text
+# COFF-ARM64-NEXT:     Value: 0
+# COFF-ARM64-NEXT:     SectionNumber: 1
+# COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-ARM64-NEXT:     SectionDefinition:
+# COFF-ARM64-NEXT:       Length:          8
+# COFF-ARM64-NEXT:       NumberOfRelocations: 1
+# COFF-ARM64-NEXT:       NumberOfLinenumbers: 0
+# COFF-ARM64-NEXT:       CheckSum:        35579893
+# COFF-ARM64-NEXT:       Number:          1
+
+# COFF-ARM64:        - Name: .data
+# COFF-ARM64-NEXT:     Value: 0
+# COFF-ARM64-NEXT:     SectionNumber: 2
+# COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-ARM64-NEXT:     SectionDefinition:
+# COFF-ARM64-NEXT:       Length:          0
+# COFF-ARM64-NEXT:       NumberOfRelocations: 0
+# COFF-ARM64-NEXT:       NumberOfLinenumbers: 0
+# COFF-ARM64-NEXT:       CheckSum:        0
+# COFF-ARM64-NEXT:       Number:          2
+
+# COFF-ARM64:        - Name: .bss
+# COFF-ARM64-NEXT:     Value: 0
+# COFF-ARM64-NEXT:     SectionNumber: 3
+# COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_STATIC
+# COFF-ARM64-NEXT:     SectionDefinition:
+# COFF-ARM64-NEXT:       Length:          0
+# COFF-ARM64-NEXT:       NumberOfRelocations: 0
+# COFF-ARM64-NEXT:       NumberOfLinenumbers: 0
+# COFF-ARM64-NEXT:       CheckSum:        0
+# COFF-ARM64-NEXT:       Number:          3
+
+# COFF-ARM64:        - Name: main
+# COFF-ARM64-NEXT:     Value: 0
+# COFF-ARM64-NEXT:     SectionNumber: 1
+# COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# COFF-ARM64:        - Name: otherFunc
+# COFF-ARM64-NEXT:     Value: 0
+# COFF-ARM64-NEXT:     SectionNumber: 0
+# COFF-ARM64-NEXT:     SimpleType: IMAGE_SYM_TYPE_NULL
+# COFF-ARM64-NEXT:     ComplexType: IMAGE_SYM_DTYPE_NULL
+# COFF-ARM64-NEXT:     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mipsel | FileCheck %s --check-prefix ELF-MIPSEL
+
+# ELF-MIPSEL:      FileHeader:
+# ELF-MIPSEL-NEXT:   Class:           ELFCLASS32
+# ELF-MIPSEL-NEXT:   Data:            ELFDATA2LSB
+# ELF-MIPSEL-NEXT:   OSABI:           ELFOSABI_GNU
+# ELF-MIPSEL-NEXT:   Type:            ET_REL
+# ELF-MIPSEL-NEXT:   Machine:         EM_MIPS
+# ELF-MIPSEL-NEXT:   Flags:           [ EF_MIPS_NOREORDER, EF_MIPS_PIC, EF_MIPS_CPIC, EF_MIPS_ABI_O32, EF_MIPS_ARCH_32 ]
+# ELF-MIPSEL-NEXT: Sections:
+# ELF-MIPSEL-NEXT:   - Name:            .text
+# ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:     Content:         0000023C00004224E8FFBD271400BFAF1000B0AF218059000000018E000024240000198E09F8200321E000020000198E09F8200321E00002000002241000B08F1400BF8F0800E0031800BD27
+# ELF-MIPSEL-NEXT:   - Name:            .data
+# ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:   - Name:            .bss
+# ELF-MIPSEL-NEXT:     Type:            SHT_NOBITS
+# ELF-MIPSEL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:     Size:            0x4
+# ELF-MIPSEL-NEXT:   - Name:            .mdebug.abi32
+# ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x1
+# ELF-MIPSEL-NEXT:   - Name:            .rodata.str1.1
+# ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x1
+# ELF-MIPSEL-NEXT:     EntSize:         0x1
+# ELF-MIPSEL-NEXT:     Content:         48656C6C6F20576F726C640A00
+# ELF-MIPSEL-NEXT:   - Name:            .reginfo
+# ELF-MIPSEL-NEXT:     Type:            SHT_MIPS_REGINFO
+# ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC ]
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x1
+# ELF-MIPSEL-NEXT:     Content:         '000000000000000000000000000000000000000000000000'
+# ELF-MIPSEL-NEXT:   - Name:            .MIPS.abiflags
+# ELF-MIPSEL-NEXT:     Type:            SHT_MIPS_ABIFLAGS
+# ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC ]
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x8
+# ELF-MIPSEL-NEXT:     EntSize:         0x0
+# ELF-MIPSEL-NEXT:     ISA:             MIPS32
+# ELF-MIPSEL-NEXT:     ISARevision:     0x1
+# ELF-MIPSEL-NEXT:     FpABI:           FP_DOUBLE
+# ELF-MIPSEL-NEXT:     GPRSize:         REG_32
+# ELF-MIPSEL-NEXT:     CPR1Size:        REG_32
+# ELF-MIPSEL-NEXT:     Flags1:          [ ODDSPREG ]
+# ELF-MIPSEL-NEXT:   - Name:            .rel.text
+# ELF-MIPSEL-NEXT:     Type:            SHT_REL
+# ELF-MIPSEL-NEXT:     Link:            .symtab
+# ELF-MIPSEL-NEXT:     AddressAlign:    0x4
+# ELF-MIPSEL-NEXT:     Info:            .text
+# ELF-MIPSEL-NEXT:     Relocations:
+# ELF-MIPSEL-NEXT:       - Symbol:          _gp_disp
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_HI16
+# ELF-MIPSEL-NEXT:       - Offset:          0x4
+# ELF-MIPSEL-NEXT:         Symbol:          _gp_disp
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_LO16
+# ELF-MIPSEL-NEXT:       - Offset:          0x18
+# ELF-MIPSEL-NEXT:         Symbol:          '$.str'
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_GOT16
+# ELF-MIPSEL-NEXT:       - Offset:          0x1C
+# ELF-MIPSEL-NEXT:         Symbol:          '$.str'
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_LO16
+# ELF-MIPSEL-NEXT:       - Offset:          0x20
+# ELF-MIPSEL-NEXT:         Symbol:          puts
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
+# ELF-MIPSEL-NEXT:       - Offset:          0x2C
+# ELF-MIPSEL-NEXT:         Symbol:          SomeOtherFunction
+# ELF-MIPSEL-NEXT:         Type:            R_MIPS_CALL16
+# ELF-MIPSEL-NEXT:   - Type: SectionHeaderTable
+# ELF-MIPSEL-NEXT:     Sections:
+# ELF-MIPSEL-NEXT:       - Name: .text
+# ELF-MIPSEL-NEXT:       - Name: .rel.text
+# ELF-MIPSEL-NEXT:       - Name: .data
+# ELF-MIPSEL-NEXT:       - Name: .bss
+# ELF-MIPSEL-NEXT:       - Name: .mdebug.abi32
+# ELF-MIPSEL-NEXT:       - Name: .rodata.str1.1
+# ELF-MIPSEL-NEXT:       - Name: .reginfo
+# ELF-MIPSEL-NEXT:       - Name: .MIPS.abiflags
+# ELF-MIPSEL-NEXT:       - Name: .shstrtab
+# ELF-MIPSEL-NEXT:       - Name: .symtab
+# ELF-MIPSEL-NEXT:       - Name: .strtab
+# ELF-MIPSEL-NEXT: Symbols:
+# ELF-MIPSEL-NEXT:     - Name:            trivial.ll
+# ELF-MIPSEL-NEXT:       Type:            STT_FILE
+# ELF-MIPSEL-NEXT:       Index:           SHN_ABS
+# ELF-MIPSEL-NEXT:     - Name:            '$.str'
+# ELF-MIPSEL-NEXT:       Type:            STT_OBJECT
+# ELF-MIPSEL-NEXT:       Section:         .rodata.str1.1
+# ELF-MIPSEL-NEXT:       Size:            0xD
+# ELF-MIPSEL-NEXT:     - Name:            .text
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .text
+# ELF-MIPSEL-NEXT:     - Name:            .data
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .data
+# ELF-MIPSEL-NEXT:     - Name:            .bss
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .bss
+# ELF-MIPSEL-NEXT:     - Name:            .mdebug.abi32
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .mdebug.abi32
+# ELF-MIPSEL-NEXT:     - Name:            .rodata.str1.1
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .rodata.str1.1
+# ELF-MIPSEL-NEXT:     - Name:            .reginfo
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .reginfo
+# ELF-MIPSEL-NEXT:     - Name:            .MIPS.abiflags
+# ELF-MIPSEL-NEXT:       Type:            STT_SECTION
+# ELF-MIPSEL-NEXT:       Section:         .MIPS.abiflags
+# ELF-MIPSEL-NEXT:     - Name:            main
+# ELF-MIPSEL-NEXT:       Type:            STT_FUNC
+# ELF-MIPSEL-NEXT:       Section:         .text
+# ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPSEL-NEXT:       Size:            0x4C
+# ELF-MIPSEL-NEXT:     - Name:            var
+# ELF-MIPSEL-NEXT:       Type:            STT_OBJECT
+# ELF-MIPSEL-NEXT:       Section:         .bss
+# ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPSEL-NEXT:       Size:            0x4
+# ELF-MIPSEL-NEXT:     - Name:            SomeOtherFunction
+# ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPSEL-NEXT:     - Name:            _gp_disp
+# ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPSEL-NEXT:     - Name:            puts
+# ELF-MIPSEL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPSEL-NEXT: ...
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.elf-mips64el | FileCheck %s --check-prefix ELF-MIPS64EL
+
+# ELF-MIPS64EL:      FileHeader:
+# ELF-MIPS64EL-NEXT:   Class:           ELFCLASS64
+# ELF-MIPS64EL-NEXT:   Data:            ELFDATA2LSB
+# ELF-MIPS64EL-NEXT:   Type:            ET_REL
+# ELF-MIPS64EL-NEXT:   Machine:         EM_MIPS
+# ELF-MIPS64EL-NEXT:   Flags:           [ EF_MIPS_ARCH_3 ]
+# ELF-MIPS64EL-NEXT: Sections:
+# ELF-MIPS64EL-NEXT:   - Name:            .text
+# ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPS64EL-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x10
+# ELF-MIPS64EL-NEXT:   - Name:            .data
+# ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPS64EL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x10
+# ELF-MIPS64EL-NEXT:     Content:         '00000000000000000000000000000000'
+# ELF-MIPS64EL-NEXT:   - Name:            .bss
+# ELF-MIPS64EL-NEXT:     Type:            SHT_NOBITS
+# ELF-MIPS64EL-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x10
+# ELF-MIPS64EL-NEXT:   - Name:            .MIPS.options
+# ELF-MIPS64EL-NEXT:     Type:            SHT_MIPS_OPTIONS
+# ELF-MIPS64EL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MIPS_NOSTRIP ]
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x8
+# ELF-MIPS64EL-NEXT:     EntSize:         0x1
+# ELF-MIPS64EL-NEXT:     Content:         '01280000000000000000000000000000000000000000000000000000000000000000000000000000'
+# ELF-MIPS64EL-NEXT:   - Name:            .pdr
+# ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x4
+# ELF-MIPS64EL-NEXT:   - Name:            .rela.data
+# ELF-MIPS64EL-NEXT:     Type:            SHT_RELA
+# ELF-MIPS64EL-NEXT:     Link:            .symtab
+# ELF-MIPS64EL-NEXT:     AddressAlign:    0x8
+# ELF-MIPS64EL-NEXT:     Info:            .data
+# ELF-MIPS64EL-NEXT:     Relocations:
+# ELF-MIPS64EL-NEXT:       - Symbol:          zed
+# ELF-MIPS64EL-NEXT:         Type:            R_MIPS_64
+# ELF-MIPS64EL-NEXT:   - Type: SectionHeaderTable
+# ELF-MIPS64EL-NEXT:     Sections:
+# ELF-MIPS64EL-NEXT:       - Name: .text
+# ELF-MIPS64EL-NEXT:       - Name: .data
+# ELF-MIPS64EL-NEXT:       - Name: .rela.data
+# ELF-MIPS64EL-NEXT:       - Name: .bss
+# ELF-MIPS64EL-NEXT:       - Name: .MIPS.options
+# ELF-MIPS64EL-NEXT:       - Name: .pdr
+# ELF-MIPS64EL-NEXT:       - Name: .shstrtab
+# ELF-MIPS64EL-NEXT:       - Name: .symtab
+# ELF-MIPS64EL-NEXT:       - Name: .strtab
+# ELF-MIPS64EL-NEXT: Symbols:
+# ELF-MIPS64EL-NEXT:     - Name:            .text
+# ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
+# ELF-MIPS64EL-NEXT:       Section:         .text
+# ELF-MIPS64EL-NEXT:     - Name:            .data
+# ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
+# ELF-MIPS64EL-NEXT:       Section:         .data
+# ELF-MIPS64EL-NEXT:     - Name:            .bss
+# ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
+# ELF-MIPS64EL-NEXT:       Section:         .bss
+# ELF-MIPS64EL-NEXT:     - Name:            bar
+# ELF-MIPS64EL-NEXT:       Section:         .data
+# ELF-MIPS64EL-NEXT:     - Name:            .MIPS.options
+# ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
+# ELF-MIPS64EL-NEXT:       Section:         .MIPS.options
+# ELF-MIPS64EL-NEXT:     - Name:            .pdr
+# ELF-MIPS64EL-NEXT:       Type:            STT_SECTION
+# ELF-MIPS64EL-NEXT:       Section:         .pdr
+# ELF-MIPS64EL-NEXT:     - Name:            zed
+# ELF-MIPS64EL-NEXT:       Binding:         STB_GLOBAL
+# ELF-MIPS64EL-NEXT: ...
+
+# RUN: yaml2obj --docnum=1 %s -o %t-x86-64
+# RUN: obj2yaml %t-x86-64 | FileCheck %s --check-prefix ELF-X86-64
+
+# ELF-X86-64:      FileHeader:
+# ELF-X86-64-NEXT:   Class:           ELFCLASS64
+# ELF-X86-64-NEXT:   Data:            ELFDATA2LSB
+# ELF-X86-64-NEXT:   OSABI:           ELFOSABI_GNU
+# ELF-X86-64-NEXT:   Type:            ET_REL
+# ELF-X86-64-NEXT:   Machine:         EM_X86_64
+# ELF-X86-64-NEXT: Sections:
+# ELF-X86-64-NEXT:   - Name:            .text
+# ELF-X86-64-NEXT:     Type:            SHT_PROGBITS
+# ELF-X86-64-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+# ELF-X86-64-NEXT:     AddressAlign:    0x10
+# ELF-X86-64-NEXT:     Content:         4883EC08C744240400000000BF00000000E80000000030C0E8000000008B4424044883C408C3
+# ELF-X86-64-NEXT:   - Name:            .rodata.str1.1
+# ELF-X86-64-NEXT:     Type:            SHT_PROGBITS
+# ELF-X86-64-NEXT:     Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+# ELF-X86-64-NEXT:     Address:         0x26
+# ELF-X86-64-NEXT:     AddressAlign:    0x1
+# ELF-X86-64-NEXT:     Content:         48656C6C6F20576F726C642100
+# ELF-X86-64-NEXT:   - Name:            .note.GNU-stack
+# ELF-X86-64-NEXT:     Type:            SHT_PROGBITS
+# ELF-X86-64-NEXT:     Address:         0x33
+# ELF-X86-64-NEXT:     AddressAlign:    0x1
+# ELF-X86-64-NEXT:   - Name:            .rela.text
+# ELF-X86-64-NEXT:     Type:            SHT_RELA
+# ELF-X86-64-NEXT:     Address:         0x38
+# ELF-X86-64-NEXT:     Link:            .symtab
+# ELF-X86-64-NEXT:     AddressAlign:    0x8
+# ELF-X86-64-NEXT:     Info:            .text
+# ELF-X86-64-NEXT:     Relocations:
+# ELF-X86-64-NEXT:       - Offset:          0xD
+# ELF-X86-64-NEXT:         Symbol:          .rodata.str1.1
+# ELF-X86-64-NEXT:         Type:            R_X86_64_32S
+# ELF-X86-64-NEXT:       - Offset:          0x12
+# ELF-X86-64-NEXT:         Symbol:          puts
+# ELF-X86-64-NEXT:         Type:            R_X86_64_PC32
+# ELF-X86-64-NEXT:         Addend:          -4
+# ELF-X86-64-NEXT:       - Offset:          0x19
+# ELF-X86-64-NEXT:         Symbol:          SomeOtherFunction
+# ELF-X86-64-NEXT:         Type:            R_X86_64_PC32
+# ELF-X86-64-NEXT:         Addend:          -4
+# ELF-X86-64-NEXT: Symbols:
+# ELF-X86-64-NEXT:     - Name:            trivial-object-test.s
+# ELF-X86-64-NEXT:       Type:            STT_FILE
+# ELF-X86-64-NEXT:       Index:           SHN_ABS
+# ELF-X86-64-NEXT:     - Name:            .text
+# ELF-X86-64-NEXT:       Type:            STT_SECTION
+# ELF-X86-64-NEXT:       Section:         .text
+# ELF-X86-64-NEXT:     - Name:            .rodata.str1.1
+# ELF-X86-64-NEXT:       Type:            STT_SECTION
+# ELF-X86-64-NEXT:       Section:         .rodata.str1.1
+# ELF-X86-64-NEXT:     - Name:            .note.GNU-stack
+# ELF-X86-64-NEXT:       Type:            STT_SECTION
+# ELF-X86-64-NEXT:       Section:         .note.GNU-stack
+# ELF-X86-64-NEXT:     - Name:            main
+# ELF-X86-64-NEXT:       Type:            STT_FUNC
+# ELF-X86-64-NEXT:       Section:         .text
+# ELF-X86-64-NEXT:       Binding:         STB_GLOBAL
+# ELF-X86-64-NEXT:       Size:            0x26
+# ELF-X86-64-NEXT:     - Name:            SomeOtherFunction
+# ELF-X86-64-NEXT:       Binding:         STB_GLOBAL
+# ELF-X86-64-NEXT:     - Name:            puts
+# ELF-X86-64-NEXT:       Binding:         STB_GLOBAL
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_GNU
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign: 0x10
+    Content:      4883EC08C744240400000000BF00000000E80000000030C0E8000000008B4424044883C408C3
+  - Name:         .rodata.str1.1
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    Address:      0x26
+    AddressAlign: 0x1
+    Content:      48656C6C6F20576F726C642100
+  - Name:         .note.GNU-stack
+    Type:         SHT_PROGBITS
+    Address:      0x33
+    AddressAlign: 0x1
+  - Name:         .rela.text
+    Type:         SHT_RELA
+    Address:      0x38
+    Link:         .symtab
+    AddressAlign: 0x8
+    EntSize:      0x18
+    Info:         .text
+    Relocations:
+      - Offset: 0xD
+        Symbol: .rodata.str1.1
+        Type:   R_X86_64_32S
+      - Offset: 0x12
+        Symbol: puts
+        Type:   R_X86_64_PC32
+        Addend: -4
+      - Offset: 0x19
+        Symbol: SomeOtherFunction
+        Type:   R_X86_64_PC32
+        Addend: -4
+Symbols:
+  - Name:    trivial-object-test.s
+    Type:    STT_FILE
+    Index:   SHN_ABS
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+  - Name:    .rodata.str1.1
+    Type:    STT_SECTION
+    Section: .rodata.str1.1
+  - Name:    .note.GNU-stack
+    Type:    STT_SECTION
+    Section: .note.GNU-stack
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Size:    0x26
+  - Name:    SomeOtherFunction
+    Binding: STB_GLOBAL
+  - Name:    puts
+    Binding: STB_GLOBAL
+
+# RUN: yaml2obj --docnum=2 %s -o %t-xtensa
+# RUN: obj2yaml %t-xtensa | FileCheck %s --check-prefix ELF-XTENSA
+
+# ELF-XTENSA:      FileHeader:
+# ELF-XTENSA-NEXT:   Class:           ELFCLASS32
+# ELF-XTENSA-NEXT:   Data:            ELFDATA2LSB
+# ELF-XTENSA-NEXT:   Type:            ET_EXEC
+# ELF-XTENSA-NEXT:   Machine:         EM_XTENSA
+## As EF_XTENSA_MACH_NONE == 0, it is always printed by obj2yaml.
+# ELF-XTENSA-NEXT:   Flags:           [ EF_XTENSA_XT_INSN, EF_XTENSA_MACH_NONE, EF_XTENSA_XT_LIT ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_XTENSA
+  Flags:           [ EF_XTENSA_XT_INSN, EF_XTENSA_XT_LIT ]
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.elf-avr | FileCheck %s --check-prefix ELF-AVR
+
+# ELF-AVR:      FileHeader:
+# ELF-AVR-NEXT:   Class:           ELFCLASS32
+# ELF-AVR-NEXT:   Data:            ELFDATA2LSB
+# ELF-AVR-NEXT:   Type:            ET_EXEC
+# ELF-AVR-NEXT:   Machine:         EM_AVR
+# ELF-AVR-NEXT:   Flags:           [ EF_AVR_ARCH_AVR2, EF_AVR_LINKRELAX_PREPARED ]
+# ELF-AVR-NEXT: ProgramHeaders:
+# ELF-AVR-NEXT:  - Type:     PT_LOAD
+# ELF-AVR-NEXT:    Flags:    [ PF_X, PF_R ]
+# ELF-AVR-NEXT:    FirstSec: .text
+# ELF-AVR-NEXT:    LastSec:  .text
+# ELF-AVR-NEXT:    Align:    0x2
+# ELF-AVR-NEXT:    Offset:   0x74
+# ELF-AVR-NEXT:  - Type:     PT_LOAD
+# ELF-AVR-NEXT:    Flags:    [ PF_W, PF_R ]
+# ELF-AVR-NEXT:    FirstSec: .data
+# ELF-AVR-NEXT:    LastSec:  .data
+# ELF-AVR-NEXT:    VAddr:    0x800060
+# ELF-AVR-NEXT:    PAddr:    0x4
+# ELF-AVR-NEXT:    Offset:   0x78
+# ELF-AVR-NEXT: Sections:
+# ELF-AVR-NEXT:   - Name:            .text
+# ELF-AVR-NEXT:     Type:            SHT_PROGBITS
+# ELF-AVR-NEXT:     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+# ELF-AVR-NEXT:     AddressAlign:    0x2
+# ELF-AVR-NEXT:     Content:         C20E0895
+# ELF-AVR-NEXT:   - Name:            .data
+# ELF-AVR-NEXT:     Type:            SHT_PROGBITS
+# ELF-AVR-NEXT:     Flags:           [ SHF_WRITE, SHF_ALLOC ]
+# ELF-AVR-NEXT:     Address:         0x800060
+# ELF-AVR-NEXT:     AddressAlign:    0x1
+# ELF-AVR-NEXT: Symbols:
+# ELF-AVR-NEXT:     - Name:           .text
+# ELF-AVR-NEXT:       Type:            STT_SECTION
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:     - Name:           .data
+# ELF-AVR-NEXT:       Type:            STT_SECTION
+# ELF-AVR-NEXT:       Section:         .data
+# ELF-AVR-NEXT:       Value:           0x800060
+# ELF-AVR-NEXT:     - Name:            a.o
+# ELF-AVR-NEXT:       Type:            STT_FILE
+# ELF-AVR-NEXT:       Index:           SHN_ABS
+# ELF-AVR-NEXT:     - Name:            main
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:     - Name:            __trampolines_start
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:     - Name:            _etext
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:       Value:           0x4
+# ELF-AVR-NEXT:     - Name:            __data_load_end
+# ELF-AVR-NEXT:       Index:           SHN_ABS
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:       Value:           0x4
+# ELF-AVR-NEXT:     - Name:            __trampolines_end
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:     - Name:            __data_load_start
+# ELF-AVR-NEXT:       Index:           SHN_ABS
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:       Value:           0x4
+# ELF-AVR-NEXT:     - Name:            __dtors_end
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:     - Name:            __eeprom_end
+# ELF-AVR-NEXT:       Section:         .data
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:       Value:           0x810000
+# ELF-AVR-NEXT:     - Name:            __ctors_start
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:     - Name:            __dtors_start
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:     - Name:            __ctors_end
+# ELF-AVR-NEXT:       Section:         .text
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:     - Name:            _edata
+# ELF-AVR-NEXT:       Section:         .data
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:       Value:           0x800060
+# ELF-AVR-NEXT:     - Name:            _end
+# ELF-AVR-NEXT:       Section:         .data
+# ELF-AVR-NEXT:       Binding:         STB_GLOBAL
+# ELF-AVR-NEXT:       Value:           0x800060
+
+# RUN: obj2yaml %p/Inputs/trivial-object-test.wasm | FileCheck %s --check-prefix WASM
+
+# WASM:      --- !WASM
+# WASM-NEXT: FileHeader:
+# WASM-NEXT:   Version:         0x1
+# WASM:        - Type:            CUSTOM
+# WASM-NEXT:     Name:            linking
+# WASM-NEXT:     Version:         2
+# WASM-NEXT:     SymbolTable:
+# WASM-NEXT:       - Index:           0
+# WASM-NEXT:         Kind:            FUNCTION
+# WASM-NEXT:         Name:            main
+# WASM-NEXT:         Flags:           [  ]
+# WASM-NEXT:         Function:        2
+# WASM-NEXT:       - Index:           1
+# WASM-NEXT:         Kind:            DATA
+# WASM-NEXT:         Name:            .L.str
+# WASM-NEXT:         Flags:           [ BINDING_LOCAL ]
+# WASM-NEXT:         Segment:         0
+# WASM-NEXT:         Size:            13
+# WASM-NEXT:       - Index:           2
+# WASM:              Name:            puts
+# WASM:            - Index:           3
+# WASM:              Name:            .LSomeOtherFunction_bitcast
+# WASM:            - Index:           4
+# WASM:              Name:            SomeOtherFunction
+# WASM:            - Index:           5
+# WASM:              Name:            var
+# WASM:          SegmentInfo:
+# WASM-NEXT:       - Index:           0
+# WASM-NEXT:         Name:            .rodata..L.str
+# WASM-NEXT:         Alignment:       0
+# WASM-NEXT:         Flags:           [  ]
+# WASM-NEXT:       - Index:           1
+# WASM:      ...

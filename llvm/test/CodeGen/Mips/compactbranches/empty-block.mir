@@ -1,0 +1,91 @@
+# RUN: llc -march=mipsel -mcpu=mips32r6 -start-after=block-placement %s -o - | FileCheck %s
+
+# Check that empty blocks in the cfg don't cause the mips hazard scheduler to
+# crash and that the nop is inserted correctly.
+
+# CHECK:  blezc
+# CHECK:  nop
+# CHECK: # %bb.1:
+# CHECK:  .insn
+# CHECK: # %bb.2:
+# CHECK:  .insn
+# CHECK: # %bb.3:
+# CHECK:  jal
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
+
+  declare i32 @k()
+
+  declare void @f(i32)
+
+  define void @l5() {
+  entry:
+    %call = tail call i32 @k()
+    %cmp = icmp sgt i32 %call, 0
+    br i1 %cmp, label %if.then, label %if.end
+
+  if.then:                                          ; preds = %entry
+    tail call void @f(i32 signext 2)
+    br label %if.end
+
+  if.end:                                           ; preds = %if.then, %entry
+    ret void
+  }
+
+---
+name:            l5
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       24
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$ra' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.if.then(0x50000000), %bb.4.if.end(0x30000000)
+    liveins: $ra
+
+    $sp = ADDiu $sp, -24
+    CFI_INSTRUCTION def_cfa_offset 24
+    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
+    CFI_INSTRUCTION offset $ra_64, -4
+    JAL @k, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit-def $v0
+    BLEZ $v0, %bb.4.if.end, implicit-def $at
+
+  bb.1.if.then:
+    successors: %bb.2.if.then(0x80000000)
+
+  bb.2.if.then:
+    successors: %bb.3.if.then(0x80000000)
+
+  bb.3.if.then:
+    successors: %bb.4.if.end(0x80000000)
+
+    $a0 = ADDiu $zero, 2
+    JAL @f, csr_o32_fp64, implicit-def dead $ra, implicit killed $a0, implicit-def $sp
+
+  bb.4.if.end:
+    $ra = LW $sp, 20 :: (load (s32) from %stack.0)
+    $sp = ADDiu $sp, 24
+    PseudoReturn undef $ra
+
+...

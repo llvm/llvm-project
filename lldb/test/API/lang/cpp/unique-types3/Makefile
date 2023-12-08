@@ -1,0 +1,5 @@
+CXX_SOURCES := main.cpp a.cpp
+
+CFLAGS_EXTRAS = $(TEST_CFLAGS_EXTRAS) $(LIMIT_DEBUG_INFO_FLAGS)
+
+include Makefile.rules

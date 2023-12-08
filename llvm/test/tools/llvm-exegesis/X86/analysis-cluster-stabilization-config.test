@@ -1,0 +1,42 @@
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-display-unstable-clusters -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-UNSTABLE %s
+
+# We have two measurements with different measurements for SQRTSSr, but they
+# have different configs, so they should not be placed in the same cluster by
+# stabilization.
+
+# CHECK-UNSTABLE-NOT: SQRTSSr
+
+---
+mode:            latency
+key:
+  instructions:
+    - 'SQRTSSr XMM11 XMM11'
+  config:          'config1'
+  register_initial_values:
+    - 'XMM11=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: latency, value: 90.1111, per_snippet_value: 90.1111 }
+error:           ''
+info:            Repeating a single explicitly serial instruction
+assembled_snippet: 4883EC10C7042400000000C744240400000000C744240800000000C744240C00000000C57A6F1C244883C410F3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBC3
+...
+---
+mode:            latency
+key:
+  instructions:
+    - 'SQRTSSr XMM11 XMM11'
+  config:          'config2'
+  register_initial_values:
+    - 'XMM11=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: latency, value: 100, per_snippet_value: 100 }
+error:           ''
+info:            Repeating a single explicitly serial instruction
+assembled_snippet: 4883EC10C7042400000000C744240400000000C744240800000000C744240C00000000C57A6F1C244883C410F3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBC3
+...

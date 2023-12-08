@@ -1,0 +1,20 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass machine-scheduler %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: cluster_flat_loads
+# GCN:      FLAT_LOAD_DWORD %0, 0
+# GCN-NEXT: FLAT_LOAD_DWORD %0, 4
+# GCN-NEXT: V_ADD_F32_e64
+name: cluster_flat_loads
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+    %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
+    %3 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+...

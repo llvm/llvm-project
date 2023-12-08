@@ -1,0 +1,73 @@
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
+
+# Check for error on `--global-base` with `-shared` and `-pie`
+RUN: not wasm-ld --global-base=2048 --experimental-pic -shared -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED-ERROR
+RUN: not wasm-ld --global-base=2048 --experimental-pic -pie -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED-ERROR
+SHARED-ERROR: error: --global-base may not be used with -shared/-pie
+
+# Check for error on `--global-base` which is lower than that end of the stack
+# when `--stack-first` is used.
+RUN: not wasm-ld --global-base=2048 --stack-first -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=STACK-ERROR
+STACK-ERROR: error: --global-base cannot be less than stack size when --stack-first is used
+
+RUN: wasm-ld --export=__global_base --export=__data_end --allow-undefined -o %t.wasm %t.o
+RUN: obj2yaml %t.wasm | FileCheck %s  -check-prefix=CHECK-1024
+CHECK-1024:       - Type:            GLOBAL
+CHECK-1024-NEXT:    Globals:
+CHECK-1024-NEXT:      - Index:           0
+CHECK-1024-NEXT:        Type:            I32
+CHECK-1024-NEXT:        Mutable:         true
+CHECK-1024-NEXT:        InitExpr:
+CHECK-1024-NEXT:          Opcode:          I32_CONST
+CHECK-1024-NEXT:          Value:           66560
+CHECK-1024-NEXT:      - Index:           1
+CHECK-1024-NEXT:        Type:            I32
+CHECK-1024-NEXT:        Mutable:         false
+CHECK-1024-NEXT:        InitExpr:
+CHECK-1024-NEXT:          Opcode:          I32_CONST
+CHECK-1024-NEXT:          Value:           1024
+CHECK-1024-NEXT:      - Index:           2
+CHECK-1024-NEXT:        Type:            I32
+CHECK-1024-NEXT:        Mutable:         false
+CHECK-1024-NEXT:        InitExpr:
+CHECK-1024-NEXT:          Opcode:          I32_CONST
+CHECK-1024-NEXT:          Value:           1024
+
+CHECK-1024:       - Type:            EXPORT
+CHECK-1024:           - Name:            __data_end
+CHECK-1024-NEXT:        Kind:            GLOBAL
+CHECK-1024-NEXT:        Index:           1
+CHECK-1024-NEXT:      - Name:            __global_base
+CHECK-1024-NEXT:        Kind:            GLOBAL
+CHECK-1024-NEXT:        Index:           2
+
+RUN: wasm-ld --export=__global_base --export=__data_end --allow-undefined --global-base=16777216 -o %t.wasm %t.o
+RUN: obj2yaml %t.wasm | FileCheck %s  -check-prefix=CHECK-16777216
+CHECK-16777216:       - Type:            GLOBAL
+CHECK-16777216-NEXT:    Globals:
+CHECK-16777216-NEXT:      - Index:           0
+CHECK-16777216-NEXT:        Type:            I32
+CHECK-16777216-NEXT:        Mutable:         true
+CHECK-16777216-NEXT:        InitExpr:
+CHECK-16777216-NEXT:          Opcode:          I32_CONST
+CHECK-16777216-NEXT:          Value:           16842752
+CHECK-16777216-NEXT:      - Index:           1
+CHECK-16777216-NEXT:        Type:            I32
+CHECK-16777216-NEXT:        Mutable:         false
+CHECK-16777216-NEXT:        InitExpr:
+CHECK-16777216-NEXT:          Opcode:          I32_CONST
+CHECK-16777216-NEXT:          Value:           16777216
+CHECK-16777216-NEXT:      - Index:           2
+CHECK-16777216-NEXT:        Type:            I32
+CHECK-16777216-NEXT:        Mutable:         false
+CHECK-16777216-NEXT:        InitExpr:
+CHECK-16777216-NEXT:          Opcode:          I32_CONST
+CHECK-16777216-NEXT:          Value:           16777216
+
+CHECK-16777216:       - Type:            EXPORT
+CHECK-16777216:           - Name:            __data_end
+CHECK-16777216-NEXT:        Kind:            GLOBAL
+CHECK-16777216-NEXT:        Index:           1
+CHECK-16777216-NEXT:      - Name:            __global_base
+CHECK-16777216-NEXT:        Kind:            GLOBAL
+CHECK-16777216-NEXT:        Index:           2

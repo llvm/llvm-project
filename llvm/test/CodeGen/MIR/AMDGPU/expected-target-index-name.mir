@@ -1,0 +1,49 @@
+# RUN: not llc -march=amdgcn -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  %struct.foo = type { float, [5 x i32] }
+
+  @float_gv = internal unnamed_addr addrspace(4) constant [5 x float] [float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00], align 4
+
+  define amdgpu_kernel void @float(float addrspace(1)* %out, i32 %index) #0 {
+  entry:
+    %0 = getelementptr inbounds [5 x float], [5 x float] addrspace(4)* @float_gv, i32 0, i32 %index
+    %1 = load float, float addrspace(4)* %0
+    store float %1, float addrspace(1)* %out
+    ret void
+  }
+
+  attributes #0 = { nounwind }
+
+...
+---
+name: float
+liveins:
+  - { reg: '$sgpr0_sgpr1' }
+frameInfo:
+  maxAlignment:  8
+body: |
+  bb.0.entry:
+    liveins: $sgpr0_sgpr1
+
+    $sgpr2_sgpr3 = S_GETPC_B64
+  ; CHECK: [[@LINE+1]]:45: expected the name of the target index
+    $sgpr2 = S_ADD_U32 $sgpr2, target-index(0), implicit-def $scc, implicit-def $scc
+    $sgpr3 = S_ADDC_U32 $sgpr3, 0, implicit-def $scc, implicit $scc, implicit-def $scc, implicit $scc
+    $sgpr4_sgpr5 = S_LSHR_B64 $sgpr2_sgpr3, 32, implicit-def dead $scc
+    $sgpr6 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 11
+    $sgpr7 = S_ASHR_I32 $sgpr6, 31, implicit-def dead $scc
+    $sgpr6_sgpr7 = S_LSHL_B64 $sgpr6_sgpr7, 2, implicit-def dead $scc
+    $sgpr2 = S_ADD_U32 $sgpr2, @float_gv, implicit-def $scc
+    $sgpr3 = S_ADDC_U32 $sgpr4, 0, implicit-def dead $scc, implicit $scc
+    $sgpr4 = S_ADD_U32 $sgpr2, $sgpr6, implicit-def $scc
+    $sgpr5 = S_ADDC_U32 $sgpr3, $sgpr7, implicit-def dead $scc, implicit $scc
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 0
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 9
+    $sgpr7 = S_MOV_B32 61440
+    $sgpr6 = S_MOV_B32 -1
+    $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...

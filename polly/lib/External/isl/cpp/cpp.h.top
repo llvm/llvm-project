@@ -1,0 +1,267 @@
+/// These are automatically generated C++ bindings for isl.
+///
+/// isl is a library for computing with integer sets and maps described by
+/// Presburger formulas. On top of this, isl provides various tools for
+/// polyhedral compilation, ranging from dependence analysis over scheduling
+/// to AST generation.
+
+#ifndef ISL_CPP
+#define ISL_CPP
+
+#include <isl/ctx.h>
+#include <isl/options.h>
+
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+
+#if __cplusplus >= 201703L
+#include <any>
+#include <optional>
+#endif
+
+/* ISL_USE_EXCEPTIONS should be defined to 1 if exceptions are available.
+ * gcc and clang define __cpp_exceptions; MSVC and xlC define _CPPUNWIND.
+ * Older versions of gcc (e.g., 4.9) only define __EXCEPTIONS.
+ * If exceptions are not available, any error condition will result
+ * in an abort.
+ */
+#ifndef ISL_USE_EXCEPTIONS
+#if defined(__cpp_exceptions) || defined(_CPPUNWIND) || defined(__EXCEPTIONS)
+#define ISL_USE_EXCEPTIONS	1
+#else
+#define ISL_USE_EXCEPTIONS	0
+#endif
+#endif
+
+namespace isl {
+
+class ctx {
+	isl_ctx *ptr;
+public:
+	/* implicit */ ctx(isl_ctx *ctx) : ptr(ctx) {}
+	isl_ctx *release() {
+		auto tmp = ptr;
+		ptr = nullptr;
+		return tmp;
+	}
+	isl_ctx *get() {
+		return ptr;
+	}
+#if __cplusplus >= 201703L
+	static void free_user(void *user) {
+		std::any *p = static_cast<std::any *>(user);
+		delete p;
+	}
+#endif
+};
+
+/* Macros hiding try/catch.
+ * If exceptions are not available, then no exceptions will be thrown and
+ * there is nothing to catch.
+ */
+#if ISL_USE_EXCEPTIONS
+#define ISL_CPP_TRY		try
+#define ISL_CPP_CATCH_ALL	catch (...)
+#else
+#define ISL_CPP_TRY		if (1)
+#define ISL_CPP_CATCH_ALL	if (0)
+#endif
+
+#if ISL_USE_EXCEPTIONS
+
+/* Class capturing isl errors.
+ *
+ * The what() return value is stored in a reference counted string
+ * to ensure that the copy constructor and the assignment operator
+ * do not throw any exceptions.
+ */
+class exception : public std::exception {
+	std::shared_ptr<std::string> what_str;
+
+protected:
+	inline exception(const char *what_arg, const char *msg,
+		const char *file, int line);
+public:
+	exception() {}
+	exception(const char *what_arg) {
+		what_str = std::make_shared<std::string>(what_arg);
+	}
+	static inline void throw_error(enum isl_error error, const char *msg,
+		const char *file, int line);
+	virtual const char *what() const noexcept {
+		return what_str->c_str();
+	}
+
+	/* Default behavior on error conditions that occur inside isl calls
+	 * performed from inside the bindings.
+	 * In the case exceptions are available, isl should continue
+	 * without printing a warning since the warning message
+	 * will be included in the exception thrown from inside the bindings.
+	 */
+	static constexpr auto on_error = ISL_ON_ERROR_CONTINUE;
+	/* Wrapper for throwing an exception with the given message.
+	 */
+	static void throw_invalid(const char *msg, const char *file, int line) {
+		throw_error(isl_error_invalid, msg, file, line);
+	}
+	static inline void throw_last_error(ctx ctx);
+};
+
+/* Create an exception of a type described by "what_arg", with
+ * error message "msg" in line "line" of file "file".
+ *
+ * Create a string holding the what() return value that
+ * corresponds to what isl would have printed.
+ * If no error message or no error file was set, then use "what_arg" instead.
+ */
+exception::exception(const char *what_arg, const char *msg, const char *file,
+	int line)
+{
+	if (!msg || !file)
+		what_str = std::make_shared<std::string>(what_arg);
+	else
+		what_str = std::make_shared<std::string>(std::string(file) +
+				    ":" + std::to_string(line) + ": " + msg);
+}
+
+class exception_abort : public exception {
+	friend exception;
+	exception_abort(const char *msg, const char *file, int line) :
+		exception("execution aborted", msg, file, line) {}
+};
+
+class exception_alloc : public exception {
+	friend exception;
+	exception_alloc(const char *msg, const char *file, int line) :
+		exception("memory allocation failure", msg, file, line) {}
+};
+
+class exception_unknown : public exception {
+	friend exception;
+	exception_unknown(const char *msg, const char *file, int line) :
+		exception("unknown failure", msg, file, line) {}
+};
+
+class exception_internal : public exception {
+	friend exception;
+	exception_internal(const char *msg, const char *file, int line) :
+		exception("internal error", msg, file, line) {}
+};
+
+class exception_invalid : public exception {
+	friend exception;
+	exception_invalid(const char *msg, const char *file, int line) :
+		exception("invalid argument", msg, file, line) {}
+};
+
+class exception_quota : public exception {
+	friend exception;
+	exception_quota(const char *msg, const char *file, int line) :
+		exception("quota exceeded", msg, file, line) {}
+};
+
+class exception_unsupported : public exception {
+	friend exception;
+	exception_unsupported(const char *msg, const char *file, int line) :
+		exception("unsupported operation", msg, file, line) {}
+};
+
+/* Throw an exception of the class that corresponds to "error", with
+ * error message "msg" in line "line" of file "file".
+ *
+ * isl_error_none is treated as an invalid error type.
+ */
+void exception::throw_error(enum isl_error error, const char *msg,
+	const char *file, int line)
+{
+	switch (error) {
+	case isl_error_none:
+		break;
+	case isl_error_abort: throw exception_abort(msg, file, line);
+	case isl_error_alloc: throw exception_alloc(msg, file, line);
+	case isl_error_unknown: throw exception_unknown(msg, file, line);
+	case isl_error_internal: throw exception_internal(msg, file, line);
+	case isl_error_invalid: throw exception_invalid(msg, file, line);
+	case isl_error_quota: throw exception_quota(msg, file, line);
+	case isl_error_unsupported:
+				throw exception_unsupported(msg, file, line);
+	}
+
+	throw exception_invalid("invalid error type", file, line);
+}
+
+/* Throw an exception corresponding to the last error on "ctx" and
+ * reset the error.
+ *
+ * If "ctx" is NULL or if it is not in an error state at the start,
+ * then an invalid argument exception is thrown.
+ */
+void exception::throw_last_error(ctx ctx)
+{
+	enum isl_error error;
+	const char *msg, *file;
+	int line;
+
+	error = isl_ctx_last_error(ctx.get());
+	msg = isl_ctx_last_error_msg(ctx.get());
+	file = isl_ctx_last_error_file(ctx.get());
+	line = isl_ctx_last_error_line(ctx.get());
+	isl_ctx_reset_error(ctx.get());
+
+	throw_error(error, msg, file, line);
+}
+
+#else
+
+#include <stdio.h>
+#include <stdlib.h>
+
+class exception {
+public:
+	/* Default behavior on error conditions that occur inside isl calls
+	 * performed from inside the bindings.
+	 * In the case exceptions are not available, isl should abort.
+	 */
+	static constexpr auto on_error = ISL_ON_ERROR_ABORT;
+	/* Wrapper for throwing an exception with the given message.
+	 * In the case exceptions are not available, print an error and abort.
+	 */
+	static void throw_invalid(const char *msg, const char *file, int line) {
+		fprintf(stderr, "%s:%d: %s\n", file, line, msg);
+		abort();
+	}
+	/* Throw an exception corresponding to the last
+	 * error on "ctx".
+	 * isl should already abort when an error condition occurs,
+	 * so this function should never be called.
+	 */
+	static void throw_last_error(ctx ctx) {
+		abort();
+	}
+};
+
+#endif
+
+/* Helper class for setting the on_error and resetting the option
+ * to the original value when leaving the scope.
+ */
+class options_scoped_set_on_error {
+	isl_ctx *ctx;
+	int saved_on_error;
+public:
+	options_scoped_set_on_error(class ctx ctx, int on_error) {
+		this->ctx = ctx.get();
+		saved_on_error = isl_options_get_on_error(this->ctx);
+		isl_options_set_on_error(this->ctx, on_error);
+	}
+	~options_scoped_set_on_error() {
+		isl_options_set_on_error(ctx, saved_on_error);
+	}
+};
+
+} // namespace isl
+

@@ -1,0 +1,226 @@
+# RUN: llc -mtriple riscv64 -mattr=+m,+v -run-pass=prologepilog \
+# RUN:     -riscv-v-vector-bits-min=512 -o - %s | FileCheck %s
+#
+# Stack layout of this program
+# |--------------------------| -- <-- Incoming SP
+# | a7 (Vaarg)               |
+# | ------------------------ | -- <-- New SP + vlenb  + 72
+# | a6 (Vaarg)               |
+# | ------------------------ | -- <-- New SP + vlenb  + 64
+# | ra (Callee-saved reg)    |
+# | ------------------------ | -- <-- New SP + vlenb  + 56
+# | s0 (Callee-saved reg)    |
+# | ------------------------ | -- <-- New SP + vlenb  + 48
+# | s1 (Callee-saved reg)    |
+# | ------------------------ | -- <-- New SP + vlenb  + 40
+# | 8 bytes of padding       |
+# | ------------------------ | -- <-- New SP + vlenb
+# | v8 (RVV objects)         |
+# | ------------------------ | -- <-- New SP + 32
+# | buf1                     |
+# |--------------------------| -- <-- New SP + 16
+# | Stack ID 5               |
+# |--------------------------| -- <-- New SP + 8
+# | Stack ID 6               |
+# |--------------------------| -- <-- New SP
+
+--- |
+  ; ModuleID = 'wrong-stack-offset-for-rvv-object.ll'
+  source_filename = "wrong-stack-offset-for-rvv-object.ll"
+  target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
+  target triple = "riscv64"
+
+  %struct = type { i32 }
+
+  define void @asm_fprintf(%struct %file, i8* %p, [10 x i8]* %buf, i8* %arrayidx3, <2 x i8>* %0, i8* %1, ...) #0 {
+  entry:
+    %buf1 = alloca [10 x i8], i32 0, align 8
+    %arrayidx32 = getelementptr inbounds [10 x i8], [10 x i8]* %buf, i64 0, i64 1
+    br label %while.cond
+
+  while.cond:                                       ; preds = %while.cond, %sw.bb, %entry
+    %incdec.ptr = getelementptr inbounds i8, i8* undef, i64 1
+    %2 = load i8, i8* null, align 1
+    %3 = zext i8 0 to i64
+    %cond = icmp eq i64 %3, 0
+    br i1 %cond, label %sw.bb, label %while.cond
+
+  sw.bb:                                            ; preds = %while.cond
+    %4 = load i8, i8* null, align 1
+    store <2 x i8> zeroinitializer, <2 x i8>* %0, align 1
+    %call = call i32 (i8*, ...) @fprintf(i8* %p)
+    br label %while.cond
+  }
+
+  declare i32 @fprintf(i8*, ...) #0
+
+  attributes #0 = { "target-features"="+m,+v" }
+
+...
+---
+name:            asm_fprintf
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x11', virtual-reg: '' }
+  - { reg: '$x14', virtual-reg: '' }
+  - { reg: '$x16', virtual-reg: '' }
+  - { reg: '$x17', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: -8, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: -16, size: 8, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, type: default, offset: -16, size: 8, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: buf1, type: default, offset: 0, size: 1, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  varArgsFrameIndex: -1
+  varArgsSaveSize: 16
+body:             |
+  ; CHECK-LABEL: name: asm_fprintf
+  ; CHECK: stack:
+  ; CHECK-NEXT:  - { id: 0, name: buf1, type: default, offset: -48, size: 1, alignment: 8,
+  ; CHECK-NEXT:      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK-NEXT:  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+  ; CHECK-NEXT:      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK-NEXT:  - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
+  ; CHECK-NEXT:      stack-id: default, callee-saved-register: '$x1', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK-NEXT:  - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8,
+  ; CHECK-NEXT:      stack-id: default, callee-saved-register: '$x8', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK-NEXT:  - { id: 4, name: '', type: spill-slot, offset: -40, size: 8, alignment: 8,
+  ; CHECK-NEXT:      stack-id: default, callee-saved-register: '$x9', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK-NEXT:  - { id: 5, name: '', type: default, offset: -56, size: 8, alignment: 8,
+  ; CHECK-NEXT:      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK-NEXT:  - { id: 6, name: '', type: default, offset: -64, size: 8, alignment: 8,
+  ; CHECK-NEXT:      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+  ; CHECK-NEXT:      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x11, $x14, $x16, $x17, $x1, $x8, $x9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -80
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 80
+  ; CHECK-NEXT:   SD killed $x1, $x2, 56 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   SD killed $x8, $x2, 48 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   SD killed $x9, $x2, 40 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -24
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -32
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x9, -40
+  ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
+  ; CHECK-NEXT:   $x10 = frame-setup SLLI killed $x10, 1
+  ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xd0, 0x00, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22
+  ; CHECK-NEXT:   renamable $x8 = COPY $x14
+  ; CHECK-NEXT:   renamable $x9 = COPY $x11
+  ; CHECK-NEXT:   $x10 = PseudoReadVLENB
+  ; CHECK-NEXT:   $x10 = SLLI killed $x10, 1
+  ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
+  ; CHECK-NEXT:   SD killed renamable $x17, killed $x10, 72 :: (store (s64))
+  ; CHECK-NEXT:   $x10 = PseudoReadVLENB
+  ; CHECK-NEXT:   $x10 = SLLI killed $x10, 1
+  ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
+  ; CHECK-NEXT:   SD killed renamable $x16, killed $x10, 64 :: (store (s64) into %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 undef $v8, 0, 2, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   $x10 = ADDI $x2, 32
+  ; CHECK-NEXT:   VS1R_V killed renamable $v8, killed $x10 :: (store unknown-size into %stack.1, align 8)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.while.cond:
+  ; CHECK-NEXT:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
+  ; CHECK-NEXT:   liveins: $x8, $x9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   BNE $x0, $x0, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.sw.bb:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x8, $x9
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   $x10 = ADDI $x2, 32
+  ; CHECK-NEXT:   renamable $v8 = VL1RE8_V killed $x10 :: (load unknown-size from %stack.1, align 8)
+  ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3 /* e8 */, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
+  ; CHECK-NEXT:   $x10 = COPY renamable $x9
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-plt) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x11, $x14, $x16, $x17
+
+    renamable $x8 = COPY $x14
+    renamable $x9 = COPY $x11
+    SD killed renamable $x17, %fixed-stack.0, 0 :: (store (s64))
+    SD killed renamable $x16, %fixed-stack.1, 0 :: (store (s64) into %fixed-stack.1, align 16)
+    dead $x0 = PseudoVSETIVLI 2, 69, implicit-def $vl, implicit-def $vtype
+    renamable $v8 = PseudoVMV_V_I_MF8 undef $v8, 0, 2, 3, 0, implicit $vl, implicit $vtype
+    VS1R_V killed renamable $v8, %stack.1 :: (store unknown-size into %stack.1, align 8)
+
+  bb.1.while.cond:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $x8, $x9
+
+    BNE $x0, $x0, %bb.1
+    PseudoBR %bb.2
+
+  bb.2.sw.bb:
+    successors: %bb.1(0x80000000)
+    liveins: $x8, $x9
+
+    dead $x0 = PseudoVSETIVLI 2, 69, implicit-def $vl, implicit-def $vtype
+    renamable $v8 = VL1RE8_V %stack.1 :: (load unknown-size from %stack.1, align 8)
+    PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
+    $x10 = COPY renamable $x9
+    PseudoCALL target-flags(riscv-plt) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
+    ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
+    PseudoBR %bb.1
+
+...

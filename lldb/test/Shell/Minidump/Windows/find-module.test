@@ -1,0 +1,28 @@
+Test that we correctly find a PE/COFF file in our executable search path, and
+use it when opening minidumps.
+
+RUN: yaml2obj %S/Inputs/find-module.exe.yaml -o %T/find-module.exe
+RUN: yaml2obj %S/Inputs/find-module.dmp.yaml -o %T/find-module.dmp
+RUN: %lldb -O "settings set target.exec-search-paths %T" \
+RUN:   -c %T/find-module.dmp -o "image dump objfile" -o "target list" -o exit \
+RUN:   | FileCheck --check-prefix=DEFAULT %s
+
+RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+RUN:   -O "settings set target.exec-search-paths %T" -c %T/find-module.dmp \
+RUN:   -o "target list" -o exit | FileCheck --check-prefix=MSVC %s
+
+RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
+RUN:   -O "settings set target.exec-search-paths %T" -c %T/find-module.dmp \
+RUN:   -o "target list" -o exit | FileCheck --check-prefix=GNU %s
+
+DEFAULT-LABEL: image dump objfile
+DEFAULT: ObjectFilePECOFF, file = '{{.*}}find-module.exe', arch = i386
+
+DEFAULT-LABEL: target list
+DEFAULT: arch=i386-pc-windows-{{msvc|gnu}}
+
+MSVC-LABEL: target list
+MSVC: arch=i386-pc-windows-msvc
+
+GNU-LABEL: target list
+GNU: arch=i386-pc-windows-gnu

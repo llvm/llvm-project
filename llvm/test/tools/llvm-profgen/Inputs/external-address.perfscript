@@ -1,0 +1,39 @@
+PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]: r-xp /home/inline-cs-noprobe.perfbin
+
+; Test for an external top address, should only ignore the call stack and keep unwinding the LBR
+
+; Valid LBR. The first 4006d7 will be kept for unwinding, the second will be truncated.
+
+	        ffffffff
+	        ffffffff
+	          4006d7
+	        ffffffff
+	          4006d7
+	        ffffffff
+ 0x4006c8/0x40067e/P/-/-/0  0x40069b/0x400670/M/-/-/0
+
+ ; Valid LBR
+	        ffffffff
+ 0x4006c8/0x40067e/P/-/-/0  0x40069b/0x400670/M/-/-/0
+
+; Valid LBR
+	        ffffffff
+ 0x4006c8/0xffffffff/P/-/-/0  0x40069b/0x400670/M/-/-/0
+
+; Valid LBR
+	          40067e
+ 0x4006c8/0xffffffff/P/-/-/0  0x40069b/0x400670/M/-/-/0
+
+; Valid LBR
+ 	        ffffffff
+	5541f689495641d7
+ 0xffffffff/0xffffffff/P/-/-/0  0x4006c8/0xffffffff/P/-/-/0  0x40069b/0x400670/M/-/-/0
+
+; Empty sample
+ 	        ffffffff
+	5541f689495641d7
+ 0xffffffff/0xffffffff/P/-/-/0  0xffffffff/0xffffffff/P/-/-/0
+
+; Invalid LBR
+ 	        ffffffff
+ 0xffffffff/0xffffffff/P/-/-/0  0x40069b/0x400670/M/-/-/0

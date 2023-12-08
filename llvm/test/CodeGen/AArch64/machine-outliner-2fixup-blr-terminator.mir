@@ -1,0 +1,75 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-NOT: OUTLINED_FUNCTION
+
+--- |
+  define void @f1() #0 { ret void }
+  define void @f2() #0 { ret void }
+  define void @f3() #0 { ret void }
+  define void @f4() #0 { ret void }
+  attributes #0 = { minsize noredzone "branch-target-enforcement"="true" }
+...
+---
+name: f1
+tracksRegLiveness: true
+body: |
+  bb.0:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    $x20, $x19 = LDPXi $sp, 11
+    $x20, $x19 = LDPXi $sp, 12
+    $x20, $x19 = LDPXi $sp, 13
+    $x20, $x19 = LDPXi $sp, 14
+    $x20, $x19 = LDPXi $sp, 18
+    $x20, $x19 = LDPXi $sp, 19
+    $x20, $x19 = LDPXi $sp, 20
+    $x20, $x19 = LDPXi $sp, 21
+    BLR $x20, implicit $sp
+  bb.2:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    RET undef $lr
+...
+---
+name: f2
+tracksRegLiveness: true
+body: |
+  bb.0:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    $x20, $x19 = LDPXi $sp, 11
+    $x20, $x19 = LDPXi $sp, 12
+    $x20, $x19 = LDPXi $sp, 13
+    $x20, $x19 = LDPXi $sp, 14
+    $x20, $x19 = LDPXi $sp, 18
+    $x20, $x19 = LDPXi $sp, 19
+    $x20, $x19 = LDPXi $sp, 20
+    $x20, $x19 = LDPXi $sp, 21
+    BLR $x20, implicit $sp
+  bb.2:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    RET undef $lr
+...
+---
+name: f3
+tracksRegLiveness: true
+body: |
+  bb.0:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    $x20, $x19 = LDPXi $sp, 11
+    $x20, $x19 = LDPXi $sp, 12
+    $x20, $x19 = LDPXi $sp, 13
+    $x20, $x19 = LDPXi $sp, 14
+    $x20, $x19 = LDPXi $sp, 18
+    $x20, $x19 = LDPXi $sp, 19
+    $x20, $x19 = LDPXi $sp, 20
+    $x20, $x19 = LDPXi $sp, 21
+    BLR $x20, implicit $sp
+  bb.2:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    RET undef $lr
+...
+---
+name: f4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    RET undef $lr

@@ -1,0 +1,36 @@
+RUN: lld-link %S/Inputs/precompb/useprecomp.obj %S/Inputs/precompa/precomp.obj %S/Inputs/precompb/precomp.obj \
+RUN:     %S/Inputs/precompa/useprecomp.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb /out:%t.exe  \
+RUN:     /summary | FileCheck %s -check-prefix SUMMARY
+
+RUN: llvm-pdbutil dump -types %t.pdb | FileCheck %s
+
+
+CHECK: Types (TPI Stream)
+CHECK-NOT: LF_PRECOMP
+CHECK-NOT: LF_ENDPRECOMP
+
+
+SUMMARY:                                     Summary
+SUMMARY-NEXT: --------------------------------------------------------------------------------
+SUMMARY-NEXT:               4 Input OBJ files (expanded from all cmd-line inputs)
+SUMMARY-NEXT:               0 PDB type server dependencies
+SUMMARY-NEXT:               2 Precomp OBJ dependencies
+
+// precompa/precomp.cpp
+#include "precomp.h"
+
+// precompa/useprecomp.cpp
+#include "precomp.h"
+int main(int argc, char **argv) { return 0; }
+
+// precompa/precomp.h
+int precompa_symbol = 42;
+
+// precompb/precomp.cpp
+#include "precomp.h"
+
+// precompb/useprecomp.cpp
+#include "precomp.h"
+
+// precompb/precomp.h
+int precompb_symbol = 142;

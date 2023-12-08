@@ -1,0 +1,16 @@
+# REQUIRES: python
+# UNSUPPORTED: lldb-repro
+
+# RUN: mkdir -p %t
+# RUN: cd %t
+# RUN: echo "int main() { return 0; }" | %clang_host -x c - -o a.out
+# RUN: cat %s | %lldb 2>&1 | FileCheck %s
+script -l lua --
+target = lldb.debugger:CreateTarget("a.out")
+print("target is valid:", tostring(target:IsValid()))
+lldb.debugger:SetSelectedTarget(target)
+quit
+# CHECK: target is valid: true
+script -l python --
+print("selected target: {}".format(lldb.debugger.GetSelectedTarget()))
+# CHECK: selected target: a.out

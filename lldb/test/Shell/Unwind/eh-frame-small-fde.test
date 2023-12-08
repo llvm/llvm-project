@@ -1,0 +1,22 @@
+# This test that we are able to unwind using eh_frame in case an FDE entry does
+# not cover the entire range of a function we are unwinding through.
+
+# REQUIRES: target-x86_64, system-linux, native
+
+# RUN: %clang_host %p/Inputs/eh-frame-small-fde.s -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+breakpoint set -n bar
+# CHECK: Breakpoint 1: where = {{.*}}`bar
+
+process launch
+# CHECK: stop reason = breakpoint 1.1
+
+thread backtrace
+# CHECK: frame #0: {{.*}}`bar
+# CHECK: frame #1: {{.*}}`foo + 6
+# CHECK: frame #2: {{.*}}`main + 20
+
+target modules show-unwind -n foo
+# CHECK: eh_frame UnwindPlan:
+# CHECK: row[0]: 0: CFA=rsp +8 => rip=r13

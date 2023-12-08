@@ -1,0 +1,38 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=avrtiny %s -o - \
+# RUN:     | FileCheck %s --check-prefix=CHECK-TINY
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=lowbytefirst %s -o - \
+# RUN:     | FileCheck %s --check-prefix=CHECK-XMEGA
+
+# This test checks the expansion of the 16-bit STSWRdK pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_stwptrrr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_stwptrrr
+body: |
+  bb.0.entry:
+    liveins: $r31r30, $r17r16
+
+    ; CHECK-LABEL: test_stwptrrr
+    ; CHECK:       STDPtrQRr $r31r30, 1, $r17
+    ; CHECK-NEXT:  STPtrRr $r31r30, $r16
+
+    ; CHECK-TINY-LABEL: test_stwptrrr
+    ; CHECK-TINY:       $r31r30 = STPtrPiRr killed $r31r30, $r16, 0
+    ; CHECK-TINY-NEXT:  $r31r30 = STPtrPiRr killed $r31r30, $r17, 0
+    ; CHECK-TINY-NEXT:  $r30 = SUBIRdK killed $r30, 2, implicit-def $sreg
+    ; CHECK-TINY-NEXT:  $r31 = SBCIRdK killed $r31, 0, implicit-def $sreg, implicit killed $sreg
+
+    ; CHECK-XMEGA-LABEL: test_stwptrrr
+    ; CHECK-XMEGA:       STPtrRr $r31r30, $r16
+    ; CHECK-XMEGA-NEXT:  STDPtrQRr $r31r30, 1, $r17
+
+    STWPtrRr $r31r30, $r17r16
+...

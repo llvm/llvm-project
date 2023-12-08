@@ -1,0 +1,20 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when an unknown register is
+# encountered.
+
+--- |
+
+  define i32 @foo() {
+  entry:
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    ; CHECK: [[@LINE+1]]:5: unknown register name 'xax'
+    $xax = MOV32r0
+    RET64 $xax
+...

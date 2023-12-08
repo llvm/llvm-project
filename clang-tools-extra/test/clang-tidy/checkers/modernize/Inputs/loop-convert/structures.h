@@ -1,0 +1,265 @@
+#ifndef STRUCTURES_H
+#define STRUCTURES_H
+
+namespace std {
+template <class T> constexpr auto begin(T& t) -> decltype(t.begin());
+template <class T> constexpr auto begin(const T& t) -> decltype(t.begin());
+template <class T> constexpr auto end(T& t) -> decltype(t.end());
+template <class T> constexpr auto end(const T& t) -> decltype(t.end());
+template <class T> constexpr auto size(const T& t) -> decltype(t.size());
+} // namespace std
+
+extern "C" {
+extern int printf(const char *restrict, ...);
+}
+
+struct Val {int X; void g(); };
+
+struct MutableVal {
+  void constFun(int) const;
+  void nonConstFun(int, int);
+  void constFun(MutableVal &) const;
+  void constParamFun(const MutableVal &) const;
+  void nonConstParamFun(const MutableVal &);
+  int X;
+};
+
+struct NonTriviallyCopyable {
+  NonTriviallyCopyable() = default;
+  // Define this constructor to make this class non-trivially copyable.
+  NonTriviallyCopyable(const NonTriviallyCopyable& Ntc);
+  int X;
+};
+
+struct TriviallyCopyableButBig {
+  int X;
+  char Array[16];
+};
+
+namespace ADT {
+
+struct S {
+  typedef MutableVal *iterator;
+  typedef const MutableVal *const_iterator;
+  const_iterator begin() const;
+  const_iterator end() const;
+  const_iterator cbegin() const;
+  const_iterator cend() const;
+  iterator begin();
+  iterator end();
+};
+
+S::const_iterator begin(const S&);
+S::const_iterator end(const S&);
+S::const_iterator cbegin(const S&);
+S::const_iterator cend(const S&);
+S::iterator begin(S&);
+S::iterator end(S&);
+unsigned size(const S&);
+
+struct T {
+  typedef int value_type;
+  struct iterator {
+    value_type &operator*();
+    const value_type &operator*() const;
+    iterator& operator ++();
+    bool operator!=(const iterator &other);
+    void insert(value_type);
+    value_type X;
+  };
+  iterator begin();
+  iterator end();
+};
+T::iterator begin(T&);
+T::iterator end(T&);
+
+} // namespace ADT
+
+using ADT::S;
+using ADT::T;
+
+struct Q {
+  typedef int value_type;
+  struct const_iterator {
+    value_type &operator*();
+    const value_type &operator*() const;
+    const_iterator &operator++();
+    bool operator!=(const const_iterator &other);
+    void insert(value_type);
+    value_type X;
+  };
+  struct iterator {
+    operator const_iterator() const;
+  };
+  iterator begin();
+  iterator end();
+};
+
+struct U {
+  struct iterator {
+    Val& operator*();
+    const Val& operator*()const;
+    iterator& operator ++();
+    bool operator!=(const iterator &other);
+    Val *operator->();
+  };
+  iterator begin();
+  iterator end();
+  int X;
+};
+
+struct X {
+  S Ss;
+  T Tt;
+  U Uu;
+  S getS();
+};
+
+namespace ADT {
+
+template<typename ElemType>
+class dependent {
+ public:
+  dependent<ElemType>();
+  struct iterator_base {
+    const ElemType& operator*()const;
+    iterator_base& operator ++();
+    bool operator!=(const iterator_base &other) const;
+    const ElemType *operator->() const;
+  };
+
+  struct iterator : iterator_base {
+    ElemType& operator*();
+    iterator& operator ++();
+    ElemType *operator->();
+  };
+
+  typedef iterator_base const_iterator;
+  const_iterator begin() const;
+  const_iterator end() const;
+  iterator begin();
+  iterator end();
+  unsigned size() const;
+  ElemType & operator[](unsigned);
+  const ElemType & operator[](unsigned) const;
+  ElemType & at(unsigned);
+  ElemType & at(unsigned, unsigned);
+  const ElemType & at(unsigned) const;
+
+  // Intentionally evil.
+  dependent<ElemType> operator*();
+
+  void foo();
+  void constFoo() const;
+};
+
+template<typename ElemType>
+unsigned size(const dependent<ElemType>&);
+template<typename ElemType>
+unsigned length(const dependent<ElemType>&);
+
+template<typename ElemType>
+class dependent_derived : public dependent<ElemType> {
+};
+
+} // namespace ADT
+
+using ADT::dependent;
+using ADT::dependent_derived;
+
+template<typename First, typename Second>
+class doublyDependent{
+ public:
+  struct Value {
+    First first;
+    Second second;
+  };
+
+  struct iterator_base {
+    const Value& operator*()const;
+    iterator_base& operator ++();
+    bool operator!=(const iterator_base &other) const;
+    const Value *operator->() const;
+  };
+
+  struct iterator : iterator_base {
+    Value& operator*();
+    Value& operator ++();
+    Value *operator->();
+  };
+
+  typedef iterator_base const_iterator;
+  const_iterator begin() const;
+  const_iterator end() const;
+  iterator begin();
+  iterator end();
+};
+
+template<typename Contained>
+class transparent {
+ public:
+  Contained *at();
+  Contained *operator->();
+  Contained operator*();
+};
+
+template<typename IteratorType>
+struct Nested {
+  typedef IteratorType* iterator;
+  typedef const IteratorType* const_iterator;
+  IteratorType *operator->();
+  IteratorType operator*();
+  iterator begin();
+  iterator end();
+  const_iterator begin() const;
+  const_iterator end() const;
+};
+
+// Like llvm::SmallPtrSet, the iterator has a dereference operator that returns
+// by value instead of by reference.
+template <typename T>
+struct PtrSet {
+  struct iterator {
+    bool operator!=(const iterator &other) const;
+    const T operator*();
+    iterator &operator++();
+  };
+  iterator begin() const;
+  iterator end() const;
+};
+
+template <typename T>
+struct TypedefDerefContainer {
+  struct iterator {
+    typedef T &deref_type;
+    bool operator!=(const iterator &other) const;
+    deref_type operator*();
+    iterator &operator++();
+  };
+  iterator begin() const;
+  iterator end() const;
+};
+
+template <typename T>
+struct RValueDerefContainer {
+  struct iterator {
+    typedef T &&deref_type;
+    bool operator!=(const iterator &other) const;
+    deref_type operator*();
+    iterator &operator++();
+  };
+  iterator begin() const;
+  iterator end() const;
+};
+
+namespace Macros {
+
+struct MacroStruct {
+  int Arr[10];
+};
+static MacroStruct *MacroSt;
+#define CONT MacroSt->
+
+} // namespace Macros
+
+#endif  // STRUCTURES_H

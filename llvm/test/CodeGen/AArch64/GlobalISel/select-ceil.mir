@@ -1,0 +1,130 @@
+# RUN: llc -verify-machineinstrs -mtriple aarch64--- \
+# RUN: -run-pass=instruction-select -mattr=+fullfp16 -global-isel %s -o - \
+# RUN: | FileCheck %s
+...
+---
+name:            ceil_float
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_float
+    ; CHECK: %{{[0-9]+}}:fpr32 = nofpexcept FRINTPSr %{{[0-9]+}}
+    liveins: $s0
+    %0:fpr(s32) = COPY $s0
+    %1:fpr(s32) = G_FCEIL %0
+    $s0 = COPY %1(s32)
+
+...
+---
+name:            ceil_double
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_double
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTPDr %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(s64) = COPY $d0
+    %1:fpr(s64) = G_FCEIL %0
+    $d0 = COPY %1(s64)
+
+...
+---
+name:            ceil_v2f32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v2f32
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTPv2f32 %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(<2 x s32>) = COPY $d0
+    %1:fpr(<2 x s32>) = G_FCEIL %0
+    $d0 = COPY %1(<2 x s32>)
+
+...
+---
+name:            ceil_v4f32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v4f32
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTPv4f32 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:fpr(<4 x s32>) = G_FCEIL %0
+    $q0 = COPY %1(<4 x s32>)
+
+...
+---
+name:            ceil_v2f64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v2f64
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTPv2f64 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<2 x s64>) = COPY $q0
+    %1:fpr(<2 x s64>) = G_FCEIL %0
+    $q0 = COPY %1(<2 x s64>)
+
+...
+---
+name:            ceil_v4f16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v4f16
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTPv4f16 %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = G_FCEIL %0
+    $d0 = COPY %1(<4 x s16>)
+
+...
+---
+name:            ceil_v8f16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            ceil_v8f16
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTPv8f16 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = G_FCEIL %0
+    $q0 = COPY %1(<8 x s16>)
+
+...

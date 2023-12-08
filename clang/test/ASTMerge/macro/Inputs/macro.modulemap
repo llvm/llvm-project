@@ -1,0 +1,4 @@
+module macro1 [extern_c] {
+  header "macro1.h"
+  export *
+}

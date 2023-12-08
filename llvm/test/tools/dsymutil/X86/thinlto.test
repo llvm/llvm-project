@@ -1,0 +1,27 @@
+$ cat foo.cpp
+struct nontrivial {
+  nontrivial() { }
+};
+
+void function2()
+{
+  static const nontrivial magic_static;
+}
+
+$ cat bar.cpp
+void function2();
+
+void function1()
+{
+  function2();
+}
+
+$ xcrun clang++ -g -flto=thin -O2 foo.cpp bar.cpp -c
+$ xcrun clang++ -flto=thin foo.o bar.o -Xlinker -object_path_lto -Xlinker lto -shared -o foobar.dylib
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/thinlto/foobar.dylib -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/thinlto/foobar.dylib -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+
+CHECK-NOT: could not find object file symbol for symbol __ZZ9function2vE12magic_static
+CHECK-NOT: could not find object file symbol for symbol __ZGVZ9function2vE12magic_static

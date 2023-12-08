@@ -1,0 +1,53 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <utility>
+
+// template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);
+
+#include <utility>
+#include <memory>
+#include <cassert>
+
+#include "test_macros.h"
+
+int main(int, char**)
+{
+    {
+        typedef std::pair<int, short> P1;
+        P1 p1 = std::make_pair(3, static_cast<short>(4));
+        assert(p1.first == 3);
+        assert(p1.second == 4);
+    }
+
+#if TEST_STD_VER >= 11
+    {
+        typedef std::pair<std::unique_ptr<int>, short> P1;
+        P1 p1 = std::make_pair(std::unique_ptr<int>(new int(3)), static_cast<short>(4));
+        assert(*p1.first == 3);
+        assert(p1.second == 4);
+    }
+    {
+        typedef std::pair<std::unique_ptr<int>, short> P1;
+        P1 p1 = std::make_pair(nullptr, static_cast<short>(4));
+        assert(p1.first == nullptr);
+        assert(p1.second == 4);
+    }
+#endif
+#if TEST_STD_VER >= 14
+    {
+        typedef std::pair<int, short> P1;
+        constexpr P1 p1 = std::make_pair(3, static_cast<short>(4));
+        static_assert(p1.first == 3, "");
+        static_assert(p1.second == 4, "");
+    }
+#endif
+
+
+  return 0;
+}

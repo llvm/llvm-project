@@ -1,0 +1,461 @@
+## Test how we handle cases when dynamic relocations or corresponding dynamic tags are broken.
+
+## Check that llvm-readobj/llvm-readelf reports an error when dumping relocations if a dynamic
+## symbol name offset is broken (goes past the end of the dynamic symbol string table).
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --dyn-relocations %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=LLVM
+# RUN: llvm-readelf --dyn-relocations %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=GNU
+
+# LLVM:      Dynamic Relocations {
+# LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1234) is past the end of the string table of size 0x1
+# LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# LLVM-NEXT: }
+
+# GNU:      'RELA' relocation section at offset {{.+}} contains 24 bytes:
+# GNU-NEXT: Offset           Info             Type          Symbol's Value   Symbol's Name + Addend
+# GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1234) is past the end of the string table of size 0x1
+# GNU-NEXT: 0000000000000000 0000000100000000 R_X86_64_NONE 0000000000000000 <corrupt> + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Link:    .dynsym
+    Relocations:
+      - Symbol: 1 ## Index of a dynamic symbol with a broken st_name.
+        Type:   R_X86_64_NONE
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x0000000000000000
+      - Tag:   DT_RELASZ
+        Value: 0x0000000000000018
+      - Tag:   DT_RELAENT
+        Value: 0x0000000000000018
+      - Tag:   DT_NULL
+        Value: 0x0000000000000000
+DynamicSymbols:
+  - StName: 0x1234
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
+
+## Show we print a warning for an invalid relocation table size stored in a DT_RELASZ entry.
+
+## Case A: the size of a single relocation entry is 0x18. In this case 0xFF % 0x18 != 0 and we report a warning
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0xFF -DTAG2=DT_RELAENT %s -o %t2a
+# RUN: llvm-readobj --dyn-relocations %t2a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2a --check-prefix=INVALID-DT-RELASZ1 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t2a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2a --check-prefix=INVALID-DT-RELASZ1 --implicit-check-not=warning:
+
+# INVALID-DT-RELASZ1: warning: '[[FILE]]': invalid DT_RELASZ value (0xff) or DT_RELAENT value (0x18)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:  .relx.dyn
+    Type:  SHT_[[RELTYPE]]
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_[[RELTYPE]]
+        Value: 0x0
+      - Tag:   [[TAG1]]
+        Value: [[TAG1VAL=0x18]]
+      - Tag:   [[TAG2]]
+        Value: [[TAG2VAL=0x18]]
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .relx.dyn
+    LastSec:  .dynamic
+
+## Case B: the DT_RELASZ has value of 0x251, what is too large, because the relocation table goes past the EOF.
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0x251 -DTAG2=DT_RELAENT %s -o %t2b
+# RUN: llvm-readobj --dyn-relocations %t2b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2b --check-prefix=INVALID-DT-RELASZ2 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t2b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2b --check-prefix=INVALID-DT-RELASZ2 --implicit-check-not=warning:
+
+# INVALID-DT-RELASZ2: warning: '[[FILE]]': unable to read data at 0x78 of size 0x251 (DT_RELASZ value): it goes past the end of the file of size 0x2c8
+
+## Show we print a warning for an invalid relocation table entry size stored in a DT_RELAENT entry.
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG2=DT_RELAENT -DTAG2VAL=0xFF %s -o %t3
+# RUN: llvm-readobj --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT --implicit-check-not=warning:
+
+## INVALID-DT-RELAENT: warning: '[[FILE]]': invalid DT_RELASZ value (0x18) or DT_RELAENT value (0xff)
+
+## Show we print a warning for an invalid relocation table size stored in a DT_RELSZ entry.
+
+## Case A: the size of a single relocation entry is 0x18. In this case 0xFF % 0x18 != 0 and we report a warning.
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG1VAL=0xFF -DTAG2=DT_RELENT %s -o %t4a
+# RUN: llvm-readobj --dyn-relocations %t4a 2>&1 | FileCheck %s -DFILE=%t4a --check-prefix=INVALID-DT-RELSZ1
+# RUN: llvm-readelf --dyn-relocations %t4a 2>&1 | FileCheck %s -DFILE=%t4a --check-prefix=INVALID-DT-RELSZ1
+
+## INVALID-DT-RELSZ1: warning: '[[FILE]]': invalid DT_RELSZ value (0xff) or DT_RELENT value (0x18)
+
+## Case B: the DT_RELSZ has value of 0x251, what is too large, because the relocation table goes past the EOF.
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG1VAL=0x251 -DTAG2=DT_RELENT %s -o %t4b
+# RUN: llvm-readobj --dyn-relocations %t4b 2>&1 | FileCheck %s -DFILE=%t4b --check-prefix=INVALID-DT-RELSZ2
+# RUN: llvm-readelf --dyn-relocations %t4b 2>&1 | FileCheck %s -DFILE=%t4b --check-prefix=INVALID-DT-RELSZ2
+
+# INVALID-DT-RELSZ2: warning: '[[FILE]]': unable to read data at 0x78 of size 0x251 (DT_RELSZ value): it goes past the end of the file of size 0x2c8
+
+## Show we print a warning for an invalid relocation table entry size stored in a DT_RELENT entry.
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG2=DT_RELENT -DTAG2VAL=0xFF %s -o %t5
+# RUN: llvm-readobj --dyn-relocations %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=INVALID-DT-RELENT
+# RUN: llvm-readelf --dyn-relocations %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=INVALID-DT-RELENT
+
+## INVALID-DT-RELENT: warning: '[[FILE]]': invalid DT_RELSZ value (0x18) or DT_RELENT value (0xff)
+
+## Show we print a warning for an invalid relocation table size stored in a DT_RELRSZ/DT_ANDROID_RELRSZ entry.
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_RELRSZ -DTAG1VAL=0xFF -DTAG2=DT_RELRENT %s -o %t6
+# RUN: llvm-readobj --dyn-relocations %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=INVALID-DT-RELRSZ
+# RUN: llvm-readelf --dyn-relocations %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=INVALID-DT-RELRSZ
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_ANDROID_RELRSZ -DTAG1VAL=0xFF -DTAG2=DT_ANDROID_RELRENT %s -o %t7
+# RUN: llvm-readobj --dyn-relocations %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DT-ANDROID-RELRSZ
+# RUN: llvm-readelf --dyn-relocations %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DT-ANDROID-RELRSZ
+
+## INVALID-DT-RELRSZ:         warning: '[[FILE]]': invalid DT_RELRSZ value (0xff) or DT_RELRENT value (0x18)
+## INVALID-DT-ANDROID-RELRSZ: warning: '[[FILE]]': invalid DT_ANDROID_RELRSZ value (0xff) or DT_ANDROID_RELRENT value (0x18)
+
+## Show we print a warning for an invalid relocation table entry size stored in a DT_RELRENT/DT_ANDROID_RELRENT entry.
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_RELRSZ -DTAG2=DT_RELRENT -DTAG2VAL=0xFF %s -o %t8
+# RUN: llvm-readobj --dyn-relocations %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=INVALID-DT-RELRENT
+# RUN: llvm-readelf --dyn-relocations %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=INVALID-DT-RELRENT
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_ANDROID_RELRSZ -DTAG2=DT_ANDROID_RELRENT -DTAG2VAL=0xFF %s -o %t9
+# RUN: llvm-readobj --dyn-relocations %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=INVALID-DT-ANDROID-RELRENT
+# RUN: llvm-readelf --dyn-relocations %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=INVALID-DT-ANDROID-RELRENT
+
+## INVALID-DT-RELRENT:         invalid DT_RELRSZ value (0x18) or DT_RELRENT value (0xff)
+## INVALID-DT-ANDROID-RELRENT: invalid DT_ANDROID_RELRSZ value (0x18) or DT_ANDROID_RELRENT value (0xff)
+
+## Show we print a warning for an invalid value of DT_PLTRELSZ, which describes the total size
+## of the relocation entries associated with the procedure linkage table.
+
+## Case A: the size of a single relocation entry is 0x18. In this case 0xFF % 0x18 != 0 and we report a warning.
+
+# RUN: yaml2obj --docnum=3 -DVAL=0xFF %s -o %t10a
+# RUN: llvm-readobj --dyn-relocations %t10a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10a --check-prefix=INVALID-DT-PLTRELSZ1 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t10a 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10a --check-prefix=INVALID-DT-PLTRELSZ1 --implicit-check-not=warning:
+
+# INVALID-DT-PLTRELSZ1: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0xff) or PLTREL entry size (0x18){{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .rela.plt
+    Type:  SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_JMPREL
+        Value: 0x0
+      - Tag:   DT_PLTRELSZ
+        Value: [[VAL]] ## The valid value would be 0x18.
+      - Tag:   DT_PLTREL
+        Value: 0x7 ## DT_RELA
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.plt
+    LastSec:  .dynamic
+
+## Case B: the DT_PLTRELSZ (PLT size) has value of 0x269, what is too large, because PLT goes past the EOF.
+
+# RUN: yaml2obj --docnum=3 -DVAL=0x269 %s -o %t10b
+# RUN: llvm-readobj --dyn-relocations %t10b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10b --check-prefix=INVALID-DT-PLTRELSZ2-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-relocations %t10b 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10b --check-prefix=INVALID-DT-PLTRELSZ2-GNU --implicit-check-not=warning:
+
+# INVALID-DT-PLTRELSZ2-LLVM:      Dynamic Relocations {
+# INVALID-DT-PLTRELSZ2-LLVM-NEXT: warning: '[[FILE]]': unable to read data at 0x78 of size 0x269 (DT_PLTRELSZ value): it goes past the end of the file of size 0x2e0
+# INVALID-DT-PLTRELSZ2-LLVM-NEXT: }
+
+# INVALID-DT-PLTRELSZ2-GNU:      'PLT' relocation section at offset 0x78 contains 617 bytes:
+# INVALID-DT-PLTRELSZ2-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# INVALID-DT-PLTRELSZ2-GNU-NEXT: warning: '[[FILE]]': unable to read data at 0x78 of size 0x269 (DT_PLTRELSZ value): it goes past the end of the file of size 0x2e0
+
+## Show we print a warning when dumping dynamic relocations if there is no dynamic symbol table.
+# RUN: yaml2obj --docnum=4 %s -o %t11
+# RUN: llvm-readobj --dyn-relocations %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=LLVM-NO-DYNSYM
+# RUN: llvm-readelf --dyn-relocations %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=GNU-NO-DYNSYM
+
+# LLVM-NO-DYNSYM:      Dynamic Relocations {
+# LLVM-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 0: no dynamic symbol table found
+# LLVM-NO-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# LLVM-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: no dynamic symbol table found
+# LLVM-NO-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# LLVM-NO-DYNSYM-NEXT: }
+
+# GNU-NO-DYNSYM:      'RELA' relocation section at offset 0x78 contains 48 bytes:
+# GNU-NO-DYNSYM-NEXT: Offset            Info             Type             Symbol's Value   Symbol's Name + Addend
+# GNU-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 0: no dynamic symbol table found
+# GNU-NO-DYNSYM-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                     <corrupt> + 0
+# GNU-NO-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: no dynamic symbol table found
+# GNU-NO-DYNSYM-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE                     <corrupt> + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
+        Symbol: 0x1
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x0
+      - Tag:   DT_RELASZ
+        Value: 0x30
+      - Tag:   DT_RELAENT
+        Value: 0x18
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
+
+## Show we print a warning when the symbol index of a dynamic relocation is too
+## large (goes past the end of the dynamic symbol table).
+# RUN: yaml2obj --docnum=5 %s -o %t12
+# RUN: llvm-readobj --dyn-relocations %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=LLVM-INVALID-DYNSYM
+# RUN: llvm-readelf --dyn-relocations %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=GNU-INVALID-DYNSYM
+
+# LLVM-INVALID-DYNSYM:      Dynamic Relocations {
+# LLVM-INVALID-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: index is greater than or equal to the number of dynamic symbols (2)
+# LLVM-INVALID-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# LLVM-INVALID-DYNSYM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# LLVM-INVALID-DYNSYM-NEXT: }
+
+# GNU-INVALID-DYNSYM:      'RELA' relocation section at offset 0x78 contains 48 bytes:
+# GNU-INVALID-DYNSYM-NEXT: Offset            Info             Type             Symbol's Value   Symbol's Name + Addend
+# GNU-INVALID-DYNSYM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: index is greater than or equal to the number of dynamic symbols (2)
+# GNU-INVALID-DYNSYM-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE                     <corrupt> + 0
+# GNU-INVALID-DYNSYM-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE                     <corrupt> + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Symbol: 0x2
+      - Type:   R_X86_64_NONE
+        Symbol: 0x2
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x0
+      - Tag:   DT_RELASZ
+        Value: 0x30
+      - Tag:   DT_RELAENT
+        Value: 0x18
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
+
+## Show that when we have both REL and RELA relocations, we dump both sets.
+# RUN: yaml2obj --docnum=6 %s -o %t13
+# RUN: llvm-readobj --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-LLVM
+# RUN: llvm-readelf --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-GNU
+
+# BOTH-RELA-REL-LLVM:      Dynamic Relocations {
+# BOTH-RELA-REL-LLVM-NEXT:   0x1 R_X86_64_NONE - 0x0{{$}}
+# BOTH-RELA-REL-LLVM-NEXT:   0x2 R_X86_64_NONE -{{$}}
+# BOTH-RELA-REL-LLVM-NEXT: }
+
+# BOTH-RELA-REL-GNU:       'RELA' relocation section at offset 0x78 contains 24 bytes:
+# BOTH-RELA-REL-GNU-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# BOTH-RELA-REL-GNU-NEXT:  0000000000000001  0000000000000000 R_X86_64_NONE                     0
+# BOTH-RELA-REL-GNU-EMPTY:
+# BOTH-RELA-REL-GNU:       'REL' relocation section at offset 0x90 contains 16 bytes:
+# BOTH-RELA-REL-GNU-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+# BOTH-RELA-REL-GNU-NEXT:  0000000000000002  0000000000000000 R_X86_64_NONE
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.dyn
+    Type: SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x1
+  - Name: .rel.dyn
+    Type: SHT_REL
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x2
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x0
+      - Tag:   DT_RELASZ
+        Value: 0x18
+      - Tag:   DT_RELAENT
+        Value: 0x18
+## 0x18 == offset of .rel.dyn == size of .rela.dyn section.
+      - Tag:   DT_REL
+        Value: 0x18
+      - Tag:   DT_RELSZ
+        Value: 0x10
+      - Tag:   DT_RELENT
+        Value: 0x10
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
+
+## Check that llvm-readobj/llvm-readelf reports a warning when dumping a relocation
+## which refers to a symbol past the end of the file.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --dyn-relocations %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=PAST-EOF-LLVM
+# RUN: llvm-readelf --dyn-relocations %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=PAST-EOF-GNU
+
+# PAST-EOF-LLVM:      Dynamic Relocations {
+# PAST-EOF-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1) is past the end of the string table of size 0x0
+# PAST-EOF-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# PAST-EOF-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: symbol at 0x330 goes past the end of the file (0x330)
+# PAST-EOF-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# PAST-EOF-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 4294967295: symbol at 0x18000002e8 goes past the end of the file (0x330)
+# PAST-EOF-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# PAST-EOF-LLVM-NEXT: }
+
+# PAST-EOF-GNU:      'RELA' relocation section at offset 0x200 contains 72 bytes:
+# PAST-EOF-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# PAST-EOF-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 1: st_name (0x1) is past the end of the string table of size 0x0
+# PAST-EOF-GNU-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 <corrupt> + 0
+# PAST-EOF-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 2: symbol at 0x330 goes past the end of the file (0x330)
+# PAST-EOF-GNU-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE                           <corrupt> + 0
+# PAST-EOF-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 4294967295: symbol at 0x18000002e8 goes past the end of the file (0x330)
+# PAST-EOF-GNU-NEXT: 0000000000000000  ffffffff00000000 R_X86_64_NONE                           <corrupt> + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x100
+    Offset:  0x100
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x200
+      - Tag:   DT_SYMTAB
+        Value: 0x300
+      - Tag:   DT_RELASZ
+        Value: 0x48
+      - Tag:   DT_RELAENT
+        Value: 0x18
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x200
+    Offset:  0x200
+    Relocations:
+## This symbol is located right before the EOF, so we can dump it.
+      - Symbol: 0x1
+        Type:   R_X86_64_NONE
+## The next symbol, which goes past the EOF.
+      - Symbol: 0x2
+        Type:   R_X86_64_NONE
+## One more symbol that goes past the EOF
+## with the maximal possible index.
+      - Symbol: 0xFFFFFFFF
+        Type:   R_X86_64_NONE
+## Place all implicit sections here to make the .dynsym section to be the
+## last in the file. This makes the task of validating offsets a bit easier.
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Name: .strtab
+    Type: SHT_STRTAB
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x300
+    Offset:  0x300
+  - Type: SectionHeaderTable
+    NoHeaders: true
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Offset:   0x0
+    FirstSec: .dynamic
+    LastSec:  .dynsym
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

@@ -1,0 +1,84 @@
+RUN: llvm-readobj --file-headers %p/Inputs/nop.exe.coff-x86-64 | FileCheck %s
+
+CHECK: Format: COFF-x86-64
+CHECK: Arch: x86_64
+CHECK: AddressSize: 64bit
+CHECK: ImageFileHeader {
+CHECK:   Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+CHECK:   SectionCount: 1
+CHECK:   TimeDateStamp: 2014-01-26 03:43:56 (0x52E4847C)
+CHECK:   PointerToSymbolTable: 0x0
+CHECK:   SymbolCount: 0
+CHECK:   OptionalHeaderSize: 240
+CHECK:   Characteristics [ (0x22)
+CHECK:     IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
+CHECK:     IMAGE_FILE_LARGE_ADDRESS_AWARE (0x20)
+CHECK:   ]
+CHECK: }
+CHECK: ImageOptionalHeader {
+CHECK:   Magic: 0x20B
+CHECK:   MajorLinkerVersion: 11
+CHECK:   MinorLinkerVersion: 0
+CHECK:   SizeOfCode: 512
+CHECK:   SizeOfInitializedData: 0
+CHECK:   SizeOfUninitializedData: 0
+CHECK:   AddressOfEntryPoint: 0x1000
+CHECK:   BaseOfCode: 0x1000
+CHECK:   ImageBase: 0x140000000
+CHECK:   SectionAlignment: 4096
+CHECK:   FileAlignment: 512
+CHECK:   MajorOperatingSystemVersion: 6
+CHECK:   MinorOperatingSystemVersion: 0
+CHECK:   MajorImageVersion: 0
+CHECK:   MinorImageVersion: 0
+CHECK:   MajorSubsystemVersion: 6
+CHECK:   MinorSubsystemVersion: 0
+CHECK:   SizeOfImage: 8192
+CHECK:   SizeOfHeaders: 512
+CHECK:   Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+CHECK:   Characteristics [ (0x8160)
+CHECK:     IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE (0x40)
+CHECK:     IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA (0x20)
+CHECK:     IMAGE_DLL_CHARACTERISTICS_NX_COMPAT (0x100)
+CHECK:     IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE (0x8000)
+CHECK:   ]
+CHECK:   SizeOfStackReserve: 1048576
+CHECK:   SizeOfStackCommit: 4096
+CHECK:   SizeOfHeapReserve: 1048576
+CHECK:   SizeOfHeapCommit: 4096
+CHECK:   NumberOfRvaAndSize: 16
+CHECK:   DataDirectory {
+CHECK:     ExportTableRVA: 0x0
+CHECK:     ExportTableSize: 0x0
+CHECK:     ImportTableRVA: 0x0
+CHECK:     ImportTableSize: 0x0
+CHECK:     ResourceTableRVA: 0x0
+CHECK:     ResourceTableSize: 0x0
+CHECK:     ExceptionTableRVA: 0x0
+CHECK:     ExceptionTableSize: 0x0
+CHECK:     CertificateTableRVA: 0x0
+CHECK:     CertificateTableSize: 0x0
+CHECK:     BaseRelocationTableRVA: 0x0
+CHECK:     BaseRelocationTableSize: 0x0
+CHECK:     DebugRVA: 0x0
+CHECK:     DebugSize: 0x0
+CHECK:     ArchitectureRVA: 0x0
+CHECK:     ArchitectureSize: 0x0
+CHECK:     GlobalPtrRVA: 0x0
+CHECK:     GlobalPtrSize: 0x0
+CHECK:     TLSTableRVA: 0x0
+CHECK:     TLSTableSize: 0x0
+CHECK:     LoadConfigTableRVA: 0x0
+CHECK:     LoadConfigTableSize: 0x0
+CHECK:     BoundImportRVA: 0x0
+CHECK:     BoundImportSize: 0x0
+CHECK:     IATRVA: 0x0
+CHECK:     IATSize: 0x0
+CHECK:     DelayImportDescriptorRVA: 0x0
+CHECK:     DelayImportDescriptorSize: 0x0
+CHECK:     CLRRuntimeHeaderRVA: 0x0
+CHECK:     CLRRuntimeHeaderSize: 0x0
+CHECK:     ReservedRVA: 0x0
+CHECK:     ReservedSize: 0x0
+CHECK:   }
+CHECK: }

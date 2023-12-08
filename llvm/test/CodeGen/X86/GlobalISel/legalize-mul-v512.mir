@@ -1,0 +1,113 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+  define <32 x i16> @test_mul_v32i16(<32 x i16> %arg1, <32 x i16> %arg2) #0 {
+    %ret = mul <32 x i16> %arg1, %arg2
+    ret <32 x i16> %ret
+  }
+
+  define <16 x i32> @test_mul_v16i32(<16 x i32> %arg1, <16 x i32> %arg2) #1 {
+    %ret = mul <16 x i32> %arg1, %arg2
+    ret <16 x i32> %ret
+  }
+
+  define <8 x i64> @test_mul_v8i64(<8 x i64> %arg1, <8 x i64> %arg2) #2 {
+    %ret = mul <8 x i64> %arg1, %arg2
+    ret <8 x i64> %ret
+  }
+
+  attributes #0 = { "target-features"="+avx512f,+avx512bw" }
+  attributes #1 = { "target-features"="+avx512f" }
+  attributes #2 = { "target-features"="+avx512f,+avx512dq" }
+
+...
+---
+name:            test_mul_v32i16
+# ALL-LABEL: name:  test_mul_v32i16
+alignment:       16
+legalized:       false
+regBankSelected: false
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: _, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0:_(<32 x s16>) = COPY $zmm0
+# ALL-NEXT:     %1:_(<32 x s16>) = COPY $zmm1
+# ALL-NEXT:     %2:_(<32 x s16>) = G_MUL %0, %1
+# ALL-NEXT:     $zmm0 = COPY %2(<32 x s16>)
+# ALL-NEXT:     RET 0, implicit $zmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $zmm0, $zmm1
+
+    %0(<32 x s16>) = COPY $zmm0
+    %1(<32 x s16>) = COPY $zmm1
+    %2(<32 x s16>) = G_MUL %0, %1
+    $zmm0 = COPY %2(<32 x s16>)
+    RET 0, implicit $zmm0
+
+...
+---
+name:            test_mul_v16i32
+# ALL-LABEL: name:  test_mul_v16i32
+alignment:       16
+legalized:       false
+regBankSelected: false
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: _, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0:_(<16 x s32>) = COPY $zmm0
+# ALL-NEXT:     %1:_(<16 x s32>) = COPY $zmm1
+# ALL-NEXT:     %2:_(<16 x s32>) = G_MUL %0, %1
+# ALL-NEXT:     $zmm0 = COPY %2(<16 x s32>)
+# ALL-NEXT:     RET 0, implicit $zmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $zmm0, $zmm1
+
+    %0(<16 x s32>) = COPY $zmm0
+    %1(<16 x s32>) = COPY $zmm1
+    %2(<16 x s32>) = G_MUL %0, %1
+    $zmm0 = COPY %2(<16 x s32>)
+    RET 0, implicit $zmm0
+
+...
+---
+name:            test_mul_v8i64
+# ALL-LABEL: name:  test_mul_v8i64
+alignment:       16
+legalized:       false
+regBankSelected: false
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: _, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: _, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0:_(<8 x s64>) = COPY $zmm0
+# ALL-NEXT:     %1:_(<8 x s64>) = COPY $zmm1
+# ALL-NEXT:     %2:_(<8 x s64>) = G_MUL %0, %1
+# ALL-NEXT:     $zmm0 = COPY %2(<8 x s64>)
+# ALL-NEXT:     RET 0, implicit $zmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $zmm0, $zmm1
+
+    %0(<8 x s64>) = COPY $zmm0
+    %1(<8 x s64>) = COPY $zmm1
+    %2(<8 x s64>) = G_MUL %0, %1
+    $zmm0 = COPY %2(<8 x s64>)
+    RET 0, implicit $zmm0
+
+...

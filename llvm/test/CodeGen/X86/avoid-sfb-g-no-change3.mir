@@ -1,0 +1,223 @@
+# RUN: llc %s -run-pass x86-avoid-SFB -mtriple=x86_64-unknown-linux-gnu -o - | FileCheck %s
+#
+# This was generated from:
+#
+# using alpha = float __attribute__((ext_vector_type(4)));
+#
+# void bravo(alpha * __restrict__ p1, alpha * __restrict__ p2) {
+#   char *p3 = (char *)p1;
+#   if (p1) {
+#     *p3 = 0;
+#     alpha t = *p1;
+#     *p2 = t;
+#   }
+# }
+#
+# Using the command line:
+# clang -g -c 1.cpp -O2 -S -emit-llvm -fno-strict-aliasing --target=x86_64-unknown-unknown -o test.ll
+# llc -stop-before=x86-avoid-SFB test.ll -o before.mir
+#
+# The IR has been modified to include a number of debug/meta instructions between the initial store and load.
+# If the code treats debug/meta instructions as normal instructions, the separation between the store and load 
+# will be too great to enable the optimization.
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "1.cpp"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-unknown"
+  
+  ; Function Attrs: norecurse nounwind uwtable
+  define dso_local void @debug(<4 x float>* noalias %p1, <4 x float>* noalias nocapture %p2) local_unnamed_addr #0 !dbg !10 {
+  entry:
+    call void @llvm.dbg.value(metadata <4 x float>* %p1, metadata !21, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata <4 x float>* %p2, metadata !22, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata <4 x float>* %p1, metadata !23, metadata !DIExpression()), !dbg !27
+    %tobool = icmp eq <4 x float>* %p1, null, !dbg !28
+    %0 = bitcast <4 x float>* %p1 to i8*, !dbg !29
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    store i8 0, i8* %0, align 1, !dbg !30
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !27
+    br i1 %tobool, label %if.end, label %if.then, !dbg !31
+  
+  if.then:                                          ; preds = %entry
+    %1 = load <4 x float>, <4 x float>* %p1, align 16, !dbg !32
+    call void @llvm.dbg.value(metadata <4 x float> %1, metadata !24, metadata !DIExpression()), !dbg !33
+    store <4 x float> %1, <4 x float>* %p2, align 16, !dbg !34
+    br label %if.end, !dbg !35
+  
+  if.end:                                           ; preds = %if.then, %entry
+    ret void, !dbg !36
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!6, !7, !8}
+  !llvm.ident = !{!9}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 9.0.0 (https://github.com/llvm/llvm-project.git 1a0312ca0b20d16edb859065bbace75f6701c92e)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "1.cpp", directory: "/mnt/c/Users/gbdawsoc/Documents/llvm/bg40969")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 64)
+  !5 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+  !6 = !{i32 2, !"Dwarf Version", i32 4}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{!"clang version 9.0.0 (https://github.com/llvm/llvm-project.git 1a0312ca0b20d16edb859065bbace75f6701c92e)"}
+  !10 = distinct !DISubprogram(name: "bravo", linkageName: "debug", scope: !1, file: !1, line: 4, type: !11, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !20)
+  !11 = !DISubroutineType(types: !12)
+  !12 = !{null, !13, !13}
+  !13 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !14)
+  !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !15, size: 64)
+  !15 = !DIDerivedType(tag: DW_TAG_typedef, name: "alpha", file: !1, line: 2, baseType: !16)
+  !16 = !DICompositeType(tag: DW_TAG_array_type, baseType: !17, size: 128, flags: DIFlagVector, elements: !18)
+  !17 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+  !18 = !{!19}
+  !19 = !DISubrange(count: 4)
+  !20 = !{!21, !22, !23, !24}
+  !21 = !DILocalVariable(name: "p1", arg: 1, scope: !10, file: !1, line: 4, type: !13)
+  !22 = !DILocalVariable(name: "p2", arg: 2, scope: !10, file: !1, line: 4, type: !13)
+  !23 = !DILocalVariable(name: "p3", scope: !10, file: !1, line: 5, type: !4)
+  !24 = !DILocalVariable(name: "t", scope: !25, file: !1, line: 8, type: !15)
+  !25 = distinct !DILexicalBlock(scope: !26, file: !1, line: 6, column: 11)
+  !26 = distinct !DILexicalBlock(scope: !10, file: !1, line: 6, column: 7)
+  !27 = !DILocation(line: 0, scope: !10)
+  !28 = !DILocation(line: 6, column: 7, scope: !26)
+  !29 = !DILocation(line: 5, column: 14, scope: !10)
+  !30 = !DILocation(line: 7, column: 9, scope: !25)
+  !31 = !DILocation(line: 6, column: 7, scope: !10)
+  !32 = !DILocation(line: 8, column: 15, scope: !25)
+  !33 = !DILocation(line: 0, scope: !25)
+  !34 = !DILocation(line: 9, column: 9, scope: !25)
+  !35 = !DILocation(line: 10, column: 3, scope: !25)
+  !36 = !DILocation(line: 11, column: 1, scope: !10)
+
+...
+---
+name:            debug
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       
+  - { id: 0, class: gr64, preferred-register: '' }
+  - { id: 1, class: gr64, preferred-register: '' }
+  - { id: 2, class: vr128, preferred-register: '' }
+liveins:         
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $rdi, $rsi
+  
+    DBG_VALUE $rdi, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE $rsi, $noreg, !22, !DIExpression(), debug-location !27
+    DBG_VALUE $rdi, $noreg, !23, !DIExpression(), debug-location !27
+    %1:gr64 = COPY $rsi
+    DBG_VALUE %1, $noreg, !22, !DIExpression(), debug-location !27
+    %0:gr64 = COPY $rdi
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    TEST64rr %0, %0, implicit-def $eflags, debug-location !28
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    MOV8mi %0, 1, $noreg, 0, $noreg, 0, debug-location !30 :: (store (s8) into %ir.0)
+    CFI_INSTRUCTION offset $r13, -123
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !21, !DIExpression(), debug-location !27
+    DBG_VALUE %0, $noreg, !23, !DIExpression(), debug-location !27
+    JCC_1 %bb.2, 4, implicit $eflags, debug-location !31
+    JMP_1 %bb.1, debug-location !31
+  
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+  
+    %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg, debug-location !32 :: (load (s128) from %ir.p1)
+    DBG_VALUE %2, $noreg, !24, !DIExpression(), debug-location !33
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2, debug-location !34 :: (store (s128) into %ir.p2)
+  
+  bb.2.if.end:
+    RET 0, debug-location !36
+
+    ; CHECK-LABEL: name: debug
+    ; CHECK: %3:gr8 = MOV8rm
+    ; CHECK: MOV8mr
+    ; CHECK: %4:gr64 = MOV64rm
+    ; CHECK: MOV64mr
+    ; CHECK: %5:gr32 = MOV32rm
+    ; CHECK: MOV32mr
+    ; CHECK: %6:gr16 = MOV16rm
+    ; CHECK: MOV16mr
+    ; CHECK: %7:gr8 = MOV8rm
+    ; CHECK: MOV8mr
+    ; CHECK: RET 0
+...

@@ -1,0 +1,4 @@
+CHECK: start
+CHECK-NOT: source
+CHECK-NOT: lldb
+CHECK-NEXT: done

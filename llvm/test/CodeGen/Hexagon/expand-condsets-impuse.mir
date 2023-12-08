@@ -1,0 +1,78 @@
+# RUN: llc -march=hexagon -run-pass expand-condsets -o - %s -verify-machineinstrs | FileCheck %s
+
+# CHECK-LABEL: name: fred
+
+--- |
+  define void @fred() { ret void }
+
+...
+---
+
+name: fred
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+  - { id: 4, class: predregs }
+  - { id: 5, class: intregs }
+  - { id: 6, class: intregs }
+  - { id: 7, class: intregs }
+  - { id: 8, class: predregs }
+  - { id: 9, class: intregs }
+  - { id: 10, class: intregs }
+  - { id: 11, class: intregs }
+  - { id: 12, class: predregs }
+  - { id: 13, class: intregs }
+  - { id: 14, class: intregs }
+  - { id: 99, class: intregs }
+liveins:
+  - { reg: '$r0', virtual-reg: '%99' }
+
+body: |
+  bb.0:
+    liveins: $r0
+    successors: %bb.298, %bb.301
+        %99 = COPY $r0
+        J2_jumpr %99, implicit-def $pc
+
+  bb.298:
+    liveins: $r0
+    successors: %bb.299, %bb.301, %bb.309
+        %0 = A2_tfrsi 123
+        %1 = A2_tfrsi -1
+        %3 = L2_loadri_io %99, 8
+        %4 = C2_cmpeqi %3, 33
+        %5 = A2_tfrsi -2
+        %6 = C2_mux %4, %5, %1
+        J2_jumpr %6, implicit-def $pc
+
+  bb.299:
+    successors: %bb.300, %bb.309
+        %7 = L2_loadrb_io %99, 12
+        %8 = C2_cmpeqi %7, 9
+        %9 = A2_tfrsi -999
+        ; CHECK: %10:intregs = C2_cmoveit killed %8, -999, implicit %10
+        %10 = C2_mux %8, %9, %1
+        J2_jumpr %10, implicit-def $pc
+
+  bb.300:
+    successors: %bb.309
+        S2_storeri_io %99, 0, %0
+        J2_jump %bb.309, implicit-def $pc
+
+  bb.301:
+    successors: %bb.299, %bb.309
+        %0 = A2_tfrsi 124
+        %1 = A2_tfrsi -4
+        %11 = L2_loadri_io %99, 8
+        %12 = C2_cmpeqi %11, 33
+        %13 = A2_tfrsi -2
+        %14 = C2_mux %12, %13, %1
+        J2_jumpr %14, implicit-def $pc
+
+  bb.309:
+
+...
+

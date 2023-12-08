@@ -1,0 +1,32 @@
+# RUN: llc -o - %s -march=amdgcn -mcpu=fiji -run-pass=si-late-branch-lowering -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: readlane_exec0
+# GCN: bb.0
+# GCN: S_CBRANCH_EXECZ %bb.2
+
+---
+name: readlane_exec0
+
+body:       |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr1_vgpr2:0x00000001, $vgpr2_vgpr3:0x00000003
+
+    $vgpr4 = V_AND_B32_e32 1, $vgpr1, implicit $exec
+    V_CMP_EQ_U32_e32 1, killed $vgpr4, implicit-def $vcc, implicit $exec
+    $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+
+   $sgpr10 = V_READFIRSTLANE_B32 $vgpr2, implicit $exec
+   $sgpr11 = V_READFIRSTLANE_B32 $vgpr3, implicit $exec
+   $sgpr10 = S_LOAD_DWORD_IMM killed $sgpr10_sgpr11, 0, 0
+   S_WAITCNT 127
+   $vgpr0 = V_XOR_B32_e32 killed $sgpr10, killed $vgpr0, implicit $exec
+
+  bb.2:
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+...

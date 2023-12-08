@@ -1,0 +1,18 @@
+; RUN: llc < %s -relocation-model=static -no-integrated-as | FileCheck %s
+; PR4152
+
+; CHECK: {{1: ._pv_cpu_ops[+]8}}
+; CHECK: {{2: ._G}}
+
+target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
+target triple = "i386-apple-darwin9.6"
+	%struct.pv_cpu_ops = type { i32, [2 x i32] }
+@pv_cpu_ops = external global %struct.pv_cpu_ops		; <ptr> [#uses=1]
+@G = external global i32		; <ptr> [#uses=1]
+
+define void @x() nounwind {
+entry:
+	tail call void asm sideeffect "1: $0", "i,~{dirflag},~{fpsr},~{flags}"(ptr getelementptr (%struct.pv_cpu_ops, ptr @pv_cpu_ops, i32 0, i32 1, i32 1)) nounwind
+	tail call void asm sideeffect "2: $0", "i,~{dirflag},~{fpsr},~{flags}"(ptr @G) nounwind
+	ret void
+}

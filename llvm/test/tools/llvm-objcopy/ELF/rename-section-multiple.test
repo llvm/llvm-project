@@ -1,0 +1,40 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --rename-section=.test1=.test2 --rename-section=.test3=.test4 --rename-section=.test5=.test6 %t %t2
+# RUN: llvm-readobj --file-headers --sections --section-data %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:        "c3c3c3c3"
+  - Name:            .test3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:        "abababab"
+  - Name:            .test7
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:        "37373737"
+
+# CHECK: SectionHeaderCount: 6
+
+# CHECK: Name: .test2
+# CHECK: SectionData (
+# CHECK-NEXT:   0000: C3C3C3C3
+# CHECK-NEXT: )
+# CHECK: Name: .test4
+# CHECK: SectionData (
+# CHECK-NEXT:   0000: ABABABAB
+# CHECK-NEXT: )
+# CHECK: Name: .test7
+# CHECK: SectionData (
+# CHECK-NEXT:   0000: 37373737
+# CHECK-NEXT: )
+# CHECK: Name: .strtab
+# CHECK: Name: .shstrtab

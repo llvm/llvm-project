@@ -1,0 +1,42 @@
+# RUN: yaml2obj -o %t.wasm %s
+# RUN: llvm-objdump -d %t.wasm | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+      - Index:           1
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+      - Index:           1
+        Locals:          []
+        Body:            20000B
+...
+
+# CHECK:       Disassembly of section CODE:
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000000 <CODE>:
+# CHECK-NEXT:          # 2 functions in section.
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000001 <>:
+# CHECK-EMPTY:
+# CHECK-NEXT:         3: 0b           	end
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000004 <>:
+# CHECK-EMPTY:
+# CHECK-NEXT:         6: 20 00        	local.get	0
+# CHECK-NEXT:         8: 0b           	end

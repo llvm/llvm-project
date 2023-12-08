@@ -1,0 +1,4 @@
+sink: { S[] -> a[] }
+must_source: { T[] -> a[]; U[] -> a[] }
+may_source: { V[] -> a[] }
+schedule_map: { T[] -> [0,1]; U[] -> [0,0]; V[] -> [0,1]; S[] -> [1,0] }

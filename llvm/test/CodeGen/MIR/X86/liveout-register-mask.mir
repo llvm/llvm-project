@@ -1,0 +1,42 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the liveout register mask
+# machine operands correctly.
+
+--- |
+
+  define void @small_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
+  entry:
+    %result = tail call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 5, ptr null, i32 2, i64 %p1, i64 %p2)
+    ret void
+  }
+
+  declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+
+...
+---
+name:            small_patchpoint_codegen
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+frameInfo:
+  hasPatchPoint: true
+  stackSize:     8
+  adjustsStack:  true
+  hasCalls:      true
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+body: |
+  bb.0.entry:
+    liveins: $rdi, $rsi, $rbp
+
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+  ; CHECK: PATCHPOINT 5, 5, 0, 2, 0, $rdi, $rsi, csr_64, liveout($esp, $rsp, $sp, $spl),
+    PATCHPOINT 5, 5, 0, 2, 0, $rdi, $rsi, csr_64, liveout($esp, $rsp, $sp, $spl), implicit-def dead early-clobber $r11, implicit-def $rsp, implicit-def dead $rax
+    $rbp = POP64r implicit-def $rsp, implicit $rsp
+    RET64
+...

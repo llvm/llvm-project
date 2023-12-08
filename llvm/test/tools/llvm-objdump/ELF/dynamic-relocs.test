@@ -1,0 +1,195 @@
+## Show that llvm-objdump can dump dynamic relocations.
+## Specifically, we are checking that the tags DT_RELA, DT_REL and DT_JMPREL
+## properly identify relocation tables.
+
+# RUN: yaml2obj --docnum=1 %s -o %t.empty
+# RUN: not llvm-objdump -R %t.empty 2>&1 | FileCheck %s --check-prefix=NO-DYNAMIC
+
+# NO-DYNAMIC: error: '{{.*}}': not a dynamic object
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+
+# RUN: yaml2obj --docnum=2 -DTYPE=ET_EXEC %s -o %t1
+# RUN: llvm-objdump --dynamic-reloc %t1 | FileCheck %s --strict-whitespace --match-full-lines
+
+## e_type doesn't matter at all.
+# RUN: yaml2obj --docnum=2 -DTYPE=0x1234 %s -o %t2
+# RUN: llvm-objdump -R %t2 | FileCheck %s --strict-whitespace --match-full-lines
+
+#      CHECK:{{.*}}file format elf64-x86-64
+#CHECK-EMPTY:
+# CHECK-NEXT:DYNAMIC RELOCATION RECORDS
+# CHECK-NEXT:OFFSET           TYPE                     VALUE
+# CHECK-NEXT:0000000000000000 R_X86_64_RELATIVE        *ABS*
+# CHECK-NEXT:0000000000000000 R_X86_64_JUMP_SLOT       bar
+# CHECK-NEXT:0000000000000008 R_X86_64_NONE            foo
+#CHECK-EMPTY:
+
+## -r ignores dynamic relocations.
+# RUN: llvm-objdump -r %t2 | FileCheck %s --check-prefix=STATIC-RELOC
+
+# STATIC-RELOC-NOT: RELOCATION RECORDS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    [[TYPE]]
+  Machine: EM_X86_64
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Size:         16
+    Flags:        [SHF_ALLOC]
+    Address:      0x100000
+    AddressAlign: 0x100
+  - Name:         .got.plt
+    Type:         SHT_PROGBITS
+    Flags:        [SHF_WRITE, SHF_ALLOC]
+    Address:      0x100100
+    AddressAlign: 0x1000
+  - Name:         .rela.dyn
+    Type:         SHT_RELA
+    Address:      0x100200
+    AddressAlign: 0x100
+    Info:         .foo
+    Link:         .dynsym
+    Flags:        [SHF_ALLOC]
+    Relocations:
+      - Offset: 0
+        Type:   R_X86_64_RELATIVE
+        Addend: 0
+  - Name:         .rela.plt
+    Type:         SHT_RELA
+    Address:      0x100300
+    AddressAlign: 0x100
+    Info:         .got.plt
+    Link:         .dynsym
+    Flags:        [SHF_ALLOC]
+    Relocations:
+      - Offset: 0
+        Symbol: bar
+        Type:   R_X86_64_JUMP_SLOT
+  - Name:         .rel.dyn
+    Type:         SHT_REL
+    Address:      0x100400
+    AddressAlign: 0x100
+    Info:         .foo
+    Link:         .dynsym
+    Flags:        [SHF_ALLOC]
+    Relocations:
+      - Offset: 8
+        Symbol: foo
+        Type:   R_X86_64_NONE
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Address:      0x100500
+    AddressAlign: 0x100
+    Link:         .dynstr
+    Flags:        [SHF_ALLOC]
+    Entries:
+      - Tag: DT_RELA
+        Value: 0x100200
+      - Tag: DT_RELASZ
+        Value: 24
+      - Tag: DT_RELAENT
+        Value: 24
+      - Tag: DT_JMPREL
+        Value: 0x100300
+      - Tag: DT_PLTREL
+        Value: 7
+      - Tag: DT_PLTRELSZ
+        Value: 24
+      - Tag: DT_REL
+        Value: 0x100400
+      - Tag: DT_RELSZ
+        Value: 16
+      - Tag: DT_RELENT
+        Value: 16
+      - Tag: DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x100000
+    Align:    0x100
+    FirstSec: .foo
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x100500
+    Align:    0x100
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+DynamicSymbols:
+  - Name:    foo
+    Section: .foo
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Test a 32-bit object.
+# RUN: yaml2obj --docnum=3 %s -o %t.i386
+# RUN: llvm-objdump -R %t.i386 | FileCheck %s --check-prefix=I386 --strict-whitespace --match-full-lines
+
+#      I386:{{.*}}file format elf32-i386
+#I386-EMPTY:
+# I386-NEXT:DYNAMIC RELOCATION RECORDS
+# I386-NEXT:OFFSET   TYPE                     VALUE
+# I386-NEXT:00000030 R_386_RELATIVE           *ABS*
+# I386-NEXT:00000010 R_386_NONE               foo
+#I386-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_386
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rel.dyn
+    LastSec:  .data
+  - Type:     PT_DYNAMIC
+    VAddr:    0x10
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+Sections:
+  - Name:            .rel.dyn
+    Type:            SHT_REL
+    Link:            .dynsym
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x4
+    Relocations:
+      - Offset:          0x30
+        Type:            R_386_RELATIVE
+      - Offset:          0x10
+        Symbol:          foo
+        Type:            R_386_NONE
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Link:            .dynstr
+    AddressAlign:    0x4
+    Entries:
+      - Tag:             DT_REL
+        Value:           0x0
+      - Tag:             DT_RELSZ
+        Value:           0x10
+      - Tag:             DT_RELENT
+        Value:           0x8
+      - Tag:             DT_RELCOUNT
+        Value:           0x1
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x4
+    Content:         '80110000'
+DynamicSymbols:
+  - Name:    foo
+    Section: .data

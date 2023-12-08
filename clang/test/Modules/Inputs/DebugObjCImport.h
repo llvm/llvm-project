@@ -1,0 +1,2 @@
+@import Empty;
+struct DebugObjCImport {};

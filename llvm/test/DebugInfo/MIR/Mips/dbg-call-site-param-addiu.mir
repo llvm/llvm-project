@@ -1,0 +1,132 @@
+## Test mips32:
+# RUN: llc -mtriple mips-linux-gnu -emit-call-site-info -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+## Test mipsel:
+# RUN: llc -mtriple mipsel-linux-gnu -emit-call-site-info -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+
+## Following code is used for producing this test case.
+##
+## extern int fn1(int,int,int);
+## extern void clobber();
+## int fn2(int a) {
+##   clobber();
+##   int local = fn1(44, a, a+10);
+##   if (local > 10)
+##     return local + 10;
+##   return local;
+## }
+## Check that parameters value loaded by instruction ADDiu/DADDiu is
+## interpreted correctly.
+
+## Test mips32:
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "fn1"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg5 A1_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 S0_64+0)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg4 A0_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_constu 0x2c)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg6 A2_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 S0_64+10)
+--- |
+  ; ModuleID = 'm.ll'
+  source_filename = "m.c"
+  target datalayout = "E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
+  target triple = "mips-unknown-linux-gnu"
+
+  ; Function Attrs: nounwind
+  define dso_local i32 @fn2(i32 signext %a) local_unnamed_addr !dbg !12 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !18
+    tail call void bitcast (void (...)* @clobber to void ()*)(), !dbg !18
+    %add = add nsw i32 %a, 10, !dbg !18
+    %call = tail call i32 @fn1(i32 signext 44, i32 signext %a, i32 signext %add), !dbg !18
+    call void @llvm.dbg.value(metadata i32 %call, metadata !17, metadata !DIExpression()), !dbg !18
+    %cmp = icmp sgt i32 %call, 10, !dbg !22
+    %add1 = add nsw i32 %call, 10, !dbg !18
+    %retval.0 = select i1 %cmp, i32 %add1, i32 %call, !dbg !18
+    ret i32 %retval.0, !dbg !18
+  }
+  
+  declare dso_local void @clobber(...) local_unnamed_addr
+  
+  declare !dbg !4 dso_local i32 @fn1(i32 signext, i32 signext, i32 signext) local_unnamed_addr
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10}
+  !llvm.ident = !{!11}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "m.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "fn1", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7, !7, !7, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 7, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{!"clang version 11.0.0"}
+  !12 = distinct !DISubprogram(name: "fn2", scope: !1, file: !1, line: 3, type: !13, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!7, !7}
+  !15 = !{!16, !17}
+  !16 = !DILocalVariable(name: "a", arg: 1, scope: !12, file: !1, line: 3, type: !7)
+  !17 = !DILocalVariable(name: "local", scope: !12, file: !1, line: 5, type: !7)
+  !18 = !DILocation(line: 0, scope: !12)
+  !22 = !DILocation(line: 6, column: 14, scope: !23)
+  !23 = distinct !DILexicalBlock(scope: !12, file: !1, line: 6, column: 8)
+
+...
+---
+name:            fn2
+alignment:       4
+liveins:
+  - { reg: '$a0', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 8, fwdArgRegs: [] }
+  - { bb: 0, offset: 12, fwdArgRegs: 
+      - { arg: 0, reg: '$a0' }
+      - { arg: 1, reg: '$a1' }
+      - { arg: 2, reg: '$a2' } }
+body:             |
+  bb.0.entry:
+    DBG_VALUE $a0, $noreg, !16, !DIExpression(), debug-location !18
+    $sp = ADDiu $sp, -24
+    CFI_INSTRUCTION def_cfa_offset 24
+    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
+    SW killed $s0, $sp, 16 :: (store (s32) into %stack.1)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s0_64, -8
+    DBG_VALUE $s0, $noreg, !16, !DIExpression(), debug-location !18
+    JAL @clobber, csr_o32, implicit-def dead $ra, implicit-def $sp, debug-location !18 {
+      $s0 = OR $a0, $zero
+    }
+    renamable $a2 = nsw ADDiu renamable $s0, 10, debug-location !18
+    $a0 = ADDiu $zero, 44, debug-location !18
+    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit killed $a1, implicit $a2, implicit-def $sp, implicit-def $v0, debug-location !18 {
+      $a1 = OR killed $s0, $zero, debug-location !18
+    }
+    DBG_VALUE $v0, $noreg, !17, !DIExpression(), debug-location !18
+    renamable $at = SLTi renamable $v0, 11, debug-location !18
+    renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !18
+    renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !18
+    $s0 = LW $sp, 16, debug-location !18 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 20, debug-location !18 :: (load (s32) from %stack.0)
+    PseudoReturn undef $ra, implicit $v0, debug-location !18 {
+      $sp = ADDiu $sp, 24
+    }

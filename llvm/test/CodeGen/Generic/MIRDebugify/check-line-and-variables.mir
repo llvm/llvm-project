@@ -1,0 +1,70 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-debugify,dead-mi-elimination,mir-check-debugify -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-debugify,mir-check-debugify -o - %s 2>&1 | FileCheck %s --check-prefix=CHECK-PASS
+--- |
+  ; ModuleID = 'check-line-and-variables.mir'
+  source_filename = "check-line-and-variables.ll"
+
+  @ga = dso_local global i32 2, align 4
+
+  ; Function Attrs: noinline nounwind optnone uwtable
+  define dso_local i32 @foo(i32 %a, i32 %b) {
+  entry:
+    %a.addr = alloca i32, align 4
+    %b.addr = alloca i32, align 4
+    %c = alloca i32, align 4
+    store i32 %a, i32* %a.addr, align 4
+    store i32 %b, i32* %b.addr, align 4
+    %0 = load i32, i32* %a.addr, align 4
+    %1 = load i32, i32* %b.addr, align 4
+    %add = add nsw i32 %0, %1
+    store i32 %add, i32* %c, align 4
+    %2 = load i32, i32* %c, align 4
+    %mul = mul nsw i32 %2, 2
+    store i32 %mul, i32* @ga, align 4
+    %3 = load i32, i32* %c, align 4
+    ; dead-mi-elimination will remove %4 = ...
+    %4 = load i32, i32* %a.addr, align 4
+    ret i32 %3
+  }
+
+...
+---
+name:            foo
+alignment:       16
+stack:
+  - { id: 0, name: a.addr, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: b.addr, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: c, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+
+    %2:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY killed %0
+    %3:gr32 = COPY killed %2
+    MOV32mr %stack.0.a.addr, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %ir.a.addr)
+    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, %3 :: (store (s32) into %ir.b.addr)
+    %14:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg :: (load (s32) from %ir.a.addr)
+    %13:gr32 = ADD32rm killed %14, %stack.1.b.addr, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %ir.b.addr)
+    ; dead-mi-elimination will remove %15:gr32 = ...
+    %15:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg :: (load (s32) from %ir.a.addr)
+    MOV32mr %stack.2.c, 1, $noreg, 0, $noreg, killed %13 :: (store (s32) into %ir.c)
+    %9:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c)
+    %8:gr32 = SHL32ri killed %9, 1, implicit-def $eflags
+    MOV32mr $noreg, 1, $noreg, @ga, $noreg, killed %8 :: (store (s32) into @ga)
+    %5:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c)
+    $eax = COPY %5
+    RET64 implicit $eax
+
+    ;CHECK:      WARNING: Missing line 9
+    ;CHECK-NEXT: Machine IR debug info check: FAIL
+    ;CHECK-PASS: Machine IR debug info check: PASS
+...

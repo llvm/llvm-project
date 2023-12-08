@@ -1,0 +1,134 @@
+; RUN: llc -verify-machineinstrs -stack-symbol-ordering=0 < %s | FileCheck %s
+
+target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+; This test is checking to make sure that we reuse the same stack slots
+; for GC values spilled over two different call sites.  Since the order
+; of GC arguments differ, niave lowering code would insert loads and 
+; stores to rearrange items on the stack.  We need to make sure (for
+; performance) that this doesn't happen.
+define i32 @back_to_back_calls(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c) #1 gc "statepoint-example" {
+; CHECK-LABEL: back_to_back_calls
+; The exact stores don't matter, but there need to be three stack slots created
+; CHECK-DAG: movq	%rdi, {{[0-9]*}}(%rsp)
+; CHECK-DAG: movq	%rdx, {{[0-9]*}}(%rsp)
+; CHECK-DAG: movq	%rsi, {{[0-9]*}}(%rsp)
+; There should be no more than three moves
+; CHECK-NOT: movq
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  %a1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 0)
+  %b1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 1)
+  %c1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 2)
+; CHECK: callq
+; This is the key check.  There should NOT be any memory moves here
+; CHECK-NOT: movq
+  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %c1, ptr addrspace(1) %b1, ptr addrspace(1) %a1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  %a2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 2)
+  %b2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 1)
+  %c2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 0)
+; CHECK: callq
+  ret i32 1
+}
+
+; This test simply checks that minor changes in vm state don't prevent slots
+; being reused for gc values.  
+define i32 @reserve_first(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c) #1 gc "statepoint-example" {
+; CHECK-LABEL: reserve_first
+; The exact stores don't matter, but there need to be three stack slots created
+; CHECK-DAG: movq	%rdi, {{[0-9]*}}(%rsp)
+; CHECK-DAG: movq	%rdx, {{[0-9]*}}(%rsp)
+; CHECK-DAG: movq	%rsi, {{[0-9]*}}(%rsp)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  %a1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 0)
+  %b1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 1)
+  %c1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 2)
+; CHECK: callq
+; This is the key check.  There should NOT be any memory moves here
+; CHECK-NOT: movq
+  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %c1, ptr addrspace(1) %b1, ptr addrspace(1) %a1), "deopt" (ptr addrspace(1) %a1, i32 0, ptr addrspace(1) %c1, i32 0, i32 0)]
+  %a2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 2)
+  %b2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 1)
+  %c2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 0)
+; CHECK: callq
+  ret i32 1
+}
+
+; Check that we reuse the same stack slot across multiple calls.  The use of
+; more than two calls here is critical.  We've had a bug which allowed reuse
+; exactly once which went undetected for a long time.
+define i32 @back_to_back_deopt(i32 %a, i32 %b, i32 %c) #1 
+  gc "statepoint-example" {
+; CHECK-LABEL: back_to_back_deopt
+; The exact stores don't matter, but there need to be three stack slots created
+; CHECK-DAG: movl	%edi, 12(%rsp)
+; CHECK-DAG: movl	%esi, 8(%rsp)
+; CHECK-DAG: movl	%edx, 4(%rsp)
+; CHECK: callq
+; CHECK-DAG: movl	%r14d, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%ebx, 4(%rsp)
+; CHECK: callq
+; CHECK-DAG: movl	%r14d, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%ebx, 4(%rsp)
+; CHECK: callq
+; CHECK-DAG: movl	%r14d, 12(%rsp)
+; CHECK-DAG: movl	%ebp, 8(%rsp)
+; CHECK-DAG: movl	%ebx, 4(%rsp)
+; CHECK: callq
+  call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c)]
+call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c)]
+call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c)]
+call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c)]
+  ret i32 1
+}
+
+; Test that stack slots are reused for invokes
+define i32 @back_to_back_invokes(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c) #1 gc "statepoint-example" personality ptr @"personality_function" {
+; CHECK-LABEL: back_to_back_invokes
+entry:
+  ; The exact stores don't matter, but there need to be three stack slots created
+  ; CHECK-DAG: movq	%rdi, {{[0-9]*}}(%rsp)
+  ; CHECK-DAG: movq	%rdx, {{[0-9]*}}(%rsp)
+  ; CHECK-DAG: movq	%rsi, {{[0-9]*}}(%rsp)
+  ; CHECK: callq
+  %safepoint_token = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+                   to label %normal_return unwind label %exceptional_return
+
+normal_return:
+  %a1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 0)
+  %b1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 1)
+  %c1 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 2)
+  ; Should work even through bitcasts
+  ; This is the key check.  There should NOT be any memory moves here
+  ; CHECK-NOT: movq
+  ; CHECK: callq
+  %safepoint_token2 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %c1, ptr addrspace(1) %b1, ptr addrspace(1) %a1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+                    to label %normal_return2 unwind label %exceptional_return2
+
+normal_return2:
+  %a2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 2)
+  %b2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 1)
+  %c2 = tail call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2, i32 0, i32 0)
+  ret i32 1
+
+exceptional_return:
+  %landing_pad = landingpad { ptr, i32 }
+          cleanup
+  ret i32 0
+
+exceptional_return2:
+  %landing_pad2 = landingpad { ptr, i32 }
+          cleanup
+  ret i32 0
+}
+
+; Function Attrs: nounwind
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
+
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+
+declare i32 @"personality_function"()
+
+attributes #1 = { uwtable }

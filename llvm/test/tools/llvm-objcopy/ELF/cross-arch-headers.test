@@ -1,0 +1,219 @@
+# Show that the --output-format correctly configures both the main output file
+# and DWO output.
+# Note that we don't actually need any DWARF to produce the DWO file.
+
+# RUN: yaml2obj %s -o %t.o
+
+# Without --output-format, the format should match the input.
+# RUN: llvm-objcopy %t.o %t.default.o --split-dwo=%t.default.dwo
+# RUN: llvm-readobj --file-headers %t.default.o | FileCheck %s --check-prefixes=CHECK,LE,DEFAULT,32
+# RUN: llvm-readobj --file-headers %t.default.dwo | FileCheck %s --check-prefixes=CHECK,LE,DEFAULT,32
+
+# RUN: llvm-objcopy %t.o -O elf32-i386 %t.elf32_i386.o --split-dwo=%t.elf32_i386.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_i386.o | FileCheck %s --check-prefixes=CHECK,LE,I386,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_i386.dwo | FileCheck %s --check-prefixes=CHECK,LE,I386,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-i386-freebsd %t.elf32_i386_freebsd.o --split-dwo=%t.elf32_i386_freebsd.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_i386_freebsd.o | FileCheck %s --check-prefixes=CHECK,LE,I386,32,FREEBSD
+# RUN: llvm-readobj --file-headers %t.elf32_i386_freebsd.dwo | FileCheck %s --check-prefixes=CHECK,LE,I386,32,FREEBSD
+
+# RUN: llvm-objcopy %t.o -O elf32-iamcu %t.elf32_iamcu.o --split-dwo=%t.elf32_iamcu.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_iamcu.o | FileCheck %s --check-prefixes=CHECK,LE,IAMCU,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_iamcu.dwo | FileCheck %s --check-prefixes=CHECK,LE,IAMCU,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-littlearm %t.elf32_littlearm.o --split-dwo=%t.elf32_littlearm.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_littlearm.o | FileCheck %s --check-prefixes=CHECK,LE,ARM,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_littlearm.dwo | FileCheck %s --check-prefixes=CHECK,LE,ARM,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-aarch64 %t.elf64_aarch64.o --split-dwo=%t.elf64_aarch64.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_aarch64.o | FileCheck %s --check-prefixes=CHECK,LE,AARCH,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_aarch64.dwo | FileCheck %s --check-prefixes=CHECK,LE,AARCH,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-littleaarch64 %t.elf64_littleaarch64.o --split-dwo=%t.elf64_littleaarch64.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_littleaarch64.o | FileCheck %s --check-prefixes=CHECK,LE,AARCH,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_littleaarch64.dwo | FileCheck %s --check-prefixes=CHECK,LE,AARCH,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-powerpc %t.elf32_powerpc.o --split-dwo=%t.elf32_powerpc.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_powerpc.o | FileCheck %s --check-prefixes=CHECK,BE,PPC32,PPCBE,PPC32BE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_powerpc.dwo | FileCheck %s --check-prefixes=CHECK,BE,PPC32,PPCBE,PPC32BE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-powerpc %t.elf64_powerpc.o --split-dwo=%t.elf64_powerpc.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_powerpc.o | FileCheck %s --check-prefixes=CHECK,BE,PPC64,PPCBE,PPC64BE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_powerpc.dwo | FileCheck %s --check-prefixes=CHECK,BE,PPC64,PPCBE,PPC64BE,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-powerpcle %t.elf32_ppcle.o --split-dwo=%t.elf32_ppcle.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC32,PPCLE,PPC32LE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC32,PPCLE,PPC32LE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-powerpcle %t.elf64_ppcle.o --split-dwo=%t.elf64_ppcle.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64,PPCLE,PPC64LE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC64,PPCLE,PPC64LE,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-x86-64 %t.elf32_x86_64.o --split-dwo=%t.elf32_x86_64.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_x86_64.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_x86_64.dwo | FileCheck %s --check-prefixes=CHECK,LE,X86-64,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-littleriscv %t.elf32_littleriscv.o --split-dwo=%t.elf32_littleriscv.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_littleriscv.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_littleriscv.dwo | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-littleriscv %t.elf64_littleriscv.o --split-dwo=%t.elf64_littleriscv.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_littleriscv.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_littleriscv.dwo | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-x86-64 %t.elf64_x86_64.o --split-dwo=%t.elf64_x86_64.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64.dwo | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-x86-64-freebsd %t.elf64_x86_64_freebsd.o --split-dwo=%t.elf64_x86_64_freebsd.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64_freebsd.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64,FREEBSD
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64_freebsd.dwo | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64,FREEBSD
+
+# RUN: llvm-objcopy %t.o -O elf32-tradbigmips %t.elf32_tradbigmips.o --split-dwo=%t.elf32_tradbigmips.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_tradbigmips.o | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPSBE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_tradbigmips.dwo | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPSBE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-bigmips %t.elf32_bigmips.o --split-dwo=%t.elf32_bigmips.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_bigmips.o | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPSBE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_bigmips.dwo | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPSBE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-ntradbigmips %t.elf32_ntradbigmips.o --split-dwo=%t.elf32_ntradbigmips.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_ntradbigmips.o | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPSBE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_ntradbigmips.dwo | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPSBE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-tradlittlemips %t.elf32_tradlittlemips.o --split-dwo=%t.elf32_tradlittlemips.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_tradlittlemips.o | FileCheck %s --check-prefixes=CHECK,LE,MIPS,MIPSLE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_tradlittlemips.dwo | FileCheck %s --check-prefixes=CHECK,LE,MIPS,MIPSLE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-ntradlittlemips %t.elf32_ntradlittlemips.o --split-dwo=%t.elf32_ntradlittlemips.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_ntradlittlemips.o | FileCheck %s --check-prefixes=CHECK,LE,MIPS,MIPSLE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_ntradlittlemips.dwo | FileCheck %s --check-prefixes=CHECK,LE,MIPS,MIPSLE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-tradbigmips %t.elf64_tradbigmips.o --split-dwo=%t.elf64_tradbigmips.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_tradbigmips.o | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPS64BE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_tradbigmips.dwo | FileCheck %s --check-prefixes=CHECK,BE,MIPS,MIPS64BE,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-tradlittlemips %t.elf64_tradlittlemips.o --split-dwo=%t.elf64_tradlittlemips.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_tradlittlemips.o | FileCheck %s --check-prefixes=CHECK,LE,MIPS,MIPS64LE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_tradlittlemips.dwo | FileCheck %s --check-prefixes=CHECK,LE,MIPS,MIPS64LE,64,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-sparc %t.elf32_sparc.o --split-dwo=%t.elf32_sparc.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_sparc.o | FileCheck %s --check-prefixes=CHECK,BE,SPARC,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_sparc.dwo | FileCheck %s --check-prefixes=CHECK,BE,SPARC,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-sparcel %t.elf32_sparcel.o --split-dwo=%t.elf32_sparcel.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_sparcel.o | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_sparcel.dwo | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-hexagon %t.elf32_hexagon.o --split-dwo=%t.elf32_hexagon.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_hexagon.o | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_hexagon.dwo | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf32-loongarch %t.elf32_loongarch.o --split-dwo=%t.elf32_loongarch.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_loongarch.o | FileCheck %s --check-prefixes=CHECK,LE,LA32,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_loongarch.dwo | FileCheck %s --check-prefixes=CHECK,LE,LA32,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-loongarch %t.elf64_loongarch.o --split-dwo=%t.elf64_loongarch.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_loongarch.o | FileCheck %s --check-prefixes=CHECK,LE,LA64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_loongarch.dwo | FileCheck %s --check-prefixes=CHECK,LE,LA64,64,SYSV
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  # Arbitrary values that do not match any value we convert to via --output-format.
+  Machine:         EM_NONE
+  OSABI:           ELFOSABI_STANDALONE
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1234
+    Binding:  STB_GLOBAL
+  - Name:     bar
+    Type:     STT_OBJECT
+    Section:  .data
+    Value:    0xabcd
+    Binding:  STB_GLOBAL
+
+# CHECK: Format:
+# 32-SAME:      elf32-
+# 64-SAME:      elf64-
+# I386-SAME:    i386
+# IAMCU-SAME:   iamcu
+# AARCH-SAME:   aarch64
+# ARM-SAME:     littlearm
+# HEXAGON-SAME: hexagon
+# LA32-SAME:    loongarch{{$}}
+# LA64-SAME:    loongarch{{$}}
+# MIPS-SAME:    mips
+# PPCBE-SAME:   powerpc{{$}}
+# PPCLE-SAME:   powerpcle{{$}}
+# RISCV32-SAME: riscv{{$}}
+# RISCV64-SAME: riscv{{$}}
+# SPARC-SAME:   sparc
+# X86-64-SAME:  x86-64
+# DEFAULT-SAME: unknown
+
+# I386-NEXT:     Arch: i386
+# IAMCU-NEXT:    Arch: i386
+# AARCH-NEXT:    Arch: aarch64
+# ARM-NEXT:      Arch: arm
+# HEXAGON-NEXT:  Arch: hexagon
+# LA32-NEXT:     Arch: loongarch32
+# LA64-NEXT:     Arch: loongarch64
+# MIPSBE-NEXT:   Arch: mips{{$}}
+# MIPSLE-NEXT:   Arch: mipsel{{$}}
+# MIPS64BE-NEXT: Arch: mips64{{$}}
+# MIPS64LE-NEXT: Arch: mips64el{{$}}
+# PPC32BE-NEXT:  Arch: powerpc{{$}}
+# PPC32LE-NEXT:  Arch: powerpcle{{$}}
+# PPC64BE-NEXT:  Arch: powerpc64{{$}}
+# PPC64LE-NEXT:  Arch: powerpc64le{{$}}
+# RISCV32-NEXT:  Arch: riscv32
+# RISCV64-NEXT:  Arch: riscv64
+# SPARC-NEXT:    Arch: sparc{{$}}
+# SPARCEL-NEXT:  Arch: sparcel
+# X86-64-NEXT:   Arch: x86_64
+# DEFAULT-NEXT:  Arch: unknown
+
+# 32-NEXT:      AddressSize: 32bit
+# 64-NEXT:      AddressSize: 64bit
+
+# 32: Class: 32-bit
+# 64: Class: 64-bit
+# LE: DataEncoding: LittleEndian
+# BE: DataEncoding: BigEndian
+
+# SYSV:    OS/ABI: SystemV (0x0)
+# FREEBSD: OS/ABI: FreeBSD (0x9)
+# DEFAULT: OS/ABI: Standalone (0xFF)
+
+# AARCH:   Machine: EM_AARCH64 (0xB7)
+# ARM:     Machine: EM_ARM (0x28)
+# HEXAGON: Machine: EM_HEXAGON (0xA4)
+# I386:    Machine: EM_386 (0x3)
+# IAMCU:   Machine: EM_IAMCU (0x6)
+# LA32:    Machine: EM_LOONGARCH (0x102)
+# LA64:    Machine: EM_LOONGARCH (0x102)
+# MIPS:    Machine: EM_MIPS (0x8)
+# PPC32:   Machine: EM_PPC (0x14)
+# PPC64:   Machine: EM_PPC64 (0x15)
+# RISCV32: Machine: EM_RISCV (0xF3)
+# RISCV64: Machine: EM_RISCV (0xF3)
+# SPARC:   Machine: EM_SPARC (0x2)
+# X86-64:  Machine: EM_X86_64 (0x3E)
+
+# 32: HeaderSize: 52
+# 64: HeaderSize: 64
+
+# 32: SectionHeaderEntrySize: 40
+# 64: SectionHeaderEntrySize: 64

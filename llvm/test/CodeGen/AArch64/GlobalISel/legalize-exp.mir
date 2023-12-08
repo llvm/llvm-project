@@ -1,0 +1,227 @@
+# RUN: llc -verify-machineinstrs -mtriple aarch64--- \
+# RUN: -run-pass=legalizer -mattr=+fullfp16 -global-isel %s -o - \
+# RUN: | FileCheck %s
+...
+---
+name:            test_v4f16.exp
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $d0
+    ; CHECK-LABEL: name:            test_v4f16.exp
+    ; CHECK: [[V1:%[0-9]+]]:_(s16), [[V2:%[0-9]+]]:_(s16), [[V3:%[0-9]+]]:_(s16), [[V4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES %{{[0-9]+}}(<4 x s16>)
+
+    ; CHECK-DAG: [[V1_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V1]](s16)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-NEXT: $s0 = COPY [[V1_S32]](s32)
+    ; CHECK-NEXT: BL &expf
+    ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT1_S32:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[ELT1:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT1_S32]](s32)
+
+    ; CHECK-DAG: [[V2_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V2]](s16)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-NEXT: $s0 = COPY [[V2_S32]](s32)
+    ; CHECK-NEXT: BL &expf
+    ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT2_S32:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[ELT2:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT2_S32]](s32)
+
+    ; CHECK-DAG: [[V3_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V3]](s16)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-NEXT: $s0 = COPY [[V3_S32]](s32)
+    ; CHECK-NEXT: BL &expf
+    ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT3_S32:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[ELT3:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT3_S32]](s32)
+
+    ; CHECK-DAG: [[V4_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V4]](s16)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-NEXT: $s0 = COPY [[V4_S32]](s32)
+    ; CHECK-NEXT: BL &expf
+    ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT4_S32:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[ELT4:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT4_S32]](s32)
+
+    ; CHECK-DAG: %{{[0-9]+}}:_(<4 x s16>) = G_BUILD_VECTOR [[ELT1]](s16), [[ELT2]](s16), [[ELT3]](s16), [[ELT4]](s16)
+
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s16>) = G_FEXP %0
+    $d0 = COPY %1(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            test_v8f16.exp
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name:            test_v8f16.exp
+
+    ; This is big, so let's just check for the 8 calls to expf, the the
+    ; G_UNMERGE_VALUES, and the G_BUILD_VECTOR. The other instructions ought
+    ; to be covered by the other tests.
+
+    ; CHECK: G_UNMERGE_VALUES
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK: BL &expf
+    ; CHECK-DAG: G_BUILD_VECTOR
+
+    %0:_(<8 x s16>) = COPY $q0
+    %1:_(<8 x s16>) = G_FEXP %0
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_v2f32.exp
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name:            test_v2f32.exp
+    ; CHECK: [[V1:%[0-9]+]]:_(s32), [[V2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %{{[0-9]+}}(<2 x s32>)
+
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $s0 = COPY [[V1]](s32)
+    ; CHECK-DAG: BL &expf
+    ; CHECK-DAG: [[ELT1:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $s0 = COPY [[V2]](s32)
+    ; CHECK-DAG: BL &expf
+    ; CHECK-DAG: [[ELT2:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: %1:_(<2 x s32>) = G_BUILD_VECTOR [[ELT1]](s32), [[ELT2]](s32)
+
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s32>) = G_FEXP %0
+    $d0 = COPY %1(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            test_v4f32.exp
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name:            test_v4f32.exp
+    ; CHECK: [[V1:%[0-9]+]]:_(s32), [[V2:%[0-9]+]]:_(s32), [[V3:%[0-9]+]]:_(s32), [[V4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %{{[0-9]+}}(<4 x s32>)
+
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $s0 = COPY [[V1]](s32)
+    ; CHECK-DAG: BL &expf
+    ; CHECK-DAG: [[ELT1:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $s0 = COPY [[V2]](s32)
+    ; CHECK-DAG: BL &expf
+    ; CHECK-DAG: [[ELT2:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $s0 = COPY [[V3]](s32)
+    ; CHECK-DAG: BL &expf
+    ; CHECK-DAG: [[ELT3:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $s0 = COPY [[V4]](s32)
+    ; CHECK-DAG: BL &expf
+    ; CHECK-DAG: [[ELT4:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: %1:_(<4 x s32>) = G_BUILD_VECTOR [[ELT1]](s32), [[ELT2]](s32), [[ELT3]](s32), [[ELT4]](s32)
+
+    %0:_(<4 x s32>) = COPY $q0
+    %1:_(<4 x s32>) = G_FEXP %0
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_v2f64.exp
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $q0
+
+    ; CHECK-LABEL: name:            test_v2f64.exp
+    ; CHECK: [[V1:%[0-9]+]]:_(s64), [[V2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES %{{[0-9]+}}(<2 x s64>)
+
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $d0 = COPY [[V1]](s64)
+    ; CHECK-DAG: BL &exp
+    ; CHECK-DAG: [[ELT1:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: ADJCALLSTACKDOWN
+    ; CHECK-DAG: $d0 = COPY [[V2]](s64)
+    ; CHECK-DAG: BL &exp
+    ; CHECK-DAG: [[ELT2:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK-DAG: ADJCALLSTACKUP
+
+    ; CHECK-DAG: %1:_(<2 x s64>) = G_BUILD_VECTOR [[ELT1]](s64), [[ELT2]](s64)
+
+    %0:_(<2 x s64>) = COPY $q0
+    %1:_(<2 x s64>) = G_FEXP %0
+    $q0 = COPY %1(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            test_exp_half
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $h0
+    ; CHECK-LABEL: name:            test_exp_half
+    ; CHECK: [[REG1:%[0-9]+]]:_(s32) = G_FPEXT %0(s16)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN
+    ; CHECK-NEXT: $s0 = COPY [[REG1]](s32)
+    ; CHECK-NEXT: BL &expf
+    ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[REG2:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[RES:%[0-9]+]]:_(s16) = G_FPTRUNC [[REG2]](s32)
+
+    %0:_(s16) = COPY $h0
+    %1:_(s16) = G_FEXP %0
+    $h0 = COPY %1(s16)
+    RET_ReallyLR implicit $h0

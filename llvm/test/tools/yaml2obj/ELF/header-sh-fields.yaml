@@ -1,0 +1,93 @@
+## In this test case we check that we can override the default values for
+## ELF header fields in the YAML.
+
+## First we check the default values.
+
+# RUN: yaml2obj %s -o %t-default
+# RUN: llvm-readelf --file-headers %t-default | FileCheck %s --check-prefix=DEFAULT
+
+# DEFAULT: Start of program headers:          64 (bytes into file)
+# DEFAULT: Start of section headers:          200 (bytes into file)
+# DEFAULT: Size of program headers:           56 (bytes)
+# DEFAULT: Number of program headers:         2
+# DEFAULT: Size of section headers:           64 (bytes)
+# DEFAULT: Number of section headers:         3
+# DEFAULT: Section header string table index: 2
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+ProgramHeaders:
+  - Type: PT_LOAD
+  - Type: PT_LOAD
+
+## Check we can override all default values using the same values
+## and that this does not change the output.
+# RUN: yaml2obj --docnum=2 %s -o %t-default-override
+# RUN: cmp %t-default %t-default-override
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  EShEntSize: [[SHENTSIZE=64]]
+  EShOff:     [[SHOFF=200]]
+  EShNum:     [[SHNUM=3]]
+  EShStrNdx:  [[SHSTRNDX=2]]
+  EPhOff:     [[PHOFF=64]]
+  EPhEntSize: [[PHENTSIZE=56]]
+  EPhNum:     [[PHNUM=2]]
+ProgramHeaders:
+  - Type: PT_LOAD
+  - Type: PT_LOAD
+
+## Override different fields to check the output produced.
+
+## Override the e_shoff field.
+# RUN: yaml2obj --docnum=2 %s -DSHOFF=3 -o %t2
+# RUN: llvm-readelf --file-headers %t2 | FileCheck %s --check-prefix=SHOFF
+
+# SHOFF: Start of section headers: 3 (bytes into file)
+
+## Override the e_shnum field.
+# RUN: yaml2obj --docnum=2 %s -DSHNUM=2 -o %t3
+# RUN: llvm-readelf --file-headers %t3 | FileCheck %s --check-prefix=SHNUM
+
+# SHNUM: Number of section headers: 2{{$}}
+
+## Override the e_shstrndx field.
+# RUN: yaml2obj --docnum=2 %s -DSHSTRNDX=4 -o %t4
+# RUN: llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=SHSTRNDX
+
+# SHSTRNDX: Section header string table index: 4{{$}}
+
+## Override the e_shentsize field.
+## Check the result using raw output from 'od' because llvm-readelf
+## is unable to dump such headers.
+
+# RUN: yaml2obj --docnum=2 %s -DSHENTSIZE=1 -o %t5
+# RUN: od -A n -t x1 -v -j 0x3a -N 1 %t5 | FileCheck %s --check-prefix=NEWSIZE
+# RUN: od -A n -t x1 -v -j 0x3a -N 1 %t-default | FileCheck %s --check-prefix=OLDSIZE
+# NEWSIZE: 01
+# OLDSIZE: 40
+
+## Override the e_phoff field.
+# RUN: yaml2obj --docnum=2 %s -DPHOFF=3 -o %t6
+# RUN: llvm-readelf --file-headers %t6 | FileCheck %s --check-prefix=PHOFF
+
+# PHOFF: Start of program headers: 3 (bytes into file){{$}}
+
+## Override the e_phnum field.
+# RUN: yaml2obj --docnum=2 %s -DPHNUM=1 -o %t7
+# RUN: llvm-readelf --file-headers %t7 | FileCheck %s --check-prefix=PHNUM
+
+# PHNUM: Number of program headers: 1{{$}}
+
+## Override the e_phentsize field.
+# RUN: yaml2obj --docnum=2 %s -DPHENTSIZE=1 -o %t8
+# RUN: llvm-readelf --file-headers %t8 | FileCheck %s --check-prefix=PHENTSIZE
+
+# PHENTSIZE: Size of program headers: 1 (bytes)

@@ -1,0 +1,10 @@
+// module.map
+
+module Level1A {
+  header "Level1A.h"
+  export *
+}
+module HasError {
+  header "HasError.h"
+  export *
+}

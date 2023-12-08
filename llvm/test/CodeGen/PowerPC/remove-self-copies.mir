@@ -1,0 +1,128 @@
+# RUN: llc -mtriple=powerpc64le-unknown-unknown -start-before ppc-pre-emit-peephole \
+# RUN:   -verify-machineinstrs -ppc-asm-full-reg-names %s -o - | FileCheck %s
+--- |
+  ; ModuleID = 't.ll'
+  source_filename = "t.ll"
+  target datalayout = "e-m:e-i64:64-n32:64"
+  
+  define signext i32 @test(i32 signext %a, i32 signext %b, i32 signext %c) {
+  entry:
+    %cmp = icmp slt i32 %a, %b
+    br i1 %cmp, label %return, label %if.end
+  
+  if.end:                                           ; preds = %entry
+    %cmp1 = icmp slt i32 %b, %a
+    br i1 %cmp1, label %return, label %if.end3
+  
+  if.end3:                                          ; preds = %if.end
+    %cmp4 = icmp eq i32 %a, %c
+    br i1 %cmp4, label %if.then5, label %if.end6
+  
+  if.then5:                                         ; preds = %if.end3
+    %add = shl nsw i32 %a, 1
+    br label %return
+  
+  if.end6:                                          ; preds = %if.end3
+    %cmp7 = icmp sgt i32 %c, %b
+    %add11 = add i32 %c, %b
+    %add12 = select i1 %cmp7, i32 %a, i32 0
+    %spec.select = add i32 %add11, %add12
+    ret i32 %spec.select
+  
+  return:                                           ; preds = %if.then5, %if.end, %entry
+    %retval.0 = phi i32 [ %add, %if.then5 ], [ %c, %entry ], [ %b, %if.end ]
+    ret i32 %retval.0
+  }
+
+...
+---
+name:            test
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:       
+liveins:         
+  - { reg: '$x3', virtual-reg: '' }
+  - { reg: '$x4', virtual-reg: '' }
+  - { reg: '$x5', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x40000000), %bb.1(0x40000000)
+    liveins: $x3, $x4, $x5
+  
+    renamable $cr0 = CMPW renamable $r3, renamable $r4
+    BCC 12, renamable $cr0, %bb.4
+  
+  bb.1.if.end:
+    successors: %bb.6(0x40000000), %bb.2(0x40000000)
+    liveins: $cr0, $x3, $x4, $x5
+  
+    BCC 36, killed renamable $cr0, %bb.2
+  
+  bb.6:
+    liveins: $x4
+  
+    ; CHECK: mr r5, r4
+    ; CHECK-NOT: mr r5, r5
+    ; CHECK: extsw r3, r5
+    $r5 = OR killed $r4, $r4, implicit $x4, implicit-def $x5
+    $r5 = OR $r5, $r5, implicit-def $x5
+    renamable $x3 = EXTSW_32_64 killed renamable $r5, implicit $x5
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+  
+  bb.2.if.end3:
+    successors: %bb.3(0x40000000), %bb.5(0x40000000)
+    liveins: $x3, $x4, $x5
+  
+    renamable $cr0 = CMPLW renamable $r3, renamable $r5
+    BCC 68, killed renamable $cr0, %bb.5
+  
+  bb.3.if.then5:
+    successors: %bb.4(0x80000000)
+    liveins: $x3
+  
+    renamable $r5 = RLWINM killed renamable $r3, 1, 0, 30, implicit $x3, implicit-def $x5
+  
+  bb.4.return:
+    liveins: $x5
+  
+    renamable $x3 = EXTSW_32_64 killed renamable $r5, implicit $x5
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+  
+  bb.5.if.end6:
+    liveins: $x3, $x4, $x5
+  
+    renamable $cr0 = CMPW renamable $r5, renamable $r4
+    renamable $r6 = LI 0
+    renamable $r4 = ADD4 killed renamable $r5, killed renamable $r4, implicit $x4, implicit $x5
+    renamable $r3 = ISEL killed renamable $r3, killed renamable $r6, killed renamable $cr0gt, implicit $cr0, implicit $x3
+    renamable $r3 = ADD4 killed renamable $r4, killed renamable $r3
+    renamable $x3 = EXTSW_32_64 killed renamable $r3
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+
+...

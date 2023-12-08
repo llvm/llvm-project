@@ -1,0 +1,16 @@
+# FIXME: Disabled on Windows for now because of reliance on posix only features
+# (eg: export, "&", pkill).
+UNSUPPORTED: darwin, target={{.*windows.*}}
+# Check that libFuzzer honors SIGUSR1/SIGUSR2
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR
+
+RUN: %run %t/LFSIGUSR 2> %t/log & export PID=$!
+RUN: sleep 2
+RUN: kill -SIGUSR1 $PID
+RUN: sleep 3
+RUN: cat %t/log | FileCheck %s
+
+CHECK: INFO: signal received, trying to exit gracefully
+CHECK: INFO: libFuzzer: exiting as requested

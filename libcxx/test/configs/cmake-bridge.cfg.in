@@ -1,0 +1,40 @@
+@AUTO_GEN_COMMENT@
+
+@SERIALIZED_LIT_PARAMS@
+
+#
+# This file performs the bridge between the CMake configuration and the Lit
+# configuration files by setting up the LitConfig object and various Lit
+# substitutions from CMake variables.
+#
+# Individual configuration files can take advantage of this bridge by
+# loading the file and then setting up the remaining Lit substitutions.
+#
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.format
+
+# Basic configuration of the test suite
+config.name = os.path.basename('@LIBCXX_TEST_CONFIG@')
+config.test_source_root = os.path.join('@LIBCXX_SOURCE_DIR@', 'test')
+config.test_format = libcxx.test.format.CxxStandardLibraryTest()
+config.recursiveExpansionLimit = 10
+config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
+
+# Add substitutions for bootstrapping the test suite configuration
+import shlex
+config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
+config.substitutions.append(('%{libcxx}', '@LIBCXX_SOURCE_DIR@'))
+config.substitutions.append(('%{include}', '@LIBCXX_GENERATED_INCLUDE_DIR@'))
+config.substitutions.append(('%{target-include}', '@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@'))
+config.substitutions.append(('%{lib}', '@LIBCXX_LIBRARY_DIR@'))
+config.substitutions.append(('%{module}', '@LIBCXX_GENERATED_MODULE_DIR@'))
+config.substitutions.append(('%{test-tools}', '@LIBCXX_TEST_TOOLS_PATH@'))
+
+# The test needs to manually rebuild the module. The compiler flags used in the
+# test need to be the same as the compiler flags used to generate the module.
+# In the future, when CMake can generated modules this may no longer be
+# necessary.
+# TODO MODULES whether it's possible to remove this substitution.
+config.substitutions.append(('%{cmake}', '@CMAKE_COMMAND@'))

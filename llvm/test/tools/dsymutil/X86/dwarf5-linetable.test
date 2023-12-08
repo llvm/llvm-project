@@ -1,0 +1,31 @@
+# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-line -debug-line-str --verbose - | FileCheck %s
+
+# RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-line -debug-line-str --verbose - | FileCheck %s
+
+# Source:
+#   int main() {
+#     return 0;
+#   }
+# Compile with:
+#   clang -gdwarf-5 dwarf5-linetable.c -c -o dwarf5-linetable.o
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        dwarf5-linetable.o
+    timestamp:       1513021112
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000FA0, size: 0x0000000F }
+...
+
+# CHECK: .debug_line contents:
+# CHECK: debug_line
+# CHECK: Line table prologue:
+# CHECK: total_length:
+# CHECK: version: 5
+# CHECK: include_directories[  0] =  .debug_line_str[0x00000000] = "/Users/buildslave/avl_test/test-line-str"
+# CHECK: file_names[  0]:
+# CHECK: name:  .debug_line_str[0x00000029] = "dwarf5-linetable.c"
+# CHECK: .debug_line_str contents:
+# CHECK: "/Users/buildslave/avl_test/test-line-str"
+# CHECK: "dwarf5-linetable.c"

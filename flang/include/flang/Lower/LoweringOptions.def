@@ -1,0 +1,41 @@
+//===--- LoweringOptions.def - Lowering options database ---------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the lowering options. Users of this file must define
+/// LOWERINGOPT macro to make use of this information.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LOWERINGOPT
+#  error Define the LOWERINGOPT macro to handle lowering options
+#endif
+
+#ifndef ENUM_LOWERINGOPT
+#  define ENUM_LOWERINGOPT(Name, Type, Bits, Default) \
+LOWERINGOPT(Name, Bits, Default)
+#endif
+
+/// If true, lower transpose without a runtime call.
+ENUM_LOWERINGOPT(OptimizeTranspose, unsigned, 1, 1)
+
+/// If true, enable polymorphic type lowering feature. Off by default.
+ENUM_LOWERINGOPT(PolymorphicTypeImpl, unsigned, 1, 0)
+
+/// If true, lower to High level FIR before lowering to FIR. On by default.
+ENUM_LOWERINGOPT(LowerToHighLevelFIR, unsigned, 1, 1)
+
+/// If true, reverse PowerPC native vector element order.
+ENUM_LOWERINGOPT(NoPPCNativeVecElemOrder, unsigned, 1, 0)
+
+/// If true, assume external names will be suffixed with an underscore.
+/// On by default.
+ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
+
+#undef LOWERINGOPT
+#undef ENUM_LOWERINGOPT

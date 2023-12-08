@@ -1,0 +1,323 @@
+## In this test we test how machine-specific dynamic tags are dumped.
+
+## Case 1: Test that hexagon machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=1 -o %t.hex %s
+# RUN: llvm-objdump -p %t.hex | FileCheck %s --check-prefix=HEXAGON
+
+# HEXAGON:      Dynamic Section:
+# HEXAGON-NEXT:  HEXAGON_SYMSZ 0x0000000000000010
+# HEXAGON-NEXT:  HEXAGON_VER   0x0000000000001000
+# HEXAGON-NEXT:  HEXAGON_PLT   0x0000000000001000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_HEXAGON
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_HEXAGON_SYMSZ
+        Value: 0x10
+      - Tag:   DT_HEXAGON_VER
+        Value: 0x1000
+      - Tag:   DT_HEXAGON_PLT
+        Value: 0x1000
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 2: Test that MIPS machine-specific tags can be dumped.
+##         MIPS has a few long tag names. Show that we indent columns properly.
+# RUN: yaml2obj --docnum=2 -o %t.mips %s
+# RUN: llvm-objdump -p %t.mips | FileCheck %s  --strict-whitespace --match-full-lines --check-prefix=MIPS
+
+#      MIPS:Dynamic Section:
+# MIPS-NEXT:  MIPS_RLD_VERSION           0x0000000012345678
+# MIPS-NEXT:  MIPS_TIME_STAMP            0x0000000011223344
+# MIPS-NEXT:  MIPS_ICHECKSUM             0x0000000011112222
+# MIPS-NEXT:  MIPS_IVERSION              0x0000000000000001
+# MIPS-NEXT:  MIPS_FLAGS                 0x0000000011111111
+# MIPS-NEXT:  MIPS_BASE_ADDRESS          0x0000000087654321
+# MIPS-NEXT:  MIPS_MSYM                  0x0000000000001000
+# MIPS-NEXT:  MIPS_CONFLICT              0x0000000000001000
+# MIPS-NEXT:  MIPS_LIBLIST               0x0000000000001000
+# MIPS-NEXT:  MIPS_LOCAL_GOTNO           0x0000000000000001
+# MIPS-NEXT:  MIPS_CONFLICTNO            0x0000000000000001
+# MIPS-NEXT:  MIPS_LIBLISTNO             0x0000000000000001
+# MIPS-NEXT:  MIPS_SYMTABNO              0x0000000000000001
+# MIPS-NEXT:  MIPS_UNREFEXTNO            0x0000000000000000
+# MIPS-NEXT:  MIPS_GOTSYM                0x0000000000000000
+# MIPS-NEXT:  MIPS_HIPAGENO              0x0000000088776655
+# MIPS-NEXT:  MIPS_RLD_MAP               0x0000000000001000
+# MIPS-NEXT:  MIPS_DELTA_CLASS           0x0000000000001000
+# MIPS-NEXT:  MIPS_DELTA_CLASS_NO        0x0000000000000001
+# MIPS-NEXT:  MIPS_DELTA_INSTANCE        0x0000000000001000
+# MIPS-NEXT:  MIPS_DELTA_INSTANCE_NO     0x0000000000000001
+# MIPS-NEXT:  MIPS_DELTA_RELOC           0x0000000000001000
+# MIPS-NEXT:  MIPS_DELTA_RELOC_NO        0x0000000000000001
+# MIPS-NEXT:  MIPS_DELTA_SYM             0x0000000000001000
+# MIPS-NEXT:  MIPS_DELTA_SYM_NO          0x0000000000000001
+# MIPS-NEXT:  MIPS_DELTA_CLASSSYM        0x0000000000001000
+# MIPS-NEXT:  MIPS_DELTA_CLASSSYM_NO     0x0000000000000001
+# MIPS-NEXT:  MIPS_CXX_FLAGS             0x0000000088887777
+# MIPS-NEXT:  MIPS_PIXIE_INIT            0x0000000000001000
+# MIPS-NEXT:  MIPS_LOCALPAGE_GOTIDX      0x0000000000000001
+# MIPS-NEXT:  MIPS_LOCAL_GOTIDX          0x0000000000000001
+# MIPS-NEXT:  MIPS_HIDDEN_GOTIDX         0x0000000000000001
+# MIPS-NEXT:  MIPS_PROTECTED_GOTIDX      0x0000000000000001
+# MIPS-NEXT:  MIPS_OPTIONS               0x0000000000001000
+# MIPS-NEXT:  MIPS_INTERFACE             0x0000000000001000
+# MIPS-NEXT:  MIPS_DYNSTR_ALIGN          0x0000000088888888
+# MIPS-NEXT:  MIPS_INTERFACE_SIZE        0x0000000000000010
+# MIPS-NEXT:  MIPS_RLD_TEXT_RESOLVE_ADDR 0x0000000000000008
+# MIPS-NEXT:  MIPS_PERF_SUFFIX           0x0000000000000000
+# MIPS-NEXT:  MIPS_COMPACT_SIZE          0x0000000000000010
+# MIPS-NEXT:  MIPS_GP_VALUE              0x0000000000000001
+# MIPS-NEXT:  MIPS_AUX_DYNAMIC           0x0000000000001000
+# MIPS-NEXT:  MIPS_PLTGOT                0x0000000000001000
+# MIPS-NEXT:  MIPS_RWPLT                 0x0000000000001000
+# MIPS-NEXT:  MIPS_RLD_MAP_REL           0x0000000000001000
+# MIPS-NEXT:  MIPS_XHASH                 0x0000000000002000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_RLD_VERSION
+        Value: 0x12345678
+      - Tag:   DT_MIPS_TIME_STAMP
+        Value: 0x11223344
+      - Tag:   DT_MIPS_ICHECKSUM
+        Value: 0x11112222
+      - Tag:   DT_MIPS_IVERSION
+        Value: 0x1
+      - Tag:   DT_MIPS_FLAGS
+        Value: 0x11111111
+      - Tag:   DT_MIPS_BASE_ADDRESS
+        Value: 0x87654321
+      - Tag:   DT_MIPS_MSYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_CONFLICT
+        Value: 0x1000
+      - Tag:   DT_MIPS_LIBLIST
+        Value: 0x1000
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_CONFLICTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_LIBLISTNO
+        Value: 0x1
+      - Tag:   DT_MIPS_SYMTABNO
+        Value: 0x1
+      - Tag:   DT_MIPS_UNREFEXTNO
+        Value: 0x0
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 0x0
+      - Tag:   DT_MIPS_HIPAGENO
+        Value: 0x88776655
+      - Tag:   DT_MIPS_RLD_MAP
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASS
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASS_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_INSTANCE
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_INSTANCE_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_RELOC
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_RELOC_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_SYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_SYM_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_DELTA_CLASSSYM
+        Value: 0x1000
+      - Tag:   DT_MIPS_DELTA_CLASSSYM_NO
+        Value: 0x1
+      - Tag:   DT_MIPS_CXX_FLAGS
+        Value: 0x88887777
+      - Tag:   DT_MIPS_PIXIE_INIT
+        Value: 0x1000
+      - Tag:   DT_MIPS_LOCALPAGE_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_LOCAL_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_HIDDEN_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_PROTECTED_GOTIDX
+        Value: 0x1
+      - Tag:   DT_MIPS_OPTIONS
+        Value: 0x1000
+      - Tag:   DT_MIPS_INTERFACE
+        Value: 0x1000
+      - Tag:   DT_MIPS_DYNSTR_ALIGN
+        Value: 0x88888888
+      - Tag:   DT_MIPS_INTERFACE_SIZE
+        Value: 0x10
+      - Tag:   DT_MIPS_RLD_TEXT_RESOLVE_ADDR
+        Value: 0x8
+      - Tag:   DT_MIPS_PERF_SUFFIX
+        Value: 0x0
+      - Tag:   DT_MIPS_COMPACT_SIZE
+        Value: 0x10
+      - Tag:   DT_MIPS_GP_VALUE
+        Value: 0x1
+      - Tag:   DT_MIPS_AUX_DYNAMIC
+        Value: 0x1000
+      - Tag:   DT_MIPS_PLTGOT
+        Value: 0x1000
+      - Tag:   DT_MIPS_RWPLT
+        Value: 0x1000
+      - Tag:   DT_MIPS_RLD_MAP_REL
+        Value: 0x1000
+      - Tag:   DT_MIPS_XHASH
+        Value: 0x2000
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 3: Test that PPC machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=3 -o %t.ppc %s
+# RUN: llvm-objdump -p %t.ppc | FileCheck %s --check-prefix=PPC
+
+# PPC:      Dynamic Section:
+# PPC-NEXT:  PPC_GOT 0x000200c0
+# PPC-NEXT:  PPC_OPT 0x00000001
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_EXEC
+  Machine: EM_PPC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_PPC_GOT
+        Value: 0x200c0
+      - Tag:   DT_PPC_OPT
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 4: Test that PPC64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=4 -o %t.ppc64 %s
+# RUN: llvm-objdump -p %t.ppc64 | FileCheck %s --check-prefix=PPC64
+
+# PPC64:      Dynamic Section:
+# PPC64-NEXT:  PPC64_GLINK 0x0000000000001000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_PPC64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_PPC64_GLINK
+        Value: 0x1000
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:      PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 5: Test that AARCH64 machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=5 -o %t.aarch64 %s
+# RUN: llvm-objdump -p %t.aarch64 | FileCheck %s --check-prefix=AARCH64
+
+# AARCH64:      Dynamic Section:
+# AARCH64-NEXT:  AARCH64_BTI_PLT      0x0000000000000001
+# AARCH64-NEXT:  AARCH64_PAC_PLT      0x0000000000000002
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_AARCH64_BTI_PLT
+        Value: 1
+      - Tag:   DT_AARCH64_PAC_PLT
+        Value: 2
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 6: Test that RISC-V machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=6 %s -o %t.rv
+# RUN: llvm-objdump -p %t.rv | FileCheck %s --check-prefix=RISCV
+
+# RISCV:      Dynamic Section:
+# RISCV-NEXT:  RISCV_VARIANT_CC     0x0000000000000001
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RISCV_VARIANT_CC
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

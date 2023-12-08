@@ -1,0 +1,208 @@
+# RUN: llc -mtriple=aarch64-unknown-fuchsia -run-pass=greedy -verify-machineinstrs -o - %s | FileCheck %s
+
+# Check that we spill %31 and do not rematerialize it since the use operand
+# of ADDXri is killed by the STRXui in this block.
+
+# CHECK-LABEL: name: test
+# CHECK: bb.17:
+# CHECK:   STRXui
+# CHECK:   LDRXui
+# CHECK: bb.18:
+
+---
+name:            test
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: variable-sized, offset: 0, alignment: 32,
+      stack-id: default }
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $x0
+
+    %22:gpr64common = COPY $x0
+    CBZW $wzr, %bb.2
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %1:gpr64 = COPY $xzr
+    B %bb.3
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    $x0 = IMPLICIT_DEF
+    %1:gpr64 = COPY $x0
+
+  bb.3:
+    successors: %bb.4(0x30000000), %bb.5(0x50000000)
+
+    %2:gpr64common = COPY %1
+    CBNZX %1, %bb.5
+    B %bb.4
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %31:gpr64common = SUBXri $sp, 288, 0
+    $sp = ANDXri %31, 7930
+    %2:gpr64common = COPY $xzr
+
+  bb.5:
+    successors: %bb.6(0x80000000)
+
+    %9:gpr64common = COPY $xzr
+    %35:gpr64sp = ADDXri %2, 32, 0
+    %4:gpr64common = UBFMXri %2, 3, 63
+    %37:gpr64 = MOVi64imm -506381209866536712
+    %38:gpr32 = MOVi32imm -202116109
+    %39:gpr64common = nuw ADDXri %22, 836, 0
+    %41:gpr64common = nuw ADDXri %22, 648, 0
+    STRXui %37, %4, 1
+    STRWui %38, %4, 8
+    %8:gpr64common = UBFMXri %39, 3, 63
+    %7:gpr64common = UBFMXri %41, 3, 63
+    %47:gpr64 = MOVi64imm 0
+
+  bb.6:
+    successors: %bb.8(0x30000000), %bb.7(0x50000000)
+
+    %44:gpr64common = ADDXrr %22, %9
+    %10:gpr64common = ADDXri %44, 648, 0
+    %11:gpr64common = ANDSXri %10, 4098, implicit-def $nzcv
+    Bcc 0, %bb.8, implicit killed $nzcv
+    B %bb.7
+
+  bb.7:
+    successors: %bb.8(0x80000000)
+
+    BL 0, csr_aarch64_aapcs, implicit-def dead $lr
+
+  bb.8:
+    successors: %bb.9(0x04000000), %bb.24(0x7c000000)
+
+    CBNZW $wzr, %bb.24
+    B %bb.9
+
+  bb.9:
+    successors: %bb.10(0x7ffff800), %bb.11(0x00000800)
+
+    %55:gpr64common = ADDXrr %22, %9
+    %56:gpr64sp = ADDXri %55, 648, 0
+    CBZX %11, %bb.10
+    B %bb.11
+
+  bb.10:
+    successors: %bb.11(0x80000000)
+
+    $x0 = ADDXri %55, 648, 0
+    $x2 = IMPLICIT_DEF
+    $w1 = COPY $wzr
+    $x1 = nuw ADDXri %35, 32, 0
+    BL 0, csr_aarch64_aapcs, implicit-def dead $lr
+    %66:gpr64sp = nuw ADDXri %35, 48, 0
+    $x0 = ADDXri %55, 696, 0
+    $x2 = IMPLICIT_DEF
+    $x1 = COPY %66
+
+  bb.11:
+    successors: %bb.15(0x7ffff800), %bb.12(0x00000800)
+
+    CBZX %11, %bb.15
+    B %bb.12
+
+  bb.12:
+    successors: %bb.13(0x00000000), %bb.14(0x80000000)
+
+    CBNZW $wzr, %bb.14
+    B %bb.13
+
+  bb.13:
+    successors:
+
+  bb.14:
+    successors: %bb.18(0x80000000)
+
+    $x1 = COPY %56
+    B %bb.18
+
+  bb.15:
+    successors: %bb.16(0x00000000), %bb.17(0x80000000)
+
+    %76:gpr32 = LDRBBui %7, 0
+    CBZW %76, %bb.17
+    B %bb.16
+
+  bb.16:
+    successors:
+
+    %74:gpr64common = ADDXrr %22, %9
+    %15:gpr64sp = ADDXri %74, 648, 0
+    $x0 = COPY %15
+
+  bb.17:
+    successors: %bb.18(0x80000000)
+
+    STRXui %22, %55, 81
+
+  bb.18:
+    successors: %bb.19(0x80000000), %bb.20(0x00000000)
+
+    %79:gpr32 = LDRBBui %8, 0
+    CBNZW %79, %bb.20
+    B %bb.19
+
+  bb.19:
+    successors: %bb.21(0x80000000), %bb.20(0x00000000)
+
+    %80:gpr32 = MOVi32imm 1
+    CBNZW %80, %bb.21
+    B %bb.20
+
+  bb.20:
+    successors:
+
+    %16:gpr64sp = ADDXri %22, 836, 0
+    $x0 = COPY %16
+
+  bb.21:
+    successors: %bb.24(0x00000000), %bb.22(0x80000000)
+
+    CBZW $wzr, %bb.24
+
+  bb.22:
+    successors: %bb.26(0x80000000)
+
+    B %bb.26
+
+  bb.24:
+    successors: %bb.25(0x04000000), %bb.6(0x7c000000)
+
+    %8:gpr64common = ADDXri %8, 24, 0
+    %7:gpr64common = ADDXri %7, 24, 0
+    CBNZW $wzr, %bb.6
+
+  bb.25:
+    successors: %bb.26(0x80000000)
+
+    %56:gpr64sp = COPY $xzr
+
+  bb.26:
+    successors: %bb.28(0x50000000), %bb.27(0x30000000)
+
+    undef %83.sub_32:gpr64 = MOVi32imm 1172321806
+    STRXui %83, %2, 0
+    CBNZX %1, %bb.28
+    B %bb.27
+
+  bb.27:
+    successors: %bb.28(0x80000000)
+
+    STRXui $xzr, %4, 0
+
+  bb.28:
+    $x0 = COPY %56
+    RET_ReallyLR implicit $x0
+
+...

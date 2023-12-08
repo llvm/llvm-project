@@ -1,0 +1,14 @@
+## Test running llvm-ifs with --output-format option to generate deprecation warnings
+
+# RUN: llvm-ifs  --output-format=IFS --output=%t %s 2>&1 | FileCheck %s --check-prefix=WARNING
+# RUN: not llvm-ifs  --output-format=IFS --output=%t --output-ifs=%t %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ifs-v1
+SoName: somelib.so
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
+Symbols: []
+...
+
+# WARNING: warning: --output-format option is deprecated, please use --output-{FILE_FORMAT} options instead
+# ERROR: error: '--output-format' cannot be used with '--output-{FILE_FORMAT}' options at the same time

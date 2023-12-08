@@ -1,0 +1,7 @@
+# RUN: llvm-cxxmap --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW: LLVM C++ mangled name remapper
+# HELP: USAGE
+# HELP: CXX Map Options
+# HELP: Color Options
+# HELP: Generic Options

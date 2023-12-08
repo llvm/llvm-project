@@ -1,0 +1,23 @@
+name: Labeling new issues
+on:
+  issues:
+    types: ['opened']
+
+permissions:
+  contents: read
+
+jobs:
+  automate-issues-labels:
+    permissions:
+      issues: write
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - uses: llvm/actions/issue-labeler@main
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/new-issues-labeler.yml
+          include-title: 1
+          include-body: 0
+          sync-labels: 0
+          enable-versioned-regex: 0

@@ -1,0 +1,137 @@
+# We do not support call site parameters when the machine instructions loading a value
+# into the forwarding register has a memory operand and multiple defs.
+# The generated code was modified a bit in order to have the scenario.
+#
+# RUN: llc -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - \
+# RUN:  | llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
+#
+# Command: clang -g -O2 -Xclang -femit-debug-entry-values test.c
+#          -mllvm -stop-before=machineverifier -o test.mir -c
+# extern void callee(int);
+# extern int y;
+#
+# #define FORCE_SPILL()                                                          \
+#   asm volatile(""                                                              \
+#                :                                                               \
+#                :                                                               \
+#                : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "r8", "r9",  \
+#                  "r10", "r11", "r12", "r13", "r14", "r15")
+#
+# __attribute__((disable_tail_calls)) void caller(int x) {
+#   FORCE_SPILL();
+#   x = x % y;
+#   callee(x);
+# }
+#
+--- |
+  ; ModuleID = 'test.c'
+  source_filename = "test.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @y = external dso_local local_unnamed_addr global i32, align 4
+  
+  ; Function Attrs: nounwind uwtable
+  define dso_local void @caller(i32 %x) local_unnamed_addr !dbg !12 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %x, metadata !14, metadata !DIExpression()), !dbg !15
+    call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"(), !dbg !16, !srcloc !17
+    %0 = load i32, i32* @y, align 4, !dbg !18
+    %rem = srem i32 %x, %0, !dbg !18
+    call void @llvm.dbg.value(metadata i32 %rem, metadata !14, metadata !DIExpression()), !dbg !15
+    call void @callee(i32 %rem), !dbg !18
+    ret void, !dbg !18
+  }
+
+  declare !dbg !4 dso_local void @callee(i32) local_unnamed_addr
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10}
+  !llvm.ident = !{!11}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "callee", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 7, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{!"clang version 11.0.0"}
+  !12 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 11, type: !5, scopeLine: 11, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !13 = !{!14}
+  !14 = !DILocalVariable(name: "x", arg: 1, scope: !12, file: !1, line: 11, type: !7)
+  !15 = !DILocation(line: 0, scope: !12)
+  !16 = !DILocation(line: 12, column: 4, scope: !12)
+  !17 = !{i32 -2147471651}
+  !18 = !DILocation(line: 13, column: 12, scope: !12)
+
+...
+---
+name:            caller
+alignment:       16
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -60, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 30, fwdArgRegs: 
+      - { arg: 0, reg: '$edi' } }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $rbp, $r15, $r14, $r13, $r12, $rbx
+  
+    DBG_VALUE $edi, $noreg, !14, !DIExpression(), debug-location !15
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 24
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 32
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 40
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 48
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 56
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 64
+    CFI_INSTRUCTION offset $rbx, -56
+    CFI_INSTRUCTION offset $r12, -48
+    CFI_INSTRUCTION offset $r13, -40
+    CFI_INSTRUCTION offset $r14, -32
+    CFI_INSTRUCTION offset $r15, -24
+    CFI_INSTRUCTION offset $rbp, -16
+    MOV32mr $rsp, 1, $noreg, 4, $noreg, $edi :: (store (s32) into %stack.0)
+    DBG_VALUE $rsp, 0, !14, !DIExpression(DW_OP_plus_uconst, 4), debug-location !15
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $df, 12, implicit-def early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !17, debug-location !16
+    $eax = MOV32rm $rsp, 1, $noreg, 4, $noreg :: (load (s32) from %stack.0)
+    DBG_VALUE $eax, $noreg, !14, !DIExpression(), debug-location !15
+    CDQ implicit-def $eax, implicit-def $edx, implicit $eax, debug-location !18
+    DIV64m $rsp, 1, $noreg, 24, $noreg, implicit-def dead $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax, implicit $rdx, debug-location !18 :: (load (s64) from %stack.0)
+    $edi = MOV32rr $edx, debug-location !18
+    DBG_VALUE $edi, $noreg, !14, !DIExpression(), debug-location !15
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !18
+    $rsp = frame-destroy ADD64ri8 $rsp, 8, implicit-def dead $eflags, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 56, debug-location !18
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 48, debug-location !18
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 40, debug-location !18
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 32, debug-location !18
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 24, debug-location !18
+    $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 16, debug-location !18
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !18
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !18
+    RET64 debug-location !18
+
+...

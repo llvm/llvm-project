@@ -1,0 +1,32 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the cfi def_cfa_register
+# operands correctly.
+
+--- |
+
+  define void @func() #0 {
+  entry:
+    unreachable
+  }
+
+  attributes #0 = { "frame-pointer"="all" }
+
+...
+---
+name:            func
+tracksRegLiveness: true
+frameInfo:
+  stackSize:     8
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+body: |
+  bb.0.entry:
+    liveins: $rbp
+
+    PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = MOV64rr $rsp
+    ; CHECK: CFI_INSTRUCTION def_cfa_register $rbp
+    CFI_INSTRUCTION def_cfa_register $rbp
+...

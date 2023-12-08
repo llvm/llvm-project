@@ -1,0 +1,5 @@
+// double-quotes/A.framework/Modules/module.modulemap
+framework module A {
+  header "A.h"
+  header "A0.h"
+}

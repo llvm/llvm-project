@@ -1,0 +1,626 @@
+## Show that all non-machine specific tags can be read and printed correctly.
+## Also show that -d is an alias for --dynamic-table.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --dynamic-table %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=LLVM64
+# RUN: llvm-readobj -d %t1 | FileCheck %s --check-prefix=LLVM64
+# RUN: llvm-readelf --dynamic-table %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU64
+# RUN: llvm-readelf -d %t1 | FileCheck %s --check-prefix=GNU64
+
+#      LLVM64:DynamicSection [ (61 entries)
+# LLVM64-NEXT:  Tag                Type                 Name/Value
+# LLVM64-NEXT:  0x0000000000000001 NEEDED               Shared library: [D]
+# LLVM64-NEXT:  0x0000000000000002 PLTRELSZ             16 (bytes)
+# LLVM64-NEXT:  0x0000000000000003 PLTGOT               0x1000
+# LLVM64-NEXT:  0x0000000000000004 HASH                 0x1000
+# LLVM64-NEXT:  0x0000000000000005 STRTAB               0x1000
+# LLVM64-NEXT:  0x0000000000000006 SYMTAB               0x1000
+# LLVM64-NEXT:  0x0000000000000007 RELA                 0x1000
+# LLVM64-NEXT:  0x0000000000000008 RELASZ               16 (bytes)
+# LLVM64-NEXT:  0x0000000000000009 RELAENT              1929 (bytes)
+# LLVM64-NEXT:  0x000000000000000A STRSZ                16 (bytes)
+# LLVM64-NEXT:  0x000000000000000B SYMENT               2439 (bytes)
+# LLVM64-NEXT:  0x000000000000000C INIT                 0x1000
+# LLVM64-NEXT:  0x000000000000000D FINI                 0x1000
+# LLVM64-NEXT:  0x000000000000000E SONAME               Library soname: [U]
+# LLVM64-NEXT:  0x000000000000000F RPATH                Library rpath: [f]
+# LLVM64-NEXT:  0x0000000000000010 SYMBOLIC             0x1234567890ABCDEF
+# LLVM64-NEXT:  0x0000000000000011 REL                  0x1000
+# LLVM64-NEXT:  0x0000000000000012 RELSZ                16 (bytes)
+# LLVM64-NEXT:  0x0000000000000013 RELENT               291 (bytes)
+# LLVM64-NEXT:  0x0000000000000014 PLTREL               RELA
+# LLVM64-NEXT:  0x0000000000000015 DEBUG                0xFEDCBA0987654321
+# LLVM64-NEXT:  0x0000000000000016 TEXTREL              0x1122334455667788
+# LLVM64-NEXT:  0x0000000000000017 JMPREL               0x1000
+# LLVM64-NEXT:  0x0000000000000018 BIND_NOW             0x8877665544332211
+# LLVM64-NEXT:  0x0000000000000019 INIT_ARRAY           0x1000
+# LLVM64-NEXT:  0x000000000000001A FINI_ARRAY           0x1000
+# LLVM64-NEXT:  0x000000000000001B INIT_ARRAYSZ         16 (bytes)
+# LLVM64-NEXT:  0x000000000000001C FINI_ARRAYSZ         16 (bytes)
+# LLVM64-NEXT:  0x000000000000001D RUNPATH              Library runpath: [w]
+# LLVM64-NEXT:  0x000000000000001E FLAGS                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS {{$}}
+# LLVM64-NEXT:  0x0000000000000020 PREINIT_ARRAY        0x1000
+# LLVM64-NEXT:  0x0000000000000021 PREINIT_ARRAYSZ      16 (bytes)
+# LLVM64-NEXT:  0x0000000000000022 SYMTAB_SHNDX         0x1000
+# LLVM64-NEXT:  0x0000000000000023 RELRSZ               16 (bytes)
+# LLVM64-NEXT:  0x0000000000000024 RELR                 0x1000
+# LLVM64-NEXT:  0x0000000000000025 RELRENT              17185 (bytes)
+# LLVM64-NEXT:  0x000000006000000F ANDROID_REL          0x1000
+# LLVM64-NEXT:  0x0000000060000010 ANDROID_RELSZ        16 (bytes)
+# LLVM64-NEXT:  0x0000000060000011 ANDROID_RELA         0x1000
+# LLVM64-NEXT:  0x0000000060000012 ANDROID_RELASZ       16 (bytes)
+# LLVM64-NEXT:  0x000000006FFFE000 ANDROID_RELR         0x1000
+# LLVM64-NEXT:  0x000000006FFFE001 ANDROID_RELRSZ       0x10
+# LLVM64-NEXT:  0x000000006FFFE003 ANDROID_RELRENT      0x1234
+# LLVM64-NEXT:  0x000000006FFFFEF5 GNU_HASH             0x1000
+# LLVM64-NEXT:  0x000000006FFFFEF6 TLSDESC_PLT          0x1000
+# LLVM64-NEXT:  0x000000006FFFFEF7 TLSDESC_GOT          0x1000
+# LLVM64-NEXT:  0x000000006FFFFFF9 RELACOUNT            0
+# LLVM64-NEXT:  0x000000006FFFFFFA RELCOUNT             0
+# LLVM64-NEXT:  0x000000006FFFFFFB FLAGS_1              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE {{$}}
+# LLVM64-NEXT:  0x000000006FFFFFF0 VERSYM               0x1000
+# LLVM64-NEXT:  0x000000006FFFFFFC VERDEF               0x1000
+# LLVM64-NEXT:  0x000000006FFFFFFD VERDEFNUM            0
+# LLVM64-NEXT:  0x000000006FFFFFFE VERNEED              0x1000
+# LLVM64-NEXT:  0x000000006FFFFFFF VERNEEDNUM           0
+# LLVM64-NEXT:  0x000000007FFFFFFD AUXILIARY            Auxiliary library: [D]
+# LLVM64-NEXT:  0x000000007FFFFFFE USED                 Not needed object: [U]
+# LLVM64-NEXT:  0x000000007FFFFFFF FILTER               Filter library: [U]
+# LLVM64-NEXT:  0x0000000012345678 <unknown:>0x12345678 0x8765432187654321
+# LLVM64-NEXT:  0x000000006ABCDEF0 <unknown:>0x6abcdef0 0x9988776655443322
+# LLVM64-NEXT:  0x0000000076543210 <unknown:>0x76543210 0x5555666677778888
+# LLVM64-NEXT:  0x0000000000000000 NULL                 0x0
+# LLVM64-NEXT:]
+
+#      GNU64:Dynamic section at offset {{.*}} contains 61 entries:
+# GNU64-NEXT:  Tag                Type                   Name/Value
+# GNU64-NEXT:  0x0000000000000001 (NEEDED)               Shared library: [D]
+# GNU64-NEXT:  0x0000000000000002 (PLTRELSZ)             16 (bytes)
+# GNU64-NEXT:  0x0000000000000003 (PLTGOT)               0x1000
+# GNU64-NEXT:  0x0000000000000004 (HASH)                 0x1000
+# GNU64-NEXT:  0x0000000000000005 (STRTAB)               0x1000
+# GNU64-NEXT:  0x0000000000000006 (SYMTAB)               0x1000
+# GNU64-NEXT:  0x0000000000000007 (RELA)                 0x1000
+# GNU64-NEXT:  0x0000000000000008 (RELASZ)               16 (bytes)
+# GNU64-NEXT:  0x0000000000000009 (RELAENT)              1929 (bytes)
+# GNU64-NEXT:  0x000000000000000a (STRSZ)                16 (bytes)
+# GNU64-NEXT:  0x000000000000000b (SYMENT)               2439 (bytes)
+# GNU64-NEXT:  0x000000000000000c (INIT)                 0x1000
+# GNU64-NEXT:  0x000000000000000d (FINI)                 0x1000
+# GNU64-NEXT:  0x000000000000000e (SONAME)               Library soname: [U]
+# GNU64-NEXT:  0x000000000000000f (RPATH)                Library rpath: [f]
+# GNU64-NEXT:  0x0000000000000010 (SYMBOLIC)             0x1234567890abcdef
+# GNU64-NEXT:  0x0000000000000011 (REL)                  0x1000
+# GNU64-NEXT:  0x0000000000000012 (RELSZ)                16 (bytes)
+# GNU64-NEXT:  0x0000000000000013 (RELENT)               291 (bytes)
+# GNU64-NEXT:  0x0000000000000014 (PLTREL)               RELA
+# GNU64-NEXT:  0x0000000000000015 (DEBUG)                0xfedcba0987654321
+# GNU64-NEXT:  0x0000000000000016 (TEXTREL)              0x1122334455667788
+# GNU64-NEXT:  0x0000000000000017 (JMPREL)               0x1000
+# GNU64-NEXT:  0x0000000000000018 (BIND_NOW)             0x8877665544332211
+# GNU64-NEXT:  0x0000000000000019 (INIT_ARRAY)           0x1000
+# GNU64-NEXT:  0x000000000000001a (FINI_ARRAY)           0x1000
+# GNU64-NEXT:  0x000000000000001b (INIT_ARRAYSZ)         16 (bytes)
+# GNU64-NEXT:  0x000000000000001c (FINI_ARRAYSZ)         16 (bytes)
+# GNU64-NEXT:  0x000000000000001d (RUNPATH)              Library runpath: [w]
+# GNU64-NEXT:  0x000000000000001e (FLAGS)                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS {{$}}
+# GNU64-NEXT:  0x0000000000000020 (PREINIT_ARRAY)        0x1000
+# GNU64-NEXT:  0x0000000000000021 (PREINIT_ARRAYSZ)      16 (bytes)
+# GNU64-NEXT:  0x0000000000000022 (SYMTAB_SHNDX)         0x1000
+# GNU64-NEXT:  0x0000000000000023 (RELRSZ)               16 (bytes)
+# GNU64-NEXT:  0x0000000000000024 (RELR)                 0x1000
+# GNU64-NEXT:  0x0000000000000025 (RELRENT)              17185 (bytes)
+# GNU64-NEXT:  0x000000006000000f (ANDROID_REL)          0x1000
+# GNU64-NEXT:  0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
+# GNU64-NEXT:  0x0000000060000011 (ANDROID_RELA)         0x1000
+# GNU64-NEXT:  0x0000000060000012 (ANDROID_RELASZ)       16 (bytes)
+# GNU64-NEXT:  0x000000006fffe000 (ANDROID_RELR)         0x1000
+# GNU64-NEXT:  0x000000006fffe001 (ANDROID_RELRSZ)       0x10
+# GNU64-NEXT:  0x000000006fffe003 (ANDROID_RELRENT)      0x1234
+# GNU64-NEXT:  0x000000006ffffef5 (GNU_HASH)             0x1000
+# GNU64-NEXT:  0x000000006ffffef6 (TLSDESC_PLT)          0x1000
+# GNU64-NEXT:  0x000000006ffffef7 (TLSDESC_GOT)          0x1000
+# GNU64-NEXT:  0x000000006ffffff9 (RELACOUNT)            0
+# GNU64-NEXT:  0x000000006ffffffa (RELCOUNT)             0
+# GNU64-NEXT:  0x000000006ffffffb (FLAGS_1)              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE {{$}}
+# GNU64-NEXT:  0x000000006ffffff0 (VERSYM)               0x1000
+# GNU64-NEXT:  0x000000006ffffffc (VERDEF)               0x1000
+# GNU64-NEXT:  0x000000006ffffffd (VERDEFNUM)            0
+# GNU64-NEXT:  0x000000006ffffffe (VERNEED)              0x1000
+# GNU64-NEXT:  0x000000006fffffff (VERNEEDNUM)           0
+# GNU64-NEXT:  0x000000007ffffffd (AUXILIARY)            Auxiliary library: [D]
+# GNU64-NEXT:  0x000000007ffffffe (USED)                 Not needed object: [U]
+# GNU64-NEXT:  0x000000007fffffff (FILTER)               Filter library: [U]
+# GNU64-NEXT:  0x0000000012345678 (<unknown:>0x12345678) 0x8765432187654321
+# GNU64-NEXT:  0x000000006abcdef0 (<unknown:>0x6abcdef0) 0x9988776655443322
+# GNU64-NEXT:  0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
+# GNU64-NEXT:  0x0000000000000000 (NULL)                 0x0
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS[[BITS=64]]
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  EPhEntSize: [[PHENTSIZE=<none>]]
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_NEEDED
+        Value: 0x1
+      - Tag:   DT_PLTRELSZ
+        Value: 0x10
+      - Tag:   DT_PLTGOT
+        Value: 0x1000
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_SYMTAB
+        Value: 0x1000
+      - Tag:   DT_RELA
+        Value: 0x1000
+      - Tag:   DT_RELASZ
+        Value: 0x10
+      - Tag:   DT_RELAENT
+        Value: 0x789
+      - Tag:   DT_STRSZ
+        Value: 0x10
+      - Tag:   DT_SYMENT
+        Value: 0x987
+      - Tag:   DT_INIT
+        Value: 0x1000
+      - Tag:   DT_FINI
+        Value: 0x1000
+      - Tag:   DT_SONAME
+        Value: 0x3
+      - Tag:   DT_RPATH
+        Value: 0x5
+      - Tag:   DT_SYMBOLIC
+        Value: [[SYMBOLIC=0x1234567890abcdef]]
+      - Tag:   DT_REL
+        Value: 0x1000
+      - Tag:   DT_RELSZ
+        Value: 0x10
+      - Tag:   DT_RELENT
+        Value: 0x123
+      - Tag:   DT_PLTREL
+        Value: 0x7
+      - Tag:   DT_DEBUG
+        Value: [[DEBUG=0xfedcba0987654321]]
+      - Tag:   DT_TEXTREL
+        Value: [[TEXTREL=0x1122334455667788]]
+      - Tag:   DT_JMPREL
+        Value: 0x1000
+      - Tag:   DT_BIND_NOW
+        Value: [[BINDNOW=0x8877665544332211]]
+      - Tag:   DT_INIT_ARRAY
+        Value: 0x1000
+      - Tag:   DT_FINI_ARRAY
+        Value: 0x1000
+      - Tag:   DT_INIT_ARRAYSZ
+        Value: 0x10
+      - Tag:   DT_FINI_ARRAYSZ
+        Value: 0x10
+      - Tag:   DT_RUNPATH
+        Value: 0x7
+      - Tag:   DT_FLAGS
+        Value: [[FLAGS=0xffffffffffffffff]]
+      - Tag:   DT_PREINIT_ARRAY
+        Value: 0x1000
+      - Tag:   DT_PREINIT_ARRAYSZ
+        Value: 0x10
+      - Tag:   DT_SYMTAB_SHNDX
+        Value: 0x1000
+      - Tag:   DT_RELRSZ
+        Value: 0x10
+      - Tag:   DT_RELR
+        Value: 0x1000
+      - Tag:   DT_RELRENT
+        Value: 0x4321
+      - Tag:   DT_ANDROID_REL
+        Value: 0x1000
+      - Tag:   DT_ANDROID_RELSZ
+        Value: 0x10
+      - Tag:   DT_ANDROID_RELA
+        Value: 0x1000
+      - Tag:   DT_ANDROID_RELASZ
+        Value: 0x10
+      - Tag:   DT_ANDROID_RELR
+        Value: 0x1000
+      - Tag:   DT_ANDROID_RELRSZ
+        Value: 0x10
+      - Tag:   DT_ANDROID_RELRENT
+        Value: 0x1234
+      - Tag:   DT_GNU_HASH
+        Value: 0x1000
+      - Tag:   DT_TLSDESC_PLT
+        Value: 0x1000
+      - Tag:   DT_TLSDESC_GOT
+        Value: 0x1000
+      - Tag:   DT_RELACOUNT
+        Value: 0x0
+      - Tag:   DT_RELCOUNT
+        Value: 0x0
+      - Tag:   DT_FLAGS_1
+        Value: [[FLAGS=0xffffffffffffffff]]
+      - Tag:   DT_VERSYM
+        Value: 0x1000
+      - Tag:   DT_VERDEF
+        Value: 0x1000
+      - Tag:   DT_VERDEFNUM
+        Value: 0x0
+      - Tag:   DT_VERNEED
+        Value: 0x1000
+      - Tag:   DT_VERNEEDNUM
+        Value: 0x0
+      - Tag:   DT_AUXILIARY
+        Value: 0x1
+      - Tag:   DT_USED
+        Value: 0x3
+      - Tag:   DT_FILTER
+        Value: 0x3
+## Show behaviour for unknown values in special and un-marked ranges.
+## An arbitrary unknown value outside of the special ranges.
+      - Tag:   0x12345678
+        Value: [[UNKNOWN=0x8765432187654321]]
+## An OS specific tag.
+      - Tag:   0x6abcdef0
+        Value: [[OSSPEC=0x9988776655443322]]
+## A processor specific tags.
+      - Tag:   0x76543210
+        Value: [[PROCSPEC=0x5555666677778888]]
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+# RUN: yaml2obj %s --docnum=1 -DBITS=32 -DSYMBOLIC=0x12345678 -DDEBUG=0xfedcba09 \
+# RUN:   -DTEXTREL=0x11223344 -DBINDNOW=0x88776655 -DFLAGS=0xffffffff \
+# RUN:   -DUNKNOWN=0x87654321 -DOSSPEC=0x99887766 -DPROCSPEC=0x55556666 -o %t2
+# RUN: llvm-readobj --dynamic-table %t2 \
+# RUN:   | FileCheck %s --check-prefix=LLVM32 --strict-whitespace --match-full-lines
+# RUN: llvm-readobj -d %t2 | FileCheck %s --check-prefix=LLVM32 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf --dynamic-table %t2 \
+# RUN:   | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
+# RUN: llvm-readelf -d %t2 | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
+
+#      LLVM32:DynamicSection [ (61 entries)
+# LLVM32-NEXT:  Tag        Type                 Name/Value
+# LLVM32-NEXT:  0x00000001 NEEDED               Shared library: [D]
+# LLVM32-NEXT:  0x00000002 PLTRELSZ             16 (bytes)
+# LLVM32-NEXT:  0x00000003 PLTGOT               0x1000
+# LLVM32-NEXT:  0x00000004 HASH                 0x1000
+# LLVM32-NEXT:  0x00000005 STRTAB               0x1000
+# LLVM32-NEXT:  0x00000006 SYMTAB               0x1000
+# LLVM32-NEXT:  0x00000007 RELA                 0x1000
+# LLVM32-NEXT:  0x00000008 RELASZ               16 (bytes)
+# LLVM32-NEXT:  0x00000009 RELAENT              1929 (bytes)
+# LLVM32-NEXT:  0x0000000A STRSZ                16 (bytes)
+# LLVM32-NEXT:  0x0000000B SYMENT               2439 (bytes)
+# LLVM32-NEXT:  0x0000000C INIT                 0x1000
+# LLVM32-NEXT:  0x0000000D FINI                 0x1000
+# LLVM32-NEXT:  0x0000000E SONAME               Library soname: [U]
+# LLVM32-NEXT:  0x0000000F RPATH                Library rpath: [f]
+# LLVM32-NEXT:  0x00000010 SYMBOLIC             0x12345678
+# LLVM32-NEXT:  0x00000011 REL                  0x1000
+# LLVM32-NEXT:  0x00000012 RELSZ                16 (bytes)
+# LLVM32-NEXT:  0x00000013 RELENT               291 (bytes)
+# LLVM32-NEXT:  0x00000014 PLTREL               RELA
+# LLVM32-NEXT:  0x00000015 DEBUG                0xFEDCBA09
+# LLVM32-NEXT:  0x00000016 TEXTREL              0x11223344
+# LLVM32-NEXT:  0x00000017 JMPREL               0x1000
+# LLVM32-NEXT:  0x00000018 BIND_NOW             0x88776655
+# LLVM32-NEXT:  0x00000019 INIT_ARRAY           0x1000
+# LLVM32-NEXT:  0x0000001A FINI_ARRAY           0x1000
+# LLVM32-NEXT:  0x0000001B INIT_ARRAYSZ         16 (bytes)
+# LLVM32-NEXT:  0x0000001C FINI_ARRAYSZ         16 (bytes)
+# LLVM32-NEXT:  0x0000001D RUNPATH              Library runpath: [w]
+# LLVM32-NEXT:  0x0000001E FLAGS                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS {{$}}
+# LLVM32-NEXT:  0x00000020 PREINIT_ARRAY        0x1000
+# LLVM32-NEXT:  0x00000021 PREINIT_ARRAYSZ      16 (bytes)
+# LLVM32-NEXT:  0x00000022 SYMTAB_SHNDX         0x1000
+# LLVM32-NEXT:  0x00000023 RELRSZ               16 (bytes)
+# LLVM32-NEXT:  0x00000024 RELR                 0x1000
+# LLVM32-NEXT:  0x00000025 RELRENT              17185 (bytes)
+# LLVM32-NEXT:  0x6000000F ANDROID_REL          0x1000
+# LLVM32-NEXT:  0x60000010 ANDROID_RELSZ        16 (bytes)
+# LLVM32-NEXT:  0x60000011 ANDROID_RELA         0x1000
+# LLVM32-NEXT:  0x60000012 ANDROID_RELASZ       16 (bytes)
+# LLVM32-NEXT:  0x6FFFE000 ANDROID_RELR         0x1000
+# LLVM32-NEXT:  0x6FFFE001 ANDROID_RELRSZ       0x10
+# LLVM32-NEXT:  0x6FFFE003 ANDROID_RELRENT      0x1234
+# LLVM32-NEXT:  0x6FFFFEF5 GNU_HASH             0x1000
+# LLVM32-NEXT:  0x6FFFFEF6 TLSDESC_PLT          0x1000
+# LLVM32-NEXT:  0x6FFFFEF7 TLSDESC_GOT          0x1000
+# LLVM32-NEXT:  0x6FFFFFF9 RELACOUNT            0
+# LLVM32-NEXT:  0x6FFFFFFA RELCOUNT             0
+# LLVM32-NEXT:  0x6FFFFFFB FLAGS_1              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE {{$}}
+# LLVM32-NEXT:  0x6FFFFFF0 VERSYM               0x1000
+# LLVM32-NEXT:  0x6FFFFFFC VERDEF               0x1000
+# LLVM32-NEXT:  0x6FFFFFFD VERDEFNUM            0
+# LLVM32-NEXT:  0x6FFFFFFE VERNEED              0x1000
+# LLVM32-NEXT:  0x6FFFFFFF VERNEEDNUM           0
+# LLVM32-NEXT:  0x7FFFFFFD AUXILIARY            Auxiliary library: [D]
+# LLVM32-NEXT:  0x7FFFFFFE USED                 Not needed object: [U]
+# LLVM32-NEXT:  0x7FFFFFFF FILTER               Filter library: [U]
+# LLVM32-NEXT:  0x12345678 <unknown:>0x12345678 0x87654321
+# LLVM32-NEXT:  0x6ABCDEF0 <unknown:>0x6abcdef0 0x99887766
+# LLVM32-NEXT:  0x76543210 <unknown:>0x76543210 0x55556666
+# LLVM32-NEXT:  0x00000000 NULL                 0x0
+# LLVM32-NEXT:]
+
+#      GNU32:Dynamic section at offset 0x84 contains 61 entries:
+# GNU32-NEXT:  Tag        Type                   Name/Value
+# GNU32-NEXT:  0x00000001 (NEEDED)               Shared library: [D]
+# GNU32-NEXT:  0x00000002 (PLTRELSZ)             16 (bytes)
+# GNU32-NEXT:  0x00000003 (PLTGOT)               0x1000
+# GNU32-NEXT:  0x00000004 (HASH)                 0x1000
+# GNU32-NEXT:  0x00000005 (STRTAB)               0x1000
+# GNU32-NEXT:  0x00000006 (SYMTAB)               0x1000
+# GNU32-NEXT:  0x00000007 (RELA)                 0x1000
+# GNU32-NEXT:  0x00000008 (RELASZ)               16 (bytes)
+# GNU32-NEXT:  0x00000009 (RELAENT)              1929 (bytes)
+# GNU32-NEXT:  0x0000000a (STRSZ)                16 (bytes)
+# GNU32-NEXT:  0x0000000b (SYMENT)               2439 (bytes)
+# GNU32-NEXT:  0x0000000c (INIT)                 0x1000
+# GNU32-NEXT:  0x0000000d (FINI)                 0x1000
+# GNU32-NEXT:  0x0000000e (SONAME)               Library soname: [U]
+# GNU32-NEXT:  0x0000000f (RPATH)                Library rpath: [f]
+# GNU32-NEXT:  0x00000010 (SYMBOLIC)             0x12345678
+# GNU32-NEXT:  0x00000011 (REL)                  0x1000
+# GNU32-NEXT:  0x00000012 (RELSZ)                16 (bytes)
+# GNU32-NEXT:  0x00000013 (RELENT)               291 (bytes)
+# GNU32-NEXT:  0x00000014 (PLTREL)               RELA
+# GNU32-NEXT:  0x00000015 (DEBUG)                0xfedcba09
+# GNU32-NEXT:  0x00000016 (TEXTREL)              0x11223344
+# GNU32-NEXT:  0x00000017 (JMPREL)               0x1000
+# GNU32-NEXT:  0x00000018 (BIND_NOW)             0x88776655
+# GNU32-NEXT:  0x00000019 (INIT_ARRAY)           0x1000
+# GNU32-NEXT:  0x0000001a (FINI_ARRAY)           0x1000
+# GNU32-NEXT:  0x0000001b (INIT_ARRAYSZ)         16 (bytes)
+# GNU32-NEXT:  0x0000001c (FINI_ARRAYSZ)         16 (bytes)
+# GNU32-NEXT:  0x0000001d (RUNPATH)              Library runpath: [w]
+# GNU32-NEXT:  0x0000001e (FLAGS)                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS {{$}}
+# GNU32-NEXT:  0x00000020 (PREINIT_ARRAY)        0x1000
+# GNU32-NEXT:  0x00000021 (PREINIT_ARRAYSZ)      16 (bytes)
+# GNU32-NEXT:  0x00000022 (SYMTAB_SHNDX)         0x1000
+# GNU32-NEXT:  0x00000023 (RELRSZ)               16 (bytes)
+# GNU32-NEXT:  0x00000024 (RELR)                 0x1000
+# GNU32-NEXT:  0x00000025 (RELRENT)              17185 (bytes)
+# GNU32-NEXT:  0x6000000f (ANDROID_REL)          0x1000
+# GNU32-NEXT:  0x60000010 (ANDROID_RELSZ)        16 (bytes)
+# GNU32-NEXT:  0x60000011 (ANDROID_RELA)         0x1000
+# GNU32-NEXT:  0x60000012 (ANDROID_RELASZ)       16 (bytes)
+# GNU32-NEXT:  0x6fffe000 (ANDROID_RELR)         0x1000
+# GNU32-NEXT:  0x6fffe001 (ANDROID_RELRSZ)       0x10
+# GNU32-NEXT:  0x6fffe003 (ANDROID_RELRENT)      0x1234
+# GNU32-NEXT:  0x6ffffef5 (GNU_HASH)             0x1000
+# GNU32-NEXT:  0x6ffffef6 (TLSDESC_PLT)          0x1000
+# GNU32-NEXT:  0x6ffffef7 (TLSDESC_GOT)          0x1000
+# GNU32-NEXT:  0x6ffffff9 (RELACOUNT)            0
+# GNU32-NEXT:  0x6ffffffa (RELCOUNT)             0
+# GNU32-NEXT:  0x6ffffffb (FLAGS_1)              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE {{$}}
+# GNU32-NEXT:  0x6ffffff0 (VERSYM)               0x1000
+# GNU32-NEXT:  0x6ffffffc (VERDEF)               0x1000
+# GNU32-NEXT:  0x6ffffffd (VERDEFNUM)            0
+# GNU32-NEXT:  0x6ffffffe (VERNEED)              0x1000
+# GNU32-NEXT:  0x6fffffff (VERNEEDNUM)           0
+# GNU32-NEXT:  0x7ffffffd (AUXILIARY)            Auxiliary library: [D]
+# GNU32-NEXT:  0x7ffffffe (USED)                 Not needed object: [U]
+# GNU32-NEXT:  0x7fffffff (FILTER)               Filter library: [U]
+# GNU32-NEXT:  0x12345678 (<unknown:>0x12345678) 0x87654321
+# GNU32-NEXT:  0x6abcdef0 (<unknown:>0x6abcdef0) 0x99887766
+# GNU32-NEXT:  0x76543210 (<unknown:>0x76543210) 0x55556666
+# GNU32-NEXT:  0x00000000 (NULL)                 0x0
+
+## When printing the "Name/Value" column we want to have the minimal possible indentation.
+## Use an arbitrary dynamic tag to demonstrate this.
+
+# RUN: yaml2obj %s --docnum=2 -o %t3
+# RUN: llvm-readobj --dynamic-table %t3 \
+# RUN:   | FileCheck %s --check-prefix=INDENT-LLVM-64 --strict-whitespace
+# RUN: llvm-readelf --dynamic-table %t3 \
+# RUN:   | FileCheck %s --check-prefix=INDENT-GNU-64 --strict-whitespace
+
+# RUN: yaml2obj %s --docnum=2 -DBITS=32 -o %t4
+# RUN: llvm-readobj --dynamic-table %t4 \
+# RUN:   | FileCheck %s --check-prefix=INDENT-LLVM-32 --strict-whitespace
+# RUN: llvm-readelf --dynamic-table %t4 \
+# RUN:   | FileCheck %s --check-prefix=INDENT-GNU-32 --strict-whitespace
+
+# INDENT-LLVM-64:Tag                Type   Name/Value
+# INDENT-LLVM-64:0x0000000000000001 NEEDED Shared
+
+# INDENT-GNU-64:Tag                Type     Name/Value
+# INDENT-GNU-64:0x0000000000000001 (NEEDED) Shared
+
+# INDENT-LLVM-32:Tag        Type   Name/Value
+# INDENT-LLVM-32:0x00000001 NEEDED Shared
+
+# INDENT-GNU-32:Tag        Type     Name/Value
+# INDENT-GNU-32:0x00000001 (NEEDED) Shared
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS=64]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0
+
+## Check how we dump dynamic tags when we are unable to read program headers.
+# RUN: yaml2obj --docnum=1 -DPHENTSIZE=1 %s -o %t-phentsize-err
+# RUN: llvm-readobj --dynamic-table %t-phentsize-err 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: -DFILE=%t-phentsize-err \
+# RUN:     --check-prefixes=PHENTSIZE-WARN,PHENTSIZE-LLVM
+# RUN: llvm-readelf --dynamic-table %t-phentsize-err 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: -DFILE=%t-phentsize-err \
+# RUN:     --check-prefixes=PHENTSIZE-WARN,PHENTSIZE-GNU
+
+# PHENTSIZE-WARN:      warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_HASH: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_STRTAB: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELA: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': DT_SYMENT value of 0x987 is not the size of a symbol (0x18)
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_REL: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_JMPREL: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB_SHNDX: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_GNU_HASH: invalid e_phentsize: 1
+
+# PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
+# PHENTSIZE-LLVM-NEXT: LoadName: <?>
+
+# PHENTSIZE-LLVM:      DynamicSection [ (61 entries)
+# PHENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000003 PLTGOT               0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000004 HASH                 0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000005 STRTAB               0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000006 SYMTAB               0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000007 RELA                 0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000008 RELASZ               16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000009 RELAENT              1929 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000A STRSZ                16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000B SYMENT               2439 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000C INIT                 0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000D FINI                 0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000E SONAME               Library soname: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000F RPATH                Library rpath: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000010 SYMBOLIC             0x1234567890ABCDEF
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000011 REL                  0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000012 RELSZ                16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000013 RELENT               291 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000014 PLTREL               RELA
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000015 DEBUG                0xFEDCBA0987654321
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000016 TEXTREL              0x1122334455667788
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000017 JMPREL               0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000018 BIND_NOW             0x8877665544332211
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000019 INIT_ARRAY           0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000000000001A FINI_ARRAY           0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000000000001B INIT_ARRAYSZ         16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000000000001C FINI_ARRAYSZ         16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000000000001D RUNPATH              Library runpath: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x000000000000001E FLAGS                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000020 PREINIT_ARRAY        0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000021 PREINIT_ARRAYSZ      16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000022 SYMTAB_SHNDX         0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000023 RELRSZ               16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000024 RELR                 0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000025 RELRENT              17185 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000006000000F ANDROID_REL          0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000060000010 ANDROID_RELSZ        16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000060000011 ANDROID_RELA         0x1000
+# PHENTSIZE-LLVM-NEXT:   0x0000000060000012 ANDROID_RELASZ       16 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFE000 ANDROID_RELR         0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFE001 ANDROID_RELRSZ       0x10
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFE003 ANDROID_RELRENT      0x1234
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFEF5 GNU_HASH             0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFEF6 TLSDESC_PLT          0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFEF7 TLSDESC_GOT          0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFF9 RELACOUNT            0
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFA RELCOUNT             0
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFB FLAGS_1              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE {{$}}
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFF0 VERSYM               0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFC VERDEF               0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFD VERDEFNUM            0
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFE VERNEED              0x1000
+# PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFF VERNEEDNUM           0
+# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFE USED                 Not needed object: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFF FILTER               Filter library: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x0000000012345678 <unknown:>0x12345678 0x8765432187654321
+# PHENTSIZE-LLVM-NEXT:   0x000000006ABCDEF0 <unknown:>0x6abcdef0 0x9988776655443322
+# PHENTSIZE-LLVM-NEXT:   0x0000000076543210 <unknown:>0x76543210 0x5555666677778888
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
+# PHENTSIZE-LLVM-NEXT: ]
+
+# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 61 entries:
+# PHENTSIZE-GNU-NEXT:   Tag                Type                   Name/Value
+# PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': string table was not found
+# PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x0000000000000002 (PLTRELSZ)             16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000000000003 (PLTGOT)               0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000004 (HASH)                 0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000005 (STRTAB)               0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000006 (SYMTAB)               0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000007 (RELA)                 0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000008 (RELASZ)               16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000000000009 (RELAENT)              1929 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000000000000a (STRSZ)                16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000000000000b (SYMENT)               2439 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000000000000c (INIT)                 0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000000000000d (FINI)                 0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000000000000e (SONAME)               Library soname: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x000000000000000f (RPATH)                Library rpath: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x0000000000000010 (SYMBOLIC)             0x1234567890abcdef
+# PHENTSIZE-GNU-NEXT:   0x0000000000000011 (REL)                  0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000012 (RELSZ)                16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000000000013 (RELENT)               291 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000000000014 (PLTREL)               RELA
+# PHENTSIZE-GNU-NEXT:   0x0000000000000015 (DEBUG)                0xfedcba0987654321
+# PHENTSIZE-GNU-NEXT:   0x0000000000000016 (TEXTREL)              0x1122334455667788
+# PHENTSIZE-GNU-NEXT:   0x0000000000000017 (JMPREL)               0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000018 (BIND_NOW)             0x8877665544332211
+# PHENTSIZE-GNU-NEXT:   0x0000000000000019 (INIT_ARRAY)           0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000000000001a (FINI_ARRAY)           0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000000000001b (INIT_ARRAYSZ)         16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000000000001c (FINI_ARRAYSZ)         16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000000000001d (RUNPATH)              Library runpath: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x000000000000001e (FLAGS)                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS
+# PHENTSIZE-GNU-NEXT:   0x0000000000000020 (PREINIT_ARRAY)        0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000021 (PREINIT_ARRAYSZ)      16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000000000022 (SYMTAB_SHNDX)         0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000023 (RELRSZ)               16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000000000024 (RELR)                 0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000000000025 (RELRENT)              17185 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000006000000f (ANDROID_REL)          0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000060000011 (ANDROID_RELA)         0x1000
+# PHENTSIZE-GNU-NEXT:   0x0000000060000012 (ANDROID_RELASZ)       16 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x000000006fffe000 (ANDROID_RELR)         0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006fffe001 (ANDROID_RELRSZ)       0x10
+# PHENTSIZE-GNU-NEXT:   0x000000006fffe003 (ANDROID_RELRENT)      0x1234
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffef5 (GNU_HASH)             0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffef6 (TLSDESC_PLT)          0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffef7 (TLSDESC_GOT)          0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffff9 (RELACOUNT)            0
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffffa (RELCOUNT)             0
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffffb (FLAGS_1)              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffff0 (VERSYM)               0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffffc (VERDEF)               0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffffd (VERDEFNUM)            0
+# PHENTSIZE-GNU-NEXT:   0x000000006ffffffe (VERNEED)              0x1000
+# PHENTSIZE-GNU-NEXT:   0x000000006fffffff (VERNEEDNUM)           0
+# PHENTSIZE-GNU-NEXT:   0x000000007ffffffd (AUXILIARY)            Auxiliary library: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x000000007ffffffe (USED)                 Not needed object: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x000000007fffffff (FILTER)               Filter library: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x0000000012345678 (<unknown:>0x12345678) 0x8765432187654321
+# PHENTSIZE-GNU-NEXT:   0x000000006abcdef0 (<unknown:>0x6abcdef0) 0x9988776655443322
+# PHENTSIZE-GNU-NEXT:   0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
+# PHENTSIZE-GNU-NEXT:   0x0000000000000000 (NULL)                 0x0

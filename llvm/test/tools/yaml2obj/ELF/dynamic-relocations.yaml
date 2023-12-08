@@ -1,0 +1,64 @@
+## Show that yaml2obj uses the correct set of symbols for relocation sections
+## referencing the dynamic symbol table.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf -r %t | FileCheck %s
+
+# CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 2 entries:
+# CHECK-NEXT:     Offset             Info             Type      Symbol's Value  Symbol's Name
+# CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE 0000000012345678 dynamic
+# CHECK-NEXT: 0000000000000008  0000000200000000 R_X86_64_NONE 0000000087654321 both
+# CHECK-EMPTY:
+# CHECK-NEXT: Relocation section '.rela.data' at offset {{.*}} contains 2 entries:
+# CHECK-NEXT:     Offset             Info             Type      Symbol's Value  Symbol's Name
+# CHECK-NEXT: 0000000000000010  0000000200000000 R_X86_64_NONE 0000000011223344 static
+# CHECK-NEXT: 0000000000000018  0000000100000000 R_X86_64_NONE 0000000088776655 both
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+  - Name: .rela.dyn
+    Type: SHT_REL
+    Link: .dynsym
+    Info: .data
+    Relocations:
+      - Type: R_X86_64_NONE
+        Symbol: dynamic
+      - Offset: 8
+        Type: R_X86_64_NONE
+        Symbol: both
+  - Name: .rela.data
+    Type: SHT_REL
+    Link: .symtab
+    Info: .data
+    Relocations:
+      - Offset: 16
+        Type: R_X86_64_NONE
+        Symbol: static
+      - Offset: 24
+        Type: R_X86_64_NONE
+        Symbol: both
+Symbols:
+    - Name: both
+      Section: .data
+      Value: 0x88776655
+      Binding: STB_GLOBAL
+    - Name: static
+      Section: .data
+      Value: 0x11223344
+      Binding: STB_GLOBAL
+DynamicSymbols:
+    - Name: dynamic
+      Section: .data
+      Value: 0x12345678
+      Binding: STB_GLOBAL
+    - Name: both
+      Section: .data
+      Value: 0x87654321
+      Binding: STB_GLOBAL

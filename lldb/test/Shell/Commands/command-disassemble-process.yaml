@@ -1,0 +1,142 @@
+# REQUIRES: x86
+
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8 %s -o %T/command-disassemble-process.exe
+# RUN: yaml2obj --docnum=1 -DMAIN_SIZE=8000 %s -o %T/command-disassemble-process.big.exe
+# RUN: yaml2obj --docnum=2 %s -o %t
+
+# RUN: %lldb -c %t %T/command-disassemble-process.exe \
+# RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:   -s %S/Inputs/command-disassemble-process.lldbinit -o exit \
+# RUN:   | FileCheck %s
+
+# RUN: %lldb -c %t %T/command-disassemble-process.big.exe \
+# RUN:   -o "settings set stop-disassembly-max-size 8000" \
+# RUN:   -o disassemble -o exit 2>&1 | FileCheck %s --check-prefix=BIG
+
+# RUN: %lldb -c %t %T/command-disassemble-process.exe \
+# RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:   -o "disassemble --address 0xdead" -o exit 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALID
+
+# CHECK:       (lldb) disassemble
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT: (lldb) disassemble --line
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
+# CHECK-NEXT: (lldb) disassemble --frame
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT: (lldb) disassemble --pc
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
+# CHECK-NEXT: (lldb) disassemble --address 0x4004
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT: (lldb) disassemble --count 7
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
+# CHECK-NEXT:     0x400c:      addb   %cl, (%rax)
+# CHECK-NEXT:     0x400e:      addb   %cl, (%rcx)
+# CHECK-NEXT: (lldb) disassemble --pc --count 7
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
+# CHECK-NEXT:     0x400c:      addb   %cl, (%rax)
+# CHECK-NEXT:     0x400e:      addb   %cl, (%rcx)
+# CHECK-NEXT:     0x4010:      addb   %cl, (%rdx)
+
+# INVALID: error: Could not find function bounds for address 0xdead
+
+# BIG: error: Not disassembling the current function because it is very large [0x0000000000004002-0x0000000000005f42). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000004000
+    AddressAlign:    0x0000000000001000
+    Content:         00000001000200030006000700080009000A000B000E000F00100011001200130016001700180019001A001B001E001F00200021002200230026002700280029002A002B002E002F
+    Size:            0x10000
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000005000
+    AddressAlign:    0x0000000000001000
+    Content:         040000000800000003000000474E5500DEADBEEFBAADF00D
+Symbols:
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000004002
+    Size:            [[MAIN_SIZE]]
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x4000
+    Align: 0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type: PT_LOAD
+    Flags: [ PF_W, PF_R ]
+    VAddr: 0x5000
+    Align: 0x1000
+    FirstSec: .note.gnu.build-id
+    LastSec: .note.gnu.build-id
+...
+
+--- !minidump
+Streams:
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x0000000000004000
+        Size of Image:   0x00002000
+        Module Name:     'command-disassemble-process.yaml'
+        CodeView Record: 4C457042DEADBEEFBAADF00D
+
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            ThreadList
+    Threads:         
+      - Thread Id:       0x000074F3
+        Context:         0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000B001000000000006CAE000000006B7FC05A0000C81D415A0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A2BF9E5A6B7F0000000000000000000000000000000000008850C14BFD7F00009850C14BFD7F00000100000000000000B04AC14BFD7F0000000000000000000060812D01000000000800000000000000B065E05A6B7F00008004400000000000E050C14BFD7F00000000000000000000000000000000000004400000000000007F03FFFF0000FFFFFFFFFFFF000000000000000000000000801F00006B7F00000400000000000000B84CC14BFD7F0000304D405A6B7F0000C84DC14BFD7F0000C0AA405A6B7F00004F033D0000000000B84DC14BFD7F0000E84DC14BFD7F0000000000000000000000000000000000000070E05A6B7F000078629E5A6B7F0000C81D415A6B7F0000804F9E5A6B7F00000000000001000000E603000001000000E093115A6B7F0000804EC14BFD7F0000584EC14BFD7F000099ADC05A6B7F00000100000000000000AAAAD77D0000000002000000000000000800000000000000B065E05A6B7F0000E6B7C05A6B7F0000010000006B7F0000884DC14BFD7F0000106F7C5A6B7F0000984EC14BFD7F0000488B7C5A6B7F0000C4A71CB90000000001000000000000000800000000000000B065E05A6B7F000048B6C05A6B7F0000702AE25A6B7F0000D84DC14BFD7F000030489E5A6B7F0000E84EC14BFD7F0000E05E9E5A6B7F00000991F0460000000001000000000000000800000000000000B065E05A6B7F000048B6C05A6B7F00000100000000000000284EC14BFD7F00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        Stack:           
+          Start of Memory Range: 0x00007FFD4BC15080
+          Content:         30044000000000000000000000000000
+  - Type:            MemoryList
+    Memory Ranges:   
+      - Start of Memory Range: 0x00007FFD4BC15080
+        Content:         30044000000000000000000000000000
+...

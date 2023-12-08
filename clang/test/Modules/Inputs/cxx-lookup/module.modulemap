@@ -1,0 +1,10 @@
+module A { header "a.h" export * }
+module B { header "b.h" export * }
+module C {
+  module C2 { header "c2.h" export * }
+  module C1 { header "c1.h" export * }
+}
+module X { header "x.h" export * }
+module Y { header "y.h" export * }
+module na { header "na.h" export * }
+module nb { header "nb.h" export * }

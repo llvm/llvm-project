@@ -1,0 +1,86 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Set attribute value if it is unset.
+def set_default(attr, value):
+  if not getattr(config, attr, None):
+    setattr(config, attr, value)
+
+# Generic config options for all compiler-rt lit tests.
+set_default("target_triple", "@COMPILER_RT_DEFAULT_TARGET_TRIPLE@")
+set_default("target_cflags", "@COMPILER_RT_TEST_COMPILER_CFLAGS@")
+set_default("host_arch", "@HOST_ARCH@")
+set_default("target_arch", "@COMPILER_RT_DEFAULT_TARGET_ARCH@")
+set_default("host_os", "@HOST_OS@")
+set_default("llvm_build_mode", "@LLVM_BUILD_MODE@")
+set_default("llvm_src_root", "@LLVM_MAIN_SRC_DIR@")
+set_default("llvm_obj_root", "@LLVM_BINARY_DIR@")
+set_default("compiler_rt_src_root", "@COMPILER_RT_SOURCE_DIR@")
+set_default("compiler_rt_obj_root", "@COMPILER_RT_BINARY_DIR@")
+set_default("enable_per_target_runtime_dir", @LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_PYBOOL@)
+set_default("llvm_tools_dir", "@LLVM_TOOLS_DIR@")
+set_default("lit_tools_dir", "@LLVM_LIT_TOOLS_DIR@")
+set_default("llvm_shlib_dir", "@LLVM_LIBRARY_OUTPUT_INTDIR@")
+set_default("gnu_ld_executable", "@GNU_LD_EXECUTABLE@")
+set_default("gold_executable", "@GOLD_EXECUTABLE@")
+set_default("clang", "@COMPILER_RT_RESOLVED_TEST_COMPILER@")
+set_default("compiler_id", "@COMPILER_RT_TEST_COMPILER_ID@")
+set_default("python_executable", "@Python3_EXECUTABLE@")
+set_default("compiler_rt_debug", @COMPILER_RT_DEBUG_PYBOOL@)
+set_default("compiler_rt_intercept_libdispatch", @COMPILER_RT_INTERCEPT_LIBDISPATCH_PYBOOL@)
+set_default("compiler_rt_libdir", "@COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR@")
+set_default("emulator", "@COMPILER_RT_EMULATOR@")
+set_default("asan_shadow_scale", "@COMPILER_RT_ASAN_SHADOW_SCALE@")
+set_default("memprof_shadow_scale", "@COMPILER_RT_MEMPROF_SHADOW_SCALE@")
+set_default("apple_platform", "osx")
+set_default("apple_platform_min_deployment_target_flag", "-mmacosx-version-min")
+set_default("sanitizer_can_use_cxxabi", @SANITIZER_CAN_USE_CXXABI_PYBOOL@)
+set_default("sanitizer_uses_static_cxxabi", @SANITIZER_USE_STATIC_CXX_ABI_PYBOOL@)
+set_default("sanitizer_uses_static_unwind", @SANITIZER_USE_STATIC_LLVM_UNWINDER_PYBOOL@)
+set_default("has_lld", @COMPILER_RT_HAS_LLD_PYBOOL@)
+set_default("can_symbolize", @CAN_SYMBOLIZE@)
+set_default("use_lld", @COMPILER_RT_TEST_USE_LLD_PYBOOL@)
+set_default("use_thinlto", False)
+set_default("use_lto", config.use_thinlto)
+set_default("android", @ANDROID_PYBOOL@)
+set_default("android_api_level", "@ANDROID_API_LEVEL@")
+set_default("android_serial", "@ANDROID_SERIAL_FOR_TESTING@")
+set_default("android_files_to_push", [])
+set_default("have_rpc_xdr_h", @HAVE_RPC_XDR_H@)
+set_default("gwp_asan", @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@)
+set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
+set_default("test_standalone_build_libs", @COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL@)
+set_default("has_compiler_rt_libatomic", @COMPILER_RT_BUILD_STANDALONE_LIBATOMIC_PYBOOL@)
+# True iff the test suite supports ignoring the test compiler's runtime library path
+# and using `config.compiler_rt_libdir` instead. This only matters when the runtime
+# library paths differ.
+set_default("test_suite_supports_overriding_runtime_lib_path", False)
+config.available_features.add('target-is-%s' % config.target_arch)
+
+if config.enable_per_target_runtime_dir:
+  set_default("target_suffix", "")
+elif config.android:
+  if config.target_arch == "i386":
+    set_default("target_suffix", "-i686-android")
+  else:
+    set_default("target_suffix", "-%s-android" % config.target_arch)
+else:
+  set_default("target_suffix", "-%s" % config.target_arch)
+
+set_default("have_internal_symbolizer", @COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL@)
+set_default("have_zlib", @ZLIB_FOUND_PYBOOL@)
+set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
+
+# LLVM tools dir can be passed in lit parameters, so try to
+# apply substitution.
+config.llvm_tools_dir = lit_config.substitute(config.llvm_tools_dir)
+config.clang = lit_config.substitute(config.clang)
+config.compiler_rt_libdir = lit_config.substitute(config.compiler_rt_libdir)
+
+if not os.path.exists(config.clang):
+  lit_config.fatal("Can't find compiler on path %r" % config.clang)
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Setup attributes common for all compiler-rt projects.
+lit_config.load_config(config, "@COMPILER_RT_SOURCE_DIR@/test/lit.common.cfg.py")

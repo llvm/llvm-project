@@ -1,0 +1,53 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# A wrapper library over MPFR for use with LLVM libc math unittests.
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+cc_library(
+    name = "mpfr_impl",
+    hdrs = ["mpfr_inc.h"],
+    target_compatible_with = select({
+        "//conditions:default": [],
+        "//libc:mpfr_disable": ["@platforms//:incompatible"],
+    }),
+    deps = select(
+        {
+            "//conditions:default": [],
+            "//libc:mpfr_external": ["@mpfr//:mpfr_external"],
+            "//libc:mpfr_system": ["@mpfr//:mpfr_system"],
+        },
+    ),
+)
+
+libc_support_library(
+    name = "mpfr_wrapper",
+    srcs = ["MPFRUtils.cpp"],
+    hdrs = ["MPFRUtils.h"],
+    # Disable layering check when using mpfr_system.
+    features = select(
+        {
+            "//conditions:default": [],
+            "//libc:mpfr_system": ["-layering_check"],
+        },
+    ),
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_cpp_bit",
+        "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_string",
+        "//libc:__support_cpp_string_view",
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_fputil_float_properties",
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_fpbits_str",
+        "//libc/test/UnitTest:fp_test_helpers",
+        "//libc/utils/MPFRWrapper:mpfr_impl",
+    ],
+)

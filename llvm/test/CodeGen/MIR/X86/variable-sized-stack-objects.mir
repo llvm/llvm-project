@@ -1,0 +1,44 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses variable sized stack objects
+# correctly.
+
+--- |
+
+  define i32 @test(i32 %a) {
+  entry:
+    %b = alloca i32
+    %x = alloca i64
+    %y = alloca i32, i32 %a
+    store i32 %a, i32* %b
+    store i64 2, i64* %x
+    %c = load i32, i32* %b
+    ret i32 %c
+  }
+
+...
+---
+name:            test
+frameInfo:
+  stackSize:       24
+  offsetAdjustment: -16
+  maxAlignment:    8
+  adjustsStack:    true
+# CHECK: stack:
+# CHECK-NEXT: - { id: 0, name: '', type: default, offset: -20, size: 4, alignment: 4,
+# CHECK-NEXT:  stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 1, name: '', type: default, offset: -32, size: 8, alignment: 8,
+# CHECK-NEXT:  stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 2, name: y, type: variable-sized, offset: -32, alignment: 1,
+stack:
+  - { id: 0, offset: -20, size: 4, alignment: 4 }
+  - { id: 1, offset: -32, size: 8, alignment: 8 }
+  - { id: 2, name: y, type: variable-sized, offset: -32, alignment: 1 }
+body: |
+  bb.0.entry:
+    MOV32mr $rsp, 1, _, -4, _, $edi
+    MOV64mi32 $rsp, 1, _, -16, _, 2
+    $eax = MOV32rm $rsp, 1, _, -4, _
+    RET64 $eax
+...

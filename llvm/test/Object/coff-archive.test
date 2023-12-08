@@ -1,0 +1,226 @@
+#
+# Check if the index is appearing properly in the output file 
+#
+RUN: llvm-nm -a --numeric-sort -M %p/Inputs/coff_archive.lib | FileCheck -check-prefix=CHECKIDX %s
+
+CHECKIDX: Archive map
+CHECKIDX: ??0invalid_argument@std@@QAE@PBD@Z in Debug\mymath.obj
+CHECKIDX: ??0logic_error@std@@QAE@PBD@Z in Debug\mymath.obj
+CHECKIDX: ??1invalid_argument@std@@UAE@XZ in Debug\mymath.obj
+CHECKIDX: ??1logic_error@std@@UAE@XZ in Debug\mymath.obj
+CHECKIDX: ??_7invalid_argument@std@@6B@ in Debug\mymath.obj
+CHECKIDX: ??_7logic_error@std@@6B@ in Debug\mymath.obj
+CHECKIDX: ??_C@_0BC@IHENMCGI@b?5cannot?5be?5zero?$CB?$AA@ in Debug\mymath.obj
+CHECKIDX: ??_Ginvalid_argument@std@@UAEPAXI@Z in Debug\mymath.obj
+CHECKIDX: ??_Glogic_error@std@@UAEPAXI@Z in Debug\mymath.obj
+CHECKIDX: ??_R0?AVexception@std@@@8 in Debug\mymath.obj
+CHECKIDX: ??_R0?AVinvalid_argument@std@@@8 in Debug\mymath.obj
+CHECKIDX: ??_R0?AVlogic_error@std@@@8 in Debug\mymath.obj
+CHECKIDX: ??_R0PAVexception@std@@@8 in Debug\mymath.obj
+CHECKIDX: ??_R0PAVinvalid_argument@std@@@8 in Debug\mymath.obj
+CHECKIDX: ??_R0PAVlogic_error@std@@@8 in Debug\mymath.obj
+CHECKIDX: ??_R0PAX@8 in Debug\mymath.obj
+CHECKIDX: ??_R1A@?0A@EA@exception@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R1A@?0A@EA@invalid_argument@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R1A@?0A@EA@logic_error@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R2exception@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R2invalid_argument@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R2logic_error@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R3exception@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R3invalid_argument@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R3logic_error@std@@8 in Debug\mymath.obj
+CHECKIDX: ??_R4invalid_argument@std@@6B@ in Debug\mymath.obj
+CHECKIDX: ??_R4logic_error@std@@6B@ in Debug\mymath.obj
+CHECKIDX: ?Add@MyMathFuncs@MathFuncs@@SANNN@Z in Debug\mymath.obj
+CHECKIDX: ?Divide@MyMathFuncs@MathFuncs@@SANNN@Z in Debug\mymath.obj
+CHECKIDX: ?Multiply@MyMathFuncs@MathFuncs@@SANNN@Z in Debug\mymath.obj
+CHECKIDX: ?Subtract@MyMathFuncs@MathFuncs@@SANNN@Z in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@C@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@D@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@E@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@F@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@G@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@H@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@I@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@J@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@K@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@M@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@N@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@O@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@_J@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@_K@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?_Rank@?$_Arithmetic_traits@_N@std@@2HB in Debug\mymath.obj
+CHECKIDX: ?value@?$integral_constant@I$0A@@tr1@std@@2IB in Debug\mymath.obj
+CHECKIDX: ?value@?$integral_constant@_N$00@tr1@std@@2_NB in Debug\mymath.obj
+CHECKIDX: ?value@?$integral_constant@_N$0A@@tr1@std@@2_NB in Debug\mymath.obj
+CHECKIDX: __CT??_R0PAVexception@std@@@84 in Debug\mymath.obj
+CHECKIDX: __CT??_R0PAVinvalid_argument@std@@@84 in Debug\mymath.obj
+CHECKIDX: __CT??_R0PAVlogic_error@std@@@84 in Debug\mymath.obj
+CHECKIDX: __CT??_R0PAX@84 in Debug\mymath.obj
+CHECKIDX: __CTA4PAVinvalid_argument@std@@ in Debug\mymath.obj
+CHECKIDX: __TI4PAVinvalid_argument@std@@ in Debug\mymath.obj
+CHECKIDX: __real@0000000000000000 in Debug\mymath.obj
+CHECKIDX: Debug\stdafx.obj:
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$T
+CHECKIDX: 00000000 i .drectve
+CHECKIDX: 00000001 a @feat.00
+CHECKIDX: 00ab9d1b a @comp.id
+
+CHECKIDX: Debug\mymath.obj:
+CHECKIDX:          U ??2@YAPAXI@Z
+CHECKIDX:          U ??3@YAXPAX@Z
+CHECKIDX:          U ??_7type_info@@6B@
+CHECKIDX:          w ??_Einvalid_argument@std@@UAEPAXI@Z
+CHECKIDX:          w ??_Elogic_error@std@@UAEPAXI@Z
+CHECKIDX:          U ??_Ginvalid_argument@std@@UAEPAXI@Z
+CHECKIDX:          U ??_Glogic_error@std@@UAEPAXI@Z
+CHECKIDX:          U ?what@exception@std@@UBEPBDXZ
+CHECKIDX:          U @__security_check_cookie@4
+CHECKIDX:          U __CxxThrowException@8
+CHECKIDX:          U __RTC_CheckEsp
+CHECKIDX:          U __RTC_InitBase
+CHECKIDX:          U __RTC_Shutdown
+CHECKIDX:          U ___CxxFrameHandler3
+CHECKIDX:          U ___security_cookie
+CHECKIDX:          U __fltused
+CHECKIDX:          U __imp_??0exception@std@@QAE@ABQBD@Z
+CHECKIDX:          U __imp_??1exception@std@@UAE@XZ
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 d .data
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$S
+CHECKIDX: 00000000 N .debug$T
+CHECKIDX: 00000000 i .drectve
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rdata$r
+CHECKIDX: 00000000 r .rtc$IMZ
+CHECKIDX: 00000000 r .rtc$TMZ
+CHECKIDX: 00000000 N .sxdata
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text
+CHECKIDX: 00000000 t .text$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 r .xdata$x
+CHECKIDX: 00000000 T ??0invalid_argument@std@@QAE@PBD@Z
+CHECKIDX: 00000000 T ??0logic_error@std@@QAE@PBD@Z
+CHECKIDX: 00000000 T ??1invalid_argument@std@@UAE@XZ
+CHECKIDX: 00000000 T ??1logic_error@std@@UAE@XZ
+CHECKIDX: 00000000 R ??_C@_0BC@IHENMCGI@b?5cannot?5be?5zero?$CB?$AA@
+CHECKIDX: 00000000 T ??_Ginvalid_argument@std@@UAEPAXI@Z
+CHECKIDX: 00000000 T ??_Glogic_error@std@@UAEPAXI@Z
+CHECKIDX: 00000000 D ??_R0?AVexception@std@@@8
+CHECKIDX: 00000000 D ??_R0?AVinvalid_argument@std@@@8
+CHECKIDX: 00000000 D ??_R0?AVlogic_error@std@@@8
+CHECKIDX: 00000000 D ??_R0PAVexception@std@@@8
+CHECKIDX: 00000000 D ??_R0PAVinvalid_argument@std@@@8
+CHECKIDX: 00000000 D ??_R0PAVlogic_error@std@@@8
+CHECKIDX: 00000000 D ??_R0PAX@8
+CHECKIDX: 00000000 R ??_R1A@?0A@EA@exception@std@@8
+CHECKIDX: 00000000 R ??_R1A@?0A@EA@invalid_argument@std@@8
+CHECKIDX: 00000000 R ??_R1A@?0A@EA@logic_error@std@@8
+CHECKIDX: 00000000 R ??_R2exception@std@@8
+CHECKIDX: 00000000 R ??_R2invalid_argument@std@@8
+CHECKIDX: 00000000 R ??_R2logic_error@std@@8
+CHECKIDX: 00000000 R ??_R3exception@std@@8
+CHECKIDX: 00000000 R ??_R3invalid_argument@std@@8
+CHECKIDX: 00000000 R ??_R3logic_error@std@@8
+CHECKIDX: 00000000 R ??_R4invalid_argument@std@@6B@
+CHECKIDX: 00000000 R ??_R4logic_error@std@@6B@
+CHECKIDX: 00000000 T ?Add@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 00000000 T ?Divide@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 00000000 T ?Multiply@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 00000000 T ?Subtract@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@C@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@D@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@E@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@F@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@G@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@H@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@I@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@J@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@K@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@M@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@N@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@O@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@_J@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@_K@std@@2HB
+CHECKIDX: 00000000 R ?_Rank@?$_Arithmetic_traits@_N@std@@2HB
+CHECKIDX: 00000000 R ?value@?$integral_constant@I$0A@@tr1@std@@2IB
+CHECKIDX: 00000000 R ?value@?$integral_constant@_N$00@tr1@std@@2_NB
+CHECKIDX: 00000000 R ?value@?$integral_constant@_N$0A@@tr1@std@@2_NB
+CHECKIDX: 00000000 R __CT??_R0PAVexception@std@@@84
+CHECKIDX: 00000000 R __CT??_R0PAVinvalid_argument@std@@@84
+CHECKIDX: 00000000 R __CT??_R0PAVlogic_error@std@@@84
+CHECKIDX: 00000000 R __CT??_R0PAX@84
+CHECKIDX: 00000000 R __CTA4PAVinvalid_argument@std@@
+CHECKIDX: 00000000 r __RTC_InitBase.rtc$IMZ
+CHECKIDX: 00000000 r __RTC_Shutdown.rtc$TMZ
+CHECKIDX: 00000000 R __TI4PAVinvalid_argument@std@@
+CHECKIDX: 00000000 R __real@0000000000000000
+CHECKIDX: 00000000 t __unwindfunclet$?Divide@MyMathFuncs@MathFuncs@@SANNN@Z$0
+CHECKIDX: 00000000 r __unwindtable$?Divide@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 00000001 a @feat.00
+CHECKIDX: 00000004 R ??_7invalid_argument@std@@6B@
+CHECKIDX: 00000004 R ??_7logic_error@std@@6B@
+CHECKIDX: 00000008 r __ehfuncinfo$?Divide@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 0000000e t __ehhandler$?Divide@MyMathFuncs@MathFuncs@@SANNN@Z
+CHECKIDX: 00ab9d1b a @comp.id

@@ -1,0 +1,65 @@
+RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest
+
+RUN: rm -rf %t/T0 %t/T1 %t/T2
+RUN: mkdir -p %t/T0 %t/T1 %t/T2
+RUN: echo F..... > %t/T0/1
+RUN: echo .U.... > %t/T0/2
+RUN: echo ..Z... > %t/T0/3
+
+# T1 has 3 elements, T2 is empty.
+RUN: cp %t/T0/* %t/T1/
+RUN: %run %t-FullCoverageSetTest         -merge=1 %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=CHECK1
+CHECK1: MERGE-OUTER: 3 files, 3 in the initial corpus
+CHECK1: MERGE-OUTER: 0 new files with 0 new features added
+
+RUN: echo ...Z.. > %t/T2/1
+RUN: echo ....E. > %t/T2/2
+RUN: echo .....R > %t/T2/3
+RUN: echo F..... > %t/T2/a
+RUN: echo .U.... > %t/T2/b
+RUN: echo ..Z... > %t/T2/c
+
+# T1 has 3 elements, T2 has 6 elements, only 3 are new.
+RUN: %run %t-FullCoverageSetTest         -merge=1 %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=CHECK2
+CHECK2: MERGE-OUTER: 9 files, 3 in the initial corpus
+CHECK2: MERGE-OUTER: 3 new files with 3 new features added
+
+# Now, T1 has 6 units and T2 has no new interesting units.
+RUN: %run %t-FullCoverageSetTest         -merge=1 %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=CHECK3
+CHECK3: MERGE-OUTER: 12 files, 6 in the initial corpus
+CHECK3: MERGE-OUTER: 0 new files with 0 new features added
+
+# Check that we respect max_len during the merge and don't crash.
+RUN: rm %t/T1/*
+RUN: cp %t/T0/* %t/T1/
+RUN: echo looooooooong > %t/T2/looooooooong
+RUN: %run %t-FullCoverageSetTest         -merge=1 %t/T1 %t/T2 -max_len=6 2>&1 | FileCheck %s --check-prefix=MAX_LEN
+MAX_LEN: MERGE-OUTER: 3 new files
+
+# Check that we respect -merge_control_file=FILE
+RUN: rm %t/T1/*
+RUN: cp %t/T0/* %t/T1/
+RUN: rm -f %t/MCF
+RUN: %run %t-FullCoverageSetTest -merge=1 -merge_control_file=%t/MCF %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=MCF
+RUN: grep STARTED %t/MCF
+RUN: grep FT %t/MCF
+MCF: MERGE-INNER: using the control file {{.*}}MCF
+MCF: MERGE-OUTER: 3 new files
+
+
+# Check that merge tolerates failures.
+RUN: rm %t/T1/*
+RUN: cp %t/T0/* %t/T1/
+RUN: echo 'FUZZER' > %t/T2/FUZZER
+RUN: %run %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=MERGE_WITH_CRASH
+MERGE_WITH_CRASH: MERGE-OUTER: successful in 2 attempt(s)
+MERGE_WITH_CRASH: MERGE-OUTER: 3 new files
+
+# Check that we actually limit the size with max_len
+RUN: rm %t/T1/* %t/T2/*
+RUN: echo 'FUZZER' > %t/T2/FUZZER
+RUN: %run %t-FullCoverageSetTest -merge=1 %t/T1 %t/T2  -max_len=5 2>&1 | FileCheck %s --check-prefix=MERGE_LEN5
+RUN: not grep FUZZER %t/T1/*
+RUN: grep FUZZE %t/T1/*
+MERGE_LEN5: MERGE-OUTER: successful in 1 attempt(s)
+

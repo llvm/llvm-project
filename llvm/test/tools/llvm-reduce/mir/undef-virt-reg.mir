@@ -1,0 +1,20 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=instructions -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: S_NOP 0
+
+# RESULT: S_ENDPGM 0, implicit undef %0:vgpr_32
+
+# Previously the the function clone would assert due to not preserving
+# virtual registers which had no defs.
+
+---
+name: undef_vreg_operand
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    S_NOP 0
+    S_ENDPGM 0, implicit undef %0:vgpr_32
+
+...

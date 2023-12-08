@@ -1,0 +1,165 @@
+# RUN: llc -emit-call-site-info -mtriple=arm-linux-gnu -debug-entry-values -run-pass if-converter %s -o -| FileCheck %s
+
+# Vefify that the call site info will be updated after the optimization.
+# This test case would previously trigger an assertion when
+# deleting the call instruction.
+
+# Test case is generated from:
+# extern void
+# foo (int* seg, int subseg);
+# extern int* mri_common_symbol;
+#
+# void
+# baa (int* secptr, int subseg)
+# {
+#   if (! (secptr == 0 && subseg == 0))
+#     foo (secptr, subseg);
+#   mri_common_symbol = 0;
+# }
+#
+# With slight change of MIR - substitution of BL instruction with BL_pred 
+# in order to trigger optimization.
+# clang -target arm-linux-gnu -g -O2 -Xclang -femit-debug-entry-values 
+#       %s -stop-before=if-convert
+#
+# CHECK: callSites:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
+# CHECK-NEXT:     - { arg: 0, reg: '$r0' }
+# CHECK-NEXT:     - { arg: 1, reg: '$r1' } }
+
+--- |
+  ; ModuleID = 'if-convert-call-site-info.c'
+  source_filename = "if-convert-call-site-info.c"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "armv6kz-unknown-linux-gnueabihf"
+  
+  @mri_common_symbol = external dso_local local_unnamed_addr global i32*, align 4
+  
+  ; Function Attrs: nounwind
+  define dso_local void @baa(i32* %secptr, i32 %subseg) local_unnamed_addr #0 !dbg !14 {
+  entry:
+    call void @llvm.dbg.value(metadata i32* %secptr, metadata !16, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata i32 %subseg, metadata !17, metadata !DIExpression()), !dbg !18
+    %cmp = icmp eq i32* %secptr, null, !dbg !19
+    %cmp1 = icmp eq i32 %subseg, 0, !dbg !21
+    %or.cond = and i1 %cmp, %cmp1, !dbg !22
+    br i1 %or.cond, label %if.end, label %if.then, !dbg !22
+  
+  if.then:                                          ; preds = %entry
+    tail call void @foo(i32* %secptr, i32 %subseg), !dbg !23
+    br label %if.end, !dbg !23
+  
+  if.end:                                           ; preds = %entry, %if.then
+    store i32* null, i32** @mri_common_symbol, align 4, !dbg !24, !tbaa !25
+    ret void, !dbg !29
+  }
+  
+  declare !dbg !4 dso_local void @foo(i32*, i32) local_unnamed_addr
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**)
+  
+  attributes #0 = { "frame-pointer"="all" }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!9, !10, !11, !12}
+  !llvm.ident = !{!13}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !1 = !DIFile(filename: "if-convert-call-site-info.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "foo", scope: !1, file: !1, line: 10, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7, !8}
+  !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 32)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !{i32 2, !"Dwarf Version", i32 4}
+  !10 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = !{i32 1, !"wchar_size", i32 4}
+  !12 = !{i32 1, !"min_enum_size", i32 4}
+  !13 = !{!"clang version 10.0.0 "}
+  !14 = distinct !DISubprogram(name: "baa", scope: !1, file: !1, line: 14, type: !5, scopeLine: 15, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !15 = !{!16, !17}
+  !16 = !DILocalVariable(name: "secptr", arg: 1, scope: !14, file: !1, line: 14, type: !7)
+  !17 = !DILocalVariable(name: "subseg", arg: 2, scope: !14, file: !1, line: 14, type: !8)
+  !18 = !DILocation(line: 0, scope: !14)
+  !19 = !DILocation(line: 16, column: 17, scope: !20)
+  !20 = distinct !DILexicalBlock(scope: !14, file: !1, line: 16, column: 7)
+  !21 = !DILocation(line: 16, column: 32, scope: !20)
+  !22 = !DILocation(line: 16, column: 22, scope: !20)
+  !23 = !DILocation(line: 17, column: 5, scope: !20)
+  !24 = !DILocation(line: 18, column: 21, scope: !14)
+  !25 = !{!26, !26, i64 0}
+  !26 = !{!"any pointer", !27, i64 0}
+  !27 = !{!"omnipotent char", !28, i64 0}
+  !28 = !{!"Simple C/C++ TBAA"}
+  !29 = !DILocation(line: 19, column: 1, scope: !14)
+
+...
+---
+name:            baa
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+frameInfo:
+  stackSize:       8
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$lr', 
+      callee-saved-restored: false }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '$r11' }
+callSites:
+  - { bb: 2, offset: 0, fwdArgRegs: 
+      - { arg: 0, reg: '$r0' }
+      - { arg: 1, reg: '$r1' } }
+constants:
+  - id:              0
+    value:           'i32** null'
+    alignment:       4
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x60000000), %bb.2(0x20000000)
+    liveins: $r0, $r1, $lr
+  
+    DBG_VALUE $r0, $noreg, !16, !DIExpression(), debug-location !18
+    DBG_VALUE $r0, $noreg, !16, !DIExpression(), debug-location !18
+    DBG_VALUE $r1, $noreg, !17, !DIExpression(), debug-location !18
+    DBG_VALUE $r1, $noreg, !17, !DIExpression(), debug-location !18
+    $sp = frame-setup STMDB_UPD $sp, 14, $noreg, killed $r11, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r11, -8
+    $r11 = frame-setup MOVr killed $sp, 14, $noreg, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_register $r11
+    CMPri renamable $r0, 0, 14, $noreg, implicit-def $cpsr, debug-location !22
+    Bcc %bb.2, 1, killed $cpsr, debug-location !22
+  
+  bb.1.entry:
+    successors: %bb.3(0x55555555), %bb.2(0x2aaaaaab)
+    liveins: $r0, $r1
+  
+    CMPri renamable $r1, 0, 14, $noreg, implicit-def $cpsr, debug-location !22
+    Bcc %bb.3, 0, killed $cpsr, debug-location !22
+  
+  bb.2.if.then:
+    liveins: $r0, $r1
+  
+    BL_pred @foo, 14, $noreg, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $sp, debug-location !23
+  
+  bb.3.if.end:
+    renamable $r0 = LDRi12 %const.0, 0, 14, $noreg, debug-location !24 :: (load (s32) from constant-pool)
+    renamable $r1 = MOVi 0, 14, $noreg, $noreg
+    STRi12 killed renamable $r1, killed renamable $r0, 0, 14, $noreg, debug-location !24 :: (store (s32) into @mri_common_symbol, !tbaa !25)
+    $sp = LDMIA_RET $sp, 14, $noreg, def $r11, def $pc, debug-location !29
+
+...

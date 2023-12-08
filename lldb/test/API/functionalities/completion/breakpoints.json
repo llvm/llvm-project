@@ -1,0 +1,34 @@
+[
+    {
+        "Breakpoint": {
+            "BKPTOptions": {
+                "AutoContinue": false,
+                "ConditionText": "",
+                "EnabledState": true,
+                "IgnoreCount": 0,
+                "OneShotState": false
+            },
+            "BKPTResolver": {
+                "Options": {
+                    "NameMask": [
+                        56
+                    ],
+                    "Offset": 0,
+                    "SkipPrologue": true,
+                    "SymbolNames": [
+                        "main"
+                    ]
+                },
+                "Type": "SymbolName"
+            },
+            "Hardware": false,
+            "Names": [
+                "mm"
+            ],
+            "SearchFilter": {
+                "Options": {},
+                "Type": "Unconstrained"
+            }
+        }
+    }
+]

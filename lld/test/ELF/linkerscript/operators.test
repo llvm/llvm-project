@@ -1,0 +1,184 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t.o
+# RUN: ld.lld %t.o -T %s -o %t
+# RUN: llvm-nm -p %t | FileCheck %s
+
+SECTIONS {
+  _start = .;
+  unary =!0 + !0;  # Test space can be omitted between = and !
+  negate =-1 - 1;
+  not =~0xffff + 4;
+  not_negate = -~5 + 1;
+  multiplicative = 20 / 2 % 7;
+  additive = 1 - 2 + -3 * -2;
+  shift = 2 << 5 >> 1 << 2;
+  shift2 = 2 << 69 >> 65;
+  less = 1 < 0 ? 1 : 2;
+  lesseq = 1<<0 <= 1>>0 ? 1 : 2;
+  greater = 0 > 1 ? 1 : 2;
+  greatereq = 1 >= 1 ? 1 : 2;
+  eq = 1 == 1 ? 1 : 2;
+  neq = 1 != 1 <= 1 ? 1 : 2;
+  and = 3 & 4 > 0;
+  or = 0xbb & 0xee | 1;
+  xor = 3&3^5|1;
+  logicaland = (0 && 0) + (0&&1)*2 + (1&& 0)*4 + (1 &&1) *8;
+  logicaland2 = 1 & 0 && 1 | 1;
+  logicalor = (0 || 0) + (0||1)*2 + (1|| 0)*4 + (1 ||1) *8;
+  logicalor2 = 0 && 0 || 1 && 1;
+  ternary1 = 0 ? 1 : 2 & 6;
+  ternary2 = 1 ? 2?3:4 : 5?6 :7;
+
+  mulassign =2;
+  mulassign *=2;  # Test space can be omitted after *=
+  divassign = 8;
+  divassign /=2;
+  plusassign =1;
+  plusassign += 2;
+  minusassign = 3;
+  minusassign -= 1;
+  lshiftassign = 1;
+  lshiftassign <<= 1;
+  lshiftassign <<= 65;  # arbitrarily reduced to 1
+  rshiftassign = 24;
+  rshiftassign >>= 1;
+  rshiftassign >>= 130;  # arbitrarily reduced to 2
+  andassign = 6;
+  andassign &= 4;
+  andassign&=4;
+  xorassign = 6;
+  xorassign ^= 3;
+  xorassign ^=0;
+  orassign = 4;
+  orassign |= 1;
+  orassign|=1;
+  braces = 1 + (2 + 3) * 4;
+  precedence1 = 1|0xff&1/1<<1+1*2;
+  precedence2 = (1 | (0xff & (1 << (1 + (1 * 2)))));
+  maxpagesize = CONSTANT (MAXPAGESIZE);
+  commonpagesize = CONSTANT (COMMONPAGESIZE);
+  . = 0xfff0;
+  datasegmentalign = DATA_SEGMENT_ALIGN (0xffff, 0);
+  datasegmentalign2 = DATA_SEGMENT_ALIGN (0, 0);
+  _end = .;
+  minus_rel = _end - 0x10;
+  minus_abs = _end - _start;
+  max = MAX(11, 22);
+  min = MIN(11, 22);
+  log2ceil0 = LOG2CEIL(0);
+  log2ceil1 = LOG2CEIL(1);
+  log2ceil2 = LOG2CEIL(2);
+  log2ceil3 = LOG2CEIL(3);
+  log2ceil4 = LOG2CEIL(4);
+  log2ceil100000000 = LOG2CEIL(0x100000000);
+  log2ceil100000001 = LOG2CEIL(0x100000001);
+  log2ceilmax = LOG2CEIL(0xffffffffffffffff);
+}
+
+# CHECK:      0000000000000002 A unary
+# CHECK-NEXT: fffffffffffffffe A negate
+# CHECK-NEXT: ffffffffffff0004 A not
+# CHECK-NEXT: 0000000000000007 A not_negate
+# CHECK-NEXT: 0000000000000003 A multiplicative
+# CHECK-NEXT: 0000000000000005 A additive
+# CHECK-NEXT: 0000000000000080 A shift
+# CHECK-NEXT: 0000000000000020 A shift
+# CHECK-NEXT: 0000000000000002 A less
+# CHECK-NEXT: 0000000000000001 A lesseq
+# CHECK-NEXT: 0000000000000002 A greater
+# CHECK-NEXT: 0000000000000001 A greatereq
+# CHECK-NEXT: 0000000000000001 A eq
+# CHECK-NEXT: 0000000000000002 A neq
+# CHECK-NEXT: 0000000000000001 A and
+# CHECK-NEXT: 00000000000000ab A or
+# CHECK-NEXT: 0000000000000007 A xor
+# CHECK-NEXT: 0000000000000008 A logicaland
+# CHECK-NEXT: 0000000000000000 A logicaland2
+# CHECK-NEXT: 000000000000000e A logicalor
+# CHECK-NEXT: 0000000000000001 A logicalor2
+# CHECK-NEXT: 0000000000000002 A ternary1
+# CHECK-NEXT: 0000000000000003 A ternary2
+# CHECK-NEXT: 0000000000000004 A mulassign
+# CHECK-NEXT: 0000000000000004 A divassign
+# CHECK-NEXT: 0000000000000003 A plusassign
+# CHECK-NEXT: 0000000000000002 A minusassign
+# CHECK-NEXT: 0000000000000004 A lshiftassign
+# CHECK-NEXT: 0000000000000003 A rshiftassign
+# CHECK-NEXT: 0000000000000004 A andassign
+# CHECK-NEXT: 0000000000000005 A xorassign
+# CHECK-NEXT: 0000000000000005 A orassign
+# CHECK-NEXT: 0000000000000015 A braces
+# CHECK-NEXT: 0000000000000009 A precedence1
+# CHECK-NEXT: 0000000000000009 A precedence2
+# CHECK-NEXT: 0000000000001000 A maxpagesize
+# CHECK-NEXT: 0000000000001000 A commonpagesize
+# CHECK-NEXT: 0000000000010000 A datasegmentalign
+# CHECK-NEXT: 000000000000fff0 A datasegmentalign2
+# CHECK-NEXT: 000000000000ffe0 T minus_rel
+# CHECK-NEXT: 000000000000fff0 A minus_abs
+# CHECK-NEXT: 0000000000000016 A max
+# CHECK-NEXT: 000000000000000b A min
+# CHECK-NEXT: 0000000000000000 A log2ceil0
+# CHECK-NEXT: 0000000000000000 A log2ceil1
+# CHECK-NEXT: 0000000000000001 A log2ceil2
+# CHECK-NEXT: 0000000000000002 A log2ceil3
+# CHECK-NEXT: 0000000000000002 A log2ceil4
+# CHECK-NEXT: 0000000000000020 A log2ceil100000000
+# CHECK-NEXT: 0000000000000021 A log2ceil100000001
+# CHECK-NEXT: 0000000000000040 A log2ceilmax
+
+## Mailformed number error.
+# RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=NUMERR %s
+# NUMERR: malformed number: 0x12Q41
+
+## Missing closing bracket.
+# RUN: echo "SECTIONS { . = (1; }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=BRACKETERR %s
+# BRACKETERR: ) expected, but got ;
+
+## Missing opening bracket.
+# RUN: echo "SECTIONS { . = 1); }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=BRACKETERR2 %s
+# BRACKETERR2: ; expected, but got )
+
+## Empty expression.
+# RUN: echo "SECTIONS { . = ; }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=ERREXPR %s
+# ERREXPR: malformed number: ;
+
+## Div by zero error.
+# RUN: echo "SECTIONS { . = 1 / 0; }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=DIVZERO %s
+# DIVZERO: {{.*}}.script:1: division by zero
+
+## Mod by zero error.
+# RUN: echo "SECTIONS { . = 1 % 0; }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=MODZERO %s
+# MODZERO: {{.*}}.script:1: modulo by zero
+
+## Broken ternary operator expression.
+# RUN: echo "SECTIONS { . = 1 ? 2; }" > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | \
+# RUN:  FileCheck --check-prefix=TERNERR %s
+# TERNERR: : expected, but got ;
+
+## Div by zero error.
+# RUN: echo 'a = 1; a /= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=DIVZERO %s
+
+## GNU ld does not support %=.
+# RUN: echo 'a = 1; a %= 0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN1 %s
+## For now, we don't support ^= without a preceding space.
+# RUN: echo 'a = 1; a^=0;' > %t.script
+# RUN: not ld.lld %t.o -T %t.script -o /dev/null 2>&1 | FileCheck --check-prefix=UNKNOWN2 %s
+
+# UNKNOWN1: error: {{.*}}:1: unknown directive: a{{$}}
+# UNKNOWN2: error: {{.*}}:1: unknown directive: a^=0{{$}}

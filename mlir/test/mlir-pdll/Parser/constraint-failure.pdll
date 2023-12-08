@@ -1,0 +1,165 @@
+// RUN: not mlir-pdll %s -split-input-file 2>&1 | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// Constraint Structure
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected identifier name
+Constraint {}
+
+// -----
+
+// CHECK: :6:12: error: `Foo` has already been defined
+// CHECK: :5:12: note: see previous definition here
+Constraint Foo() { op<>; }
+Constraint Foo() { op<>; }
+
+// -----
+
+Constraint Foo() {
+  // CHECK: `erase` cannot be used within a Constraint
+  erase op<>;
+}
+
+// -----
+
+Constraint Foo() {
+  // CHECK: `replace` cannot be used within a Constraint
+  replace;
+}
+
+// -----
+
+Constraint Foo() {
+  // CHECK: `rewrite` cannot be used within a Constraint
+  rewrite;
+}
+
+// -----
+
+Constraint Foo() -> Value {
+  // CHECK: `return` terminated the `Constraint` body, but found trailing statements afterwards
+  return _: Value;
+  return _: Value;
+}
+
+// -----
+
+// CHECK: missing return in a `Constraint` expected to return `Value`
+Constraint Foo() -> Value {
+  let value: Value;
+}
+
+// -----
+
+// CHECK: expected `Constraint` lambda body to contain a single expression
+Constraint Foo() -> Value => let foo: Value;
+
+// -----
+
+// CHECK: unable to convert expression of type `Op` to the expected type of `Attr`
+Constraint Foo() -> Attr => op<>;
+
+// -----
+
+Rewrite SomeRewrite();
+
+// CHECK: unable to invoke `Rewrite` within a match section
+Constraint Foo() {
+  SomeRewrite();
+}
+
+// -----
+
+Constraint Foo() {
+  Constraint Foo() {};
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Arguments
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected `(` to start argument list
+Constraint Foo {}
+
+// -----
+
+// CHECK: expected identifier argument name
+Constraint Foo(10{}
+
+// -----
+
+// CHECK: expected `:` before argument constraint
+Constraint Foo(arg{}
+
+// -----
+
+// CHECK: inline `Attr`, `Value`, and `ValueRange` type constraints are not permitted on arguments or results
+Constraint Foo(arg: Value<type>){}
+
+// -----
+
+// CHECK: expected `)` to end argument list
+Constraint Foo(arg: Value{}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Results
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected identifier constraint
+Constraint Foo() -> {}
+
+// -----
+
+// CHECK: cannot create a single-element tuple with an element label
+Constraint Foo() -> result: Value {}
+
+// -----
+
+// CHECK: cannot create a single-element tuple with an element label
+Constraint Foo() -> (result: Value) {}
+
+// -----
+
+// CHECK: expected identifier constraint
+Constraint Foo() -> () {}
+
+// -----
+
+// CHECK: expected `:` before result constraint
+Constraint Foo() -> (result {};
+
+// -----
+
+// CHECK: expected `)` to end result list
+Constraint Foo() -> (Op{};
+
+// -----
+
+// CHECK: inline `Attr`, `Value`, and `ValueRange` type constraints are not permitted on arguments or results
+Constraint Foo() -> Value<type>) {}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Native Constraints
+//===----------------------------------------------------------------------===//
+
+Pattern {
+  // CHECK: external declarations must be declared in global scope
+  Constraint ExternalConstraint();
+}
+
+// -----
+
+// CHECK: expected `;` after native declaration
+Constraint Foo() [{}]
+
+// -----
+
+// CHECK: native Constraints currently do not support returning results
+Constraint Foo() -> Op;

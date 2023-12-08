@@ -1,0 +1,80 @@
+
+// RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
+// RUN: llvm-cov export --format=lcov %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s --check-prefix=NOBRANCH
+
+// CHECK-DAG: BRDA:14,0,0,1
+// CHECK-DAG: BRDA:14,0,1,5
+// CHECK-DAG: BRDA:27,0,0,1
+// CHECK-DAG: BRDA:27,0,1,4
+// CHECK-DAG: BRDA:27,1,2,0
+// CHECK-DAG: BRDA:27,1,3,1
+// CHECK-DAG: BRDA:27,2,4,0
+// CHECK-DAG: BRDA:27,2,5,5
+// CHECK-DAG: BRDA:27,3,6,2
+// CHECK-DAG: BRDA:27,3,7,3
+// CHECK-DAG: BRDA:30,0,0,4
+// CHECK-DAG: BRDA:30,0,1,1
+// CHECK-DAG: BRDA:30,1,2,0
+// CHECK-DAG: BRDA:30,1,3,1
+// CHECK-DAG: BRDA:32,0,0,4
+// CHECK-DAG: BRDA:32,0,1,1
+// CHECK-DAG: BRDA:32,1,2,1
+// CHECK-DAG: BRDA:32,1,3,3
+// CHECK-DAG: BRDA:34,0,0,1
+// CHECK-DAG: BRDA:34,0,1,5
+// CHECK-DAG: BRDA:41,0,0,1
+// CHECK-DAG: BRDA:41,0,1,4
+// CHECK-DAG: BRDA:43,0,0,1
+// CHECK-DAG: BRDA:43,0,1,4
+// CHECK-DAG: BRDA:45,0,0,0
+// CHECK-DAG: BRDA:45,0,1,5
+// CHECK-DAG: BRDA:47,0,0,3
+// CHECK-DAG: BRDA:47,0,1,2
+// CHECK-DAG: BRDA:53,0,0,50
+// CHECK-DAG: BRDA:53,0,1,5
+// CHECK-NOT: BRDA
+// CHECK: BRF:30
+// CHECK: BRH:26
+
+// Check recursive macro-expansions.
+// RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
+// RUN: llvm-cov export --format=lcov %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
+// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=NOBRANCH
+
+// MACROS-COUNT-4: BRDA:17
+// MACROS-NOT: BRDA:17
+
+// MACROS-COUNT-4: BRDA:19
+// MACROS-NOT: BRDA:19
+
+// MACROS-COUNT-4: BRDA:21
+// MACROS-NOT: BRDA:21
+
+// MACROS-COUNT-4: BRDA:23
+// MACROS-NOT: BRDA:23
+
+// MACROS-COUNT-4: BRDA:25
+// MACROS-NOT: BRDA:25
+
+// MACROS: BRDA:27,0,0,0
+// MACROS: BRDA:27,0,1,3
+// MACROS: BRDA:27,1,2,-
+// MACROS: BRDA:27,1,3,-
+// MACROS: BRDA:27,2,4,-
+// MACROS: BRDA:27,2,5,-
+// MACROS: BRDA:27,3,6,-
+// MACROS: BRDA:27,3,7,-
+// MACROS: BRDA:27,4,8,-
+// MACROS: BRDA:27,4,9,-
+
+// MACROS-COUNT-10: BRDA:37
+// MACROS-NOT: BRDA:37
+// MACROS-NOT: BRDA
+// MACROS: BRF:40
+// MACROS: BRH:24
+
+// NOBRANCH-NOT: BRDA
+// NOBRANCH-NOT: BRF
+// NOBRANCH-NOT: BRH
+

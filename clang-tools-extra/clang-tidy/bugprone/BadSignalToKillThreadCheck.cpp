@@ -1,0 +1,71 @@
+//===--- BadSignalToKillThreadCheck.cpp - clang-tidy ---------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "BadSignalToKillThreadCheck.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Preprocessor.h"
+#include <optional>
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
+
+void BadSignalToKillThreadCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(
+      callExpr(callee(functionDecl(hasName("::pthread_kill"))),
+               argumentCountIs(2),
+               hasArgument(1, integerLiteral().bind("integer-literal")))
+          .bind("thread-kill"),
+      this);
+}
+
+static Preprocessor *PP;
+
+void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto IsSigterm = [](const auto &KeyValue) -> bool {
+    return KeyValue.first->getName() == "SIGTERM" &&
+           KeyValue.first->hasMacroDefinition();
+  };
+  const auto TryExpandAsInteger =
+      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
+    if (It == PP->macro_end())
+      return std::nullopt;
+    const MacroInfo *MI = PP->getMacroInfo(It->first);
+    const Token &T = MI->tokens().back();
+    if (!T.isLiteral() || !T.getLiteralData())
+      return std::nullopt;
+    StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+
+    llvm::APInt IntValue;
+    constexpr unsigned AutoSenseRadix = 0;
+    if (ValueStr.getAsInteger(AutoSenseRadix, IntValue))
+      return std::nullopt;
+    return IntValue.getZExtValue();
+  };
+
+  const auto SigtermMacro = llvm::find_if(PP->macros(), IsSigterm);
+
+  if (!SigtermValue && !(SigtermValue = TryExpandAsInteger(SigtermMacro)))
+    return;
+
+  const auto *MatchedExpr = Result.Nodes.getNodeAs<Expr>("thread-kill");
+  const auto *MatchedIntLiteral =
+      Result.Nodes.getNodeAs<IntegerLiteral>("integer-literal");
+  if (MatchedIntLiteral->getValue() == *SigtermValue) {
+    diag(MatchedExpr->getBeginLoc(),
+         "thread should not be terminated by raising the 'SIGTERM' signal");
+  }
+}
+
+void BadSignalToKillThreadCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *Pp, Preprocessor *ModuleExpanderPP) {
+  PP = Pp;
+}
+
+} // namespace clang::tidy::bugprone

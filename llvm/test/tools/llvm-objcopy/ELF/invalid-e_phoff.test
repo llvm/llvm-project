@@ -1,0 +1,33 @@
+## If the e_phoff field is set to a value either past the end of the file, or
+## such that e_phoff + e_phnum * sizeof(Elf_Phdr) is past the end of the file,
+## we should emit an error. This test checks that the emitted error is sensible.
+
+# RUN: yaml2obj %s -o %t.o
+## Remove the default section headers so that the section header table is not invalid.
+# RUN: llvm-objcopy --strip-sections %t.o
+# RUN: cp %t.o %t2.o
+
+## Verify that the phdr table is at offset 64:
+# RUN: llvm-readobj --file-headers %t.o | FileCheck %s --check-prefix=VALIDATE
+# VALIDATE: ProgramHeaderOffset: 0x40{{$}}
+
+## Truncate the file to end before the program header table ends.
+# RUN: %python -c "with open('%/t.o', 'r+b') as input: input.truncate(65)"
+# RUN: not llvm-objcopy %t.o 2>&1 | FileCheck %s --check-prefix=CASE1
+
+# CASE1: error: program headers are longer than binary of size 65: e_phoff = 0x40, e_phnum = 1, e_phentsize = 56
+
+## Set the e_phoff field to a value much larger than the object file size.
+# RUN: %python -c "with open('%/t2.o', 'r+b') as input: import struct; bytes = struct.pack('<Q', 0x40000000); input.seek(32); input.write(bytes)"
+# RUN: not llvm-objcopy %t2.o 2>&1 | FileCheck %s --check-prefix=CASE2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type: PT_LOAD
+
+# CASE2: error: program headers are longer than binary of size 120: e_phoff = 0x40000000, e_phnum = 1, e_phentsize = 56

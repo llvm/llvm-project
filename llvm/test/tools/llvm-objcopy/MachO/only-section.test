@@ -1,0 +1,153 @@
+## Show that if --only-section is given, llvm-objcopy removes all sections
+## except ones specified in the option.
+
+# RUN: yaml2obj %s -o %t
+
+## Specify all sections. The output file should be the same as the input.
+# RUN: llvm-objcopy -j __TEXT,__text -j __DATA,__data -j __TEXT,__const %t %t2
+# RUN: cmp %t %t2
+
+## Specify one section. The output file should contain only that section.
+# RUN: llvm-objcopy --only-section __TEXT,__text %t %t3
+# RUN: llvm-readobj --sections --section-data --macho-segment %t3 \
+# RUN:   | FileCheck %s --check-prefix=ONLY-TEXT-SECTION
+
+# ONLY-TEXT-SECTION:      Sections [
+# ONLY-TEXT-SECTION-NEXT:   Section {
+# ONLY-TEXT-SECTION-NEXT:     Index: 0
+# ONLY-TEXT-SECTION-NEXT:     Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# ONLY-TEXT-SECTION-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# ONLY-TEXT-SECTION-NEXT:     Address: 0x0
+# ONLY-TEXT-SECTION-NEXT:     Size: 0x4
+# ONLY-TEXT-SECTION-NEXT:     Offset: 184
+# ONLY-TEXT-SECTION-NEXT:     Alignment: 0
+# ONLY-TEXT-SECTION-NEXT:     RelocationOffset: 0x0
+# ONLY-TEXT-SECTION-NEXT:     RelocationCount: 0
+# ONLY-TEXT-SECTION-NEXT:     Type: Regular (0x0)
+# ONLY-TEXT-SECTION-NEXT:     Attributes [ (0x800004)
+# ONLY-TEXT-SECTION-NEXT:       PureInstructions (0x800000)
+# ONLY-TEXT-SECTION-NEXT:       SomeInstructions (0x4)
+# ONLY-TEXT-SECTION-NEXT:     ]
+# ONLY-TEXT-SECTION-NEXT:     Reserved1: 0x0
+# ONLY-TEXT-SECTION-NEXT:     Reserved2: 0x0
+# ONLY-TEXT-SECTION-NEXT:     Reserved3: 0x0
+# ONLY-TEXT-SECTION-NEXT:     SectionData (
+# ONLY-TEXT-SECTION-NEXT:       0000: AABBCCDD                             |....|
+# ONLY-TEXT-SECTION-NEXT:     )
+# ONLY-TEXT-SECTION-NEXT:   }
+# ONLY-TEXT-SECTION-NEXT: ]
+# ONLY-TEXT-SECTION-NEXT: Segment {
+# ONLY-TEXT-SECTION-NEXT:   Cmd: LC_SEGMENT_64
+# ONLY-TEXT-SECTION-NEXT:   Name:
+# ONLY-TEXT-SECTION-NEXT:   Size: 152
+# ONLY-TEXT-SECTION-NEXT:   vmaddr: 0x0
+# ONLY-TEXT-SECTION-NEXT:   vmsize: 0x4
+# ONLY-TEXT-SECTION-NEXT:   fileoff: 184
+# ONLY-TEXT-SECTION-NEXT:   filesize: 4
+# ONLY-TEXT-SECTION-NEXT:   maxprot: rwx
+# ONLY-TEXT-SECTION-NEXT:   initprot: rwx
+# ONLY-TEXT-SECTION-NEXT:   nsects: 1
+# ONLY-TEXT-SECTION-NEXT:   flags: 0x0
+# ONLY-TEXT-SECTION-NEXT: }
+
+## Remove all sections if the specified section name is not present in the input.
+# RUN: llvm-objcopy --only-section __TEXT,__nonexistent %t %t4 2>&1
+# RUN: llvm-readobj --sections --section-data --macho-segment %t4 \
+# RUN:   | FileCheck %s --check-prefix=NONEXISTENT-SECTION
+
+# NONEXISTENT-SECTION:      Sections [
+# NONEXISTENT-SECTION-NEXT: ]
+# NONEXISTENT-SECTION-NEXT: Segment {
+# NONEXISTENT-SECTION-NEXT:   Cmd: LC_SEGMENT_64
+# NONEXISTENT-SECTION-NEXT:   Name:
+# NONEXISTENT-SECTION-NEXT:   Size: 72
+# NONEXISTENT-SECTION-NEXT:   vmaddr: 0x0
+# NONEXISTENT-SECTION-NEXT:   vmsize: 0x0
+# NONEXISTENT-SECTION-NEXT:   fileoff: 104
+# NONEXISTENT-SECTION-NEXT:   filesize: 0
+# NONEXISTENT-SECTION-NEXT:   maxprot: rwx
+# NONEXISTENT-SECTION-NEXT:   initprot: rwx
+# NONEXISTENT-SECTION-NEXT:   nsects: 0
+# NONEXISTENT-SECTION-NEXT:   flags: 0x0
+# NONEXISTENT-SECTION-NEXT: }
+
+## Use wildcard to specify all sections under the __TEXT segment.
+# RUN: llvm-objcopy --only-section "__TEXT,*" %t %t5 2>&1
+# RUN: llvm-readobj --file-header --sections %t5 \
+# RUN:   | FileCheck %s --check-prefix=WILDCARD
+
+## Make sure that it doesn't care about the segment/section name separator ",".
+# RUN: llvm-objcopy --only-section "__TEXT*" %t %t6 2>&1
+# RUN: cmp %t5 %t6
+
+# WILDCARD:      NumOfLoadCommands: 1
+# WILDCARD:      Sections [
+# WILDCARD:        Index: 0
+# WILDCARD-NEXT:   Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# WILDCARD:        Index: 1
+# WILDCARD-NEXT:   Name: __const (5F 5F 63 6F 6E 73 74 00 00 00 00 00 00 00 00 00)
+# WILDCARD-NOT:    Index: 2
+# WILDCARD:      ]
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      312
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          12
+    fileoff:         344
+    filesize:        12
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          344
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000004
+        content:         'DDAADDAA'
+        size:            4
+        offset:          348
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x0000000000000008
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          352
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000

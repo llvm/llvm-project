@@ -1,0 +1,24 @@
+# RUN: dsymutil -no-output -oso-prepend-path=%p -y %s 2>&1 | FileCheck -DMSG=%errc_ENOENT %s
+
+# This is the archive member part of basic-archive.macho.x86_64 debug map with corrupted timestamps.
+
+# CHECK: warning: {{.*}}libbasic.a(basic2.macho.x86_64.o): [[MSG]]
+# CHECK: warning: {{.*}}libbasic.a(basic3.macho.x86_64.o): [[MSG]]
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        '/Inputs/libbasic.a(basic2.macho.x86_64.o)'
+    timestamp:       141869239
+    symbols:
+      - { sym: _foo, objAddr: 0x0000000000000020, binAddr: 0x0000000100000ED0, size: 0x00000050 }
+      - { sym: _private_int, objAddr: 0x0000000000000560, binAddr: 0x0000000100001004, size: 0x00000000 }
+      - { sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F20, size: 0x00000017 }
+      - { sym: _baz, objAddr: 0x0000000000000310, binAddr: 0x0000000100001000, size: 0x00000000 }
+  - filename:        '/Inputs/libbasic.a(basic3.macho.x86_64.o)'
+    timestamp:       418692393
+    symbols:
+      - { sym: _val, objAddr: 0x0000000000000004, binAddr: 0x0000000100001008, size: 0x00000000 }
+      - { sym: _bar, objAddr: 0x0000000000000020, binAddr: 0x0000000100000F40, size: 0x00000050 }
+      - { sym: _inc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000F90, size: 0x00000019 }
+...

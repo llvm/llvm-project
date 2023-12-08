@@ -1,0 +1,41 @@
+# REQUIRES: aarch64-registered-target
+# RUN: not --crash llc -verify-machineinstrs -mtriple aarch64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+name:            test
+legalized:       true
+regBankSelected: false
+body: |
+  bb.0:
+   liveins: $w0, $w1
+   %bank:gpr(s32) = COPY $w0
+   %class:gpr32(s32) = COPY $w1
+
+   ; CHECK: *** Bad machine code: G_ASSERT_ZEXT cannot change register bank ***
+   ; CHECK: instruction: %bank_mismatch:fpr(s32) = G_ASSERT_ZEXT %bank:gpr, 16
+   %bank_mismatch:fpr(s32) = G_ASSERT_ZEXT %bank, 16
+
+   ; CHECK: *** Bad machine code: G_ASSERT_ZEXT source and destination register classes must match ***
+   ; CHECK: instruction: %class_mismatch_gpr:gpr32all(s32) = G_ASSERT_ZEXT %class:gpr32, 16
+   %class_mismatch_gpr:gpr32all(s32) = G_ASSERT_ZEXT %class, 16
+
+   ; CHECK: *** Bad machine code: G_ASSERT_ZEXT cannot change register bank ***
+   ; CHECK: instruction: %class_mismatch_fpr:fpr32(s32) = G_ASSERT_ZEXT %class:gpr32, 16
+   %class_mismatch_fpr:fpr32(s32) = G_ASSERT_ZEXT %class, 16
+
+   ; CHECK: *** Bad machine code: G_ASSERT_ZEXT source and destination register classes must match ***
+   ; CHECK: instruction: %dst_has_class_src_has_bank:gpr32all(s32) = G_ASSERT_ZEXT %bank:gpr, 16
+   %dst_has_class_src_has_bank:gpr32all(s32) = G_ASSERT_ZEXT %bank, 16
+
+   ; CHECK: *** Bad machine code: Generic instruction cannot have physical register ***
+   ; CHECK: instruction: %implicit_physreg:gpr(s32) = G_ASSERT_ZEXT %class:gpr32, 16, implicit-def $w0
+   %implicit_physreg:gpr(s32) = G_ASSERT_ZEXT %class, 16, implicit-def $w0
+
+   %nothing:_(s32) = G_IMPLICIT_DEF
+
+   ; CHECK: *** Bad machine code: G_ASSERT_ZEXT cannot change register bank ***
+   ; CHECK: %only_dst_has_bank:gpr(s32) = G_ASSERT_ZEXT %nothing:_, 4
+   %only_dst_has_bank:gpr(s32) = G_ASSERT_ZEXT %nothing, 4
+
+   ; CHECK: *** Bad machine code: G_ASSERT_ZEXT cannot change register bank ***
+   ; CHECK: %only_dst_has_class:gpr32all(s32) = G_ASSERT_ZEXT %nothing:_, 4
+    %only_dst_has_class:gpr32all(s32) = G_ASSERT_ZEXT %nothing, 4

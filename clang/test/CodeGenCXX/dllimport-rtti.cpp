@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -triple i686-windows-gnu  -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+
+struct __declspec(dllimport) S {
+  virtual void f() {}
+} s;
+// MSVC: [[VF_S:.*]] = private unnamed_addr constant { [2 x ptr] }
+// MSVC-DAG: @"??_SS@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VF_S]], i32 0, i32 0, i32 1)
+// MSVC-DAG: @"??_R0?AUS@@@8" = linkonce_odr
+// MSVC-DAG: @"??_R1A@?0A@EA@S@@8" = linkonce_odr
+// MSVC-DAG: @"??_R2S@@8" = linkonce_odr
+// MSVC-DAG: @"??_R3S@@8" = linkonce_odr
+
+// GNU-DAG: @_ZTV1S = available_externally dllimport
+// GNU-DAG: @_ZTI1S = linkonce_odr dso_local
+
+struct U : S {
+} u;
+
+struct __declspec(dllimport) V {
+  virtual void f();
+} v;
+// GNU-DAG: @_ZTV1V = available_externally dllimport
+// GNU-DAG: @_ZTS1V = linkonce_odr dso_local
+// GNU-DAG: @_ZTI1V = linkonce_odr dso_local
+
+struct W {
+  __declspec(dllimport) virtual void f();
+  virtual void g();
+} w;
+// GNU-DAG: @_ZTV1W = linkonce_odr dso_local
+// GNU-DAG: @_ZTS1W = linkonce_odr dso_local
+// GNU-DAG: @_ZTI1W = linkonce_odr dso_local

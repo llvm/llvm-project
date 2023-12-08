@@ -1,0 +1,28 @@
+# RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            g_merge_values
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = IMPLICIT_DEF
+    %1:_(s32) = IMPLICIT_DEF
+    %2:_(<2 x s32>) = IMPLICIT_DEF
+    %3:_(<2 x s32>) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_MERGE_VALUES cannot operate on vectors
+    %4:_(<4 x s32>) = G_MERGE_VALUES %2, %3
+
+    ; CHECK: Bad machine code: G_MERGE_VALUES result size is inconsistent
+    %5:_(s64) = G_MERGE_VALUES %0
+
+    ; CHECK: Bad machine code: G_MERGE_VALUES result size is inconsistent
+    %6:_(s64) = G_MERGE_VALUES %0, %1, %1
+
+    %7:_(s16) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_MERGE_VALUES source types do not match
+    %8:_(s64) = G_MERGE_VALUES %0, %7
+
+...

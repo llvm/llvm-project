@@ -1,0 +1,55 @@
+{
+  'version': 0,
+  'roots': [
+    { 'name': 'OUT_DIR', 'type': 'directory',
+      'contents': [
+        { 'name': 'not_real.h', 'type': 'file',
+          'external-contents': 'INPUT_DIR/actual_header.h'
+        },
+        { 'name': 'import_some_frame.h', 'type': 'file',
+          'external-contents': 'INPUT_DIR/import_some_frame.h'
+        },
+        { 'name': 'module.map', 'type': 'file',
+          'external-contents': 'INPUT_DIR/actual_module.map'
+        },
+        { 'name': 'include_real.h', 'type': 'file',
+          'external-contents': 'INPUT_DIR/include_real.h'
+        },
+        { 'name': 'SomeFramework.framework', 'type': 'directory',
+          'contents': [
+            { 'name': 'Headers', 'type': 'directory',
+              'contents': [
+                { 'name': 'public_header.h', 'type': 'file',
+                  'external-contents': 'INPUT_DIR/public_header.h' },
+                { 'name': 'public_header2.h', 'type': 'file',
+                  'external-contents': 'INPUT_DIR/public_header2.h' },
+                { 'name': 'public_header3.h', 'type': 'file',
+                  'external-contents': 'INPUT_DIR/public_header3.h' }
+              ]
+            }
+          ]
+        },
+        { 'name': 'Foo.framework/Headers/Foo.h', 'type': 'file',
+          'external-contents': 'INPUT_DIR/Foo.h'
+        },
+        { 'name': 'Incomplete.framework', 'type': 'directory',
+          'contents': [
+            { 'name': 'Headers', 'type': 'directory',
+              'contents': [
+                { 'name': 'Incomplete.h', 'type': 'file',
+                  'external-contents': 'INPUT_DIR/Incomplete.h'
+                },
+                { 'name': 'IncompleteVFS.h', 'type': 'file',
+                  'external-contents': 'INPUT_DIR/IncompleteVFS.h'
+                }
+              ]
+            },
+            { 'name': 'Modules/module.modulemap', 'type': 'file',
+              'external-contents': 'INPUT_DIR/incomplete-umbrella.modulemap'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,248 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+??0Base@@QEAA@XZ
+; CHECK: __cdecl Base::Base(void)
+
+??1Base@@UEAA@XZ
+; CHECK: virtual __cdecl Base::~Base(void)
+
+??2@YAPEAX_K@Z
+; CHECK: void * __cdecl operator new(unsigned __int64)
+
+??3@YAXPEAX_K@Z
+; CHECK: void __cdecl operator delete(void *, unsigned __int64)
+
+??4Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator=(int)
+
+??6Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator<<(int)
+
+??5Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator>>(int)
+
+??7Base@@QEAAHXZ
+; CHECK: int __cdecl Base::operator!(void)
+
+??8Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator==(int)
+
+??9Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator!=(int)
+
+??ABase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator[](int)
+
+??BBase@@QEAAHXZ
+; CHECK: __cdecl Base::operator int(void)
+
+??CBase@@QEAAHXZ
+; CHECK: int __cdecl Base::operator->(void)
+
+??DBase@@QEAAHXZ
+; CHECK: int __cdecl Base::operator*(void)
+
+??EBase@@QEAAHXZ
+; CHECK: int __cdecl Base::operator++(void)
+
+??EBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator++(int)
+
+??FBase@@QEAAHXZ
+; CHECK: int __cdecl Base::operator--(void)
+
+??FBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator--(int)
+
+??GBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator-(int)
+
+??HBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator+(int)
+
+??IBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator&(int)
+
+??JBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator->*(int)
+
+??KBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator/(int)
+
+??LBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator%(int)
+
+??MBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator<(int)
+
+??NBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator<=(int)
+
+??OBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator>(int)
+
+??PBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator>=(int)
+
+??QBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator,(int)
+
+??RBase@@QEAAHXZ
+; CHECK: int __cdecl Base::operator()(void)
+
+??SBase@@QEAAHXZ
+; CHECK: int __cdecl Base::operator~(void)
+
+??TBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator^(int)
+
+??UBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator|(int)
+
+??VBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator&&(int)
+
+??WBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator||(int)
+
+??XBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator*=(int)
+
+??YBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator+=(int)
+
+??ZBase@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator-=(int)
+
+??_0Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator/=(int)
+
+??_1Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator%=(int)
+
+??_2Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator>>=(int)
+
+??_3Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator<<=(int)
+
+??_4Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator&=(int)
+
+??_5Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator|=(int)
+
+??_6Base@@QEAAHH@Z
+; CHECK: int __cdecl Base::operator^=(int)
+
+??_7Base@@6B@
+; CHECK: const Base::`vftable'
+
+??_7A@B@@6BC@D@@@
+; CHECK: const B::A::`vftable'{for `D::C'}
+
+??_8Middle2@@7B@
+; CHECK: const Middle2::`vbtable'
+
+??_9Base@@$B7AA
+; CHECK: [thunk]: __cdecl Base::`vcall'{8, {flat}}
+
+??_B?1??getS@@YAAAUS@@XZ@51
+; CHECK: `struct S & __cdecl getS(void)'::`2'::`local static guard'{2}
+
+??_C@_02PCEFGMJL@hi?$AA@
+; CHECK: "hi"
+
+??_DDiamond@@QEAAXXZ
+; CHECK: void __cdecl Diamond::`vbase dtor'(void)
+
+??_EBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`vector deleting dtor'(unsigned int)
+
+??_EBase@@G3AEPAXI@Z
+; CHECK: [thunk]: private: void * __thiscall Base::`vector deleting dtor'`adjustor{4}'(unsigned int)
+
+??_F?$SomeTemplate@H@@QAEXXZ
+; CHECK: void __thiscall SomeTemplate<int>::`default ctor closure'(void)
+
+??_GBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`scalar deleting dtor'(unsigned int)
+
+??_H@YAXPEAX_K1P6APEAX0@Z@Z
+; CHECK: void __cdecl `vector ctor iterator'(void *, unsigned __int64, unsigned __int64, void * (__cdecl *)(void *))
+
+??_I@YAXPEAX_K1P6AX0@Z@Z
+; CHECK: void __cdecl `vector dtor iterator'(void *, unsigned __int64, unsigned __int64, void (__cdecl *)(void *))
+
+??_JBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`vector vbase ctor iterator'(unsigned int)
+
+??_KBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`virtual displacement map'(unsigned int)
+
+??_LBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`eh vector ctor iterator'(unsigned int)
+
+??_MBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`eh vector dtor iterator'(unsigned int)
+
+??_NBase@@UEAAPEAXI@Z
+; CHECK: virtual void * __cdecl Base::`eh vector vbase ctor iterator'(unsigned int)
+
+??_O?$SomeTemplate@H@@QAEXXZ
+; CHECK: void __thiscall SomeTemplate<int>::`copy ctor closure'(void)
+
+??_SBase@@6B@
+; CHECK: const Base::`local vftable'
+
+??_TDerived@@QEAAXXZ
+; CHECK: void __cdecl Derived::`local vftable ctor closure'(void)
+
+??_U@YAPEAX_KAEAVklass@@@Z
+; CHECK: void * __cdecl operator new[](unsigned __int64, class klass &)
+
+??_V@YAXPEAXAEAVklass@@@Z
+; CHECK: void __cdecl operator delete[](void *, class klass &)
+
+??_R0?AUBase@@@8
+; CHECK: struct Base `RTTI Type Descriptor'
+
+.?AUBase@@
+; CHECK: struct Base `RTTI Type Descriptor Name'
+
+??_R1A@?0A@EA@Base@@8
+; CHECK: Base::`RTTI Base Class Descriptor at (0, -1, 0, 64)'
+
+??_R2Base@@8
+; CHECK: Base::`RTTI Base Class Array'
+
+??_R3Base@@8
+; CHECK: Base::`RTTI Class Hierarchy Descriptor'
+
+??_R4Base@@6B@
+; CHECK: const Base::`RTTI Complete Object Locator'
+
+; Generated for `int Foo = f(4);` at global scope.
+??__EFoo@@YAXXZ
+; CHECK: void __cdecl `dynamic initializer for 'Foo''(void)
+
+; Generated for
+;   class C {  static int i; };
+;   int C::i = f(5);
+??__E?i@C@@0HA@@YAXXZ
+; CHECK: void __cdecl `dynamic initializer for `private: static int C::i''(void)
+
+??__FFoo@@YAXXZ
+; CHECK: void __cdecl `dynamic atexit destructor for 'Foo''(void)
+
+??__F_decisionToDFA@XPathLexer@@0V?$vector@VDFA@dfa@antlr4@@V?$allocator@VDFA@dfa@antlr4@@@std@@@std@@A@YAXXZ
+; CHECK: void __cdecl `dynamic atexit destructor for `private: static class std::vector<class antlr4::dfa::DFA, class std::allocator<class antlr4::dfa::DFA>> XPathLexer::_decisionToDFA''(void)
+
+??__J?1??f@@YAAAUS@@XZ@51
+; CHECK: `struct S & __cdecl f(void)'::`2'::`local static thread guard'{2}
+
+??__K_deg@@YAHO@Z
+; CHECK: int __cdecl operator ""_deg(long double)
+

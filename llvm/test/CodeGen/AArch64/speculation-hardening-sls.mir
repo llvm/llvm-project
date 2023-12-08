@@ -1,0 +1,150 @@
+# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN:     -start-before aarch64-sls-hardening -o - %s \
+# RUN:     -mattr=+pauth,+harden-sls-retbr \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,ISBDSB
+# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN:     -start-before aarch64-sls-hardening -o - %s \
+# RUN:     -mattr=+pauth,+harden-sls-retbr -mattr=+sb \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,SB
+
+# Check that the SLS hardening pass also protects BRA* indirect branches that
+# llvm currently does not generate.
+--- |
+  @ptr_aa = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@br_aa, %return), i8* blockaddress(@br_aa, %l2)], align 8
+  @ptr_aaz = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@br_aaz, %return), i8* blockaddress(@br_aaz, %l2)], align 8
+  @ptr_ab = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@br_ab, %return), i8* blockaddress(@br_ab, %l2)], align 8
+  @ptr_abz = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@br_abz, %return), i8* blockaddress(@br_abz, %l2)], align 8
+
+  define dso_local i32 @br_aa(i32 %a, i32 %b, i32 %i) {
+  entry:
+    br label %l2
+  l2:
+    br label %return
+  return:
+    ret i32 undef
+  }
+  define dso_local i32 @br_aaz(i32 %a, i32 %b, i32 %i) {
+  entry:
+    br label %l2
+  l2:
+    br label %return
+  return:
+    ret i32 undef
+  }
+  define dso_local i32 @br_ab(i32 %a, i32 %b, i32 %i) {
+  entry:
+    br label %l2
+  l2:
+    br label %return
+  return:
+    ret i32 undef
+  }
+  define dso_local i32 @br_abz(i32 %a, i32 %b, i32 %i) {
+  entry:
+    br label %l2
+  l2:
+    br label %return
+  return:
+    ret i32 undef
+  }
+...
+---
+name:            br_aa
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: br_aa:
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+    liveins: $w2
+    $x8 = ADRP target-flags(aarch64-page) @ptr_aa
+    renamable $x8 = ADDXri $x8, target-flags(aarch64-pageoff, aarch64-nc) @ptr_aa, 0
+    renamable $x8 = LDRXroW killed renamable $x8, killed renamable $w2, 1, 1
+    BRAA killed renamable $x8, $sp
+  ; CHECK:       braa x8, sp
+  ; ISBDSB-NEXT: dsb sy
+  ; ISBDSB-NEXT: isb
+  ; SB-NEXT:     {{ sb$}}
+
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
+    renamable $w0 = MOVZWi 1, 0
+    RET undef $lr, implicit $w0
+
+  bb.2.return (ir-block-address-taken %ir-block.return):
+    $w0 = ORRWrs $wzr, $wzr, 0
+    RET undef $lr, implicit $w0
+...
+---
+name:            br_aaz
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: br_aaz:
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+    liveins: $w2
+    $x8 = ADRP target-flags(aarch64-page) @ptr_aaz
+    renamable $x8 = ADDXri $x8, target-flags(aarch64-pageoff, aarch64-nc) @ptr_aaz, 0
+    renamable $x8 = LDRXroW killed renamable $x8, killed renamable $w2, 1, 1
+    BRAAZ killed renamable $x8
+  ; CHECK:       braaz x8
+  ; ISBDSB-NEXT: dsb sy
+  ; ISBDSB-NEXT: isb
+  ; SB-NEXT:     {{ sb$}}
+
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
+    renamable $w0 = MOVZWi 1, 0
+    RET undef $lr, implicit $w0
+
+  bb.2.return (ir-block-address-taken %ir-block.return):
+    $w0 = ORRWrs $wzr, $wzr, 0
+    RET undef $lr, implicit $w0
+...
+---
+name:            br_ab
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: br_ab:
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+    liveins: $w2
+    $x8 = ADRP target-flags(aarch64-page) @ptr_ab
+    renamable $x8 = ADDXri $x8, target-flags(aarch64-pageoff, aarch64-nc) @ptr_ab, 0
+    renamable $x8 = LDRXroW killed renamable $x8, killed renamable $w2, 1, 1
+    BRAA killed renamable $x8, $sp
+  ; CHECK:       braa x8, sp
+  ; ISBDSB-NEXT: dsb sy
+  ; ISBDSB-NEXT: isb
+  ; SB-NEXT:     {{ sb$}}
+
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
+    renamable $w0 = MOVZWi 1, 0
+    RET undef $lr, implicit $w0
+
+  bb.2.return (ir-block-address-taken %ir-block.return):
+    $w0 = ORRWrs $wzr, $wzr, 0
+    RET undef $lr, implicit $w0
+...
+---
+name:            br_abz
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: br_abz:
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+    liveins: $w2
+    $x8 = ADRP target-flags(aarch64-page) @ptr_abz
+    renamable $x8 = ADDXri $x8, target-flags(aarch64-pageoff, aarch64-nc) @ptr_abz, 0
+    renamable $x8 = LDRXroW killed renamable $x8, killed renamable $w2, 1, 1
+    BRAAZ killed renamable $x8
+  ; CHECK:       braaz x8
+  ; ISBDSB-NEXT: dsb sy
+  ; ISBDSB-NEXT: isb
+  ; SB-NEXT:     {{ sb$}}
+
+  bb.1.l2 (ir-block-address-taken %ir-block.l2):
+    renamable $w0 = MOVZWi 1, 0
+    RET undef $lr, implicit $w0
+
+  bb.2.return (ir-block-address-taken %ir-block.return):
+    $w0 = ORRWrs $wzr, $wzr, 0
+    RET undef $lr, implicit $w0
+...

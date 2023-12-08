@@ -1,0 +1,39 @@
+# RUN: llc -march=x86 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses fixed stack memory operands
+# correctly.
+
+--- |
+
+  define i32 @test(i32 %a) #0 {
+  entry:
+    %b = alloca i32
+    store i32 %a, i32* %b
+    %c = load i32, i32* %b
+    ret i32 %c
+  }
+
+  attributes #0 = { "frame-pointer"="none" }
+
+...
+---
+name:            test
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       4
+  maxAlignment:    4
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true }
+stack:
+  - { id: 0, name: b, offset: -8, size: 4, alignment: 4 }
+body: |
+  bb.0.entry:
+    frame-setup PUSH32r undef $eax, implicit-def $esp, implicit $esp
+    CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK: name: test
+  ; CHECK: $eax = MOV32rm $esp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0, align 16)
+    $eax = MOV32rm $esp, 1, _, 8, _ :: (load (s32) from %fixed-stack.0, align 16)
+    MOV32mr $esp, 1, _, 0, _, $eax :: (store (s32) into %ir.b)
+    $edx = POP32r implicit-def $esp, implicit $esp
+    RET32 $eax
+...

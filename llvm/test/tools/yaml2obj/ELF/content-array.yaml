@@ -1,0 +1,91 @@
+## Check we are able to describe the content of a section
+## using the ContentArray key.
+
+## Check we are able to use ContentArray to create multi-line descriptions
+## of section contents with comments on the same line.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s
+
+# CHECK:      Section {
+# CHECK:        Index: 1
+# CHECK-NEXT:   Name: .foo
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x0
+# CHECK-NEXT:   Offset: 0x40
+# CHECK-NEXT:   Size: 16
+# CHECK-NEXT:   Link: 0
+# CHECK-NEXT:   Info: 0
+# CHECK-NEXT:   AddressAlignment: 0
+# CHECK-NEXT:   EntrySize: 0
+# CHECK-NEXT:   SectionData (
+# CHECK-NEXT:     0000: 11223344 55667788 99AABBCC DDEEFF00
+# CHECK-NEXT:   )
+# CHECK-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    ContentArray: [ 0x11, 0x22, 0x33, 0x44,                                ## .long 11223344
+                    0x55, 0x66,                                            ## .short 5566.
+                    0x77,                                                  ## .byte 0x77
+                    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00 ] ## .quad 0x8899aabbccddeeff00
+
+## Check we do not allow using 'Content' and 'ContentArray' at the same time.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=BOTH
+# BOTH: error: Content and ContentArray can't be used together
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Content:      [ 0x0 ]
+    ContentArray: [ 0x1 ]
+
+## Check how the "Size" and the "ContentArray" keys can be used together.
+
+## Case A: check that we report an error when the the value of "Size" is less than the content size.
+# RUN: not yaml2obj --docnum=3 -DSIZE=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=SIZE-LESS
+# SIZE-LESS: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    ContentArray: [ 0x11, 0x22 ]
+    Size:         [[SIZE]]
+
+## Case B: check we are able to produce an output when the value of "Size" is equal
+##         to the content size. In this case the "Size" key has no effect.
+# RUN: yaml2obj --docnum=3 -DSIZE=2 %s -o %t3.eq
+# RUN: llvm-readobj --sections --section-data %t3.eq | FileCheck %s --check-prefix=SIZE-EQ
+
+# SIZE-EQ:      Name: .foo
+# SIZE-EQ:      SectionData (
+# SIZE-EQ-NEXT:   0000: 1122 |
+# SIZE-EQ-NEXT: )
+
+## Case C: check we are able to produce an output when the value of "Size" is greater
+##         than the content size. In this case zeroes are added as padding after the
+##         specified content.
+# RUN: yaml2obj --docnum=3 -DSIZE=3 %s -o %t4.gr
+# RUN: llvm-readobj --sections --section-data %t4.gr | FileCheck %s --check-prefix=SIZE-GR
+
+# SIZE-GR:      Name: .foo
+# SIZE-GR:      SectionData (
+# SIZE-GR-NEXT:   0000: 112200 |
+# SIZE-GR-NEXT: )

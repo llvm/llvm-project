@@ -1,0 +1,27 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.cpp_compiler = "@LIBFUZZER_TEST_COMPILER@"
+config.target_flags = "@LIBFUZZER_TEST_FLAGS@"
+config.c_compiler = "@LIBFUZZER_TEST_COMPILER@"
+config.stdlib = "@LIBFUZZER_TEST_STDLIB@"
+config.apple_platform = "@LIBFUZZER_TEST_APPLE_PLATFORM@"
+config.apple_platform_min_deployment_target_flag = "@LIBFUZZER_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
+config.name_suffix = "@LIBFUZZER_TEST_CONFIG_SUFFIX@"
+config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"
+
+config.osx_sysroot_flag = "@OSX_SYSROOT_FLAG@"
+config.cmake_binary_dir = "@CMAKE_BINARY_DIR@"
+config.llvm_library_dir = "@LLVM_LIBRARY_DIR@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.target_arch = "@LIBFUZZER_TEST_TARGET_ARCH@"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config,
+    "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+if config.enable_per_target_runtime_dir:
+  config.runtime_library_dir = config.compiler_rt_libdir
+else:
+  config.runtime_library_dir = "@LLVM_LIBRARY_DIR@"
+
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

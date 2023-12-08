@@ -1,0 +1,4 @@
+RUN: not llvm-dwp %p/../Inputs/invalid_string_form.dwo -o %t 2>&1 | FileCheck %s
+
+CHECK: error: {{.*}}: string field must be encoded with one of the following:
+CHECK: DW_FORM_string, DW_FORM_strx, DW_FORM_strx1, DW_FORM_strx2, DW_FORM_strx3, DW_FORM_strx4, or DW_FORM_GNU_str_index.

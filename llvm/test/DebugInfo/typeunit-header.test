@@ -1,0 +1,15 @@
+RUN: llvm-dwarfdump -v %p/Inputs/typeunit-header.elf-x86-64 | FileCheck %s
+
+This is testing a bugfix where parsing the type unit header was not 
+taking the unit's intial length field into account when validating.
+
+The input file is hand-coded assembler to generate a type unit stub,
+which only contains a type unit DIE with a sole visibility attribute.
+
+We make sure that llvm-dwarfdump is parsing the type unit header correctly
+and displays it. 
+
+CHECK: .debug_types contents:
+CHECK: 0x00000000: Type Unit: length = 0x00000019, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08, name = '', type_signature = 0x0011223344556677, type_offset = 0x0019 (next unit at 0x0000001d)
+CHECK: 0x00000017: DW_TAG_type_unit [1] *
+CHECK: DW_AT_visibility [DW_FORM_data1] (DW_VIS_local)

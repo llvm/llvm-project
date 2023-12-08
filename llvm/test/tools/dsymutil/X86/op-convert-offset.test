@@ -1,0 +1,53 @@
+# To rebuild the test case:
+#
+# $ cat op-convert-offset0.c
+# extern int a[2];
+#
+# int foo(_Bool b) {
+#   return b ? a[1] : a[0];
+# }
+# $ cat op-convert-offset1.c
+# int a[2] = {1, 2};
+#
+# int foo(_Bool);
+#
+# int main() {
+#   return foo(0);
+# }
+# $ xcrun clang -g -O2 -c -target x86_64-apple-unknown-macho op-convert-offset1.c -emit-llvm
+# $ xcrun clang -g -O2 -c -target x86_64-apple-unknown-macho op-convert-offset0.c -emit-llvm
+# $ llvm-link op-convert-offset1.bc op-convert-offset0.bc -o op-convert-offset.ll -S
+# $ xcrun clang -c op-convert-offset.ll -O0 -arch x86_64
+# $ xcrun clang -g op-convert-offset.o -O0 -arch x86_64 -o op-convert-offset
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset -o %t.dSYM 2>&1
+RUN: llvm-dwarfdump %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset.o 2>&1 | FileCheck %s --check-prefix OBJ
+RUN: llvm-dwarfdump %t.dSYM 2>&1 | FileCheck %s --check-prefix DSYM
+
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs \
+RUN:  %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset \
+RUN:  -o %t.dSYM 2>&1
+RUN: llvm-dwarfdump \
+RUN:   %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset.o 2>&1 \
+RUN:   | FileCheck %s --check-prefix OBJ
+RUN: llvm-dwarfdump %t.dSYM 2>&1 | FileCheck %s --check-prefix DSYM
+
+OBJ: 0x0000007d:   DW_TAG_base_type
+OBJ:                 DW_AT_name      ("DW_ATE_unsigned_1")
+OBJ:                 DW_AT_encoding  (DW_ATE_unsigned)
+OBJ:                 DW_AT_byte_size (0x01)
+
+OBJ: 0x00000094:     DW_TAG_formal_parameter
+OBJ:                   DW_AT_location        (DW_OP_breg2 RCX+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_convert (0x0000007d) "DW_ATE_unsigned_1", DW_OP_convert (0x00000081) "DW_ATE_unsigned_8", DW_OP_stack_value)
+OBJ:                   DW_AT_name    ("b")
+OBJ:                   DW_AT_type    (0x000000af "_Bool")
+
+DSYM: 0x00000084:   DW_TAG_base_type
+DSYM:                 DW_AT_name      ("DW_ATE_unsigned_1")
+DSYM:                 DW_AT_encoding  (DW_ATE_unsigned)
+DSYM:                 DW_AT_byte_size (0x01)
+
+DSYM: 0x0000009b:     DW_TAG_formal_parameter
+DSYM:                   DW_AT_location        (DW_OP_breg2 RCX+0, DW_OP_constu 0xff, DW_OP_and, DW_OP_convert (0x00000084) "DW_ATE_unsigned_1", DW_OP_convert (0x00000088) "DW_ATE_unsigned_8", DW_OP_stack_value)
+DSYM:                   DW_AT_name    ("b")
+DSYM:                   DW_AT_type    ({{.*}} "_Bool")

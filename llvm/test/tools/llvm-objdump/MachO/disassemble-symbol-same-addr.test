@@ -1,0 +1,14 @@
+# RUN: llvm-mc %s --triple x86_64-apple-darwin -filetype=obj -o %t.o
+# RUN: llvm-objdump --macho -d %t.o | FileCheck %s
+
+_foo:
+_bar:
+_baz:
+_qux:
+  nop
+
+## Ensure symbols with the same address are printed in a deterministic order
+# CHECK:      _foo
+# CHECK-NEXT: _bar
+# CHECK-NEXT: _baz
+# CHECK-NEXT: _qux

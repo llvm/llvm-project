@@ -1,0 +1,18 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.name_suffix = "@ASAN_TEST_CONFIG_SUFFIX@"
+config.target_cflags = "@ASAN_TEST_TARGET_CFLAGS@"
+config.clang = "@ASAN_TEST_TARGET_CC@"
+config.bits = "@ASAN_TEST_BITS@"
+config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"
+config.apple_platform = "@ASAN_TEST_APPLE_PLATFORM@"
+config.apple_platform_min_deployment_target_flag = "@ASAN_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
+config.asan_dynamic = @ASAN_TEST_DYNAMIC@
+config.target_arch = "@ASAN_TEST_TARGET_ARCH@"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@ASAN_LIT_SOURCE_DIR@/lit.cfg.py")

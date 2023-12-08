@@ -1,0 +1,27 @@
+Design guidelines for the isl interfaces
+========================================
+
+# Constructors
+
+A function that constructs an isl object can be exposed in two ways, as
+an unnamed constructor or as a named static function. Aiming for an interface
+that is explicit and close to the isl C interface, all such functions
+are exported as named static functions, except in the following cases.
+Unnamed constructors are generated for functions where even without the
+function name an object is identified uniquely by its arguments. For
+example, there is a single isl_val that corresponds to a given integer
+(isl_val_int_from_si), but both a NaN or a zero value can be constructed
+from an isl_local_space (isl_aff_zero_on_domain and isl_aff_nan_on_domain).
+Only function that create objects that are fully constructed by the function
+and do not require further information to be added for typical use cases
+are exposed as unnamed constructors.
+Functions that commonly require more information to be provided
+(isl_union_access_info_from_sink, isl_schedule_constraints_on_domain)
+are exported as named static functions.
+Typical examples of function that are generated as unnamed constructors
+are the following:
+
+- Conversion constructors
+- Constructors from std::string
+- Constructors where all arguments by themselves uniquely identify
+  a complete object (e.g., isl_val_int_from_si)

@@ -1,0 +1,25 @@
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a static library, with Clang-cl on Windows.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', '--driver-mode=g++'))
+config.substitutions.append(('%{compile_flags}',
+    '-fms-runtime-lib=' + config.fms_runtime_lib + ' -nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX' + config.dbg_include
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib -L %{lib} -llibc++ -l' + config.cxx_lib
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

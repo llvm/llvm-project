@@ -1,0 +1,218 @@
+# RUN: llc %s -o - -run-pass=machine-cse -mtriple=x86_64-- | FileCheck %s
+#
+# This test examines machine-cse's behaviour when dealing with copy propagation,
+# the code for which is lifted from test/CodeGen/X86/machine-cse.ll. There are
+# two (MIR) function that have SHL/LEA instructions CSE'd in the bb.1.bb1 block.
+# They both depend on the COPY of a vreg to %100 in the entry block.
+#
+# In the first (@t) there's only one use of %100, and that gets CSE'd away. The
+# corresponding COPY is deleted, and all DBG_VALUEs that refer to it must be
+# updated.
+#
+# In the second (@u) there are two uses of %100, one of which isn't deleted. The
+# DBG_VALUE users of %100 don't need to be updated -- test that they're not.
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-unknown"
+  
+  %struct.s2 = type { i32, i8*, i8*, [256 x %struct.s1*], [8 x i32], i64, i8*, i32, i64, i64, i32, %struct.s3*, %struct.s3*, [49 x i64] }
+  %struct.s1 = type { %ptr, %ptr }
+  %ptr = type { i8* }
+  %struct.s3 = type { %struct.s3*, %struct.s3*, i32, i32, i32 }
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+  
+  define fastcc i8* @t(i32 %base) !dbg !3 {
+  entry:
+    %0 = zext i32 %base to i64
+    %1 = getelementptr inbounds %struct.s2, %struct.s2* null, i64 %0
+    br i1 undef, label %bb1, label %bb2
+  
+  bb1:                                              ; preds = %entry
+    %2 = getelementptr inbounds %struct.s2, %struct.s2* null, i64 %0, i32 0
+    call void @llvm.dbg.value(metadata i32* %2, metadata !4, metadata !DIExpression()), !dbg !7
+    call void @bar(i32* %2)
+    unreachable
+  
+  bb2:                                              ; preds = %entry
+    %3 = ptrtoint %struct.s2* %1 to i64
+    call void @baz(i64 %3)
+    unreachable
+  }
+  
+  ; This is a stub replicating bb structure of @t
+  define fastcc i8* @u(i32 %base) !dbg !33 {
+  entry:
+    br i1 undef, label %bb1, label %bb2
+  
+  bb1:                                              ; preds = %entry
+    unreachable
+  
+  bb2:                                              ; preds = %entry
+    unreachable
+  }
+ 
+
+  declare void @bar(i32*)
+  
+  declare void @baz(i64)
+  
+  declare i8* @foo(%struct.s2*)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { nounwind readnone speculatable }
+  attributes #1 = { nounwind }
+  
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "bees.cpp", directory: "")
+  !3 = distinct !DISubprogram(name: "nope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !8)
+  !33 = distinct !DISubprogram(name: "alsonope", scope: !1, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !8)
+  !4 = !DILocalVariable(name: "bees", scope: !3, type: !5)
+  !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !DILocation(line: 0, scope: !3)
+  !8 = !{!4}
+
+
+  ; CHECK: ![[METAVAR:[0-9]+]] = !DILocalVariable(name: "bees",
+
+...
+---
+name:            t
+# CHECK-LABEL: name: t
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$edi', virtual-reg: '%2' }
+frameInfo:       
+  hasCalls:        true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $edi
+  
+    ; Capture vreg num for subreg move for later checks; test that the COPY
+    ; of that vreg is optimized out.
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK:       %[[BASEVREG:[0-9]+]]:gr64 = SUBREG_TO_REG
+    ; CHECK-NOT:   COPY %[[BASEVREG]]:gr64
+
+    %2:gr32 = COPY $edi
+    %3:gr32 = MOV32rr %2
+    %0:gr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32bit
+    %4:gr64_nosp = SHL64ri %0, 9, implicit-def dead $eflags
+    %1:gr64 = LEA64r %4, 4, %4, 0, $noreg
+    %5:gr32 = MOV32r0 implicit-def dead $eflags
+    %6:gr8 = COPY %5.sub_8bit
+    %100:gr64 = COPY %0:gr64
+    TEST8rr %6, %6, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+  
+  bb.1.bb1:
+    successors: 
+  
+    ; Check for CSE happening and DBG_VALUE updating.
+    ; CHECK-LABEL: bb.1.bb1:
+    ; CHECK-NOT:   SHL64ri
+    ; CHECK-NOT:   LEA64r
+    ; CHECK:       DBG_VALUE %[[BASEVREG]], $noreg, ![[METAVAR]],
+    ; CHECK-NEXT:  ADJCALLSTACKDOWN64
+
+    %7:gr64_nosp = SHL64ri %100, 9, implicit-def dead $eflags
+    %8:gr64 = LEA64r %7, 4, %7, 0, $noreg
+    DBG_VALUE %100, $noreg, !4, !DIExpression(), debug-location !7
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %8
+    CALL64pcrel32 @bar, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.2.bb2:
+    ; As the COPY to %100 dies, the DBG_VALUE below should be updated too.
+    ; CHECK-LABEL: bb.2.bb2:
+    ; CHECK:       ADJCALLSTACKDOWN64
+    ; CHECK-NEXT:  $rdi = COPY
+    ; CHECK-NEXT:  DBG_VALUE %[[BASEVREG]], $noreg, ![[METAVAR]],
+    ; CHECK-NEXT:  CALL64pcrel32
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %1
+    DBG_VALUE %100, $noreg, !4, !DIExpression(), debug-location !7
+    CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+...
+---
+name:            u
+# CHECK-LABEL: name: u
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$edi', virtual-reg: '%2' }
+frameInfo:       
+  hasCalls:        true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $edi
+  
+    ; In this function, the COPY to %100 should not be optimized out, and as a
+    ; result the DBG_VALUEs should not be rewritten.
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK:       %[[BASEVREG:[0-9]+]]:gr64 = SUBREG_TO_REG
+    ; CHECK:       %[[COPIEDVREG:[0-9]+]]:gr64 = COPY %[[BASEVREG]]
+
+    %2:gr32 = COPY $edi
+    %3:gr32 = MOV32rr %2
+    %0:gr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32bit
+    %4:gr64_nosp = SHL64ri %0, 9, implicit-def dead $eflags
+    %1:gr64 = LEA64r %4, 4, %4, 0, $noreg
+    %5:gr32 = MOV32r0 implicit-def dead $eflags
+    %6:gr8 = COPY %5.sub_8bit
+    %100:gr64 = COPY %0:gr64
+    TEST8rr %6, %6, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+  
+  bb.1.bb1:
+    successors: 
+  
+    ; CSE should happen, DBG_VALUE updating should not.
+    ; CHECK-LABEL: bb.1.bb1:
+    ; CHECK-NOT:   SHL64ri
+    ; CHECK-NOT:   LEA64r
+    ; CHECK:       DBG_VALUE %[[COPIEDVREG]], $noreg, ![[METAVAR]],
+    ; CHECK-NEXT:  ADJCALLSTACKDOWN64
+
+
+
+    %7:gr64_nosp = SHL64ri %100, 9, implicit-def dead $eflags
+    %8:gr64 = LEA64r %7, 4, %7, 0, $noreg
+    DBG_VALUE %100, $noreg, !4, !DIExpression(), debug-location !7
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %8
+    CALL64pcrel32 @bar, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.2.bb2:
+
+    ; Test that the copy-read of %100 below is preserved, and the DBG_VALUE
+    ; operand is too.
+    ; CHECK-LABEL: bb.2.bb2:
+    ; CHECK:       ADJCALLSTACKDOWN64
+    ; CHECK-NEXT:  $rdi = COPY %[[COPIEDVREG]]
+    ; CHECK-NEXT:  DBG_VALUE %[[COPIEDVREG]], $noreg, ![[METAVAR]],
+    ; CHECK-NEXT:  CALL64pcrel32
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %100
+    DBG_VALUE %100, $noreg, !4, !DIExpression(), debug-location !7
+    CALL64pcrel32 @baz, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+...

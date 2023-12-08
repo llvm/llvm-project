@@ -1,0 +1,53 @@
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp -format html -o %t.dir
+
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S -name=_Z4funcIbEiT_ %S/showTemplateInstantiations.cpp -format html -o %t.filtered.dir
+
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp -format html | FileCheck %s -check-prefix=NODIR
+
+RUN: FileCheck %s -input-file=%t.dir/style.css -check-prefix=STYLE
+RUN: FileCheck %s -input-file=%t.dir/index.html -check-prefix=TOPLEVEL
+RUN: FileCheck %s -input-file=%t.dir/coverage/tmp/showTemplateInstantiations.cpp.html -check-prefix=FILEVIEW
+
+RUN: FileCheck %s -input-file=%t.filtered.dir/style.css -check-prefix=STYLE
+RUN: FileCheck %s -input-file=%t.filtered.dir/index.html -check-prefix=TOPLEVEL
+RUN: FileCheck %s -input-file=%t.filtered.dir/coverage/tmp/showTemplateInstantiations.cpp.html -check-prefix=FILEVIEW
+
+STYLE-DAG: .red
+STYLE-DAG: .cyan
+STYLE-DAG: .source-name-title
+STYLE-DAG: .centered
+STYLE-DAG: .expansion-view
+STYLE-DAG: .line-number
+STYLE-DAG: .light-row
+STYLE-DAG: .light-row-bold
+STYLE-DAG: .column-entry
+STYLE-DAG: .column-entry-bold
+STYLE-DAG: .column-entry-yellow
+STYLE-DAG: .column-entry-yellow:hover
+STYLE-DAG: .column-entry-red
+STYLE-DAG: .column-entry-red:hover
+STYLE-DAG: .column-entry-green
+STYLE-DAG: .column-entry-green:hover
+STYLE-DAG: .covered-line
+STYLE-DAG: .uncovered-line
+STYLE-DAG: .tooltip
+STYLE-DAG: .tooltip span.tooltip-content
+STYLE-DAG: th, td
+STYLE-DAG: td:first-child
+STYLE-DAG: td:last-child
+STYLE-DAG: tr:hover
+
+TOPLEVEL-NOT: <style>
+TOPLEVEL: <head>
+TOPLEVEL: <link rel='stylesheet' type='text/css' href='style.css'>
+TOPLEVEL: </head>
+
+FILEVIEW-NOT: <style>
+FILEVIEW: <head>
+FILEVIEW: <link rel='stylesheet' type='text/css' href='..{{.*}}..{{.*}}style.css'>
+FILEVIEW: </head>
+
+NODIR: <head>
+NODIR: <style>
+NODIR: </style>
+NODIR: </head>

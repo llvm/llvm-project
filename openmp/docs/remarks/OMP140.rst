@@ -1,0 +1,49 @@
+.. _omp140:
+
+Could not internalize function. Some optimizations may not be possible. [OMP140]
+====================================================================================================================
+
+This analysis remark indicates that function internalization failed for the
+given function. Internalization occurs when a call to a function that ordinarily
+has external visibility is replaced with a call to a copy of that function with
+only internal visibility. This allows the compiler to make strong static
+assertions about the context a function is called in. Without internalization
+this analysis would always be invalidated by the possibility of someone calling
+the function in a different context outside of the current translation unit.
+This is necessary for optimizations like :ref:`OMP111 <omp111>` and :ref:`OMP120
+<omp120>`. If a function failed to be internalized it most likely has linkage
+that cannot be copied. Internalization is currently only enabled by default for
+OpenMP target offloading.
+
+Examples
+--------
+
+This will occur for any function declaration that has incompatible linkage.
+
+.. code-block:: c++
+
+   __attribute__((weak)) void setup();
+
+   void foo() {
+   #pragma omp target
+   {
+     setup();
+     #pragma omp parallel
+     {
+       work();
+     }
+   }
+   }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass-analysis=openmp-opt omp140.cpp
+   omp140.cpp:1:1: remark: Could not internalize function. Some optimizations may not
+   be possible. [OMP140]
+   __attribute__((weak)) void setup() {
+   ^
+
+Diagnostic Scope
+----------------
+
+OpenMP analysis remark.

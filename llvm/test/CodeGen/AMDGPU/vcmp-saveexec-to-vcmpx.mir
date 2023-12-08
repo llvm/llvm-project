@@ -1,0 +1,89 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,GFX1010 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,GFX1030 %s
+---
+
+# After the Optimize exec masking (post-RA) pass, there's a change of having v_cmpx instructions
+# being introduced whenever there's a sequence of v_cmp and s_and_saveexec instructions
+# which can be safely replaced in various cases.
+# However, it is not safe to do so when the generated code sequence would omit part of the EXEC mask
+# which could occur when a subset of EXEC is used as input operand in the v_cmp instruction.
+# The idea behind this test is to check if the subregisters are correctly handled here.
+
+# GCN-LABEL: name: vcmp_saveexec_to_mov_vcmpx_exec_subreg
+# GCN: V_CMP_GT_U32_e64
+# GCN: S_AND_SAVEEXEC_B64
+name: vcmp_saveexec_to_mov_vcmpx_exec_subreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $sgpr2
+    renamable $sgpr0_sgpr1 = V_CMP_GT_U32_e64 $sgpr2, killed $vgpr0, implicit $exec
+    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
+    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+...
+
+---
+
+# Ensure the transformation does not get applied when the v_cmp target is used before the s_and_saveexec instruction.
+
+# GCN-LABEL: name: vcmp_saveexec_to_mov_vcmpx_exec_intermediate_use
+# GCN: V_CMP_LT_F32_e64
+# GCN: V_WRITELANE_B32
+# GCN: S_AND_SAVEEXEC_B64
+name: vcmp_saveexec_to_mov_vcmpx_exec_intermediate_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr2
+    renamable $sgpr0_sgpr1 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr1, 0, implicit $mode, implicit $exec
+    $vgpr0 = V_WRITELANE_B32 0, $sgpr0, $vgpr0
+    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
+    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+...
+
+---
+
+# Check if the modifiers are preserved when generating the V_CMPX instruction.
+
+# GCN-LABEL: name: vcmp_saveexec_to_mov_vcmpx_check_abs
+# GFX1010: V_CMP_LT_F32_e64
+# GFX1010: S_AND_SAVEEXEC_B64
+# GFX1030: S_MOV_B64
+# GFX1030-NEXT: V_CMPX_LT_F32_nosdst_e64 0, 953267991, 2
+name: vcmp_saveexec_to_mov_vcmpx_check_abs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    renamable $sgpr0_sgpr1 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr0, 0, implicit $mode, implicit $exec
+    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
+    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3
+...
+
+---
+
+# Check if the sequence will be optimized even with more than 5 (unrelated) instructions inbetween the v_cmp and s_and_saveexec.
+
+# GCN-LABEL: name: vcmp_saveexec_to_mov_vcmpx_check_many_instrs
+# GFX1010: V_CMP_LT_F32_e64
+# GFX1010: S_AND_SAVEEXEC_B64
+# GFX1030: S_MOV_B64
+# GFX1030: V_CMPX_LT_F32_nosdst_e64 0, 953267991, 2
+name: vcmp_saveexec_to_mov_vcmpx_check_many_instrs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $sgpr2, $vgpr1
+    renamable $sgpr0_sgpr1 = V_CMP_LT_F32_e64 0, 953267991, 2, $vgpr0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr2, $vgpr1
+    $sgpr2_sgpr3 = COPY $exec, implicit-def $exec
+    $sgpr2_sgpr3 = S_AND_B64 killed renamable $sgpr2_sgpr3, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
+    $exec = S_MOV_B64_term killed renamable $sgpr2_sgpr3

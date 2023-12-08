@@ -1,0 +1,129 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --remove-section=.text.bar %t %t1
+# RUN: llvm-readobj --section-groups %t1 | FileCheck %s
+
+# In this test the section .text.bar is getting removed, as a result, 
+# the indices of the sections which go after .text.bar will change, 
+# thus the fields Link, Info and the content of .group should be updated.
+
+# CHECK:           Name: .group
+# CHECK-NEXT:      Index: 1
+# CHECK-NEXT:      Link: 3
+# CHECK-NEXT:      Info: 2
+# CHECK-NEXT:      Type: COMDAT (0x1)
+# CHECK-NEXT:      Signature: foo
+# CHECK:           .text.foo (2)
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .group
+    Type:            SHT_GROUP
+    Link:            .symtab
+    AddressAlign:    0x0000000000000004
+    Info:            foo
+    Members:         
+      - SectionOrType:   GRP_COMDAT
+      - SectionOrType:   .text.foo
+  - Name:            .text.bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+  - Name:            .text.foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    AddressAlign:    0x0000000000000010
+Symbols:
+  - Name:            .text.bar
+    Type:            STT_SECTION
+    Section:         .text.bar
+  - Name:            .text.foo
+    Type:            STT_SECTION
+    Section:         .text.foo
+  - Name:            bar
+    Type:            STT_FUNC
+    Section:         .text.bar
+    Size:            0x0000000000000000
+    Binding:         STB_WEAK
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text.foo
+    Size:            0x0000000000000000
+    Binding:         STB_WEAK
+
+## This checks that tool will emit an error when trying to remove the symbol
+## table when we have a group section linked with symtab.
+# RUN: not llvm-objcopy -R .symtab %t %t2 2>&1 | FileCheck %s --check-prefix=ERR -DINPUT=%t
+
+# ERR: error: '[[INPUT]]': section '.symtab' cannot be removed because it is referenced by the group section '.group'
+
+## The '.symtab' section could be removed using --allow-broken-links option.
+# RUN: llvm-objcopy --allow-broken-links -R .symtab %t %t3
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=SECTIONS
+
+# SECTIONS: There are 6 section headers
+# SECTIONS:      Name      Type   Address Off    Size   ES     Flg Lk Inf
+# SECTIONS-NEXT: NULL
+# SECTIONS-NEXT: .group    {{.+}} {{.+}}  {{.+}} {{.+}} {{.+}}     0  0
+# SECTIONS-NEXT: .text.bar
+# SECTIONS-NEXT: .text.foo
+# SECTIONS-NEXT: .strtab
+# SECTIONS-NEXT: .shstrtab
+
+## Show that llvm-objcopy can handle a group section with a zero sh_link and
+## sh_info fields.
+# RUN: llvm-objcopy --allow-broken-links -R .symtab %t3 %t4
+# RUN: cmp %t3 %t4
+
+## The signature symbol becomes local. Assume the intention is to localize the group.
+## Drop GRP_COMDAT so that the linker will suppress deduplication.
+# RUN: llvm-objcopy --keep-global-symbol=bar %t %t5
+# RUN: llvm-readelf -s --section-groups %t5 | FileCheck %s --check-prefix=LOCAL-SIG
+
+# LOCAL-SIG:  LOCAL  DEFAULT [[#]] foo
+# LOCAL-SIG:  (unknown) group section [ 1] `.group' [foo] contains 1 sections:
+
+## The signature symbol remains non-local. Keep GRP_COMDAT.
+# RUN: llvm-readelf -s --section-groups %t1 | FileCheck %s --check-prefix=WEAK-SIG
+
+# WEAK-SIG:   WEAK   DEFAULT [[#]] foo
+# WEAK-SIG:   COMDAT group section [ 1] `.group' [foo] contains 1 sections:
+
+# RUN: llvm-objcopy --globalize-symbol=foo %t %t6
+# RUN: llvm-readelf -s --section-groups %t6 | FileCheck %s --check-prefix=GLOBAL-SIG
+
+# GLOBAL-SIG: GLOBAL DEFAULT [[#]] foo
+# GLOBAL-SIG: COMDAT group section [ 1] `.group' [foo] contains 1 sections:
+
+## If the signature is initially local and no operation has been performed to
+## specifically localize it, it isn't clear whether we should drop GRP_COMDAT.
+## The current convention is that compilers should not produce such input, so
+## our choice does not matter.
+# RUN: yaml2obj --docnum=2 %s -o %t.localsig
+# RUN: llvm-objcopy %t.localsig %t.localsig.out
+# RUN: llvm-readelf -s --section-groups %t.localsig.out | FileCheck %s --check-prefix=LOCAL-SIG
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:  .group
+    Type:  SHT_GROUP
+    Info:  foo
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.foo
+  - Name:  .text.foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_GROUP ]
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text.foo

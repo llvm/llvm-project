@@ -1,0 +1,151 @@
+# RUN: llc -run-pass arm-cp-islands %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv6m--none-eabi"
+
+  declare void @exit0()
+
+  declare void @exit1(i32)
+
+  declare void @exit2()
+
+  declare void @exit3()
+
+  declare void @exit4()
+
+  define void @jump_table(i32 %val, i32 %arg2, i32 %arg3, i32 %arg4) {
+  entry:
+    switch i32 %val, label %default [
+      i32 1, label %lab1
+      i32 2, label %lab2
+      i32 3, label %lab3
+      i32 4, label %lab4
+    ]
+
+  default:                                          ; preds = %entry
+    tail call void @exit0()
+    ret void
+
+  lab1:                                             ; preds = %entry
+    %b = sub i32 %val, 1
+    %a = shl i32 %b, 2
+    tail call void @exit1(i32 %a)
+    ret void
+
+  lab2:                                             ; preds = %entry
+    tail call void @exit2()
+    ret void
+
+  lab3:                                             ; preds = %entry
+    tail call void @exit3()
+    ret void
+
+  lab4:                                             ; preds = %entry
+    tail call void @exit4()
+    ret void
+  }
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #0
+
+  attributes #0 = { nounwind }
+
+...
+---
+name:            jump_table
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+calleeSavedRegisters: [ '$lr', '$d8', '$d9', '$d10', '$d11', '$d12', '$d13',
+                        '$d14', '$d15', '$q4', '$q5', '$q6', '$q7', '$r4',
+                        '$r5', '$r6', '$r7', '$r8', '$r9', '$r10', '$r11',
+                        '$s16', '$s17', '$s18', '$s19', '$s20', '$s21',
+                        '$s22', '$s23', '$s24', '$s25', '$s26', '$s27',
+                        '$s28', '$s29', '$s30', '$s31', '$d8_d10', '$d9_d11',
+                        '$d10_d12', '$d11_d13', '$d12_d14', '$d13_d15',
+                        '$q4_q5', '$q5_q6', '$q6_q7', '$q4_q5_q6_q7', '$r4_r5',
+                        '$r6_r7', '$r8_r9', '$r10_r11', '$d8_d9_d10', '$d9_d10_d11',
+                        '$d10_d11_d12', '$d11_d12_d13', '$d12_d13_d14',
+                        '$d13_d14_d15', '$d8_d10_d12', '$d9_d11_d13', '$d10_d12_d14',
+                        '$d11_d13_d15', '$d8_d10_d12_d14', '$d9_d11_d13_d15',
+                        '$d9_d10', '$d11_d12', '$d13_d14', '$d9_d10_d11_d12',
+                        '$d11_d12_d13_d14' ]
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$lr', callee-saved-restored: false }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '$r7' }
+jumpTable:
+  kind:            inline
+  entries:
+    - id:              0
+      blocks:          [ '%bb.3.lab1', '%bb.4.lab2', '%bb.5.lab3', '%bb.6.lab4' ]
+# r1 is redefined in the middle of the recognizable jump sequence - it shouldn't be clobbered!
+# CHECK-NOT: tTBB_JT
+
+body:             |
+  bb.0.entry:
+    successors: %bb.2.default(0x19999998), %bb.1.entry(0x66666668)
+    liveins: $r0, $r7, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $r1, dead $cpsr = tSUBi3 $r0, 1, 14, $noreg
+    tCMPi8 $r1, 3, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.2.default, 8, killed $cpsr
+
+  bb.1.entry:
+    successors: %bb.3.lab1(0x20000000), %bb.4.lab2(0x20000000), %bb.5.lab3(0x20000000), %bb.6.lab4(0x20000000)
+    liveins: $r0, $r1
+
+    $r1, dead $cpsr = tLSLri killed $r1, 2, 14, $noreg
+    $r2 = tLEApcrelJT %jump-table.0, 14, $noreg
+    $r2 = tLDRr killed $r1, killed $r2, 14, $noreg :: (load (s32) from jump-table)
+    $r1, dead $cpsr = tLSLri $r2, 2, 14, $noreg
+    tBR_JTr killed $r2, %jump-table.0
+
+  bb.2.default:
+    tBL 14, $noreg, @exit0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit-def $sp, implicit $sp
+
+  bb.3.lab1:
+    liveins: $r0,$r1
+
+    tBL 14, $noreg, @exit1, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit-def $sp, implicit $sp
+
+  bb.4.lab2:
+    tBL 14, $noreg, @exit2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit-def $sp, implicit $sp
+
+  bb.5.lab3:
+    tBL 14, $noreg, @exit3, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit-def $sp, implicit $sp
+
+  bb.6.lab4:
+    tBL 14, $noreg, @exit4, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    tPOP_RET 14, $noreg, def $r7, def $pc, implicit-def $sp, implicit $sp
+
+...

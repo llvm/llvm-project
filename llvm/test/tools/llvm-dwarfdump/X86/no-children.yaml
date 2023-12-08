@@ -1,0 +1,23 @@
+# RUN: yaml2obj %s | llvm-dwarfdump -verify - | FileCheck %s
+# CHECK: warning: DW_TAG_compile_unit has DW_CHILDREN_yes but DIE has no children
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data4
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
+        - AbbrCode: 0   ## Terminator for the current DIE.

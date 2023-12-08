@@ -1,0 +1,485 @@
+module c_library [extern_c] { module inner { header "c-header.h" } }
+module cxx_library { header "cxx-header.h" requires cplusplus }
+module c_library_bad [extern_c] { header "c-header-bad.h" }
+module diamond_top { header "diamond_top.h" }
+module diamond_left { 
+  header "diamond_left.h" 
+  export diamond_top
+}
+module diamond_right { 
+  header "diamond_right.h" 
+  export diamond_top
+}
+module diamond_bottom { 
+  header "diamond_bottom.h" 
+  export *
+}
+module irgen { header "irgen.h" }
+module cxx_irgen_top { header "cxx-irgen-top.h" }
+module cxx_irgen_left { header "cxx-irgen-left.h" }
+module cxx_irgen_right { header "cxx-irgen-right.h" }
+module lookup_left_objc { header "lookup_left.h" }
+module lookup_right_objc { header "lookup_right.h" }
+module lookup_left_cxx { header "lookup_left.hpp" }
+module lookup_right_cxx { header "lookup_right.hpp" }
+module module_private_left { header "module_private_left.h" }
+module module_private_right { header "module_private_right.h" }
+module macros_top { 
+  header "macros_top.h" 
+  explicit module b { header "macros_top_b.h" }
+  explicit module c { header "macros_top_c.h" }
+}
+module macros_left { 
+  header "macros_left.h" 
+  export *
+}
+module macros_right { 
+  header "macros_right.h" 
+  export *
+  explicit module undef {
+    header "macros_right_undef.h"
+  }
+}
+module macros_bottom { 
+  header "macros_bottom.h" 
+  export *
+}
+module macros { header "macros.h" }
+module macros_other { header "macros_other.h" }
+module category_top { header "category_top.h" }
+module category_left { 
+  header "category_left.h" 
+  export category_top
+
+  explicit module sub {
+    header "category_left_sub.h"
+  }
+}
+module category_right { 
+  header "category_right.h" 
+  export category_top
+
+  explicit module sub {
+    header "category_right_sub.h"
+  }
+}
+module category_bottom { 
+  header "category_bottom.h" 
+  export category_left
+  export category_right
+}
+module category_other { header "category_other.h" }
+module redeclarations_left { header "redeclarations_left.h" }
+module redeclarations_right { header "redeclarations_right.h" }
+module redecl_namespaces_left { header "redecl_namespaces_left.h" }
+module redecl_namespaces_right { header "redecl_namespaces_right.h" }
+module redecl_add_after_load_top { header "redecl-add-after-load-top.h" }
+module redecl_add_after_load_decls { header "redecl-add-after-load-decls.h" }
+module redecl_add_after_load { header "redecl-add-after-load.h" }
+module load_failure { header "load_failure.h" }
+
+module decldef {
+  explicit module Decl { header "decl.h" }
+  explicit module Decl2 { header "decl2.h" }
+  explicit module Def { header "def.h" }
+}
+
+module redecl_merge_top { 
+  header "redecl-merge-top.h"
+  explicit module Explicit { header "redecl-merge-top-explicit.h" }
+  exclude header "nonexistent.h"
+}
+module redecl_merge_left { 
+  header "redecl-merge-left.h" 
+  export *
+}
+module redecl_merge_left_left { 
+  header "redecl-merge-left-left.h" 
+  export *
+}
+module redecl_merge_right { 
+  header "redecl-merge-right.h" 
+  export *
+}
+module redecl_merge_bottom { 
+  explicit module prefix {
+    header "redecl-merge-bottom-prefix.h"
+  }
+
+  header "redecl-merge-bottom.h" 
+  export *
+}
+module namespaces_top { 
+  header "namespaces-top.h"
+  export *
+}
+module namespaces_left { 
+  header "namespaces-left.h"
+  export *
+}
+module namespaces_right { 
+  header "namespaces-right.h"
+  export *
+}
+module templates_top { 
+  header "templates-top.h"
+  export *
+}
+module templates_left { 
+  header "templates-left.h"
+  export *
+}
+module templates_right { 
+  header "templates-right.h"
+  export *
+}
+module MethodPoolA {
+  header "MethodPoolA.h"
+
+  explicit module Sub2 {
+    header "MethodPoolASub2.h"
+  }
+
+  explicit module Sub {
+    header "MethodPoolASub.h"
+  }
+}
+module MethodPoolB {
+  header "MethodPoolB.h"
+
+  explicit module Sub2 {
+    header "MethodPoolBSub2.h"
+  }
+
+  explicit module Sub {
+    header "MethodPoolBSub.h"
+  }
+}
+module import_decl {
+  header "import-decl.h"
+}
+
+framework module * { 
+  exclude NotAModule
+}
+
+module linkage_merge_left {
+  explicit module sub {
+    header "linkage-merge-sub.h"
+  }
+}
+
+module autolink {
+  header "autolink.h"
+  link "autolink"
+
+  explicit module sub {
+    header "autolink-sub.h"
+    link "autolink_sub"
+  }
+
+  explicit module sub2 {
+    header "autolink-sub2.h"
+    link framework "autolink_framework"
+  }
+
+  explicit module sub3 {
+    header "autolink-sub3.h"
+    link "autolink_from_pch"
+  }
+}
+
+module weird_objc {
+  header "weird_objc.h"
+}
+
+module objc_type_param {
+  header "objc_type_param.h"
+}
+
+module ignored_macros {
+  header "ignored_macros.h"
+}
+
+module cxx_many_overloads {
+  header "cxx-many-overloads.h"
+}
+
+module cxx_inline_namespace {
+  header "cxx-inline-namespace.h"
+}
+
+module cxx_inline_namespace_b {
+  header "cxx-inline-namespace-b.h"
+}
+
+module cxx_linkage_cache {
+  header "cxx-linkage-cache.h"
+}
+
+module cxx_templates_common {
+  header "cxx-templates-common.h"
+
+  explicit module unimported { header "cxx-templates-unimported.h" }
+}
+
+module cxx_templates_a {
+  header "cxx-templates-a.h"
+}
+
+module cxx_templates_b_impl {
+  header "cxx-templates-b-impl.h"
+}
+
+module cxx_templates_b {
+  header "cxx-templates-b.h"
+}
+
+module cxx_templates_c {
+  header "cxx-templates-c.h"
+}
+
+module cxx_templates_d {
+  header "cxx-templates-d.h"
+}
+
+module cxx_decls {
+  module unimported {
+    header "cxx-decls-unimported.h"
+  }
+  module imported {
+    header "cxx-decls-imported.h"
+  }
+}
+
+module cxx_decls_premerged {
+  header "cxx-decls-premerged.h"
+}
+
+module cxx_decls_merged {
+  header "cxx-decls-merged.h"
+}
+
+module config {
+  header "config.h"
+  config_macros [exhaustive] WANT_FOO, WANT_BAR
+}
+
+module diag_flags {
+  header "diag_flags.h"
+}
+
+module diag_pragma {
+  header "diag_pragma.h"
+}
+
+module pragma_pack {
+  module set { header "pragma_pack_set.h" }
+  module empty { header "empty.h" }
+}
+
+module dummy {
+  header "dummy.h"
+}
+
+module builtin {
+  header "builtin.h"
+  explicit module sub {
+    header "builtin_sub.h"
+  }
+}
+
+module linkage_merge {
+  explicit module foo {
+    header "linkage-merge-foo.h"
+  }
+  explicit module bar {
+    header "linkage-merge-bar.h"
+  }
+
+}
+
+module incomplete_mod {
+  header "incomplete_mod.h"
+}
+
+module warning {
+  header "warning.h"
+}
+
+module warn_unused_local_typedef {
+  header "warn-unused-local-typedef.h"
+}
+
+module using_decl {
+  module a { header "using-decl-a.h" export * }
+  module b { header "using-decl-b.h" export * }
+}
+
+module recursive_visibility_a1 {
+  module inner { header "recursive_visibility_a1_inner.h" }
+}
+module recursive_visibility_a2 {
+  module inner {
+    module more_inner {
+      header "recursive_visibility_a2_more_inner.h"
+    }
+  }
+}
+module recursive_visibility_b {
+  header "recursive_visibility_b.h"
+  export *
+}
+module recursive_visibility_c {
+  header "recursive_visibility_c.h"
+}
+module recursive1 {
+  header "recursive1.h"
+}
+module recursive2 {
+  header "recursive2.h"
+}
+module crash {
+  header "crash.h"
+}
+
+module DebugCXX {
+  header "DebugCXX.h"
+}
+
+module DebugObjC {
+  header "DebugObjC.h"
+}
+
+module DebugObjCImport {
+  module SubModule {
+    header "DebugObjCImport.h"
+  }
+}
+
+module DebugDwoId {
+  header "DebugDwoId.h"
+}
+
+module ImportNameInDir {
+  header "ImportNameInDir.h"
+  export *
+}
+
+module RequiresWithMissingHeader {
+  module HeaderBefore {
+    header "RequiresWithMissingHeader-Missing1.h"
+    requires missing
+  }
+  module HeaderAfter {
+    requires missing
+    header "RequiresWithMissingHeader-Missing2.h"
+  }
+}
+
+module TargetFeatures {
+  module arm {
+    requires arm
+    module aarch32 { requires aarch32 }
+    module aarch64 { requires aarch64 }
+  }
+  module x86 {
+    requires x86
+    module x86_32 { requires x86_32 }
+    module x86_64 { requires x86_64 }
+  }
+  module riscv {
+    requires riscv
+    module riscv32 { requires riscv32 }
+    module riscv64 { requires riscv64 }
+  }
+}
+
+module DebugSubmodules {
+  module DebugSubmoduleA {
+    header "DebugSubmoduleA.h"
+    export *
+  }
+  module DebugSubmoduleB {
+    header "DebugSubmoduleB.h"
+    export *
+  }
+}
+
+module ExtensionTestA {
+  header "ExtensionTestA.h"
+}
+
+module TypedefTag {
+  header "typedef-tag.h"
+  explicit module Hidden {
+    header "typedef-tag-hidden.h"
+  }
+}
+
+module ElaboratedTypeStructs {
+  module Empty {}
+  module Structs {
+    header "elaborated-type-structs.h"
+  }
+}
+
+// We import a module, then declare a method with selector stringValue in
+// MethodPoolCombined1.h. In MethodPoolCombined2.h, we import another module
+// that also contains a method for selector stringValue. We make sure that
+// the method pool entry for stringValue in this module is complete.
+module MethodPoolCombined {
+  header "MethodPoolCombined1.h"
+  header "MethodPoolCombined2.h"
+}
+
+module MethodPoolString1 {
+  header "MethodPoolString1.h"
+}
+
+module MethodPoolString2 {
+  header "MethodPoolString2.h"
+}
+
+module Empty {}
+
+module MacroFabs1 {
+  header "MacroFabs1.h"
+}
+
+module DiagOutOfDate {
+  header "DiagOutOfDate.h"
+}
+
+module DebugNestedA {
+  header "DebugNestedA.h"
+  export *
+}
+
+module DebugNestedB {
+  header "DebugNestedB.h"
+  export *
+}
+
+module objcAtKeywordMissingEnd {
+  header "objcAtKeywordMissingEnd.h"
+}
+
+module innerstructredef {
+  module one {
+    header "empty.h"
+  }
+  module two {
+   header "innerstructredef.h"
+  }
+}
+
+module template_nontrivial0 {
+  header "template-nontrivial0.h"
+  export *
+}
+
+module template_nontrivial1 {
+  header "template-nontrivial1.h"
+  export *
+}

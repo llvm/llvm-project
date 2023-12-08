@@ -1,0 +1,49 @@
+RUN: dsymutil -help 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=HELP %s
+RUN: cat %S/../../../docs/CommandGuide/dsymutil.rst  | FileCheck %s
+
+HELP: OVERVIEW: manipulate archived DWARF debug symbol files.
+HELP: USAGE: {{.*}}dsymutil{{[^ ]*}} [options] <input files>
+HELP-NOT: -reverse-iterate
+HELP: Dsymutil Options:
+CHECK: -accelerator
+CHECK: -arch <arch>
+CHECK: -build-variant-suffix <suffix=buildvariant>
+CHECK: -dump-debug-map
+CHECK: -D <path>
+CHECK: -fat64
+CHECK: -flat
+CHECK: -gen-reproducer
+CHECK: -help
+CHECK: -keep-function-for-static
+CHECK: -no-odr
+CHECK: -no-output
+CHECK: -no-swiftmodule-timestamp
+CHECK: -num-threads  <threads>
+CHECK: -object-prefix-map <prefix=remapped>
+CHECK: -oso-prepend-path <path>
+CHECK: -out <filename>
+CHECK: {{-o <filename>}}
+CHECK: -remarks-drop-without-debug
+CHECK: -remarks-output-format <format>
+CHECK: -remarks-prepend-path <path>
+CHECK: -reproducer <mode>
+CHECK: -statistics
+CHECK: -symbol-map
+CHECK: -symtab
+CHECK: {{-S}}
+CHECK: -toolchain
+CHECK: -update
+CHECK: -use-reproducer <path>
+CHECK: -verbose
+CHECK: -verify
+CHECK: {{-y}}
+HELP-NOT: -reverse-iterate
+
+RUN: dsymutil --version 2>&1 | FileCheck --check-prefix=VERSION %s
+VERSION: {{ version }}
+
+RUN: not dsymutil 2>&1 | FileCheck --check-prefix=NOINPUT %s
+NOINPUT: error: no input files specified
+
+RUN: dsymutil -bogus -help 2>&1 | FileCheck --check-prefix=BOGUS %s
+BOGUS: warning: ignoring unknown option: -bogus

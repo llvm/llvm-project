@@ -1,0 +1,177 @@
+# RUN: llc -march=amdgcn -run-pass peephole-opt -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+
+
+# GCN-LABEL: bb.0:
+# GCN:  S_MOV_B32 1082130432
+# GCN:  %3:vgpr_32 = V_MADAK_F32 1082130432, killed %0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src1-inlined
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:sreg_32 = S_MOV_B32 1082130432
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %0, 0, killed %18, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+
+# GCN-LABEL: bb.0:
+# GCN:  S_MOV_B32 1082130432
+# GCN:  %3:vgpr_32 = V_MADAK_F32 1082130432, killed %0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src0-inlined
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:sreg_32 = S_MOV_B32 1082130432
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %18, 0, killed %0, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  S_MOV_B32 1082130432
+# GCN:  %3:vgpr_32 = V_MADAK_F32 killed %0, killed %0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test none-inlined
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:sreg_32 = S_MOV_B32 1082130432
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %0, 0, killed %0, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  V_MOV_B32_e32 1082130432
+# GCN:  %3:vgpr_32 = V_MADAK_F32 1082130432, killed %0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src1-2vgprs-inlined
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:vgpr_32 = V_MOV_B32_e32 1082130432, implicit $exec
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %0, 0, killed %18, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+
+# GCN-LABEL: bb.0:
+# GCN:  V_MOV_B32_e32 1082130432
+# GCN:  %3:vgpr_32 = V_MADAK_F32 1082130432, killed %0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src0-2vgprs-inlined
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:vgpr_32 = V_MOV_B32_e32 1082130432, implicit $exec
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %18, 0, killed %0, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  S_MOV_B32 1082130432
+# GCN:  V_MADAK_F32 1082130432, killed $vgpr1, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src0-phys-vgpr
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+
+    $vgpr1 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:sgpr_32 = S_MOV_B32 1082130432
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed $vgpr1, 0, killed %18, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  S_MOV_B32 1082130432
+# GCN:  V_MADAK_F32 1082130432, killed $vgpr0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src1-phys-vgpr
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %18:sgpr_32 = S_MOV_B32 1082130432
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %18, 0, killed $vgpr0, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  V_MOV_B32_e32 1092616192, implicit $exec
+# GCN:  V_MAC_F32_e64 0, killed $sgpr2, 0, killed %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+
+---
+name:            test src0-phys-sgpr
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2
+
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed $sgpr2, 0, killed %0, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  V_MOV_B32_e32 1092616192, implicit $exec
+# GCN:  V_MAC_F32_e64 0, killed %0, 0, killed $sgpr2, 0, %1, 0, 0, implicit $mode, implicit $exec
+
+---
+name:            test src1-phys-sgpr
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2
+
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %0, 0, killed $sgpr2, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...
+
+# GCN-LABEL: bb.0:
+# GCN:  $sgpr2 = S_MOV_B32 1082130432
+# GCN:  V_MADAK_F32 1082130432, killed %0, 1092616192, implicit $mode, implicit $exec
+
+---
+name:            test src1-phys-sgpr-move
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+
+    %0:vgpr_32 = COPY $vgpr0
+    %17:vgpr_32 = V_MOV_B32_e32 1092616192, implicit $exec
+    $sgpr2 = S_MOV_B32 1082130432
+    %19:vgpr_32 = V_MAC_F32_e64 0, killed %0, 0, killed $sgpr2, 0, %17, 0, 0, implicit $mode, implicit $exec
+
+...

@@ -1,0 +1,12 @@
+## Unsupported on AIX and FreeBSD as AIX and FreeBSD 12 and earlier allow
+## reading directories by default.
+# UNSUPPORTED: system-freebsd, system-aix
+
+# RUN: rm -rf %t && mkdir -p %t
+
+## Passing in a directory:
+# RUN: mkdir -p %t/tmpDir
+# RUN: not llvm-ar p %t/tmpDir 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=IS-DIR -DARCHIVE=%t/tmpDir -DMSG=%errc_EISDIR
+
+# IS-DIR: error: unable to open '[[ARCHIVE]]': [[MSG]]

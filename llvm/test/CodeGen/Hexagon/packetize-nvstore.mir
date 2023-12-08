@@ -1,0 +1,25 @@
+# RUN: llc -march=hexagon -start-before=hexagon-packetizer -o - %s | FileCheck %s
+# This used to generate an invalid packet:
+# {
+#   r1 = #0
+#   memw(r0++#4) = r1.new     // new-value store must be the only store
+#   memw(r0+#0) = #0
+# }
+#
+# CHECK: memw
+# CHECK: }
+# CHECK: memw
+
+---
+name: f0
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $r0
+    renamable $r1 = A2_tfrsi 0
+    renamable $r0 = S2_storeri_pi renamable $r0, 4, killed renamable $r1 :: (store (s32) into %stack.0)
+    S4_storeiri_io renamable $r0, 0, 0 :: (store (s32) into %stack.0 + 4)
+    J2_jumpr $r31, implicit-def $pc
+...

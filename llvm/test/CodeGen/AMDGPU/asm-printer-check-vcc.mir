@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -start-after=livedebugvalues -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: foo:
+# GCN: s_getpc_b64 vcc
+# GCN: s_add_u32 vcc_lo, vcc_lo, bar@rel32@lo+4
+# GCN: s_addc_u32 vcc_hi, vcc_hi, bar@rel32@hi+12
+--- |
+  define amdgpu_kernel void @foo() {
+    ret void
+  }
+  @bar = external protected local_unnamed_addr addrspace(4) externally_initialized global i32, align 4
+---
+name: foo
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0:
+    BUNDLE implicit-def $vcc, implicit-def $vcc_lo, implicit-def $vcc_lo_lo16, implicit-def $vcc_lo_hi16, implicit-def $vcc_hi, implicit-def $vcc_hi_lo16, implicit-def $vcc_hi_hi16, implicit-def $scc {
+      $vcc = S_GETPC_B64
+      $vcc_lo = S_ADD_U32 internal $vcc_lo, target-flags(amdgpu-rel32-lo) @bar + 4, implicit-def $scc
+      $vcc_hi = S_ADDC_U32 internal $vcc_hi, target-flags(amdgpu-rel32-hi) @bar + 12, implicit-def $scc, implicit internal $scc
+    }

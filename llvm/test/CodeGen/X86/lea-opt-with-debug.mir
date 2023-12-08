@@ -1,0 +1,122 @@
+# RUN: llc -mtriple=x86_64-unknown-unknown -start-after=peephole-opt -stop-before=detect-dead-lanes -o - %s | FileCheck %s
+
+# Test that the optimize LEA pass can remove a redundant LEA even when it is
+# also used by a DBG_VALUE. Check that the uses of the replaced LEA are updated
+# correctly.
+
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
+  %struct.A = type { i32, i32, i32 }
+
+  @c = common local_unnamed_addr global ptr null, align 8
+  @a = common local_unnamed_addr global i32 0, align 4
+  @d = common local_unnamed_addr global i32 0, align 4
+  @b = common local_unnamed_addr global i32 0, align 4
+
+  define i32 @fn1() local_unnamed_addr !dbg !8 {
+    %1 = load ptr, ptr @c, align 8, !dbg !13
+    %2 = load i32, ptr @a, align 4, !dbg !13
+    %3 = sext i32 %2 to i64, !dbg !13
+    %4 = getelementptr inbounds %struct.A, ptr %1, i64 %3, !dbg !13
+    %5 = ptrtoint ptr %4 to i64, !dbg !13
+    %6 = trunc i64 %5 to i32, !dbg !13
+    store i32 %6, ptr @d, align 4, !dbg !13
+    %7 = getelementptr inbounds %struct.A, ptr %1, i64 %3, i32 2, !dbg !14
+    tail call void @llvm.dbg.value(metadata ptr %7, i64 0, metadata !11, metadata !DIExpression()), !dbg !15
+    br label %8, !dbg !16
+
+  ; <label>:8:                                      ; preds = %8, %0
+    %9 = load i32, ptr %7, align 4, !dbg !17
+    store i32 %9, ptr @d, align 4, !dbg !17
+    br label %8, !dbg !18
+  }
+
+  ; Function Attrs: nounwind readnone
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+
+  attributes #0 = { nounwind readnone }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!5, !6, !7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2)
+  !1 = !DIFile(filename: "test.c", directory: "")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !5 = !{i32 2, !"Dwarf Version", i32 4}
+  !6 = !{i32 2, !"Debug Info Version", i32 3}
+  !7 = !{i32 1, !"PIC Level", i32 2}
+  !8 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 7, type: !9, isLocal: false, isDefinition: true, scopeLine: 7, isOptimized: true, unit: !0, retainedNodes: !10)
+  !9 = !DISubroutineType(types: !3)
+  !10 = !{!11}
+  !11 = !DILocalVariable(name: "e", scope: !8, file: !1, line: 8, type: !12)
+  !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+  !13 = !DILocation(line: 9, scope: !8)
+  !14 = !DILocation(line: 10, scope: !8)
+  !15 = !DILocation(line: 8, scope: !8)
+  !16 = !DILocation(line: 11, scope: !8)
+  !17 = !DILocation(line: 13, scope: !8)
+  !18 = !DILocation(line: 14, scope: !8)
+
+...
+---
+name:            fn1
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr64_nosp }
+  - { id: 3, class: gr64_nosp }
+  - { id: 4, class: gr64 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr32 }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1(0x80000000)
+
+    ; CHECK: %3:gr64_nosp = LEA64r %2, 2, %2, 0, $noreg, debug-location !13
+    ; CHECK-NEXT: %4:gr64 = LEA64r %1, 4, %3, 0, $noreg, debug-location !13
+    ; CHECK-NOT: %0:gr64 = LEA64r %1, 4, %3, 8, $noreg, debug-location !14
+    ; CHECK: DBG_VALUE %4, $noreg, !11, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value), debug-location !15
+
+    %1 = MOV64rm $rip, 1, $noreg, @c, $noreg, debug-location !13 :: (dereferenceable load (s64) from @c)
+    %2 = MOVSX64rm32 $rip, 1, $noreg, @a, $noreg, debug-location !13 :: (dereferenceable load (s32) from @a)
+    %3 = LEA64r %2, 2, %2, 0, $noreg, debug-location !13
+    %4 = LEA64r %1, 4, %3, 0, $noreg, debug-location !13
+    %5 = COPY %4.sub_32bit, debug-location !13
+    MOV32mr $rip, 1, $noreg, @d, $noreg, killed %5, debug-location !13 :: (store (s32) into @d)
+    %0 = LEA64r %1, 4, %3, 8, $noreg, debug-location !14
+    DBG_VALUE %0, $noreg, !11, !DIExpression(), debug-location !15
+
+    ; CHECK-LABEL: bb.1 (%ir-block.8):
+    ; CHECK: %6:gr32 = MOV32rm %4, 1, $noreg, 8, $noreg, debug-location !17 :: (load (s32) from %ir.7)
+
+  bb.1 (%ir-block.8):
+    successors: %bb.1(0x80000000)
+
+    %6 = MOV32rm %0, 1, $noreg, 0, $noreg, debug-location !17 :: (load (s32) from %ir.7)
+    MOV32mr $rip, 1, $noreg, @d, $noreg, killed %6, debug-location !17 :: (store (s32) into @d)
+    JMP_1 %bb.1, debug-location !18
+
+...

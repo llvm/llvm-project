@@ -1,0 +1,18 @@
+// module.map
+
+module Level1A {
+  header "Level1A.h"
+  export *
+}
+module Level1B {
+  header "Level1B.h"
+  export *
+  module Level2B {
+    header "Level2B.h"
+    export *
+  }
+}
+module Level2A {
+  header "Level2A.h"
+  export *
+}

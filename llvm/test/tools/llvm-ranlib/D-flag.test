@@ -1,0 +1,47 @@
+## Test the -D and -U flags of llvm-ranlib
+## Create an archive with timestamps but without symbol table
+## Important: all `llvm-ar tv` calls must use TZ=UTC to produce identical values
+# RUN: yaml2obj %S/../llvm-ar/Inputs/add-lib1.yaml -o %t.o
+# RUN: env TZ=UTC touch -t 200001020304 %t.o
+# RUN: rm -f %t.a %t-no-index.a && llvm-ar cqSU %t-no-index.a %t.o
+
+## Check that the intial listing has real values:
+# RUN: env TZ=UTC llvm-ar tv %t-no-index.a | FileCheck %s --check-prefix=REAL-VALUES
+
+## Check that the -D flag clears the timestamps:
+# RUN: cp %t-no-index.a %t.a && llvm-ranlib -D %t.a
+# RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=DETERMINISTIC-VALUES
+
+## Check that the -U flag maintains the timestamps:
+# RUN: cp %t-no-index.a %t.a && llvm-ranlib -U %t.a
+# RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=REAL-VALUES
+
+## Check that we accept multiple values and the last one wins:
+# RUN: cp %t-no-index.a %t.a && llvm-ranlib -UDU %t.a
+# RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=REAL-VALUES
+# RUN: cp %t-no-index.a %t.a && llvm-ranlib -UUD %t.a
+# RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=DETERMINISTIC-VALUES
+
+## Check multiple archives can be specified and arguments can be specified anywhere.
+# RUN: cp %t-no-index.a %t.a && cp %t-no-index.a %t2.a
+# RUN: llvm-ranlib -U %t.a -D %t2.a -U
+# RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=REAL-VALUES
+# RUN: env TZ=UTC llvm-ar tv %t2.a | FileCheck %s --check-prefix=REAL-VALUES
+
+## Check that the -D/-U option is only accepted with a single dash. This matches
+## the GNU ranlib behaviour.
+# RUN: not llvm-ranlib --D %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-D
+# BAD-OPT-D: error: Invalid option: '--D'
+# RUN: not llvm-ranlib --U %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-U
+# BAD-OPT-U: error: Invalid option: '--U'
+# RUN: not llvm-ranlib -x %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-x
+# BAD-OPT-x: error: Invalid option: '-x'
+
+## If the first argument starts with value flags, the error message only shows
+## the remainder of the parsed string:
+# RUN: not llvm-ranlib -Dx %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-x
+# RUN: not llvm-ranlib -DxD %t.a 2>&1 | FileCheck %s --check-prefix=BAD-OPT-xD
+# BAD-OPT-xD: error: Invalid option: '-xD'
+
+# DETERMINISTIC-VALUES: {{[-rwx]+}} 0/0    712 Jan  1 00:00 1970 D-flag.test.tmp.o
+# REAL-VALUES: {{[-rwx]+}} {{[0-9]+}}/{{[0-9]+}} 712 Jan  2 03:04 2000 D-flag.test.tmp.o

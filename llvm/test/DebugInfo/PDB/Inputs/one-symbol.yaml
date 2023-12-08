@@ -1,0 +1,11 @@
+---
+DbiStream:
+  Modules:
+    - Module:          one-symbol.yaml
+      Modi:
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'c:\foo\one-symbol.yaml'
+...

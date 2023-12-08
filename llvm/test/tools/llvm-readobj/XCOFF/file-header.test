@@ -1,0 +1,65 @@
+## This is a general test for the --file-header option.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj %t1 --file-header | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=FILEHEADER32
+
+#      FILEHEADER32:Format: aixcoff-rs6000
+# FILEHEADER32-NEXT:Arch: powerpc
+# FILEHEADER32-NEXT:AddressSize: 32bit
+# FILEHEADER32-NEXT:FileHeader {
+# FILEHEADER32-NEXT:  Magic: 0x1DF
+# FILEHEADER32-NEXT:  NumberOfSections: 1
+# FILEHEADER32-NEXT:  TimeStamp: 1970-01-01 00:00:01 (0x1)
+# FILEHEADER32-NEXT:  SymbolTableOffset: 0x3C
+# FILEHEADER32-NEXT:  SymbolTableEntries: 1
+# FILEHEADER32-NEXT:  OptionalHeaderSize: 0x0
+# FILEHEADER32-NEXT:  Flags: 0x12
+# FILEHEADER32-NEXT:}
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:          [[MAGIC=0x01DF]]
+  CreationTime:         [[CREATTIME=1]]
+  EntriesInSymbolTable: [[SYMBOLCOUNT=1]]
+  NumberOfSections:     1
+  OffsetToSymbolTable:  0x3C
+  AuxiliaryHeaderSize:  0
+  Flags:                0x12
+Sections:
+  - Name: .text
+Symbols:
+  - Name: foo
+
+# RUN: yaml2obj -DMAGIC=0x01F7 -DCREATTIME=0 %s -o %t2
+# RUN: llvm-readobj %t2 --file-header | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=FILEHEADER64
+
+#      FILEHEADER64:Format: aix5coff64-rs6000
+# FILEHEADER64-NEXT:Arch: powerpc64
+# FILEHEADER64-NEXT:AddressSize: 64bit
+# FILEHEADER64-NEXT:FileHeader {
+# FILEHEADER64-NEXT:  Magic: 0x1F7
+# FILEHEADER64-NEXT:  NumberOfSections: 1
+# FILEHEADER64-NEXT:  TimeStamp: None (0x0)
+# FILEHEADER64-NEXT:  SymbolTableOffset: 0x3C
+# FILEHEADER64-NEXT:  SymbolTableEntries: 1
+# FILEHEADER64-NEXT:  OptionalHeaderSize: 0x0
+# FILEHEADER64-NEXT:  Flags: 0x12
+# FILEHEADER64-NEXT:}
+
+# RUN: yaml2obj -DCREATTIME=-1 %s -o %t3
+# RUN: llvm-readobj %t3 --file-header | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=NEGTIME
+
+# NEGTIME:FileHeader {
+# NEGTIME:  TimeStamp: Reserved Value (0xFFFFFFFF)
+# NEGTIME:}
+
+# RUN: yaml2obj -DSYMBOLCOUNT=-1 %s -o %t4
+# RUN: llvm-readobj %t4 --file-header | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=NEGSYMCOUNT
+
+# NEGSYMCOUNT:FileHeader {
+# NEGSYMCOUNT:  SymbolTableEntries: Reserved Value (0xFFFFFFFF)
+# NEGSYMCOUNT:}

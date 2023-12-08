@@ -1,0 +1,221 @@
+# RUN: llc %s -start-after=shrink-wrap -march=mips64 -mcpu=mips64r6 -mattr=+fp64,+msa -o /dev/null
+
+# Test that estimated size of the stack leads to the creation of an emergency
+# spill when MSA is in use. Previously, this test case would fail during
+# register scavenging due to the lack of a spill slot.
+--- |
+  define inreg { i64, i64 } @test(i64 inreg %a.coerce0, i64 inreg %a.coerce1, i64 inreg %b.coerce0, i64 inreg %b.coerce1, i32 signext %c) #0 {
+  entry:
+    %retval = alloca <16 x i8>, align 16
+    %a = alloca <16 x i8>, align 16
+    %b = alloca <16 x i8>, align 16
+    %a.addr = alloca <16 x i8>, align 16
+    %b.addr = alloca <16 x i8>, align 16
+    %c.addr = alloca i32, align 4
+    %g = alloca <16 x i8>*, align 8
+    %d = alloca i8*, align 8
+    %0 = bitcast <16 x i8>* %a to { i64, i64 }*
+    %1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %0, i32 0, i32 0
+    store i64 %a.coerce0, i64* %1, align 16
+    %2 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %0, i32 0, i32 1
+    store i64 %a.coerce1, i64* %2, align 8
+    %a1 = load <16 x i8>, <16 x i8>* %a, align 16
+    %3 = bitcast <16 x i8>* %b to { i64, i64 }*
+    %4 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %3, i32 0, i32 0
+    store i64 %b.coerce0, i64* %4, align 16
+    %5 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %3, i32 0, i32 1
+    store i64 %b.coerce1, i64* %5, align 8
+    %b2 = load <16 x i8>, <16 x i8>* %b, align 16
+    store <16 x i8> %a1, <16 x i8>* %a.addr, align 16
+    store <16 x i8> %b2, <16 x i8>* %b.addr, align 16
+    store i32 %c, i32* %c.addr, align 4
+    %6 = alloca i8, i64 6400, align 16
+    %7 = bitcast i8* %6 to <16 x i8>*
+    store <16 x i8>* %7, <16 x i8>** %g, align 8
+    %8 = load <16 x i8>*, <16 x i8>** %g, align 8
+    call void @h(<16 x i8>* %b.addr, <16 x i8>* %8)
+    %9 = load <16 x i8>*, <16 x i8>** %g, align 8
+    %10 = bitcast <16 x i8>* %9 to i8*
+    store i8* %10, i8** %d, align 8
+    %11 = load <16 x i8>, <16 x i8>* %a.addr, align 16
+    %12 = load i8*, i8** %d, align 8
+    %arrayidx = getelementptr inbounds i8, i8* %12, i64 0
+    %13 = load i8, i8* %arrayidx, align 1
+    %conv = sext i8 %13 to i32
+    %14 = call <16 x i8> @llvm.mips.fill.b(i32 %conv)
+    %add = add <16 x i8> %11, %14
+    %15 = load i8*, i8** %d, align 8
+    %arrayidx3 = getelementptr inbounds i8, i8* %15, i64 1
+    %16 = load i8, i8* %arrayidx3, align 1
+    %conv4 = sext i8 %16 to i32
+    %17 = call <16 x i8> @llvm.mips.fill.b(i32 %conv4)
+    %add5 = add <16 x i8> %add, %17
+    %18 = load <16 x i8>, <16 x i8>* %b.addr, align 16
+    %add6 = add <16 x i8> %18, %add5
+    store <16 x i8> %add6, <16 x i8>* %b.addr, align 16
+    %19 = load <16 x i8>, <16 x i8>* %b.addr, align 16
+    store <16 x i8> %19, <16 x i8>* %retval, align 16
+    %20 = bitcast <16 x i8>* %retval to { i64, i64 }*
+    %21 = load { i64, i64 }, { i64, i64 }* %20, align 16
+    ret { i64, i64 } %21
+  }
+
+  declare void @h(<16 x i8>*, <16 x i8>*)
+
+  declare <16 x i8> @llvm.mips.fill.b(i32)
+
+  declare void @llvm.stackprotector(i8*, i8**)
+
+...
+---
+name:            test
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$a1_64', virtual-reg: '' }
+  - { reg: '$a2_64', virtual-reg: '' }
+  - { reg: '$a3_64', virtual-reg: '' }
+  - { reg: '$t0_64', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: retval, type: default, offset: 0, size: 16, alignment: 16,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: a, type: default, offset: 0, size: 16, alignment: 16,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: b, type: default, offset: 0, size: 16, alignment: 16,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: a.addr, type: default, offset: 0, size: 16, alignment: 16,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: b.addr, type: default, offset: 0, size: 16, alignment: 16,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: c.addr, type: default, offset: 0, size: 4, alignment: 4,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: g, type: default, offset: 0, size: 8, alignment: 8,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: d, type: default, offset: 0, size: 8, alignment: 8,
+      callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: default, offset: 0, size: 6400,
+      alignment: 16, callee-saved-register: '', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $a0_64, $a1_64, $a2_64, $a3_64, $t0_64
+
+    SD killed $a0_64, %stack.1.a, 0 :: (store (s64) into %ir.1, align 16)
+    SD killed $a1_64, %stack.1.a, 8 :: (store (s64) into %ir.2)
+    $w0 = LD_B %stack.1.a, 0 :: (dereferenceable load (s128) from %ir.a)
+    SD killed $a2_64, %stack.2.b, 0 :: (store (s64) into %ir.4, align 16)
+    SD killed $a3_64, %stack.2.b, 8 :: (store (s64) into %ir.5)
+    $w1 = LD_B %stack.2.b, 0 :: (dereferenceable load (s128) from %ir.b)
+    ST_B killed $w0, %stack.3.a.addr, 0 :: (store (s128) into %ir.a.addr)
+    ST_B killed $w1, %stack.4.b.addr, 0 :: (store (s128) into %ir.b.addr)
+    SW $t0, %stack.5.c.addr, 0, implicit killed $t0_64 :: (store (s32) into %ir.c.addr)
+    $at_64 = LEA_ADDiu64 %stack.8, 0
+    SD killed $at_64, %stack.6.g, 0 :: (store (s64) into %ir.g)
+    $a1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $a0_64 = LEA_ADDiu64 %stack.4.b.addr, 0
+    JAL @h, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $a1_64, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    $at_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $v0_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $v1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a0_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a2_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $a3_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t0_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t2_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t3_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t4_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t5_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t6_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t7_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s0_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s1_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s2_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s3_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s4_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s5_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s6_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $s7_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t8_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $t9_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $ra_64 = LD %stack.6.g, 0 :: (dereferenceable load (s64) from %ir.g)
+    $w0 = LD_B %stack.3.a.addr, 0 :: (dereferenceable load (s128) from %ir.a.addr)
+    SD $at_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $v0_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $v1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a0_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a2_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $a3_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t0_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t2_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t3_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t4_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t5_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t6_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t7_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s0_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s1_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s2_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s3_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s4_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s5_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s6_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $s7_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t8_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $t9_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    SD $ra_64, %stack.7.d, 0 :: (store (s64) into %ir.d)
+    $at_64 = LD %stack.7.d, 0 :: (dereferenceable load (s64) from %ir.d)
+    $v0 = LB $at_64, 0 :: (load (s8) from %ir.arrayidx)
+    $w1 = FILL_B killed $v0
+    $w0 = ADDV_B killed $w0, killed $w1
+    $at = LB killed $at_64, 1 :: (load (s8) from %ir.arrayidx3)
+    $w1 = FILL_B killed $at
+    $w0 = ADDV_B killed $w0, killed $w1
+    $w1 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load (s128) from %ir.b.addr)
+    $w0 = ADDV_B killed $w1, killed $w0
+    ST_B killed $w0, %stack.4.b.addr, 0 :: (store (s128) into %ir.b.addr)
+    $w0 = LD_B %stack.4.b.addr, 0 :: (dereferenceable load (s128) from %ir.b.addr)
+    ST_B killed $w0, %stack.0.retval, 0 :: (store (s128) into %ir.retval)
+    $v0_64 = LD %stack.0.retval, 0 :: (dereferenceable load (s64) from %ir.20, basealign 16)
+    $v1_64 = LD %stack.0.retval, 8 :: (dereferenceable load (s64) from %ir.20 + 8, basealign 16)
+    RetRA implicit $v0_64, implicit $v1_64
+
+...

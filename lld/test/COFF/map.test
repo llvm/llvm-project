@@ -1,0 +1,57 @@
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t-dll.obj
+# RUN: lld-link /out:%t.dll /dll %t-dll.obj /implib:%t-dll.lib \
+# RUN:   /export:exportfn1 /export:exportfn2
+# RUN: yaml2obj %p/Inputs/map.yaml -o %t.obj
+# RUN: lld-link /out:%t.exe /entry:main %t.obj %t-dll.lib /map:%T/foo.map  /lldmap
+# RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < %T/foo.map
+# RUN: FileCheck -check-prefix=LLDMAP -strict-whitespace %s < %t.map
+# RUN: lld-link /out:%t.exe /entry:main %t.obj %t-dll.lib /map /lldmap:%T/foo-lld.map
+# RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < %t.map
+# RUN: FileCheck -check-prefix=LLDMAP -strict-whitespace %s < %T/foo-lld.map
+# RUN: lld-link /out:%t.dll /dll %t-dll.obj /export:exportfn1 \
+# RUN:   /export:foo=exportfn2 /map /mapinfo:exports
+# RUN: FileCheck -check-prefix=MAPINFO -strict-whitespace %s < %t.map
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: cp %t.obj map.test.tmp.obj
+# RUN: cp %t-dll.lib map.test.tmp-dll.lib
+# RUN: lld-link /entry:main map.test.tmp.obj map.test.tmp-dll.lib /map
+# RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < map.test.tmp.map
+
+# MAP: {{.*}}
+# MAP-EMPTY:
+# MAP-NEXT: Timestamp is {{.*}}
+# MAP-EMPTY:
+# MAP-NEXT: Preferred load address is 0000000140000000
+# MAP-EMPTY:
+# MAP-NEXT: Start         Length     Name                   Class
+# MAP-NEXT: 0001:00000000 00000008H .text                   CODE
+# MAP-EMPTY:
+# MAP-NEXT:  Address         Publics by Value              Rva+Base               Lib:Object
+# MAP-EMPTY:
+# MAP-NEXT: 0000:00000042       absolute                   0000000000000042     <absolute>
+# MAP-NEXT: 0001:00000000       main                       0000000140001000     map.test.tmp.obj
+# MAP-NEXT: 0001:00000010       exportfn1                  0000000140001010     map.test.tmp-dll:map.test.tmp.dll
+# MAP-NEXT: 0001:00000020       exportfn2                  0000000140001020     map.test.tmp-dll:map.test.tmp.dll
+# MAP-NEXT: 0002:00000040       __imp_exportfn1            0000000140002040     map.test.tmp-dll:map.test.tmp.dll
+# MAP-NEXT: 0002:00000048       __imp_exportfn2            0000000140002048     map.test.tmp-dll:map.test.tmp.dll
+# MAP-EMPTY:
+# MAP-NEXT: entry point at         0001:00000000
+# MAP-EMPTY:
+# MAP-NEXT: Static symbols
+# MAP-EMPTY:
+# MAP-NEXT: 0001:00000043       staticdef                  0000000140001043     map.test.tmp.obj
+
+
+# LLDMAP:      Address  Size     Align Out     In      Symbol
+# LLDMAP-NEXT: 00001000 00000026  4096 .text
+# LLDMAP-NEXT: 00001000 00000008     4         {{.*}}map.test.tmp.obj:(.text)
+# LLDMAP-NEXT: 00001000 00000000     0                 main
+
+# MAPINFO: Exports
+# MAPINFO-EMPTY:
+# MAPINFO-NEXT:  ordinal    name
+# MAPINFO-EMPTY:
+# MAPINFO-NEXT:        1    exportfn1
+# MAPINFO-NEXT:        2    exportfn3
+# MAPINFO-NEXT:        3    exportfn2
+# MAPINFO-NEXT:               exported name: foo

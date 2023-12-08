@@ -1,0 +1,116 @@
+# RUN: llc -run-pass=ppc-merge-strings -mcpu=pwr8 -mtriple powerpc64le-unknown-linux-gnu \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -run-pass=ppc-merge-strings -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  ; Constants list.
+  @.str = private unnamed_addr constant [8 x i8] c"ABCDEFG\00", align 1
+  @__const.test2.A = private unnamed_addr constant [6 x i32] [i32 34, i32 23, i32 653, i32 12, i32 75, i32 32], align 4
+  @__const.test3.A = private unnamed_addr constant [7 x float] [float 0x400AA3D700000000, float 0x4021EB8520000000, float 0x4023147AE0000000, float 0x401CEB8520000000, float 0x401C8F5C20000000, float 0x402075C280000000, float 0x3FF1C28F60000000], align 4
+  @__const.test4.A = private unnamed_addr constant [7 x double] [double 3.330000e+00, double 8.960000e+00, double 0x4023147AE147AE14, double 7.230000e+00, double 7.140000e+00, double 8.230000e+00, double 1.110000e+00], align 8
+  @.str.1 = private unnamed_addr constant [16 x i8] c"DifferentString\00", align 1
+  @__const.test5.B = private unnamed_addr constant [6 x i32] [i32 134, i32 123, i32 53, i32 142, i32 375, i32 132], align 4
+  @__const.test5.C = private unnamed_addr constant [7 x float] [float 0x4037547AE0000000, float 0x403CF5C280000000, float 0x40338A3D80000000, float 0x40313AE140000000, float 0x404111EB80000000, float 0x40323AE140000000, float 0x40263851E0000000], align 4
+  @__const.test5.D = private unnamed_addr constant [7 x double] [double 2.333000e+01, double 2.896000e+01, double 1.954000e+01, double 1.723000e+01, double 3.414000e+01, double 1.823000e+01, double 1.111000e+01], align 8
+
+  ; CHECK: @__ModuleStringPool = private constant { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] } { [7 x double] [double 3.330000e+00, double 8.960000e+00, double 0x4023147AE147AE14, double 7.230000e+00, double 7.140000e+00, double 8.230000e+00, double 1.110000e+00], [7 x double] [double 2.333000e+01, double 2.896000e+01, double 1.954000e+01, double 1.723000e+01, double 3.414000e+01, double 1.823000e+01, double 1.111000e+01], [6 x i32] [i32 34, i32 23, i32 653, i32 12, i32 75, i32 32], [6 x i32] [i32 134, i32 123, i32 53, i32 142, i32 375, i32 132], [7 x float] [float 0x400AA3D700000000, float 0x4021EB8520000000, float 0x4023147AE0000000, float 0x401CEB8520000000, float 0x401C8F5C20000000, float 0x402075C280000000, float 0x3FF1C28F60000000], [7 x float] [float 0x4037547AE0000000, float 0x403CF5C280000000, float 0x40338A3D80000000, float 0x40313AE140000000, float 0x404111EB80000000, float 0x40323AE140000000, float 0x40263851E0000000], [8 x i8] c"ABCDEFG\00", [16 x i8] c"DifferentString\00" }, align 8
+
+  ; List of callee functions.
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+  declare signext i32 @calleeStr(ptr noundef) local_unnamed_addr #0
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
+  declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #0
+  declare signext i32 @calleeInt(ptr noundef) local_unnamed_addr #0
+  declare signext i32 @calleeFloat(ptr noundef) local_unnamed_addr #0
+  declare signext i32 @calleeDouble(ptr noundef) local_unnamed_addr #0
+
+  ;;
+  ;; Start of test code.
+  ;;
+
+  define dso_local signext i32 @test1() local_unnamed_addr #0 {
+  entry:
+    %call = tail call signext i32 @calleeStr(ptr noundef nonnull @.str) #0
+    ret i32 %call
+
+  ; CHECK-LABEL: test1
+  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 6
+  ; CHECK:         tail call signext i32 @calleeStr
+  }
+
+  define dso_local signext i32 @test2() local_unnamed_addr #0 {
+  entry:
+    %A = alloca [6 x i32], align 4
+    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %A) #0
+    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) %A, ptr noundef nonnull align 4 dereferenceable(24) @__const.test2.A, i64 24, i1 false)
+    %call = call signext i32 @calleeInt(ptr noundef nonnull %A) #0
+    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %A) #0
+    ret i32 %call
+
+  ; CHECK-LABEL: test2
+  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 2
+  ; CHECK:         call signext i32 @calleeInt
+  }
+
+  define dso_local signext i32 @test3() local_unnamed_addr #0 {
+  entry:
+    %A = alloca [7 x float], align 4
+    call void @llvm.lifetime.start.p0(i64 28, ptr nonnull %A) #0
+    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(28) %A, ptr noundef nonnull align 4 dereferenceable(28) @__const.test3.A, i64 28, i1 false)
+    %call = call signext i32 @calleeFloat(ptr noundef nonnull %A) #0
+    call void @llvm.lifetime.end.p0(i64 28, ptr nonnull %A) #0
+    ret i32 %call
+  ; CHECK-LABEL: test3
+  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 4
+  ; CHECK:         call signext i32 @calleeFloat
+  }
+
+  define dso_local signext i32 @test4() local_unnamed_addr #0 {
+  entry:
+    %A = alloca [7 x double], align 8
+    call void @llvm.lifetime.start.p0(i64 56, ptr nonnull %A) #0
+    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(56) %A, ptr noundef nonnull align 8 dereferenceable(56) @__const.test4.A, i64 56, i1 false)
+    %call = call signext i32 @calleeDouble(ptr noundef nonnull %A) #0
+    call void @llvm.lifetime.end.p0(i64 56, ptr nonnull %A) #0
+    ret i32 %call
+  ; CHECK-LABEL: test4
+  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 0
+  ; CHECK:         call signext i32 @calleeDouble
+  }
+
+  define dso_local signext i32 @test5() local_unnamed_addr #0 {
+  entry:
+    %B = alloca [6 x i32], align 4
+    %C = alloca [7 x float], align 4
+    %D = alloca [7 x double], align 8
+    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %B) #0
+    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) %B, ptr noundef nonnull align 4 dereferenceable(24) @__const.test5.B, i64 24, i1 false)
+    call void @llvm.lifetime.start.p0(i64 28, ptr nonnull %C) #0
+    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(28) %C, ptr noundef nonnull align 4 dereferenceable(28) @__const.test5.C, i64 28, i1 false)
+    call void @llvm.lifetime.start.p0(i64 56, ptr nonnull %D) #0
+    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(56) %D, ptr noundef nonnull align 8 dereferenceable(56) @__const.test5.D, i64 56, i1 false)
+    %call = tail call signext i32 @calleeStr(ptr noundef nonnull @.str.1) #0
+    %call1 = call signext i32 @calleeInt(ptr noundef nonnull %B) #0
+    %add = add nsw i32 %call1, %call
+    %call3 = call signext i32 @calleeFloat(ptr noundef nonnull %C) #0
+    %add4 = add nsw i32 %add, %call3
+    %call6 = call signext i32 @calleeDouble(ptr noundef nonnull %D) #0
+    %add7 = add nsw i32 %add4, %call6
+    call void @llvm.lifetime.end.p0(i64 56, ptr nonnull %D) #0
+    call void @llvm.lifetime.end.p0(i64 28, ptr nonnull %C) #0
+    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %B) #0
+    ret i32 %add7
+  ; CHECK-LABEL: test5
+  ; CHECK:         %0 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 3
+  ; CHECK:         %1 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 5
+  ; CHECK:         %2 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 1
+  ; CHECK:         %3 = getelementptr { [7 x double], [7 x double], [6 x i32], [6 x i32], [7 x float], [7 x float], [8 x i8], [16 x i8] }, ptr @__ModuleStringPool, i32 0, i32 7
+  ; CHECK:         call signext i32 @calleeStr
+  ; CHECK:         call signext i32 @calleeInt
+  ; CHECK:         call signext i32 @calleeFloat
+  ; CHECK:         call signext i32 @calleeDouble
+  }
+
+  attributes #0 = { nounwind }
+...

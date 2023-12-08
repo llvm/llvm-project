@@ -1,0 +1,52 @@
+# REQUIRES: avr
+
+## Test ld.lld supports OUTPUT_FORMAT/OUTPUT_ARCH for AVR output.
+
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=avr -mcpu=atmega328 %t/avr5.s -o %t/avr5.o
+# RUN: ld.lld %t/avr5.o -T %t/avr5.lds -o %t/avr5a.out
+# RUN: llvm-objdump --no-print-imm-hex --mcpu=atmega328 -d %t/avr5a.out | FileCheck %s --check-prefix=RELOC
+# RUN: ld.lld %t/avr5.o -Ttext=0 -Tdata=0x800 -e _start -o %t/avr5b.out
+# RUN: llvm-objdump --no-print-imm-hex --mcpu=atmega328 -d %t/avr5b.out | FileCheck %s --check-prefix=RELOC
+
+# RELOC:      ldi  r24, 2
+# RELOC-NEXT: ldi  r25, 8
+
+# RUN: llvm-readelf --headers %t/avr5a.out | FileCheck %s --check-prefix=HEAD
+# RUN: llvm-readelf --headers %t/avr5b.out | FileCheck %s --check-prefix=HEAD
+
+# HEAD: Atmel AVR 8-bit microcontroller
+# HEAD: 0x85, EF_AVR_ARCH_AVR5, relaxable
+
+# HEAD:      Name     Type      Address   Off     Size
+# HEAD-NEXT:          NULL      00000000  000000  000000
+# HEAD-NEXT: .text    PROGBITS  00000000  001000  000006
+# HEAD-NEXT: .data    PROGBITS  00000800  001800  000004
+
+#--- avr5.s
+	.text
+	.globl _start
+	.p2align 1
+_start:
+	ldi   r24, lo8(def) ; Load lower byte of variable def 16-bit address to r24
+	ldi   r25, hi8(def) ; Load higher byte of variable def 16-bit address to r25
+	rjmp  _start
+
+	.section .data
+	.type abc, @object
+	.type def, @object
+	.globl abc
+	.globl def
+abc:
+	.short 100
+def:
+	.short 200
+
+#--- avr5.lds
+OUTPUT_FORMAT("elf32-avr", "elf32-avr", "elf32-avr")
+OUTPUT_ARCH(avr:5)
+ENTRY(_start)
+SECTIONS {
+	.text 0x000: { *(.text*) }
+	.data 0x800: { *(.data*) }
+}

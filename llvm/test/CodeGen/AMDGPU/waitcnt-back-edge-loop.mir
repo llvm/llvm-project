@@ -1,0 +1,93 @@
+# RUN: llc -o - %s -march=amdgcn -mcpu=fiji -run-pass=si-insert-waitcnts -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: waitcnt-back-edge-loop
+# GCN: bb.2
+# GCN: S_WAITCNT 3952
+# GCN: $vgpr5 = V_CVT_I32_F32_e32 killed $vgpr5, implicit $mode, implicit $exec
+
+---
+name: waitcnt-back-edge-loop
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr1_vgpr2
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr1_vgpr2
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32) from `ptr addrspace(1) null`, addrspace 1)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32) from `ptr addrspace(1) null`, addrspace 1)
+    $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 3, killed $sgpr4, implicit $exec
+    $vgpr3 = V_CNDMASK_B32_e64 0, -1082130432, 0, 1065353216, killed $sgpr0_sgpr1, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.3:
+    successors: %bb.1
+
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32) from `ptr addrspace(1) null`, addrspace 1)
+
+  bb.1:
+    successors: %bb.5, %bb.2
+
+    $vgpr5 = V_CVT_I32_F32_e32 killed $vgpr5, implicit $mode, implicit $exec
+    V_CMP_NE_U32_e32 0, $vgpr5, implicit-def $vcc, implicit $exec
+    $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.5, implicit killed $vcc
+
+  bb.2:
+    successors: %bb.4, %bb.3
+
+    V_CMP_EQ_U32_e32 9, killed $vgpr5, implicit-def $vcc, implicit $exec
+    $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.3, implicit killed $vcc
+
+  bb.4:
+    successors: %bb.3, %bb.1
+
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32) from `ptr addrspace(1) null`, addrspace 1)
+    $vgpr4 = V_CVT_I32_F32_e32 $vgpr5, implicit $mode, implicit $exec
+    V_CMP_EQ_U32_e32 2, killed $vgpr4, implicit-def $vcc, implicit $exec
+    $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
+    $vgpr4 = V_MOV_B32_e32 $vgpr5, implicit $exec, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_BRANCH %bb.3
+
+  bb.5:
+
+    $vgpr4 = V_MAC_F32_e32 killed $vgpr0, killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
+    EXP_DONE 12, killed $vgpr4, undef $vgpr0, undef $vgpr0, undef $vgpr0, 0, 0, 15, implicit $exec
+    S_ENDPGM 0
+...
+---
+
+# GCN-LABEL: name: waitcnt-multiple-back-edges{{$}}
+# GCN: bb.0:
+# GCN: S_WAITCNT 0
+# GCN-NEXT: S_BRANCH %bb.2
+
+name: waitcnt-multiple-back-edges
+body: |
+  bb.0:
+    S_BRANCH %bb.2
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+
+  bb.3:
+    S_CBRANCH_VCCNZ %bb.5, implicit $vcc
+
+  bb.4:
+    BUFFER_ATOMIC_ADD_OFFSET renamable $vgpr0, renamable $sgpr12_sgpr13_sgpr14_sgpr15, 0, 4, 0, implicit $exec
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.6
+
+  bb.5:
+    S_CBRANCH_SCC0 %bb.2, implicit $scc
+    S_BRANCH %bb.6
+
+  bb.6:
+    S_CBRANCH_SCC1 %bb.0, implicit $scc
+    S_ENDPGM 0
+...

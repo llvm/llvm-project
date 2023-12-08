@@ -1,0 +1,199 @@
+## This test checks warning messages if --start-address/--stop-address
+## do not intersect with address ranges of sections that have the SHF_ALLOC
+## flag.
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: yaml2obj --docnum=2 %s -o %t.2
+# RUN: yaml2obj --docnum=3 %s -o %t.o
+# RUN: yaml2obj --docnum=4 %s -o %t.3
+
+## Warn if no section covers any part of the specified range.
+
+## - Section ends at start of range:
+##           | range |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1004 --stop-address=0x1006 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+
+## - Range is between two sections:
+##             | range |
+## | section |           | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1005 --stop-address=0x1006 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+
+## - Range appears after any section:
+##                  | range |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1405 --stop-address=0x1406 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+
+## - Range starts at 0. (--start-address defaults to 0).
+# RUN: llvm-objdump --file-headers --stop-address=0x1000 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN-STOP-ONLY
+
+## - Range ends at UINT64_MAX. (--stop-address defaults to UINT64_MAX)
+# RUN: llvm-objdump --file-headers --start-address=0x1500 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN-START-ONLY
+
+## No warning if a section covers at least part of the specified range.
+
+## - Ranges are identical:
+## | range   |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1000 --stop-address=0x1004 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Range is entirely within section:
+##  | range |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1001 --stop-address=0x1003 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section is entirely within range:
+## |   range   |
+##  | section |
+# RUN: llvm-objdump --file-headers --start-address=0xfff --stop-address=0x1005 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section and range share same start, section larger:
+## | range |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1000 --stop-address=0x1003 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section and range share same start, range larger:
+## | range        |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1000 --stop-address=0x1005 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section and range share same end, section larger:
+##   | range |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1001 --stop-address=0x1004 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section and range share same end, range larger:
+## | range    |
+##  | section |
+# RUN: llvm-objdump --file-headers --start-address=0xfff --stop-address=0x1004 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section and range partially overlap, range first:
+## | range |
+##   | section |
+# RUN: llvm-objdump --file-headers --start-address=0xfff --stop-address=0x1003 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Section and range partially overlap, section first:
+##       | range |
+## | section |
+# RUN: llvm-objdump --file-headers --start-address=0x1001 --stop-address=0x1005 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## - Range starts before first section and ends after second:
+## |            range               |
+##   | section |    | section |
+# RUN: llvm-objdump --file-headers --start-address=0xfff --stop-address=0x1405 %t 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## Warn only for the input file that does not have the specified range.
+# RUN: llvm-objdump --file-headers --start-address=0x2001 --stop-address=0x2005 %t %t.2 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MULTI-INPUT
+
+## Warn if the specified range is in a segment but not in any section.
+# RUN: llvm-objdump --file-headers --start-address=0x1008 --stop-address=0x1009 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+
+## Warning for --start-address/--stop-address works regardless of the other options used including --section.
+# RUN: llvm-objdump --syms --section=.text2 --start-address=0x1004 --stop-address=0x1005 %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+
+## Sections without the SHF_ALLOC flag are ignored in address range calculation.
+# RUN: llvm-objdump --file-headers --start-address=0x1 --stop-address=0x3 %t.3 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+
+## No warning for relocatable objects.
+# RUN: llvm-objdump --file-headers --start-address=0x1004 --stop-address=0x1005 %t.o 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning:
+
+## No warning if neither --start-address nor --stop-address are specified.
+# RUN: llvm-objdump --file-headers %t 2>&1 | FileCheck %s --implicit-check-not=warning:
+
+# WARN: warning: {{.*}}: no section overlaps the range {{.*}} specified by --start-address/--stop-address
+# WARN-STOP-ONLY: warning: {{.*}}: no section has address less than 0x1000 specified by --stop-address
+# WARN-START-ONLY: warning: {{.*}}: no section has address greater than or equal to 0x1500 specified by --start-address
+
+# MULTI-INPUT: file format
+# MULTI-INPUT: warning: {{.*}}: no section overlaps the range [0x2001,0x2005) specified by --start-address/--stop-address
+# MULTI-INPUT: file format
+# MULTI-INPUT-NOT: warning:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    4
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1400
+    Size:    4
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1000
+    FileSize: 0x500
+    FirstSec: .text
+    LastSec:  .text2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2000
+    Size:    4
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1000
+    FileSize: 0x4
+    FirstSec: .text
+    LastSec:  .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    4
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .non.alloc
+    Type:    SHT_PROGBITS
+    Size:    2

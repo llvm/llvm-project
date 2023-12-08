@@ -1,0 +1,25 @@
+## Test the -V flag, which prints the version number to stdout. It also allows
+## for no operation to be specified, but if an operation is specified, it should
+## still occur and regular argument parsing errors should be surfaced (unlike
+## cctools libtool, which silences all argument parsing errors when -V is
+## specified).
+
+## Test -V by itself.
+# RUN: llvm-libtool-darwin -V | FileCheck %s
+## The specific version number, vendor string, etc. will differ across
+## environments, so this is the most specific we can get.
+# CHECK: LLVM version
+
+## Parsing errors should not be surfaced when no operation is specified.
+# RUN: llvm-libtool-darwin -V -D -U | FileCheck %s
+
+## Regular errors should occur when an operation is specified.
+# RUN: not llvm-libtool-darwin -V -static 2>&1 | FileCheck --check-prefix=ERROR %s
+# ERROR: -o option: must be specified
+
+## A valid command line should print the version and perform the operation.
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o -V | FileCheck %s
+# RUN: llvm-libtool-darwin -static -o %t2.lib %t-input1.o %t-input2.o
+# RUN: cmp %t.lib %t2.lib

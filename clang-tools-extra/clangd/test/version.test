@@ -1,0 +1,25 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+# Verify versions get recorded/inferred, and are reported in publishDiagnostics.
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","text":""}}}
+# CHECK:    "version": 0
+---
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.c","version":5},"contentChanges":[{"text":"a"}]}}
+# CHECK:    "version": 5
+---
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.c"},"contentChanges":[{"text":"b"}]}}
+# CHECK:    "version": 6
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///bar.c","version": 42, "languageId":"c","text":""}}}
+# CHECK:    "version": 42
+---
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///bar.c"},"contentChanges":[{"text":"c"}]}}
+# CHECK:    "version": 43
+---
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///bar.c", "version": 123},"contentChanges":[{"text":"d"}]}}
+# CHECK:    "version": 123
+---
+{"jsonrpc":"2.0","id":6,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

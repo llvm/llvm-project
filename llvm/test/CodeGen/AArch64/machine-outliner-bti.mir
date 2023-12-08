@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+# AArch64 Branch Target Enforcement treats the BR and BLR indirect branch
+# instructions differently. The BLR instruction can only target a BTI C
+# instruction, and the BR instruction can only target a BTI J instruction. We
+# always start indirectly-called functions with BTI C, so the outliner must not
+# transform a BLR instruction into a BR instruction.
+
+# There is an exception to this: BR X16 and BR X17 can also target a BTI C
+# instruction. We make of this for general tail-calls (tested elsewhere), but
+# don't currently make use of this in the outliner.
+
+# CHECK-NOT: OUTLINED_FUNCTION_
+
+--- |
+  @g = hidden local_unnamed_addr global i32 0, align 4
+
+  define hidden void @bar(void ()* nocapture %f) "branch-target-enforcement"="true" {
+  entry:
+    ret void
+  }
+
+  declare void @foo()
+...
+---
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x20, $x21, $lr, $x19
+
+    HINT 34
+
+    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
+    BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+
+    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
+    BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+
+    STRWui killed renamable $w21, killed renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
+    BLR killed renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+
+    TCRETURNdi @foo, 0, csr_aarch64_aapcs, implicit $sp
+...

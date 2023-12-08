@@ -1,0 +1,81 @@
+# RUN: llc -march=nvptx -mcpu=sm_20 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses floating point constant operands
+# correctly.
+
+--- |
+
+  define float @test(float %k, i32 %i) {
+  entry:
+    %0 = fpext float %k to double
+    %1 = fadd double %0, 3.250000e+00
+    %2 = fptrunc double %1 to float
+    %3 = sitofp i32 %i to float
+    %4 = fadd float %3, 6.250000e+00
+    %5 = fmul float %4, %2
+    ret float %5
+  }
+
+  define float @test2(float %k, i32 %i) {
+  entry:
+    %0 = fpext float %k to double
+    %1 = fadd double %0, 0x7FF8000000000000
+    %2 = fptrunc double %1 to float
+    %3 = sitofp i32 %i to float
+    %4 = fadd float %3, 0x7FF8000000000000
+    %5 = fmul float %4, %2
+    ret float %5
+  }
+
+...
+---
+name:            test
+registers:
+  - { id: 0, class: float32regs }
+  - { id: 1, class: float64regs }
+  - { id: 2, class: int32regs }
+  - { id: 3, class: float64regs }
+  - { id: 4, class: float32regs }
+  - { id: 5, class: float32regs }
+  - { id: 6, class: float32regs }
+  - { id: 7, class: float32regs }
+body: |
+  bb.0.entry:
+    %0 = LD_f32_avar 0, 4, 1, 2, 32, &test_param_0
+    %1 = CVT_f64_f32 %0, 0
+    %2 = LD_i32_avar 0, 4, 1, 0, 32, &test_param_1
+  ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 3.250000e+00
+    %3 = FADD_rnf64ri %1, double 3.250000e+00
+    %4 = CVT_f32_f64 %3, 5
+    %5 = CVT_f32_s32 %2, 5
+  ; CHECK: %6:float32regs = FADD_rnf32ri %5, float 6.250000e+00
+    %6 = FADD_rnf32ri %5, float 6.250000e+00
+    %7 = FMUL_rnf32rr %6, %4
+    StoreRetvalF32 %7, 0
+    Return
+...
+---
+name:            test2
+registers:
+  - { id: 0, class: float32regs }
+  - { id: 1, class: float64regs }
+  - { id: 2, class: int32regs }
+  - { id: 3, class: float64regs }
+  - { id: 4, class: float32regs }
+  - { id: 5, class: float32regs }
+  - { id: 6, class: float32regs }
+  - { id: 7, class: float32regs }
+body: |
+  bb.0.entry:
+    %0 = LD_f32_avar 0, 4, 1, 2, 32, &test2_param_0
+    %1 = CVT_f64_f32 %0, 0
+    %2 = LD_i32_avar 0, 4, 1, 0, 32, &test2_param_1
+  ; CHECK: %3:float64regs = FADD_rnf64ri %1, double 0x7FF8000000000000
+    %3 = FADD_rnf64ri %1, double 0x7FF8000000000000
+    %4 = CVT_f32_f64 %3, 5
+    %5 = CVT_f32_s32 %2, 5
+  ; CHECK: %6:float32regs = FADD_rnf32ri %5, float 0x7FF8000000000000
+    %6 = FADD_rnf32ri %5, float 0x7FF8000000000000
+    %7 = FMUL_rnf32rr %6, %4
+    StoreRetvalF32 %7, 0
+    Return
+...

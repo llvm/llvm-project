@@ -1,0 +1,121 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the block address operands
+# correctly.
+
+--- |
+
+  @addr = global i8* null
+
+  define void @test() {
+  entry:
+    store volatile i8* blockaddress(@test, %block), i8** @addr
+    %val = load volatile i8*, i8** @addr
+    indirectbr i8* %val, [label %block]
+
+  block:
+    ret void
+  }
+
+  define void @test2() {
+  entry:
+    store volatile i8* blockaddress(@test2, %"quoted block"), i8** @addr
+    %val = load volatile i8*, i8** @addr
+    indirectbr i8* %val, [label %"quoted block"]
+
+  "quoted block":
+    ret void
+  }
+
+  define void @slot_in_other_function(i8** %addr) {
+  entry:
+    store volatile i8* blockaddress(@test3, %0), i8** %addr
+    ret void
+  }
+
+  define void @test3() {
+  entry:
+    store volatile i8* blockaddress(@test3, %0), i8** @addr
+    %val = load volatile i8*, i8** @addr
+    indirectbr i8* %val, [label %0]
+
+    ret void
+  }
+
+  define void @test4() {
+  entry:
+    store volatile i8* blockaddress(@test4, %block), i8** @addr
+    %val = load volatile i8*, i8** @addr
+    indirectbr i8* %val, [label %block]
+
+  block:
+    ret void
+  }
+
+...
+---
+name:            test
+body: |
+  bb.0.entry:
+    successors: %bb.1.block
+  ; CHECK: $rax = LEA64r $rip, 1, $noreg, blockaddress(@test, %ir-block.block), $noreg
+    $rax = LEA64r $rip, 1, _, blockaddress(@test, %ir-block.block), _
+    MOV64mr $rip, 1, _, @addr, _, killed $rax
+    JMP64m $rip, 1, _, @addr, _
+
+  bb.1.block (ir-block-address-taken %ir-block.block):
+    RET64
+...
+---
+name:            test2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1
+  ; CHECK: $rax = LEA64r $rip, 1, $noreg, blockaddress(@test2, %ir-block."quoted block"), $noreg
+    $rax = LEA64r $rip, 1, _, blockaddress(@test2, %ir-block."quoted block"), _
+    MOV64mr $rip, 1, _, @addr, _, killed $rax
+    JMP64m $rip, 1, _, @addr, _
+
+  bb.1 (%ir-block."quoted block", ir-block-address-taken %ir-block."quoted block"):
+    RET64
+...
+---
+name:            slot_in_other_function
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK-LABEL: name: slot_in_other_function
+  ; CHECK: $rax = LEA64r $rip, 1, $noreg, blockaddress(@test3, %ir-block.0), $noreg
+    $rax = LEA64r $rip, 1, _, blockaddress(@test3, %ir-block.0), _
+    MOV64mr killed $rdi, 1, _, 0, _, killed $rax
+    RET64
+...
+---
+name:            test3
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1
+  ; CHECK-LABEL: name: test3
+  ; CHECK: $rax = LEA64r $rip, 1, $noreg, blockaddress(@test3, %ir-block.0), $noreg
+    $rax = LEA64r $rip, 1, _, blockaddress(@test3, %ir-block.0), _
+    MOV64mr $rip, 1, _, @addr, _, killed $rax
+    JMP64m $rip, 1, _, @addr, _
+
+  bb.1 (%ir-block.0, ir-block-address-taken %ir-block.0):
+    RET64
+...
+---
+name:            test4
+body: |
+  bb.0.entry:
+    successors: %bb.1.block
+  ; CHECK: $rax = LEA64r $rip, 1, $noreg, blockaddress(@test, %ir-block.block) + 2, $noreg
+    $rax = LEA64r $rip, 1, _, blockaddress(@test, %ir-block.block) + 2, _
+    MOV64mr $rip, 1, _, @addr, _, killed $rax
+    JMP64m $rip, 1, _, @addr, _
+
+  bb.1.block (ir-block-address-taken %ir-block.block):
+    RET64
+...

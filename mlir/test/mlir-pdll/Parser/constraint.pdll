@@ -1,0 +1,74 @@
+// RUN: mlir-pdll %s -I %S -split-input-file | FileCheck %s
+
+// CHECK:  Module
+// CHECK:  `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Tuple<>>
+Constraint Foo();
+
+// -----
+
+// CHECK:  Module
+// CHECK:  `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Tuple<>> Code< /* Native Code */ >
+Constraint Foo() [{ /* Native Code */ }];
+
+// -----
+
+// CHECK: Module
+// CHECK: `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Value>
+// CHECK:   `Inputs`
+// CHECK:     `-VariableDecl {{.*}} Name<arg> Type<Value>
+// CHECK:   `Results`
+// CHECK:     `-VariableDecl {{.*}} Name<> Type<Value>
+// CHECK:   `-CompoundStmt {{.*}}
+// CHECK:     `-ReturnStmt {{.*}}
+// CHECK:       `-DeclRefExpr {{.*}} Type<Value>
+// CHECK:         `-VariableDecl {{.*}} Name<arg> Type<Value>
+Constraint Foo(arg: Value) -> Value => arg;
+
+// -----
+
+// CHECK: Module
+// CHECK: `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Tuple<result1: Value, result2: Attr>>
+// CHECK:   `Results`
+// CHECK:     |-VariableDecl {{.*}} Name<result1> Type<Value>
+// CHECK:     | `Constraints`
+// CHECK:     |   `-ValueConstraintDecl {{.*}}
+// CHECK:     `-VariableDecl {{.*}} Name<result2> Type<Attr>
+// CHECK:       `Constraints`
+// CHECK:         `-AttrConstraintDecl {{.*}}
+// CHECK:   `-CompoundStmt {{.*}}
+// CHECK:     `-ReturnStmt {{.*}}
+// CHECK:       `-TupleExpr {{.*}} Type<Tuple<result1: Value, result2: Attr>>
+// CHECK:         |-MemberAccessExpr {{.*}} Member<0> Type<Value>
+// CHECK:         | `-TupleExpr {{.*}} Type<Tuple<Value, Attr>>
+// CHECK:         `-MemberAccessExpr {{.*}} Member<1> Type<Attr>
+// CHECK:           `-TupleExpr {{.*}} Type<Tuple<Value, Attr>>
+Constraint Foo() -> (result1: Value, result2: Attr) => (_: Value, attr<"10">);
+
+// -----
+
+// CHECK: Module
+// CHECK: |-UserConstraintDecl {{.*}} Name<Bar> ResultType<Tuple<>>
+// CHECK: `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Value>
+// CHECK:   `Inputs`
+// CHECK:     `-VariableDecl {{.*}} Name<arg> Type<Value>
+// CHECK:       `Constraints`
+// CHECK:         `-UserConstraintDecl {{.*}} Name<Bar> ResultType<Tuple<>>
+// CHECK:   `Results`
+// CHECK:     `-VariableDecl {{.*}} Name<> Type<Value>
+// CHECK:       `Constraints`
+// CHECK:         `-UserConstraintDecl {{.*}} Name<Bar> ResultType<Tuple<>>
+Constraint Bar(input: Value);
+
+Constraint Foo(arg: Bar) -> Bar => arg;
+
+// -----
+
+// Test that anonymous constraints are uniquely named.
+
+// CHECK: Module
+// CHECK: UserConstraintDecl {{.*}} Name<<anonymous_constraint_0>> ResultType<Tuple<>>
+// CHECK: UserConstraintDecl {{.*}} Name<<anonymous_constraint_1>> ResultType<Attr>
+Constraint Outer() {
+  Constraint() {};
+  Constraint() => attr<"10">;
+}

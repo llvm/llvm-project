@@ -1,0 +1,72 @@
+# RUN: llc -global-isel=1 -O0 -run-pass=aarch64-O0-prelegalizer-combiner %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
+
+--- |
+  ; ModuleID = 'salvage-debug-info-dead.mir'
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+
+  @A = global i8 1234
+
+  declare external i128 @foo()
+
+  define void @main() !dbg !6 {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!10, !11, !12}
+  !llvm.ident = !{!20}
+
+  !1 = distinct !DIGlobalVariable(name: "A", scope: !2, file: !3, line: 1, type: !7, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "test.ll", directory: "/")
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !DISubroutineType(types: !23)
+  !9 = distinct !DIGlobalVariable(name: "C", scope: !2, file: !3, line: 3, type: !7, isLocal: false, isDefinition: true)
+  !10 = !{i32 7, !"Dwarf Version", i32 4}
+  !11 = !{i32 2, !"Debug Info Version", i32 3}
+  !12 = !{i32 1, !"wchar_size", i32 4}
+  !20 = !{!"clang"}
+  !6 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !24)
+  !23 = !{!7}
+  !24 = !{}
+  !25 = !DILocalVariable(name: "X", scope: !6, file: !3, line: 6, type: !7)
+  !42 = !DILocalVariable(name: "Y", scope: !6, file: !3, line: 12, type: !7)
+  !52 = !DILocalVariable(name: "Z", scope: !6, file: !3, line: 16, type: !7)
+  !56 = !DILocalVariable(name: "W", scope: !6, file: !3, line: 18, type: !7)
+  !57 = !DILocalVariable(name: "P", scope: !6, file: !3, line: 18, type: !7)
+...
+---
+# Check that we salvage debug information for instructions
+# deleted as dead in Combiner pass
+name: main
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: main
+  ; CHECK: bb.0:
+  ; CHECK:   liveins: $x0
+  ; CHECK-NEXT: {{   $}}
+  ; CHECK-NEXT:   DBG_VALUE $x0, $noreg, {{.*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 6, column: 7, scope: !6)
+  ; CHECK-NEXT:   DBG_VALUE $x0, $noreg, {{.*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 7, column: 7, scope: !6)
+  ; CHECK-NEXT:   DBG_VALUE $x0, $noreg, {{.*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 8, column: 7, scope: !6)
+  ; CHECK: bb.1:
+  ; CHECK-NEXT:   DBG_VALUE $x0, $noreg, {{.*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 9, column: 7, scope: !6)
+  ; CHECK-NEXT:   DBG_VALUE %4:_(s32), 0, {{.*}}, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
+  bb.0:
+    liveins: $x0
+    %0:_(s64) = COPY $x0
+    %1:_(s32) = G_TRUNC %0:_(s64)
+    DBG_VALUE %1:_(s32), $noreg, !25, !DIExpression(), debug-location !DILocation(line: 6, column: 7, scope: !6)
+
+    %2:_(s16) = G_TRUNC %1:_(s32)
+    DBG_VALUE %2:_(s16), $noreg, !42, !DIExpression(), debug-location !DILocation(line: 7, column: 7, scope: !6)
+
+    %3:_(s8) = G_TRUNC %2:_(s16)
+    DBG_VALUE %3:_(s8), $noreg, !52, !DIExpression(), debug-location !DILocation(line: 8, column: 7, scope: !6)
+
+  bb.1:
+    %4:_(s32) = G_TRUNC %0:_(s64)
+    DBG_VALUE %4:_(s32), $noreg, !56, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
+    DBG_VALUE %4:_(s32), 0, !57, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
+
+...

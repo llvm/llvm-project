@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=si-lower-sgpr-spills -o - %s | FileCheck %s
+
+# CHECK-LABEL: name: empty_entry_block
+# CHECK: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: SI_SPILL_S32_TO_VGPR
+# CHECK: SI_RESTORE_S32_FROM_VGPR
+# CHECK-NEXT: SI_RESTORE_S32_FROM_VGPR
+# CHECK-NEXT: SI_RESTORE_S32_FROM_VGPR
+# CHECK-NEXT: SI_RESTORE_S32_FROM_VGPR
+---
+name:            empty_entry_block
+body: |
+  bb.0:
+
+  bb.1:
+    renamable $sgpr36_sgpr37 = S_XOR_B64 renamable $vcc, -1, implicit-def dead $scc
+    $sgpr34_sgpr35 = S_AND_SAVEEXEC_B64 $sgpr36_sgpr37, implicit-def $exec, implicit-def $scc, implicit $exec
+    S_ENDPGM 0

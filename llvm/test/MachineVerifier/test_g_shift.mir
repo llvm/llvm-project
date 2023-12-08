@@ -1,0 +1,21 @@
+# RUN: not --crash llc -mtriple=arm64 -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name: test_shift
+body: |
+  bb.0:
+    %s32:_(s32) = G_IMPLICIT_DEF
+    %v2s32:_(<2 x s32>) = G_IMPLICIT_DEF
+    %s64:_(s64) = G_IMPLICIT_DEF
+    %v2s64:_(<2 x s64>) = G_IMPLICIT_DEF
+
+    ; CHECK: Shifts and rotates require operands to be either all scalars or all vectors
+    %shl:_(<2 x s64>) = G_SHL %v2s64, %s64
+
+    ; CHECK: Shifts and rotates require operands to be either all scalars or all vectors
+    %lshr:_(s32) = G_LSHR %s32, %v2s32
+
+    ; CHECK: Shifts and rotates require operands to be either all scalars or all vectors
+    %ashr:_(<2 x s32>) = G_ASHR %v2s32, %s64
+...

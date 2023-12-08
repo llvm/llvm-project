@@ -1,0 +1,80 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=branch-relaxation -debug-only=branch-relaxation %s -o /dev/null 2>&1 | FileCheck %s
+
+# Ensure meta instructions (e.g. CFI_INSTRUCTION) don't contribute to the code
+# size of a basic block.
+
+# CHECK:  Basic blocks before relaxation
+# CHECK-NEXT: %bb.0 offset=00000000 size=0x18
+# CHECK-NEXT: %bb.1 offset=00000018 size=0x4
+# CHECK-NEXT: %bb.2 offset=0000001c size=0xc
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--linux-gnu"
+
+  define i32 @test(i32* %a) #0 {
+  entry:
+    %call = tail call i32 @validate(i32* %a)
+    %tobool = icmp eq i32 %call, 0
+    br i1 %tobool, label %return, label %if.then
+
+  if.then:                                          ; preds = %entry
+    %0 = load i32, i32* %a, align 4
+    br label %return
+
+  return:                                           ; preds = %entry, %if.then
+    %retval.0 = phi i32 [ %0, %if.then ], [ 0, %entry ]
+    ret i32 %retval.0
+  }
+
+  declare i32 @validate(i32*)
+
+  attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "frame-pointer"="all" }
+
+...
+---
+name:            test
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+frameInfo:
+  stackSize:       32
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
+  - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 16, callee-saved-register: '$x19' }
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $x0, $x19, $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -32 :: (store (s64) into %stack.2)
+    frame-setup STPXi $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 16, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w19, -32
+    $x19 = ORRXrs $xzr, $x0, 0
+    BL @validate, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, implicit-def $w0
+    CBZW renamable $w0, %bb.2
+
+  bb.1.if.then:
+    liveins: $x19
+
+    renamable $w0 = LDRWui killed renamable $x19, 0 :: (load (s32) from %ir.a)
+
+  bb.2.return:
+    liveins: $w0
+
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    early-clobber $sp, $x19 = frame-destroy LDRXpost $sp, 32 :: (load (s64) from %stack.2)
+    RET undef $lr, implicit killed $w0
+
+...

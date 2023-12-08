@@ -1,0 +1,335 @@
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s -experimental-debug-variable-locations| FileCheck %s
+
+# Test that multiple DBG_VALUE's and DBG_PHIs following an instruction whose
+# register needs # to be changed during the post-RA scheduler pass are updated
+# correctly.
+
+# Test case was derived from the output from the following command and
+# the source code below. DBG_PHIs added manually later:
+#
+#   clang -S -emit-llvm -target x86_64 -march=btver2 -O2 -g -o - <srcfile> |
+#   llc -stop-before=post-RA-sched -o -
+#
+# Source code reduced from the original 8MB source file:
+#
+# struct a;
+# class b {
+# public:
+#   a *c = ap;
+#   unsigned *d() { return (unsigned *)c; }
+#   a *ap;
+# };
+# enum { e = 2 };
+# template <typename f> f *g(f *h, f *i) {
+#   long j = long(i), k = -!h;
+#   return reinterpret_cast<f *>(long(h) | k & j);
+# }
+# class l {
+# public:
+#   l(int);
+#   int m;
+# };
+# unsigned *n;
+# unsigned o;
+# class p {
+# public:
+#   int aa();
+#   unsigned *q() {
+#     n = r.d();
+#     return g(n, &o);
+#   }
+#   b r;
+# };
+# class s : l {
+# public:
+#   p t;
+#   s(int h) : l(h), ab(t), ac(~0 << h) { ae(); }
+#   p &ab;
+#   int ac;
+#   void ae() {
+#     const unsigned *v;
+#     const unsigned u = 0;
+#     v = ab.q();
+#     const unsigned *x = g(v, &u);
+#     int w = x[m] & ac;
+#     while (w) {
+#       int z = (ab.aa() - 1) / e;
+#       if (m <= z)
+#         return;
+#     }
+#   }
+# };
+# class ad {
+# public:
+#   ~ad() {
+#     for (y();;)
+#       ;
+#   }
+#   class y {
+#   public:
+#     y() : af(0) {}
+#     s af;
+#   };
+# };
+# class ag {
+#   ad ah;
+# };
+# enum ai {};
+# class aj {
+# public:
+#   aj(unsigned(ai));
+#   ag ak;
+# };
+# struct al {
+#   static unsigned am(ai);
+# };
+# template <int> struct an : al { static aj ao; };
+# template <> aj an<0>::ao(am);
+
+--- |
+
+  %class.s = type <{ %class.l, [4 x i8], %class.p, %class.p*, i32, [4 x i8] }>
+  %class.l = type { i32 }
+  %class.p = type { %class.b }
+  %class.b = type { %struct.a*, %struct.a* }
+  %struct.a = type opaque
+
+  @n = local_unnamed_addr global i32* null, align 8
+  @o = global i32 0, align 4
+
+  define linkonce_odr void @_ZN1sC2Ei(%class.s*, i32) unnamed_addr #0 align 2 !dbg !4 {
+    %3 = alloca i32, align 4
+    %4 = bitcast %class.s* %0 to %class.l*
+    tail call void @_ZN1lC2Ei(%class.l* %4, i32 %1)
+    %5 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 2
+    tail call void @llvm.dbg.value(metadata %class.p* %5, i64 0, metadata !10, metadata !17), !dbg !18
+    tail call void @llvm.dbg.value(metadata %class.p* %5, i64 0, metadata !20, metadata !17), !dbg !27
+    %6 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 2, i32 0, i32 1
+    %7 = bitcast %struct.a** %6 to i64*
+    %8 = load i64, i64* %7, align 8
+    %9 = bitcast %class.p* %5 to i64*
+    store i64 %8, i64* %9, align 8
+    %10 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 3
+    store %class.p* %5, %class.p** %10, align 8
+    %11 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 4
+    %12 = shl i32 -1, %1
+    store i32 %12, i32* %11, align 8
+    store i32 0, i32* %3, align 4
+    %13 = bitcast %class.p* %5 to i32**
+    %14 = load i32*, i32** %13, align 8
+    store i32* %14, i32** @n, align 8
+    %15 = icmp eq i32* %14, null
+    %16 = ptrtoint i32* %14 to i64
+    %17 = select i1 %15, i64 ptrtoint (i32* @o to i64), i64 0
+    %18 = or i64 %17, %16
+    tail call void @llvm.dbg.value(metadata i32* %3, i64 0, metadata !29, metadata !35), !dbg !36
+    tail call void @llvm.dbg.value(metadata i32* %3, i64 0, metadata !39, metadata !17), !dbg !44
+    %19 = ptrtoint i32* %3 to i64
+    call void @llvm.dbg.value(metadata i64 %19, i64 0, metadata !46, metadata !17), !dbg !48
+    %20 = icmp eq i64 %18, 0
+    %21 = select i1 %20, i64 %19, i64 0
+    %22 = or i64 %21, %18
+    %23 = inttoptr i64 %22 to i32*
+    %24 = bitcast %class.s* %0 to i32*
+    %25 = load i32, i32* %24, align 8
+    %26 = sext i32 %25 to i64
+    %27 = getelementptr inbounds i32, i32* %23, i64 %26
+    %28 = load i32, i32* %27, align 4
+    %29 = and i32 %12, %28
+    %30 = icmp eq i32 %29, 0
+    br i1 %30, label %47, label %31
+
+  ; <label>:31:                                     ; preds = %2
+    %32 = bitcast %class.s* %0 to i32*
+    %33 = call i32 @_ZN1p2aaEv(%class.p* %5)
+    %34 = add nsw i32 %33, -1
+    %35 = sdiv i32 %34, 2
+    %36 = load i32, i32* %32, align 8
+    %37 = icmp sgt i32 %36, %35
+    br i1 %37, label %38, label %47
+
+  ; <label>:38:                                     ; preds = %31
+    br label %39
+
+  ; <label>:39:                                     ; preds = %39, %38
+    %40 = bitcast %class.s* %0 to i32*
+    %sunkaddr = ptrtoint %class.s* %0 to i64
+    %sunkaddr1 = add i64 %sunkaddr, 24
+    %sunkaddr2 = inttoptr i64 %sunkaddr1 to %class.p**
+    %41 = load %class.p*, %class.p** %sunkaddr2, align 8
+    %42 = call i32 @_ZN1p2aaEv(%class.p* %41)
+    %43 = add nsw i32 %42, -1
+    %44 = sdiv i32 %43, 2
+    %45 = load i32, i32* %40, align 8
+    %46 = icmp sgt i32 %45, %44
+    br i1 %46, label %39, label %47
+
+  ; <label>:47:                                     ; preds = %39, %31, %2
+    ret void
+  }
+
+  declare void @_ZN1lC2Ei(%class.l*, i32) unnamed_addr #1
+
+  declare i32 @_ZN1p2aaEv(%class.p*) local_unnamed_addr #1
+
+  ; Function Attrs: nounwind readnone
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "test.cpp", directory: "")
+  !2 = !{i32 2, !"Dwarf Version", i32 4}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "s", linkageName: "_ZN1sC2Ei", scope: !5, file: !1, line: 32, type: !6, isLocal: false, isDefinition: true, scopeLine: 32, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+  !5 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "s", file: !1, line: 29, size: 320, identifier: "_ZTS1s")
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null, !8, !9}
+  !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !10 = !DILocalVariable(name: "this", arg: 1, scope: !11, type: !16, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !11 = distinct !DISubprogram(name: "p", linkageName: "_ZN1pC2Ev", scope: !12, file: !1, line: 20, type: !13, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: true, unit: !0)
+  !12 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "p", file: !1, line: 20, size: 128, identifier: "_ZTS1p")
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{null, !15}
+  !15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !16 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
+  !17 = !DIExpression()
+  !18 = !DILocation(line: 0, scope: !11, inlinedAt: !19)
+  !19 = distinct !DILocation(line: 32, column: 3, scope: !4)
+  !20 = !DILocalVariable(name: "this", arg: 1, scope: !21, type: !26, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !21 = distinct !DISubprogram(name: "b", linkageName: "_ZN1bC2Ev", scope: !22, file: !1, line: 2, type: !23, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: true, unit: !0)
+  !22 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "b", file: !1, line: 2, size: 128, identifier: "_ZTS1b")
+  !23 = !DISubroutineType(types: !24)
+  !24 = !{null, !25}
+  !25 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !26 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
+  !27 = !DILocation(line: 0, scope: !21, inlinedAt: !28)
+  !28 = distinct !DILocation(line: 20, column: 7, scope: !11, inlinedAt: !19)
+  !29 = !DILocalVariable(name: "u", scope: !30, file: !1, line: 37, type: !33)
+  !30 = distinct !DISubprogram(name: "ae", linkageName: "_ZN1s2aeEv", scope: !5, file: !1, line: 35, type: !31, isLocal: false, isDefinition: true, scopeLine: 35, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+  !31 = !DISubroutineType(types: !32)
+  !32 = !{null, !8}
+  !33 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !34)
+  !34 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !35 = !DIExpression(DW_OP_deref)
+  !36 = !DILocation(line: 37, column: 20, scope: !30, inlinedAt: !37)
+  !37 = distinct !DILocation(line: 32, column: 41, scope: !38)
+  !38 = distinct !DILexicalBlock(scope: !4, file: !1, line: 32, column: 39)
+  !39 = !DILocalVariable(name: "i", arg: 2, scope: !40, file: !1, line: 9, type: !43)
+  !40 = distinct !DISubprogram(name: "g<const unsigned int>", linkageName: "_Z1gIKjEPT_S2_S2_", scope: !1, file: !1, line: 9, type: !41, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+  !41 = !DISubroutineType(types: !42)
+  !42 = !{!43, !43, !43}
+  !43 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !33, size: 64)
+  !44 = !DILocation(line: 9, column: 37, scope: !40, inlinedAt: !45)
+  !45 = distinct !DILocation(line: 39, column: 25, scope: !30, inlinedAt: !37)
+  !46 = !DILocalVariable(name: "j", scope: !40, file: !1, line: 10, type: !47)
+  !47 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  !48 = !DILocation(line: 10, column: 8, scope: !40, inlinedAt: !45)
+
+# CHECK: ![[I_VAR:[0-9]+]] = !DILocalVariable(name: "i", {{.*}}line: 9, {{.*}})
+# CHECK: ![[I_LOC:[0-9]+]] = !DILocation(line: 9, column: 37, {{.*}})
+# CHECK: ![[J_VAR:[0-9]+]] = !DILocalVariable(name: "j", {{.*}}line: 10, {{.*}})
+# CHECK: ![[J_LOC:[0-9]+]] = !DILocation(line: 10, column: 8, {{.*}})
+
+...
+---
+name:            _ZN1sC2Ei
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+  - { reg: '$esi' }
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -32, size: 8, alignment: 16, callee-saved-register: '$rbx' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$r14' }
+  - { id: 2, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+stack:
+  - { id: 0, offset: -36, size: 4, alignment: 4 }
+body:             |
+  bb.0:
+    successors: %bb.3, %bb.2
+    liveins: $esi, $rdi, $r14, $rbx, $rbp
+
+    ; CHECK:      [[REGISTER:\$r[a-z0-9]+]] = LEA64r {{\$r[a-z0-9]+}}, 1, $noreg, -20, $noreg
+    ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[J_VAR]], !DIExpression(), debug-location ![[J_LOC]]
+    ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+    ; CHECK-NEXT: DBG_PHI [[REGISTER]], 0
+    ; CHECK-NEXT: DBG_PHI [[REGISTER]], 1
+
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    $rsp = frame-setup SUB64ri8 $rsp, 16, implicit-def dead $eflags
+    CFI_INSTRUCTION offset $rbx, -32
+    CFI_INSTRUCTION offset $r14, -24
+    $r14d = MOV32rr $esi
+    $rbx = MOV64rr $rdi
+    CALL64pcrel32 @_ZN1lC2Ei, csr_64, implicit $rsp, implicit $rdi, implicit $esi, implicit-def $rsp
+    $rdi = LEA64r $rbx, 1, $noreg, 8, $noreg
+    DBG_VALUE $rdi, $noreg, !20, !17, debug-location !27
+    DBG_VALUE $rdi, $noreg, !10, !17, debug-location !18
+    $rax = MOV64rm $rbx, 1, $noreg, 16, $noreg :: (load (s64))
+    MOV64mr $rbx, 1, $noreg, 8, $noreg, killed $rax :: (store (s64))
+    MOV64mr $rbx, 1, $noreg, 24, $noreg, $rdi :: (store (s64))
+    $eax = MOV32ri -1
+    $cl = MOV8rr $r14b, implicit killed $r14d
+    $eax = SHL32rCL killed $eax, implicit-def dead $eflags, implicit $cl
+    MOV32mr $rbx, 1, $noreg, 32, $noreg, $eax :: (store (s32), align 8)
+    MOV32mi $rbp, 1, $noreg, -20, $noreg, 0 :: (store (s32))
+    $rcx = MOV64rm $rbx, 1, $noreg, 8, $noreg :: (load (s64))
+    MOV64mr $rip, 1, $noreg, @n, $noreg, $rcx :: (store (s64))
+    $edx = XOR32rr undef $edx, undef $edx, implicit-def dead $eflags, implicit-def $rdx
+    TEST64rr $rcx, $rcx, implicit-def $eflags
+    $esi = MOV32ri @o, implicit-def $rsi
+    $rsi = CMOV64rr killed $rsi, $rdx, 5, implicit killed $eflags
+    $rsi = OR64rr killed $rsi, killed $rcx, implicit-def $eflags
+    $rcx = LEA64r $rbp, 1, $noreg, -20, $noreg
+    DBG_VALUE $rcx, $noreg, !46, !17, debug-location !48
+    DBG_VALUE $rcx, $noreg, !39, !17, debug-location !44
+    DBG_PHI $rcx, 0
+    DBG_PHI $rcx, 1
+    DBG_VALUE $rbp, -20, !29, !17, debug-location !36
+    $rcx = CMOV64rr killed $rcx, killed $rdx, 5, implicit killed $eflags
+    $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
+    $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load (s32), align 8)
+    DBG_INSTR_REF !46, !17, dbg-instr-ref(1, 0), debug-location !48
+    DBG_INSTR_REF !39, !17, dbg-instr-ref(2, 0), debug-location !44
+    TEST32mr killed $rcx, 4, killed $rdx, 0, $noreg, killed $eax, implicit-def $eflags :: (load (s32))
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.1:
+    successors: %bb.2
+    liveins: $rbx, $rbp
+
+    $rdi = MOV64rm $rbx, 1, $noreg, 24, $noreg :: (load (s64))
+
+  bb.2:
+    successors: %bb.1, %bb.3
+    liveins: $rbx, $rbp, $rsp, $rdi
+
+    CALL64pcrel32 @_ZN1p2aaEv, csr_64, implicit $rsp, implicit $rdi, implicit-def $rsp, implicit-def $eax
+    $eax = KILL $eax, implicit-def $rax
+    $ecx = LEA64_32r $rax, 1, $noreg, -1, $noreg, implicit-def $rcx
+    $ecx = SHR32ri $ecx, 31, implicit-def dead $eflags, implicit killed $rcx, implicit-def $rcx
+    $eax = LEA64_32r killed $rax, 1, killed $rcx, -1, $noreg
+    $eax = SAR32r1 killed $eax, implicit-def dead $eflags
+    CMP32mr $rbx, 1, $noreg, 0, $noreg, killed $eax, implicit-def $eflags :: (load (s32), align 8), (load (s32), align 8)
+    JCC_1 %bb.1, 15, implicit killed $eflags
+
+  bb.3:
+    liveins: $rbp
+
+    $rsp = ADD64ri8 $rsp, 16, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    $r14 = POP64r implicit-def $rsp, implicit $rsp
+    $rbp = POP64r implicit-def $rsp, implicit $rsp
+    RET64
+
+...

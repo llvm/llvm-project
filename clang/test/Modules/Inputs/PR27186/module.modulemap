@@ -1,0 +1,5 @@
+module "Rtypes.h" { header "Rtypes.h" }
+module a [extern_c] {
+  header "stddef.h"
+  header "time.h"
+}

@@ -1,0 +1,87 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s 
+
+# This test verifies that shader flags are omitted if they are all off.
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            SFI0
+    Size:            8
+    Flags:
+      Doubles:         true
+      ComputeShadersPlusRawAndStructuredBuffers: false
+      UAVsAtEveryStage: true
+      Max64UAVs:       false
+      MinimumPrecision: true
+      DX11_1_DoubleExtensions: false
+      DX11_1_ShaderExtensions: true
+      LEVEL9ComparisonFiltering: true
+      TiledResources:  false
+      StencilRef:      true
+      InnerCoverage:   true
+      TypedUAVLoadAdditionalFormats: false
+      ROVs:            false
+      ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: true
+      WaveOps:         false
+      Int64Ops:        false
+      ViewID:          true
+      Barycentrics:    false
+      NativeLowPrecision: false
+      ShadingRate:     false
+      Raytracing_Tier_1_1: true
+      SamplerFeedback: false
+      AtomicInt64OnTypedResource: false
+      AtomicInt64OnGroupShared: false
+      DerivativesInMeshAndAmpShaders: true
+      ResourceDescriptorHeapIndexing: false
+      SamplerDescriptorHeapIndexing: false
+      RESERVED:        true
+      AtomicInt64OnHeapResource: false
+      AdvancedTextureOps: true
+      WriteableMSAATextures: false
+      NextUnusedBit:   true
+  - Name:            FKE0
+    Size:            8
+...
+
+# CHECK: Parts:
+# CHECK-NEXT:   - Name:            SFI0
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:     Flags:
+# CHECK-NEXT:       Doubles:         true
+# CHECK-NEXT:       ComputeShadersPlusRawAndStructuredBuffers: false
+# CHECK-NEXT:       UAVsAtEveryStage: true
+# CHECK-NEXT:       Max64UAVs:       false
+# CHECK-NEXT:       MinimumPrecision: true
+# CHECK-NEXT:       DX11_1_DoubleExtensions: false
+# CHECK-NEXT:       DX11_1_ShaderExtensions: true
+# CHECK-NEXT:       LEVEL9ComparisonFiltering: true
+# CHECK-NEXT:       TiledResources:  false
+# CHECK-NEXT:       StencilRef:      true
+# CHECK-NEXT:       InnerCoverage:   true
+# CHECK-NEXT:       TypedUAVLoadAdditionalFormats: false
+# CHECK-NEXT:       ROVs:            false
+# CHECK-NEXT:       ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: true
+# CHECK-NEXT:       WaveOps:         false
+# CHECK-NEXT:       Int64Ops:        false
+# CHECK-NEXT:       ViewID:          true
+# CHECK-NEXT:       Barycentrics:    false
+# CHECK-NEXT:       NativeLowPrecision: false
+# CHECK-NEXT:       ShadingRate:     false
+# CHECK-NEXT:       Raytracing_Tier_1_1: true
+# CHECK-NEXT:       SamplerFeedback: false
+# CHECK-NEXT:       AtomicInt64OnTypedResource: false
+# CHECK-NEXT:       AtomicInt64OnGroupShared: false
+# CHECK-NEXT:       DerivativesInMeshAndAmpShaders: true
+# CHECK-NEXT:       ResourceDescriptorHeapIndexing: false
+# CHECK-NEXT:       SamplerDescriptorHeapIndexing: false
+# CHECK-NEXT:       RESERVED:        true
+# CHECK-NEXT:       AtomicInt64OnHeapResource: false
+# CHECK-NEXT:       AdvancedTextureOps: true
+# CHECK-NEXT:       WriteableMSAATextures: false
+# CHECK-NEXT:       NextUnusedBit:   true

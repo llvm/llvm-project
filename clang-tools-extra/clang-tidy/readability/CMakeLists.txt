@@ -1,0 +1,72 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
+add_clang_library(clangTidyReadabilityModule
+  AvoidConstParamsInDecls.cpp
+  AvoidUnconditionalPreprocessorIfCheck.cpp
+  BracesAroundStatementsCheck.cpp
+  ConstReturnTypeCheck.cpp
+  ContainerContainsCheck.cpp
+  ContainerDataPointerCheck.cpp
+  ContainerSizeEmptyCheck.cpp
+  ConvertMemberFunctionsToStatic.cpp
+  DeleteNullPointerCheck.cpp
+  DuplicateIncludeCheck.cpp
+  ElseAfterReturnCheck.cpp
+  FunctionCognitiveComplexityCheck.cpp
+  FunctionSizeCheck.cpp
+  IdentifierLengthCheck.cpp
+  IdentifierNamingCheck.cpp
+  ImplicitBoolConversionCheck.cpp
+  InconsistentDeclarationParameterNameCheck.cpp
+  IsolateDeclarationCheck.cpp
+  MagicNumbersCheck.cpp
+  MakeMemberFunctionConstCheck.cpp
+  MisleadingIndentationCheck.cpp
+  MisplacedArrayIndexCheck.cpp
+  NamedParameterCheck.cpp
+  NamespaceCommentCheck.cpp
+  NonConstParameterCheck.cpp
+  OperatorsRepresentationCheck.cpp
+  QualifiedAutoCheck.cpp
+  ReadabilityTidyModule.cpp
+  RedundantAccessSpecifiersCheck.cpp
+  RedundantControlFlowCheck.cpp
+  RedundantDeclarationCheck.cpp
+  RedundantFunctionPtrDereferenceCheck.cpp
+  RedundantMemberInitCheck.cpp
+  RedundantPreprocessorCheck.cpp
+  RedundantSmartptrGetCheck.cpp
+  RedundantStringCStrCheck.cpp
+  RedundantStringInitCheck.cpp
+  ReferenceToConstructedTemporaryCheck.cpp
+  SimplifyBooleanExprCheck.cpp
+  SimplifySubscriptExprCheck.cpp
+  StaticAccessedThroughInstanceCheck.cpp
+  StaticDefinitionInAnonymousNamespaceCheck.cpp
+  StringCompareCheck.cpp
+  SuspiciousCallArgumentCheck.cpp
+  UniqueptrDeleteReleaseCheck.cpp
+  UppercaseLiteralSuffixCheck.cpp
+  UseAnyOfAllOfCheck.cpp
+
+  LINK_LIBS
+  clangTidy
+  clangTidyUtils
+
+  DEPENDS
+  omp_gen
+  ClangDriverOptions
+  )
+
+clang_target_link_libraries(clangTidyReadabilityModule
+  PRIVATE
+  clangAnalysis
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangLex
+  clangTooling
+  )

@@ -1,0 +1,67 @@
+## Test the deletion of members and that symbols are removed from the symbol table.
+
+# RUN: yaml2obj %s -o %t-delete.o --docnum=1
+# RUN: yaml2obj %s -o %t-keep.o --docnum=2
+# RUN: touch %t1.txt
+# RUN: touch %t2.txt
+
+## Add file:
+# RUN: rm -f %t.a
+# RUN: llvm-ar rc %t.a %t1.txt %t-delete.o %t-keep.o %t2.txt
+# RUN: llvm-nm --print-armap %t.a \
+# RUN:   | FileCheck %s --check-prefix=SYMBOL-ADDED
+# RUN: llvm-ar t %t.a | FileCheck %s --check-prefix=FILE-ADDED
+
+# SYMBOL-ADDED:      symbol1
+# SYMBOL-ADDED-NEXT: symbol2
+
+# FILE-ADDED:      1.txt
+# FILE-ADDED-NEXT: delete.o
+# FILE-ADDED-NEXT: keep.o
+# FILE-ADDED-NEXT: 2.txt
+
+## Delete file that is not a member:
+# RUN: cp %t.a %t-archive-copy.a
+# RUN: llvm-ar d %t.a t/missing.o
+# RUN: cmp %t.a %t-archive-copy.a
+
+## Delete file:
+# RUN: llvm-ar d %t.a %t-delete.o
+# RUN: llvm-nm --print-armap %t.a \
+# RUN:   | FileCheck %s --check-prefix=SYMBOL-DELETED --implicit-check-not symbol1
+# RUN: llvm-ar t %t.a \
+# RUN:   | FileCheck %s --check-prefix=FILE-DELETED --implicit-check-not delete.o
+
+# SYMBOL-DELETED: symbol2
+
+# FILE-DELETED:      1.txt
+# FILE-DELETED-NEXT: keep.o
+# FILE-DELETED-NEXT: 2.txt
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol1
+    Binding: STB_GLOBAL
+    Section: .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol2
+    Binding: STB_GLOBAL
+    Section: .text

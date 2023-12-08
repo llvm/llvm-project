@@ -1,0 +1,17 @@
+# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+
+# RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs -y %s -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+
+---
+triple:          'x86_64h-apple-darwin'
+objects:
+  - filename: fat-test.o
+    symbols:
+      - { sym: _x86_64h_var, objAddr: 0x0, binAddr: 0x1000, size: 0x4 }
+...
+
+# CHECK: .debug_info contents:
+# CHECK: DW_TAG_variable
+# CHECK-NOT: {{DW_TAG|NULL}}
+# CHECK:  DW_AT_name{{.*}}"x86_64h_var"
+

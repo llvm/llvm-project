@@ -1,0 +1,188 @@
+# RUN: llc -run-pass=tailduplication -tail-dup-size=4 %s -o - | FileCheck %s
+
+# JumpTableDest32 uses an `adr` to a temporary label (itself). If duplicated we
+# cannot guarantee reachability for any uses after the first.
+
+# CHECK: JumpTableDest32
+# CHECK-NOT: JumpTableDest32
+
+
+--- |
+  ; ModuleID = 'jump-table.ll'
+  source_filename = "jump-table.ll"
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64-apple-ios"
+  
+  define i32 @test_jumptable32(i32 %in, i1 %tst) {
+    br i1 %tst, label %true, label %false
+  
+  true:                                             ; preds = %0
+    call void @foo()
+    br label %switch
+  
+  false:                                            ; preds = %0
+    call void @bar()
+    br label %switch
+  
+  lbl1:                                             ; preds = %lbl4, %lbl3, %def, %switch
+    %merge = phi i32 [ 1, %switch ], [ 0, %def ], [ 4, %lbl3 ], [ 8, %lbl4 ]
+    ret i32 %merge
+  
+  switch:                                           ; preds = %false, %true
+    switch i32 %in, label %def [
+      i32 0, label %lbl1
+      i32 1, label %lbl2
+      i32 2, label %lbl3
+      i32 4, label %lbl4
+    ]
+  
+  def:                                              ; preds = %switch
+    br label %lbl1
+  
+  lbl2:                                             ; preds = %switch
+    %1 = call i64 @llvm.aarch64.space(i32 262144, i64 undef)
+    ret i32 2
+  
+  lbl3:                                             ; preds = %switch
+    br label %lbl1
+  
+  lbl4:                                             ; preds = %switch
+    br label %lbl1
+  }
+  
+  declare void @foo()
+  
+  declare void @bar()
+  
+  ; Function Attrs: nounwind
+  declare i64 @llvm.aarch64.space(i32, i64) #0
+  
+  attributes #0 = { nounwind }
+
+...
+---
+name:            test_jumptable32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x20', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+jumpTable:
+  kind:            label-difference32
+  entries:
+    - id:              0
+      blocks:          [ '%bb.9', '%bb.6', '%bb.7', '%bb.5', '%bb.8' ]
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $w1, $x19, $x20, $lr
+  
+    early-clobber $sp = frame-setup STPXpre killed $x20, killed $x19, $sp, -4 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 32
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w19, -24
+    frame-setup CFI_INSTRUCTION offset $w20, -32
+    renamable $w19 = COPY $w0
+    TBZW killed renamable $w1, 0, %bb.2
+  
+  bb.1.true:
+    successors: %bb.3(0x80000000)
+    liveins: $w19
+  
+    BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    B %bb.3
+  
+  bb.2.false:
+    successors: %bb.3(0x80000000)
+    liveins: $w19
+  
+    BL @bar, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    B %bb.3
+  
+  bb.3.switch:
+    successors: %bb.9(0x1c71c71c), %bb.6(0x1c71c71c), %bb.7(0x1c71c71c), %bb.5(0x0e38e38e), %bb.8(0x1c71c71c)
+    liveins: $w19
+  
+    renamable $w8 = ORRWrs $wzr, killed renamable $w19, 0, implicit-def $x8
+    renamable $x9 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
+    early-clobber renamable $x10, dead early-clobber renamable $x11 = JumpTableDest32 killed renamable $x9, killed renamable $x8, %jump-table.0
+    BR killed renamable $x10
+  
+  bb.5.def:
+    successors: %bb.9(0x80000000)
+  
+    renamable $w0 = COPY $wzr
+    B %bb.9
+  
+  bb.6.lbl2:
+    successors: %bb.9(0x80000000)
+  
+    dead $xzr = SPACE 262144, undef renamable $x8
+    $w0 = MOVi32imm 2
+    B %bb.9
+  
+  bb.7.lbl3:
+    successors: %bb.9(0x80000000)
+  
+    renamable $w0 = MOVi32imm 4
+    B %bb.9
+  
+  bb.8.lbl4:
+    successors: %bb.9(0x80000000)
+  
+    renamable $w0 = MOVi32imm 8
+  
+  bb.9.lbl1:
+    liveins: $w0
+  
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    early-clobber $sp, $x20, $x19 = frame-destroy LDPXpost $sp, 4 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
+    RET_ReallyLR implicit $w0
+
+...

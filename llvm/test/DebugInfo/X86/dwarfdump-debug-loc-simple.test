@@ -1,0 +1,22 @@
+RUN: llvm-dwarfdump -v %p/../Inputs/dwarfdump-test-loc-list-32bit.elf.o | FileCheck %s
+Note: the input file was generated from Inputs/dwarfdump-test-loc-list-32bit.elf.cpp
+
+CHECK: .debug_info
+CHECK: DW_AT_name{{.*}}"f"
+CHECK: DW_AT_location{{.*}}([[F_LOC:0x[0-9a-f]*]]
+CHECK-NEXT:    [0x00000000, 0x00000023) ".text": DW_OP_reg1 ECX
+CHECK-NEXT:    [0x00000023, 0x0000005d) ".text": DW_OP_breg5 EBP-16)
+CHECK: DW_AT_name{{.*}}"g"
+CHECK: DW_AT_location{{.*}}([[G_LOC:0x[0-9a-f]*]]
+CHECK-NEXT:    [0x00000000, 0x00000020) ".text": DW_OP_reg0 EAX
+CHECK-NEXT:    [0x00000020, 0x0000005d) ".text": DW_OP_breg5 EBP-12)
+
+CHECK: .debug_loc contents:
+CHECK-NEXT: [[F_LOC]]:
+this is actually the wrong location due to PR14763, but that doesn't matter for
+the purposes of testing dwarfdump
+CHECK-NEXT:             (0x00000000, 0x00000023) ".text": DW_OP_reg1 ECX
+CHECK-NEXT:             (0x00000023, 0x0000005d) ".text": DW_OP_breg5 EBP-16
+CHECK: [[G_LOC]]:
+CHECK-NEXT:             (0x00000000, 0x00000020) ".text": DW_OP_reg0 EAX
+CHECK-NEXT:             (0x00000020, 0x0000005d) ".text": DW_OP_breg5 EBP-12

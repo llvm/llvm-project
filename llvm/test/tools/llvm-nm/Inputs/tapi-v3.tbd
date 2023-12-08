@@ -1,0 +1,24 @@
+--- !tapi-tbd-v3
+archs: [ i386, x86_64 ]
+platform: ios
+install-name: /usr/lib/libfoo.dylib
+swift-abi-version: 3
+exports:
+  - archs: [ i386, x86_64 ]
+    re-exports: [ /usr/lib/external/liba.dylib ]
+    symbols: [ _sym1, _sym2 ]
+    objc-classes: [ NSString, NSBlockPredicate ]
+    objc-eh-types: [ NSString ]
+    objc-ivars: [ NSBlockPredicate._block ]
+  - archs: [ i386 ]
+    symbols: [ _sym3 ]
+--- !tapi-tbd-v3
+archs: [ x86_64 ]
+platform: ios
+install-name: /usr/lib/liba.dylib
+swift-abi-version: 3
+parent-umbrella: foo
+exports:
+  - archs: [ x86_64 ]
+    symbols: [ _sym10, _sym11 ]
+...

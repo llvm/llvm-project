@@ -1,0 +1,16 @@
+REQUIRES: x86_64-linux
+
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-readelf --notes %p/Inputs/buildid.memprofexe > %t1.txt
+RUN: llvm-profdata show --memory %p/Inputs/buildid.memprofraw --profiled-binary %p/Inputs/buildid.memprofexe -o -  > %t2.txt
+RUN: cat %t1.txt %t2.txt | FileCheck %s
+
+Test that we print out the profile build ids when --profiled-binary is empty. 
+RUN: not llvm-profdata show --memory %p/Inputs/buildid.memprofraw -o - 2> %t3.txt
+RUN: cat %t1.txt %t3.txt | FileCheck %s
+
+COM: First extract the id from the llvm-readelf output.
+CHECK: Build ID: [[ID:[[:xdigit:]]+]]
+
+COM: Then match it with the profdata output.
+CHECK-COUNT-1: BuildId: {{.*}}[[ID]]

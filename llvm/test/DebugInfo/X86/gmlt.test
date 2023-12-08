@@ -1,0 +1,2 @@
+; RUN: llc -O0 -filetype=obj < %S/../Inputs/gmlt.ll -mtriple x86_64-apple-darwin | llvm-dwarfdump -v - \
+; RUN:     | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %S/../Inputs/gmlt.ll

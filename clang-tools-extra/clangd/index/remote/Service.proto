@@ -1,0 +1,25 @@
+//===--- Service.proto - Remote index service definition ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+syntax = "proto2";
+
+package clang.clangd.remote.v1;
+
+import "Index.proto";
+
+// Semantics of SymbolIndex match clangd::SymbolIndex with all required
+// structures corresponding to their clangd::* counterparts.
+service SymbolIndex {
+  rpc Lookup(LookupRequest) returns (stream LookupReply) {}
+
+  rpc FuzzyFind(FuzzyFindRequest) returns (stream FuzzyFindReply) {}
+
+  rpc Refs(RefsRequest) returns (stream RefsReply) {}
+
+  rpc Relations(RelationsRequest) returns (stream RelationsReply) {}
+}

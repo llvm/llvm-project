@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <title>Polly - Polyhedral optimizations for LLVM</title>
+  <link type="text/css" rel="stylesheet" href="menu.css">
+  <link type="text/css" rel="stylesheet" href="content.css">
+</head>
+<body>
+<div id="box">
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+  <!--*********************************************************************-->
+  <h1>Open Projects</h1>
+  <!--*********************************************************************-->
+
+  LLVM Polly keeps here a list of open projects which each of themselves would
+  be a great contribution to Polly. All of these projects are meant to be self
+  contained and should take a newcomer around 3-4 months of work. The projects
+  we propose are all suitable as <a
+  href="https://developers.google.com/open-source/gsoc/">Google Summer of
+  Code</a> projects. In case you are interested in a Google Summer of code
+  project make sure to reach out via the Polly <a
+  href="https://groups.google.com/group/polly-dev">mailing list</a> early to
+  discuss your project proposal.
+
+  <h3>Integrate Polly with the LLVM vectorizers</h3>
+  Polly is not only a self-contained optimizer, but also provides a powerful
+  dependence and other program analyses. Currently, these analyses are only used
+  for our own optimizations. However, LLVM passes such as the loop vectorizer
+  would clearly benefit from having direct access to the available Polly
+  analyses. In this project, you would define in collaboration with the LLVM
+  community and considering existing dependence analysis interface a new
+  dependence analysis interface for Polly that allows passes to directly query
+  Polly analysis. Even though this project sounds straightforward at a first
+  glance, sorting out how to actually make this happen with the current and
+  the new pass managers, understanding how and when to invalidate the Polly
+  analysis and if dependence information can be computed on-demand make this
+  still a challenging project. If successful, this project may be a great way
+  to bring features of Polly to standard -O3 optimizations.
+
+  <h3>Register tiling to obtain fast BLAS kernels with Polly</h3>
+  Even though Polly is already able to speep up compute kernels significantly,
+  when comparing to the best BLAS routines we still are at least one order of
+  magnitude off. In this project you will investigate what is needed to close
+  this performance gap. Earlier investigations have shown that register tiling
+  is one important piece towards this goal. In combination with good tile size
+  models and some back-end work, this project is shooting to make common blas
+  operations, but also many non-blas kernels competitive with vendor math
+  libraries and outperforming the code icc/gcc currently generate.
+
+  <h3>Polly support for Julia - First steps</h3>
+  <a href="https://julialang.org/">Julia</a> is a new matlab style programming
+  language that provides C like performance for scientific computing. Even
+  though Julia also translates to LLVM-IR, parsing and optimizing Julia code
+  poses new challenges that currently prevent Polly from optimizing Julia
+  code despite the clear need for optimizations such as loop-tiling for Julia.
+  In this project you will -- starting from first proof-of-concept patches --
+  integrate Polly into Julia and ensure that Julia code can benefit from the
+  same high-level loop optimizations as todays C code already does. If time
+  permits, making Polly's recent bound-check elimination logic work in Julia
+  code would allow the optimization of Julia code, even if save out-of-bound
+  checking is used.
+  <h3>Interactive Polyhedral Web Calculator</h3>
+  At the core of Polly we use the isl math library. isl allows us to describe
+  loop transformations with relatively simple higher level operations while
+  still providing the full expressiveness of integer polyhedra. To understand
+  and describe the transformations we are performing it is often very convenient
+  to quickly script example transformations in a scripting language like python.
+  isl already comes with a python binding generator, with
+  pypyjs there is a python interpreter for the web and with emscriptem isl
+  itself can also be compiled to javascript. In this project you combine all
+  these components to obtain an interactive polyhedral web calculator, that uses
+  latest web technology to nicely illustrate the integer polyhedra you obtain.
+</div>
+</div>
+</body>
+</html>

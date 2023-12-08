@@ -1,0 +1,18 @@
+// This is only defined when building, but LLDB is missing this flag when loading the standard
+// library module so the actual contents of the module are missing.
+#ifdef BUILDING_OUTSIDE_LLDB
+
+#include "stdio.h"
+
+namespace std {
+  inline namespace __1 {
+    // Pretend to be a std::vector template we need to instantiate
+    // in LLDB.
+    template<typename T>
+    struct vector { T i; int size() { return 2; } };
+  }
+}
+#else
+// Break the build when parsing from within LLDB.
+random_token_to_fail_the_build
+#endif // BUILDING_OUTSIDE_LLDB

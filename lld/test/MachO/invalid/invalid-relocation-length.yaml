@@ -1,0 +1,99 @@
+# REQUIRES: x86
+# RUN: yaml2obj %s -o %t.o
+# RUN: not %lld -o %t %t.o 2>&1 | FileCheck %s -DFILE=%t.o
+#
+# CHECK: error: UNSIGNED relocation has width 2 bytes, but must be 4 or 8 bytes at offset 1 of __TEXT,__text in [[FILE]]
+
+!mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      280
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          9
+    fileoff:         312
+    filesize:        9
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            9
+        offset:          0x00000138
+        align:           0
+        reloff:          0x00000144
+        nreloc:          1
+        flags:           0x80000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         '000000000000000000'
+        relocations:
+          - address:         0x00000001
+            symbolnum:       1
+            pcrel:           false
+            length:          1
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           659200
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          332
+    nsyms:           2
+    stroff:          364
+    strsize:         12
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         1
+    - n_strx:          6
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         9
+  StringTable:
+    - ''
+    - _foo
+    - _main

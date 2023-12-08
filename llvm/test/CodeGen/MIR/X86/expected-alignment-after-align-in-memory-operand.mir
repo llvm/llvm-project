@@ -1,0 +1,30 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define void @memory_alignment(<8 x float>* %vec) {
+  entry:
+    %v = load <8 x float>, <8 x float>* %vec
+    %v2 = insertelement <8 x float> %v, float 0.0, i32 4
+    store <8 x float> %v2, <8 x float>* %vec
+    ret void
+  }
+
+...
+---
+name:            memory_alignment
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK: [[@LINE+1]]:74: expected an integer literal after 'align'
+    $xmm0 = MOVAPSrm $rdi, 1, _, 0, _ :: (load (s128) from %ir.vec, align)
+    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load (s128) from %ir.vec + 16, basealign 32)
+    $xmm2 = FsFLD0SS
+    $xmm1 = MOVSSrr killed $xmm1, killed $xmm2
+    MOVAPSmr $rdi, 1, _, 0, _, killed $xmm0 :: (store (s128) into %ir.vec, align 32)
+    MOVAPSmr killed $rdi, 1, _, 16, _, killed $xmm1 :: (store (s128) into %ir.vec + 16, basealign 32)
+    RET64
+...

@@ -1,0 +1,88 @@
+# RUN: llc -mtriple=x86_64-none-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs  -o - %s | FileCheck %s
+#
+# This test was originally generated from the following sample:
+#
+# int x0;
+# extern void x3(int, int);
+# void x1(int x2) {
+#   if (x0)
+#     x3(0, x2);
+# }
+#
+# The code generates a COPY instruction which the PostRA Machine Sink pass will
+# try to sink.  Earlier versions were not performing the sink due to a
+# DBG_VALUE instruction confusing the sinking algorithm.
+
+--- |
+  @x0 = common dso_local global i32 0, align 4, !dbg !0
+
+  define dso_local void @x1(i32) !dbg !11 {
+    %2 = alloca i32, align 4
+    store i32 %0, ptr %2, align 4
+    call void @llvm.dbg.declare(metadata ptr %2, metadata !14, metadata !DIExpression()), !dbg !16
+    %3 = load i32, ptr @x0, align 4, !dbg !16
+    %4 = icmp ne i32 %3, 0, !dbg !16
+    br i1 %4, label %5, label %7, !dbg !16
+
+  ; <label>:5:                                      ; preds = %1
+    %6 = load i32, ptr %2, align 4, !dbg !16
+    call void @x3(i32 0, i32 %6), !dbg !16
+    br label %7, !dbg !16
+
+  ; <label>:7:                                      ; preds = %5, %1
+    ret void, !dbg !16
+  }
+
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+  declare dso_local void @x3(i32, i32)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!7, !8}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "x0", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+  !3 = !DIFile(filename: "test.c", directory: "")
+  !4 = !{}
+  !5 = !{!0}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = distinct !DISubprogram(name: "x1", scope: !3, file: !3, line: 3, type: !12, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !2)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null, !6}
+  !14 = !DILocalVariable(name: "x2", arg: 1, scope: !11, file: !3, line: 3, type: !6)
+  !15 = distinct !DILexicalBlock(scope: !11, file: !3, line: 4, column: 7)
+  !16 = !DILocation(line: 4, column: 7, scope: !15)
+
+...
+---
+# CHECK: name: x1
+# CHECK: bb.0:
+# CHECK-NOT: $eax = COPY $edi
+# CHECK: bb.1:
+# CHECK: renamable $eax = COPY $edi
+# CHECK-NEXT: DBG_VALUE $eax,
+# CHECK: bb.2:
+name:            x1
+alignment:       16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.2, %bb.1; %bb.2, %bb.1
+    liveins: $edi
+    DBG_VALUE $edi, $noreg, !14, !DIExpression(), debug-location !16
+    renamable $eax = COPY $edi
+    DBG_VALUE $eax, $noreg, !14, !DIExpression(), debug-location !16
+    CMP32mi8 $rip, 1, $noreg, @x0, $noreg, 0, implicit-def $eflags, debug-location !16
+    JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !16
+    JMP_1 %bb.1, debug-location !16
+
+  bb.1:
+    liveins: $eax
+    $edi = MOV32r0 implicit-def dead $eflags, debug-location !16
+    $esi = COPY killed renamable $eax, debug-location !16
+
+  bb.2:
+    RET 0, debug-location !16
+...

@@ -1,0 +1,38 @@
+.. _omp180:
+
+Replacing OpenMP runtime call <call> with <value>.
+====================================================================
+
+This optimization remark indicates that analysis determined an OpenMP runtime
+calls can be replaced with a constant value. This can occur when an OpenMP
+runtime call that queried some internal state was found to always return a
+single value after analysis.
+
+Example
+-------
+
+This optimization will trigger for most target regions to simplify the runtime
+once certain constants are known. This will trigger for internal runtime
+functions so it requires enabling verbose remarks with
+`-openmp-opt-verbose-remarks` (prefixed with `-mllvm` for use with clang).
+
+.. code-block:: c++
+
+  void foo() {
+  #pragma omp target parallel
+    { }
+  }
+
+.. code-block:: console
+
+  $ clang test.c -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass=openmp-opt \
+    -mllvm -openmp-opt-verbose-remarks
+  remark: Replacing runtime call __kmpc_is_spmd_exec_mode with 1. [OMP180] [-Rpass=openmp-opt]
+  remark: Replacing runtime call __kmpc_is_spmd_exec_mode with 1. [OMP180] [-Rpass=openmp-opt]
+  remark: Replacing runtime call __kmpc_parallel_level with 1. [OMP180] [-Rpass=openmp-opt]
+  remark: Replacing runtime call __kmpc_parallel_level with 1. [OMP180] [-Rpass=openmp-opt]
+
+Diagnostic Scope
+----------------
+
+OpenMP optimization remark.

@@ -1,0 +1,26 @@
+// -*- C++ -*-
+//===-- algorithm ---------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _TEST_SUPPORT_STDLIB_ALGORITHM
+#define _TEST_SUPPORT_STDLIB_ALGORITHM
+
+#include_next <algorithm>
+
+#include <pstl/internal/pstl_config.h>
+
+#if _PSTL_EXECUTION_POLICIES_DEFINED
+// If <execution> has already been included, pull in implementations
+#    include <pstl/internal/glue_algorithm_impl.h>
+#else
+// Otherwise just pull in forward declarations
+#    include <pstl/internal/glue_algorithm_defs.h>
+#    define _PSTL_ALGORITHM_FORWARD_DECLARED 1
+#endif
+
+#endif /* _TEST_SUPPORT_STDLIB_ALGORITHM */

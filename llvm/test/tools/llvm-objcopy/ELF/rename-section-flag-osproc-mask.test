@@ -1,0 +1,123 @@
+# Test that cpu/processor-specific SHF_* flags are preserved,
+# except SHF_X86_64_LARGE on x86_64 (which is controlled with the
+# "large" flag).
+
+# ===== x86_64 =====
+
+# RUN: yaml2obj --docnum=1 %s -o %t-x86_64.o
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-x86_64.o
+# RUN: llvm-readobj --sections %t-x86_64.o | FileCheck %s --check-prefix=X86_64
+# RUN: llvm-objcopy --rename-section=.bar=.quz,alloc,large %t-x86_64.o
+# RUN: llvm-readobj --sections %t-x86_64.o | FileCheck %s --check-prefix=X86_64-LARGE
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:          .foo
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_X86_64_LARGE ]
+
+# X86_64:        Name: .bar
+# X86_64-NEXT:   Type: SHT_PROGBITS
+# X86_64-NEXT:   Flags [
+# X86_64-NEXT:     SHF_ALLOC (0x2)
+# X86_64-NEXT:     SHF_WRITE (0x1)
+# X86_64-NEXT:   ]
+
+# X86_64-LARGE:        Name: .quz
+# X86_64-LARGE-NEXT:   Type: SHT_PROGBITS
+# X86_64-LARGE-NEXT:   Flags [
+# X86_64-LARGE-NEXT:     SHF_ALLOC (0x2)
+# X86_64-LARGE-NEXT:     SHF_WRITE (0x1)
+# X86_64-LARGE-NEXT:     SHF_X86_64_LARGE (0x10000000)
+# X86_64-LARGE-NEXT:   ]
+
+# ===== hex =====
+
+# RUN: yaml2obj --docnum=2 %s -o %t-hex.o
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-hex.o
+# RUN: llvm-readobj --sections %t-hex.o | FileCheck %s --check-prefix=HEX
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_HEXAGON
+Sections:
+  - Name:          .foo
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_HEX_GPREL ]
+
+# HEX:        Name: .bar
+# HEX-NEXT:   Type: SHT_PROGBITS
+# HEX-NEXT:   Flags [
+# HEX-NEXT:     SHF_ALLOC (0x2)
+# HEX-NEXT:     SHF_HEX_GPREL (0x10000000)
+# HEX-NEXT:     SHF_WRITE (0x1)
+# HEX-NEXT:   ]
+
+# ===== mips =====
+
+# RUN: yaml2obj --docnum=3 %s -o %t-mips.o
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-mips.o
+# RUN: llvm-readobj --sections %t-mips.o | FileCheck %s --check-prefix=MIPS
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_MIPS
+Sections:
+  - Name:          .foo
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_MIPS_NODUPES, SHF_MIPS_NAMES, SHF_MIPS_LOCAL,
+                     SHF_MIPS_NOSTRIP, SHF_MIPS_GPREL, SHF_MIPS_MERGE,
+		     SHF_MIPS_ADDR, SHF_MIPS_STRING ]
+
+# Note: llvm-readobj prints SHF_EXCLUDE/SHF_MASKPROC since specifying all
+# SHF_MIPS_* flags covers the same bitset.
+
+# MIPS:        Name: .bar
+# MIPS-NEXT:   Type: SHT_PROGBITS
+# MIPS-NEXT:   Flags [
+# MIPS-NEXT:     SHF_ALLOC (0x2)
+# MIPS-NEXT:     SHF_MIPS_ADDR (0x40000000)
+# MIPS-NEXT:     SHF_MIPS_GPREL (0x10000000)
+# MIPS-NEXT:     SHF_MIPS_LOCAL (0x4000000)
+# MIPS-NEXT:     SHF_MIPS_MERGE (0x20000000)
+# MIPS-NEXT:     SHF_MIPS_NAMES (0x2000000)
+# MIPS-NEXT:     SHF_MIPS_NODUPES (0x1000000)
+# MIPS-NEXT:     SHF_MIPS_NOSTRIP (0x8000000)
+# MIPS-NEXT:     SHF_WRITE (0x1)
+# MIPS-NEXT:   ]
+
+# ===== arm =====
+
+# RUN: yaml2obj --docnum=4 %s -o %t-arm.o
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-arm.o
+# RUN: llvm-readobj --sections %t-arm.o | FileCheck %s --check-prefix=ARM
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+Sections:
+  - Name:          .foo
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ARM_PURECODE ]
+
+# ARM:        Name: .bar
+# ARM-NEXT:   Type: SHT_PROGBITS
+# ARM-NEXT:   Flags [
+# ARM-NEXT:     SHF_ALLOC (0x2)
+# ARM-NEXT:     SHF_ARM_PURECODE (0x20000000)
+# ARM-NEXT:     SHF_WRITE (0x1)
+# ARM-NEXT:   ]

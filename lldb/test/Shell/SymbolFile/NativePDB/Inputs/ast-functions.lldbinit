@@ -1,0 +1,8 @@
+
+break set -n main
+break set -n static_fn
+break set -n varargs_fn
+
+target modules dump ast
+
+quit

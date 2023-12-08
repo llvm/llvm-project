@@ -1,0 +1,328 @@
+# RUN: yaml2obj %s --docnum=1 -o %t.arm
+# RUN: llvm-readobj -h %t.arm \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm --check-prefix ARM
+
+#      ARM:File: [[FILE]]
+# ARM-NEXT:Format: COFF-ARM
+# ARM-NEXT:Arch: thumb
+# ARM-NEXT:AddressSize: 32bit
+# ARM-NEXT:ImageFileHeader {
+# ARM-NEXT:  Machine: IMAGE_FILE_MACHINE_ARMNT (0x1C4)
+# ARM-NEXT:  SectionCount: 0
+# ARM-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+# ARM-NEXT:  PointerToSymbolTable: 0x0
+# ARM-NEXT:  SymbolCount: 0
+# ARM-NEXT:  StringTableSize: 0
+# ARM-NEXT:  OptionalHeaderSize: 0
+# ARM-NEXT:  Characteristics [ (0x0)
+# ARM-NEXT:  ]
+# ARM-NEXT:}
+# ARM-NOT:{{.}}
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: [  ]
+sections:
+symbols:
+
+# RUN: yaml2obj %s --docnum=2 -o %t.arm64
+# RUN: llvm-readobj -h %t.arm64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64 --check-prefix ARM64
+
+#      ARM64:File: [[FILE]]
+# ARM64-NEXT:Format: COFF-ARM64
+# ARM64-NEXT:Arch: aarch64
+# ARM64-NEXT:AddressSize: 64bit
+# ARM64-NEXT:ImageFileHeader {
+# ARM64-NEXT:  Machine: IMAGE_FILE_MACHINE_ARM64 (0xAA64)
+# ARM64-NEXT:  SectionCount: 0
+# ARM64-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+# ARM64-NEXT:  PointerToSymbolTable: 0x0
+# ARM64-NEXT:  SymbolCount: 0
+# ARM64-NEXT:  StringTableSize: 0
+# ARM64-NEXT:  OptionalHeaderSize: 0
+# ARM64-NEXT:  Characteristics [ (0x0)
+# ARM64-NEXT:  ]
+# ARM64-NEXT:}
+# ARM64-NOT:{{.}}
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+symbols:
+
+# RUN: yaml2obj %s --docnum=3 -o %t.i386
+# RUN: llvm-readobj -h %t.i386 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
+
+#      I386:File: [[FILE]]
+# I386-NEXT:Format: COFF-i386
+# I386-NEXT:Arch: i386
+# I386-NEXT:AddressSize: 32bit
+# I386-NEXT:ImageFileHeader {
+# I386-NEXT:  Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+# I386-NEXT:  SectionCount: 0
+# I386-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+# I386-NEXT:  PointerToSymbolTable: 0x0
+# I386-NEXT:  SymbolCount: 0
+# I386-NEXT:  StringTableSize: 0
+# I386-NEXT:  OptionalHeaderSize: 0
+# I386-NEXT:  Characteristics [ (0x0)
+# I386-NEXT:  ]
+# I386-NEXT:}
+# I386-NOT:{{.}}
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [  ]
+sections:
+symbols:
+
+# RUN: yaml2obj %s --docnum=4 -o %t.x86-64
+# RUN: llvm-readobj -h %t.x86-64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
+
+#      X86-64:File: [[FILE]]
+# X86-64-NEXT:Format: COFF-x86-64
+# X86-64-NEXT:Arch: x86_64
+# X86-64-NEXT:AddressSize: 64bit
+# X86-64-NEXT:ImageFileHeader {
+# X86-64-NEXT:  Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+# X86-64-NEXT:  SectionCount: 0
+# X86-64-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+# X86-64-NEXT:  PointerToSymbolTable: 0x0
+# X86-64-NEXT:  SymbolCount: 0
+# X86-64-NEXT:  StringTableSize: 0
+# X86-64-NEXT:  OptionalHeaderSize: 0
+# X86-64-NEXT:  Characteristics [ (0x0)
+# X86-64-NEXT:  ]
+# X86-64-NEXT:}
+# X86-64-NOT:{{.}}
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+symbols:
+
+# RUN: yaml2obj %s --docnum=5 -o %t.i386
+# RUN: llvm-readobj -h %t.i386 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386-CUSTOM-HEADER
+
+#      I386-CUSTOM-HEADER:File: [[FILE]]
+# I386-CUSTOM-HEADER-NEXT:Format: COFF-i386
+# I386-CUSTOM-HEADER-NEXT:Arch: i386
+# I386-CUSTOM-HEADER-NEXT:AddressSize: 32bit
+# I386-CUSTOM-HEADER-NEXT:ImageFileHeader {
+# I386-CUSTOM-HEADER-NEXT:  Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+# I386-CUSTOM-HEADER-NEXT:  SectionCount: 0
+# I386-CUSTOM-HEADER-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+# I386-CUSTOM-HEADER-NEXT:  PointerToSymbolTable: 0x0
+# I386-CUSTOM-HEADER-NEXT:  SymbolCount: 0
+# I386-CUSTOM-HEADER-NEXT:  StringTableSize: 0
+# I386-CUSTOM-HEADER-NEXT:  OptionalHeaderSize: 224
+# I386-CUSTOM-HEADER-NEXT:  Characteristics [ (0x102)
+# I386-CUSTOM-HEADER-NEXT:    IMAGE_FILE_32BIT_MACHINE (0x100)
+# I386-CUSTOM-HEADER-NEXT:    IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
+# I386-CUSTOM-HEADER-NEXT:  ]
+# I386-CUSTOM-HEADER-NEXT:}
+# I386-CUSTOM-HEADER-NEXT:ImageOptionalHeader {
+# I386-CUSTOM-HEADER-NEXT:  Magic: 0x10B
+# I386-CUSTOM-HEADER-NEXT:  MajorLinkerVersion: 0
+# I386-CUSTOM-HEADER-NEXT:  MinorLinkerVersion: 0
+# I386-CUSTOM-HEADER-NEXT:  SizeOfCode: 0
+# I386-CUSTOM-HEADER-NEXT:  SizeOfInitializedData: 0
+# I386-CUSTOM-HEADER-NEXT:  SizeOfUninitializedData: 0
+# I386-CUSTOM-HEADER-NEXT:  AddressOfEntryPoint: 0x1000
+# I386-CUSTOM-HEADER-NEXT:  BaseOfCode: 0x0
+# I386-CUSTOM-HEADER-NEXT:  BaseOfData: 0x0
+# I386-CUSTOM-HEADER-NEXT:  ImageBase: 0x400000
+# I386-CUSTOM-HEADER-NEXT:  SectionAlignment: 4096
+# I386-CUSTOM-HEADER-NEXT:  FileAlignment: 512
+# I386-CUSTOM-HEADER-NEXT:  MajorOperatingSystemVersion: 6
+# I386-CUSTOM-HEADER-NEXT:  MinorOperatingSystemVersion: 0
+# I386-CUSTOM-HEADER-NEXT:  MajorImageVersion: 0
+# I386-CUSTOM-HEADER-NEXT:  MinorImageVersion: 0
+# I386-CUSTOM-HEADER-NEXT:  MajorSubsystemVersion: 6
+# I386-CUSTOM-HEADER-NEXT:  MinorSubsystemVersion: 0
+# I386-CUSTOM-HEADER-NEXT:  SizeOfImage: 4096
+# I386-CUSTOM-HEADER-NEXT:  SizeOfHeaders: 512
+# I386-CUSTOM-HEADER-NEXT:  CheckSum: 0x0
+# I386-CUSTOM-HEADER-NEXT:  Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+# I386-CUSTOM-HEADER-NEXT:  Characteristics [ (0x8140)
+# I386-CUSTOM-HEADER-NEXT:    IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE (0x40)
+# I386-CUSTOM-HEADER-NEXT:    IMAGE_DLL_CHARACTERISTICS_NX_COMPAT (0x100)
+# I386-CUSTOM-HEADER-NEXT:    IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE (0x8000)
+# I386-CUSTOM-HEADER-NEXT:  ]
+# I386-CUSTOM-HEADER-NEXT:  SizeOfStackReserve: 1048576
+# I386-CUSTOM-HEADER-NEXT:  SizeOfStackCommit: 4096
+# I386-CUSTOM-HEADER-NEXT:  SizeOfHeapReserve: 1048576
+# I386-CUSTOM-HEADER-NEXT:  SizeOfHeapCommit: 4096
+# I386-CUSTOM-HEADER-NEXT:  NumberOfRvaAndSize: 16
+# I386-CUSTOM-HEADER-NEXT:  DataDirectory {
+# I386-CUSTOM-HEADER-NEXT:    ExportTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ExportTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ImportTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ImportTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ResourceTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ResourceTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ExceptionTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ExceptionTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    CertificateTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    CertificateTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    BaseRelocationTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    BaseRelocationTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    DebugRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    DebugSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ArchitectureRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ArchitectureSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    GlobalPtrRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    GlobalPtrSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    TLSTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    TLSTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    LoadConfigTableRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    LoadConfigTableSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    BoundImportRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    BoundImportSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    IATRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    IATSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    DelayImportDescriptorRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    DelayImportDescriptorSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    CLRRuntimeHeaderRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    CLRRuntimeHeaderSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ReservedRVA: 0x0
+# I386-CUSTOM-HEADER-NEXT:    ReservedSize: 0x0
+# I386-CUSTOM-HEADER-NEXT:  }
+# I386-CUSTOM-HEADER-NEXT:}
+# I386-CUSTOM-HEADER-NEXT:DOSHeader {
+# I386-CUSTOM-HEADER-NEXT:  Magic: MZ
+# I386-CUSTOM-HEADER-NEXT:  UsedBytesInTheLastPage: 0
+# I386-CUSTOM-HEADER-NEXT:  FileSizeInPages: 0
+# I386-CUSTOM-HEADER-NEXT:  NumberOfRelocationItems: 0
+# I386-CUSTOM-HEADER-NEXT:  HeaderSizeInParagraphs: 0
+# I386-CUSTOM-HEADER-NEXT:  MinimumExtraParagraphs: 0
+# I386-CUSTOM-HEADER-NEXT:  MaximumExtraParagraphs: 0
+# I386-CUSTOM-HEADER-NEXT:  InitialRelativeSS: 0
+# I386-CUSTOM-HEADER-NEXT:  InitialSP: 0
+# I386-CUSTOM-HEADER-NEXT:  Checksum: 0
+# I386-CUSTOM-HEADER-NEXT:  InitialIP: 0
+# I386-CUSTOM-HEADER-NEXT:  InitialRelativeCS: 0
+# I386-CUSTOM-HEADER-NEXT:  AddressOfRelocationTable: 64
+# I386-CUSTOM-HEADER-NEXT:  OverlayNumber: 0
+# I386-CUSTOM-HEADER-NEXT:  OEMid: 0
+# I386-CUSTOM-HEADER-NEXT:  OEMinfo: 0
+# I386-CUSTOM-HEADER-NEXT:  AddressOfNewExeHeader: 128
+# I386-CUSTOM-HEADER-NEXT:}
+# I386-CUSTOM-HEADER-NOT:{{.}}
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       4194304
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 0
+    Size:            0
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_32BIT_MACHINE ]
+sections:
+symbols:         []
+...
+
+# RUN: yaml2obj %s --docnum=6 -o %t.unknown
+# RUN: llvm-readobj -h %t.unknown \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines --check-prefix UNKNOWN
+
+#      UNKNOWN:Format: COFF-<unknown arch>
+# UNKNOWN-NEXT:Arch: unknown
+# UNKNOWN-NEXT:AddressSize: 32bit
+# UNKNOWN-NEXT:ImageFileHeader {
+# UNKNOWN-NEXT:  Machine: IMAGE_FILE_MACHINE_UNKNOWN (0x0)
+# UNKNOWN-NEXT:  SectionCount: 0
+# UNKNOWN-NEXT:  TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+# UNKNOWN-NEXT:  PointerToSymbolTable: 0x0
+# UNKNOWN-NEXT:  SymbolCount: 0
+# UNKNOWN-NEXT:  StringTableSize: 0
+# UNKNOWN-NEXT:  OptionalHeaderSize: 0
+# UNKNOWN-NEXT:  Characteristics [ (0x0)
+# UNKNOWN-NEXT:  ]
+# UNKNOWN-NEXT:}
+# UNKNOWN-NOT:{{.}}
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_UNKNOWN
+  Characteristics: [  ]
+sections:
+symbols:
+
+# RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
+# RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix IMPORTLIB
+
+#      IMPORTLIB:Format: COFF-import-file
+# IMPORTLIB-NEXT:Type: code
+# IMPORTLIB-NEXT:Name type: noprefix
+# IMPORTLIB-NEXT:Symbol: __imp__func
+# IMPORTLIB-NEXT:Symbol: _func
+# IMPORTLIB-NOT:{{.}}

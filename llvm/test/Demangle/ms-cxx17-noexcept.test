@@ -1,0 +1,25 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?nochange@@YAXXZ
+; CHECK: void __cdecl nochange(void)
+
+?a@@YAXP6AHXZ@Z
+; CHECK: void __cdecl a(int (__cdecl *)(void))
+?a@@YAXP6AHX_E@Z
+; CHECK: void __cdecl a(int (__cdecl *)(void) noexcept)
+
+?b@@YAXP6AHXZ@Z
+; CHECK: void __cdecl b(int (__cdecl *)(void))
+
+?c@@YAXP6AHXZ@Z
+; CHECK: void __cdecl c(int (__cdecl *)(void))
+?c@@YAXP6AHX_E@Z
+; CHECK: void __cdecl c(int (__cdecl *)(void) noexcept)
+
+?ee@?$e@$$A6AXXZ@@EEAAXXZ
+; CHECK: private: virtual void __cdecl e<void __cdecl(void)>::ee(void)
+
+?ee@?$e@$$A6AXX_E@@EEAAXXZ
+; CHECK: private: virtual void __cdecl e<void __cdecl(void) noexcept>::ee(void)

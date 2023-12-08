@@ -1,0 +1,1 @@
+RUN: llvm-dis -disable-output %p/Inputs/PR23310.bc

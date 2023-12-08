@@ -1,0 +1,37 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @test(i32 %a) #0 {
+  entry:
+    %b = alloca i32
+    %x = alloca i64
+    store i32 %a, i32* %b
+    store i64 2, i64* %x
+    %c = load i32, i32* %b
+    ret i32 %c
+  }
+
+  attributes #0 = { "frame-pointer"="none" }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+frameInfo:
+  maxAlignment:    8
+stack:
+  - { id: 0, name: b, offset: -12, size: 4, alignment: 4 }
+# CHECK: [[@LINE+1]]:11: redefinition of stack object '%stack.0'
+  - { id: 0, name: x, offset: -24, size: 8, alignment: 8 }
+body: |
+  bb.0.entry:
+    liveins: $edi
+
+    MOV32mr $rsp, 1, _, -4, _, killed $edi
+    MOV64mi32 $rsp, 1, _, -16, _, 2
+    $eax = MOV32rm $rsp, 1, _, -4, _
+    RET64 $eax
+...

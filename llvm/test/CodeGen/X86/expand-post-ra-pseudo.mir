@@ -1,0 +1,11 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=postrapseudos | FileCheck %s
+---
+# CHECK-LABEL: name: func
+name: func
+body: |
+  bb.0:
+    liveins: $eax
+    ; CHECK-NOT: dead $rax = KILL {{[0-9]+}}
+    ; CHECK: dead $rax = KILL killed $eax
+    dead $rax = SUBREG_TO_REG 0, killed $eax, %subreg.sub_32bit
+...

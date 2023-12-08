@@ -1,0 +1,32 @@
+# RUN: llc -march=hexagon -run-pass expand-condsets -expand-condsets-coa-limit=0 -o - %s -verify-machineinstrs | FileCheck %s
+
+# CHECK-LABEL: name: fred
+
+--- |
+  define void @fred() { ret void }
+
+...
+---
+
+name: fred
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: predregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: intregs }
+  - { id: 3, class: intregs }
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $p0
+        %0 = COPY $p0
+        %0 = COPY $p0   ; Cheat: convince MIR parser that this is not SSA.
+        %1 = COPY $r1
+        ; Make sure we do not expand/predicate a mux with identical inputs.
+        ; CHECK-NOT: A2_paddit
+        %2 = A2_addi %1, 1
+        %3 = C2_mux %0, killed %2, %2
+        $r0 = COPY %3
+
+...
+

@@ -1,0 +1,140 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses global value operands correctly.
+
+--- |
+
+  @G = external global i32
+  @0 = external global i32
+
+  define i32 @inc() {
+  entry:
+    %a = load i32, i32* @G
+    %b = add i32 %a, 1
+    ret i32 %b
+  }
+
+  define i32 @inc2() {
+  entry:
+    %a = load i32, i32* @0
+    %b = add i32 %a, 1
+    ret i32 %b
+  }
+
+  @.$0  = external global i32
+  @-_-  = external global i32
+  @_-_a = external global i32
+  @$.-B = external global i32
+
+  define i32 @test() {
+  entry:
+    %a = load i32, i32* @.$0
+    store i32 %a, i32* @-_-
+    %b = load i32, i32* @_-_a
+    store i32 %b, i32* @$.-B
+    ret i32 %b
+  }
+
+  @"\01Hello@$%09 \\ World," = external global i32
+
+  define i32 @test2() {
+  entry:
+    %a = load i32, i32* @"\01Hello@$%09 \\ World,"
+    ret i32 %a
+  }
+
+  define i32 @test3() {
+  entry:
+    %a = load i32, i32* @.$0
+    store i32 %a, i32* @-_-
+    %b = load i32, i32* @_-_a
+    store i32 %b, i32* @$.-B
+    ret i32 %b
+  }
+
+  define i32 @tf() {
+  entry:
+    %a = load i32, i32* @G
+    %b = add i32 %a, 1
+    ret i32 %b
+  }
+
+...
+---
+# CHECK: name: inc
+name: inc
+body: |
+  bb.0.entry:
+    ; CHECK: $rax = MOV64rm $rip, 1, $noreg, @G, $noreg
+    $rax = MOV64rm $rip, 1, _, @G, _
+    $eax = MOV32rm $rax, 1, _, 0, _
+    $eax = INC32r $eax, implicit-def $eflags
+    RET64 $eax
+...
+---
+# CHECK: name: inc2
+name: inc2
+body: |
+  bb.0.entry:
+    ; CHECK: $rax = MOV64rm $rip, 1, $noreg, @0, $noreg
+    $rax = MOV64rm $rip, 1, _, @0, _
+    $eax = MOV32rm $rax, 1, _, 0, _
+    $eax = INC32r $eax, implicit-def $eflags
+    RET64 $eax
+...
+---
+name:            test
+body: |
+  bb.0.entry:
+    ; CHECK: , @".$0",
+    ; CHECK: , @-_-,
+    ; CHECK: , @_-_a,
+    ; CHECK: , @"$.-B",
+    $rax = MOV64rm $rip, 1, _, @.$0, _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    $rcx = MOV64rm $rip, 1, _, @-_-, _
+    MOV32mr killed $rcx, 1, _, 0, _, killed $eax
+    $rax = MOV64rm $rip, 1, _, @_-_a, _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    $rcx = MOV64rm $rip, 1, _, @$.-B, _
+    MOV32mr killed $rcx, 1, _, 0, _, $eax
+    RET64 $eax
+...
+---
+name:            test2
+body: |
+  bb.0.entry:
+    ; CHECK: , @"\01Hello@$%09 \\ World,",
+    $rax = MOV64rm $rip, 1, _, @"\01Hello@$%09 \\ World,", _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    RET64 $eax
+...
+---
+# CHECK: name: test3
+name:            test3
+body: |
+  bb.0.entry:
+    ; CHECK: , @".$0",
+    ; CHECK: , @-_-,
+    ; CHECK: , @_-_a + 4,
+    ; CHECK: , @"$.-B" - 8,
+    $rax = MOV64rm $rip, 1, _, @.$0 + 0, _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    $rcx = MOV64rm $rip, 1, _, @-_- - 0, _
+    MOV32mr killed $rcx, 1, _, 0, _, killed $eax
+    $rax = MOV64rm $rip, 1, _, @_-_a + 4, _
+    $eax = MOV32rm killed $rax, 1, _, 0, _
+    $rcx = MOV64rm $rip, 1, _, @$.-B - 8, _
+    MOV32mr killed $rcx, 1, _, 0, _, $eax
+    RET64 $eax
+...
+---
+# CHECK: name: tf
+name: tf
+body: |
+  bb.0.entry:
+  ; CHECK: $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @G, $noreg
+    $rax = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @G, _
+    $eax = MOV32rm $rax, 1, _, 0, _
+    $eax = INC32r $eax, implicit-def $eflags
+    RET64 $eax
+...

@@ -1,0 +1,237 @@
+# RUN: llc -mtriple=x86_64-unknown-unknown -run-pass=machine-sink -o - %s | FileCheck %s
+# In the first test, check various things when we sink machine instructions:
+#   a) DBG_VALUEs should sink with defs
+#   b) Undefs should be left behind
+#   c) DBG_VALUEs not immediately following the defining inst should sink too
+#   d) If we generate debug-use-before-defs through sinking, and can copy
+#      propagate to a different value, we should do that.
+#
+# Test two checks DBG_VALUEs do not sink past a DBG_VALUE in the same block
+# that redefines the variable location, while three checks that copy-propagation
+# happens in the same scenario.
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
+
+  ; Function Attrs: noreturn nounwind uwtable
+  define void @Process(i32* nocapture readonly %p) local_unnamed_addr !dbg !9 {
+  ; Stripped
+  entry:
+    br label %nou
+  nou:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @test2(i32* nocapture readonly %p) local_unnamed_addr !dbg !101 {
+  ; Stripped
+  entry:
+    br label %block1
+  block1:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @test3(i32* nocapture readonly %p) local_unnamed_addr !dbg !201 {
+  ; Stripped
+  entry:
+    br label %block1
+  block1:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  ; Function Attrs: nounwind readnone
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+
+  !llvm.dbg.cu = !{!1}
+  !llvm.module.flags = !{!6, !7}
+  !llvm.ident = !{!8}
+
+  !0 = !DIGlobalVariableExpression(var: !DIGlobalVariable(name: "x", scope: !1, file: !2, line: 1, type: !5, isLocal: false, isDefinition: true), expr: !DIExpression())
+  !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, globals: !4)
+  !2 = !DIFile(filename: "t.c", directory: "")
+  !3 = !{}
+  !4 = !{!0}
+  !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !6 = !{i32 2, !"Dwarf Version", i32 4}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{!"clang version 4.0.0 "}
+  !9 = distinct !DISubprogram(name: "Process", scope: !2, file: !2, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !1, retainedNodes: !15)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{null, !12}
+  !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 64)
+  !13 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !14)
+  !14 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "p", arg: 1, scope: !9, file: !2, line: 2, type: !12)
+  !17 = !DIExpression()
+  !18 = !DILocation(line: 2, column: 34, scope: !9)
+  !28 = !DILexicalBlockFile(scope: !9, file: !2, discriminator: 1)
+  !101 = distinct !DISubprogram(name: "test2", scope: !2, file: !2, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !1, retainedNodes: !102)
+  !102 = !{!103}
+  !103 = !DILocalVariable(name: "q", arg: 1, scope: !101, file: !2, line: 2, type: !12)
+  !104 = !DILocation(line: 1, column: 1, scope: !101)
+  !201 = distinct !DISubprogram(name: "test2", scope: !2, file: !2, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: true, unit: !1, retainedNodes: !202)
+  !202 = !{!203}
+  !203 = !DILocalVariable(name: "r", arg: 1, scope: !201, file: !2, line: 2, type: !12)
+  !204 = !DILocation(line: 1, column: 1, scope: !201)
+
+  ; CHECK: [[VARNUM:![0-9]+]] = !DILocalVariable(name: "p",
+  ; CHECK: [[VAR2NUM:![0-9]+]] = !DILocalVariable(name: "q",
+  ; CHECK: [[VAR3NUM:![0-9]+]] = !DILocalVariable(name: "r",
+
+...
+---
+name:            Process
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%2' }
+  - { reg: '$rsi', virtual-reg: '%2' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.nou(0x80000000), %bb.2.exit
+    liveins: $rdi, $esi
+
+    ; This block should have the vreg copy sunk from it, the DBG_VALUE with it,
+    ; and a copy-prop'd DBG_VALUE left over.
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK:       [[ARG0VREG:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT:  CMP32ri $esi, 0
+    ; CHECK-NEXT:  DBG_VALUE [[ARG0VREG]], $noreg, [[VARNUM]]
+    ; CHECK-NEXT:  JCC_1 %bb.1, 4
+    ; CHECK-NEXT:  JMP_1
+
+    %2:gr64 = COPY $rdi
+    %5:gr64 = COPY %2
+    CMP32ri $esi, 0, implicit-def $eflags
+    DBG_VALUE %5, $noreg, !16, !17, debug-location !18
+    JCC_1 %bb.1.nou, 4, implicit $eflags
+    JMP_1 %bb.2.exit
+
+  bb.1.nou:
+    successors: %bb.2.exit(0x80000000)
+
+    ; This block should receive the sunk copy and DBG_VALUE
+    ; CHECK-LABEL: bb.1.nou:
+    ; CHECK:       [[SUNKVREG:%[0-9]+]]:gr64 = COPY [[ARG0VREG]]
+    ; CHECK-NEXT:  DBG_VALUE [[SUNKVREG]], $noreg, [[VARNUM]]
+    ; CHECK-NEXT:  ADD64ri32
+    ; CHECK-NEXT:  JMP_1
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
+    JMP_1 %bb.2.exit
+
+  bb.2.exit:
+    ; The DBG_VALUE below should have its operand copy-propagated after
+    ; the copy to %5 is sunk.
+    ; CHECK-LABEL: bb.2.exit:
+    ; CHECK:       DBG_VALUE [[ARG0VREG]], $noreg, [[VARNUM]]
+    ; CHECK-NEXT:  $rax = MOV64rr [[ARG0VREG]]
+    ; CHECK-NEXT:  RET 0
+    DBG_VALUE %5, _, !16, !17, debug-location !18
+    $rax = MOV64rr %2
+    RET 0
+...
+---
+name:            test2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%2' }
+  - { reg: '$rsi', virtual-reg: '%2' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.block1, %bb.2.exit
+    liveins: $rdi, $esi
+
+    ; This block should _not_ have the first DBG_VALUE sunk out from it, as it
+    ; would pass a later DBG_VALUE of the same variable location. An undef
+    ; DBG_VALUE should be left behind though.
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK:       [[TEST2VREG:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT:  CMP32ri $esi, 0
+    ; CHECK-NEXT:  DBG_VALUE $noreg, $noreg, [[VAR2NUM]]
+    ; CHECK-NEXT:  CMP32ri $esi, 0
+    ; CHECK-NEXT:  DBG_VALUE 0, $noreg, [[VAR2NUM]]
+    ; CHECK-NEXT:  JCC_1 %bb.1, 4
+    ; CHECK-NEXT:  JMP_1
+
+    %2:gr64 = COPY $rdi
+    %5:gr64 = ADD64ri32 %2, 1, implicit-def dead $eflags
+    CMP32ri $esi, 0, implicit-def $eflags
+    DBG_VALUE %5, $noreg, !103, !17, debug-location !104
+    CMP32ri $esi, 0, implicit-def $eflags
+    DBG_VALUE 0, $noreg, !103, !17, debug-location !104
+    JCC_1 %bb.1.block1, 4, implicit $eflags
+    JMP_1 %bb.2.exit
+
+  bb.1.block1:
+    successors: %bb.2.exit
+
+    ; This block should receive no DBG_VALUE.
+    ; CHECK-LABEL: bb.1.block1:
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       [[SUNKVREG2:%[0-9]+]]:gr64 = ADD64ri32 [[TEST2VREG]]
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK-NEXT:  ADD64ri32
+    ; CHECK: JMP_1 %bb.2
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
+    JMP_1 %bb.2.exit
+
+  bb.2.exit:
+    $rax = MOV64rr %2
+    RET 0
+...
+---
+name:            test3
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%2' }
+  - { reg: '$rsi', virtual-reg: '%2' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.block1, %bb.2.exit
+    liveins: $rdi, $esi
+
+    ; The copy from %2 to %5 will sink into a later block, and the first
+    ; DBG_VALUE cannot pass the second. But, we should be able to recover
+    ; the variable location through copy propagation.
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK:       [[TEST3VREG:%[0-9]+]]:gr64 = COPY $rdi
+    ; CHECK-NEXT:  CMP32ri $esi, 0
+    ; CHECK-NEXT:  DBG_VALUE [[TEST3VREG]], $noreg, [[VAR3NUM]]
+    ; CHECK-NEXT:  CMP32ri $esi, 0
+    ; CHECK-NEXT:  DBG_VALUE 0, $noreg, [[VAR3NUM]]
+    ; CHECK-NEXT:  JCC_1 %bb.1, 4
+    ; CHECK-NEXT:  JMP_1
+
+    %2:gr64 = COPY $rdi
+    %5:gr64 = COPY %2
+    CMP32ri $esi, 0, implicit-def $eflags
+    DBG_VALUE %5, $noreg, !203, !17, debug-location !204
+    CMP32ri $esi, 0, implicit-def $eflags
+    DBG_VALUE 0, $noreg, !203, !17, debug-location !204
+    JCC_1 %bb.1.block1, 4, implicit $eflags
+    JMP_1 %bb.2.exit
+
+  bb.1.block1:
+    successors: %bb.2.exit
+
+    ; This block should receive no DBG_VALUE.
+    ; CHECK-LABEL: bb.1.block1:
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK:       COPY [[TEST3VREG]]
+    ; CHECK-NOT:   DBG_VALUE
+    ; CHECK-NEXT:  ADD64ri32
+    ; CHECK: JMP_1 %bb.2
+    %1:gr64 = ADD64ri32 %5, 4, implicit-def dead $eflags
+    JMP_1 %bb.2.exit
+
+  bb.2.exit:
+    $rax = MOV64rr %2
+    RET 0
+...

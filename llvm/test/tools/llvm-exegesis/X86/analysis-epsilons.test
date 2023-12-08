@@ -1,0 +1,63 @@
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=9 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-TWO %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=9 -analysis-inconsistency-epsilon=100 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-TWO %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=10 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-ONE %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=10 -analysis-inconsistency-epsilon=100 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-ONE %s
+
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=9 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-FAIL %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=10 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-FAIL %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=9 -analysis-inconsistency-epsilon=100 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-PASS %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=10 -analysis-inconsistency-epsilon=100 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-PASS %s
+
+# CHECK-CLUSTERS-ALL: {{^}}cluster_id,opcode_name,config,sched_class,latency{{$}}
+
+# CHECK-CLUSTERS-TWO: {{^}}0,
+# CHECK-CLUSTERS-TWO-SAME: ,90.00{{$}}
+# CHECK-CLUSTERS-TWO: {{^}}1,
+# CHECK-CLUSTERS-TWO-SAME: ,100.00{{$}}
+
+# CHECK-CLUSTERS-ONE: {{^}}0,
+# CHECK-CLUSTERS-ONE-SAME: ,90.00{{$}}
+# CHECK-CLUSTERS-ONE-NEXT: {{^}}0,
+# CHECK-CLUSTERS-ONE-SAME: ,100.00{{$}}
+
+# CHECK-INCONSISTENCIES-FAIL: contains instructions whose performance characteristics do not match that of LLVM
+# CHECK-INCONSISTENCIES-FAIL: contains instructions whose performance characteristics do not match that of LLVM
+# CHECK-INCONSISTENCIES-FAIL-NOT: contains instructions whose performance characteristics do not match that of LLVM
+
+# CHECK-INCONSISTENCIES-PASS-NOT: contains instructions whose performance characteristics do not match that of LLVM
+
+---
+mode:            latency
+key:
+  instructions:
+    - 'ADD32rr EDX EDX EAX'
+  config:          ''
+  register_initial_values:
+    - 'EDX=0x0'
+    - 'EAX=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: latency, value: 90, per_snippet_value: 90 }
+error:           ''
+info:            Repeating a single implicitly serial instruction
+assembled_snippet: BA00000000B80000000001C201C201C201C201C201C201C201C201C201C201C201C201C201C201C201C2C3
+...
+---
+mode:            latency
+key:
+  instructions:
+    - 'SQRTSSr XMM11 XMM11'
+  config:          ''
+  register_initial_values:
+    - 'XMM11=0x0'
+cpu_name:        bdver2
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: latency, value: 100, per_snippet_value: 100 }
+error:           ''
+info:            Repeating a single explicitly serial instruction
+assembled_snippet: 4883EC10C7042400000000C744240400000000C744240800000000C744240C00000000C57A6F1C244883C410F3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBF3450F51DBC3
+...

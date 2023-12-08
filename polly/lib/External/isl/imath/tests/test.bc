@@ -1,0 +1,155 @@
+/* e(a, b, m) := a^b (mod m) */
+define e(a, b, m) {
+  auto s, sb;
+
+  sb = obase; obase = 16;
+  s = 1;
+  while(b != 0) {
+    if((b % 2) == 1) {
+      s = (s * a) % m;
+    }
+    b /= 2;
+    a = (a * a) % m;
+  }
+  obase = sb;
+  return (s);
+}
+
+/* g(a, b) := (a, b) */
+define g(a, b) {
+  auto r;
+
+  while(b != 0) {
+    r = a % b;
+    a = b;
+    b = r;
+  }
+  if(a < 0) {
+    return(-a);
+  } else {
+    return(a);
+  }
+}
+
+define a(x) {
+  if(x < 0) {
+    return (-x);
+  } else {
+    return (x);
+  }
+}
+
+xgu = 0; xgv = 0;
+define x(a, b) {
+  auto u, v, x, y, t, r;
+
+  if(a(b) > a(a)) {
+    t = b; b = a; a = t; r = 1;
+  } else {
+    r = 0;
+  }
+
+  u = 1; v = 0;
+  x = 0; y = 1;
+
+  while(b != 0) {
+    t = a / b;
+
+    a = a - (t * b);
+    v = v - (t * y);
+    u = u - (t * x);
+
+    if(a(a) < a(b)) {
+      t = a; a = b; b = t;
+      t = v; v = y; y = t;
+      t = u; u = x; x = t;
+    }
+  }
+
+  if(r) {
+    xgu = v; xgv = u;
+  } else {
+    xgu = u; xgv = v;
+  }
+
+  if(a < 0) {
+    return (-a);
+  } else {
+    return (a);
+  }
+}
+
+define i(a, m) {
+  auto c;
+
+  c = x(a, m);
+  if(c != 1)
+    return(0);
+
+  return ((xgu + m) % m);
+}
+
+scale = 0
+rand_modulus = 2860385147
+rand_base = 129
+rand_seed = 10342799
+
+define srand(s) {
+  rand_seed = s;
+}
+
+define rand(n) {
+  auto r;
+
+  r = (rand_seed * rand_base) % rand_modulus;
+  rand_seed = r;
+  return(r % n);
+}
+
+define rand_digits(k) {
+  auto s;
+
+  s = 0;
+  while(k > 0) {
+    s = (s * 10) + rand(10);
+    k = k - 1;
+  }
+
+  return(s);
+}
+
+define rval(ndigits, probneg) {
+  auto x;
+  x = rand_digits(ndigits);
+  if(probneg > 0 && rand(100) < probneg)
+    x = x * -1;
+  return(x);
+}
+
+for(i = 2; i < 100; i += 4) {
+  value = rand_digits(i);
+  obase = 256;
+  print "readuns:", value;
+  obase = 10;
+  print ":", value, "\n"  
+}
+
+/*
+for(i = 2; i < 100; i += 4) {
+  for(j = 0; j < 2; ++j) {
+    ndig = rand(7);
+    base = rval(ndig, 20);
+    expt = rand_digits(i);
+    mod = rand_digits(i);
+
+    result = e(base, expt, mod);
+    if(result < 0) {
+      result = result + mod;
+    }
+    print "emodbv:", base, ",", expt, ",", mod, ",0:", result, "\n";
+    print "emodbv:", base, ",", expt, ",", mod, ",=2:", result, "\n";
+    print "emodbv:", base, ",", expt, ",", mod, ",=3:", result, "\n";
+  }
+}
+*/
+halt

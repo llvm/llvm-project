@@ -1,0 +1,5 @@
+module A {
+  textual header "foo.h" { size 13 }
+  textual header "bar.h" { size 1000 }
+  textual header "baz.h" { mtime 1 }
+}

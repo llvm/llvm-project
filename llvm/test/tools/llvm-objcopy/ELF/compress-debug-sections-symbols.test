@@ -1,0 +1,17 @@
+# REQUIRES: zlib
+
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
+
+## Test that after the compression is done we do not remove the symbol
+## and it is placed into the right section.
+
+# RUN: llvm-objcopy --compress-debug-sections %t.o %t-compressed1.o
+# RUN: llvm-readobj --symbols %t-compressed1.o | FileCheck %s
+
+# CHECK:        Name:    .Linfo_string0
+# CHECK-NEXT:   Value:   0x0
+# CHECK-NEXT:   Size:    0
+# CHECK-NEXT:   Binding: Global
+# CHECK-NEXT:   Type:    None
+# CHECK-NEXT:   Other:   0
+# CHECK-NEXT:   Section: .debug_bar

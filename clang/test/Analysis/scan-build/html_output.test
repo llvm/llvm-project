@@ -1,0 +1,33 @@
+// FIXME: Actually, "perl".
+REQUIRES: shell
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir %clang -S %S/Inputs/single_null_dereference.c \
+RUN:     | FileCheck %s -check-prefix CHECK-STDOUT
+
+// Test html output
+
+CHECK-STDOUT: scan-build: Using '{{.*}}' for static analysis
+CHECK-STDOUT: scan-build: 1 bug found.
+CHECK-STDOUT: scan-build: Run 'scan-view {{.*}}' to examine bug reports.
+
+// We expect an index file, a file for the report, and sibling support files.
+RUN: ls %t.output_dir/*/ | FileCheck %s -check-prefix CHECK-FILENAMES
+
+CHECK-FILENAMES: index.html
+CHECK-FILENAMES: report-{{.*}}.html
+CHECK-FILENAMES: scanview.css
+CHECK-FILENAMES: sorttable.js
+
+
+// The index should have a link to the report for the single issue.
+RUN: cat %t.output_dir/*/index.html \
+RUN:     | FileCheck %s -check-prefix CHECK-INDEX-HTML
+
+CHECK-INDEX-HTML: <!-- REPORTBUG id="report-{{.*}}.html" -->
+
+// The report should describe the issue.
+RUN: cat %t.output_dir/*/report-*.html \
+RUN:     | FileCheck %s -check-prefix CHECK-REPORT-HTML
+
+CHECK-REPORT-HTML: <!-- BUGTYPE Dereference of null pointer -->

@@ -1,0 +1,3 @@
+sum:0:0
+ 1: 0 __prefetch_nta_1:0 __prefetch_nta_0:42
+ 1.1: 0 __prefetch_nta_0:18446744073709551615

@@ -1,0 +1,26 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-insert-waitcnts -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+
+# Check that the waitcnt propogates info in the case of a single basic block loop
+
+# GCN-LABEL: waitcnt-loop-single-basic-block
+# GCN: bb.0
+# GCN: S_WAITCNT 3952
+# GCN-NEXT: GLOBAL_STORE_DWORD
+# GCN: S_WAITCNT 3953
+# GCN-NEXT: GLOBAL_STORE_DWORD
+
+...
+name: waitcnt-loop-single-basic-block
+body: |
+  bb.0:
+    S_BRANCH %bb.1
+  bb.1:
+    GLOBAL_STORE_DWORD $vgpr7_vgpr8, $vgpr11, 0, 0, implicit $exec
+    $vgpr21 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
+    $vgpr10 = GLOBAL_LOAD_DWORD $vgpr10_vgpr11, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr14_vgpr15, $vgpr21, 0, 0, implicit $exec
+    $vgpr11 = GLOBAL_LOAD_DWORD $vgpr11_vgpr12, 0, 0, implicit $exec
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+  bb.2:
+    S_ENDPGM 0
+...

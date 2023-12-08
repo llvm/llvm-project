@@ -1,0 +1,128 @@
+## Test that note values are interpreted correctly for FreeBSD executables.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefixes=GNU --strict-whitespace
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM --strict-whitespace
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name:         .note.tag
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Notes:
+      - Name: FreeBSD
+        Desc: '6CD61300'
+        Type: NT_FREEBSD_ABI_TAG
+      - Name: FreeBSD
+        Desc: '6C'  # Invalid data (should be 4 bytes)
+        Type: NT_FREEBSD_ABI_TAG
+      - Name: FreeBSD
+        Desc: '61617263683634'
+        Type: NT_FREEBSD_ARCH_TAG
+      - Name: FreeBSD
+        Desc: 'FFFFFFFF'
+        Type: NT_FREEBSD_FEATURE_CTL
+      - Name: FreeBSD
+        Desc: '00'  # Invalid data (should be 4 bytes)
+        Type: NT_FREEBSD_FEATURE_CTL
+      - Name: FreeBSD
+        Desc: '00000000'
+        Type: NT_FREEBSD_NOINIT_TAG
+      - Name: FreeBSD
+        Desc: '616263646566'
+        Type: 0xabcdef
+      - Name: FreeBSD
+        Desc: '616263646566'
+        Type: NT_FREEBSD_PROCSTAT_RLIMIT # Only valid for coredumps.
+
+# GNU: Displaying notes found in: .note.tag
+# GNU-NEXT: Owner                Data size 	Description
+# GNU-NEXT: FreeBSD              0x00000004	NT_FREEBSD_ABI_TAG (ABI version tag)
+# GNU-NEXT:   ABI tag: 1300076
+# GNU-NEXT: FreeBSD              0x00000001	NT_FREEBSD_ABI_TAG (ABI version tag)
+# GNU-NEXT:   description data: 6c
+# GNU-NEXT: FreeBSD              0x00000007	NT_FREEBSD_ARCH_TAG (architecture tag)
+# GNU-NEXT:   Arch tag: aarch64
+# GNU-NEXT: FreeBSD              0x00000004	NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
+# GNU-NEXT:   Feature flags: ASLR_DISABLE PROTMAX_DISABLE STKGAP_DISABLE WXNEEDED LA48 ASG_DISABLE (0xFFFFFFFF)
+# GNU-NEXT: FreeBSD              0x00000001	NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
+# GNU-NEXT:   description data: 00
+# GNU-NEXT: FreeBSD              0x00000004	NT_FREEBSD_NOINIT_TAG (no .init tag)
+# GNU-NEXT:   description data: 00 00 00 00
+# GNU-NEXT: FreeBSD              0x00000006	Unknown note type: (0x00abcdef)
+# GNU-NEXT:   description data: 61 62 63 64 65 66
+## NT_FREEBSD_PROCSTAT_RLIMIT is only a valid type for coredumps and should therefore not be decoded.
+## Note: Binutils prints NT_PROCSTAT_RLIMIT, but this seems incorrect
+# GNU-NEXT: FreeBSD              0x00000006	Unknown note type: (0x0000000d)
+# GNU-NEXT:   description data: 61 62 63 64 65 66
+# GNU-EMPTY:
+
+# LLVM:     Notes [
+# LLVM-NEXT:  NoteSection {
+# LLVM-NEXT:    Name: .note.tag
+# LLVM-NEXT:    Offset: 0x40
+# LLVM-NEXT:    Size: 0xCC
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x4
+# LLVM-NEXT:      Type: NT_FREEBSD_ABI_TAG (ABI version tag)
+# LLVM-NEXT:      ABI tag: 1300076
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x1
+# LLVM-NEXT:      Type: NT_FREEBSD_ABI_TAG (ABI version tag)
+# LLVM-NEXT:      Description data (
+# LLVM-NEXT:        0000: 6C                                   |l|
+# LLVM-NEXT:      )
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x7
+# LLVM-NEXT:      Type: NT_FREEBSD_ARCH_TAG (architecture tag)
+# LLVM-NEXT:      Arch tag: aarch64
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x4
+# LLVM-NEXT:      Type: NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
+# LLVM-NEXT:      Feature flags: ASLR_DISABLE PROTMAX_DISABLE STKGAP_DISABLE WXNEEDED LA48 ASG_DISABLE (0xFFFFFFFF)
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x1
+# LLVM-NEXT:      Type: NT_FREEBSD_FEATURE_CTL (FreeBSD feature control)
+# LLVM-NEXT:      Description data (
+# LLVM-NEXT:        0000: 00                                   |.|
+# LLVM-NEXT:      )
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x4
+# LLVM-NEXT:      Type: NT_FREEBSD_NOINIT_TAG (no .init tag)
+# LLVM-NEXT:      Description data (
+# LLVM-NEXT:        0000: 00000000                             |....|
+# LLVM-NEXT:      )
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x6
+# LLVM-NEXT:      Type: Unknown (0x00abcdef)
+# LLVM-NEXT:      Description data (
+# LLVM-NEXT:        0000: 61626364 6566                        |abcdef|
+# LLVM-NEXT:      )
+# LLVM-NEXT:    }
+# LLVM-NEXT:    Note {
+# LLVM-NEXT:      Owner: FreeBSD
+# LLVM-NEXT:      Data size: 0x6
+# LLVM-NEXT:      Type: Unknown (0x0000000d)
+# LLVM-NEXT:      Description data (
+# LLVM-NEXT:        0000: 61626364 6566                        |abcdef|
+# LLVM-NEXT:      )
+# LLVM-NEXT:    }
+# LLVM-NEXT:  }
+# LLVM-NEXT:]

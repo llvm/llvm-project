@@ -1,0 +1,4 @@
+# UNSUPPORTED: system-windows
+# UNSUPPORTED: lldb-repro
+# RUN: %python %S/expect_exit_code.py 226 %lldb -b -s %s
+q -30

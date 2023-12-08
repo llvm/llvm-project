@@ -1,0 +1,25 @@
+# RUN: llvm-mc -triple aarch64 -mattr +rme -disassemble %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -triple aarch64 -disassemble %s 2>&1 | FileCheck --check-prefix=CHECK-NO-RME %s
+
+[0xa0,0x60,0x3e,0xd5]
+[0xc0,0x21,0x3e,0xd5]
+[0x80,0x21,0x3e,0xd5]
+# CHECK: mrs x0, MFAR_EL3
+# CHECK: mrs x0, GPCCR_EL3
+# CHECK: mrs x0, GPTBR_EL3
+# CHECK-NO-RME: mrs x0, MFAR_EL3
+# CHECK-NO-RME: mrs x0, S3_6_C2_C1_6
+# CHECK-NO-RME: mrs x0, S3_6_C2_C1_4
+
+[0x60,0x84,0x0e,0xd5]
+[0xe0,0x84,0x0e,0xd5]
+[0x9f,0x81,0x0e,0xd5]
+[0x9f,0x87,0x0e,0xd5]
+# CHECK: tlbi rpaos, x0
+# CHECK: tlbi rpalos, x0
+# CHECK: tlbi paallos
+# CHECK: tlbi paall
+# CHECK-NO-RME: sys #6, c8, c4, #3
+# CHECK-NO-RME: sys #6, c8, c4, #7
+# CHECK-NO-RME: sys #6, c8, c1, #4
+# CHECK-NO-RME: sys #6, c8, c7, #4

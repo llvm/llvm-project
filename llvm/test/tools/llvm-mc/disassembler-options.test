@@ -1,0 +1,4 @@
+# RUN: export LSAN_OPTIONS=detect_leaks=0
+# RUN: not llvm-mc -M invalid /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: invalid disassembler option 'invalid'

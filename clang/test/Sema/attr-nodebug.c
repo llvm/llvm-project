@@ -1,0 +1,11 @@
+// RUN: %clang_cc1 %s -verify -fsyntax-only
+
+int a __attribute__((nodebug));
+
+void b(int p __attribute__((nodebug))) { // expected-warning {{'nodebug' attribute only applies to typedefs, functions, function pointers, Objective-C methods, and variables}}
+  int b __attribute__((nodebug));
+}
+
+void t1(void) __attribute__((nodebug));
+
+void t2(void) __attribute__((nodebug(2))); // expected-error {{'nodebug' attribute takes no arguments}}

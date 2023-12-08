@@ -1,0 +1,28 @@
+# REQUIRES: arm
+# RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-linux-gnueabihf %S/Inputs/arm-thunk-many-passes.s -o %t.o
+# RUN: ld.lld %t.o -T %s -o %t
+# RUN: llvm-nm %t | FileCheck %s
+
+## arm-thunk-many-passes.s is worst case case of thunk generation that takes 9
+## passes to converge. It takes a few more passes to make symbol assignment
+## converge. Test that
+## 1. we don't error that "thunk creation not converged".
+## 2. we check convergence of symbols defined in an output section descriptor.
+
+# CHECK: 01011050 T a
+# CHECK: 0101104f T b
+# CHECK: 0101104e T c
+# CHECK: 0101104d T d
+# CHECK: 0101104c T e
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .text 0x00011000 : {
+    a = b + 1;
+    b = c + 1;
+    c = d + 1;
+    d = e + 1;
+    *(.text*);
+  }
+  e = .;
+}

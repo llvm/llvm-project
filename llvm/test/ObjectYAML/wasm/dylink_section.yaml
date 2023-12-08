@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+
+Sections:
+  - Type:            CUSTOM
+    Name:            dylink.0
+    MemorySize:      4
+    MemoryAlignment: 2
+    TableSize:       1
+    TableAlignment:  0
+    Needed:          [ libfoo.so, libbar.so ]
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x1
+# CHECK: Sections:
+# CHECK:   - Type:            CUSTOM
+# CHECK:     Name:            dylink.0
+# CHECK:     MemorySize:      4
+# CHECK:     MemoryAlignment: 2
+# CHECK:     TableSize:       1
+# CHECK:     TableAlignment:  0
+# CHECK:     Needed:
+# CHECK:       - libfoo.so
+# CHECK:       - libbar.so
+# CHECK: ...

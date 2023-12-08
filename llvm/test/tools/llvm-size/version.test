@@ -1,0 +1,4 @@
+## Show that --version works for llvm-size.
+
+RUN: llvm-size --version | FileCheck %s
+CHECK: version

@@ -1,0 +1,16 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the 'renamable' register flags
+# correctly.
+
+--- |
+  define void @foo() { ret void }
+...
+---
+name:            foo
+body: |
+  ; CHECK: bb.0:
+  bb.0:
+    ; CHECK: renamable $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    renamable $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    RET64 $eax
+...

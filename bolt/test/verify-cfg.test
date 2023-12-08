@@ -1,0 +1,8 @@
+# Verify if the `--verify-cfg` option might produce incorrect alerts.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
+RUN: llvm-bolt %t -o %t.bolt --verify-cfg 2>&1 | FileCheck %s
+
+CHECK-NOT: BOLT-ERROR: Invalid CFG detected after pass {{.*}}

@@ -1,0 +1,35 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when an unknown named machine
+# basic block is encountered.
+
+--- |
+
+  define i32 @foo(i32* %p) {
+  entry:
+    %a = load i32, i32* %p
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    $eax = MOV32rm $rdi, 1, _, 0, _
+    CMP32ri8 $eax, 10, implicit-def $eflags
+    ; CHECK: [[@LINE+1]]:11: the name of machine basic block #2 isn't 'hit'
+    JCC_1 %bb.2.hit, 15, implicit $eflags
+
+  bb.1.less:
+    $eax = MOV32r0 implicit-def $eflags
+
+  bb.2.exit:
+    RET64 $eax
+...

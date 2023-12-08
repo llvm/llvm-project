@@ -1,0 +1,170 @@
+## Show that llvm-size prints sizes in different radixes when requested.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1.o
+# RUN: yaml2obj %s --docnum=2 -o %t2.o
+
+## Case 1: Octal radix (Berkeley).
+# RUN: llvm-size %t1.o %t2.o --totals -B --radix=8 \
+# RUN:   | FileCheck %s --check-prefix=OCT-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+# RUN: llvm-size %t1.o %t2.o --totals -B -o \
+# RUN:   | FileCheck %s --check-prefix=OCT-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+
+# OCT-BERK:         text    data     bss     oct     hex filename
+# OCT-BERK-NEXT:      01      02      04       7       7 [[FILE1]]
+# OCT-BERK-NEXT:     010     020     040      70      38 [[FILE2]]
+# OCT-BERK-NEXT:     011     022     044      77      3f (TOTALS)
+
+## Case 2: Decimal radix (Berkeley).
+# RUN: llvm-size %t1.o %t2.o --totals -B --radix=10 \
+# RUN:   | FileCheck %s --check-prefix=DEC-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+# RUN: llvm-size %t1.o %t2.o --totals -B -d \
+# RUN:   | FileCheck %s --check-prefix=DEC-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+
+# DEC-BERK:         text    data     bss     dec     hex filename
+# DEC-BERK-NEXT:       1       2       4       7       7 [[FILE1]]
+# DEC-BERK-NEXT:       8      16      32      56      38 [[FILE2]]
+# DEC-BERK-NEXT:       9      18      36      63      3f (TOTALS)
+
+## Case 3: Hexadecimal radix (Berkeley).
+# RUN: llvm-size %t1.o %t2.o --totals -B --radix=16 \
+# RUN:   | FileCheck %s --check-prefix=HEX-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+# RUN: llvm-size %t1.o %t2.o --totals -B -x \
+# RUN:   | FileCheck %s --check-prefix=HEX-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+
+# HEX-BERK:         text    data     bss     dec     hex filename
+# HEX-BERK-NEXT:     0x1     0x2     0x4       7       7 [[FILE1]]
+# HEX-BERK-NEXT:     0x8    0x10    0x20      56      38 [[FILE2]]
+# HEX-BERK-NEXT:     0x9    0x12    0x24      63      3f (TOTALS)
+
+## Case 4: Octal radix (sysv).
+# RUN: llvm-size %t1.o %t2.o -A --radix=8 \
+# RUN:   | FileCheck %s --check-prefix=OCT-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+# RUN: llvm-size %t1.o %t2.o -A -o \
+# RUN:   | FileCheck %s --check-prefix=OCT-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+
+# OCT-SYSV:      [[FILE1]]  :
+# OCT-SYSV-NEXT: section     size   addr
+# OCT-SYSV-NEXT: .text         01     04
+# OCT-SYSV-NEXT: .data         02     02
+# OCT-SYSV-NEXT: .bss          04     01
+# OCT-SYSV-NEXT: Total         07
+# OCT-SYSV-EMPTY:
+# OCT-SYSV-EMPTY:
+# OCT-SYSV-NEXT: [[FILE2]]  :
+# OCT-SYSV-NEXT: section     size   addr
+# OCT-SYSV-NEXT: .blob        010    040
+# OCT-SYSV-NEXT: .blab        020    020
+# OCT-SYSV-NEXT: .blib        040    010
+# OCT-SYSV-NEXT: Total        070
+
+## Case 5: Decimal radix (sysv).
+# RUN: llvm-size %t1.o %t2.o -A --radix=10 \
+# RUN:   | FileCheck %s --check-prefix=DEC-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+# RUN: llvm-size %t1.o %t2.o -A -d \
+# RUN:   | FileCheck %s --check-prefix=DEC-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+
+# DEC-SYSV:      [[FILE1]]  :
+# DEC-SYSV-NEXT: section     size   addr
+# DEC-SYSV-NEXT: .text          1      4
+# DEC-SYSV-NEXT: .data          2      2
+# DEC-SYSV-NEXT: .bss           4      1
+# DEC-SYSV-NEXT: Total          7
+# DEC-SYSV-EMPTY:
+# DEC-SYSV-EMPTY:
+# DEC-SYSV-NEXT: [[FILE2]]  :
+# DEC-SYSV-NEXT: section     size   addr
+# DEC-SYSV-NEXT: .blob          8     32
+# DEC-SYSV-NEXT: .blab         16     16
+# DEC-SYSV-NEXT: .blib         32      8
+# DEC-SYSV-NEXT: Total         56
+
+## Case 6: Hexadecimal radix (sysv).
+# RUN: llvm-size %t1.o %t2.o -A --radix=16 \
+# RUN:   | FileCheck %s --check-prefix=HEX-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+# RUN: llvm-size %t1.o %t2.o -A -x \
+# RUN:   | FileCheck %s --check-prefix=HEX-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+
+# HEX-SYSV:      [[FILE1]]  :
+# HEX-SYSV-NEXT: section     size   addr
+# HEX-SYSV-NEXT: .text        0x1    0x4
+# HEX-SYSV-NEXT: .data        0x2    0x2
+# HEX-SYSV-NEXT: .bss         0x4    0x1
+# HEX-SYSV-NEXT: Total        0x7
+# HEX-SYSV-EMPTY:
+# HEX-SYSV-EMPTY:
+# HEX-SYSV-NEXT: [[FILE2]]  :
+# HEX-SYSV-NEXT: section     size   addr
+# HEX-SYSV-NEXT: .blob        0x8   0x20
+# HEX-SYSV-NEXT: .blab       0x10   0x10
+# HEX-SYSV-NEXT: .blib       0x20    0x8
+# HEX-SYSV-NEXT: Total       0x38
+
+## Case 7: Default Berkeley is decimal.
+# RUN: llvm-size %t1.o %t2.o --totals -B \
+# RUN:   | FileCheck %s --check-prefix=DEC-BERK -DFILE1=%t1.o -DFILE2=%t2.o
+
+## Case 8: Default sysv is decimal.
+# RUN: llvm-size %t1.o %t2.o -A \
+# RUN:   | FileCheck %s --check-prefix=DEC-SYSV -DFILE1=%t1.o -DFILE2=%t2.o
+
+## Case 9: Bad values.
+# RUN: not llvm-size %t1.o --radix=0 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=0
+# RUN: not llvm-size %t1.o --radix=1 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=1
+# RUN: not llvm-size %t1.o --radix=2 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=2
+# RUN: not llvm-size %t1.o --radix=32 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=32
+# RUN: not llvm-size %t1.o --radix=-1 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=-1
+# RUN: not llvm-size %t1.o --radix=bad 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=bad
+
+# BAD-VAL: {{.*}}llvm-size{{.*}}: error: --radix value should be one of: 8, 10, 16
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    1
+    Address: 4
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    2
+    Address: 2
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    4
+    Address: 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .blob
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    8
+    Address: 32
+  - Name:    .blab
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    16
+    Address: 16
+  - Name:    .blib
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    32
+    Address: 8

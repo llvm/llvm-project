@@ -1,0 +1,30 @@
+RUN: llvm-mc %p/Inputs/typeunit-header.s -filetype obj \
+RUN:   -triple x86_64-unknown-elf -o - \
+RUN:   | llvm-dwarfdump -debug-types=0x00000019 - | FileCheck %s
+CHECK: .debug_types contents:
+:CHECK-NOT: {{:}}
+CHECK: 0x00000019: DW_TAG_structure_type
+CHECK:               DW_AT_visibility
+CHECK-NOT: {{:}}
+
+RUN: llvm-mc %p/Inputs/typeunit-header.s -filetype obj \
+RUN:   -triple x86_64-unknown-elf -o - \
+RUN:   | llvm-dwarfdump -c -debug-types=0x0000017 - \
+RUN:   | FileCheck %s --check-prefix=CHILDREN
+CHILDREN: .debug_types contents:
+CHILDREN: 0x00000017: DW_TAG_type_unit
+CHILDREN: 0x00000019:   DW_TAG_structure_type
+CHECK-NOT: {{:}}
+
+RUN: llvm-mc %p/Inputs/typeunit-header.s -filetype obj \
+RUN:   -triple x86_64-unknown-elf -o - \
+RUN:   | llvm-dwarfdump -c -r 0 -debug-types=0x0000017 - \
+RUN:   | FileCheck %s --check-prefix=ZERO-CHILDREN
+ZERO-CHILDREN: .debug_types contents:
+ZERO-CHILDREN: 0x00000017: DW_TAG_type_unit
+ZERO-CHILDREN-NOT:            DW_TAG_
+
+RUN: llvm-mc %p/Inputs/typeunit-header.s -filetype obj \
+RUN:   -triple x86_64-unknown-elf -o - \
+RUN:   | llvm-dwarfdump -c -r 1 -debug-types=0x0000017 - \
+RUN:   | FileCheck %s --check-prefix=CHILDREN

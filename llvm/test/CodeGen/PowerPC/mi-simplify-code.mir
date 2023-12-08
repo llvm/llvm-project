@@ -1,0 +1,63 @@
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -mcpu=pwr8 -x mir < %s \
+# RUN:   -verify-machineinstrs -start-before=ppc-mi-peepholes | FileCheck %s
+
+---
+name: remove_frsp
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+
+    %1:g8rc = COPY $x4
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %2:g8rc = RLDICR %1, 2, 61
+    %3:f8rc, %4:g8rc_and_g8rc_nox0 = LFSUX %0, killed %2
+    %5:f4rc = FRSP killed %3, implicit $rm
+    %22:vslrc = SUBREG_TO_REG 1, %5, %subreg.sub_64
+    %7:g8rc = LI8 8
+    %8:vssrc = XFLOADf32 %4, killed %7
+    %23:vslrc = SUBREG_TO_REG 1, %8, %subreg.sub_64
+    %10:vsrc = XXPERMDI %23, %22, 0
+    %11:vrrc = XVCVDPSP killed %10, implicit $rm
+    $v2 = COPY %11
+    BLR8 implicit $lr8, implicit $rm, implicit $v2
+...
+# CHECK-LABEL: remove_frsp
+# CHECK: sldi 4, 4, 2
+# CHECK-NEXT: lfsux 0, 3, 4
+# CHECK-NOT: frsp
+# CHECK-NEXT: lfs 1, 8(3)
+# CHECK-NEXT: xxmrghd	0, 1, 0
+# CHECK-NEXT: xvcvdpsp 34, 0
+# CHECK-NEXT: blr
+
+---
+name: remove_xsrsp
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+
+    %1:g8rc = COPY $x4
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %2:g8rc = RLDICR %1, 2, 61
+    %3:f8rc, %4:g8rc_and_g8rc_nox0 = LFSUX %0, killed %2
+    %5:vssrc = XSRSP killed %3
+    %22:vslrc = SUBREG_TO_REG 1, %5, %subreg.sub_64
+    %7:g8rc = LI8 8
+    %8:vssrc = XFLOADf32 %4, killed %7
+    %23:vslrc = SUBREG_TO_REG 1, %8, %subreg.sub_64
+    %10:vsrc = XXPERMDI %23, %22, 0
+    %11:vrrc = XVCVDPSP killed %10, implicit $rm
+    $v2 = COPY %11
+    BLR8 implicit $lr8, implicit $rm, implicit $v2
+...
+# CHECK-LABEL: remove_xsrsp
+# CHECK: sldi 4, 4, 2
+# CHECK-NEXT: lfsux 0, 3, 4
+# CHECK-NOT: xsrsp
+# CHECK-NEXT: lfs 1, 8(3)
+# CHECK-NEXT: xxmrghd	0, 1, 0
+# CHECK-NEXT: xvcvdpsp 34, 0
+# CHECK-NEXT: blr

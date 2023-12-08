@@ -1,0 +1,250 @@
+# RUN: llc -emit-call-site-info -start-after=livedebugvalues -filetype=obj -o - %s \
+# RUN:   | llvm-dwarfdump -v - | FileCheck %s
+
+# This tests for a crash in DwarfDebug's singular DBG_VALUE range promotion when
+#  encountering an IMPLICIT_DEF in its own lexical scope.
+
+# CHECK: .debug_info contents:
+# CHECK:       DW_TAG_formal_parameter [14]
+# CHECK-NEXT:  DW_AT_const_value [DW_FORM_udata]    (0)
+# CHECK-NEXT:  DW_AT_abstract_origin {{.*}} "name"
+--- |
+  ; ModuleID = 't.ll'
+  source_filename = "t.ll"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--linux-gnu"
+
+  %class.v = type <{ i32, i8, i8, [2 x i8] }>
+  %class.j = type <{ %"class.j<6, a::f>::D", i32, [4 x i8] }>
+  %"class.j<6, a::f>::D" = type { %"class.j<6, a::f>::p" }
+  %"class.j<6, a::f>::p" = type { i64 }
+
+  @bt = global i32 0, align 4
+
+  define void @_ZN1v2bvEv(%class.v* nocapture readonly %this) local_unnamed_addr align 2 !dbg !14 {
+  entry:
+    %bz = alloca %class.j, align 8
+    %att = alloca %class.j, align 8
+    %ap = getelementptr inbounds %class.v, %class.v* %this, i64 0, i32 1
+    %0 = load i8, i8* %ap, align 4
+    %conv = sext i8 %0 to i32
+    switch i32 %conv, label %sw.epilog [
+      i32 1, label %_ZN1jILi6EN1a1fEE1mEj.exit
+      i32 0, label %sw.bb2
+    ]
+
+  _ZN1jILi6EN1a1fEE1mEj.exit:                       ; preds = %entry
+    %1 = bitcast %class.j* %att to i64*
+    %2 = bitcast %class.j* %bz to i64*
+    store i64 1, i64* %2, align 8
+    call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !18, metadata !23), !dbg !24
+    store i64 1, i64* %1, align 8, !dbg !27
+    br label %sw.epilog
+
+  sw.bb2:                                           ; preds = %entry
+    %3 = bitcast %class.j* %att to i64*
+    %4 = bitcast %class.j* %bz to i64*
+    %.pre = load i64, i64* %3, align 8
+    %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i13.phi.trans.insert = getelementptr inbounds %class.j, %class.j* %bz, i64 0, i32 1
+    %.phi.trans.insert = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i13.phi.trans.insert to i64*
+    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14.pre = load i64, i64* %.phi.trans.insert, align 8
+    %.pre25 = load i64, i64* %4, align 8
+    %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert = getelementptr inbounds %class.j, %class.j* %att, i64 0, i32 1
+    %.phi.trans.insert26 = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx1.i.i.i.i.i.i.phi.trans.insert to i64*
+    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i.pre = load i64, i64* %.phi.trans.insert26, align 8
+    br label %sw.epilog
+
+  sw.epilog:                                        ; preds = %sw.bb2, %_ZN1jILi6EN1a1fEE1mEj.exit, %entry
+    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i = phi i64 [ %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i.pre, %sw.bb2 ], [ undef, %entry ], [ undef, %_ZN1jILi6EN1a1fEE1mEj.exit ], !dbg !32
+    %5 = phi i64 [ %.pre25, %sw.bb2 ], [ 0, %entry ], [ 1, %_ZN1jILi6EN1a1fEE1mEj.exit ]
+    %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14 = phi i64 [ %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14.pre, %sw.bb2 ], [ undef, %entry ], [ undef, %_ZN1jILi6EN1a1fEE1mEj.exit ]
+    %6 = phi i64 [ %.pre, %sw.bb2 ], [ 0, %entry ], [ 1, %_ZN1jILi6EN1a1fEE1mEj.exit ]
+    %bw1 = bitcast %class.v* %this to i32*
+    %7 = load i32, i32* %bw1, align 4
+    %bx = getelementptr inbounds %class.v, %class.v* %this, i64 0, i32 2
+    %8 = load i8, i8* %bx, align 1
+    %tobool = icmp ne i8 %8, 0
+    %.fca.0.insert9 = insertvalue [2 x i64] undef, i64 %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i14, 0
+    %.fca.1.insert12 = insertvalue [2 x i64] %.fca.0.insert9, i64 %5, 1
+    %.fca.0.insert = insertvalue [2 x i64] undef, i64 %agg.tmp.sroa.2.0.copyload2.i.i6.i.i.i.i, 0
+    %.fca.1.insert = insertvalue [2 x i64] %.fca.0.insert, i64 %6, 1
+    call void @_Z2byi1LS_bbPi(i32 %7, [2 x i64] %.fca.1.insert12, [2 x i64] %.fca.1.insert, i1 %tobool, i1 false, i32* nonnull @bt)
+    ret void
+  }
+
+  declare void @_Z2byi1LS_bbPi(i32, [2 x i64], [2 x i64], i1, i1, i32*) local_unnamed_addr
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  attributes #0 = { nounwind readnone speculatable }
+  attributes #1 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!12, !13}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 (trunk 305696) (llvm/trunk 305708)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2)
+  !1 = !DIFile(filename: "/<stdin>", directory: "/")
+  !2 = !{}
+  !3 = !{!4, !10}
+  !4 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "r", file: !5, line: 50, size: 8, elements: !6, identifier: "_ZTS1r")
+  !5 = !DIFile(filename: "current.ii", directory: "/")
+  !6 = !{!7}
+  !7 = !DISubprogram(name: "r", scope: !4, file: !5, line: 52, type: !8, isLocal: false, isDefinition: false, scopeLine: 52, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{null}
+  !10 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "q", scope: !11, file: !5, line: 39, size: 64, elements: !2, identifier: "_ZTSN1jILi6EN1a1fEE1qE")
+  !11 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "j<6, a::f>", file: !5, line: 7, size: 128, elements: !2, templateParams: !2, identifier: "_ZTS1jILi6EN1a1fEE")
+  !12 = !{i32 2, !"Debug Info Version", i32 3}
+  !13 = !{i32 1, !"wchar_size", i32 4}
+  !14 = distinct !DISubprogram(name: "bv", linkageName: "_ZN1v2bvEv", scope: !15, file: !5, line: 104, type: !16, isLocal: false, isDefinition: true, scopeLine: 104, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !17, retainedNodes: !2)
+  !15 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "v", file: !5, line: 97, size: 64, elements: !2, identifier: "_ZTS1v")
+  !16 = !DISubroutineType(types: !2)
+  !17 = !DISubprogram(name: "bv", linkageName: "_ZN1v2bvEv", scope: !15, file: !5, line: 98, type: !16, isLocal: false, isDefinition: false, scopeLine: 98, flags: DIFlagPrototyped, isOptimized: true)
+  !18 = !DILocalVariable(name: "name", arg: 2, scope: !19, file: !5, line: 22, type: !21)
+  !19 = distinct !DISubprogram(name: "m", linkageName: "_ZN1jILi6EN1a1fEE1mEj", scope: !11, file: !5, line: 22, type: !16, isLocal: false, isDefinition: true, scopeLine: 22, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !20, retainedNodes: !2)
+  !20 = !DISubprogram(name: "m", linkageName: "_ZN1jILi6EN1a1fEE1mEj", scope: !11, file: !5, line: 22, type: !16, isLocal: false, isDefinition: false, scopeLine: 22, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true)
+  !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "h", file: !5, line: 10, baseType: !22)
+  !22 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !23 = !DIExpression()
+  !24 = !DILocation(line: 22, scope: !19, inlinedAt: !25)
+  !25 = distinct !DILocation(line: 109, scope: !26)
+  !26 = distinct !DILexicalBlock(scope: !14, file: !5, line: 106)
+  !27 = !DILocation(line: 29, scope: !28, inlinedAt: !31)
+  !28 = distinct !DISubprogram(name: "n", linkageName: "_ZN1jILi6EN1a1fEE1p1nEl", scope: !29, file: !5, line: 29, type: !8, isLocal: false, isDefinition: true, scopeLine: 29, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !30, retainedNodes: !2)
+  !29 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "p", scope: !11, file: !5, line: 26, size: 64, elements: !2, identifier: "_ZTSN1jILi6EN1a1fEE1pE")
+  !30 = !DISubprogram(name: "n", linkageName: "_ZN1jILi6EN1a1fEE1p1nEl", scope: !29, file: !5, line: 29, type: !8, isLocal: false, isDefinition: false, scopeLine: 29, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true)
+  !31 = distinct !DILocation(line: 24, scope: !19, inlinedAt: !25)
+  !32 = !DILocation(line: 61, scope: !33, inlinedAt: !38)
+  !33 = distinct !DISubprogram(name: "bc<j<6, a::f> >", linkageName: "_ZN1s2bcI1jILi6EN1a1fEEEEDTcl2badeclsr1aE2aaIPT_EEEES6_", scope: !34, file: !5, line: 60, type: !16, isLocal: false, isDefinition: true, scopeLine: 60, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !36, declaration: !35, retainedNodes: !2)
+  !34 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "s", file: !5, line: 59, size: 8, elements: !2, identifier: "_ZTS1s")
+  !35 = !DISubprogram(name: "bc<j<6, a::f> >", linkageName: "_ZN1s2bcI1jILi6EN1a1fEEEEDTcl2badeclsr1aE2aaIPT_EEEES6_", scope: !34, file: !5, line: 60, type: !16, isLocal: false, isDefinition: false, scopeLine: 60, flags: DIFlagPrototyped, isOptimized: true, templateParams: !36)
+  !36 = !{!37}
+  !37 = !DITemplateTypeParameter(name: "ay", type: !11)
+  !38 = distinct !DILocation(line: 70, scope: !39, inlinedAt: !42)
+  !39 = distinct !DISubprogram(name: "bc", linkageName: "_ZN1JI1s1jILi6EN1a1fEEE2bcEPS4_", scope: !40, file: !5, line: 70, type: !16, isLocal: false, isDefinition: true, scopeLine: 70, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !41, retainedNodes: !2)
+  !40 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "J<s, j<6, a::f> >", file: !5, line: 69, size: 8, elements: !2, templateParams: !2, identifier: "_ZTS1JI1s1jILi6EN1a1fEEE")
+  !41 = !DISubprogram(name: "bc", linkageName: "_ZN1JI1s1jILi6EN1a1fEEE2bcEPS4_", scope: !40, file: !5, line: 70, type: !16, isLocal: false, isDefinition: false, scopeLine: 70, flags: DIFlagPrototyped, isOptimized: true)
+  !42 = distinct !DILocation(line: 85, scope: !43, inlinedAt: !46)
+  !43 = distinct !DISubprogram(name: "u<j<6, a::f> >", linkageName: "_ZN1uC2I1jILi6EN1a1fEEEERT_", scope: !44, file: !5, line: 85, type: !16, isLocal: false, isDefinition: true, scopeLine: 85, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !36, declaration: !45, retainedNodes: !2)
+  !44 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "u", file: !5, line: 82, size: 128, elements: !2, identifier: "_ZTS1u")
+  !45 = !DISubprogram(name: "u<j<6, a::f> >", scope: !44, file: !5, line: 85, type: !16, isLocal: false, isDefinition: false, scopeLine: 85, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true, templateParams: !36)
+  !46 = distinct !DILocation(line: 85, scope: !47, inlinedAt: !48)
+  !47 = distinct !DISubprogram(name: "u<j<6, a::f> >", linkageName: "_ZN1uC1I1jILi6EN1a1fEEEERT_", scope: !44, file: !5, line: 85, type: !16, isLocal: false, isDefinition: true, scopeLine: 85, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !36, declaration: !45, retainedNodes: !2)
+  !48 = distinct !DILocation(line: 92, scope: !49, inlinedAt: !52)
+  !49 = distinct !DISubprogram(name: "L<j<6, a::f> >", linkageName: "_ZN1LC2I1jILi6EN1a1fEEEERT_", scope: !50, file: !5, line: 92, type: !16, isLocal: false, isDefinition: true, scopeLine: 92, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !2, declaration: !51, retainedNodes: !2)
+  !50 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "L", file: !5, line: 88, size: 128, elements: !2, identifier: "_ZTS1L")
+  !51 = !DISubprogram(name: "L<j<6, a::f> >", scope: !50, file: !5, line: 92, type: !16, isLocal: false, isDefinition: false, scopeLine: 92, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true, templateParams: !2)
+  !52 = distinct !DILocation(line: 92, scope: !53, inlinedAt: !54)
+  !53 = distinct !DISubprogram(name: "L<j<6, a::f> >", linkageName: "_ZN1LC1I1jILi6EN1a1fEEEERT_", scope: !50, file: !5, line: 92, type: !16, isLocal: false, isDefinition: true, scopeLine: 92, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !2, declaration: !51, retainedNodes: !2)
+  !54 = distinct !DILocation(line: 114, scope: !14)
+
+...
+---
+name:            _ZN1v2bvEv
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: bz, type: default, offset: -32, size: 16, alignment: 8,
+      callee-saved-register: '', local-offset: -16, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: att, type: default, offset: -48, size: 16, alignment: 8,
+      callee-saved-register: '', local-offset: -32, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      callee-saved-register: '$lr', debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.3.sw.bb2(0x2aaaaaab), %bb.1.entry(0x55555555)
+    liveins: $x0, $lr
+
+    $sp = frame-setup SUBXri $sp, 48, 0
+    frame-setup STRXui killed $lr, $sp, 4 :: (store (s64) into %stack.2)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 48
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    $w8 = LDRSBWui $x0, 4 :: (load (s8) from %ir.ap, align 4)
+    CBZW $w8, %bb.3.sw.bb2
+
+  bb.1.entry:
+    successors: %bb.2._ZN1jILi6EN1a1fEE1mEj.exit(0x40000001), %bb.4(0x3fffffff)
+    liveins: $w8, $x0
+
+    dead $wzr = SUBSWri killed $w8, 1, 0, implicit-def $nzcv
+    Bcc 1, %bb.4, implicit $nzcv
+
+  bb.2._ZN1jILi6EN1a1fEE1mEj.exit:
+    successors: %bb.5.sw.epilog(0x80000000)
+    liveins: $x0
+
+    $w2 = ORRWri $wzr, 0, implicit-def $x2
+    $x3 = IMPLICIT_DEF debug-location !32
+    $x1 = IMPLICIT_DEF
+    STRXui $x2, $sp, 2 :: (store (s64) into %ir.2)
+    DBG_VALUE 0, 0, !18, !23, debug-location !24
+    STRXui $x2, $sp, 0, debug-location !27 :: (store (s64) into %ir.1)
+    $w4 = ORRWri $wzr, 0, implicit-def $x4
+    B %bb.5.sw.epilog
+
+  bb.3.sw.bb2:
+    successors: %bb.5.sw.epilog(0x80000000)
+    liveins: $x0
+
+    $x4, $x3 = LDPXi $sp, 0 :: (dereferenceable load (s64) from %ir.3), (dereferenceable load (s64) from %ir..phi.trans.insert26)
+    $x2, $x1 = LDPXi $sp, 2 :: (dereferenceable load (s64) from %ir..phi.trans.insert), (dereferenceable load (s64) from %ir.4)
+    B %bb.5.sw.epilog
+
+  bb.4:
+    successors: %bb.5.sw.epilog(0x80000000)
+    liveins: $x0
+
+    $x2 = ORRXrs $xzr, $xzr, 0
+    $x4 = ORRXrs $xzr, $xzr, 0
+    $x3 = IMPLICIT_DEF debug-location !32
+    $x1 = IMPLICIT_DEF
+
+  bb.5.sw.epilog:
+    liveins: $x0, $x1, $x2, $x3, $x4
+
+    $w8 = LDRBBui $x0, 5 :: (load (s8) from %ir.bx)
+    $w0 = LDRWui killed $x0, 0 :: (load (s32) from %ir.bw1)
+    $x7 = ADRP target-flags(aarch64-page) @bt
+    $x7 = ADDXri killed $x7, target-flags(aarch64-pageoff, aarch64-nc) @bt, 0
+    dead $wzr = SUBSWri killed $w8, 0, 0, implicit-def $nzcv
+    $w5 = CSINCWr $wzr, $wzr, 0, implicit killed $nzcv
+    $w6 = ORRWrs $wzr, $wzr, 0
+    BL @_Z2byi1LS_bbPi, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $x1, implicit killed $x2, implicit killed $x3, implicit killed $x4, implicit killed $w5, implicit killed $w6, implicit killed $x7, implicit-def $sp
+    $lr = LDRXui $sp, 4 :: (load (s64) from %stack.2)
+    $sp = ADDXri $sp, 48, 0
+    RET undef $lr
+
+...

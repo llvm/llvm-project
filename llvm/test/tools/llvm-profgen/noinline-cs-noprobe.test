@@ -1,0 +1,124 @@
+;; The test fails on Windows. Fix it before removing the following requirement.
+; REQUIRES: x86_64-linux
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t1
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --ignore-stack-samples --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-STRIP-CTX
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-AGG-UNWINDER
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.aggperfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-AGG
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t1 --profile-summary-cold-count=0
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/noinline-cs-noprobe.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t2 --profile-summary-cold-count=0 -use-md5
+; RUN: llvm-profdata show --sample -show-sec-info-only %t2 | FileCheck %s --check-prefix=CHECK-MD5
+; RUN: llvm-profdata show --sample -detailed-summary --function=dummy %t1 > %t.summary
+; RUN: llvm-profdata show --sample -detailed-summary --function=dummy %t2 > %t2.summary
+; RUN: diff -b %t.summary %t2.summary
+
+
+; CHECK-AGG:[main:1 @ foo]:108:0
+; CHECK-AGG: 2: 6
+; CHECK-AGG: 3: 6 bar:6
+; CHECK-AGG:[main:1 @ foo:3 @ bar]:100:6
+; CHECK-AGG: 0: 6
+; CHECK-AGG: 1: 6
+; CHECK-AGG: 2: 4
+; CHECK-AGG: 4: 2
+; CHECK-AGG: 5: 6
+
+; CHECK-AGG-UNWINDER:      [main:1 @ foo]
+; CHECK-AGG-UNWINDER-NEXT:   3
+; CHECK-AGG-UNWINDER-NEXT:   5ff-62f:6
+; CHECK-AGG-UNWINDER-NEXT:   634-637:6
+; CHECK-AGG-UNWINDER-NEXT:   645-645:6
+; CHECK-AGG-UNWINDER-NEXT:   3
+; CHECK-AGG-UNWINDER-NEXT:   62f->5b0:6
+; CHECK-AGG-UNWINDER-NEXT:   637->645:6
+; CHECK-AGG-UNWINDER-NEXT:   645->5ff:6
+; CHECK-AGG-UNWINDER-NEXT: [main:1 @ foo:3 @ bar]
+; CHECK-AGG-UNWINDER-NEXT:   4
+; CHECK-AGG-UNWINDER-NEXT:   5b0-5c8:2
+; CHECK-AGG-UNWINDER-NEXT:   5b0-5d7:4
+; CHECK-AGG-UNWINDER-NEXT:   5dc-5e9:2
+; CHECK-AGG-UNWINDER-NEXT:   5e5-5e9:4
+; CHECK-AGG-UNWINDER-NEXT:   3
+; CHECK-AGG-UNWINDER-NEXT:   5c8->5dc:4
+; CHECK-AGG-UNWINDER-NEXT:   5d7->5e5:4
+; CHECK-AGG-UNWINDER-NEXT:   5e9->634:6
+
+
+; CHECK:[main:1 @ foo]:54:0
+; CHECK: 2: 3
+; CHECK: 3: 3 bar:3
+; CHECK:[main:1 @ foo:3 @ bar]:50:3
+; CHECK: 0: 3
+; CHECK: 1: 3
+; CHECK: 2: 2
+; CHECK: 4: 1
+; CHECK: 5: 3
+
+; CHECK-STRIP-CTX: foo:198:0
+; CHECK-STRIP-CTX:  0: 0
+; CHECK-STRIP-CTX:  1: 0
+; CHECK-STRIP-CTX:  2: 3
+; CHECK-STRIP-CTX:  3: 3 bar:3
+; CHECK-STRIP-CTX:  4: 0
+; CHECK-STRIP-CTX:  5: 0
+; CHECK-STRIP-CTX: bar:142:3
+; CHECK-STRIP-CTX:  0: 3
+; CHECK-STRIP-CTX:  1: 3
+; CHECK-STRIP-CTX:  2: 2
+; CHECK-STRIP-CTX:  4: 1
+; CHECK-STRIP-CTX:  5: 3
+
+; CHECK-UNWINDER:      [main:1 @ foo]
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5ff-62f:3
+; CHECK-UNWINDER-NEXT:   634-637:3
+; CHECK-UNWINDER-NEXT:   645-645:3
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   62f->5b0:3
+; CHECK-UNWINDER-NEXT:   637->645:3
+; CHECK-UNWINDER-NEXT:   645->5ff:3
+; CHECK-UNWINDER-NEXT: [main:1 @ foo:3 @ bar]
+; CHECK-UNWINDER-NEXT:   4
+; CHECK-UNWINDER-NEXT:   5b0-5c8:1
+; CHECK-UNWINDER-NEXT:   5b0-5d7:2
+; CHECK-UNWINDER-NEXT:   5dc-5e9:1
+; CHECK-UNWINDER-NEXT:   5e5-5e9:2
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5c8->5dc:2
+; CHECK-UNWINDER-NEXT:   5d7->5e5:2
+; CHECK-UNWINDER-NEXT:   5e9->634:3
+
+; CHECK-MD5: NameTableSection {{.*}} {fixlenmd5}
+
+
+
+
+
+; original code:
+; clang -O0 -g test.c -o a.out
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

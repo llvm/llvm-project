@@ -1,0 +1,48 @@
+# RUN: yaml2obj %s -o %t
+
+## Check we are able to strip all symbols and relocatable information at the same time.
+
+# RUN: llvm-objcopy -S %t %t2
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
+
+# RUN: llvm-objcopy --strip-all-gnu %t %t2
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
+
+# CHECK-NOT: .symtab
+# CHECK-NOT: .rela.text
+
+## Check we are able to strip the particular symbol if we
+## strip the corresponding relocation section at the same time.
+
+# RUN: llvm-objcopy --strip-symbol=bar -R .rela.text %t %t2
+# RUN: llvm-readelf -s -S %t2 | FileCheck %s --check-prefix=STRIPSYM
+
+# STRIPSYM-NOT: bar
+# STRIPSYM-NOT: .rela.text
+
+# RUN: not llvm-objcopy --strip-symbol=bar %t %t2 2>&1 | FileCheck %s --check-prefix=ERR -DINPUT=%t
+# ERR: error: '[[INPUT]]': not stripping symbol 'bar' because it is named in a relocation
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ] 
+    Content:         00000000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Link:            .symtab
+    Info:            .text
+    Relocations:
+      - Offset:          0x0000000000000000
+        Symbol:          bar
+        Type:            R_X86_64_32S
+Symbols:
+  - Name:     bar
+    Section:  .text
+    Binding:  STB_GLOBAL

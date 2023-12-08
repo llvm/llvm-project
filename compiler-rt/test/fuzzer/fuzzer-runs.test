@@ -1,0 +1,9 @@
+RUN: mkdir -p %t
+RUN: %cpp_compiler %S/NthRunCrashTest.cpp -o %t-NthRunCrashTest
+RUN: echo abcd > %t/NthRunCrashTest.in
+RUN: %run %t-NthRunCrashTest %t/NthRunCrashTest.in
+RUN: %run %t-NthRunCrashTest %t/NthRunCrashTest.in -runs=10
+RUN: not %run %t-NthRunCrashTest %t/NthRunCrashTest.in -runs=10000 2>&1 | FileCheck %s
+RUN: rm %t/NthRunCrashTest.in
+CHECK: BINGO
+

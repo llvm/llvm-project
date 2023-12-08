@@ -1,0 +1,467 @@
+//===- llvm/unittest/ADT/TinyPtrVectorTest.cpp ----------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// TinyPtrVector unit tests.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/type_traits.h"
+#include "gtest/gtest.h"
+#include <algorithm>
+#include <random>
+#include <vector>
+
+using namespace llvm;
+
+namespace {
+template <typename T> struct RemovePointer : std::remove_pointer<T> {};
+
+template <typename PointerTy, unsigned IntBits, typename IntType,
+          typename PtrTraits, typename Info>
+struct RemovePointer<
+    PointerIntPair<PointerTy, IntBits, IntType, PtrTraits, Info>> {
+  typedef typename RemovePointer<PointerTy>::type type;
+};
+
+template <typename VectorT>
+class TinyPtrVectorTest : public testing::Test {
+protected:
+  typedef typename VectorT::value_type PtrT;
+  typedef typename RemovePointer<PtrT>::type ValueT;
+  using PtrTraits = PointerLikeTypeTraits<PtrT>;
+
+  VectorT V;
+  VectorT V2;
+
+  ValueT TestValues[1024];
+  std::vector<PtrT> TestPtrs;
+
+  TinyPtrVectorTest() {
+    for (size_t i = 0, e = std::size(TestValues); i != e; ++i)
+      TestPtrs.push_back(PtrT(&TestValues[i]));
+
+    std::shuffle(TestPtrs.begin(), TestPtrs.end(), std::mt19937{});
+  }
+
+  PtrT makePtr(ValueT *V) { return PtrT(V); }
+
+  ArrayRef<PtrT> testArray(size_t N) { return ArrayRef(&TestPtrs[0], N); }
+
+  void appendValues(VectorT &V, ArrayRef<PtrT> Values) {
+    for (size_t i = 0, e = Values.size(); i != e; ++i)
+      V.push_back(Values[i]);
+  }
+
+  void setVectors(ArrayRef<PtrT> Values1, ArrayRef<PtrT> Values2) {
+    V.clear();
+    appendValues(V, Values1);
+    V2.clear();
+    appendValues(V2, Values2);
+  }
+
+  void expectValues(const VectorT &V, ArrayRef<PtrT> Values) {
+    EXPECT_EQ(Values.empty(), V.empty());
+    EXPECT_EQ(Values.size(), V.size());
+    for (size_t i = 0, e = Values.size(); i != e; ++i) {
+      EXPECT_EQ(Values[i], V[i]);
+      EXPECT_EQ(Values[i], *std::next(V.begin(), i));
+    }
+    EXPECT_EQ(V.end(), std::next(V.begin(), Values.size()));
+  }
+};
+
+typedef ::testing::Types<TinyPtrVector<int *>, TinyPtrVector<double *>,
+                         TinyPtrVector<PointerIntPair<int *, 1>>>
+    TinyPtrVectorTestTypes;
+TYPED_TEST_SUITE(TinyPtrVectorTest, TinyPtrVectorTestTypes, );
+
+TYPED_TEST(TinyPtrVectorTest, EmptyTest) {
+  this->expectValues(this->V, this->testArray(0));
+}
+
+TYPED_TEST(TinyPtrVectorTest, PushPopBack) {
+  this->V.push_back(this->TestPtrs[0]);
+  this->expectValues(this->V, this->testArray(1));
+  this->V.push_back(this->TestPtrs[1]);
+  this->expectValues(this->V, this->testArray(2));
+  this->V.push_back(this->TestPtrs[2]);
+  this->expectValues(this->V, this->testArray(3));
+  this->V.push_back(this->TestPtrs[3]);
+  this->expectValues(this->V, this->testArray(4));
+  this->V.push_back(this->TestPtrs[4]);
+  this->expectValues(this->V, this->testArray(5));
+
+  // Pop and clobber a few values to keep things interesting.
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(4));
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(3));
+  this->TestPtrs[3] = this->makePtr(&this->TestValues[42]);
+  this->TestPtrs[4] = this->makePtr(&this->TestValues[43]);
+  this->V.push_back(this->TestPtrs[3]);
+  this->expectValues(this->V, this->testArray(4));
+  this->V.push_back(this->TestPtrs[4]);
+  this->expectValues(this->V, this->testArray(5));
+
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(4));
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(3));
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(2));
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(1));
+  this->V.pop_back();
+  this->expectValues(this->V, this->testArray(0));
+
+  this->appendValues(this->V, this->testArray(42));
+  this->expectValues(this->V, this->testArray(42));
+}
+
+TYPED_TEST(TinyPtrVectorTest, ClearTest) {
+  this->expectValues(this->V, this->testArray(0));
+  this->V.clear();
+  this->expectValues(this->V, this->testArray(0));
+
+  this->appendValues(this->V, this->testArray(1));
+  this->expectValues(this->V, this->testArray(1));
+  this->V.clear();
+  this->expectValues(this->V, this->testArray(0));
+
+  this->appendValues(this->V, this->testArray(42));
+  this->expectValues(this->V, this->testArray(42));
+  this->V.clear();
+  this->expectValues(this->V, this->testArray(0));
+}
+
+TYPED_TEST(TinyPtrVectorTest, CopyAndMoveCtorTest) {
+  this->appendValues(this->V, this->testArray(42));
+  TypeParam Copy(this->V);
+  this->expectValues(Copy, this->testArray(42));
+
+  // This is a separate copy, and so it shouldn't destroy the original.
+  Copy.clear();
+  this->expectValues(Copy, this->testArray(0));
+  this->expectValues(this->V, this->testArray(42));
+
+  TypeParam Copy2(this->V2);
+  this->appendValues(Copy2, this->testArray(42));
+  this->expectValues(Copy2, this->testArray(42));
+  this->expectValues(this->V2, this->testArray(0));
+
+  TypeParam Move(std::move(Copy2));
+  this->expectValues(Move, this->testArray(42));
+  this->expectValues(Copy2, this->testArray(0));
+
+  TypeParam MultipleElements(this->testArray(2));
+  TypeParam SingleElement(this->testArray(1));
+  MultipleElements = std::move(SingleElement);
+  this->expectValues(MultipleElements, this->testArray(1));
+  this->expectValues(SingleElement, this->testArray(0));
+}
+
+TYPED_TEST(TinyPtrVectorTest, CopyAndMoveTest) {
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(0));
+  this->expectValues(this->V2, this->testArray(0));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(0));
+
+  this->setVectors(this->testArray(1), this->testArray(0));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(0));
+  this->expectValues(this->V2, this->testArray(0));
+  this->setVectors(this->testArray(1), this->testArray(0));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(0));
+
+  this->setVectors(this->testArray(2), this->testArray(0));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(0));
+  this->expectValues(this->V2, this->testArray(0));
+  this->setVectors(this->testArray(2), this->testArray(0));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(0));
+
+  this->setVectors(this->testArray(42), this->testArray(0));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(0));
+  this->expectValues(this->V2, this->testArray(0));
+  this->setVectors(this->testArray(42), this->testArray(0));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(0));
+
+  this->setVectors(this->testArray(0), this->testArray(1));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(1));
+  this->expectValues(this->V2, this->testArray(1));
+  this->setVectors(this->testArray(0), this->testArray(1));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(1));
+
+  this->setVectors(this->testArray(0), this->testArray(2));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(2));
+  this->expectValues(this->V2, this->testArray(2));
+  this->setVectors(this->testArray(0), this->testArray(2));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(2));
+
+  this->setVectors(this->testArray(0), this->testArray(42));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(42));
+  this->expectValues(this->V2, this->testArray(42));
+  this->setVectors(this->testArray(0), this->testArray(42));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(42));
+
+  this->setVectors(this->testArray(1), this->testArray(1));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(1));
+  this->expectValues(this->V2, this->testArray(1));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(1));
+
+  this->setVectors(this->testArray(1), this->testArray(2));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(2));
+  this->expectValues(this->V2, this->testArray(2));
+  this->setVectors(this->testArray(1), this->testArray(2));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(2));
+
+  this->setVectors(this->testArray(1), this->testArray(42));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(42));
+  this->expectValues(this->V2, this->testArray(42));
+  this->setVectors(this->testArray(1), this->testArray(42));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(42));
+
+  this->setVectors(this->testArray(2), this->testArray(1));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(1));
+  this->expectValues(this->V2, this->testArray(1));
+  this->setVectors(this->testArray(2), this->testArray(1));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(1));
+
+  this->setVectors(this->testArray(2), this->testArray(2));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(2));
+  this->expectValues(this->V2, this->testArray(2));
+  this->setVectors(this->testArray(2), this->testArray(2));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(2));
+
+  this->setVectors(this->testArray(2), this->testArray(42));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(42));
+  this->expectValues(this->V2, this->testArray(42));
+  this->setVectors(this->testArray(2), this->testArray(42));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(42));
+
+  this->setVectors(this->testArray(42), this->testArray(1));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(1));
+  this->expectValues(this->V2, this->testArray(1));
+  this->setVectors(this->testArray(42), this->testArray(1));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(1));
+
+  this->setVectors(this->testArray(42), this->testArray(2));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(2));
+  this->expectValues(this->V2, this->testArray(2));
+  this->setVectors(this->testArray(42), this->testArray(2));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(2));
+
+  this->setVectors(this->testArray(42), this->testArray(42));
+  this->V = this->V2;
+  this->expectValues(this->V, this->testArray(42));
+  this->expectValues(this->V2, this->testArray(42));
+  this->setVectors(this->testArray(42), this->testArray(42));
+  this->V = std::move(this->V2);
+  this->expectValues(this->V, this->testArray(42));
+}
+
+TYPED_TEST(TinyPtrVectorTest, EraseTest) {
+  this->appendValues(this->V, this->testArray(1));
+  this->expectValues(this->V, this->testArray(1));
+  this->V.erase(this->V.begin());
+  this->expectValues(this->V, this->testArray(0));
+
+  this->appendValues(this->V, this->testArray(42));
+  this->expectValues(this->V, this->testArray(42));
+  this->V.erase(this->V.begin());
+  this->TestPtrs.erase(this->TestPtrs.begin());
+  this->expectValues(this->V, this->testArray(41));
+  this->V.erase(std::next(this->V.begin(), 1));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 1));
+  this->expectValues(this->V, this->testArray(40));
+  this->V.erase(std::next(this->V.begin(), 2));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 2));
+  this->expectValues(this->V, this->testArray(39));
+  this->V.erase(std::next(this->V.begin(), 5));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 5));
+  this->expectValues(this->V, this->testArray(38));
+  this->V.erase(std::next(this->V.begin(), 13));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 13));
+  this->expectValues(this->V, this->testArray(37));
+
+  typename TypeParam::iterator I = this->V.begin();
+  do {
+    I = this->V.erase(I);
+  } while (I != this->V.end());
+  this->expectValues(this->V, this->testArray(0));
+}
+
+TYPED_TEST(TinyPtrVectorTest, EraseRangeTest) {
+  this->appendValues(this->V, this->testArray(1));
+  this->expectValues(this->V, this->testArray(1));
+  this->V.erase(this->V.begin(), this->V.begin());
+  this->expectValues(this->V, this->testArray(1));
+  this->V.erase(this->V.end(), this->V.end());
+  this->expectValues(this->V, this->testArray(1));
+  this->V.erase(this->V.begin(), this->V.end());
+  this->expectValues(this->V, this->testArray(0));
+
+  this->appendValues(this->V, this->testArray(42));
+  this->expectValues(this->V, this->testArray(42));
+  this->V.erase(this->V.begin(), std::next(this->V.begin(), 1));
+  this->TestPtrs.erase(this->TestPtrs.begin(),
+                       std::next(this->TestPtrs.begin(), 1));
+  this->expectValues(this->V, this->testArray(41));
+  this->V.erase(std::next(this->V.begin(), 1), std::next(this->V.begin(), 2));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 1),
+                       std::next(this->TestPtrs.begin(), 2));
+  this->expectValues(this->V, this->testArray(40));
+  this->V.erase(std::next(this->V.begin(), 2), std::next(this->V.begin(), 4));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 2),
+                       std::next(this->TestPtrs.begin(), 4));
+  this->expectValues(this->V, this->testArray(38));
+  this->V.erase(std::next(this->V.begin(), 5), std::next(this->V.begin(), 10));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 5),
+                       std::next(this->TestPtrs.begin(), 10));
+  this->expectValues(this->V, this->testArray(33));
+  this->V.erase(std::next(this->V.begin(), 13), std::next(this->V.begin(), 26));
+  this->TestPtrs.erase(std::next(this->TestPtrs.begin(), 13),
+                       std::next(this->TestPtrs.begin(), 26));
+  this->expectValues(this->V, this->testArray(20));
+  this->V.erase(std::next(this->V.begin(), 7), this->V.end());
+  this->expectValues(this->V, this->testArray(7));
+  this->V.erase(this->V.begin(), this->V.end());
+  this->expectValues(this->V, this->testArray(0));
+}
+
+TYPED_TEST(TinyPtrVectorTest, Insert) {
+  this->V.insert(this->V.end(), this->TestPtrs[0]);
+  this->expectValues(this->V, this->testArray(1));
+  this->V.clear();
+  this->appendValues(this->V, this->testArray(4));
+  this->expectValues(this->V, this->testArray(4));
+  this->V.insert(this->V.end(), this->TestPtrs[4]);
+  this->expectValues(this->V, this->testArray(5));
+  this->V.insert(this->V.begin(), this->TestPtrs[42]);
+  this->TestPtrs.insert(this->TestPtrs.begin(), this->TestPtrs[42]);
+  this->expectValues(this->V, this->testArray(6));
+  this->V.insert(std::next(this->V.begin(), 3), this->TestPtrs[43]);
+  this->TestPtrs.insert(std::next(this->TestPtrs.begin(), 3),
+                        this->TestPtrs[43]);
+  this->expectValues(this->V, this->testArray(7));
+}
+
+TYPED_TEST(TinyPtrVectorTest, InsertRange) {
+  this->V.insert(this->V.end(), this->TestPtrs.begin(), this->TestPtrs.begin());
+  this->expectValues(this->V, this->testArray(0));
+  this->V.insert(this->V.begin(), this->TestPtrs.begin(),
+                 this->TestPtrs.begin());
+  this->expectValues(this->V, this->testArray(0));
+  this->V.insert(this->V.end(), this->TestPtrs.end(), this->TestPtrs.end());
+  this->expectValues(this->V, this->testArray(0));
+  this->V.insert(this->V.end(), this->TestPtrs.begin(),
+                 std::next(this->TestPtrs.begin()));
+  this->expectValues(this->V, this->testArray(1));
+  this->V.clear();
+  this->V.insert(this->V.end(), this->TestPtrs.begin(),
+                 std::next(this->TestPtrs.begin(), 2));
+  this->expectValues(this->V, this->testArray(2));
+  this->V.clear();
+  this->V.insert(this->V.end(), this->TestPtrs.begin(),
+                 std::next(this->TestPtrs.begin(), 42));
+  this->expectValues(this->V, this->testArray(42));
+  this->V.clear();
+  this->V.insert(this->V.end(),
+                 std::next(this->TestPtrs.begin(), 5),
+                 std::next(this->TestPtrs.begin(), 13));
+  this->V.insert(this->V.begin(),
+                 std::next(this->TestPtrs.begin(), 0),
+                 std::next(this->TestPtrs.begin(), 3));
+  this->V.insert(std::next(this->V.begin(), 2),
+                 std::next(this->TestPtrs.begin(), 2),
+                 std::next(this->TestPtrs.begin(), 4));
+  this->V.erase(std::next(this->V.begin(), 4));
+  this->V.insert(std::next(this->V.begin(), 4),
+                 std::next(this->TestPtrs.begin(), 4),
+                 std::next(this->TestPtrs.begin(), 5));
+  this->expectValues(this->V, this->testArray(13));
+}
+
+}
+
+TEST(TinyPtrVectorTest, SingleEltCtorTest) {
+  int v = 55;
+  TinyPtrVector<int *> V(&v);
+
+  EXPECT_TRUE(V.size() == 1);
+  EXPECT_FALSE(V.empty());
+  EXPECT_TRUE(V.front() == &v);
+}
+
+TEST(TinyPtrVectorTest, ArrayRefCtorTest) {
+  int data_array[128];
+  std::vector<int *> data;
+
+  for (unsigned i = 0, e = 128; i != e; ++i) {
+    data_array[i] = 324 - int(i);
+    data.push_back(&data_array[i]);
+  }
+
+  TinyPtrVector<int *> V(data);
+  EXPECT_TRUE(V.size() == 128);
+  EXPECT_FALSE(V.empty());
+  for (unsigned i = 0, e = 128; i != e; ++i) {
+    EXPECT_TRUE(V[i] == data[i]);
+  }
+}
+
+TEST(TinyPtrVectorTest, MutableArrayRefTest) {
+  int data_array[128];
+  std::vector<int *> data;
+
+  for (unsigned i = 0, e = 128; i != e; ++i) {
+    data_array[i] = 324 - int(i);
+    data.push_back(&data_array[i]);
+  }
+
+  TinyPtrVector<int *> V(data);
+  EXPECT_TRUE(V.size() == 128);
+  EXPECT_FALSE(V.empty());
+
+  MutableArrayRef<int *> mut_array = V;
+  for (unsigned i = 0, e = 128; i != e; ++i) {
+    EXPECT_TRUE(mut_array[i] == data[i]);
+    mut_array[i] = 324 + mut_array[i];
+    EXPECT_TRUE(mut_array[i] == (324 + data[i]));
+  }
+}

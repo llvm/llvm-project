@@ -1,0 +1,44 @@
+// RUN: %clang_cc1 %s -cl-std=clc++1.0 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+
+// CHECK: %struct.X = type { i32 }
+
+// CHECK: @ci ={{.*}} addrspace(2) constant i32 0
+// CHECK: @gi ={{.*}} addrspace(1) global i32 0
+__constant int ci = 0;
+__global int gi = 0;
+
+struct X {
+  int x;
+
+  // Local variables are handled in local_addrspace_init.clcpp
+  X() /*__generic or __private*/ : x(0) {}
+#if defined(GENERIC)
+  X() __private : x(0) {}
+#endif
+  X() __global : x(0) {}
+  constexpr X() __constant : x(0) {}
+  constexpr X(int x) __constant : x(x) {}
+};
+
+// CHECK: @cx1 ={{.*}} addrspace(2) constant %struct.X zeroinitializer
+// CHECK: @cx2 ={{.*}} addrspace(2) constant %struct.X { i32 1 }
+// CHECK: @gx ={{.*}} addrspace(1) global %struct.X zeroinitializer
+__constant X cx1;
+__constant X cx2(1);
+__global X gx;
+
+// CHECK: @_ZZ1kE3cx1 = internal addrspace(2) constant %struct.X zeroinitializer
+// CHECK: @_ZZ1kE3cx2 = internal addrspace(2) constant %struct.X { i32 1 }
+
+kernel void k() {
+  // Check that the constructor for px calls the __private constructor.
+  // CHECK: %px = alloca %struct.X
+  // CHECK-NEXT: call spir_func void @_ZN1XC1Ev(ptr {{.*}}%px)
+  __private X px;
+
+  __constant X cx1;
+  __constant X cx2(1);
+  // CHECK-NEXT: ret void
+}

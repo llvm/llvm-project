@@ -1,0 +1,63 @@
+; REQUIRES: x86
+;; Show that whether an object is a bitcode file or regular ELF object does not
+;; make any difference to which file is selected from an archive.
+
+; RUN: rm -rf %t.dir
+; RUN: split-file %s %t.dir
+; RUN: cd %t.dir
+
+; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux ref.s -o ref.o
+; RUN: llvm-as a.ll -o a.bc
+; RUN: llvm-as b.ll -o b.bc
+; RUN: llc -filetype=obj a.ll -o a.o
+; RUN: llc -filetype=obj b.ll -o b.o
+
+; RUN: llvm-ar rc a.bc.b.bc.a a.bc b.bc
+; RUN: llvm-ar rc a.bc.b.o.a a.bc b.o
+; RUN: llvm-ar rc a.o.b.bc.a a.o b.bc
+; RUN: llvm-ar rc a.o.b.o.a a.o b.o
+; RUN: llvm-ar rc other.bc.a a.bc
+; RUN: llvm-ar rc other.o.a a.o
+
+; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.bc.a other.bc.a | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.bc.a other.o.a  | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.o.a  other.bc.a | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.o.a  other.o.a  | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.bc.a  other.bc.a | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.bc.a  other.o.a  | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.o.a   other.bc.a | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+;; Not an LTO test case, but here for completeness.
+; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.o.a   other.o.a  | \
+; RUN:   FileCheck %s --implicit-check-not={{.}}
+
+; CHECK:      ref.o
+; CHECK-NEXT: a.{{.*}}.b.{{.*}}.a(b.{{.*}})
+; CHECK-NEXT: a.{{.*}}.b.{{.*}}.a(a.{{.*}})
+
+;--- a.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux"
+define void @bar() {
+  ret void
+}
+
+;--- b.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux"
+define void @foo() {
+  call void @bar()
+  ret void
+}
+declare void @bar()
+
+;--- ref.s
+.global _start
+_start:
+  call foo

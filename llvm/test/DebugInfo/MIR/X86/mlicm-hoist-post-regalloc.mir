@@ -1,0 +1,96 @@
+--- |
+  ; REQUIRES: asserts
+  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -o - %s -experimental-debug-variable-locations=false | FileCheck %s
+  ; RUN: llc -start-before=phi-node-elimination -stop-after=machinelicm -debug-only=machinelicm -early-live-intervals -o - %s -experimental-debug-variable-locations=false | FileCheck %s
+  ; Ensure we execute machinelicm post register allocation.
+  ; Line numbers should not be retained when loop invariant instructions are hoisted.
+  ;
+  ; CHECK-LABEL:  bb.0.entry:
+  ; CHECK:        MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load (s64) from got)
+  ; CHECK-LABEL:  bb.1.while.body:
+  ;
+  target triple = "x86_64-unknown-linux-gnu"
+
+  @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
+
+  define void @Process(i32* nocapture readonly %p) !dbg !10 {
+  entry:
+    call void @llvm.dbg.value(metadata i32* %p, metadata !17, metadata !DIExpression()), !dbg !18
+    br label %while.body, !dbg !19
+
+  while.body:                                       ; preds = %while.body, %entry
+    %p.addr.0 = phi i32* [ %p, %entry ], [ %incdec.ptr, %while.body ]
+    call void @llvm.dbg.value(metadata i32* %p.addr.0, metadata !17, metadata !DIExpression()), !dbg !18
+    %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.0, i64 1, !dbg !20
+    call void @llvm.dbg.value(metadata i32* %incdec.ptr, metadata !17, metadata !DIExpression()), !dbg !18
+    %0 = load i32, i32* %p.addr.0, align 4, !dbg !21
+    store i32 %0, i32* @x, align 4, !dbg !22
+    br label %while.body, !dbg !23, !llvm.loop !25
+  }
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!7, !8}
+  !llvm.ident = !{!9}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 10.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+  !3 = !DIFile(filename: "t.ll", directory: "/tmp/")
+  !4 = !{}
+  !5 = !{!0}
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{!"clang version 10.0.0 "}
+  !10 = distinct !DISubprogram(name: "Process", scope: !3, file: !3, line: 2, type: !11, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !16)
+  !11 = !DISubroutineType(types: !12)
+  !12 = !{null, !13}
+  !13 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !14, size: 64)
+  !14 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !15)
+  !15 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !16 = !{!17}
+  !17 = !DILocalVariable(name: "p", arg: 1, scope: !10, file: !3, line: 2, type: !13)
+  !18 = !DILocation(line: 2, column: 34, scope: !10)
+  !19 = !DILocation(line: 4, column: 3, scope: !10)
+  !20 = !DILocation(line: 5, column: 11, scope: !10)
+  !21 = !DILocation(line: 5, column: 9, scope: !10)
+  !22 = !DILocation(line: 5, column: 7, scope: !10)
+  !23 = !DILocation(line: 4, column: 3, scope: !24)
+  !24 = !DILexicalBlockFile(scope: !10, file: !3, discriminator: 1)
+  !25 = distinct !{!25, !19, !20}
+
+...
+---
+name:            Process
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr64 }
+  - { id: 2, class: gr64 }
+  - { id: 3, class: gr32 }
+  - { id: 4, class: gr64 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.while.body(0x80000000)
+    liveins: $rdi
+
+    DBG_VALUE $rdi, _, !17, !DIExpression(), debug-location !18
+    %2 = COPY $rdi
+    DBG_VALUE %2, _, !17, !DIExpression(), debug-location !18
+
+  bb.1.while.body:
+    successors: %bb.1.while.body(0x80000000)
+
+    %0 = PHI %2, %bb.0.entry, %1, %bb.1.while.body
+    DBG_VALUE %0, _, !17, !DIExpression(), debug-location !18
+    %1 = ADD64ri32 %0, 4, implicit-def dead $eflags, debug-location !20
+    DBG_VALUE %1, _, !17, !DIExpression(), debug-location !18
+    %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0)
+    %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load (s64) from got)
+    MOV32mr killed %4, 1, _, 0, _, killed %3, debug-location !22 :: (store (s32) into @x)
+    JMP_1 %bb.1.while.body, debug-location !23
+
+...

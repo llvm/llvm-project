@@ -1,0 +1,49 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,VI %s
+# RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
+
+---
+name: m0_sendmsg
+body: |
+  ; GCN-LABEL: name: m0_sendmsg
+  ; GCN:  $m0 = S_MOV_B32 -1
+  ; VI-NEXT: S_NOP 0
+  ; GFX9-NEXT: S_NOP 0
+  ; GCN-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
+
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...
+---
+
+name: m0_sendmsghalt
+body: |
+  ; GCN-LABEL: name: m0_sendmsghalt
+  ; GCN:  $m0 = S_MOV_B32 -1
+  ; VI-NEXT: S_NOP 0
+  ; GFX9-NEXT: S_NOP 0
+  ; GCN-NEXT: S_SENDMSGHALT 3, implicit $exec, implicit $m0
+
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    S_SENDMSGHALT 3, implicit $exec, implicit $m0
+    S_ENDPGM 0
+...
+---
+
+name: m0_ttracedata
+body: |
+  ; GCN-LABEL: name: m0_ttracedata
+  ; GCN:  $m0 = S_MOV_B32 -1
+  ; VI-NEXT: S_NOP 0
+  ; GFX9-NEXT: S_NOP 0
+  ; GCN-NEXT: S_TTRACEDATA implicit $m0
+
+  bb.0:
+    $m0 = S_MOV_B32 -1
+    S_TTRACEDATA implicit $m0
+    S_ENDPGM 0
+...

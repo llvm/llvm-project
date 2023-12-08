@@ -1,0 +1,58 @@
+// RUN: %clang_cc1 %s -pedantic -ast-dump -verify | FileCheck %s
+
+__constant int g1; // expected-error {{variable in constant address space must be initialized}}
+__constant int g2 = 0;
+
+struct X {
+  int x;
+//CHECK:  CXXConstructorDecl
+//CHECK-NOT:  used
+//CHECK-SAME: X 'void (){{.*}} __generic'
+  X() /*__generic*/ : x(0) {}
+//CHECK: CXXConstructorDecl {{.*}} used X 'void (){{.*}} __private'
+  X() __private : x(0) {}
+//CHECK: CXXConstructorDecl {{.*}} used X 'void (){{.*}} __global'
+  X() __global : x(0) {}
+  constexpr X() __constant : x(0) {}
+  constexpr X(int x) __constant : x(x) {}
+};
+
+__global X gx;
+
+//expected-note@+2{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const __generic Y' for 1st argument}}
+//expected-note@+1{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to '__generic Y' for 1st argument}}
+struct Y {
+  int y;
+  Y() __generic = default; // expected-note{{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+};
+
+kernel void k() {
+  __constant X cx1;
+  __constant X cx2(1);
+  __local X lx;
+  __private X x;
+
+  __private X tx = X();
+
+  __private Y py;
+  __constant Y cy1; // expected-error{{variable in constant address space must be initialized}}
+  __constant Y cy2(1); // expected-error{{no matching constructor for initialization of '__constant Y'}}
+}
+
+struct Z {
+  int z;
+  // The address space is deduced to be __generic if omitted
+  Z() = default; // expected-note{{previous definition is here}}
+  Z() __generic = default; // expected-error {{constructor cannot be redeclared}}
+
+  Z() __private = default;
+  Z() __local = default;
+  Z() __global = default;
+  // Can't default constexpr constructors
+  constexpr Z() __constant : z(0) {}
+};
+
+struct W {
+  int w;
+  constexpr W() __constant = default; // expected-error {{defaulted definition of default constructor is not constexpr}}
+};

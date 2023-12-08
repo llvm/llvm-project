@@ -1,0 +1,73 @@
+# RUN: llc -mtriple=aarch64-none-linux-android -run-pass aarch64-ldst-opt -o - %s | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-android"
+
+  define void @f(i64* nocapture %x) "target-features"="+mte" {
+  entry:
+    store i64 1, i64* %x, align 8
+    %0 = tail call i8* @llvm.aarch64.irg(i8* null, i64 0)
+    %1 = tail call i8* @llvm.aarch64.irg.sp(i64 0)
+    %arrayidx1 = getelementptr inbounds i64, i64* %x, i64 1
+    store i64 1, i64* %arrayidx1, align 8
+    ret void
+  }
+
+  declare i8* @llvm.aarch64.irg(i8*, i64) nounwind
+  declare i8* @llvm.aarch64.irg.sp(i64) nounwind
+...
+---
+name:            f
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    $x8 = ORRXrs $xzr, $xzr, 0
+    $w9 = MOVZWi 1, 0, implicit-def $x9
+
+    ; Check that stores are merged across IRG.
+    ; CHECK: STPXi renamable $x9, killed renamable $x9, renamable $x0, 0
+
+    STRXui renamable $x9, renamable $x0, 0 :: (store (s64) into %ir.x)
+    dead renamable $x10 = IRG renamable $x8, $xzr
+    dead renamable $x8 = IRG $sp, $xzr
+    STRXui killed renamable $x9, killed renamable $x0, 1 :: (store (s64) into %ir.arrayidx1)
+    RET undef $lr
+
+...

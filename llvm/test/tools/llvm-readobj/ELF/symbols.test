@@ -1,0 +1,295 @@
+## This is a general test for --symbols option and its aliases.
+## There are also other symbols* tests that check specific things.
+
+## For testing and behavior documenting purposes we are using ET_REL and ET_DYN inputs.
+## Relocatable ELF objects are very different by nature from executables and dynamic libraries.
+## They might never have dynamic symbols normally, for example, though we still want
+## to document the --dyn-symbols behavior.
+## There is no need to check ET_EXEC inputs because for dumpers there is no difference
+## between them and ET_DYN inputs in the context of this test.
+
+## Case 1: Test how llvm-readobj and llvm-readelf dumps symbols.
+## a) Check relocatable objects.
+# RUN: yaml2obj %s -DBITS=64 -DTYPE=ET_REL -o %t64
+# RUN: llvm-readobj --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
+# RUN: llvm-readelf -s --extra-sym-info %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64X
+# RUN: yaml2obj %s -DBITS=32 -DTYPE=ET_REL -o %t32
+# RUN: llvm-readobj --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
+# RUN: llvm-readelf -s -X %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32X
+## b) Check dynamic objects.
+# RUN: yaml2obj %s -DBITS=64 -DTYPE=ET_DYN -o %t64.so
+# RUN: llvm-readobj --symbols %t64.so > %t64llvm.txt
+# RUN: FileCheck --input-file=%t64llvm.txt %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
+## --extra-sym-info is a no-op for llvm-readobj.
+# RUN: llvm-readobj --symbols --extra-sym-info %t64.so | diff %t64llvm.txt -
+# RUN: yaml2obj %s -DBITS=32 -DTYPE=ET_DYN -o %t32.so
+# RUN: llvm-readobj --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
+
+#      SYMBOLS-LLVM:Symbols [
+# SYMBOLS-LLVM-NEXT:  Symbol {
+# SYMBOLS-LLVM-NEXT:    Name:  (0)
+# SYMBOLS-LLVM-NEXT:    Value: 0x0
+# SYMBOLS-LLVM-NEXT:    Size: 0
+# SYMBOLS-LLVM-NEXT:    Binding: Local (0x0)
+# SYMBOLS-LLVM-NEXT:    Type: None (0x0)
+# SYMBOLS-LLVM-NEXT:    Other: 0
+# SYMBOLS-LLVM-NEXT:    Section: Undefined (0x0)
+# SYMBOLS-LLVM-NEXT:  }
+# SYMBOLS-LLVM-NEXT:  Symbol {
+# SYMBOLS-LLVM-NEXT:    Name: foo (5)
+# SYMBOLS-LLVM-NEXT:    Value: 0x1
+# SYMBOLS-LLVM-NEXT:    Size: 0
+# SYMBOLS-LLVM-NEXT:    Binding: Local (0x0)
+# SYMBOLS-LLVM-NEXT:    Type: None (0x0)
+# SYMBOLS-LLVM-NEXT:    Other: 0
+# SYMBOLS-LLVM-NEXT:    Section: .text (0x1)
+# SYMBOLS-LLVM-NEXT:  }
+# SYMBOLS-LLVM-NEXT:  Symbol {
+# SYMBOLS-LLVM-NEXT:    Name: bar (1)
+# SYMBOLS-LLVM-NEXT:    Value: 0x2
+# SYMBOLS-LLVM-NEXT:    Size: 0
+# SYMBOLS-LLVM-NEXT:    Binding: Local (0x0)
+# SYMBOLS-LLVM-NEXT:    Type: None (0x0)
+# SYMBOLS-LLVM-NEXT:    Other: 0
+# SYMBOLS-LLVM-NEXT:    Section: Undefined (0x0)
+# SYMBOLS-LLVM-NEXT:  }
+# SYMBOLS-LLVM-NEXT:  Symbol {
+# SYMBOLS-LLVM-NEXT:    Name: data (9)
+# SYMBOLS-LLVM-NEXT:    Value: 0x3
+# SYMBOLS-LLVM-NEXT:    Size: 0
+# SYMBOLS-LLVM-NEXT:    Binding: Global (0x1)
+# SYMBOLS-LLVM-NEXT:    Type: None (0x0)
+# SYMBOLS-LLVM-NEXT:    Other: 0
+# SYMBOLS-LLVM-NEXT:    Section: .data (0x2)
+# SYMBOLS-LLVM-NEXT:  }
+# SYMBOLS-LLVM-NEXT:]
+
+#      SYMBOLS-GNU64:Symbol table '.symtab' contains 4 entries:
+# SYMBOLS-GNU64-NEXT:   Num:    Value          Size Type    Bind   Vis       Ndx Name
+# SYMBOLS-GNU64-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# SYMBOLS-GNU64-NEXT:     1: 0000000000000001     0 NOTYPE  LOCAL  DEFAULT     1 foo
+# SYMBOLS-GNU64-NEXT:     2: 0000000000000002     0 NOTYPE  LOCAL  DEFAULT   UND bar
+# SYMBOLS-GNU64-NEXT:     3: 0000000000000003     0 NOTYPE  GLOBAL DEFAULT     2 data
+
+#     SYMBOLS-GNU64X:Symbol table '.symtab' contains 4 entries:
+#SYMBOLS-GNU64X-NEXT:   Num:    Value          Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+#SYMBOLS-GNU64X-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND          
+#SYMBOLS-GNU64X-NEXT:     1: 0000000000000001     0 NOTYPE  LOCAL  DEFAULT     1 (.text)  foo
+#SYMBOLS-GNU64X-NEXT:     2: 0000000000000002     0 NOTYPE  LOCAL  DEFAULT   UND          bar
+#SYMBOLS-GNU64X-NEXT:     3: 0000000000000003     0 NOTYPE  GLOBAL DEFAULT     2 (.data)  data
+
+#      SYMBOLS-GNU32:Symbol table '.symtab' contains 4 entries:
+# SYMBOLS-GNU32-NEXT:   Num:    Value  Size Type    Bind   Vis       Ndx Name
+# SYMBOLS-GNU32-NEXT:     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# SYMBOLS-GNU32-NEXT:     1: 00000001     0 NOTYPE  LOCAL  DEFAULT     1 foo
+# SYMBOLS-GNU32-NEXT:     2: 00000002     0 NOTYPE  LOCAL  DEFAULT   UND bar
+# SYMBOLS-GNU32-NEXT:     3: 00000003     0 NOTYPE  GLOBAL DEFAULT     2 data
+
+#     SYMBOLS-GNU32X:Symbol table '.symtab' contains 4 entries:
+#SYMBOLS-GNU32X-NEXT:   Num:    Value  Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+#SYMBOLS-GNU32X-NEXT:     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND          
+#SYMBOLS-GNU32X-NEXT:     1: 00000001     0 NOTYPE  LOCAL  DEFAULT     1 (.text)  foo
+#SYMBOLS-GNU32X-NEXT:     2: 00000002     0 NOTYPE  LOCAL  DEFAULT   UND          bar
+#SYMBOLS-GNU32X-NEXT:     3: 00000003     0 NOTYPE  GLOBAL DEFAULT     2 (.data)  data
+
+## Case 2: Check flag aliases produce identical output
+# RUN: llvm-readobj --symbols %t64 > %t.symbols
+# RUN: llvm-readobj --syms %t64 > %t.syms
+# RUN: cmp %t.symbols %t.syms
+# RUN: llvm-readobj -s %t64 | diff %t.symbols -
+# RUN: llvm-readelf -s --elf-output-style=LLVM %t64 | diff %t.symbols -
+
+# RUN: llvm-readelf --symbols %t64 > %t.symbols.gnu
+# RUN: llvm-readelf --syms %t64 > %t.syms.gnu
+# RUN: cmp %t.symbols.gnu %t.syms.gnu
+# RUN: llvm-readelf -s %t64 | diff %t.symbols.gnu -
+
+## Case 3: Test that both regular and dynamic symbols are dumped when `--symbols` and `--dyn-symbols`
+##         are specified together. Note that the order is different for different styles.
+# RUN: llvm-readobj --symbols --dyn-symbols %t64 | FileCheck %s --check-prefix=BOTH-LLVM
+# RUN: llvm-readelf --symbols --dyn-symbols %t64 | FileCheck %s --check-prefix=BOTH-GNU
+
+# BOTH-LLVM: Symbols [
+# BOTH-LLVM: DynamicSymbols [
+
+# BOTH-GNU: Symbol table '.dynsym'
+# BOTH-GNU: Symbol table '.symtab'
+
+## Case 4: --symbols implies --dyn-symbols for llvm-readelf.
+# RUN: llvm-readobj --symbols %t64 | FileCheck %s --implicit-check-not="DynamicSymbols ["
+# RUN: llvm-readelf --symbols %t64 | FileCheck %s --check-prefix=BOTH-GNU
+
+## Case 5: Test that `--dyn-symbols` does not trigger `--symbols` implicitly.
+# RUN: llvm-readobj --dyn-symbols %t64 | FileCheck %s --implicit-check-not="{{^}}Symbols ["
+# RUN: llvm-readelf --dyn-symbols %t64 | FileCheck %s --implicit-check-not="Symbol table '.symtab'"
+
+## Case 6: Test that the Num index starts from zero at every new symbol table.
+# RUN: llvm-readelf --symbols %t64 %t64 | FileCheck %s --check-prefix=NUM-INDEX
+
+# NUM-INDEX:      Symbol table '.symtab' contains 4 entries:
+# NUM-INDEX-NEXT:    Num: {{.*}}
+# NUM-INDEX-NEXT:      0: {{.*}}
+# NUM-INDEX:      Symbol table '.symtab' contains 4 entries:
+# NUM-INDEX-NEXT:    Num: {{.*}}
+# NUM-INDEX-NEXT:      0: {{.*}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  [[TYPE]]
+Sections:
+  - Name:  .text
+    Type: SHT_PROGBITS
+  - Name:  .data
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    foo
+    Value:   0x1
+    Section: .text
+  - Name:    bar
+    Value:   0x2
+  - Name:    data
+    Value:   0x3
+    Binding: STB_GLOBAL
+    Section: .data
+DynamicSymbols:
+  - Name:  zed
+
+## Check the behavior when we are unable to print symbols due to an error.
+
+## Case 1: check we are able to dump symbols even when can't get the string table for the
+## SHT_SYMTAB section because of invalid sh_link value.
+# RUN: yaml2obj --docnum=2 -DLINK=0xff %s -o %t64.err1
+# RUN: llvm-readobj --symbols %t64.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.err1 --check-prefix=STRTAB-LINK-ERR-LLVM
+# RUN: llvm-readelf --symbols %t64.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.err1 --check-prefix=STRTAB-LINK-ERR-GNU
+
+# STRTAB-LINK-ERR-LLVM:      Symbols [
+# STRTAB-LINK-ERR-LLVM-NEXT: warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
+# STRTAB-LINK-ERR-LLVM-NEXT:   Symbol {
+# STRTAB-LINK-ERR-LLVM-NEXT:     Name: <?> (0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Value: 0x0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Size: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Type: None (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Other: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Section: Undefined (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:   }
+# STRTAB-LINK-ERR-LLVM-NEXT:   Symbol {
+# STRTAB-LINK-ERR-LLVM-NEXT:     Name: <?> (1)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Value: 0x1
+# STRTAB-LINK-ERR-LLVM-NEXT:     Size: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Binding: Global (0x1)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Type: None (0x0)
+# STRTAB-LINK-ERR-LLVM-NEXT:     Other: 0
+# STRTAB-LINK-ERR-LLVM-NEXT:     Section: .symtab (0x1)
+# STRTAB-LINK-ERR-LLVM-NEXT:   }
+# STRTAB-LINK-ERR-LLVM-NEXT: ]
+
+# STRTAB-LINK-ERR-GNU:      warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
+# STRTAB-LINK-ERR-GNU:      Symbol table '.symtab' contains 2 entries:
+# STRTAB-LINK-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# STRTAB-LINK-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>
+# STRTAB-LINK-ERR-GNU-NEXT:      1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT     1 <?>
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  EShStrNdx: [[SHSTRTAB=2]]
+Sections:
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Link:    [[LINK=.strtab]]
+    EntSize: [[ENTSIZE=0x18]]
+## Define the .shstrtab section to reveal its position.
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+Symbols:
+  - Name: foo
+    Value: 0x1
+    Binding: STB_GLOBAL
+    Index: 1
+
+## Case 2: check we report a warning when we are unable to read symbols
+##         from the the SHT_SYMTAB section.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=0xFF %s -o %t64.err2
+# RUN: llvm-readobj --symbols %t64.err2 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err2 --check-prefix=SYMTAB-ENTSIZE-ERR-LLVM
+# RUN: llvm-readelf --symbols %t64.err2 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err2 --check-prefix=SYMTAB-ENTSIZE-ERR-GNU
+
+# SYMTAB-ENTSIZE-ERR-LLVM:      Symbols [
+# SYMTAB-ENTSIZE-ERR-LLVM-NEXT:   warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has invalid sh_entsize: expected 24, but got 255
+# SYMTAB-ENTSIZE-ERR-LLVM:      ]
+
+# SYMTAB-ENTSIZE-ERR-GNU:     warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has invalid sh_entsize: expected 24, but got 255
+# SYMTAB-ENTSIZE-ERR-GNU-NOT: {{.}}
+
+## Case 3: check we report a warning, but continue dumping, when we are unable to read the name of the SHT_SYMTAB section.
+##         In this case we set the e_shstrndx field to an invalid index so that the .shstrtab section can't be located.
+# RUN: yaml2obj --docnum=2 -DSHSTRTAB=0xff %s -o %t64.err3
+# RUN: llvm-readobj --symbols %t64.err3 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --symbols %t64.err3 2>&1 | \
+# RUN:  FileCheck %s -DFILE=%t64.err3 --check-prefix=SYMTAB-SHSTRTAB-ERR-GNU --implicit-check-not=warning:
+
+# SYMTAB-SHSTRTAB-ERR-LLVM:      Symbols [
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   Symbol {
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Name:  (0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Value: 0x0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Size: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Type: None (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Other: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Section: Undefined (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   }
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   Symbol {
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Name: foo (1)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Value: 0x1
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Size: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Binding: Global (0x1)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Type: None (0x0)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Other: 0
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: warning: '[[FILE]]': section header string table index 255 does not exist
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:     Section: <?> (0x1)
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT:   }
+# SYMTAB-SHSTRTAB-ERR-LLVM-NEXT: ]
+
+# SYMTAB-SHSTRTAB-ERR-GNU:      warning: '[[FILE]]': unable to get the name of SHT_SYMTAB section with index 1: section header string table index 255 does not exist
+# SYMTAB-SHSTRTAB-ERR-GNU:      Symbol table '<?>' contains 2 entries:
+# SYMTAB-SHSTRTAB-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT     1 foo
+
+## Test a symbol defined relative to a section with an invalid name.
+# RUN: yaml2obj --docnum=3 %s -o %t64.err4
+# RUN: llvm-readelf -s %t64.err4 2>&1 | FileCheck /dev/null --implicit-check-not=warning:
+# RUN: llvm-readelf -s -X %t64.err4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.err4 --check-prefix=INVALID-SECNAME-GNU --implicit-check-not=warning:
+
+# INVALID-SECNAME-GNU:      Num:    Value  Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+# INVALID-SECNAME-GNU-NEXT:   0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND          
+# INVALID-SECNAME-GNU-NEXT: warning: '[[FILE]]': a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# INVALID-SECNAME-GNU-NEXT:   1: 00000000     0 NOTYPE  LOCAL  DEFAULT     1          foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:   .invalid
+    Type:   SHT_PROGBITS
+    ShName: 0xffff
+Symbols:
+  - Name:    foo
+    Section: .invalid

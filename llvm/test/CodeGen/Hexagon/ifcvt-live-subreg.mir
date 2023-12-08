@@ -1,0 +1,50 @@
+# RUN: llc -march=hexagon -run-pass if-converter -o - %s | FileCheck %s
+# Check that an implicit use is generated for a predicated instruction
+# when a subregister of the redefined register is live.
+
+# CHECK-LABEL: name: foo
+
+# Verify the predicated block:
+# CHECK-LABEL: bb.0:
+# CHECK: liveins: $r0, $r1, $p0, $d8
+# CHECK: $d8 = A2_combinew killed $r0, killed $r1
+# CHECK: $d8 = L2_ploadrdf_io $p0, $r29, 0, implicit killed $d8
+# CHECK: J2_jumprf killed $p0, $r31, implicit-def $pc, implicit-def $pc, implicit $d8
+
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+
+
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+  - { reg: '$p0' }
+  - { reg: '$d8' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r1, $p0, $d8
+    $d8 = A2_combinew killed $r0, killed $r1
+    J2_jumpf killed $p0, %bb.2, implicit-def $pc
+
+  bb.1:
+    liveins: $r17
+    $r0 = A2_tfrsi 0
+    $r1 = A2_tfrsi 0
+    A2_nop ; non-predicable
+    J2_jumpr killed $r31, implicit-def dead $pc, implicit killed $d0
+
+  bb.2:
+    ; Predicate this block.
+    $d8 = L2_loadrd_io $r29, 0
+    J2_jumpr killed $r31, implicit-def dead $pc, implicit killed $d8
+
+...
+

@@ -1,0 +1,444 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
+
+# Test instruction sequences where PTEST is redundant and thus gets removed.
+---
+name:            whilele_b8_s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; Here we check the expected sequence with subsequent tests
+    ; just asserting there is no PTEST instruction.
+    ;
+    ; CHECK-LABEL: name: whilele_b8_s32
+    ; CHECK: %3:ppr = WHILELE_PWW_B %0, %1, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_B 31
+    %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b8_s64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilele_b8_s64
+    ; CHECK-NOT: PTEST
+    %1:gpr64 = COPY $x1
+    %0:gpr64 = COPY $x0
+    %2:ppr = PTRUE_B 31
+    %3:ppr = WHILELE_PXX_B %0, %1, implicit-def dead $nzcv
+    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b16_s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: whilele_b16_s32
+    ; CHECK-NOT: PTEST
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_H 31
+    %4:ppr = WHILELE_PWW_H %0, %1, implicit-def dead $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b16_s64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilele_b16_s64
+    ; CHECK-NOT: PTEST
+    %1:gpr64 = COPY $x1
+    %0:gpr64 = COPY $x0
+    %2:ppr = PTRUE_H 31
+    %4:ppr = WHILELE_PXX_H %0, %1, implicit-def dead $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b32_s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: whilele_b32_s32
+    ; CHECK-NOT: PTEST
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_S 31
+    %4:ppr = WHILELE_PWW_S %0, %1, implicit-def dead $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b32_s64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilele_b32_s64
+    ; CHECK-NOT: PTEST
+    %1:gpr64 = COPY $x1
+    %0:gpr64 = COPY $x0
+    %2:ppr = PTRUE_S 31
+    %4:ppr = WHILELE_PXX_S %0, %1, implicit-def dead $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b64_s32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: whilele_b64_s32
+    ; CHECK-NOT: PTEST
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_D 31
+    %4:ppr = WHILELE_PWW_D %0, %1, implicit-def dead $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b64_s64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: whilele_b64_s64
+    ; CHECK-NOT: PTEST
+    %1:gpr64 = COPY $x1
+    %0:gpr64 = COPY $x0
+    %2:ppr = PTRUE_D 31
+    %4:ppr = WHILELE_PXX_D %0, %1, implicit-def dead $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b8_s32_keep_ptest_not_all_active
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; PTEST is not redundant when it's Pg operand is not an all active predicate
+    ; of element size matching the WHILELE, which is the implicitly predicate
+    ; used by WHILE when calculating the condition codes.
+    ;
+    ; CHECK-LABEL: name: whilele_b8_s32_keep_ptest_not_all_active
+    ; CHECK: %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    ; CHECK-NEXT: PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_B 7
+    %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b8_s32_keep_ptest_of_halfs
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; PTEST is not redundant when it's Pg operand is not an all active predicate
+    ; of element size matching the WHILELE, which is the implicitly predicate
+    ; used by WHILE when calculating the condition codes.
+    ;
+    ; CHECK-LABEL: name: whilele_b8_s32_keep_ptest_of_halfs
+    ; CHECK: %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    ; CHECK-NEXT: PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_H 31
+    %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b8_s32_keep_ptest_of_words
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; PTEST is not redundant when it's Pg operand is not an all active predicate
+    ; of element size matching the WHILELE, which is the implicitly predicate
+    ; used by WHILE when calculating the condition codes.
+    ;
+    ; CHECK-LABEL: name: whilele_b8_s32_keep_ptest_of_words
+    ; CHECK: %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    ; CHECK-NEXT: PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_S 31
+    %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            whilele_b8_s32_keep_ptest_of_doublewords
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; PTEST is not redundant when it's Pg operand is not an all active predicate
+    ; of element size matching the WHILELE, which is the implicitly predicate
+    ; used by WHILE when calculating the condition codes.
+    ;
+    ; CHECK-LABEL: name: whilele_b8_s32_keep_ptest_of_doublewords
+    ; CHECK: %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    ; CHECK-NEXT: PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:ppr = PTRUE_D 31
+    %3:ppr = WHILELE_PWW_B %0, %1, implicit-def dead $nzcv
+    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...

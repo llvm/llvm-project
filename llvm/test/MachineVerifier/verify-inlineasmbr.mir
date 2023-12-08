@@ -1,0 +1,178 @@
+# RUN: not --crash llc -run-pass=none -verify-machineinstrs %s 2>&1 \
+# RUN:  | FileCheck %s
+# REQUIRES: powerpc-registered-target
+
+# Test for a case we observed after the initial implementation of D129997
+# landed, in which case we observed a crash while building the ppc64le Linux
+# kernel. In that case, we had one block with two exits, both to the same
+# successor. Removing one of the exits corrupted the successor/predecessor
+# lists.
+
+# CHECK: *** Bad machine code: INLINEASM_BR indirect target missing from successor list ***
+# CHECK-NEXT: - function:    ceph_con_v2_try_read
+# CHECK-NEXT: - basic block: %bb.3 if.else.i.i
+# CHECK-NEXT: - instruction: INLINEASM_BR &"" [sideeffect] [attdialect], $0:[imm], %bb.5
+# CHECK-NEXT: - operand 3:   %bb.5
+
+# CHECK: *** Bad machine code: INLINEASM_BR indirect target predecessor list missing parent ***
+# CHECK-NEXT: - function:    ceph_con_v2_try_read
+# CHECK-NEXT: - basic block: %bb.3 if.else.i.i
+# CHECK-NEXT: - instruction: INLINEASM_BR &"" [sideeffect] [attdialect], $0:[imm], %bb.5
+# CHECK-NEXT: - operand 3:   %bb.5
+
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+  target triple = "powerpc64le-unknown-linux-gnu"
+
+  ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
+
+  define void @ceph_con_v2_try_read(i32 %__trans_tmp_3.sroa.0.0.copyload, i1 %tobool.not.i.i) {
+  entry:
+    %skip.i.i = alloca i32, i32 0, align 4
+    %cond = icmp eq i32 %__trans_tmp_3.sroa.0.0.copyload, 0
+    br label %for.cond
+
+  for.cond:                                         ; preds = %for.cond, %process_message_header.exit.i, %if.end.i, %entry
+    br i1 %cond, label %sw.bb, label %for.cond
+
+  sw.bb:                                            ; preds = %for.cond
+    %call.i.i2 = call i32 null(ptr %skip.i.i)
+    br i1 %tobool.not.i.i, label %if.else.i.i, label %process_message_header.exit.i
+
+  if.else.i.i:                                      ; preds = %sw.bb
+    callbr void asm sideeffect "", "!i"()
+            to label %if.end.i [label %if.end.i]
+
+  process_message_header.exit.i:                    ; preds = %sw.bb
+    call void @llvm.lifetime.end.p0(i64 0, ptr %skip.i.i)
+    br label %for.cond
+
+  if.end.i:                                         ; preds = %if.else.i.i, %if.else.i.i
+    call void @llvm.lifetime.end.p0(i64 0, ptr %skip.i.i)
+    br label %for.cond
+  }
+
+  attributes #0 = { argmemonly nocallback nofree nosync nounwind willreturn }
+
+...
+---
+name:            ceph_con_v2_try_read
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: crbitrc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+  - { id: 3, class: crbitrc, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: g8rc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: g8rc, preferred-register: '' }
+  - { id: 9, class: g8rc, preferred-register: '' }
+  - { id: 10, class: g8rc, preferred-register: '' }
+liveins:
+  - { reg: '$x3', virtual-reg: '%1' }
+  - { reg: '$x4', virtual-reg: '%2' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: skip.i.i, type: default, offset: 0, size: 1, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x3, $x4
+
+    %2:g8rc = COPY $x4
+    %1:g8rc = COPY $x3
+    %10:g8rc = ANDI8_rec %2, 1, implicit-def $cr0
+    %3:crbitrc = COPY $cr0gt
+    %4:gprc = COPY %1.sub_32
+    %5:crrc = CMPWI killed %4, 0
+    %0:crbitrc = COPY %5.sub_eq
+
+  bb.1.for.cond:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+
+    BCn %0, %bb.1
+    B %bb.2
+
+  bb.2.sw.bb:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+
+    ADJCALLSTACKDOWN 32, 0, implicit-def dead $r1, implicit $r1
+    %6:g8rc = COPY $x2
+    STD %6, 24, $x1 :: (store (s64) into stack + 24)
+    %7:g8rc = ADDI8 %stack.0.skip.i.i, 0
+    %8:g8rc = LI8 0
+    $x3 = COPY %7
+    $x12 = COPY %8
+    MTCTR8 %8, implicit-def $ctr8
+    BCTRL8_LDinto_toc 24, $x1, csr_ppc64_altivec, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x3, implicit $x12, implicit $x2, implicit-def $r1, implicit-def $x3
+    ADJCALLSTACKUP 32, 0, implicit-def dead $r1, implicit $r1
+    %9:g8rc = COPY $x3
+    BCn %3, %bb.4
+    B %bb.3
+
+  ; Oops, should have %bb.5 in the successor list!
+  bb.3.if.else.i.i:
+    successors: %bb.1(0x80000000)
+
+    INLINEASM_BR &"", 1 /* sideeffect attdialect */, 13 /* imm */, %bb.5
+    LIFETIME_END %stack.0.skip.i.i
+    B %bb.1
+
+  bb.4.process_message_header.exit.i:
+    successors: %bb.1(0x80000000)
+
+    LIFETIME_END %stack.0.skip.i.i
+    B %bb.1
+
+  ; Oops, should have %bb.3 in the predecessor list!
+  bb.5.if.end.i (machine-block-address-taken, inlineasm-br-indirect-target):
+    successors: %bb.1(0x80000000)
+
+    LIFETIME_END %stack.0.skip.i.i
+    B %bb.1
+
+...

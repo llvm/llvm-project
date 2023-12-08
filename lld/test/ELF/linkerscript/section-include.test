@@ -1,0 +1,33 @@
+# REQUIRES: x86
+
+# RUN: echo '.section .text,"ax"; .global _start; nop' > %t.s
+# RUN: echo '.section .data,"aw"; .quad 0' >> %t.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t.o
+
+## Empty include file.
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: echo "" > %t.dir/inc.script
+# RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
+# RUN: llvm-objdump --section-headers %t.elf | FileCheck %s --check-prefix=CHECK1
+# CHECK1:      .data         00000008 0000000000002000 DATA
+# CHECK1-NEXT: .data3        00000008 0000000000002008 DATA
+
+## Non-empty include file.
+# RUN: echo ".data2 : { QUAD(0) } > RAM" > %t.dir/inc.script
+# RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
+# RUN: llvm-objdump --section-headers %t.elf | FileCheck %s --check-prefix=CHECK2
+# CHECK2:      .data         00000008 0000000000002000 DATA
+# CHECK2-NEXT: .data2        00000008 0000000000002008 DATA
+# CHECK2-NEXT: .data3        00000008 0000000000002010 DATA
+
+MEMORY {
+  ROM (rwx): ORIGIN = 0x1000, LENGTH = 0x100
+  RAM (rwx): ORIGIN = 0x2000, LENGTH = 0x100
+}
+
+SECTIONS {
+  .text : { *(.text*) } > ROM
+  .data : { *(.data*) } > RAM
+  INCLUDE "inc.script"
+  .data3 : { QUAD(0) } > RAM
+}

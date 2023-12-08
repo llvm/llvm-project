@@ -1,0 +1,285 @@
+# RUN: llc -march=amdgcn -run-pass peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+...
+# GCN-LABEL: name: no_fold_imm_madak_mac_clamp_f32
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
+# GCN-NEXT: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+
+name:            no_fold_imm_madak_mac_clamp_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_64_xexec }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_64 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: sgpr_64 }
+  - { id: 14, class: sgpr_128 }
+  - { id: 15, class: sreg_32_xm0 }
+  - { id: 16, class: sreg_64 }
+  - { id: 17, class: sgpr_128 }
+  - { id: 18, class: sgpr_128 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vreg_64 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vreg_64 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vreg_64 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
+    %27 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %28 = REG_SEQUENCE %3, 1, %27, 2
+    %11 = S_MOV_B32 61440
+    %12 = S_MOV_B32 0
+    %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
+    %14 = REG_SEQUENCE killed %5, 17, %13, 18
+    %15 = S_MOV_B32 2
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
+    %17 = REG_SEQUENCE killed %6, 17, %13, 18
+    %18 = REG_SEQUENCE killed %4, 17, %13, 18
+    %20 = COPY %29
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %22 = COPY %29
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %23 = V_MOV_B32_e32 1090519040, implicit $exec
+    %24 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+    %26 = COPY %29
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN-LABEL: name: no_fold_imm_madak_mac_omod_f32
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $mode, implicit $exec
+
+name:            no_fold_imm_madak_mac_omod_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_64_xexec }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_64 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: sgpr_64 }
+  - { id: 14, class: sgpr_128 }
+  - { id: 15, class: sreg_32_xm0 }
+  - { id: 16, class: sreg_64 }
+  - { id: 17, class: sgpr_128 }
+  - { id: 18, class: sgpr_128 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vreg_64 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vreg_64 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vreg_64 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
+    %27 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %28 = REG_SEQUENCE %3, 1, %27, 2
+    %11 = S_MOV_B32 61440
+    %12 = S_MOV_B32 0
+    %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
+    %14 = REG_SEQUENCE killed %5, 17, %13, 18
+    %15 = S_MOV_B32 2
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
+    %17 = REG_SEQUENCE killed %6, 17, %13, 18
+    %18 = REG_SEQUENCE killed %4, 17, %13, 18
+    %20 = COPY %29
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %22 = COPY %29
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %23 = V_MOV_B32_e32 1090519040, implicit $exec
+    %24 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $mode, implicit $exec
+    %26 = COPY %29
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN: name: no_fold_imm_madak_mad_clamp_f32
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+
+name:            no_fold_imm_madak_mad_clamp_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_64_xexec }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_64 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: sgpr_64 }
+  - { id: 14, class: sgpr_128 }
+  - { id: 15, class: sreg_32_xm0 }
+  - { id: 16, class: sreg_64 }
+  - { id: 17, class: sgpr_128 }
+  - { id: 18, class: sgpr_128 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vreg_64 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vreg_64 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vreg_64 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
+    %27 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %28 = REG_SEQUENCE %3, 1, %27, 2
+    %11 = S_MOV_B32 61440
+    %12 = S_MOV_B32 0
+    %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
+    %14 = REG_SEQUENCE killed %5, 17, %13, 18
+    %15 = S_MOV_B32 2
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
+    %17 = REG_SEQUENCE killed %6, 17, %13, 18
+    %18 = REG_SEQUENCE killed %4, 17, %13, 18
+    %20 = COPY %29
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %22 = COPY %29
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %23 = V_MOV_B32_e32 1090519040, implicit $exec
+    %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+    %26 = COPY %29
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN: name: no_fold_imm_madak_mad_omod_f32
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
+
+name:            no_fold_imm_madak_mad_omod_f32
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_64_xexec }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: sreg_32_xm0 }
+  - { id: 10, class: sreg_64 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sreg_32_xm0 }
+  - { id: 13, class: sgpr_64 }
+  - { id: 14, class: sgpr_128 }
+  - { id: 15, class: sreg_32_xm0 }
+  - { id: 16, class: sreg_64 }
+  - { id: 17, class: sgpr_128 }
+  - { id: 18, class: sgpr_128 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: vgpr_32 }
+  - { id: 22, class: vreg_64 }
+  - { id: 23, class: vgpr_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vgpr_32 }
+  - { id: 26, class: vreg_64 }
+  - { id: 27, class: vgpr_32 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vreg_64 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
+    %27 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %28 = REG_SEQUENCE %3, 1, %27, 2
+    %11 = S_MOV_B32 61440
+    %12 = S_MOV_B32 0
+    %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
+    %14 = REG_SEQUENCE killed %5, 17, %13, 18
+    %15 = S_MOV_B32 2
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
+    %17 = REG_SEQUENCE killed %6, 17, %13, 18
+    %18 = REG_SEQUENCE killed %4, 17, %13, 18
+    %20 = COPY %29
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %22 = COPY %29
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %23 = V_MOV_B32_e32 1090519040, implicit $exec
+    %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
+    %26 = COPY %29
+    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...

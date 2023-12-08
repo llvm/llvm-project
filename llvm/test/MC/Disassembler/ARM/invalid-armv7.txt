@@ -1,0 +1,541 @@
+# RUN: not llvm-mc -disassemble %s -mcpu cortex-a15 -triple armv7 2>&1 | FileCheck %s
+
+# This file is checking ARMv7 encodings which are globally invalid, usually due
+# to the constraints of the instructions not being met. For example invalid
+# combinations of registers.
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for bfi
+#------------------------------------------------------------------------------
+
+# Opcode=60 Name=BFI Format=ARM_FORMAT_DPFRM(4)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 1: 1: 1| 1: 1: 0: 0| 1: 1: 1: 1| 1: 1: 1: 1| 0: 0: 0: 0| 0: 0: 0: 1| 0: 1: 1: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# if d == 15 then UNPREDICTABLE;
+[0x16 0xf0 0xcf 0xe7]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x16 0xf0 0xcf 0xe7]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for cdp2
+#------------------------------------------------------------------------------
+
+[0xe0 0x6a 0x0c 0xfe]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xe0 0x6a 0x0c 0xfe]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for cps*
+#------------------------------------------------------------------------------
+
+# invalid imod value (0b01)
+[0xc0 0x67 0x4 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xc0 0x67 0x4 0xf1]
+
+# invalid (imod, M, iflags) combination
+[0x93 0x00 0x02 0xf1]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x93 0x00 0x02 0xf1]
+
+# CPS: various encodings that are ambiguous with other instructions
+[0x9f 0xff 0x4e 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x9f 0xff 0x4e 0xf1]
+
+[0x80 0x80 0x2c 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x80 0x80 0x2c 0xf1]
+
+[0xce 0x3f 0x28 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xce 0x3f 0x28 0xf1]
+
+[0x80 0x00 0x20 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x80 0x00 0x20 0xf1]
+
+[0xa0 0x00 0x00 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xa0 0x00 0x00 0xf1]
+
+
+#------------------------------------------------------------------------------
+# Undefined encoding space for hint instructions
+#------------------------------------------------------------------------------
+
+[0xfe 0xf0 0x20 0xf3]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xfe 0xf0 0x20 0xf3]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for ldc
+#------------------------------------------------------------------------------
+
+# Opcode=0 Name=PHI Format=(42)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 0: 1| 1: 1: 0: 0| 0: 0: 0: 1| 1: 1: 1: 1| 1: 0: 1: 1| 0: 1: 0: 0| 1: 0: 0: 1| 0: 0: 1: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# The bytes have 0b0000 for P,U,D,W; from A8.6.51, it is undefined.
+
+[0x92 0xb4 0x1f 0xdc]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x92 0xb4 0x1f 0xdc]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for ldm
+#------------------------------------------------------------------------------
+
+# Opcode=134 Name=LDMIA Format=ARM_FORMAT_LDSTMULFRM(10)
+# 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 0| 1: 0: 0: 1| 1: 0: 0: 1| 1: 0: 1: 1| 0: 0: 0: 1| 0: 0: 1: 1| 0: 0: 1: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# B6.1.8 RFE has Inst{15-0} as 0x0a00 ==> Not an RFE instruction
+# A8.6.53 LDM/LDMIA/LDMFD is predicated with Inst{31-28} as cond ==> Not an LDMIA instruction
+
+[0x32 0xb1 0x99 0xf8]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x32 0xb1 0x99 0xf8]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for ldr
+#------------------------------------------------------------------------------
+
+# Opcode=165 Name=LDR_PRE Format=ARM_FORMAT_LDFRM(6)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 1: 1: 1| 1: 0: 1: 1| 0: 1: 1: 1| 0: 1: 1: 0| 0: 0: 0: 0| 1: 0: 0: 0| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# if m == 15 then UNPREDICTABLE
+
+[0x8f 0x60 0xb7 0xe7]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x8f 0x60 0xb7 0xe7]
+
+# LDR (register) has encoding Inst{4} = 0.
+[0xba 0xae 0x9f 0x57]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xba 0xae 0x9f 0x57]
+
+# LDR_PRE/POST has encoding Inst{4} = 0.
+[0xde 0x69 0x18 0x46]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xde 0x69 0x18 0x46]
+
+# Opcode=140 Name=LDRB_POST Format=ARM_FORMAT_LDFRM(6)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 1: 1: 0| 1: 1: 0: 1| 0: 1: 1: 1| 0: 1: 1: 1| 0: 0: 0: 0| 0: 0: 0: 0| 0: 1: 0: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# if wback && (n == 15 || n == t) then UNPREDICTABLE
+[0x05 0x70 0xd7 0xe6]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x05 0x70 0xd7 0xe6]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for ldrexd
+#------------------------------------------------------------------------------
+
+# Opcode=242 Name=LDREXD Format=ARM_FORMAT_LDSTEX(6)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 0: 0: 1| 1: 0: 1: 1| 0: 0: 1: 1| 0: 0: 0: 1| 1: 1: 1: 1| 1: 0: 0: 1| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+
+# ARM v8 Architecture Reference Manual F5.1.84 LDREXD
+# t = UInt(Rt); t2 = t + 1; n = UInt(Rn);
+# if Rt<0> == '1' || t2 == 15 || n == 15 then UNPREDICTABLE;
+
+[0x9f 0x1f 0xb3 0xe1]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x9f 0x1f 0xb3 0xe1]
+
+# FIXME: should be potentially undefined but no register pair R14_R15 defined to
+# to return.
+[0x9f 0xef 0xb3 0xe1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x9f 0xef 0xb3 0xe1]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for mcr
+#------------------------------------------------------------------------------
+
+# Opcode=171 Name=MCR Format=ARM_FORMAT_BRFRM(2)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 0: 0: 1: 0| 1: 1: 1: 0| 1: 0: 1: 0| 0: 0: 0: 0| 0: 0: 0: 1| 1: 0: 1: 1| 0: 0: 0: 1| 1: 0: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# Encoding error: coproc == 10 or 11 for MCR[R]/MR[R]C
+
+[0x1b 0x1b 0xa0 0x2e]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x1b 0x1b 0xa0 0x2e]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for mov/lsl
+#------------------------------------------------------------------------------
+
+# Opcode=0 Name=PHI Format=(42)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 0: 0: 1| 1: 0: 1: 1| 1: 1: 0: 0| 1: 1: 0: 1| 0: 0: 0: 1| 0: 0: 0: 0| 0: 0: 1: 0|
+# -------------------------------------------------------------------------------------------------
+# To qualify as an LSL (immediate) instruction, Inst{19-16} "should" be 0b0000, instead it is = 0b1100.
+# The instruction is UNPREDICTABLE, and is not a valid instruction.
+#
+# See also
+# A8.6.88 LSL (immediate)
+# A8.6.98 MOV (shifted register), and
+# I.1 Instruction encoding diagrams and pseudocode
+
+[0x2 0xd1 0xbc 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x2 0xd1 0xbc 0xf1]
+
+
+# Opcode=0 Name=PHI Format=(42)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 0: 0: 1| 1: 0: 1: 1| 1: 1: 0: 0| 1: 1: 0: 1| 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 1: 0|
+# -------------------------------------------------------------------------------------------------
+# To qualify as a MOV (register) instruction, Inst{19-16} "should" be 0b0000, instead it is = 0b1100.
+# The instruction is UNPREDICTABLE, and is not a valid instruction.
+#
+# See also
+# A8.6.97 MOV (register)
+
+[0x2 0xd0 0xbc 0xf1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x2 0xd0 0xbc 0xf1]
+
+# Opcode=196 Name=MOVs Format=ARM_FORMAT_DPSOREGFRM(5)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 0: 1| 0: 0: 0: 1| 1: 0: 1: 0| 0: 0: 0: 0| 0: 1: 0: 0| 0: 0: 1: 0| 1: 0: 0: 1| 0: 0: 1: 1|
+# -------------------------------------------------------------------------------------------------
+# A8.6.89 LSL (register): Inst{7-4} = 0b0001
+[0x93 0x42 0xa0 0xd1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x93 0x42 0xa0 0xd1]
+
+# Opcode=185 Name=MOVTi16 Format=ARM_FORMAT_DPFRM(4)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 0: 1: 1| 0: 1: 0: 0| 0: 0: 0: 1| 1: 1: 1: 1| 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# if d == 15 then UNPREDICTABLE
+[0x00 0xf0 0x41 0xe3]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x00 0xf0 0x41 0xe3]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for mrrc2
+#------------------------------------------------------------------------------
+
+[0x00 0x1a 0x50 0xfc]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x00 0x1a 0x50 0xfc]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for msr (imm)
+#------------------------------------------------------------------------------
+
+# Opcode=206 Name=MSRi Format=ARM_FORMAT_BRFRM(2)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 0: 0: 0: 0| 0: 0: 1: 1| 0: 0: 1: 0| 0: 0: 0: 0| 1: 1: 1: 1| 0: 0: 0: 1| 1: 0: 1: 0| 0: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# A5.2.11 MSR (immediate), and hints & B6.1.6 MSR (immediate)
+# The hints instructions have more specific encodings, so if mask == 0,
+# we should reject this as an invalid instruction.
+
+[0xa7 0xf1 0x20 0x3]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xa7 0xf1 0x20 0x3]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for sbfx
+#------------------------------------------------------------------------------
+
+# Opcode=271 Name=SBFX Format=ARM_FORMAT_DPFRM(4)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 1: 1: 1| 1: 0: 1: 0| 0: 1: 1: 1| 0: 1: 0: 1| 0: 1: 0: 0| 0: 1: 0: 1| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# if d == 15 || n == 15 then UNPREDICTABLE;
+
+[0x5f 0x54 0xa7 0xe7]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x5f 0x54 0xa7 0xe7]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for smlad
+#------------------------------------------------------------------------------
+
+# Opcode=284 Name=SMLAD Format=ARM_FORMAT_MULFRM(1)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 0: 0: 1| 0: 1: 1: 1| 0: 0: 0: 0| 1: 1: 1: 1| 0: 1: 1: 0| 1: 0: 0: 0| 0: 0: 0: 1| 1: 0: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.167
+# if d == 15 || n == 15 | m == 15 then UNPREDICTABLE
+
+[0x1b 0x68 0xf 0x97]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x1b 0x68 0xf 0x97]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for srs
+#------------------------------------------------------------------------------
+
+# Opcode=0 Name=PHI Format=(42)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 0| 1: 1: 0: 0| 0: 1: 0: 1| 0: 0: 0: 1| 1: 1: 0: 0| 1: 0: 0: 0| 0: 0: 1: 1|
+# -------------------------------------------------------------------------------------------------
+# Unknown format
+#
+# B6.1.10 SRS
+# Inst{19-8} = 0xd05
+# Inst{7-5} = 0b000
+
+[0x83 0x1c 0xc5 0xf8]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x83 0x1c 0xc5 0xf8]
+
+[0x00 0x00 0x20 0xf8]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x00 0x00 0x20 0xf8]
+
+[0xff 0xff 0xaf 0xf8]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xff 0xff 0xaf 0xf8]
+
+[0x13 0x00 0xa0 0xf8]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x13 0x00 0xa0 0xf8]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for sxtb
+#------------------------------------------------------------------------------
+
+# Opcode=390 Name=SXTBr_rot Format=ARM_FORMAT_EXTFRM(14)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 0: 1: 1: 0| 1: 0: 1: 0| 1: 1: 1: 1| 1: 1: 1: 1| 0: 1: 0: 0| 0: 1: 1: 1| 0: 1: 0: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.223 SXTB
+# if d == 15 || m == 15 then UNPREDICTABLE;
+
+[0x75 0xf4 0xaf 0xe6]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x75 0xf4 0xaf 0xe6]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON umaal
+#------------------------------------------------------------------------------
+
+# Opcode=419 Name=UMAAL Format=ARM_FORMAT_MULFRM(1)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 0: 0: 0| 0: 1: 0: 0| 1: 1: 1: 1| 1: 0: 1: 1| 1: 1: 1: 1| 1: 0: 0: 1| 1: 0: 0: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.244 UMAAL
+# if dLo == 15 || dHi == 15 || n == 15 || m == 15 then UNPREDICTABLE;
+[0x98 0xbf 0x4f 0xf0]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x98 0xbf 0x4f 0xf0]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vcvt (float <-> fixed)
+#------------------------------------------------------------------------------
+
+# imm6=0b0xxxxx -> UNDEFINED
+[0x1e 0xcf 0x92 0xf3]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x1e 0xcf 0x92 0xf3]
+
+[0x3e 0xcf 0x92 0xf3]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x3e 0xcf 0x92 0xf3]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vext
+#------------------------------------------------------------------------------
+
+# invalid imm4 value (0b1xxx)
+# A8.8.316: if Q == '0' && imm4<3> == '1' then UNDEFINED;
+[0x8f 0xf9 0xf7 0xf2]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x8f 0xf9 0xf7 0xf2]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vldmsdb
+#------------------------------------------------------------------------------
+
+# core registers out of range
+[0xa5 0xba 0x72 0xed]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0xa5 0xba 0x72 0xed]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vmov
+#------------------------------------------------------------------------------
+
+# VMOV cmode=0b1111 op=1 is UNDEFINED
+[0x70 0xef 0xc7 0xf3]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x70 0xef 0xc7 0xf3]
+
+#  VMOV cmode=0b1111 op=1 is UNDEFINED
+[0x30 0x0f 0x80 0xf3]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x30 0x0f 0x80 0xf3]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vqadd
+#------------------------------------------------------------------------------
+
+# Opcode=1225 Name=VQADDsv16i8 Format=ARM_FORMAT_N3Reg(37)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0 
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 0: 1: 0| 0: 1: 0: 0| 0: 0: 0: 0| 1: 1: 1: 0| 0: 0: 0: 0| 1: 1: 0: 1| 1: 0: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# Qm -> bit[0] == 0, otherwise UNDEFINED
+[0xdb 0xe0 0x40 0xf2]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xdb 0xe0 0x40 0xf2]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vld/vst
+#------------------------------------------------------------------------------
+
+# A8.6.393 VST2 (multiple 2-element structures)
+[0xb3 0x09 0x03 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xb3 0x09 0x03 0xf4]
+
+# size == '11' ==> UNDEFINED
+[0xc3 0x08 0x03 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xc3 0x08 0x03 0xf4]
+
+# type == '1000' and align == '11' ==> UNDEFINED
+[0xb3 0x08 0x03 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xb3 0x08 0x03 0xf4]
+
+# VST1 multi-element, type == 0b0111, align == 0b10 -> undefined
+[0xaf 0xb7 0x07 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xaf 0xb7 0x07 0xf4]
+
+# VST1 multi-element, type == 0b0111, align == 0b11 -> undefined
+[0xbf 0xb7 0x07 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xbf 0xb7 0x07 0xf4]
+
+# VST1 multi-element, type == 0b1010, align == 0b11 -> undefined
+[0xbf 0x8a 0x03 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xbf 0x8a 0x03 0xf4]
+
+# VST1 multi-element, type == 0b0110, align == 0b10 -> undefined
+[0xaf 0xb6 0x07 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xaf 0xb6 0x07 0xf4]
+
+# VST1 multi-element, type == 0b0110, align == 0b11 -> undefined
+[0xbf 0xb6 0x07 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xbf 0xb6 0x07 0xf4]
+
+# VST2 multi-element, type == 0b0100, align == 0b11 -> undefined
+[0x4f 0xa8 0x07 0xf7]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x4f 0xa8 0x07 0xf7]
+
+# VST2 multi-element, type == 0b0100, align == 0b11 -> undefined
+[0x4f 0xa9 0x07 0xf7]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x4f 0xa9 0x07 0xf7]
+
+# VST3 multi-element, size = 0b11 -> undefined
+[0xbf 0xa4 0x0b 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xbf 0xa4 0x0b 0xf4]
+
+# VST3 multi-element, align = 0b10 -> undefined
+[0x6f 0xa4 0x0b 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x6f 0xa4 0x0b 0xf4]
+
+# VST3 multi-element, align = 0b11 -> undefined
+[0x7f 0xa4 0x0b 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x7f 0xa4 0x0b 0xf4]
+
+# VST4 multi-element, size = 0b11 -> undefined
+[0xcf 0x50 0x03 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xcf 0x50 0x03 0xf4]
+
+
+# Opcode=737 Name=VLD1DUPq8_UPD Format=ARM_FORMAT_NLdSt(30)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0 
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 1: 0: 0| 1: 0: 1: 0| 0: 0: 0: 0| 0: 0: 1: 1| 1: 1: 0: 0| 0: 0: 1: 1| 1: 1: 0: 1|
+# -------------------------------------------------------------------------------------------------
+# 
+# 'a' == 1 and data_size == 8 is invalid
+[0x3d 0x3c 0xa0 0xf4]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x3d 0x3c 0xa0 0xf4]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for MSR/MRS (banked register)
+#------------------------------------------------------------------------------
+# These have a banked register encoding of 0b111111, which is unallocated.
+
+# msr <invalid>, r0
+[0x00,0xf3,0x6f,0xe1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x00,0xf3,0x6f,0xe1]
+
+# mrs r0, <invalid>
+[0x00,0x03,0x4f,0xe1]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x00,0x03,0x4f,0xe1]

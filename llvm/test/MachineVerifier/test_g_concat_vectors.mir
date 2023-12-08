@@ -1,0 +1,25 @@
+#RUN: not --crash llc -o - -global-isel -mtriple=aarch64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            g_concat_vectors
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(<2 x s32>) = IMPLICIT_DEF
+    %1:_(<2 x s32>) = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: G_CONCAT_VECTOR num dest and source elements should match
+    %2:_(<2 x s32>) = G_CONCAT_VECTORS %0, %1
+
+    ; CHECK: Bad machine code: G_CONCAT_VECTOR requires at least 2 source operands
+    %3:_(<2 x s32>) = G_CONCAT_VECTORS %1
+
+    ; CHECK: *** Bad machine code: Explicit definition marked as use ***
+    G_CONCAT_VECTORS %1, %1
+
+...

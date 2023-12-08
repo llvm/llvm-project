@@ -1,0 +1,49 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses machine functions correctly.
+
+--- |
+
+  define i32 @foo() {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @bar() {
+  start:
+    ret i32 0
+  }
+
+  define i32 @test() {
+  start:
+    ret i32 0
+  }
+
+...
+---
+# CHECK-LABEL: name: foo
+# CHECK: body:
+# CHECK-NEXT: bb.0.entry:
+name:            foo
+body: |
+  bb.0.entry:
+...
+---
+# CHECK-LABEL: name: bar
+# CHECK: body:
+# CHECK-NEXT: bb.0.start (align 4):
+# CHECK:      bb.1 (machine-block-address-taken):
+name:            bar
+body: |
+  bb.0.start (align 4):
+  bb.1 (machine-block-address-taken):
+...
+---
+# CHECK-LABEL: name: test
+# CHECK: body:
+# CHECK-NEXT: bb.0.start (machine-block-address-taken, align 4):
+# CHECK:      bb.1 (machine-block-address-taken, align 4):
+name:            test
+body: |
+  bb.0.start (align 4, machine-block-address-taken):
+  bb.1 (machine-block-address-taken, align 4):
+...

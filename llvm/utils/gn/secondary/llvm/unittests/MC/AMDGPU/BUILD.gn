@@ -1,0 +1,13 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("AMDGPUDwarfTests") {
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/AMDGPU:LLVMAMDGPUCodeGen",
+    "//llvm/lib/Target/AMDGPU/MCTargetDesc",
+    "//llvm/lib/Target/AMDGPU/TargetInfo",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [ "DwarfRegMappings.cpp" ]
+}

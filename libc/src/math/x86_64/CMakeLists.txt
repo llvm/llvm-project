@@ -1,0 +1,29 @@
+add_entrypoint_object(
+  cos
+  SRCS
+    cos.cpp
+  HDRS
+    ../cos.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  sin
+  SRCS
+    sin.cpp
+  HDRS
+    ../sin.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  tan
+  SRCS
+    tan.cpp
+  HDRS
+    ../tan.h
+  COMPILE_OPTIONS
+    -O2
+)

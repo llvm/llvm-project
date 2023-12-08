@@ -1,0 +1,36 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses immediate machine operands.
+
+--- |
+
+  define i32 @foo() {
+  entry:
+    ret i32 42
+  }
+
+  define i32 @bar() {
+  entry:
+    ret i32 -11
+  }
+
+...
+---
+# CHECK: name: foo
+name:            foo
+body: |
+  bb.0.entry:
+    ; CHECK:      $eax = MOV32ri 42
+    ; CHECK-NEXT: RET64 $eax
+    $eax = MOV32ri 42
+    RET64 $eax
+...
+---
+# CHECK: name: bar
+name:            bar
+body: |
+  bb.0.entry:
+    ; CHECK:      $eax = MOV32ri -11
+    ; CHECK-NEXT: RET64 $eax
+    $eax = MOV32ri -11
+    RET64 $eax
+...

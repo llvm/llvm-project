@@ -1,0 +1,84 @@
+# RUN: yaml2obj %p/Inputs/ihex-elf-sections.yaml -o %t
+# RUN: llvm-objcopy -O ihex %t - | FileCheck %s
+
+# Check ihex output, when we have segments in ELF file
+# In such case only sections in PT_LOAD segments will
+# be exported and their physical addresses will be used
+# RUN: yaml2obj %p/Inputs/ihex-elf-segments.yaml -o %t-segs
+# RUN: llvm-objcopy -O ihex %t-segs - | FileCheck %s --check-prefix=SEGMENTS
+
+# Check that non-load segments are ignored:
+# RUN: yaml2obj %p/Inputs/ihex-elf-pt-null.yaml -o %t2-segs
+# RUN: llvm-objcopy -O ihex %t2-segs - | FileCheck %s --check-prefix=PT_NULL
+
+# Check that sign-extended 32-bit section addresses are processed
+# correctly
+# RUN: yaml2obj %p/Inputs/ihex-elf-sections2.yaml -o %t-sec2
+# RUN: llvm-objcopy -O ihex --only-section=.text1 %t-sec2 - | FileCheck %s --check-prefix=SIGN_EXTENDED
+
+# Check that section address range overlapping 32 bit range
+# triggers an error
+# RUN: not llvm-objcopy -O ihex --only-section=.text2 %t-sec2 %t-sec2-2.hex 2>&1 | FileCheck %s --check-prefix=BAD-ADDR
+# RUN: not llvm-objcopy -O ihex --only-section=.text3 %t-sec2 %t-sec2-3.hex 2>&1 | FileCheck %s --check-prefix=BAD-ADDR2
+
+# Check that zero length section is not written
+# RUN: llvm-objcopy -O ihex --only-section=.text %t-sec2 - | FileCheck %s --check-prefix=ZERO_SIZE_SEC
+
+# Check 80x86 start address record. It is created for start
+# addresses less than 0x100000
+# RUN: llvm-objcopy -O ihex --set-start=0xFFFF %t - | FileCheck %s --check-prefix=START1
+
+# Check i386 start address record (05). It is created for
+# start addresses which doesn't fit 20 bits
+# RUN: llvm-objcopy -O ihex --set-start=0x100000 %t - | FileCheck %s --check-prefix=START2
+
+# We allow sign extended 32 bit start addresses as well.
+# RUN: llvm-objcopy -O ihex --set-start=0xFFFFFFFF80001000 %t - | FileCheck %s --check-prefix=START3
+
+# Start address which exceeds 32 bit range triggers an error
+# RUN: not llvm-objcopy -O ihex --set-start=0xF00000000 %t %t6.hex 2>&1 | FileCheck %s --check-prefix=BAD-START
+
+# CHECK:      :10000000000102030405060708090A0B0C0D0E0F78
+# CHECK-NEXT: :05001000101112131491
+# CHECK-NEXT: :08FFF800303132333435363765
+# CHECK-NEXT: :020000021000EC
+# CHECK-NEXT: :030000003839404C
+# CHECK-NEXT: :0401000040414243F5
+# CHECK-NEXT: :020000020000FC
+# CHECK-NEXT: :020000040010EA
+# CHECK-NEXT: :08FFF800505152535455565765
+# CHECK-NEXT: :020000040011E9
+# CHECK-NEXT: :03000000585960EC
+# CHECK-NEXT: :00000001FF
+
+# SEGMENTS:       :020000040010EA
+# SEGMENTS-NEXT:  :10000000000102030405060708090A0B0C0D0E0F78
+# SEGMENTS-NEXT:  :05001000101112131491
+# SEGMENTS-NEXT:  :0B001800303132333435363738394090
+# SEGMENTS-NEXT:  :0400280040414243CE
+# SEGMENTS-NEXT:  :0B003000505152535455565758596018
+# SEGMENTS-NEXT:  :020000040020DA
+# SEGMENTS-NEXT:  :03FFF80000000006
+# SEGMENTS-NEXT:  :0400000500100000E7
+# SEGMENTS-NEXT:  :00000001FF
+# SEGMENTS-NOT:   {{.}}
+
+# 'ExtendedAddr' (04) record shouldn't be created
+# PT_NULL-NOT: :02000004
+
+# SIGN_EXTENDED:      :0200000480007A
+# SIGN_EXTENDED-NEXT: :051000000001020304E1
+# SIGN_EXTENDED-NEXT: :00000001FF
+
+# BAD-ADDR: error: {{.*}}: Section '.text2' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
+# BAD-ADDR2: error: {{.*}}: Section '.text3' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
+
+# There shouldn't be 'ExtendedAddr' nor 'Data' records
+# ZERO_SIZE_SEC-NOT:  :02000004
+# ZERO_SIZE_SEC-NOT:  :00FFFF00
+# ZERO_SIZE_SEC:      :00000001FF
+
+# START1: :040000030000FFFFFB
+# START2: :0400000500100000E7
+# START3: :040000058000100067
+# BAD-START: error: {{.*}}: Entry point address 0x{{.*}} overflows 32 bits

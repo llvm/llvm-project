@@ -1,0 +1,26 @@
+RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+
+RUN: dsymutil --linker llvm -oso-prepend-path %p/.. %p/../Inputs/common.macho.x86_64 -f -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+
+The test was compiled from a single source:
+$ cat common.c 
+char common[16];
+int main() { return 0;}
+void bar() {}
+$ clang -g -c common.c -o common.macho.x86_64.o
+$ clang common.macho.x86_64.o -o common.macho.x86_64
+
+CHECK:   DW_TAG_variable
+CHECK:     DW_AT_name {{.*}} "common"
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_location {{.*}} (DW_OP_addr 0x100001000)
+
+CHECK:   DW_TAG_subprogram
+CHECK-NEXT:     DW_AT_low_pc{{.*}}(0x0000000100000f80)
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_name {{.*}} "main"
+
+CHECK:   DW_TAG_subprogram
+CHECK-NEXT:     DW_AT_low_pc{{.*}}(0x0000000100000f90)
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_name {{.*}} "bar"

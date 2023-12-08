@@ -1,0 +1,15 @@
+# REQUIRES: asserts
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=machine-cse -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+# ERR: MachineFunctionProperties required by Machine Common Subexpression Elimination pass are not met by function not_ssa.
+# ERR-NEXT: Required properties: IsSSA
+# ERR-NEXT: Current properties: NoPHIs
+
+---
+name: not_ssa
+body: |
+  bb.0:
+    %0:sgpr_32 = S_MOV_B32 0
+    %0:sgpr_32 = S_MOV_B32 1
+    S_ENDPGM 0, implicit %0
+...

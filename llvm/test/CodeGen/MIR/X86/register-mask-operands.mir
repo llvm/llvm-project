@@ -1,0 +1,39 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses register mask operands correctly.
+
+--- |
+
+  define i32 @compute(i32 %a) #0 {
+  body:
+    %c = mul i32 %a, 11
+    ret i32 %c
+  }
+
+  define i32 @foo(i32 %a) #0 {
+  entry:
+    %b = call i32 @compute(i32 %a)
+    ret i32 %b
+  }
+
+  attributes #0 = { "frame-pointer"="none" }
+
+...
+---
+name:            compute
+body: |
+  bb.0.body:
+    $eax = IMUL32rri8 $edi, 11, implicit-def $eflags
+    RET64 $eax
+...
+---
+# CHECK: name: foo
+name:            foo
+body: |
+  bb.0.entry:
+    ; CHECK:      PUSH64r $rax
+    ; CHECK-NEXT: CALL64pcrel32 @compute, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax
+    PUSH64r $rax, implicit-def $rsp, implicit $rsp
+    CALL64pcrel32 @compute, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, implicit-def $eax
+    $rdx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+...

@@ -1,0 +1,14 @@
+# RUN: dsymutil -f %p/../Inputs/lc_build_version.x86_64 -o - \
+# RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
+
+# RUN: dsymutil --linker llvm -f %p/../Inputs/lc_build_version.x86_64 -o - \
+# RUN:   -oso-prepend-path=%p/.. | obj2yaml | FileCheck %s
+
+CHECK: LoadCommands:
+CHECK:   - cmd:             LC_BUILD_VERSION
+CHECK-NEXT:    cmdsize:         24
+CHECK-NEXT:    platform:        1
+CHECK-NEXT:    minos:           658944
+CHECK-NEXT:    sdk:             658944
+CHECK-NEXT:    ntools:          0
+CHECK-NEXT:   - cmd:             LC_BUILD_VERSION

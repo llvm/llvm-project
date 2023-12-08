@@ -1,0 +1,5 @@
+explicit module Foo.Private {
+    umbrella header "Foo.h"
+    requires objc
+    export *
+}

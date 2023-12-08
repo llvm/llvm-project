@@ -1,0 +1,56 @@
+# Positive tests in regular and verbose mode.
+# RUN: dsymutil -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
+# RUN: dsymutil -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS,VERBOSE
+
+# VERBOSE: Verifying DWARF for architecture: x86_64
+# QUIET-SUCCESS-NOT: error: output verification failed
+
+# Negative output tests in regular and verbose mode.
+# (Invalid object generated from ../Inputs/invalid.s by modified the low PC.)
+# RUN: not dsymutil -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
+# RUN: not dsymutil -verify-dwarf=output -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
+# RUN: not dsymutil -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,VERBOSE
+
+# Negative input & output tests in regular and verbose mode. Only output failures result in a non-zero exit code.
+# RUN: dsymutil -verify-dwarf=input -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
+# RUN: dsymutil -verify-dwarf=input -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
+# RUN: dsymutil -verify-dwarf=none -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS
+# RUN: not dsymutil -verify-dwarf=bogus -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=BOGUS
+# RUN: not dsymutil -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL
+# RUN: not dsymutil -verify-dwarf=all -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=VERBOSE-INPUT-FAIL
+
+# VERBOSE-INPUT-FAIL-DAG: error: Abbreviation declaration contains multiple DW_AT_language attributes.
+# QUIET-INPUT-FAIL-DAG: warning: input verification failed
+# QUIET-OUTPUT-FAIL-DAG: error: output verification failed
+# QUIET-SUCCESS-NOT: input verification failed
+# QUIET-SUCCESS-NOT: output verification failed
+# BOGUS: error: invalid verify type specified: 'bogus'
+#
+# Positive tests in regular and verbose mode.
+# RUN: dsymutil --linker llvm -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
+# RUN: dsymutil --linker llvm -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS,VERBOSE
+#
+# # Negative output tests in regular and verbose mode.
+# (Invalid object generated from ../Inputs/invalid.s by modified the low PC.)
+# RUN: not dsymutil --linker llvm -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
+# RUN: not dsymutil --linker llvm -verify-dwarf=output -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
+# RUN: not dsymutil --linker llvm -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,VERBOSE
+#
+# # Negative input & output tests in regular and verbose mode. Only output failures result in a non-zero exit code.
+# RUN: dsymutil --linker llvm -verify-dwarf=input -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
+# RUN: dsymutil --linker llvm -verify-dwarf=input -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
+# RUN: dsymutil --linker llvm -verify-dwarf=none -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS
+# RUN: not dsymutil --linker llvm -verify-dwarf=bogus -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=BOGUS
+# RUN: not dsymutil --linker llvm -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL
+# RUN: not dsymutil --linker llvm -verify-dwarf=all -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=VERBOSE-INPUT-FAIL
+
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        invalid.o
+    timestamp:       1518197670
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000010, binAddr: 0x0000000100000FB0, size: 0x00000008 }
+      - { sym: _g, objAddr: 0x0000000000000000, binAddr: 0x0000000100000FA0, size: 0x00000010 }
+...

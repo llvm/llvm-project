@@ -1,0 +1,488 @@
+Here's a short precis of how to run lldb if you are familiar with the
+gdb command set:
+
+
+1) LLDB Command Structure:
+
+First some details on lldb command structure to help orient you...
+
+Unlike gdb's command set, which is rather free-form, we tried to make
+the lldb command syntax fairly structured.  The commands are all of the
+form
+
+<noun> <verb> [-options [option-value]] [argument [argument...]]
+
+The command line parsing is done before command execution, so it is
+uniform across all the commands.  The command syntax is very simple,
+basically arguments, options and option values are all white-space
+separated.  If you need to put a backslash or double-quote character
+in an argument you back-slash it in the argument.  That makes the
+command syntax more regular, but it also means you may have to
+quote some arguments in lldb that you wouldn't in gdb.
+
+Options can be placed anywhere on the command line, but if the arguments
+begin with a "-" then you have to tell lldb that you're done with options
+using the "--" option.  So for instance, the "process launch" command takes
+the "-s" option to mean "stop the process at the first instruction".  It's 
+arguments are the arguments you are passing to the program.  So if you wanted
+to pass an argument that contained a "-" you would have to do:
+
+(lldb) process launch -- -program_arg value
+
+We also tried to reduce the number of special purpose argument
+parsers, which sometimes forces the user to be a little more explicit
+about stating their intentions.  The first instance you'll note of
+this is the breakpoint command.  In gdb, to set a breakpoint, you
+would just say:
+
+(gdb) break foo.c:12
+
+or
+
+(gdb) break foo
+
+if foo is a function.  As time went on, the parser that tells foo.c:12
+from foo from foo.c::foo (which means the function foo in the file
+foo.c) got more and more complex and bizarre, and especially in C++
+there are times where there's really no way to specify the function
+you want to break on.  The lldb commands are more verbose but also precise.  
+So you say:
+
+(lldb) breakpoint set -f foo.c -l 12
+
+to set a file & line breakpoint.  To set a breakpoint on a function
+by name, you do:
+
+(lldb) breakpoint set -n foo
+
+This can allow us to be more expressive, so you can say:
+
+(lldb) breakpoint set -M foo
+
+to break on all C++ methods named foo, or:
+
+(lldb) breakpoint set -S alignLeftEdges:
+
+to set a breakpoint on all ObjC selectors called alignLeftEdges:.  It
+also makes it easy to compose specifications, like:
+
+(lldb) breakpoint set -s foo.dylib -n foo
+
+for all functions called foo in the shared library foo.dylib.  Suggestions
+on more interesting primitives of this sort are also very welcome.
+
+So for instance:
+
+(lldb) breakpoint set -n "-[SKTGraphicView alignLeftEdges:]"
+
+Just like gdb, the lldb command interpreter does a shortest unique
+string match on command names, so the previous command can also be
+typed:
+
+(lldb) b s -n "-[SKTGraphicView alignLeftEdges:]"
+
+lldb also supports command completion for source file names, symbol
+names, file names, etc. Completion is initiated by a hitting a <TAB>.
+Individual options in a command can have different completers, so for
+instance the -f option in "breakpoint" completes to source files, the
+-s option to currently loaded shared libraries, etc...  We can even do 
+things like if you specify -s, and are completing on -f, we will only
+list source files in the shared library specified by -s...
+
+The individual commands are pretty extensively documented, using
+the "help" command.  And there is an "apropos" command that will
+search the help for a particular word and dump a summary help string
+for each matching command.
+
+Finally, there is a mechanism to construct aliases for commonly used
+commands.  So for instance if you get annoyed typing
+
+(lldb) b s -f foo.c -l 12
+
+you can do:
+
+(lldb) command alias bfl breakpoint set -f %1 -l %2
+(lldb) bfl foo.c 12
+
+We have added a few aliases for commonly used commands (e.g. "step",
+"next" and "continue") but we haven't tried to be exhaustive because
+in our experience it is more convenient to make the basic commands
+unique down to a letter or two, and then learn these sequences than
+fill the namespace with lots of aliases, and then have to type them
+all the way out.
+
+However, users are free to customize lldb's command set however they
+like, and since lldb reads the file ~/.lldbinit at startup, you can
+store all your aliases there and they will be generally available to
+you.  Your aliases are also documented in the help command so you can
+remind yourself of what you've set up.
+
+lldb also has a built-in Python interpreter, which is accessible by
+the "script" command.  All the functionality of the debugger is
+available as classes in the Python interpreter, so the more complex
+commands that in gdb you would introduce with the "define" command can
+be done by writing Python functions using the lldb-Python library,
+then loading the scripts into your running session and accessing them
+with the "script" command.  
+
+
+
+2) A typical session:
+
+
+a) Setting the program to debug:
+
+
+As with gdb, you can start lldb and specify the file you wish to debug
+on the command line:
+
+$ lldb /Projects/Sketch/build/Debug/Sketch.app
+Current executable set to '/Projects/Sketch/build/Debug/Sketch.app' (x86_64).
+
+or you can specify it after the fact with the "file" command:
+
+(lldb) file /Projects/Sketch/build/Debug/Sketch.app
+Current executable set to '/Projects/Sketch/build/Debug/Sketch.app' (x86_64).
+
+
+b) Setting breakpoints:
+
+
+We've discussed how to set breakpoints above.  You can use "help break set" 
+to see all the options for breakpoint setting.  For instance, we might do:
+
+(lldb) b s -S alignLeftEdges:
+Breakpoint created: 1: name = 'alignLeftEdges:', locations = 1, resolved = 1
+
+You can find out about the breakpoints you've set with:
+
+(lldb) break list
+Current breakpoints:
+1: name = 'alignLeftEdges:', locations = 1, resolved = 1
+  1.1: where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405, address = 0x0000000100010d5b, resolved, hit count = 0 
+
+Note that each "logical" breakpoint can have multiple "locations".
+The logical breakpoint has an integer id, and its locations have an
+id within their parent breakpoint (the two are joined by a ".",
+e.g. 1.1 in the example above.)  
+
+Also the breakpoints remain "live" so that if another shared library
+were to be loaded that had another implementation of the
+"alignLeftEdges:" selector, the new location would be added to
+breakpoint 1 (e.g. a "1.2" breakpoint would be set on the newly loaded
+selector).
+
+The other piece of information in the breakpoint listing is whether the
+breakpoint location was "resolved" or not.  A location gets resolved when
+the file address it corresponds to gets loaded into the program you are
+debugging.  For instance if you set a breakpoint in a shared library that 
+then gets unloaded, that breakpoint location will remain, but it will no 
+longer be "resolved".
+
+One other thing to note for gdb users is that lldb acts like gdb with:
+
+(gdb) set breakpoint pending on
+
+That is, lldb should always make a breakpoint from your specification, even
+if it couldn't find any locations that match the specification.  You can tell
+whether the expression was resolved or not by checking the locations field
+in "breakpoint list", and we report the breakpoint as "pending" when you
+set it so you can tell you've made a typo more easily, if that was indeed 
+the reason no locations were found:
+
+(lldb) b s -f no_such_file.c -l 10000000
+Breakpoint created: 1: file ='no_such_file.c', line = 10000000, locations = 0 (pending)
+
+You can delete, disable, set conditions and ignore counts either on all the
+locations generated by your logical breakpoint, or on particular locations
+your specification resolved to.  For instance if we wanted to add a command
+to print a backtrace when we hit this breakpoint we could do:
+
+(lldb) b command add -c 1.1
+Enter your debugger command(s).  Type 'DONE' to end.
+> bt
+> DONE
+
+The "-c" option specifies that the breakpoint command is a set of lldb
+command interpreter commands.  Use "-s" if you want to implement your
+breakpoint command using the Python interface instead.
+
+
+c) Running the program:
+
+Then you can either launch the process with the command:
+
+(lldb) process launch
+
+or its alias:
+
+(lldb) r
+
+Or you can attach to a process by name with:
+
+(lldb) process attach -n Sketch
+
+The "attach by name"  also supports the "-w" option which waits for the
+next process of that name to show up, and attaches to that.  You can also
+attach by PID:
+
+(lldb) process attach -p 12345
+Process 46915 Attaching
+(lldb) Process 46915 Stopped
+1 of 3 threads stopped with reasons:
+* thread #1: tid = 0x2c03, 0x00007fff85cac76a, where = libSystem.B.dylib`__getdirentries64 + 10, stop reason = signal = SIGSTOP, queue = com.apple.main-thread
+
+Note that we tell you that "1 of 3 threads stopped with reasons" and
+then list those threads.  In a multi-threaded environment it is very
+common for more than one thread to hit your breakpoint(s) before the
+kernel actually returns control to the debugger.  In that case, you
+will see all the threads that stopped for some interesting reason
+listed in the stop message.
+
+
+d) Controlling execution:
+
+
+After launching, we can continue until we hit our breakpoint.  The primitive
+commands for process control all exist under the "thread" command:
+
+(lldb) thread continue
+Resuming thread 0x2c03 in process 46915
+Resuming process 46915
+(lldb)
+
+At present you can only operate on one thread at a time, but the
+design will ultimately support saying "step over the function in
+Thread 1, and step into the function in Thread 2, and continue Thread
+3" etc.  When we eventually support keeping some threads running while
+others are stopped this will be particularly important.  For
+convenience, however, all the stepping commands have easy aliases.  
+So "thread continue" is just "c", etc.
+
+The other program stepping commands are pretty much the same as in gdb.  
+You've got:
+
+  1. (lldb) thread step-in
+     The same as gdb's "step" -- there is also the alias "s" in lldb
+
+  2. (lldb) thread step-over
+     The same as gdb's "next" -- there is also the alias "n" in lldb
+
+  3. (lldb) thread step-out
+     The same as gdb's "finish" -- there is also the alias "f" in lldb
+
+And the "by instruction" versions:
+
+(lldb) thread step-inst
+(lldb) thread step-over-inst
+
+Finally, there's:
+
+(lldb) thread until 100
+
+Which runs the thread in the current frame till it reaches line 100 in
+this frame or stops if it leaves the current frame.  This is a pretty 
+close equivalent to gdb's "until" command.
+
+
+One thing here that might be a little disconcerting to gdb users here is that
+when you resume process execution, you immediately get a prompt back.  That's
+because the lldb interpreter remains live when you are running the target.
+This allows you to set a breakpoint, etc without having to explicitly interrupt
+the program you are debugging.  We're still working out all the operations
+that it is safe to do while running.  But this way of operation will set us
+up for "no stop" debugging when we get to implementing that.
+
+If you want to interrupt a running program do:
+
+(lldb) process interrupt
+
+To find out the state of the program, use:
+
+(lldb) process status
+Process 47958 is running.
+
+This is very convenient, but it does have the down-side that debugging
+programs that use stdin is no longer as straightforward.  For now, you
+have to specify another tty to use as the program stdout & stdin using
+the appropriate options to "process launch", or start your program in
+another terminal and catch it with "process attach -w".  We will come
+up with some more convenient way to juggle the terminal back & forth
+over time.
+
+
+e) Examining program state:
+
+Once you've stopped, lldb will choose a current thread, usually the
+one that stopped "for a reason", and a current frame in that thread.
+Many the commands for inspecting state work on this current
+thread/frame.
+
+To inspect the current state of your process, you can start with the
+threads:
+
+(lldb) thread list
+Process 46915 state is Stopped
+* thread #1: tid = 0x2c03, 0x00007fff85cac76a, where = libSystem.B.dylib`__getdirentries64 + 10, stop reason = signal = SIGSTOP, queue = com.apple.main-thread
+  thread #2: tid = 0x2e03, 0x00007fff85cbb08a, where = libSystem.B.dylib`kevent + 10, queue = com.apple.libdispatch-manager
+  thread #3: tid = 0x2f03, 0x00007fff85cbbeaa, where = libSystem.B.dylib`__workq_kernreturn + 10
+
+The * indicates that Thread 1 is the current thread.  To get a
+backtrace for that thread, do:
+
+(lldb) thread backtrace
+thread #1: tid = 0x2c03, stop reason = breakpoint 1.1, queue = com.apple.main-thread
+  frame #0: 0x0000000100010d5b, where = Sketch`-[SKTGraphicView alignLeftEdges:] + 33 at /Projects/Sketch/SKTGraphicView.m:1405
+  frame #1: 0x00007fff8602d152, where = AppKit`-[NSApplication sendAction:to:from:] + 95
+  frame #2: 0x00007fff860516be, where = AppKit`-[NSMenuItem _corePerformAction] + 365
+  frame #3: 0x00007fff86051428, where = AppKit`-[NSCarbonMenuImpl performActionWithHighlightingForItemAtIndex:] + 121
+  frame #4: 0x00007fff860370c1, where = AppKit`-[NSMenu performKeyEquivalent:] + 272
+  frame #5: 0x00007fff86035e69, where = AppKit`-[NSApplication _handleKeyEquivalent:] + 559
+  frame #6: 0x00007fff85f06aa1, where = AppKit`-[NSApplication sendEvent:] + 3630
+  frame #7: 0x00007fff85e9d922, where = AppKit`-[NSApplication run] + 474
+  frame #8: 0x00007fff85e965f8, where = AppKit`NSApplicationMain + 364
+  frame #9: 0x0000000100015ae3, where = Sketch`main + 33 at /Projects/Sketch/SKTMain.m:11
+  frame #10: 0x0000000100000f20, where = Sketch`start + 52
+
+You can also provide a list of threads to backtrace, or the keyword
+"all" to see all threads:
+
+(lldb) thread backtrace all
+
+Next task is inspecting data:
+
+The most convenient way to inspect a frame's arguments and local variables is:
+
+(lldb) frame variable 
+self = (SKTGraphicView *) 0x0000000100208b40
+_cmd = (struct objc_selector *) 0x000000010001bae1
+sender = (id) 0x00000001001264e0
+selection = (NSArray *) 0x00000001001264e0
+i = (NSUInteger) 0x00000001001264e0
+c = (NSUInteger) 0x00000001001253b0
+
+You can also choose particular variables to view:
+
+(lldb) frame variable self
+(SKTGraphicView *) self = 0x0000000100208b40
+
+The frame variable command is not a full expression parser but it
+does support some common operations like dereferencing:
+
+(lldb) fr v *self
+(SKTGraphicView *) self = 0x0000000100208b40
+  (NSView) NSView = {
+    (NSResponder) NSResponder = {
+...
+
+and structure element references:
+
+(lldb) frame variable self.isa
+(struct objc_class *) self.isa = 0x0000000100023730
+
+The frame variable command will also perform "object printing" operations on
+variables (currently we only support NSPrintForDebugger) with:
+
+(lldb) fr v -o self
+(SKTGraphicView *) self = 0x0000000100208b40
+<SKTGraphicView: 0x100208b40>
+
+You can select another frame to view with:
+
+(lldb) frame select 9
+frame #9: 0x0000000100015ae3, where = Sketch`main + 33 at /Projects/Sketch/SKTMain.m:11
+   8      
+   9      
+  10      int main(int argc, const char *argv[]) {
+  11 ->       return NSApplicationMain(argc, argv);
+  12          }
+  13          
+  14          
+
+Another neat trick that the variable list does is array references, so:
+
+(lldb) fr v argv[0]
+(char const *) argv[0] = 0x00007fff5fbffaf8 "/Projects/Sketch/build/Debug/Sketch.app/Contents/MacOS/Sketch"
+
+If you need to view more complex data or change program data, you can
+use the general "expression" command.  It takes an expression and
+evaluates it in the scope of the currently selected frame.  For instance:
+
+(lldb) expr self
+$0 = (SKTGraphicView *) 0x0000000100135430
+(lldb) expr self = 0x00
+$1 = (SKTGraphicView *) 0x0000000000000000
+(lldb) frame var self
+(SKTGraphicView *) self = 0x0000000000000000
+
+You can also call functions:
+
+(lldb) expr (int) printf ("I have a pointer 0x%llx.\n", self)
+$2 = (int) 22
+I have a pointer 0x0.
+
+One thing to note from this example is that lldb commands can be defined to
+take "raw" input.  "expression" is one of these.  So in the expression command,
+you don't have to quote your whole expression, nor backslash protect quotes,
+etc...
+
+Finally, the results of the expressions are stored in persistent variables
+(of the form $[0-9]+) that you can use in further expressions, like:
+
+(lldb) expr self = $0
+$4 = (SKTGraphicView *) 0x0000000100135430
+
+f) Customization:
+
+You can use the embedded Python interpreter to add the following 'pwd' and 'cd' commands
+for your lldb session:
+
+(lldb) script import os
+(lldb) command alias pwd script print os.getcwd()
+(lldb) command regex cd "s/^(.*)$/script os.chdir(os.path.expanduser('%1'))/"
+
+...
+
+(lldb) cd /tmp
+script os.chdir(os.path.expanduser('/tmp'))
+(lldb) pwd
+/private/tmp
+(lldb) 
+
+Or for a more capable 'cd' command, create ~/utils.py like this:
+
+import os
+
+def chdir(debugger, args, result, dict):
+    """Change the working directory, or cd to ${HOME}."""
+    dir = args.strip()
+    if dir:
+        os.chdir(args)
+    else:
+        os.chdir(os.path.expanduser('~'))
+    print "Current working directory: %s" % os.getcwd()
+
+and, have the following in your ~/.lldbinit file:
+
+script import os, sys
+script sys.path.append(os.path.expanduser('~'))
+script import utils
+command alias pwd script print os.getcwd()
+command script add -f utils.chdir cd
+
+and, then in your lldb session, you can have:
+
+(lldb) help cd
+
+Change the working directory, or cd to ${HOME}.
+Syntax: cd
+(lldb) cd
+Current working directory: /Volumes/data/Users/johnny
+(lldb) cd /tmp
+Current working directory: /private/tmp
+(lldb) pwd
+/private/tmp
+(lldb) 
+
+For more examples of customization, look under the ToT/examples/customization
+directory.

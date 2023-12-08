@@ -1,0 +1,12 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.name_suffix = "@CFI_TEST_CONFIG_SUFFIX@"
+config.cfi_lit_test_mode = "@CFI_LIT_TEST_MODE@"
+config.target_arch = "@CFI_TEST_TARGET_ARCH@"
+config.target_cflags = "@CFI_TEST_TARGET_CFLAGS@"
+config.use_lld = @CFI_TEST_USE_LLD@
+config.use_lto = True # CFI *requires* LTO.
+config.use_thinlto = @CFI_TEST_USE_THINLTO@
+
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

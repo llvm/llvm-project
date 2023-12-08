@@ -1,0 +1,90 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --prefix-symbols prefix %t %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefixes=COMMON,BASIC
+# RUN: llvm-objcopy --redefine-sym bar=baz --prefix-symbols prefix %t %t3
+# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefixes=COMMON,REDEF
+
+## Show that an empty string is permitted as the argument to
+## --prefix-symbols.
+# RUN: llvm-objcopy --prefix-symbols= %t2 %t4
+# RUN: cmp %t2 %t4
+
+## Show that the last prefix wins.
+# RUN: llvm-objcopy --prefix-symbols foo --prefix-symbols prefix %t %t5
+# RUN: cmp %t2 %t5
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            64
+Symbols:
+  - Name:     foo
+    Type:     STT_SECTION
+    Section:  .text
+  - Name:     bar
+    Type:     STT_FILE
+    Section:  .text
+  - Name:     foobar
+    Type:     STT_FUNC
+    Section:  .text
+    Binding:  STB_GLOBAL
+  - Name:     undef
+    Binding:  STB_GLOBAL
+
+# COMMON: Symbols [
+# COMMON-NEXT:  Symbol {
+# COMMON-NEXT:    Name:
+# COMMON-NEXT:    Value: 0x0
+# COMMON-NEXT:    Size: 0
+# COMMON-NEXT:    Binding: Local
+# COMMON-NEXT:    Type: None
+# COMMON-NEXT:    Other: 0
+# COMMON-NEXT:    Section: Undefined
+# COMMON-NEXT:  }
+# COMMON-NEXT:  Symbol {
+# COMMON-NEXT:    Name: foo
+# COMMON-NEXT:    Value: 0x0
+# COMMON-NEXT:    Size: 0
+# COMMON-NEXT:    Binding: Local
+# COMMON-NEXT:    Type: Section
+# COMMON-NEXT:    Other: 0
+# COMMON-NEXT:    Section: .text
+# COMMON-NEXT:  }
+# COMMON-NEXT:  Symbol {
+# BASIC-NEXT:    Name: prefixbar
+# REDEF-NEXT:    Name: prefixbaz
+# COMMON-NEXT:    Value: 0x0
+# COMMON-NEXT:    Size: 0
+# COMMON-NEXT:    Binding: Local
+# COMMON-NEXT:    Type: File
+# COMMON-NEXT:    Other: 0
+# COMMON-NEXT:    Section: .text
+# COMMON-NEXT:  }
+# COMMON-NEXT:  Symbol {
+# COMMON-NEXT:    Name: prefixfoobar
+# COMMON-NEXT:    Value: 0x0
+# COMMON-NEXT:    Size: 0
+# COMMON-NEXT:    Binding: Global
+# COMMON-NEXT:    Type: Function
+# COMMON-NEXT:    Other: 0
+# COMMON-NEXT:    Section: .text
+# COMMON-NEXT:  }
+# COMMON-NEXT:  Symbol {
+# COMMON-NEXT:    Name: prefixundef
+# COMMON-NEXT:    Value: 0x0
+# COMMON-NEXT:    Size: 0
+# COMMON-NEXT:    Binding: Global
+# COMMON-NEXT:    Type: None
+# COMMON-NEXT:    Other: 0
+# COMMON-NEXT:    Section: Undefined
+# COMMON-NEXT:  }
+# COMMON-NEXT:]

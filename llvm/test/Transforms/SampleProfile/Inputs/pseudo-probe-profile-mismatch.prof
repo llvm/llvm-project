@@ -1,0 +1,14 @@
+main:30:0
+ 1: 0
+ 12: 10 matched:10
+ 20: 10 bar:10
+ 13: foo_mismatch:10
+  1: 10
+  !CFGChecksum: 4294967295
+ !CFGChecksum: 844635331715433
+bar:10:10
+ 1: 10
+ !CFGChecksum: 42949671295
+matched:10:10
+ 1: 10
+ !CFGChecksum: 4294967295

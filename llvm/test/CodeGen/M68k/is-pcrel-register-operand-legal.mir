@@ -1,0 +1,10 @@
+# RUN: llc -O0 -mtriple=m68k -start-after=prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+
+name: is-pcrel-register-operand-legal
+body:             |
+  bb.0.entry:
+    ; CHECK: move.l  (0,%pc,%a0), (%a1)
+    ; CHECK: move.l  (%a0), (0,%pc,%a1)
+
+    MOV32jk $a1,  0, $a0, implicit-def $ccr
+    MOV32kj 0,  $a1, $a0, implicit-def $ccr

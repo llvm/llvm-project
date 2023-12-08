@@ -1,0 +1,43 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_A",
+         "sizes" : [ "*" ],
+         "type" : "double"
+      }
+   ],
+   "context" : "[n] -> {  : -2147483648 <= n <= 2147483647 }",
+   "name" : "%for---%return",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_body[i0] -> MemRef_A[0] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_body[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_body",
+         "schedule" : "[n] -> { Stmt_body[i0] -> [i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_region_entry__TO__region_exit[i0] -> MemRef_A[0] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "[n] -> { Stmt_region_entry__TO__region_exit[i0] -> MemRef_A[0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_region_entry__TO__region_exit[i0] -> MemRef_A[0] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_region_entry__TO__region_exit[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_region_entry__TO__region_exit",
+         "schedule" : "[n] -> { Stmt_region_entry__TO__region_exit[i0] -> [i0, 1] }"
+      }
+   ]
+}

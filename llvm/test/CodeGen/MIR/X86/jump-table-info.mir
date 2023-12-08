@@ -1,0 +1,150 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the jump table info and jump
+# table operands correctly.
+
+--- |
+
+  define i32 @test_jumptable(i32 %in) {
+  entry:
+    switch i32 %in, label %def [
+      i32 0, label %lbl1
+      i32 1, label %lbl2
+      i32 2, label %lbl3
+      i32 3, label %lbl4
+    ]
+
+  def:
+    ret i32 0
+
+  lbl1:
+    ret i32 1
+
+  lbl2:
+    ret i32 2
+
+  lbl3:
+    ret i32 4
+
+  lbl4:
+    ret i32 8
+  }
+
+  define i32 @test_jumptable2(i32 %in) {
+  entry:
+    switch i32 %in, label %def [
+      i32 0, label %lbl1
+      i32 1, label %lbl2
+      i32 2, label %lbl3
+      i32 3, label %lbl4
+    ]
+
+  def:
+    ret i32 0
+
+  lbl1:
+    ret i32 1
+
+  lbl2:
+    ret i32 2
+
+  lbl3:
+    ret i32 4
+
+  lbl4:
+    ret i32 8
+  }
+
+...
+---
+name:            test_jumptable
+# CHECK:      jumpTable:
+# CHECK-NEXT: kind: label-difference32
+# CHECK-NEXT: entries:
+# CHECK-NEXT: - id: 0
+# CHECK-NEXT: blocks: [ '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
+# CHECK-NEXT: body:
+jumpTable:
+  kind:          label-difference32
+  entries:
+    - id:        0
+      blocks:    [ '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
+body: |
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+
+    $eax = MOV32rr $edi, implicit-def $rax
+    CMP32ri8 $edi, 3, implicit-def $eflags
+    JCC_1 %bb.2, 7, implicit $eflags
+
+  bb.1.entry:
+    successors: %bb.3, %bb.4, %bb.5, %bb.6
+    ; CHECK: $rcx = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+    $rcx = LEA64r $rip, 1, _, %jump-table.0, _
+    $rax = MOVSX64rm32 $rcx, 4, $rax, 0, _
+    $rax = ADD64rr $rax, $rcx, implicit-def $eflags
+    JMP64r $rax
+
+  bb.2.def:
+    $eax = MOV32r0 implicit-def $eflags
+    RET64 $eax
+
+  bb.3.lbl1:
+    $eax = MOV32ri 1
+    RET64 $eax
+
+  bb.4.lbl2:
+    $eax = MOV32ri 2
+    RET64 $eax
+
+  bb.5.lbl3:
+    $eax = MOV32ri 4
+    RET64 $eax
+
+  bb.6.lbl4:
+    $eax = MOV32ri 8
+    RET64 $eax
+...
+---
+name:            test_jumptable2
+jumpTable:
+  kind:          label-difference32
+  entries:
+    - id:        1
+      blocks:    [ '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
+body: |
+  bb.0.entry:
+    successors: %bb.2, %bb.1
+
+    $eax = MOV32rr $edi, implicit-def $rax
+    CMP32ri8 $edi, 3, implicit-def $eflags
+    JCC_1 %bb.2, 7, implicit $eflags
+
+  bb.1.entry:
+    successors: %bb.3, %bb.4, %bb.5, %bb.6
+    ; Verify that the printer will use an id of 0 for this jump table:
+    ; CHECK: $rcx = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+    $rcx = LEA64r $rip, 1, _, %jump-table.1, _
+    $rax = MOVSX64rm32 $rcx, 4, $rax, 0, _
+    $rax = ADD64rr $rax, $rcx, implicit-def $eflags
+    JMP64r $rax
+
+  bb.2.def:
+    $eax = MOV32r0 implicit-def $eflags
+    RET64 $eax
+
+  bb.3.lbl1:
+    $eax = MOV32ri 1
+    RET64 $eax
+
+  bb.4.lbl2:
+    $eax = MOV32ri 2
+    RET64 $eax
+
+  bb.5.lbl3:
+    $eax = MOV32ri 4
+    RET64 $eax
+
+  bb.6.lbl4:
+    $eax = MOV32ri 8
+    RET64 $eax
+...

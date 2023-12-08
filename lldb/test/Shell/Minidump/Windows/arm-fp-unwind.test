@@ -1,0 +1,18 @@
+Test that unwind plans use the frame pointer register correctly.
+
+REQUIRES: arm
+
+RUN: yaml2obj %S/Inputs/arm-fp-unwind.exe.yaml -o %T/arm-fp-unwind.exe
+RUN: yaml2obj %S/Inputs/arm-fp-unwind.dmp.yaml -o %T/arm-fp-unwind.dmp
+RUN: %lldb -O "settings set target.exec-search-paths %T" \
+RUN:   -c %T/arm-fp-unwind.dmp -o "image show-unwind -a 0x00c71010" -b \
+RUN:   | FileCheck %s
+
+CHECK: Assembly language inspection UnwindPlan:
+CHECK-NEXT: This UnwindPlan originally sourced from EmulateInstructionARM
+CHECK-NEXT: This UnwindPlan is sourced from the compiler: no.
+CHECK-NEXT: This UnwindPlan is valid at all instruction locations: yes.
+CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
+CHECK-NEXT: row[0]:    0: CFA=sp +0 =>
+CHECK-NEXT: row[1]:    4: CFA=sp +8 => fp=[CFA-8] lr=[CFA-4]
+CHECK-NEXT: row[2]:    6: CFA=fp +8 => fp=[CFA-8] lr=[CFA-4]

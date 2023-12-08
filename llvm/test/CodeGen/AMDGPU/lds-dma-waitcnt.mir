@@ -1,0 +1,119 @@
+# RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: buffer_load_dword_lds_ds_read
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: buffer_load_dword_lds_ds_read
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef` + 4), (store (s32) into `ptr addrspace(3) undef` + 4)
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: buffer_load_dword_lds_vmcnt_1
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_IDXEN
+# GCN-NEXT: S_WAITCNT 3953
+#                     vmcnt(1)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: buffer_load_dword_lds_vmcnt_1
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef`), (store (s32) into `ptr addrspace(3) undef`)
+    $vgpr10 = BUFFER_LOAD_DWORD_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef`)
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: buffer_load_dword_lds_flat_read
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: FLAT_LOAD_DWORD
+---
+name: buffer_load_dword_lds_flat_read
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef`), (store (s32) into `ptr addrspace(3) undef`)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr undef`)
+
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: global_load_lds_dword_ds_read
+# GCN:      GLOBAL_LOAD_LDS_DWORD
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: global_load_lds_dword_ds_read
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef` + 4), (store (s32) into `ptr addrspace(3) undef` + 4)
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: scratch_load_lds_dword_ds_read
+# GCN:      SCRATCH_LOAD_LDS_DWORD
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: scratch_load_lds_dword_ds_read
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    SCRATCH_LOAD_LDS_DWORD $vgpr0, 4, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(5) undef` + 4), (store (s32) into `ptr addrspace(3) undef` + 4)
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: buffer_store_lds_dword_ds_read
+# GCN:      BUFFER_STORE_LDS_DWORD
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: buffer_store_lds_dword_ds_read
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_STORE_LDS_DWORD $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(3) undef` + 4), (store (s32) into `ptr addrspace(1) undef` + 4)
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    S_ENDPGM 0
+
+...
+
+# No need to wait before load from VMEM to LDS.
+# GCN-LABEL: name: series_of_buffer_load_dword_lds_ds_read
+# GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
+# GCN-NEXT: S_WAITCNT 3952
+#                     vmcnt(0)
+# GCN-NEXT: DS_READ_B32_gfx9
+---
+name: series_of_buffer_load_dword_lds_ds_read
+body:             |
+  bb.0:
+    $m0 = S_MOV_B32 0
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef`), (store (s32) into `ptr addrspace(3) undef`)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef` + 4), (store (s32) into `ptr addrspace(3) undef` + 4)
+    BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) undef` + 8), (store (s32) into `ptr addrspace(3) undef` + 8)
+    $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
+    S_ENDPGM 0
+
+...

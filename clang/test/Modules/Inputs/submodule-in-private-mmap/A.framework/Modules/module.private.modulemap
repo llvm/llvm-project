@@ -1,0 +1,7 @@
+framework module A_Private {
+  header "APrivate.h"
+}
+
+module A.SomeSub {
+  header "SomeSub.h"
+}

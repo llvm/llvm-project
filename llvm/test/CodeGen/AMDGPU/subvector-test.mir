@@ -1,0 +1,37 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before=greedy -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -start-before=greedy -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+...
+# GCN-LABEL: {{^}}"subvector-basic-bb"
+# GCN: s_subvector_loop_begin [[RS:s[0-9]]], .LBB0_2
+# GCN: s_subvector_loop_end [[RS]], .LBB0_1
+name:            subvector-basic-bb
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  frameOffsetReg: $sgpr5
+  stackPtrOffsetReg: $sgpr32
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    successors: %bb.1, %bb.2
+
+    %1:sgpr_64 = COPY $sgpr0_sgpr1
+    %4:sgpr_128 = S_LOAD_DWORDX4_IMM %1, 36, 0
+    %11:sreg_64_xexec = S_LOAD_DWORDX2_IMM %4.sub2_sub3, 0, 0
+    undef %15.sub0:vreg_64 = COPY %4.sub0
+    %15.sub1:vreg_64 = COPY %4.sub1
+    %16:vgpr_32 = COPY %1.sub0
+    S_SUBVECTOR_LOOP_BEGIN %bb.2, undef %19:sreg_32, implicit-def $exec, implicit $exec, implicit-def %19
+
+  bb.1:
+    successors: %bb.1, %bb.2
+
+    %14:sreg_32_xm0 = S_ADD_I32 %11.sub0, %11.sub1, implicit-def dead $scc
+    %16:vgpr_32 = COPY %14
+    S_SUBVECTOR_LOOP_END %bb.1, %19:sreg_32, implicit-def $exec, implicit $exec, implicit-def %19
+
+  bb.2:
+
+    GLOBAL_STORE_DWORD %15, %16, 0, 0, implicit $exec
+    S_ENDPGM 0
+...

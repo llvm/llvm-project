@@ -1,0 +1,814 @@
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -aarch64-load-store-renaming=true -o - %s | FileCheck %s
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -aarch64-load-store-renaming=false -o - %s | FileCheck --check-prefix=NO-RENAME %s
+
+# NO-RENAME-NOT: STP
+# NO-RENAME:     test12
+# NO-RENAME:     STP
+# NO-RENAME-NOT: STP
+#
+---
+# CHECK-LABEL: name: test1
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1
+# CHECK:       $x10, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
+# CHECK-NEXT:  renamable $x8 = ADDXrr $x8, $x8
+# CHECK-NEXT:  STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:  RET undef $lr
+
+name:            test1
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+    STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
+    renamable $x8 = ADDXrr $x8, $x8
+    STRXui renamable $x8, renamable $x0, 10 :: (store (s64), align 4)
+    RET undef $lr
+
+...
+---
+# CHECK-LABEL: name: test2
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT:    liveins: $x0, $x9, $x1
+
+# CHECK:         $x10, renamable $x8 = LDPXi renamable $x9, 0 :: (load (s64))
+# CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
+# CHECK-NEXT:    STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
+# CHECK-NEXT:    renamable $x8 = ADDXrr $x8, $x8
+# CHECK-NEXT:    STPXi renamable $x8, killed $x10, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:    RET undef $lr
+
+name:            test2
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x9' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x9, $x1
+    renamable $x9, renamable $x8 = LDPXi renamable $x9, 0 :: (load (s64))
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
+    STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
+    renamable $x8 = ADDXrr $x8, $x8
+    STRXui renamable $x8, renamable $x0, 10 :: (store (s64), align 4)
+    RET undef $lr
+
+...
+---
+# MOVK has a tied operand and we currently do not rename across tied defs.
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT:    liveins: $x0
+#
+# CHECK:         renamable $x8 = MRS 58880
+# CHECK-NEXT:    renamable $x8 = MOVZXi 15309, 0
+# CHECK-NEXT:    renamable $x8 = MOVKXi renamable $x8, 26239, 16
+# CHECK-NEXT:    STRXui renamable $x8, renamable $x0, 0, implicit killed $x8 :: (store (s64))
+# CHECK-NEXT:    renamable $x8 = MRS 55840
+# CHECK-NEXT:    STRXui killed renamable $x8, killed renamable $x0, 1, implicit killed $x8 :: (store (s64))
+# CHECK-NEXT:    RET undef $lr
+#
+name:            test3
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+frameInfo:
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0
+
+    renamable $x8 = MRS 58880, implicit-def $nzcv
+    renamable $x8 = MOVZXi 15309, 0
+    renamable $x8 = MOVKXi renamable $x8, 26239, 16
+    STRXui renamable $x8, renamable $x0, 0, implicit killed $x8 :: (store (s64))
+    renamable $x8 = MRS 55840, implicit-def $nzcv
+    STRXui killed renamable  $x8, renamable killed $x0, 1, implicit killed $x8 :: (store (s64))
+    RET undef $lr
+
+...
+---
+# CHECK-LABEL: name: test4
+# CHECK-LABEL:  bb.0:
+# CHECK-NEXT:    liveins: $x0, $x1
+
+# CHECK:         $x9 = MRS 58880
+# CHECK-NEXT:    renamable $x8 = MRS 55840
+# CHECK-NEXT:    STPXi $x9, killed renamable $x8, killed renamable $x0, 0 :: (store (s32))
+# CHECK-NEXT:    RET undef $lr
+
+name:            test4
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    renamable $x8 = MRS 58880, implicit-def $nzcv
+    STRXui renamable $x8, renamable $x0, 0, implicit killed $x8 :: (store (s32))
+    renamable $x8 = MRS 55840, implicit-def $nzcv
+    STRXui killed renamable  $x8, renamable killed $x0, 1, implicit killed $x8 :: (store (s32))
+    RET undef $lr
+
+...
+---
+# CHECK-LABEL: name: test5
+# CHECK-LABEL:  bb.0:
+# CHECK-NEXT:    liveins: $x0, $x1
+
+# CHECK:         $x9 = MRS 58880
+# CHECK-NEXT:    renamable $x8 = MRS 55840
+# CHECK-NEXT:    STPWi $w9, killed renamable $w8, killed renamable $x0, 0 :: (store (s32))
+# CHECK-NEXT:    RET undef $lr
+
+name:            test5
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    renamable $x8 = MRS 58880, implicit-def $nzcv
+    STRWui renamable $w8, renamable $x0, 0, implicit killed $x8 :: (store (s32))
+    renamable $x8 = MRS 55840, implicit-def $nzcv
+    STRWui killed renamable $w8, renamable killed $x0, 1, implicit killed $x8 :: (store (s32))
+    RET undef $lr
+
+...
+---
+# CHECK-LABEL: name: test6
+# CHECK-LABEL: bb.0:
+# CHECK:    liveins: $x0, $x1, $q3
+
+# CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load (s128))
+# CHECK-NEXT:    renamable $q9 = XTNv8i16 renamable $q9, killed renamable $q3
+# CHECK-NEXT:    STRQui renamable $q9, renamable $x0, 11 :: (store (s128), align 4)
+# CHECK-NEXT:    renamable $q9 = FADDv2f64 renamable $q9, renamable $q9, implicit $fpcr
+# CHECK-NEXT:    STRQui renamable $q9, renamable $x0, 10 :: (store (s128), align 4)
+# CHECK-NEXT:    RET undef $lr
+
+# XTN has a tied use-def.
+name:            test6
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+  - { reg: '$q3' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $q3
+    renamable $q9 = LDRQui $x0, 0 :: (load (s128))
+    renamable $q9 = XTNv8i16 renamable $q9, killed renamable $q3
+    STRQui renamable $q9, renamable $x0, 11 :: (store (s128), align 4)
+    renamable $q9 = FADDv2f64 renamable $q9, renamable $q9, implicit $fpcr
+    STRQui renamable $q9, renamable $x0, 10 :: (store (s128), align 4)
+    RET undef $lr
+
+...
+---
+# Currently we do not rename across frame-setup instructions.
+# CHECK-LABEL: name: test7
+# CHECK-LABEL: bb.0:
+# CHECK-NEXT:    liveins: $x0, $x1
+
+# CHECK:         $sp = frame-setup SUBXri $sp, 64, 0
+# CHECK-NEXT:    renamable $x9 = frame-setup LDRXui renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:    STRXui renamable $x9, $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:    STRXui renamable $x9, $x0, 11 :: (store (s64), align 4)
+# CHECK-NEXT:    RET undef $lr
+#
+name:            test7
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  stackSize:       64
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -48, size: 16, alignment: 16 }
+  - { id: 1, type: spill-slot, offset: -64, size: 16, alignment: 16 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    $sp = frame-setup SUBXri $sp, 64, 0
+    renamable $x9 = frame-setup LDRXui renamable $x0, 0 :: (load (s64))
+    STRXui renamable $x9, $x0, 10 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+    STRXui renamable $x9, $x0, 11 :: (store (s64), align 4)
+    RET undef $lr
+...
+---
+# CHECK-LABEL: name: test8
+# CHECK-LABEL:  bb.0:
+# CHECK-NEXT:    liveins: $x0, $x1
+
+# CHECK:         renamable $x8 = MRS 58880
+# CHECK-NEXT:    $w9 = ORRWrs $wzr, killed renamable $w8, 0, implicit-def $x9
+# CHECK-NEXT:    renamable $x8 = MRS 55840
+# CHECK-NEXT:    STPWi $w9, killed renamable $w8, killed renamable $x0, 0 :: (store (s32))
+# CHECK-NEXT:    RET undef $lr
+
+name:            test8
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    renamable $x8 = MRS 58880, implicit-def $nzcv
+    renamable $w8 = ORRWrs $wzr, killed renamable $w8, 0, implicit-def $x8
+    STRWui renamable $w8, renamable $x0, 0, implicit killed $x8 :: (store (s32))
+    renamable $x8 = MRS 55840, implicit-def $nzcv
+    STRWui killed renamable $w8, renamable killed $x0, 1, implicit killed $x8 :: (store (s32))
+    RET undef $lr
+
+...
+---
+# The reg class returned for $q9 contains only the first 16 Q registers.
+# TODO: Can we check that all instructions that require renaming also support
+#       the second 16 Q registers?
+# CHECK-LABEL: name: test9
+# CHECK-LABEL: bb.0:
+# CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
+
+# CHECK:         renamable $q9 = LDRQui $x0, 0 :: (load (s128))
+# CHECK-NEXT:    STRQui killed renamable $q9, renamable $x0, 10 :: (store (s128), align 4)
+# CHECK:         renamable $q9 = LDRQui $x0, 1 :: (load (s128))
+# CHECK-NEXT:    STRQui renamable $q9, renamable $x0, 11 :: (store (s128), align 4)
+# CHECK-NEXT:    RET undef $lr
+
+name:            test9
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+  - { reg: '$q3' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
+    renamable $q9 = LDRQui $x0, 0 :: (load (s128))
+    STRQui renamable killed $q9, renamable $x0, 10 :: (store (s128), align 4)
+    renamable $q9 = LDRQui $x0, 1 :: (load (s128))
+    STRQui renamable $q9, renamable $x0, 11 :: (store (s128), align 4)
+    RET undef $lr
+
+...
+---
+# The livein $q7 is killed early, so we can re-use it for renaming.
+# CHECK-LABEL: name: test10
+# CHECK-LABEL: bb.0:
+# CHECK:    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
+
+# CHECK:         renamable $q7 = FADDv2f64 renamable $q7, renamable $q7, implicit $fpcr
+# CHECK-NEXT:    STRQui killed renamable $q7, renamable $x0, 100 :: (store (s128), align 4)
+# CHECK-NEXT:    $q7, renamable $q9 = LDPQi $x0, 0 :: (load (s128))
+# CHECK-NEXT:    STPQi killed renamable $q9, killed $q7, renamable $x0, 10 :: (store (s128), align 4)
+# CHECK-NEXT:    RET undef $lr
+
+name:            test10
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+  - { reg: '$q3' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $q0, $q1, $q2, $q3, $q4, $q5, $q6, $q7
+    renamable $q7 = FADDv2f64 renamable $q7, renamable $q7, implicit $fpcr
+    STRQui renamable killed $q7, renamable $x0, 100 :: (store (s128), align 4)
+    renamable $q9 = LDRQui $x0, 0 :: (load (s128))
+    STRQui renamable killed $q9, renamable $x0, 11 :: (store (s128), align 4)
+    renamable $q9 = LDRQui $x0, 1 :: (load (s128))
+    STRQui renamable killed $q9, renamable $x0, 10 :: (store (s128), align 4)
+    RET undef $lr
+
+...
+---
+# Make sure we do not use any registers that are defined between paired candidates
+# ($x14 in this example)
+# CHECK-LABEL: name: test11
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x11, $x12, $x13
+
+# CHECK:         renamable $w10 = LDRWui renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:    renamable $x9, renamable $x8 = LDPXi renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:    STRXui killed renamable $x9, renamable $x0, 11 :: (store (s64), align 4)
+# CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 3 :: (load (s64))
+# CHECK-NEXT:    renamable $x14 = LDRXui renamable $x0, 5 :: (load (s64))
+# CHECK-NEXT:    STRXui renamable $x9, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:    STRXui killed renamable $x14, renamable $x0, 200 :: (store (s64), align 4)
+# CHECK-NEXT:    renamable $w8 = ADDWrr $w10, $w10
+# CHECK-NEXT:    STRWui renamable $w8, renamable $x0, 100 :: (store (s64), align 4)
+# CHECK-NEXT:    RET undef $lr
+#
+name:            test11
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x11, $x12, $x13
+    renamable $w10 = LDRWui renamable $x0, 0 :: (load (s64))
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 1 :: (load (s64))
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 3 :: (load (s64))
+    renamable $x14 = LDRXui renamable $x0, 5 :: (load (s64))
+    STRXui renamable $x9, renamable $x0, 10 :: (store (s64), align 4)
+    STRXui renamable killed $x14, renamable $x0, 200 :: (store (s64), align 4)
+    renamable $w8 = ADDWrr $w10, $w10
+    STRWui renamable $w8, renamable $x0, 100 :: (store (s64), align 4)
+    RET undef $lr
+
+...
+---
+# Check that we correctly deal with killed registers in stores that get merged forward,
+# which extends the live range of the first store operand.
+# CHECK-LABEL: name: test12
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1
+#
+# CHECK:         renamable $x10 = LDRXui renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:    $x11, renamable $x8 = LDPXi renamable $x0, 3 :: (load (s64))
+# CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
+# CHECK-NEXT:    renamable $x8 = ADDXrr $x8, $x8
+# CHECK-NEXT:    STPXi renamable $x8, killed $x11, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:    STPXi killed renamable $x10, renamable $x9, renamable $x0, 20 :: (store (s64), align 4)
+# CHECK-NEXT:    RET undef $lr
+
+name:            test12
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    renamable $x10 = LDRXui renamable $x0, 0 :: (load (s64))
+    STRXui renamable killed $x10, renamable $x0, 20 :: (store (s64), align 4)
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 3 :: (load (s64))
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
+    renamable $x8 = ADDXrr $x8, $x8
+    STRXui renamable $x8, renamable $x0, 10 :: (store (s64), align 4)
+    STRXui renamable $x9, renamable $x0, 21 :: (store (s64), align 4)
+    RET undef $lr
+
+...
+---
+# Make sure we do not use any registers that are defined between def to rename and the first
+# paired store. ($x14 in this example)
+# CHECK-LABEL: name: test13
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x10, $x11, $x12, $x13
+# CHECK:    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:    renamable $x14 = LDRXui renamable $x0, 4 :: (load (s64))
+# CHECK-NEXT:    STRXui killed renamable $x14, renamable $x0, 100 :: (store (s64), align 4)
+# CHECK-NEXT:    STRXui killed renamable $x9, renamable $x0, 11 :: (store (s64), align 4)
+# CHECK-NEXT:    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
+# CHECK-NEXT:    STRXui renamable $x9, renamable $x0, 10 :: (store (s64))
+# CHECK-NEXT:    RET undef $lr
+#
+name:            test13
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x10, $x11, $x12, $x13
+    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
+    renamable $x14 = LDRXui renamable $x0, 4 :: (load (s64))
+    STRXui renamable killed $x14, renamable $x0, 100 :: (store (s64), align 4)
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 2 :: (load (s64))
+    STRXui renamable $x9, renamable $x0, 10 :: (store (s64))
+    RET undef $lr
+
+...
+# Make sure we do not rename if pseudo-defs. Noop pseudo instructions like KILL
+# may lead to a missing definition of the rename register.
+#
+# CHECK-LABEL: name: test14_pseudo
+# CHECK: bb.0:
+# CHECK-NEXT:    liveins: $w8, $fp, $w25
+# CHECK:         renamable $w8 = KILL killed renamable $w8, implicit-def $x8
+# CHECK-NEXT:    STURXi killed renamable $x8, $fp, -40 :: (store (s64))
+# CHECK-NEXT:    $w8 = ORRWrs $wzr, killed $w25, 0, implicit-def $x8
+# CHECK-NEXT:    STURXi killed renamable $x8, $fp, -32 :: (store (s64))
+# CHECK-NEXT:    RET undef $lr
+#
+name:            test14_pseudo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w8, $fp, $w25
+
+    renamable $w8 = KILL killed renamable $w8, implicit-def $x8
+    STURXi killed renamable $x8, $fp, -40 :: (store (s64))
+    $w8 = ORRWrs $wzr, killed $w25, 0, implicit-def $x8
+    STURXi killed renamable $x8, $fp, -32 :: (store (s64))
+    RET undef $lr
+...
+---
+# Make sure we do not pick a register marked as undef for renaming.
+#
+# CHECK-LABEL: name: test15_undef_op
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $x0, $x1, $x8
+# CHECK:       renamable $x10, $x11 = LDPXi renamable $x0, 0 :: (load (s64))
+# CHECK-NEXT:  renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+# CHECK-NEXT:  STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
+# CHECK-NEXT:  renamable $x10 = ADDXrr $x10, $x10
+# CHECK-NEXT:  STPXi renamable $x10, killed $x11, renamable $x0, 10 :: (store (s64), align 4)
+# CHECK-NEXT:  RET undef $lr
+#
+name:            test15_undef_op
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1, $x8
+    renamable $x10, renamable $x9 = LDPXi renamable $x0, 0 :: (load (s64))
+    STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
+    renamable $x9 = LDRXui renamable $x0, 1 :: (load (s64))
+    STRXui renamable $x9, renamable $x0, 100 :: (store (s64), align 4)
+    renamable $x10 = ADDXrr $x10, $x10
+    STRXui renamable $x10, renamable $x0, 10 :: (store (s64), align 4)
+    RET undef $lr
+
+...
+
+# During ISel, the order of load/store pairs can be optimized and changed
+# so that only a single register is used. Due to this register reuse, LDP/STPs
+# are not generated. These tests check that LDP/STPs will be generated after
+# register renaming is attempted.
+
+---
+#
+# CHECK-LABEL: name: ldst32
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
+# CHECK-NEXT: STPQi killed renamable $q0, killed $q1, $sp, 2 :: (store (s128), align 32)
+# CHECK-NEXT: RET undef $lr
+#
+name:            ldst32
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui killed renamable $q0, $sp, 3 :: (store 16, basealign 32)
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 32)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: ldst64
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 64)
+# CHECK-NEXT: STPQi killed renamable $q0, killed $q1, $sp, 2 :: (store (s128), align 64)
+# CHECK-NEXT: RET undef $lr
+#
+name:            ldst64
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui killed renamable $q0, $sp, 3 :: (store 16, basealign 64)
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 64)
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 64)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: ldst128
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 128)
+# CHECK-NEXT: STPQi killed renamable $q0, killed $q1, $sp, 2 :: (store (s128), align 128)
+# CHECK-NEXT: RET undef $lr
+#
+name:            ldst128
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui killed renamable $q0, $sp, 3 :: (store 16, basealign 128)
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 128)
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 128)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: ldst-no-reg-available
+# CHECK: liveins: $q1, $q2, $q3, $q4, $q5, $q6, $q7, $q8, $q9, $q10
+# CHECK: renamable $q0 = LDRQui $sp, 1 :: (load (s128))
+# CHECK-NEXT: STRQui killed renamable $q0, $sp, 3 :: (store (s128), align 32)
+# CHECK-NEXT: renamable $q0 = LDRQui $sp, 0 :: (load (s128), align 32)
+# CHECK-NEXT: STRQui killed renamable $q0, $sp, 2 :: (store (s128), align 32)
+# CHECK-NEXT: RET undef $lr
+#
+name:            ldst-no-reg-available
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $q1, $q2, $q3, $q4, $q5, $q6, $q7, $q8, $q9, $q10
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui killed renamable $q0, $sp, 3 :: (store 16, basealign 32)
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 32)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: ldst-basereg-modified
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
+# CHECK-NEXT: STRQui killed $q1, $sp, 3 :: (store (s128), align 32)
+# CHECK-NEXT: $sp = ADDXri $sp, 16, 0
+# CHECK-NEXT: STRQui killed renamable $q0, $sp, 2 :: (store (s128), align 32)
+# CHECK-NEXT: RET undef $lr
+#
+name:            ldst-basereg-modified
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui killed renamable $q0, $sp, 3 :: (store 16, basealign 32)
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    $sp = ADDXri $sp, 16, 0
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 32)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: ldr-dest-reg-implicit-killed
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
+# CHECK-NEXT: STPSi $s1, renamable $s0, $sp, 9 :: (store (s32))
+# CHECK-NEXT: RET undef $lr
+#
+name:            ldr-dest-reg-implicit-killed
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRSui renamable $s0, $sp, 9, implicit killed $q0 :: (store (s32))
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRSui renamable $s0, $sp, 10, implicit killed $q0 :: (store (s32))
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: bundled
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
+# CHECK-NEXT: STPSi $s1, renamable $s0, $sp, 9 :: (store (s32))
+# CHECK-NEXT: BUNDLE implicit-def $z3
+# CHECK-NEXT:  $z3 = MOVPRFX_ZZ $z19
+# CHECK-NEXT:  $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+# CHECK-NEXT: }
+# CHECK-NEXT: RET undef $lr
+#
+name:            bundled
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $z3, $z19, $p0, $z16
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRSui renamable $s0, $sp, 9, implicit killed $q0 :: (store (s32))
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z16 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+    }
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRSui renamable $s0, $sp, 10, implicit killed $q0 :: (store (s32))
+    RET undef $lr
+...
+---
+#
+# CHECK-LABEL: name: bundled_use
+# CHECK: renamable $q0 = LDRQui $sp, 1
+# CHECK-NEXT: STRQui renamable $q0, $sp, 3, implicit-def $z0
+# CHECK-NEXT: BUNDLE implicit-def $z3
+# CHECK-NEXT:  $z3 = MOVPRFX_ZZ $z19
+# CHECK-NEXT:  $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z0
+# CHECK-NEXT: }
+# CHECK-NEXT: renamable $q0 = LDRQui $sp, 0
+# CHECK-NEXT: STRQui killed renamable $q0, $sp, 2
+# CHECK-NEXT: RET undef $lr
+#
+name:            bundled_use
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $z3, $z19, $p0, $z16
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui renamable $q0, $sp, 3, implicit-def $z0 :: (store 16, basealign 128)
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z0, implicit $q0 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z0
+    }
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 128)
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 128)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: bundle_at_limit
+# CHECK: renamable $x3, $x4 = LDPXi $sp, 1 :: (load (s64))
+#
+name:            bundle_at_limit
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $z0, $p0, $z3, $z19
+    renamable $x3 = LDRXui $sp, 2 :: (load (s64))
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x3, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x3, 1, 0
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z0 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z0
+    }
+    $x2 = ADDXri renamable $x3, 1, 0
+    renamable $x3 = LDRXui $sp, 1 :: (load (s64))
+    RET undef $lr
+
+...

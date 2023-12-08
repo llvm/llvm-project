@@ -1,0 +1,47 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+  interface
+    attributes(device) subroutine exts1
+    end
+  end interface
+ contains
+  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  recursive attributes(device) subroutine s1
+  end
+  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  pure attributes(device) subroutine s2
+  end
+  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  elemental attributes(device) subroutine s3
+  end
+  subroutine s4
+   contains
+    !ERROR: A device subprogram may not be an internal subprogram
+    attributes(device) subroutine inner
+    end
+  end
+  attributes(device) subroutine s5 ! nvfortran crashes on this one
+   contains
+    !ERROR: 'inner' may not be an internal procedure of CUDA device subprogram 's5'
+    subroutine inner
+    end
+  end
+  attributes(device) subroutine s6
+    stmtfunc(x) = x + 1. ! ok
+  end
+  !ERROR: A function may not have ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)
+  attributes(global) real function f1
+  end
+  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  recursive attributes(global) subroutine s7
+  end
+  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  pure attributes(global) subroutine s8
+  end
+  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
+  elemental attributes(global) subroutine s9
+  end
+end
+
+attributes(device) subroutine exts1
+end

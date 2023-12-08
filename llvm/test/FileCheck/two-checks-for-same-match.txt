@@ -1,0 +1,8 @@
+// Check that two distinct CHECK lines won't match the same string
+// RUN: not FileCheck -input-file %s %s
+
+; CHECK: {{a[0-9]b}}
+; CHECK: {{a[0-9]b}}
+
+a2b
+

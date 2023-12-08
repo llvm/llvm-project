@@ -1,0 +1,38 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -O binary %t %t2
+# RUN: od -t x1 %t2 | FileCheck %s --ignore-case
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000001000
+    Content:         "c3c3c3c3"
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1008
+    AddressAlign:    0x0000000000000008
+    Content:         "3232"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1000
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x1008
+    Align:    0x1000
+    FirstSec: .data
+    LastSec:  .data
+
+# CHECK: 0000000 c3 c3 c3 c3 00 00 00 00 32 32

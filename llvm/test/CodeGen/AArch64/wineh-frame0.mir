@@ -1,0 +1,60 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+# Check save_regp_x, save_regp
+
+# CHECK:        early-clobber $sp = frame-setup STPXpre killed $x19, killed $x20, $sp, -10
+# CHECK-NEXT:   frame-setup SEH_SaveRegP_X 19, 20, -80
+# CHECK-NEXT:   frame-setup STPXi killed $x21, killed $x22, $sp, 2
+# CHECK-NEXT:   frame-setup SEH_SaveRegP 21, 22, 16
+# CHECK-NEXT:   frame-setup STPXi killed $x23, killed $x24, $sp, 4
+# CHECK-NEXT:   frame-setup SEH_SaveRegP 23, 24, 32
+# CHECK-NEXT:   frame-setup STPXi killed $x25, killed $x26, $sp, 6
+# CHECK-NEXT:   frame-setup SEH_SaveRegP 25, 26, 48
+# CHECK-NEXT:   frame-setup STPXi killed $x27, killed $x28, $sp, 8
+# CHECK-NEXT:   frame-setup SEH_SaveRegP 27, 28, 64
+# CHECK-NEXT:   frame-setup SEH_PrologEnd
+# CHECK:        frame-destroy SEH_EpilogStart
+# CHECK-NEXT:   $x27, $x28 = frame-destroy LDPXi $sp, 8
+# CHECK-NEXT:   frame-destroy SEH_SaveRegP 27, 28, 64
+# CHECK-NEXT:   $x25, $x26 = frame-destroy LDPXi $sp, 6
+# CHECK-NEXT:   frame-destroy SEH_SaveRegP 25, 26, 48
+# CHECK-NEXT:   $x23, $x24 = frame-destroy LDPXi $sp, 4
+# CHECK-NEXT:   frame-destroy SEH_SaveRegP 23, 24, 32
+# CHECK-NEXT:   $x21, $x22 = frame-destroy LDPXi $sp, 2
+# CHECK-NEXT:   frame-destroy SEH_SaveRegP 21, 22, 16
+# CHECK-NEXT:   early-clobber $sp, $x19, $x20 = frame-destroy LDPXpost $sp, 10
+# CHECK-NEXT:   frame-destroy SEH_SaveRegP_X 19, 20, -80
+# CHECK-NEXT:   frame-destroy SEH_EpilogEnd
+# CHECK-NEXT:   RET_ReallyLR implicit $x0
+
+...
+---
+name:            test
+alignment:       4
+tracksRegLiveness: true
+hasWinCFI: true
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  stackSize:       80
+  maxAlignment:    8
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: true
+stack:
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x27, $x28, $x25, $x26, $x23, $x24, $x21, $x22, $x19, $x20
+    $x19 = ADDXrr $x0, killed $x1
+    $x20 = ADDXrr $x19, killed $x0
+    $x21 = ADDXrr $x20, killed $x19
+    $x22 = ADDXrr $x21, killed $x20
+    $x23 = ADDXrr $x22, killed $x21
+    $x24 = ADDXrr $x23, killed $x22
+    $x25 = ADDXrr $x24, killed $x23
+    $x26 = ADDXrr $x25, killed $x24
+    $x27 = ADDXrr $x26, killed $x25
+    $x28 = ADDXrr $x27, killed $x26
+    $x0 = COPY $x28
+    RET_ReallyLR implicit $x0
+
+...

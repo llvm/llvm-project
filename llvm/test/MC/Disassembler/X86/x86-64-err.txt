@@ -1,0 +1,15 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 2>&1 | FileCheck --check-prefix=64 %s
+# RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck --check-prefix=32 %s
+
+# 64: warning: invalid instruction encoding
+# 32: into
+0xce
+
+# 64: invalid instruction encoding
+0xc4,0x62,0xf9,0x18,0x20
+# 64: invalid instruction encoding
+0xc4,0x62,0xfd,0x18,0x20
+# 64: invalid instruction encoding
+0xc4,0xe2,0xfd,0x1a,0x08
+# 64: invalid instruction encoding
+0xc4,0xe3,0xfd,0x39,0xc5,0x01

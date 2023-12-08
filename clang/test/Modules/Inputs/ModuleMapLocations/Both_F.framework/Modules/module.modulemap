@@ -1,0 +1,3 @@
+framework module Both_F {
+  header "a.h"
+}

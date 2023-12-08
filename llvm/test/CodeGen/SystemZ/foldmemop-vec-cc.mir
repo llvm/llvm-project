@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -start-before=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test that folding does not occur if it would introduce a clobbering of a live CC.
+
+--- |
+  define void @fun0(double %arg0, double %arg1, double* %Dst) { ret void }
+
+...
+
+# CHECK-LABEL: fun0:
+# CHECK: ld      %f1, 160(%r15)          # 8-byte Folded Reload
+# CHECK-NEXT: wfadb   %f0, %f0, %f1
+---
+name:            fun0
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fp64bit }
+  - { id: 1, class: fp64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: gr64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%0' }
+  - { reg: '$f2d', virtual-reg: '%1' }
+  - { reg: '$r2d', virtual-reg: '%2' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $r2d
+  
+    %2:addr64bit = COPY $r2d
+    %1:fp64bit = COPY $f2d
+    %0:fp64bit = COPY $f0d
+    CDBR %0, %1, implicit-def $cc, implicit $fpc
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    %3:vr64bit = nofpexcept WFADB %0, %1, implicit $fpc
+    %4:gr64bit = LGHI 0
+    %4:gr64bit = LOCGHI %4, 1, 14, 8, implicit killed $cc
+    VST64 %3, %2, 0, $noreg :: (store (s64) into %ir.Dst)
+    Return
+
+...
+

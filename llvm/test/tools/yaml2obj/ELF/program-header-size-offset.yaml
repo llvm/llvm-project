@@ -1,0 +1,210 @@
+## Show that yaml2obj properly emits program headers with explicit file size,
+## memory size and offset parameters.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj %t1 --program-headers | FileCheck %s
+
+# CHECK: ProgramHeaders [
+# CHECK:    Offset: 0x1234
+# CHECK:    FileSize: 1111
+# CHECK:    MemSize: 9999
+
+# CHECK:    Offset: 0x2000
+# CHECK:    FileSize: 6
+# CHECK:    MemSize: 4
+
+# CHECK:    Offset: 0x2000
+# CHECK:    FileSize: 4
+# CHECK:    MemSize: 6
+
+# CHECK:    Offset: 0x1FFF
+# CHECK:    FileSize: 5
+# CHECK:    MemSize: 5
+
+# CHECK:    Offset: 0xFFE
+# CHECK:    FileSize: 7
+# CHECK:    MemSize: 9
+
+# CHECK:    Offset: 0x3000
+# CHECK:    FileSize: 3
+# CHECK:    MemSize: 2
+
+# CHECK:    Offset: 0x2004
+## Offset of .nobits2 (0x2009) - offset of .data (0x2004) == 0x5.
+# CHECK:    FileSize: 5
+# CHECK:    MemSize: 6
+# CHECK: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 4
+    ShOffset: 0x1000
+    AddressAlign: 0x1000
+  - Name: .rodata
+    Type: SHT_PROGBITS
+    Size: 4
+    ShOffset: 0x2000
+    AddressAlign: 0x1000
+  - Name: .data
+    Type: SHT_PROGBITS
+    ShOffset: 0x2004
+    Size: 4
+  - Name: .nobits1
+    Type: SHT_NOBITS
+    ShOffset: 0x2008
+    Size: 1
+  - Name: .nobits2
+    Type: SHT_NOBITS
+    # Intentionally set to 0x2009 though the previous section is SHT_NOBITS.
+    ShOffset: 0x2009
+    Size: 1
+ProgramHeaders:
+  # Program header with no sections.
+  - Type:     0x6abcdef0 # arbitrary type
+    Offset:   0x1234
+    FileSize: 1111
+    MemSize:  9999
+  # Program header with only file size set.
+  - Type:     0x6abcdef0
+    FileSize: 6
+    FirstSec: .rodata
+    LastSec:  .rodata
+  # Program header with only mem size set.
+  - Type:     0x6abcdef0
+    MemSize:  6
+    FirstSec: .rodata
+    LastSec:  .rodata
+  # Program header with only offset set.
+  - Type:     0x6abcdef0
+    Offset:   0x1fff
+    FirstSec: .rodata
+    LastSec:  .rodata
+  # Program header with sections, valid properties.
+  - Type:     0x6abcdef0
+    Offset:   0xffe
+    FileSize: 7
+    MemSize:  9
+    FirstSec: .text
+    LastSec:  .text
+  # Program header with invalid properties.
+  - Type:     0x6abcdef0
+    Offset:   0x3000
+    FileSize: 3
+    MemSize:  2
+  # Program header with 2 SHT_NOBITS sections.
+  - Type:     0x6abcdef0
+    Offset:   0x2004
+    FirstSec: .data
+    LastSec:  .nobits2
+
+## Test the "Offset" property.
+
+## Check that by default the p_offset field of a segment is set to the
+## offset of the section with the minimum offset.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf %t2 --sections --program-headers | \
+# RUN:   FileCheck %s --check-prefixes=DEFAULT-OFFSET
+
+# DEFAULT-OFFSET:      [Nr] Name Type     Address          Off
+# DEFAULT-OFFSET:      [ 1] .foo PROGBITS 0000000000001000 0000b0
+# DEFAULT-OFFSET-NEXT: [ 2] .bar PROGBITS 0000000000001001 0000b1
+
+# DEFAULT-OFFSET:       Type Offset
+# DEFAULT-OFFSET-NEXT:  LOAD 0x0000b0
+# DEFAULT-OFFSET-NEXT:  LOAD 0x0000b1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+    Address: 0x1000
+  - Name:  .bar
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .foo
+    LastSec:  .bar
+  - Type:     PT_LOAD
+    FirstSec: .bar
+    LastSec:  .bar
+
+## Check we can set the "Offset" value explicitly to be less than or equal to
+## the offset of a section in the segment.
+# RUN: yaml2obj --docnum=3 -DOFFSET=0x77 %s -o %t3
+# RUN: llvm-readelf %t3 --sections --program-headers | \
+# RUN:   FileCheck %s --check-prefixes=VALID-OFFSET,VALID-OFFSET-LESS
+# RUN: yaml2obj --docnum=3 -DOFFSET=0x78 %s -o %t4
+# RUN: llvm-readelf %t4 --sections --program-headers | \
+# RUN:   FileCheck %s --check-prefixes=VALID-OFFSET,VALID-OFFSET-EQ
+
+# VALID-OFFSET: [Nr] Name Type     Address          Off
+# VALID-OFFSET: [ 1] .foo PROGBITS 0000000000000000 000078
+
+# VALID-OFFSET:      Type Offset
+# VALID-OFFSET-EQ:   LOAD 0x000078
+# VALID-OFFSET-LESS: LOAD 0x000077
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Size:  0x1
+ProgramHeaders:
+  - Type:    PT_LOAD
+    Offset:  [[OFFSET]]
+    FirstSec: .foo
+    LastSec:  .foo
+
+## Check we report an error when the "Offset" value is larger than the offset of a section in the segment.
+# RUN: not yaml2obj --docnum=3 -DOFFSET=0x79 %s -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET
+
+# INVALID-OFFSET: yaml2obj: error: 'Offset' for segment with index 1 must be less than or equal to the minimum file offset of all included sections (0x78)
+
+## Document that the "Offset" value is checked after the section offset is overriden using "ShOffset".
+# RUN: yaml2obj --docnum=4 %s -o %t5
+# RUN: llvm-readelf %t5 --sections --program-headers | FileCheck %s --check-prefix=SHOFFSET
+
+# SHOFFSET: [Nr] Name Type     Address          Off
+# SHOFFSET: [ 1] .foo PROGBITS 0000000000000000 ffffffff
+
+# SHOFFSET:      Type Offset
+# SHOFFSET-NEXT: LOAD 0xffffff00
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:     .foo
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC ]
+    Size:     0x1
+## Note: the real .foo offset is much less than 0xFFFFFFFF or
+##       0xFFFFFF00, but no error is reported.
+    ShOffset: 0xFFFFFFFF
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Offset:   0xFFFFFF00
+    FirstSec: .foo
+    LastSec:  .foo

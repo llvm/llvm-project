@@ -1,0 +1,301 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+licenses(["notice"])
+
+cc_binary(
+    name = "llvm-bolt-heatmap",
+    srcs = glob([
+        "tools/heatmap/*.cpp",
+    ]),
+    deps = [
+        ":Profile",
+        ":Rewrite",
+        ":Utils",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:MC",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "merge-fdata",
+    srcs = glob([
+        "tools/merge-fdata/*.cpp",
+    ]),
+    deps = [
+        ":Profile",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "llvm-bolt",
+    srcs = glob([
+        "tools/driver/*.cpp",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Profile",
+        ":Rewrite",
+        ":RuntimeLibs",
+        ":TargetAArch64",
+        ":TargetX86",
+        ":Utils",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Rewrite",
+    srcs = glob([
+        "lib/Rewrite/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/bolt/Rewrite/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Core",
+        ":Passes",
+        ":Profile",
+        ":RuntimeLibs",
+        ":TargetX86",
+        ":Utils",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DWP",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:DWARFLinker",
+        "//llvm:JITLink",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:OrcShared",
+        "//llvm:Support",
+        "//llvm:ir_headers",
+    ],
+)
+
+expand_template(
+    name = "RuntimeLibraryVariables_inc",
+    out = "include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc",
+    substitutions = {
+        # FIXME this is a total guess
+        "@LLVM_LIBDIR_SUFFIX@": "lib",
+    },
+    template = "include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in",
+)
+
+cc_library(
+    name = "RuntimeLibs",
+    srcs = glob([
+        "lib/RuntimeLibs/*.cpp",
+    ]),
+    includes = ["include"],
+    textual_hdrs = glob([
+        "include/bolt/RuntimeLibs/*.h",
+    ]) + ["include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc"],
+    deps = [
+        ":Core",
+        ":Passes",
+        ":Utils",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DWP",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Profile",
+    srcs = glob([
+        "lib/Profile/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/bolt/Profile/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Core",
+        ":Passes",
+        ":Utils",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "Passes",
+    srcs = glob([
+        "lib/Passes/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/bolt/Passes/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Core",
+        ":Utils",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "TargetX86",
+    srcs = glob([
+        "lib/Target/X86/*.cpp",
+    ]),
+    hdrs = glob([
+        "lib/Target/X86/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Core",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DWP",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:X86CommonTableGen",
+        "//llvm:X86UtilsAndDesc",
+    ],
+)
+
+cc_library(
+    name = "TargetAArch64",
+    srcs = glob([
+        "lib/Target/AArch64/*.cpp",
+    ]),
+    hdrs = glob([
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Core",
+        ":Utils",
+        "//llvm:AArch64CommonTableGen",
+        "//llvm:AArch64UtilsAndDesc",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DWP",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Core",
+    srcs = glob([
+        "lib/Core/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/bolt/Core/*.h",
+        "include/bolt/RuntimeLibs/*.h",
+        "include/bolt/Passes/*.h",
+        "include/bolt/Rewrite/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":Utils",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:ir_headers",
+    ],
+)
+
+cc_library(
+    name = "Utils",
+    srcs = glob([
+        "lib/Utils/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/bolt/Utils/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:DWP",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:MCParser",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)

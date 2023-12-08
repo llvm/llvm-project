@@ -1,0 +1,6 @@
+RUN: llvm-pdbutil dump -globals %S/Inputs/pdbdump-globals-empty.pdb | FileCheck %s
+
+CHECK:                        Global Symbols
+CHECK: ============================================================
+CHECK:   Records
+CHECK-NOT: S_

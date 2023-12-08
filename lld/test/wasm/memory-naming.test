@@ -1,0 +1,88 @@
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.start.o
+# RUN: wasm-ld --export-memory=foo -o %t.wasm %t.start.o
+# RUN: obj2yaml %t.wasm | FileCheck %s
+
+# Verify that the --export-memory=<name> option changes the exported name of the module's memory
+
+# CHECK:       - Type:            EXPORT
+# CHECK-NEXT:    Exports:
+# CHECK-NEXT:      - Name:            foo
+# CHECK-NEXT:        Kind:            MEMORY
+# CHECK-NEXT:        Index:           0
+# CHECK-NEXT:      - Name:            _start
+# CHECK-NEXT:        Kind:            FUNCTION
+# CHECK-NEXT:        Index:           0
+# CHECK-NEXT:  - Type:
+
+# RUN:wasm-ld --export-memory --export-memory -o %t.unnamed.wasm %t.start.o
+# RUN: obj2yaml %t.unnamed.wasm | FileCheck -check-prefix=CHECK-UNNAMED %s
+
+# Verify that the --export-memory option without a parameter exports the memory
+# as "memory"
+
+# CHECK-UNNAMED:       - Type:            EXPORT
+# CHECK-UNNAMED-NEXT:    Exports:
+# CHECK-UNNAMED-NEXT:      - Name:            memory
+# CHECK-UNNAMED-NEXT:        Kind:            MEMORY
+# CHECK-UNNAMED-NEXT:        Index:           0
+# CHECK-UNNAMED-NEXT:      - Name:            _start
+# CHECK-UNNAMED-NEXT:        Kind:            FUNCTION
+# CHECK-UNNAMED-NEXT:        Index:           0
+# CHECK-UNNAMED-NEXT:  - Type:
+
+# RUN:wasm-ld --export-memory=foo --export-memory=foo -o %t.duplicate.wasm %t.start.o
+# RUN: obj2yaml %t.duplicate.wasm | FileCheck -check-prefix=CHECK-DUPLICATE %s
+
+# Verify that passing --export-memory with the same name twice works
+
+# CHECK-DUPLICATE:       - Type:            EXPORT
+# CHECK-DUPLICATE-NEXT:    Exports:
+# CHECK-DUPLICATE-NEXT:      - Name:            foo
+# CHECK-DUPLICATE-NEXT:        Kind:            MEMORY
+# CHECK-DUPLICATE-NEXT:        Index:           0
+# CHECK-DUPLICATE-NEXT:      - Name:            _start
+# CHECK-DUPLICATE-NEXT:        Kind:            FUNCTION
+# CHECK-DUPLICATE-NEXT:        Index:           0
+# CHECK-DUPLICATE-NEXT:  - Type:
+
+# RUN:wasm-ld --import-memory=foo,bar -o %t.import.wasm %t.start.o
+# RUN: obj2yaml %t.import.wasm | FileCheck -check-prefix=CHECK-IMPORT %s
+
+# Verify that memory imports can be renamed, and that no memory is exported by
+# default when memory is being imported
+
+# CHECK-IMPORT:       - Type:            IMPORT
+# CHECK-IMPORT-NEXT:    Imports:
+# CHECK-IMPORT-NEXT:      - Module:          foo
+# CHECK-IMPORT-NEXT:        Field:           bar
+# CHECK-IMPORT-NEXT:        Kind:            MEMORY
+# CHECK-IMPORT-NEXT:        Memory:
+# CHECK-IMPORT-NEXT:          Minimum:         0x2
+# CHECK-IMPORT:      - Type:            EXPORT
+# CHECK-IMPORT-NEXT:    Exports:
+# CHECK-IMPORT-NEXT:      - Name:            _start
+# CHECK-IMPORT-NEXT:        Kind:            FUNCTION
+# CHECK-IMPORT-NEXT:        Index:           0
+# CHECK-IMPORT-NEXT:  - Type:
+
+# RUN:wasm-ld --import-memory=foo,bar --export-memory=qux -o %t.both.wasm %t.start.o
+# RUN: obj2yaml %t.both.wasm | FileCheck -check-prefix=CHECK-BOTH %s
+
+# Verify that memory can be both imported and exported from a module
+
+# CHECK-BOTH:       - Type:            IMPORT
+# CHECK-BOTH-NEXT:    Imports:
+# CHECK-BOTH-NEXT:      - Module:          foo
+# CHECK-BOTH-NEXT:        Field:           bar
+# CHECK-BOTH-NEXT:        Kind:            MEMORY
+# CHECK-BOTH-NEXT:        Memory:
+# CHECK-BOTH-NEXT:          Minimum:         0x2
+# CHECK-BOTH:       - Type:            EXPORT
+# CHECK-BOTH-NEXT:    Exports:
+# CHECK-BOTH-NEXT:      - Name:            qux
+# CHECK-BOTH-NEXT:        Kind:            MEMORY
+# CHECK-BOTH-NEXT:        Index:           0
+# CHECK-BOTH-NEXT:      - Name:            _start
+# CHECK-BOTH-NEXT:        Kind:            FUNCTION
+# CHECK-BOTH-NEXT:        Index:           0
+# CHECK-BOTH-NEXT:  - Type:

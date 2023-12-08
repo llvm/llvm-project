@@ -1,0 +1,116 @@
+## Show that --disassemble + --reloc prints relocations inline and does not dump
+## the relocation sections.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1.o
+# RUN: llvm-objdump %t1.o -d -r | FileCheck %s --implicit-check-not="RELOCATION RECORDS"
+
+# CHECK:      0: e8 00 00 00 00                callq   0x5 <.text+0x5>
+# CHECK-NEXT:          0000000000000001:  R_X86_64_PC32        foo-0x4
+# CHECK-NEXT:          0000000000000002:  R_X86_64_NONE        bar+0x8
+# CHECK-NEXT: 5: e8 00 00 00 00                callq   0xa <.text+0xa>
+# CHECK-NEXT:          0000000000000006:  R_X86_64_PLT32       foo+0x1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e800000000e800000000'
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Info:    .text
+    Relocations:
+      - Offset: 1
+        Symbol: foo
+        Type:   R_X86_64_PC32
+        Addend: -4
+      - Offset: 2
+        Symbol: bar
+        Type:   R_X86_64_NONE
+        Addend: 8
+      - Offset: 6
+        Symbol: foo
+        Type:   R_X86_64_PLT32
+        Addend: 1
+Symbols:
+  - Name: foo
+  - Name: bar
+
+## Check we report an error if the relocated section identified by the
+## sh_info field of a relocation section is invalid.
+
+# RUN: yaml2obj %s --docnum=2 -o %t2.o
+# RUN: not llvm-objdump %t2.o -d --reloc 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=ERR
+
+# ERR: error: '[[FILE]]': section (1): failed to get a relocated section: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name: .rela.debug_info
+  Type: SHT_RELA
+  Link: 0
+  Info: 0xFF
+  Relocations: []
+
+## Check ranges of addends being displayed in a dump of relocations mixed with disassembly.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-objdump -d -r %t3 | FileCheck %s --check-prefix=ADDENDS
+
+# ADDENDS: Disassembly of section .text:
+# ADDENDS: R_X86_64_64 glob-0x8000000000000000
+# ADDENDS: R_X86_64_64 glob+0x7fffffffffffffff
+# ADDENDS: R_X86_64_64 glob-0x1
+# ADDENDS: R_X86_64_64 glob+0x12345678
+# ADDENDS: R_X86_64_64 glob{{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name:  .text
+  Type:  SHT_PROGBITS
+  Size:  8
+  Flags: [SHF_EXECINSTR,SHF_ALLOC]
+- Name: .rela.text
+  Type: SHT_RELA
+  Info: .text
+  Relocations:
+    - Offset: 0x0
+      Addend: -9223372036854775808
+      Symbol: glob
+      Type:   R_X86_64_64
+    - Offset: 0x1
+      Symbol: glob
+      Type:   R_X86_64_64
+      Addend: 9223372036854775807
+    - Offset: 0x2
+      Symbol: glob
+      Type:   R_X86_64_64
+      Addend: -1
+    - Offset: 0x3
+      Symbol: glob
+      Type:   R_X86_64_64
+      Addend: 0x12345678
+    - Offset: 0x4
+      Symbol: glob
+      Type:   R_X86_64_64
+      Addend: 0
+Symbols:
+  - Name:    glob
+    Section: .text
+    Value:   0x0
+    Size:    0
+    Binding: STB_GLOBAL

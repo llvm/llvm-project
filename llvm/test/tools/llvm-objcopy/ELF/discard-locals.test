@@ -1,0 +1,120 @@
+# RUN: yaml2obj %s -o %t
+# RUN: cp %t %t1
+# RUN: llvm-objcopy --discard-locals %t %t2
+# Verify that llvm-objcopy has not modified the input.
+# RUN: cmp %t %t1
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
+
+# RUN: llvm-objcopy -X %t %t3
+# Verify that llvm-objcopy has not modified the input.
+# RUN: cmp %t %t1
+# RUN: cmp %t2 %t3
+
+# Verify that llvm-strip modifies the symbol table the same way.
+
+# RUN: cp %t %t4
+# RUN: llvm-strip --discard-locals %t4
+# RUN: cmp %t2 %t4
+
+# RUN: cp %t %t5
+# RUN: llvm-strip -X %t5
+# RUN: cmp %t2 %t5
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+  - Name:            .LLVM.Custom.Section
+    Type:            SHT_PROGBITS
+Symbols:
+  - Name:     Local
+    Type:     STT_FUNC
+    Section:  .text
+  - Name:     .L.LocalSection
+    Type:     STT_SECTION
+    Section:  .text
+  - Type:     STT_SECTION
+    Section:  .LLVM.Custom.Section
+  - Name:     .L.LocalFile
+    Type:     STT_FILE
+  - Name:     .L.str
+    Type:     STT_OBJECT
+    Section:  .text
+  - Name:     .L.undefined
+  - Name:     .L.abs
+    Index:    SHN_ABS
+  - Name:     .L.Global
+    Type:     STT_FUNC
+    Section:  .text
+    Binding:  STB_GLOBAL
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: Local
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.LocalSection
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: Section
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: Section
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .LLVM.Custom.Section
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.LocalFile
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: File
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.undefined
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.Global
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

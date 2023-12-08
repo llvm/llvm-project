@@ -1,0 +1,100 @@
+## Check we are able to have multiple YAMLs in a file and switch between
+## them using --docnum=x option.
+
+# RUN: yaml2obj --docnum=1 %s \
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC1 %s
+# RUN: yaml2obj --docnum=2 %s \
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC2 %s
+# RUN: yaml2obj --docnum=3 %s \
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC3 %s
+# RUN: yaml2obj --docnum=4 %s \
+# RUN:   | llvm-readobj --symbols - | FileCheck -check-prefix=DOC4 %s
+# RUN: not yaml2obj --docnum=5 %s 2>&1 \
+# RUN:   | FileCheck -check-prefix=DOC5 %s
+
+# DOC1: Name: _sym1
+# DOC2: Name: _sym2
+# DOC3: Name: _sym3
+# DOC4: Name: _sym4
+# DOC5: error: cannot find the 5th document
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_MIPS
+  Flags: [EF_MIPS_CPIC]
+Symbols:
+- Name: _sym1
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS32
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_386
+Symbols:
+- Name: _sym2
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+
+sections:
+  - Name: .text
+    Alignment: 16
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    SectionData: "00000000"
+symbols:
+  - Name: .text
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          36
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name: _sym3
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_I386
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+
+sections:
+  - Name: .text
+    Alignment: 16
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    SectionData: "00000000"
+symbols:
+  - Name: .text
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          36
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name: _sym4
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL

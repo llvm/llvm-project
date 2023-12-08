@@ -1,0 +1,153 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -no-stack-coloring=false -run-pass stack-coloring -o - %s
+
+# Test to insure that the liveness analysis in the StackColoring
+# pass gracefully handles statically unreachable blocks. See PR 37310.
+
+# This MIR testcase was created by compiling the following test, first
+# with "clang -emit-llvm -S" and then "llc -stop-before stack-coloring",
+# and finally editing the resulting MIR by hand to introduce a statically
+# unreachable BB (to wit: rename all bb.3 to bb.4, rename bb.2 to bb.3,
+# then add bb.2 with unconditional jump to bb.4).
+
+# Original C code:
+# extern int inita(int *);
+# void foo(int x) {
+#   if (x != 3) {
+#     int q[128];
+#     inita(&q[0]);
+#     return;
+#   }
+#   int r[128];
+#   inita(&r[x]);
+# }
+
+--- |
+  
+  define void @foo(i32 %x) {
+  entry:
+    %q = alloca [128 x i32], align 16
+    %r = alloca [128 x i32], align 16
+    %cmp = icmp eq i32 %x, 3
+    br i1 %cmp, label %if.end, label %if.then
+  
+  if.then:                                          ; preds = %entry
+    %0 = bitcast [128 x i32]* %q to i8*
+    call void @llvm.lifetime.start.p0i8(i64 512, i8* nonnull %0)
+    %arrayidx2 = bitcast [128 x i32]* %q to i32*
+    %call = call i32 @inita(i32* nonnull %arrayidx2)
+    call void @llvm.lifetime.end.p0i8(i64 512, i8* nonnull %0)
+    br label %return
+
+  unreachable:
+    br label %return
+  
+  if.end:                                           ; preds = %entry
+    %1 = bitcast [128 x i32]* %r to i8*
+    call void @llvm.lifetime.start.p0i8(i64 512, i8* nonnull %1)
+    %arrayidx1 = getelementptr inbounds [128 x i32], [128 x i32]* %r, i64 0, i64 3
+    %call2 = call i32 @inita(i32* nonnull %arrayidx1)
+    call void @llvm.lifetime.end.p0i8(i64 512, i8* nonnull %1)
+    br label %return
+  
+  return:                                           ; preds = %if.end, %if.then
+    ret void
+  }
+  
+  declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+  
+  declare i32 @inita(i32*)
+  
+  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+  
+  declare void @llvm.stackprotector(i8*, i8**)
+  
+...
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr64, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr64, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+liveins:         
+  - { reg: '$edi' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+  - { id: 0, name: q, type: default, offset: 0, size: 512, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: r, type: default, offset: 0, size: 512, alignment: 16, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       
+body:             |
+  bb.0.entry:
+    successors: %bb.3(0x40000000), %bb.1(0x40000000)
+    liveins: $edi
+  
+    %0:gr32 = COPY $edi
+    %1:gr32 = SUB32ri8 %0, 3, implicit-def $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
+    JMP_1 %bb.1
+  
+  bb.1.if.then:
+    successors: %bb.4(0x80000000)
+  
+    LIFETIME_START %stack.0.q
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %2:gr64 = LEA64r %stack.0.q, 1, $noreg, 0, $noreg
+    $rdi = COPY %2
+    CALL64pcrel32 @inita, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %3:gr32 = COPY $eax
+    LIFETIME_END %stack.0.q
+    JMP_1 %bb.4
+
+  bb.2.unreachable:
+    successors: %bb.4(0x80000000)
+  
+    JMP_1 %bb.4
+  
+  bb.3.if.end:
+    successors: %bb.4(0x80000000)
+  
+    LIFETIME_START %stack.1.r
+    %4:gr64 = LEA64r %stack.1.r, 1, $noreg, 12, $noreg
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %4
+    CALL64pcrel32 @inita, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %5:gr32 = COPY $eax
+    LIFETIME_END %stack.1.r
+  
+  bb.4.return:
+    RET 0
+
+...

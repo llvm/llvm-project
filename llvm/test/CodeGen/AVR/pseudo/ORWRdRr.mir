@@ -1,0 +1,25 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+# This test checks the expansion of the 16-bit OR pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_orwrdrr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_orwrdrr
+body: |
+  bb.0.entry:
+    liveins: $r15r14, $r21r20
+
+    ; CHECK-LABEL: test_orwrdrr
+
+    ; CHECK:      $r14 = ORRdRr $r14, $r20, implicit-def dead $sreg
+    ; CHECK-NEXT: $r15 = ORRdRr $r15, $r21, implicit-def $sreg
+
+    $r15r14 = ORWRdRr $r15r14, $r21r20, implicit-def $sreg
+...

@@ -1,0 +1,55 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_A",
+         "sizes" : [ "*" ],
+         "type" : "double"
+      }
+   ],
+   "context" : "[n] -> {  : -2147483648 <= n <= 2147483647 }",
+   "name" : "%for---%return",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_body[i0] -> MemRef_phi1__phi[] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_body[i0] -> MemRef_phi2__phi[] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_body[i0] -> MemRef_phi3__phi[] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_body[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_body",
+         "schedule" : "[n] -> { Stmt_body[i0] -> [i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[n] -> { Stmt_user[i0] -> MemRef_phi1__phi[] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "[n] -> { Stmt_user[i0] -> MemRef_phi2__phi[] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "[n] -> { Stmt_user[i0] -> MemRef_phi3__phi[] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_user[i0] -> MemRef_A[0] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_user[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_user",
+         "schedule" : "[n] -> { Stmt_user[i0] -> [i0, 1] }"
+      }
+   ]
+}

@@ -1,0 +1,2 @@
+module "Rtypes.h" { header "Rtypes.h" header "TGenericClassInfo.h" }
+module "TSchemaHelper.h" { header "TSchemaHelper.h" }

@@ -1,0 +1,86 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn-- -verify-machineinstrs -debug-only=regalloc -run-pass=greedy -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+# Check that physreg candidate is not used since cannot be spilled in a block,
+# e.g. before exec mask preamble
+# CHECK: , cannot spill all interferences.
+
+name:            foo
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
+  stackPtrOffsetReg: $sgpr32
+body:             |
+  bb.0:
+    liveins: $sgpr96_sgpr97, $sgpr98_sgpr99, $sgpr100_sgpr101, $sgpr102_sgpr103
+
+    %0:sreg_64 = COPY $sgpr102_sgpr103
+    %1:sgpr_128 = COPY $sgpr100_sgpr101_sgpr102_sgpr103
+    %2:sgpr_128 = COPY %1
+    %3:sgpr_128 = COPY %1
+    %4:sgpr_128 = COPY %1
+    %5:sgpr_128 = COPY %1
+    %6:sgpr_128 = COPY %1
+    %7:sgpr_128 = COPY %1
+    %8:sgpr_128 = COPY %1
+    %9:sgpr_128 = COPY %1
+    %10:sgpr_128 = COPY %1
+    %11:sgpr_128 = COPY %1
+    %12:sgpr_128 = COPY %1
+    %13:sgpr_128 = COPY %1
+    %14:sgpr_128 = COPY %1
+    %15:sgpr_128 = COPY %1
+    %16:sgpr_128 = COPY %1
+    %17:sgpr_128 = COPY %1
+    %18:sgpr_128 = COPY %1
+    %19:sgpr_128 = COPY %1
+    %20:sgpr_128 = COPY %1
+    %21:sgpr_128 = COPY %1
+    %22:sgpr_128 = COPY %1
+    %23:sgpr_128 = COPY %1
+    %24:sgpr_128 = COPY %1
+    %25:sgpr_128 = COPY %1
+    %26:sgpr_128 = COPY %1
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $sgpr96_sgpr97, $sgpr98_sgpr99, $sgpr102_sgpr103
+
+    %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr96_sgpr97, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    liveins: $sgpr98_sgpr99, $sgpr102_sgpr103
+
+    %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr98_sgpr99, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.3:
+    liveins: $sgpr102_sgpr103
+
+    %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr102_sgpr103, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_CMP_EQ_U64 %1.sub0_sub1, %2.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %3.sub0_sub1, %4.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %5.sub0_sub1, %6.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %7.sub0_sub1, %8.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %9.sub0_sub1, %10.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %11.sub0_sub1, %12.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %13.sub0_sub1, %14.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %15.sub0_sub1, %16.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %17.sub0_sub1, %18.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %19.sub0_sub1, %20.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %21.sub0_sub1, %22.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %23.sub0_sub1, %24.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %25.sub0_sub1, %26.sub2_sub3, implicit-def $scc
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit %0, implicit $vgpr0
+...

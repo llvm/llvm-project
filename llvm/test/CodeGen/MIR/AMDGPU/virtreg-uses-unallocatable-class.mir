@@ -1,0 +1,26 @@
+# UNSUPPORTED: reverse_iteration
+# RUN: not llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=none -o - %s 2>&1 | FileCheck %s
+
+# Check a diagnostic is emitted if non-allocatable classes are used
+# with virtual registers, and there's no assert.
+
+# CHECK: error: {{.*}}: Cannot use non-allocatable class 'TTMP_32' for virtual register named_use in function 'virtreg_unallocatable'
+# CHECK: error: {{.*}}: Cannot use non-allocatable class 'TTMP_32' for virtual register named_def in function 'virtreg_unallocatable'
+# CHECK: error: {{.*}}: Cannot use non-allocatable class 'TTMP_32' for virtual register 0 in function 'virtreg_unallocatable'
+# CHECK: error: {{.*}}: Cannot use non-allocatable class 'TTMP_32' for virtual register 2 in function 'virtreg_unallocatable'
+# CHECK: error: {{.*}}: Cannot use non-allocatable class 'TTMP_32' for virtual register 1 in function 'virtreg_unallocatable'
+
+---
+name: virtreg_unallocatable
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ttmp_32}
+body:             |
+  bb.0:
+    %1:ttmp_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %2:ttmp_32
+
+    %named_def:ttmp_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %named_use:ttmp_32
+
+...

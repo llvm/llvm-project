@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  sendfile
+  SRCS
+    sendfile.cpp
+  HDRS
+    ../sendfile.h
+  DEPENDS
+    libc.include.sys_sendfile
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

@@ -1,0 +1,25 @@
+REQUIRES: system-darwin
+
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: cat %p/../Inputs/remarks/fat.macho.remarks.x86 > %t/fat.macho.remarks.x86
+
+RUN: dsymutil -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/fat.macho.remarks.x86
+
+Check that the remark files in the bundle exist and are all sane:
+RUN: llvm-bcanalyzer -dump %t/fat.macho.remarks.x86.dSYM/Contents/Resources/Remarks/fat.macho.remarks.x86-x86_64h | FileCheck %s
+RUN: llvm-bcanalyzer -dump %t/fat.macho.remarks.x86.dSYM/Contents/Resources/Remarks/fat.macho.remarks.x86-x86_64 | FileCheck %s
+RUN: llvm-bcanalyzer -dump %t/fat.macho.remarks.x86.dSYM/Contents/Resources/Remarks/fat.macho.remarks.x86-i386 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-i386
+
+RUN: dsymutil --linker llvm -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/fat.macho.remarks.x86
+
+Check that the remark files in the bundle exist and are all sane:
+RUN: llvm-bcanalyzer -dump %t/fat.macho.remarks.x86.dSYM/Contents/Resources/Remarks/fat.macho.remarks.x86-x86_64h | FileCheck %s
+RUN: llvm-bcanalyzer -dump %t/fat.macho.remarks.x86.dSYM/Contents/Resources/Remarks/fat.macho.remarks.x86-x86_64 | FileCheck %s
+RUN: llvm-bcanalyzer -dump %t/fat.macho.remarks.x86.dSYM/Contents/Resources/Remarks/fat.macho.remarks.x86-i386 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-i386
+
+CHECK: <Meta
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK-i386: <Remark Num
+CHECK-NOT: <Remark Num

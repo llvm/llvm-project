@@ -1,0 +1,33 @@
+# RUN: llc -march=amdgcn -run-pass si-fold-operands -verify-machineinstrs -o - %s | FileCheck %s
+
+# CHECK: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# CHECK: %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# CHECK: %4:vgpr_32 = COPY %3
+# CHECK: %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# CHECK: %7:vgpr_32 = COPY %3
+
+---
+name:            fold_cndmask
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: vgpr_32 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vgpr_32 }
+body:             |
+  bb.0.entry:
+    %0 = IMPLICIT_DEF
+    %1 = V_CNDMASK_B32_e64 0, 0, 0, 0, %0, implicit $exec
+    %2 = V_CNDMASK_B32_e64 0, %1, 0, %1, %0, implicit $exec
+    %3 = IMPLICIT_DEF
+    %4 = V_CNDMASK_B32_e64 0, %3, 0, %3, %0, implicit $exec
+    %5 = COPY %1
+    %6 = V_CNDMASK_B32_e64 0, %5, 0, 0, %0, implicit $exec
+    $vcc = IMPLICIT_DEF
+    %7 = V_CNDMASK_B32_e32 %3, %3, implicit $exec, implicit $vcc
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %4, implicit %6, implicit %7
+...

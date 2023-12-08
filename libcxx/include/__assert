@@ -1,0 +1,37 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___ASSERT
+#define _LIBCPP___ASSERT
+
+#include <__config>
+#include <__verbose_abort>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#define _LIBCPP_ASSERT(expression, message)                                                                            \
+  (__builtin_expect(static_cast<bool>(expression), 1)                                                                  \
+       ? (void)0                                                                                                       \
+       : _LIBCPP_VERBOSE_ABORT(                                                                                        \
+             "%s:%d: assertion %s failed: %s\n", __builtin_FILE(), __builtin_LINE(), #expression, message))
+
+// TODO: __builtin_assume can currently inhibit optimizations. Until this has been fixed and we can add
+//       assumptions without a clear optimization intent, disable that to avoid worsening the code generation.
+//       See https://discourse.llvm.org/t/llvm-assume-blocks-optimization/71609 for a discussion.
+#if 0 && __has_builtin(__builtin_assume)
+#  define _LIBCPP_ASSUME(expression)                                                                                   \
+    (_LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wassume")                                              \
+         __builtin_assume(static_cast<bool>(expression)) _LIBCPP_DIAGNOSTIC_POP)
+#else
+#  define _LIBCPP_ASSUME(expression) ((void)0)
+#endif
+
+#endif // _LIBCPP___ASSERT

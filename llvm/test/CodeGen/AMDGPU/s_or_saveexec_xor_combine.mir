@@ -1,0 +1,127 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,WAVE32 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,WAVE64 %s
+
+---
+
+# After the Optimize exec masking (post-RA) pass, codegen can end up with the following sequence:
+# s_or_saveexec_b32 s0, s0
+# s_xor_b32 exec_lo, exec_lo, s0
+#
+# This can be combined into one instruction:
+# s_andn2_saveexec_b32 s0, s0
+
+# Ensure the transformation gets applied in the b32 case.
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32
+# WAVE32: S_ANDN2_SAVEEXEC_B32
+name: s_or_saveexec_xor_combine_b32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr0, implicit-def $scc
+...
+
+---
+
+# Ensure the transformation gets applied in the b64 case.
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b64
+# WAVE64: S_ANDN2_SAVEEXEC_B64
+name: s_or_saveexec_xor_combine_b64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    renamable $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 killed renamable $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec = S_XOR_B64 $exec, renamable $sgpr0_sgpr1, implicit-def $scc
+...
+
+---
+
+# Ensure the transformation does get applied even if the operands are swapped.
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32_swap
+# WAVE32: S_ANDN2_SAVEEXEC_B32
+name: s_or_saveexec_xor_combine_b32_swap
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = S_XOR_B32 renamable $sgpr0, $exec_lo, implicit-def $scc
+...
+
+---
+
+# Ensure the transformation does get applied if source and dest operand for s_or_saveeexec are not equal.
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32_inequal_operands
+# WAVE32: S_ANDN2_SAVEEXEC
+name: s_or_saveexec_xor_combine_b32_inequal_operands
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr0, implicit-def $scc
+...
+
+---
+
+# Ensure the transformation does not get applied if s_xor does not use the dest as input operand.
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32_wrong_input
+# WAVE32: S_OR_SAVEEXEC
+# WAVE32: S_XOR_B32
+name: s_or_saveexec_xor_combine_b32_wrong_input
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr1, implicit-def $scc
+...
+
+---
+
+
+# Ensure the transformation does not get applied if the instructions don't appear sequentially.
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32_non_sequence
+# WAVE32: S_OR_SAVEEXEC
+# WAVE32: S_MOV_B32
+# WAVE32: S_XOR_B32
+name: s_or_saveexec_xor_combine_b32_non_sequence
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    $exec_lo = S_XOR_B32 $exec_lo, renamable $sgpr1, implicit-def $scc
+...
+
+---
+
+# Don't apply the transformation if the basic block only has a single instruction.
+
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32_last_inst
+# WAVE32: S_OR_SAVEEXEC
+name: s_or_saveexec_xor_combine_b32_last_inst
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec
+...
+
+---
+
+# Don't apply the transformation if the basic block ends with an S_OR_SAVEEXEC_B32 instruction.
+
+# GCN-LABEL: name: s_or_saveexec_xor_combine_b32_or_saveexec_terminator
+# WAVE32: S_MOV_B32
+# WAVE32: S_OR_SAVEEXEC
+name: s_or_saveexec_xor_combine_b32_or_saveexec_terminator
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    renamable $sgpr0 = S_OR_SAVEEXEC_B32 killed renamable $sgpr0, implicit-def $exec, implicit-def $scc, implicit $exec

@@ -1,0 +1,49 @@
+## Show that the archive library emits error messages when adding malformed
+## objects.
+
+# RUN: rm -rf %t.dir
+# RUN: split-file %s %t.dir
+# RUN: cd %t.dir
+
+## Malformed bitcode object is the first file member of archive if the symbol table is required.
+# RUN: llvm-as input.ll -o input.bc
+# RUN: cp input.bc good.bc
+# RUN: %python -c "with open('input.bc', 'a') as f: f.truncate(10)"
+# RUN: not llvm-ar rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+
+## Malformed bitcode object is the last file member of archive if the symbol table is required.
+# RUN: rm -rf bad.a
+# RUN: not llvm-ar rc bad.a good.bc input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+
+## Malformed bitcode object if the symbol table is not required for big archive.
+# RUN: rm -rf bad.a
+# RUN: not llvm-ar --format=bigarchive rcS bad.a input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: rm -rf bad.a
+# RUN: not llvm-ar --format=bigarchive rcS bad.a good.bc input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+
+# ERR1: error: bad.a: 'input.bc': Invalid bitcode signature
+
+## Non-bitcode malformed file.
+# RUN: yaml2obj input.yaml -o input.o
+# RUN: not llvm-ar rc bad.a input.o 2>&1 | FileCheck %s --check-prefix=ERR2
+
+# ERR2: error: bad.a: 'input.o': section header table goes past the end of the file: e_shoff = 0x9999
+
+## Don't emit an error if the symbol table is not required for formats other than the big archive format.
+# RUN: llvm-ar --format=gnu rcS good.a input.o input.bc
+# RUN: llvm-ar t good.a | FileCheck %s --check-prefix=CONTENTS
+
+# CONTENTS:      input.o
+# CONTENTS-NEXT: input.bc
+
+#--- input.ll
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux"
+
+#--- input.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  EShOff:  0x9999

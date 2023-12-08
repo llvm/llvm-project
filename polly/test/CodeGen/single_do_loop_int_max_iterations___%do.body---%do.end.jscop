@@ -1,0 +1,13 @@
+{
+	"name": "do.body => do.end",
+	"context": "{ [] }",
+	"statements": [{
+		"name": "Stmt_do_body",
+		"domain": "{ Stmt_do_body[i0] : i0 >= 0 and i0 <= 2147483646 }",
+		"schedule": "{ Stmt_do_body[i0] -> [0, o1, i0, o3, 0] : 64o3 = o1 and o1 <= i0 and o1 >= -63 + i0 }",
+		"accesses": [{
+			"kind": "write",
+			"relation": "{ Stmt_do_body[i0] -> MemRef_A[0] }"
+		}]
+	}]
+}

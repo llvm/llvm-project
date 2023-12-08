@@ -1,0 +1,19 @@
+LLVM notes
+----------
+
+This directory contains the 'googlemock' component of Google Test 1.14.0, with
+all elements removed except for the actual source code, to minimize the
+addition to the LLVM distribution.
+
+Cleaned up as follows:
+
+# Remove all the unnecessary files and directories
+$ rm -f CMakeLists.txt configure* Makefile* CHANGES CONTRIBUTORS README README.md .gitignore
+$ rm -rf build-aux make msvc scripts test docs
+$ rm -f src/gmock_main.cc
+
+# Put the license in the consistent place for LLVM.
+$ mv LICENSE LICENSE.TXT
+
+Modified as follows:
+* Support for std::begin/std::end in gmock-matchers.h

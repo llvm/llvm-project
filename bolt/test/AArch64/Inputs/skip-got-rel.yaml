@@ -1,0 +1,172 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+  Entry:           0x10364
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x238
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .dynamic
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x10348
+    Align:           0x10000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .got
+    VAddr:           0x20388
+    Align:           0x10000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x20388
+    Align:           0x8
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .got
+    VAddr:           0x20388
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x238
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C642D6C696E75782D616172636836342E736F2E3100
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x258
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x28C
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x290
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x20448
+        Type:            R_AARCH64_RELATIVE
+        Addend:          66432
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10348
+    AddressAlign:    0x4
+    Content:         FF4300D1E00700F9E80740F908014092E003082AFF430091C0035FD6FD7BBFA9FD0300911F2003D580000010F5FFFF97FD7BC1A8C0035FD6C0035FD6
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x20388
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_FLAGS_1
+        Value:           0x8000000
+      - Tag:             DT_RELA
+        Value:           0x290
+      - Tag:             DT_RELASZ
+        Value:           0x18
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_RELACOUNT
+        Value:           0x1
+      - Tag:             DT_SYMTAB
+        Value:           0x258
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x28C
+      - Tag:             DT_STRSZ
+        Value:           0x1
+      - Tag:             DT_GNU_HASH
+        Value:           0x270
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x20448
+    AddressAlign:    0x8
+    Content:         '0000000000000000'
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x1036C
+        Symbol:          foo2
+        Type:            R_AARCH64_ADR_GOT_PAGE
+      - Offset:          0x10370
+        Symbol:          foo2
+        Type:            R_AARCH64_LD64_GOT_LO12_NC
+      - Offset:          0x10374
+        Symbol:          foo
+        Type:            R_AARCH64_CALL26
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x10348
+  - Name:            ex2.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '$x.0 (1)'
+    Section:         .text
+    Value:           0x10380
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x238
+  - Name:            _DYNAMIC
+    Section:         .dynamic
+    Value:           0x20388
+    Other:           [ STV_HIDDEN ]
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10348
+    Size:            0x1C
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10364
+    Size:            0x1C
+  - Name:            foo2
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10380
+    Size:            0x4
+DynamicSymbols:  []
+...

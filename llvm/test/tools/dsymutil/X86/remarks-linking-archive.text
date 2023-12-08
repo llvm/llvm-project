@@ -1,0 +1,50 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: cat %p/../Inputs/remarks/basic.macho.remarks.archive.x86_64 > %t/basic.macho.remarks.archive.x86_64
+
+RUN: dsymutil -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.archive.x86_64
+
+Check that the remark file in the bundle exists and is sane:
+RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.archive.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.archive.x86_64 | FileCheck %s
+
+RUN: dsymutil --linker llvm -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.archive.x86_64
+
+Check that the remark file in the bundle exists and is sane:
+RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.archive.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.archive.x86_64 | FileCheck %s
+
+Check that we don't error if we're missing remark files from an archive, but we warn instead.
+Instead of creating a new binary, just remove the remarks prepend path.
+RUN: dsymutil -oso-prepend-path=%p/../Inputs %t/basic.macho.remarks.archive.x86_64 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING
+
+RUN: dsymutil --linker llvm -oso-prepend-path=%p/../Inputs %t/basic.macho.remarks.archive.x86_64 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING
+
+CHECK: <Meta
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK: <Remark Num
+CHECK-NOT: <Remark Num
+
+CHECK-MISSING: warning: '/remarks/basic1.macho.remarks.x86_64.opt.bitstream': No such file or directory
+CHECK-MISSING-NEXT: note: while processing {{.*}}libbasic.a(basic1.macho.remarks.x86_64.o)
+CHECK-MISSING-NEXT: warning: '/remarks/basic2.macho.remarks.x86_64.opt.bitstream': No such file or directory
+CHECK-MISSING-NEXT: note: while processing {{.*}}libbasic.a(basic2.macho.remarks.x86_64.o)
+CHECK-MISSING-NEXT: warning: '/remarks/basic3.macho.remarks.x86_64.opt.bitstream': No such file or directory
+CHECK-MISSING-NEXT: note: while processing {{.*}}libbasic.a(basic3.macho.remarks.x86_64.o)

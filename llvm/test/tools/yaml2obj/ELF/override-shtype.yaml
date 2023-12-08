@@ -1,0 +1,42 @@
+## Check we are able to override the sh_type field for different sections.
+## When doing this we are still able to use YAML keys that can be normally used
+## to describe a section with the original type specified with the Type key.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefixes=COMMON,ORIGINAL
+
+## Check we can use a hex value for the ShType. SHT_PROGBITS == 0x1.
+# RUN: yaml2obj -DTYPE=0x1 %s -o %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefixes=COMMON,OVERRIDE
+
+# COMMON:        Name: .gnu.version_r
+# ORIGINAL-NEXT: Type: SHT_GNU_verneed
+# OVERRIDE-NEXT: Type: SHT_PROGBITS
+# COMMON:        SectionData (
+# COMMON-NEXT:     0000: 01000100 04000000 10000000 00000000 |
+# COMMON-NEXT:     0010: 91070000 00000300 01000000 00000000 |
+# COMMON-NEXT:   )
+
+## Check we can use a string type name for the ShType.
+# RUN: yaml2obj -DTYPE=SHT_PROGBITS %s -o %t3
+# RUN: cmp %t2 %t3
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .gnu.version_r
+    Type:   SHT_GNU_verneed
+    Flags:  [ SHF_ALLOC ]
+    ShType: [[TYPE=SHT_GNU_verneed]]
+    Dependencies:
+      - Version: 1
+        File:    dso.so.0
+        Entries:
+          - Name:  v1
+            Hash:  1937
+            Flags: 0
+            Other: 3
+DynamicSymbols: []

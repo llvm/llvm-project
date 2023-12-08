@@ -1,0 +1,27 @@
+# REQUIRES: lld
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld %t.o -o %t --image-base 0x47000
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Plugin name: elf
+# CHECK: Architecture: x86_64--
+# CHECK: Executable: true
+# CHECK: Stripped: false
+# CHECK: Type: executable
+# CHECK: Strata: user
+# CHECK: Base VM address: 0x47000
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         554889E55DC3
+...

@@ -1,0 +1,48 @@
+# REQUIRES: zlib
+## Test --compress-debug-sections=zlib and uncompression.
+
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o && llvm-objcopy %t.o
+# RUN: llvm-objcopy --compress-debug-sections=zlib %t.o %t-zlib.o
+# RUN: llvm-objcopy --decompress-debug-sections %t-zlib.o %t-un.o
+# RUN: cmp %t.o %t-un.o
+
+# RUN: llvm-readelf -S -r -x .debug_foo %t-zlib.o | FileCheck %s --check-prefixes=CHECK,COMPRESSED
+# RUN: llvm-readelf -S -r -x .debug_foo %t-un.o | FileCheck %s --check-prefixes=CHECK,UNCOMPRESSED
+
+# CHECK:             Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# COMPRESSED:        .debug_foo        PROGBITS        0000000000000000 000040 {{.*}} 00   C  0   0  8
+# COMPRESSED-NEXT:   .notdebug_foo     PROGBITS        0000000000000000 {{.*}} 000008 00      0   0  0
+# UNCOMPRESSED:      .debug_foo        PROGBITS        0000000000000000 000040 000008 00      0   0  0
+# UNCOMPRESSED-NEXT: .notdebug_foo     PROGBITS        0000000000000000 {{.*}} 000008 00      0   0  0
+
+## Relocations do not change.
+# CHECK:             Relocation section '.rela.debug_foo' at offset {{.*}} contains 2 entries:
+# CHECK-NEXT:            Offset
+# CHECK-NEXT:        0000000000000001  000000010000000a R_X86_64_32            0000000000000000 .debug_foo + 0
+# CHECK-NEXT:        0000000000000002  000000020000000a R_X86_64_32            0000000000000000 .notdebug_foo + 0
+
+# COMPRESSED:        Hex dump of section '.debug_foo':
+# COMPRESSED-NEXT:   0x00000000 01000000 {{.*}}   08000000 00000000
+# COMPRESSED-NEXT:   0x00000010 00000000 00000000 {{.*}}
+
+## --compress-debug-sections does not update a compressed section.
+# RUN: llvm-objcopy --compress-debug-sections=zlib %t-zlib.o %t-zlib-zlib.o
+# RUN: cmp %t-zlib.o %t-zlib-zlib.o
+
+# RUN: yaml2obj %s -o %t-corrupted
+# RUN: not llvm-objcopy --decompress-debug-sections %t-corrupted /dev/null 2>&1 | FileCheck %s -DFILE=%t-corrupted --check-prefix=ERR
+
+# ERR: error: '[[FILE]]': failed to decompress section '.debug_info': zlib error: Z_DATA_ERROR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Type:         SHT_PROGBITS
+    Name:         .debug_info
+    Flags:        [ SHF_COMPRESSED ]
+    AddressAlign: 8
+    Content:      "010000000000000004000000000000000100000000000000ffffffff"

@@ -1,0 +1,24 @@
+RUN: llvm-readobj --coff-basereloc %p/Inputs/basereloc.obj.coff-i386 | FileCheck %s
+
+CHECK:      Format: COFF-i386
+CHECK-NEXT: Arch: i386
+CHECK-NEXT: AddressSize: 32bit
+CHECK-NEXT: BaseReloc [
+CHECK-NEXT:   Entry {
+CHECK-NEXT:     Type: HIGHLOW
+CHECK-NEXT:     Address: 0x1004
+CHECK-NEXT:   }
+CHECK-NEXT:   Entry {
+CHECK-NEXT:     Type: HIGHLOW
+CHECK-NEXT:     Address: 0x100A
+CHECK-NEXT:   }
+CHECK-NEXT:   Entry {
+CHECK-NEXT:     Type: HIGHLOW
+CHECK-NEXT:     Address: 0x1010
+CHECK-NEXT:   }
+CHECK-NEXT:   Entry {
+CHECK-NEXT:     Type: ABSOLUTE
+CHECK-NEXT:     Address: 0x1000
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+

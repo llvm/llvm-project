@@ -1,0 +1,68 @@
+## This test checks JSON output for CODE.
+
+## If the addresses are specified on the command-line, the output JSON will
+## contain an array of the results for all of the given addresses.
+
+## Show how library errors are reported in the output.
+# RUN: not llvm-symbolizer --output-style=JSON -e %p/no-file.exe 0 | \
+# RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=NO-FILE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# NO-FILE:{"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}/no-file.exe"}
+
+## Resolve out of range address.
+## Expected a list with one empty object with default values.
+# RUN: llvm-symbolizer --output-style=JSON -e %p/Inputs/addr.exe 0x10000000 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# NOT-FOUND:[{"Address":"0x10000000","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}]
+
+## Check a non-zero discriminator.
+# RUN: llvm-symbolizer --output-style=JSON --obj=%p/Inputs/discrim 0x400575 | \
+# RUN:   FileCheck %s --check-prefix=DISCRIM --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# DISCRIM:[{"Address":"0x400575","ModuleName":"{{.*}}/Inputs/discrim","Symbol":[{"Column":17,"Discriminator":2,"FileName":"/tmp{{/|\\\\}}discrim.c","FunctionName":"foo","Line":5,"StartAddress":"0x400560","StartFileName":"/tmp{{/|\\\\}}discrim.c","StartLine":4}]}]
+
+## In case of stdin input the output will contain a single JSON object for each input string.
+
+## This test case is testing stdin input, with the --no-inlines option.
+# RUN: llvm-symbolizer --output-style=JSON --no-inlines -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
+# RUN:   FileCheck %s --check-prefix=NO-INLINES --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+## Invalid first argument before any valid one.
+# NO-INLINES:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"something"}
+## Resolve valid address.
+# NO-INLINES-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"main","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2}]}
+## Invalid argument after a valid one.
+# NO-INLINES-NEXT:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"some"}
+
+## This test case is testing stdin input, inlines by default.
+# RUN: llvm-symbolizer --output-style=JSON -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
+# RUN:   FileCheck %s --check-prefix=INLINE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+## Invalid first argument before any valid one.
+# INLINE:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"something"}
+## Resolve valid address.
+# INLINE-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inctwo","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inc","Line":7,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":6},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"main","Line":14,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":12}]}
+## Invalid argument after a valid one.
+# INLINE-NEXT:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"some"}
+
+## Also check the last test case with llvm-adr2line.
+## The expected result is the same with -f -i.
+# RUN: llvm-addr2line --output-style=JSON -f -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
+# RUN:   FileCheck %s --check-prefix=INLINE-A2L --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+## Invalid first argument before any valid one.
+# INLINE-A2L:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"something"}
+## Resolve valid address.
+# INLINE-A2L-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inctwo","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inc","Line":7,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":6},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"main","Line":14,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":12}]}
+## Invalid argument after a valid one.
+# INLINE-A2L:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"some"}
+
+## Note llvm-addr2line without -f does not print the function name in JSON too.
+# RUN: llvm-addr2line --output-style=JSON -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
+# RUN:   FileCheck %s --check-prefix=NO-FUNC-A2L --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+## Invalid first argument before any valid one.
+# NO-FUNC-A2L:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"something"}
+## Resolve valid address.
+# NO-FUNC-A2L-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"","Line":7,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":6},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"","Line":14,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":12}]}
+## Invalid argument after a valid one.
+# NO-FUNC-A2L-NEXT:{"Loc":[],"ModuleName":"{{.*}}/Inputs/addr.exe","SymName":"some"}
+
+## When a module offset is specified by a symbol, more than one source location can be found.
+# RUN: llvm-symbolizer --output-style=JSON --no-inlines -e %p/Inputs/symbols.so "static_func" | \
+# RUN:   FileCheck %s --check-prefix=MULTIPLE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
+# MULTIPLE:[{"Loc":[{"Column":24,"Discriminator":0,"FileName":"/tmp/dbginfo{{/|\\\\}}symbols.part3.c","FunctionName":"static_func","Line":4,"StartAddress":"0x121d","StartFileName":"/tmp/dbginfo{{/|\\\\}}symbols.part3.c","StartLine":4},{"Column":24,"Discriminator":0,"FileName":"/tmp/dbginfo{{/|\\\\}}symbols.part4.c","FunctionName":"static_func","Line":4,"StartAddress":"0x125f","StartFileName":"/tmp/dbginfo{{/|\\\\}}symbols.part4.c","StartLine":4}],"ModuleName":"{{.*}}Inputs/symbols.so","SymName":"static_func"}]

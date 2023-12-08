@@ -1,0 +1,347 @@
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=CHECK
+# RUN: llc %s -o - -start-before=livedebugvalues -filetype=obj -mtriple=x86_64-unknown-unknown | llvm-dwarfdump - | FileCheck %s --check-prefix=RANGES
+# Check that livedebugvalues does the right thing when register and constant
+# DBG_VALUEs interact, and that their ranges are correctly terminated by the
+# debug printing backend.
+--- |
+  ; All these IR functions are duds, see the MIR below.
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  
+  define i32 @foo(i32* %bees, i32* %output) !dbg !4 {
+  entry:
+    br i1 undef, label %bb1, label %bb1
+  bb1:
+    br label %bb3
+  bb2:
+    br label %bb3
+  bb3:
+    ret i32 0
+  }
+
+  define i32 @bar(i32* %bees, i32* %output) !dbg !40 {
+  entry:
+    br i1 undef, label %bb1, label %bb1
+  bb1:
+    br label %bb3
+  bb2:
+    br label %bb3
+  bb3:
+    ret i32 0
+  }
+
+  define i32 @baz(i32* %bees, i32* %output) !dbg !80 {
+  entry:
+    br i1 undef, label %bb1, label %bb1
+  bb1:
+    br label %bb3
+  bb2:
+    br label %bb3
+  bb3:
+    ret i32 0
+  }
+
+  define i32 @qux(i32* %bees, i32* %output) !dbg !120 {
+  entry:
+    br i1 undef, label %bb1, label %bb1
+  bb1:
+    br label %bb3
+  bb2:
+    br label %bb3
+  bb3:
+    ret i32 0
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**)
+  
+  !llvm.module.flags = !{!0, !100}
+  !llvm.dbg.cu = !{!1}
+  
+  !100 = !{i32 2, !"Dwarf Version", i32 4}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "beards", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !2 = !DIFile(filename: "bees.cpp", directory: ".")
+  !3 = !DILocalVariable(name: "flannel", scope: !4, file: !2, line: 1, type: !16)
+  !4 = distinct !DISubprogram(name: "nope", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !5 = !DILocation(line: 0, scope: !4)
+  !6 = !DILocation(line: 1, scope: !4)
+  !7 = !DILocation(line: 2, scope: !4)
+  !8 = !DILocation(line: 4, scope: !4)
+  !9 = !DILocation(line: 5, scope: !4)
+  !10 = !DILocation(line: 6, scope: !4)
+  !11 = !DILocation(line: 7, scope: !4)
+  !12 = !DILocation(line: 8, scope: !4)
+  !13 = !{!3}
+  !14 = !DISubroutineType(types: !15)
+  !15 = !{!16}
+  !16 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !40 = distinct !DISubprogram(name: "bar", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !41 = !DILocalVariable(name: "towel", scope: !40, file: !2, line: 1, type: !16)
+  !42 = !DILocation(line: 40, scope: !40)
+  !80 = distinct !DISubprogram(name: "baz", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !81 = !DILocalVariable(name: "socks", scope: !80, file: !2, line: 1, type: !16)
+  !82 = !DILocation(line: 40, scope: !80)
+  !120 = distinct !DISubprogram(name: "qux", scope: !2, file: !2, line: 1, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !13, type: !14, isDefinition: true)
+  !121 = !DILocalVariable(name: "shoes", scope: !120, file: !2, line: 1, type: !16)
+  !122 = !DILocation(line: 40, scope: !120)
+
+...
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+registers:       []
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+body:             |
+
+  ; Two DBG_VALUEs for eax merge into bb3, check that livedebugvalues propagates
+  ; the location.
+  ; CHECK-LABEL: name: foo
+  ; CHECK-LABEL: bb.1.bb1
+  ; CHECK:       $eax = MOV32rr
+  ; CHECK-NEXT:  DBG_VALUE $eax
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.2.bb2
+  ; CHECK:       $eax = ADD32ri8
+  ; CHECK-NEXT:  DBG_VALUE $eax
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.3.bb3
+  ; CHECK:       DBG_VALUE $eax
+  ; Test for there being a location-list gap between bb1 and bb2, as the
+  ; variable does not have a location over the ADD32ri. The range should also
+  ; extend over the final bb.
+  ; RANGES-LABEL: DW_TAG_subprogram
+  ; RANGES:       DW_AT_high_pc (0x[[NOPEHIGHPC:[0-9a-f]+]])
+  ; RANGES-LABEL: DW_AT_name ("nope")
+  ; RANGES:       DW_AT_location (0x{{[0-9a-f]+}}
+  ; RANGES-NEXT:   [0x{{[0-9a-f]+}}, 0x[[NOPEADDR:[0-9a-f]+]]): DW_OP_reg0 RAX
+  ; RANGES-NEXT:   [
+  ; RANGES-NOT:    0x[[NOPEADDR]]
+  ; RANGES-SAME:   , 0x[[NOPEHIGHPC]]): DW_OP_reg0 RAX
+
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $rdi
+  
+    $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    JCC_1 %bb.1, 2, implicit killed $eflags
+    JMP_1 %bb.2
+  
+  bb.1.bb1 (align 4):
+    successors: %bb.3
+    liveins: $ecx, $rdi
+  
+    $eax = MOV32rr killed $ecx, implicit-def $rax
+    DBG_VALUE $eax, $noreg, !3, !DIExpression(), debug-location !8
+    JMP_1 %bb.3
+  
+  bb.2.bb2:
+    successors: %bb.3
+    liveins: $rax
+  
+    $eax = ADD32ri8 $eax, 3, implicit-def dead $eflags, implicit killed $rax, implicit-def $rax
+    DBG_VALUE $eax, $noreg, !3, !DIExpression(), debug-location !8
+    JMP_1 %bb.3
+
+  bb.3.bb3:
+    liveins: $rax
+    RET64 $eax, debug-location !9
+
+...
+---
+name:            bar
+alignment:       16
+tracksRegLiveness: true
+registers:       []
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+body:             |
+  ; Two DBG_VALUEs, one for eax, the other for zero, merge into bb3. Check that
+  ; livedebugvalues does not propagate anything.
+  ; the location.
+  ; CHECK-LABEL: name: bar
+  ; CHECK-LABEL: bb.1.bb1
+  ; CHECK:       $eax = MOV32rr
+  ; CHECK-NEXT:  DBG_VALUE 0
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.2.bb2
+  ; CHECK:       $eax = ADD32ri8
+  ; CHECK-NEXT:  DBG_VALUE $eax
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.3.bb3
+  ; CHECK-NOT:   DBG_VALUE
+  ; Test for there being a location-list gap between bb1 and bb2, the variable
+  ; should not have a location over the ADD32ri. The range of the last entry
+  ; should not cover the last block.
+  ; RANGES-LABEL: DW_TAG_subprogram
+  ; RANGES:       DW_AT_high_pc (0x[[BARHIGHPC:[0-9a-f]+]])
+  ; RANGES-LABEL: DW_AT_name ("bar")
+  ; RANGES:       DW_AT_location (0x{{[0-9a-f]+}}
+  ; RANGES-NEXT:   [0x{{[0-9a-f]+}}, 0x[[BARADDR:[0-9a-f]+]]): DW_OP_consts +0, DW_OP_stack_value
+  ; RANGES-NEXT:   [
+  ; RANGES-NOT:    0x[[BARADDR]]
+  ; RANGES-NOT:    0x[[BARHIGHPC]]
+  ; RANGES-SAME:   ): DW_OP_reg0 RAX
+
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $rdi
+  
+    $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    JCC_1 %bb.1, 2, implicit killed $eflags
+    JMP_1 %bb.2
+  
+  bb.1.bb1 (align 4):
+    successors: %bb.3
+    liveins: $ecx, $rdi
+  
+    $eax = MOV32rr killed $ecx, implicit-def $rax
+    DBG_VALUE 0, $noreg, !41, !DIExpression(), debug-location !42
+    JMP_1 %bb.3
+  
+  bb.2.bb2:
+    successors: %bb.3
+    liveins: $rax
+  
+    $eax = ADD32ri8 $eax, 3, implicit-def dead $eflags, implicit killed $rax, implicit-def $rax
+    DBG_VALUE $eax, $noreg, !41, !DIExpression(), debug-location !42
+    JMP_1 %bb.3
+
+  bb.3.bb3:
+    liveins: $rax
+    RET64 $eax, debug-location !42
+
+...
+---
+name:            baz
+alignment:       16
+tracksRegLiveness: true
+registers:       []
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+body:             |
+  ; Two DBG_VALUEs, one for zero, the other for eax, merge into bb3. Check that
+  ; livedebugvalues does not propagate anything.
+  ; the location.
+  ; CHECK-LABEL: name: baz
+  ; CHECK-LABEL: bb.1.bb1
+  ; CHECK:       $eax = MOV32rr
+  ; CHECK-NEXT:  DBG_VALUE $eax
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.2.bb2
+  ; CHECK:       $eax = ADD32ri8
+  ; CHECK-NEXT:  DBG_VALUE 0
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.3.bb3
+  ; CHECK-NOT:   DBG_VALUE
+  ; Test for there being a location-list gap between bb1 and bb2, the variable
+  ; should not have a location over the ADD32ri. The range of the last item
+  ; should not cover the last block.
+  ; RANGES-LABEL: DW_TAG_subprogram
+  ; RANGES:       DW_AT_high_pc (0x[[BAZHIGHPC:[0-9a-f]+]])
+  ; RANGES-LABEL: DW_AT_name ("baz")
+  ; RANGES:       DW_AT_location (0x{{[0-9a-f]+}}
+  ; RANGES-NEXT:   [0x{{[0-9a-f]+}}, 0x[[BAZADDR:[0-9a-f]+]]): DW_OP_reg0 RAX
+  ; RANGES-NEXT:   [
+  ; RANGES-NOT:    0x[[BAZADDR]]
+  ; RANGES-NOT:    0x[[BAZHIGHPC]]
+  ; RANGES-SAME:   ): DW_OP_consts +0, DW_OP_stack_value
+
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $rdi
+  
+    $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    JCC_1 %bb.1, 2, implicit killed $eflags
+    JMP_1 %bb.2
+  
+  bb.1.bb1 (align 4):
+    successors: %bb.3
+    liveins: $ecx, $rdi
+  
+    $eax = MOV32rr killed $ecx, implicit-def $rax
+    DBG_VALUE $eax, $noreg, !81, !DIExpression(), debug-location !82
+    JMP_1 %bb.3
+  
+  bb.2.bb2:
+    successors: %bb.3
+    liveins: $rax
+  
+    $eax = ADD32ri8 $eax, 3, implicit-def dead $eflags, implicit killed $rax, implicit-def $rax
+    DBG_VALUE 0, $noreg, !81, !DIExpression(), debug-location !82
+    JMP_1 %bb.3
+
+  bb.3.bb3:
+    liveins: $rax
+    RET64 $eax, debug-location !82
+
+...
+---
+name:            qux
+alignment:       16
+tracksRegLiveness: true
+registers:       []
+liveins:         
+  - { reg: '$rdi', virtual-reg: '' }
+body:             |
+  ; Two DBG_VALUEs for zero merging into bb3, Check that livedebugvalues does
+  ; propagate the zero into the merging block.
+  ; CHECK-LABEL: name: qux
+  ; CHECK-LABEL: bb.1.bb1
+  ; CHECK:       $eax = MOV32rr
+  ; CHECK-NEXT:  DBG_VALUE 0
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.2.bb2
+  ; CHECK:       $eax = ADD32ri8
+  ; CHECK-NEXT:  DBG_VALUE 0
+  ; CHECK-NEXT:  JMP_1 %bb.3
+  ; CHECK-LABEL: bb.3.bb3
+  ; CHECK:       DBG_VALUE 0
+  ; Test for there being a location-list gap between bb1 and bb2, the variable
+  ; should not have a location over the ADD32ri. The final entry should cover
+  ; the final block.
+  ; RANGES-LABEL: DW_TAG_subprogram
+  ; RANGES:       DW_AT_high_pc (0x[[QUXHIGHPC:[0-9a-f]+]])
+  ; RANGES-LABEL: DW_AT_name ("qux")
+  ; RANGES:       DW_AT_location (0x{{[0-9a-f]+}}
+  ; RANGES-NEXT:   [0x{{[0-9a-f]+}}, 0x[[QUXADDR:[0-9a-f]+]]): DW_OP_consts +0, DW_OP_stack_value
+  ; RANGES-NOT:    0x[[QUXADDR]]
+  ; RANGES-NEXT:   [0x{{[0-9a-f]+}}, 0x[[QUXHIGHPC]]): DW_OP_consts +0, DW_OP_stack_value
+
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $rdi
+  
+    $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def $eflags
+    JCC_1 %bb.1, 2, implicit killed $eflags
+    JMP_1 %bb.2
+  
+  bb.1.bb1 (align 4):
+    successors: %bb.3
+    liveins: $ecx, $rdi
+  
+    $eax = MOV32rr killed $ecx, implicit-def $rax
+    DBG_VALUE 0, $noreg, !121, !DIExpression(), debug-location !122
+    JMP_1 %bb.3
+  
+  bb.2.bb2:
+    successors: %bb.3
+    liveins: $rax
+  
+    $eax = ADD32ri8 $eax, 3, implicit-def dead $eflags, implicit killed $rax, implicit-def $rax
+    DBG_VALUE 0, $noreg, !121, !DIExpression(), debug-location !122
+    JMP_1 %bb.3
+
+  bb.3.bb3:
+    liveins: $rax
+    RET64 $eax, debug-location !122
+
+...

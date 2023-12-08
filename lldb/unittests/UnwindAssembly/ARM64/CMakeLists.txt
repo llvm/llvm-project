@@ -1,0 +1,13 @@
+add_lldb_unittest(Arm64InstEmulationTests
+  TestArm64InstEmulation.cpp
+  LINK_LIBS
+    lldbCore
+    lldbSymbol
+    lldbTarget
+    lldbPluginUnwindAssemblyInstEmulation
+    lldbPluginDisassemblerLLVMC
+    lldbPluginInstructionARM64
+    lldbPluginProcessUtility
+  LINK_COMPONENTS
+    Support
+    ${LLVM_TARGETS_TO_BUILD})

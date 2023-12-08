@@ -1,0 +1,192 @@
+# RUN: llc -mtriple=thumbv8.1m.main %s -run-pass=arm-low-overhead-loops --verify-machineinstrs -o -
+# CHECK:      bb.1.for.body.preheader:
+# CHECK:        $lr = t2DLS
+# CHECK-NOT:    t2LoopDec
+# CHECK:      bb.6.for.inc:
+# CHECK:        $lr = t2LEUpdate renamable $lr, %bb.2
+
+--- |
+  ; ModuleID = 'switch.ll'
+  source_filename = "switch.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
+  define dso_local arm_aapcscc i32 @search(ptr nocapture readonly %c, i32 %N) {
+  entry:
+    %cmp11 = icmp eq i32 %N, 0
+    br i1 %cmp11, label %for.cond.cleanup, label %for.body.preheader
+  
+  for.body.preheader:                               ; preds = %entry
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
+    br label %for.body
+  
+  for.cond.cleanup:                                 ; preds = %for.inc, %entry
+    %found.0.lcssa = phi i32 [ 0, %entry ], [ %found.1, %for.inc ]
+    %spaces.0.lcssa = phi i32 [ 0, %entry ], [ %spaces.1, %for.inc ]
+    %sub = sub nsw i32 %found.0.lcssa, %spaces.0.lcssa
+    ret i32 %sub
+  
+  for.body:                                         ; preds = %for.inc, %for.body.preheader
+    %lsr.iv1 = phi ptr [ %c, %for.body.preheader ], [ %scevgep, %for.inc ]
+    %spaces.013 = phi i32 [ %spaces.1, %for.inc ], [ 0, %for.body.preheader ]
+    %found.012 = phi i32 [ %found.1, %for.inc ], [ 0, %for.body.preheader ]
+    %0 = phi i32 [ %start, %for.body.preheader ], [ %3, %for.inc ]
+    %1 = load i8, ptr %lsr.iv1, align 1
+    %2 = zext i8 %1 to i32
+    switch i32 %2, label %for.inc [
+      i32 108, label %sw.bb
+      i32 111, label %sw.bb
+      i32 112, label %sw.bb
+      i32 32, label %sw.bb1
+    ]
+  
+  sw.bb:                                            ; preds = %for.body, %for.body, %for.body
+    %inc = add nsw i32 %found.012, 1
+    br label %for.inc
+  
+  sw.bb1:                                           ; preds = %for.body
+    %inc2 = add nsw i32 %spaces.013, 1
+    br label %for.inc
+  
+  for.inc:                                          ; preds = %sw.bb1, %sw.bb, %for.body
+    %found.1 = phi i32 [ %found.012, %for.body ], [ %found.012, %sw.bb1 ], [ %inc, %sw.bb ]
+    %spaces.1 = phi i32 [ %spaces.013, %for.body ], [ %inc2, %sw.bb1 ], [ %spaces.013, %sw.bb ]
+    %scevgep = getelementptr i8, ptr %lsr.iv1, i32 1
+    %3 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+    %4 = icmp ne i32 %3, 0
+    br i1 %4, label %for.body, label %for.cond.cleanup
+  }
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i32 @llvm.start.loop.iterations.i32(i32) #0
+  
+  ; Function Attrs: noduplicate nounwind
+  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr) #1
+  
+  attributes #0 = { noduplicate nounwind }
+  attributes #1 = { nounwind }
+
+...
+---
+name:            search
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.7(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r4, $lr
+  
+    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r4, -8
+    tCBZ $r1, %bb.7
+  
+  bb.1.for.body.preheader:
+    successors: %bb.4(0x80000000)
+    liveins: $r0, $r1
+  
+    $lr = tMOVr $r1, 14, $noreg
+    $lr = t2DoLoopStart killed $r1
+    renamable $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+    renamable $r12 = t2MOVi 1, 14, $noreg, $noreg
+    renamable $r2, dead $cpsr = tMOVi8 0, 14, $noreg
+    tB %bb.4, 14, $noreg
+  
+  bb.2.for.body:
+    successors: %bb.3(0x80000000)
+    liveins: $lr, $r0, $r1, $r2, $r3, $r12
+  
+    tCMPi8 killed renamable $r3, 32, 14, $noreg, implicit-def $cpsr
+    t2IT 0, 8, implicit-def $itstate
+    renamable $r1 = nsw tADDi8 $noreg, killed renamable $r1, 1, 0, killed $cpsr, implicit $r1, implicit killed $itstate
+  
+  bb.3.for.inc:
+    successors: %bb.4(0x7c000000), %bb.8(0x04000000)
+    liveins: $lr, $r0, $r1, $r2, $r12
+  
+    renamable $r0, dead $cpsr = tADDi8 killed renamable $r0, 1, 14, $noreg
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    t2LoopEnd renamable $lr, %bb.4, implicit-def dead $cpsr
+    tB %bb.8, 14, $noreg
+  
+  bb.4.for.body:
+    successors: %bb.2(0x26666665), %bb.5(0x5999999b)
+    liveins: $lr, $r0, $r1, $r2, $r12
+  
+    renamable $r3 = tLDRBi renamable $r0, 0, 14, $noreg :: (load (s8) from %ir.lsr.iv1)
+    renamable $r4 = t2SUBri renamable $r3, 108, 14, $noreg, $noreg
+    tCMPi8 renamable $r4, 4, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.2, 8, killed $cpsr
+  
+  bb.5.for.body:
+    successors: %bb.6(0x6db6db6e), %bb.2(0x12492492)
+    liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r12
+  
+    renamable $r4 = t2LSLrr renamable $r12, killed renamable $r4, 14, $noreg, $noreg
+    t2TSTri killed renamable $r4, 25, 14, $noreg, implicit-def $cpsr
+    tBcc %bb.2, 0, killed $cpsr
+  
+  bb.6.sw.bb:
+    successors: %bb.3(0x80000000)
+    liveins: $lr, $r0, $r1, $r2, $r12
+  
+    renamable $r2, dead $cpsr = nsw tADDi8 killed renamable $r2, 1, 14, $noreg
+    tB %bb.3, 14, $noreg
+  
+  bb.7:
+    successors: %bb.8(0x80000000)
+  
+    renamable $r2, dead $cpsr = tMOVi8 0, 14, $noreg
+    renamable $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+  
+  bb.8.for.cond.cleanup:
+    liveins: $r1, $r2
+  
+    renamable $r0, dead $cpsr = nsw tSUBrr killed renamable $r2, killed renamable $r1, 14, $noreg
+    tPOP_RET 14, $noreg, def $r4, def $pc, implicit killed $r0
+
+...

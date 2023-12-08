@@ -1,0 +1,11 @@
+## Show that llvm-strings prints the last string in the input even if no
+## unprintable character follows it.
+
+RUN: echo -n abcdefg | llvm-strings - | FileCheck %s --check-prefix=PRINT
+PRINT: abcdefg
+
+## Show that llvm-strings does not print the last string in the input if it is
+## too short and no unprintable character follows it.
+
+RUN: echo -n abc | llvm-strings - | FileCheck --allow-empty %s --check-prefix=NOPRINT
+NOPRINT-NOT: {{.}}

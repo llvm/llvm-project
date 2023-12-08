@@ -1,0 +1,67 @@
+# RUN: llc -run-pass ppc-mi-peepholes -ppc-eliminate-signext -ppc-eliminate-zeroext -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  target datalayout = "E-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+  define ptr @func(ptr %a) {
+  entry:
+    ret ptr %a
+  }
+  
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x3', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    liveins: $x3
+
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK: %4:g8rc = EXTSW_32_64 killed %3
+    ; CHECK: %5:g8rc = INSERT_SUBREG %15, %1, %subreg.sub_32
+    ; CHECK: %7:g8rc = EXTSW_32_64 killed %6
+    ; CHECK: %9:g8rc = INSERT_SUBREG %16, %8, %subreg.sub_32
+    ; CHECK: %11:g8rc = INSERT_SUBREG %17, %10, %subreg.sub_32
+    ; CHECK: %14:g8rc = COPY killed %13
+
+    %0:g8rc_nox0 = COPY $x3
+    %1:gprc, %2:g8rc_nox0 = LBZU 0, %0:g8rc_nox0
+    %3:gprc = COPY %2:g8rc_nox0
+    %4:g8rc = EXTSW_32_64 %3:gprc ; should not be eliminated
+    %5:g8rc = EXTSW_32_64 %1:gprc
+
+    %6:gprc = ORIS %1:gprc, 32768 ; should not be eliminated
+    %7:g8rc = EXTSW_32_64 %6:gprc
+
+    %8:gprc = ORIS %1:gprc, 32767
+    %9:g8rc = EXTSW_32_64 %8:gprc
+
+    %10:gprc = ORI %1:gprc, 32768
+    %11:g8rc = EXTSW_32_64 %10:gprc
+
+    %12:g8rc = IMPLICIT_DEF
+    %13:g8rc = INSERT_SUBREG %12:g8rc, %1:gprc, %subreg.sub_32
+    %14:g8rc = RLDICL %13:g8rc, 0, 32
+
+...

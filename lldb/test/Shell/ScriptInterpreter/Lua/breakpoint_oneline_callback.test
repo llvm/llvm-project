@@ -1,0 +1,17 @@
+# RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t
+# RUN: %lldb -s %s --script-language lua %t 2>&1 | FileCheck %s
+b main
+breakpoint command add -s lua -o 'return false'
+run
+# CHECK: Process {{[0-9]+}} exited with status = 0
+breakpoint command add -s lua -o 'print(bacon)'
+run
+# CHECK: bacon
+# CHECK: Process {{[0-9]+}} exited with status = 0
+breakpoint command add -s lua -o "return true"
+run
+# CHECK: Process {{[0-9]+}} stopped
+breakpoint command add -s lua -o 'error("my error message")'
+run
+# CHECK: my error message
+# CHECK: Process {{[0-9]+}} stopped

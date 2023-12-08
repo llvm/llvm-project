@@ -1,0 +1,65 @@
+# REQUIRES: zlib
+# RUN: yaml2obj -DCLASS=32 -DENDIAN=LSB -DINFO_CHDR=010000005600000001000000 %s -o %t.o
+# RUN: llvm-dwp %t.o -o %t
+# RUN: llvm-dwarfdump -v %t | FileCheck %s
+
+# RUN: yaml2obj -DCLASS=32 -DENDIAN=MSB -DINFO_CHDR=000000010000005600000001 %s -o %t.o
+# RUN: llvm-dwp %t.o -o %t
+# RUN: llvm-dwarfdump -v %t | FileCheck %s
+
+# RUN: yaml2obj -DCLASS=64 -DENDIAN=LSB -DINFO_CHDR=01000000fd7f000056000000000000000100000000000000 %s -o %t.o
+# RUN: llvm-dwp %t.o -o %t
+# RUN: llvm-dwarfdump -v %t | FileCheck %s
+
+# RUN: yaml2obj -DCLASS=64 -DENDIAN=MSB -DINFO_CHDR=0000000100007ffd00000000000000560000000000000001 %s -o %t.o
+# RUN: llvm-dwp %t.o -o %t
+# RUN: llvm-dwarfdump -v %t | FileCheck %s
+
+## Simple test built from this input which produces DWARF long enough to be compressed in the .[z]debug_info section:
+##
+##   void f(int a, int b, int c, int d) {
+##   }
+
+## Since the compression is pretty orthogonal, we're not trying to test that the
+## compression library functioned correctly, just that dwp used it to decompress
+## the section - so test a few simple features and be done with it.
+
+# CHECK: .debug_info.dwo contents:
+# CHECK: Compile Unit:
+# CHECK:   DW_TAG_compile_unit
+# CHECK:     DW_TAG_subprogram
+# CHECK:       DW_TAG_formal_parameter
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS[[CLASS]]
+  Data:            ELFDATA2[[ENDIAN]]
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .debug_loc.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         636C616E672076657273696F6E20332E392E3020287472756E6B203236313232332920286C6C766D2F7472756E6B203236313233342900612E637070005F5A3166696969690066006100696E7400620063006400
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         00000000370000003D00000046000000480000004A0000004E0000005000000052000000
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_COMPRESSED ]
+    AddressAlign:    0x8
+    Content:         [[INFO_CHDR]]789c0b626060606100010e462083f1e6eb7f7c0d8b756299188480628c614ccc8c8ccc4c136b5818190381024066051b9c59c20e67167040980c2cacac2c0c00109a0afa
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         01110125823E130503823EB142070000022E0111813E120640186E823E03823E3A0B3B0B3F190000030500021803823E3A0B3B0B4913000004240003823E3E0B0B0B000000
+  - Name:            .debug_line.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0D0000000200070000000101FB0E010000

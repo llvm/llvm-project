@@ -1,0 +1,151 @@
+# RUN: rm -rf %t
+# RUN: %split-file %s %t
+
+# RUN: yaml2obj %t/zero-secaddr.yml -o %t/zero-secaddr
+# RUN: llvm-objdump %t/zero-secaddr -d --symbolize-operands\
+# RUN:  --no-show-raw-insn --no-leading-addr | FileCheck %s
+
+# RUN: yaml2obj %t/nonzero-secaddr.yml -o %t/nonzero-secaddr
+# RUN: llvm-objdump %t/nonzero-secaddr -d --symbolize-operands\
+# RUN:  --no-show-raw-insn --no-leading-addr | FileCheck %s
+
+## Expect to find the branch labels.
+# CHECK: <break_cond_is_arg>:
+# CHECK:     s_branch L1
+# CHECK: <L0>:
+# CHECK:     s_cbranch_execz L2
+# CHECK: <L1>:
+# CHECK:     s_branch L0
+# CHECKL <L2>:
+
+# I created this YAML starting with this LLVM IR:
+#
+#   define void @break_cond_is_arg(i32 %arg, i1 %breakcond) {
+#   entry:
+#     br label %loop
+#   loop:
+#     %tmp23phi = phi i32 [ %tmp23, %endif ], [ 0, %entry ]
+#     %tmp23 = add nuw i32 %tmp23phi, 1
+#     %tmp27 = icmp ult i32 %arg, %tmp23
+#     br i1 %tmp27, label %then, label %endif
+#   then:                                             ; preds = %bb
+#     call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> undef, i32 0, i32 undef, i32 0)
+#     br label %endif
+#   endif:                                             ; preds = %bb28, %bb
+#     br i1 %breakcond, label %loop, label %loopexit
+#   loopexit:
+#     ret void
+#   }
+#
+#   declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #0
+#
+#   attributes #0 = { nounwind writeonly }
+#
+# I compiled it to a relocatable ELF:
+#
+#   llc -march=amdgcn -mcpu=gfx1030 llvm/a.ll -filetype=obj -o a.elf
+#
+# then converted it to YAML:
+#
+#   obj2yaml a.elf
+#
+# then manually removed the BB0_1 etc local symbols.
+#
+# Note that there are two copies of the file:
+#   - One as a relocatable object file (zero section addresses)
+#   - One as a shared object file (non-zero section addresses)
+
+#--- zero-secaddr.yml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX1030 ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         00008CBF0000FDBB81020236810385BE800384BE8102847D6AC10689040082BF7E077E88058105817E047E8A080088BF0500887D7E060787070404886A3C87BEF7FF88BF000070E000000104F4FF82BF7E047E880000FDBB1E2080BE
+  - Name:            .AMDGPU.config
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         48B80000000000004CB800000000000060B800000000000004000000000000000800000000000000
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .note
+    Type:            SHT_NOTE
+    AddressAlign:    0x4
+    Notes:
+      - Name:            AMD
+        Desc:            616D6467636E2D756E6B6E6F776E2D6C696E75782D676E752D67667831303330
+        Type:            NT_FREEBSD_PROCSTAT_GROUPS
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .shstrtab
+      - Name:            .text
+      - Name:            .AMDGPU.config
+      - Name:            .note.GNU-stack
+      - Name:            .note
+      - Name:            .symtab
+Symbols:
+  - Name:            break_cond_is_arg
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x5C
+...
+
+#--- nonzero-secaddr.yml
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX1030 ]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         00008CBF0000FDBB81020236810385BE800384BE8102847D6AC10689040082BF7E077E88058105817E047E8A080088BF0500887D7E060787070404886A3C87BEF7FF88BF000070E000000104F4FF82BF7E047E880000FDBB1E2080BE
+  - Name:            .AMDGPU.config
+    Type:            SHT_PROGBITS
+    Address:         0x2000
+    AddressAlign:    0x1
+    Content:         48B80000000000004CB800000000000060B800000000000004000000000000000800000000000000
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    Address:         0x3000
+    AddressAlign:    0x1
+  - Name:            .note
+    Type:            SHT_NOTE
+    Address:         0x4000
+    AddressAlign:    0x4
+    Notes:
+      - Name:            AMD
+        Desc:            616D6467636E2D756E6B6E6F776E2D6C696E75782D676E752D67667831303330
+        Type:            NT_FREEBSD_PROCSTAT_GROUPS
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .shstrtab
+      - Name:            .text
+      - Name:            .AMDGPU.config
+      - Name:            .note.GNU-stack
+      - Name:            .note
+      - Name:            .symtab
+Symbols:
+  - Name:            break_cond_is_arg
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x5C
+    Value:           0x1000
+...

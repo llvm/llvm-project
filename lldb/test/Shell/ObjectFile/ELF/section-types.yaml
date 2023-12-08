@@ -1,0 +1,144 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK-LABEL: Name: .text
+# CHECK-NEXT: Type: code
+
+# CHECK-LABEL: Name: .debug_info
+# CHECK-NEXT: Type: dwarf-info
+
+# CHECK-LABEL: Name: .debug_types
+# CHECK-NEXT: Type: dwarf-types
+
+# CHECK-LABEL: Name: .debug_types.dwo
+# CHECK-NEXT: Type: dwarf-types-dwo
+
+# CHECK-LABEL: Name: .debug_loc
+# CHECK-NEXT: Type: dwarf-loc
+
+# CHECK-LABEL: Name: .debug_loc.dwo
+# CHECK-NEXT: Type: dwarf-loc-dwo
+
+# CHECK-LABEL: Name: .debug_loclists
+# CHECK-NEXT: Type: dwarf-loclists
+
+# CHECK-LABEL: Name: .debug_loclists.dwo
+# CHECK-NEXT: Type: dwarf-loclists-dwo
+
+# CHECK-LABEL: Name: .debug_rnglists
+# CHECK-NEXT: Type: dwarf-rnglists
+
+# CHECK-LABEL: Name: .debug_rnglists.dwo
+# CHECK-NEXT: Type: dwarf-rnglists-dwo
+
+# CHECK-LABEL: Name: .debug_names
+# CHECK-NEXT: Type: dwarf-names
+
+# CHECK-LABEL: Name: .debug_cu_index
+# CHECK-NEXT: Type: dwarf-cu-index
+
+# CHECK-LABEL: Name: .debug_tu_index
+# CHECK-NEXT: Type: dwarf-tu-index
+
+# CHECK-LABEL: Name: .gnu_debugaltlink
+# CHECK-NEXT: Type: dwarf-gnu-debugaltlink
+
+# CHECK-LABEL: Name: __codesection
+# CHECK-NEXT: Type: code
+
+# CHECK-LABEL: Name: .data
+# CHECK-NEXT: Type: data
+# CHECK: Thread specific: no
+
+# CHECK-LABEL: Name: .tdata
+# CHECK-NEXT: Type: data
+# CHECK: Thread specific: yes
+
+# CHECK-LABEL: Name: .tbss
+# CHECK-NEXT: Type: zero-fill
+# CHECK: Thread specific: yes
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  Entry:           0x00000000000007A0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_types
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_types.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loc
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loc.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loclists
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loclists.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_rnglists.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_names
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_cu_index
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_tu_index
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .gnu_debugaltlink
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            __codesection
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         DEADBEEFBAADF00D
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
+  - Name:            .tdata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_TLS ]
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
+  - Name:            .tbss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_TLS ]
+    AddressAlign:    0x0000000000000004
+    Size:            0x0000000000000004
+...

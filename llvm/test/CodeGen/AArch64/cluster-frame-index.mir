@@ -1,0 +1,53 @@
+#RUN: llc -mtriple=aarch64-- -mcpu=cyclone -run-pass machine-scheduler -o - %s | FileCheck %s
+---
+name:            merge_stack
+# CHECK-LABEL: name: merge_stack
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    undef %3.sub_32:gpr64 = ORRWrs $wzr, %0, 0
+    STRXui %3, %stack.0, 0 :: (store (s64))
+    undef %5.sub_32:gpr64 = ORRWrs $wzr, %1, 0
+    STRXui %5, %stack.0, 1 :: (store (s64))
+    RET_ReallyLR
+
+    ; CHECK: COPY
+    ; CHECK-NEXT: COPY
+    ; CHECK-NEXT: ORRWrs
+    ; CHECK-NEXT: ORRWrs
+    ; CHECK-NEXT: STRXui
+    ; CHECK-NEXT: STRXui
+    ; CHECK-NEXT: RET
+...
+---
+name:            merge_fixedstack
+# CHECK-LABEL: name: merge_fixedstack
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 16, alignment: 8, offset: -16 }
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    undef %3.sub_32:gpr64 = ORRWrs $wzr, %0, 0
+    STRXui %3, %fixed-stack.0, 0 :: (store (s64))
+    undef %5.sub_32:gpr64 = ORRWrs $wzr, %1, 0
+    STRXui %5, %fixed-stack.0, 1 :: (store (s64))
+    RET_ReallyLR
+
+    ; CHECK: COPY
+    ; CHECK-NEXT: COPY
+    ; CHECK-NEXT: ORRWrs
+    ; CHECK-NEXT: ORRWrs
+    ; CHECK-NEXT: STRXui
+    ; CHECK-NEXT: STRXui
+    ; CHECK-NEXT: RET
+...

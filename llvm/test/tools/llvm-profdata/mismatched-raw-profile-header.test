@@ -1,0 +1,22 @@
+// Magic
+RUN: printf '\377lprofr\201' > %t
+// Version
+RUN: printf '\0\0\0\0\10\0\0\10' >> %t
+// The rest of the header needs to be there to prevent a broken header error.
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\2' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\3' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\20' >> %t
+RUN: printf '\0\0\0\1\0\4\0\0' >> %t
+RUN: printf '\0\0\0\2\0\4\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+
+RUN: not llvm-profdata show %t -o /dev/null 2>&1 | FileCheck %s
+
+CHECK: raw profile version mismatch: Profile uses raw profile format version = 134217736; expected version = {{[0-9]+}}
+CHECK-NEXT: PLEASE update this tool to version in the raw profile, or regenerate raw profile with expected version.

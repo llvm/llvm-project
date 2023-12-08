@@ -1,0 +1,125 @@
+# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp4 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
+# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix HARD-ABI
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=+vfp4,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-ABI
+# RUN: llc -mtriple arm-linux-gnu -mattr=+vfp4,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-ABI
+--- |
+  define void @test_fma_float() { ret void }
+  define void @test_fma_double() { ret void }
+...
+---
+name:            test_fma_float
+# CHECK-LABEL: name: test_fma_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY $r1
+    ; CHECK-DAG: [[Z:%[0-9]+]]:_(s32) = COPY $r2
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = COPY $r2
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FMA [[X]], [[Y]], [[Z]]
+    ; SOFT-NOT: G_FMA
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-ABI-DAG: $r0 = COPY [[X]]
+    ; SOFT-ABI-DAG: $r1 = COPY [[Y]]
+    ; SOFT-ABI-DAG: $r2 = COPY [[Z]]
+    ; SOFT-ABI: BL &fmaf, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit-def $r0
+    ; SOFT-ABI: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; HARD-ABI-DAG: $s0 = COPY [[X]]
+    ; HARD-ABI-DAG: $s1 = COPY [[Y]]
+    ; HARD-ABI-DAG: $s2 = COPY [[Z]]
+    ; HARD-ABI: BL &fmaf, {{.*}}, implicit $s0, implicit $s1, implicit $s2, implicit-def $s0
+    ; HARD-ABI: [[R:%[0-9]+]]:_(s32) = COPY $s0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FMA
+    %3(s32) = G_FMA %0, %1, %2
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %3(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_fma_double
+# CHECK-LABEL: name: test_fma_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY $r1
+    ; CHECK-DAG: [[Y0:%[0-9]+]]:_(s32) = COPY $r2
+    ; CHECK-DAG: [[Y1:%[0-9]+]]:_(s32) = COPY $r3
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = COPY $r2
+    %3(s32) = COPY $r3
+    ; HARD-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    ; HARD-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]]
+    ; HARD-ABI-DAG: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    ; HARD-ABI-DAG: [[Y:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[Y0]]
+    %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
+    ; HARD: [[R:%[0-9]+]]:_(s64) = G_FMA [[X]], [[X]], [[Y]]
+    ; SOFT-NOT: G_FMA
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-ABI: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
+    ; SOFT-ABI: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-ABI: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
+    ; SOFT-ABI: G_STORE [[Y0]](s32), [[FI1]](p0){{.*}}store (s32) into stack, align 1)
+    ; SOFT-ABI: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
+    ; FIXME: Should avoid multiple copies from $sp
+    ; FIXME: This ought to be align 8 but ARM's call lowering hardcodes it to 1
+    ; SOFT-ABI: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; SOFT-ABI: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
+    ; SOFT-ABI: G_STORE [[Y1]](s32), [[FI2]](p0){{.*}}store (s32) into stack + 4, align 1)
+    ; SOFT-ABI-DAG: $r{{[0-1]}} = COPY [[X0]]
+    ; SOFT-ABI-DAG: $r{{[0-1]}} = COPY [[X1]]
+    ; SOFT-ABI-DAG: $r{{[2-3]}} = COPY [[X0]]
+    ; SOFT-ABI-DAG: $r{{[2-3]}} = COPY [[X1]]
+
+    ; SOFT-ABI: BL &fma, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
+    ; SOFT-ABI-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT-ABI-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; HARD-ABI-DAG: $d0 = COPY [[X]]
+    ; HARD-ABI-DAG: $d1 = COPY [[X]]
+    ; HARD-ABI-DAG: $d2 = COPY [[Y]]
+    ; HARD-ABI: BL &fma, {{.*}}, implicit $d0, implicit $d1, implicit $d2, implicit-def $d0
+    ; HARD-ABI: [[R:%[0-9]+]]:_(s64) = COPY $d0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FMA
+    %6(s64) = G_FMA %4, %4, %5
+    ; HARD: [[R0:%[0-9]+]]:_(s32), [[R1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[R]](s64)
+    ; HARD-ABI: [[R0:%[0-9]+]]:_(s32), [[R1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[R]](s64)
+    %7(s32),%8(s32) = G_UNMERGE_VALUES %6(s64)
+    ; CHECK-DAG: $r0 = COPY [[R0]]
+    ; CHECK-DAG: $r1 = COPY [[R1]]
+    $r0 = COPY %7(s32)
+    $r1 = COPY %8(s32)
+    BX_RET 14, $noreg, implicit $r0, implicit $r1
+...

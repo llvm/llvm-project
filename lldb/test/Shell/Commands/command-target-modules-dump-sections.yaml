@@ -1,0 +1,36 @@
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t -o "target modules dump sections" -o exit \
+# RUN:   | FileCheck --match-full-lines --strict-whitespace %s
+
+#      CHECK:Sections for '{{.*}}command-target-modules-dump-sections.yaml.tmp' (x86_64):
+# CHECK-NEXT:  SectID     Type             File Address                             Perm File Off.  File Size  Flags      Section Name
+# CHECK-NEXT:  ---------- ---------------- ---------------------------------------  ---- ---------- ---------- ---------- ----------------------------
+# CHECK-NEXT:  0x00000001 code             [0x0000000000004000-0x0000000000005000)  r-x  0x00001000 0x00001000 0x00000006 command-target-modules-dump-sections.yaml.tmp..text
+# CHECK-NEXT:  0x00000002 regular          [0x0000000000005000-0x0000000000005100)  r--  0x00002000 0x00000100 0x00000002 command-target-modules-dump-sections.yaml.tmp..rodata
+# CHECK-NEXT:  0x00000003 eh-frame         [0x0000000000006000-0x0000000000006040)  r--  0x00002100 0x00000040 0x00000002 command-target-modules-dump-sections.yaml.tmp..eh_frame
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000004000
+    AddressAlign:    0x0000000000001000
+    Size:            0x1000
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000005000
+    AddressAlign:    0x0000000000000020
+    Size:            0x100
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000006000
+    AddressAlign:    0x0000000000000008
+    Size:            0x40
+...

@@ -1,0 +1,6 @@
+# UNSUPPORTED: lldb-repro
+#
+# RUN: %lldb -s %s --script-language python 2>&1 | FileCheck %s
+b main
+breakpoint command add -s python -o "1234_foo"
+# CHECK: error: SyntaxError({{.*}})

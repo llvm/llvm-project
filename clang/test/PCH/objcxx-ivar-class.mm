@@ -1,0 +1,16 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
+// Test this without pch.
+// RUN: %clang_cc1 -include %S/objcxx-ivar-class.h -triple %itanium_abi_triple %s -emit-llvm -o - | FileCheck %s
+
+// Test with pch.
+// RUN: %clang_cc1 -x objective-c++-header -triple %itanium_abi_triple -emit-pch -o %t %S/objcxx-ivar-class.h
+// RUN: %clang_cc1 -include-pch %t -triple %itanium_abi_triple %s -emit-llvm -o - | FileCheck %s
+
+// CHECK: [C position]
+// CHECK: call {{.*}} @_ZN1SC1ERKS_
+
+// CHECK: [C setPosition:]
+// CHECK: = call {{.*}}ptr @_ZN1SaSERKS_
+
+// CHECK: [C .cxx_destruct]
+// CHECK: [C .cxx_construct]

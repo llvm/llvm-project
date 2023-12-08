@@ -1,0 +1,9 @@
+REQUIRES: x86-registered-target && host-byteorder-little-endian
+RUN: sancov -print %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
+
+CHECK: 0x4e132b
+CHECK: 0x4e1472
+CHECK: 0x4e1520
+CHECK: 0x4e1553
+CHECK: 0x4e1586
+

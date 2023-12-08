@@ -1,0 +1,59 @@
+# RUN: not --crash llc -o - -mtriple=arm64  -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            g_shuffle_vector
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(<2 x s32>) = G_IMPLICIT_DEF
+    %1:_(<2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<4 x s32>) = G_IMPLICIT_DEF
+
+    %3:_(s32) = G_CONSTANT i32 0
+    %4:_(s32) = G_CONSTANT i32 1
+    %5:_(<2 x s32>) = G_BUILD_VECTOR %3, %4
+
+    ; CHECK: Bad machine code: Incorrect mask operand type for G_SHUFFLE_VECTOR
+    %6:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, %2
+
+    ; CHECK: Bad machine code: Incorrect mask operand type for G_SHUFFLE_VECTOR
+    %7:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, %5
+
+    ; CHECK: Bad machine code: Incorrect mask operand type for G_SHUFFLE_VECTOR
+    %8:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, 0
+
+    ; CHECK: Bad machine code: Incorrect mask operand type for G_SHUFFLE_VECTOR
+    %9:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, i32 0
+
+    ; CHECK: Bad machine code: Wrong result type for shufflemask
+    %10:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 2)
+
+    ; CHECK: Bad machine code: Wrong result type for shufflemask
+    %11:_(<2 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 2, 1, 1)
+
+    ; CHECK: Bad machine code: G_SHUFFLE_VECTOR cannot change element type
+    %12:_(<4 x s16>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 2, 1, 1)
+
+    ; CHECK: Bad machine code: Source operands must be the same type
+    %13:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %2, shufflemask(0, 2, 1, 1)
+
+    ; CHECK: Bad machine code: Out of bounds shuffle index
+    %14:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 2, 1, 4)
+
+    ; CHECK: Bad machine code: Out of bounds shuffle index
+    %15:_(<4 x s32>) = G_SHUFFLE_VECTOR %0, %1, shufflemask(0, 2, 1, 5)
+
+    %19:_(s16) = G_CONSTANT i16 0
+
+    ; CHECK: Bad machine code: Source operands must be the same type
+    %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %3, %19, shufflemask(1, 0)
+
+    ; CHECK: Bad machine code: G_SHUFFLE_VECTOR cannot change element type
+    %21:_(s16) = G_SHUFFLE_VECTOR %3, %4, shufflemask(0)
+
+    ; CHECK: Bad machine code: Out of bounds shuffle index
+    %22:_(s32) = G_IMPLICIT_DEF
+    %20:_(<2 x s32>) = G_SHUFFLE_VECTOR %22, %22, shufflemask(0, 2)
+
+...

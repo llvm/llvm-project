@@ -1,0 +1,7 @@
+## This test checks the error message displayed if the destination
+## is stdout and separate debug info file is requested.
+
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t.o
+# RUN: not llvm-dwarfutil --separate-debug-file %t.o - 2>&1 | FileCheck --check-prefix CHECK %s
+
+# CHECK: error: unable to write to stdout when --separate-debug-file specified

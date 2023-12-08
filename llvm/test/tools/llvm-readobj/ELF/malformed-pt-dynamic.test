@@ -1,0 +1,146 @@
+## If the offset and/or size fields of the PT_DYNAMIC field become corrupted,
+## we should report a sensible message.
+
+## Case A: Test case where the size of the PT_DYNAMIC header is too large to fit in the file,
+##         but the start is within the file.
+
+## Case A.1: the section header table is present in the object. Check that we report a warning about the
+##           broken PT_DYNAMIC header, check we dump the dynamic table.
+# RUN: yaml2obj %s -DFILESIZE=0x131 -o %t1
+# RUN: llvm-readobj %t1 --dynamic-table 2>&1 | FileCheck -DFILE=%t1 %s --check-prefixes=WARN1,WARN1-LLVM
+# RUN: llvm-readelf %t1 --dynamic-table 2>&1 | FileCheck -DFILE=%t1 %s --check-prefixes=WARN1,WARN1-GNU
+
+# WARN1: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x131) exceeds the size of the file (0x1130)
+
+# WARN1-LLVM:      DynamicSection [ (1 entries)
+# WARN1-LLVM-NEXT:   Tag                Type Name/Value
+# WARN1-LLVM-NEXT:   0x0000000000000000 NULL 0x0
+# WARN1-LLVM-NEXT: ]
+
+# WARN1-GNU:       Dynamic section at offset 0x1000 contains 1 entries:
+# WARN1-GNU-NEXT:   Tag                Type   Name/Value
+# WARN1-GNU-NEXT:   0x0000000000000000 (NULL) 0x0
+
+## Case A.2: in this case we drop section headers. The dynamic table is not dumped.
+# RUN: yaml2obj %s -DFILESIZE=0x12 -DNOHEADERS=true -o %t1.noheaders
+# RUN: llvm-readobj %t1.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t1.noheaders %s \
+# RUN:   --check-prefix=WARN1-NOHEADERS --implicit-check-not="DynamicSection ["
+# RUN: llvm-readelf %t1.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t1.noheaders %s \
+# RUN:   --check-prefix=WARN1-NOHEADERS --implicit-check-not="Dynamic section"
+
+# WARN1-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x12) exceeds the size of the file (0x1011)
+
+## Case B: Test case where the offset of the PT_DYNAMIC header is too large to be in the file.
+
+## Case B.1: the section header table is present in the object. Check that we report a warning about the
+##           broken PT_DYNAMIC header. Check we also report a warning about broken fields of the SHT_DYNAMIC section.
+# RUN: yaml2obj %s -DOFFSET=0x1131 -o %t2
+# RUN: llvm-readobj %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s \
+# RUN:   --check-prefix=WARN2 --implicit-check-not=warning:
+# RUN: llvm-readelf %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s \
+# RUN:   --check-prefix=WARN2 --implicit-check-not=warning:
+
+# WARN2: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1131) + file size (0x10) exceeds the size of the file (0x1130)
+# WARN2: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0x1131) + size (0x10) is greater than the file size (0x1130)
+# WARN2: warning: '[[FILE]]': no valid dynamic table was found
+
+## Case B.2: in this case we drop section headers. The dynamic table is not dumped.
+# RUN: yaml2obj %s -DOFFSET=0x1112 -DNOHEADERS=true -o %t2.noheaders
+# RUN: llvm-readobj %t2.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t2.noheaders %s \
+# RUN:   --check-prefix=WARN2-NOHEADERS --implicit-check-not="DynamicSection ["
+# RUN: llvm-readelf %t2.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t2.noheaders %s \
+# RUN:   --check-prefix=WARN2-NOHEADERS --implicit-check-not="Dynamic section"
+
+# WARN2-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1112) + file size (0x10) exceeds the size of the file (0x1011)
+
+## Case C: test we report a warning when the offset + the file size of the PT_DYNAMIC is so large a
+##         value that it overflows the platform address size type. Check we also report a warning about
+##         broken fields of the SHT_DYNAMIC section.
+
+# RUN: yaml2obj %s -DOFFSET=0xffffffffffffffff -o %t3
+# RUN: llvm-readobj %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s \
+# RUN:   --check-prefix=WARN3 --implicit-check-not=warning:
+# RUN: llvm-readelf %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s \
+# RUN:   --check-prefix=WARN3 --implicit-check-not=warning:
+
+# WARN3: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1130)
+# WARN3: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0xffffffffffffffff) + size (0x10) is greater than the file size (0x1130)
+# WARN3: warning: '[[FILE]]': no valid dynamic table was found
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DOFFSET=0xffffffffffffffff -o %t3.noheaders
+# RUN: llvm-readobj %t3.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t3.noheaders %s --check-prefix=WARN3-NOHEADERS
+# RUN: llvm-readelf %t3.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t3.noheaders %s --check-prefix=WARN3-NOHEADERS
+
+# WARN3-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1011)
+
+# RUN: yaml2obj %s -DFILESIZE=0xffffffffffffffff -o %t4
+# RUN: llvm-readobj %t4 --dynamic-table 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=WARN4
+# RUN: llvm-readelf %t4 --dynamic-table 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=WARN4
+
+# WARN4: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffffffffffff) exceeds the size of the file (0x1130)
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DFILESIZE=0xffffffffffffffff -o %t4.noheaders
+# RUN: llvm-readobj %t4.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t4.noheaders %s --check-prefix=WARN4-NOHEADERS
+# RUN: llvm-readelf %t4.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t4.noheaders %s --check-prefix=WARN4-NOHEADERS
+
+# WARN4-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffffffffffff) exceeds the size of the file (0x1011)
+
+## Case D: the same as "Case C", but for a 32-bit object.
+
+# RUN: yaml2obj %s -DBITS=32 -DOFFSET=0xffffffff -o %t5
+# RUN: llvm-readobj %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s \
+# RUN:   --check-prefix=WARN5 --implicit-check-not=warning:
+# RUN: llvm-readelf %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s \
+# RUN:   --check-prefix=WARN5 --implicit-check-not=warning:
+
+# WARN5: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x10c8)
+# WARN5: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0xffffffff) + size (0x8) is greater than the file size (0x10c8)
+# WARN5: warning: '[[FILE]]': no valid dynamic table was found
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DOFFSET=0xffffffff -o %t5.noheaders
+# RUN: llvm-readobj %t5.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t5.noheaders %s --check-prefix=WARN5-NOHEADERS
+# RUN: llvm-readelf %t5.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t5.noheaders %s --check-prefix=WARN5-NOHEADERS
+
+# WARN5-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x1009)
+
+# RUN: yaml2obj %s -DBITS=32 -DFILESIZE=0xffffffff -o %t6
+# RUN: llvm-readobj %t6 --dynamic-table 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=WARN6
+# RUN: llvm-readelf %t6 --dynamic-table 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=WARN6
+
+# WARN6: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffff) exceeds the size of the file (0x10c8)
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DFILESIZE=0xffffffff -o %t6.noheaders
+# RUN: llvm-readobj %t6.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t6.noheaders %s --check-prefix=WARN6-NOHEADERS
+# RUN: llvm-readelf %t6.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t6.noheaders %s --check-prefix=WARN6-NOHEADERS
+
+# WARN6-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffff) exceeds the size of the file (0x1009)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS=64]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:     .dynamic
+    Type:     SHT_DYNAMIC
+    Address:  0x1000
+    Offset:   0x1000
+    ShOffset: [[OFFSET=<none>]]
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADERS=false]]
+ProgramHeaders:
+  - Type:     PT_DYNAMIC
+    FileSize: [[FILESIZE=<none>]]
+    FirstSec: .dynamic
+    LastSec:  .dynamic

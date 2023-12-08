@@ -1,0 +1,221 @@
+RUN: llvm-debuginfo-analyzer --version 2>&1 | FileCheck --check-prefix=VERSION %s
+VERSION: {{ version }}
+
+RUN: llvm-debuginfo-analyzer -h > %t 2>&1
+RUN: FileCheck -input-file=%t %s --check-prefix=HELP --implicit-check-not=out-file
+RUN: llvm-debuginfo-analyzer --help > %t 2>&1
+RUN: FileCheck -input-file=%t %s --check-prefix=HELP --implicit-check-not=out-file
+HELP: OVERVIEW: Printing a logical representation of low-level debug information.
+HELP: USAGE: llvm-debuginfo-analyzer{{[^ ]*}} [options] <input object files or .dSYM bundles>
+HELP: OPTIONS:
+HELP: Generic Options:
+HELP:   --help          - Display available options (--help-hidden for more)
+HELP:   --help-list     - Display list of available options (--help-list-hidden for more)
+HELP:   --version       - Display the version of this program
+HELP: Print Options:
+HELP: These control which elements are printed.
+HELP:   --print=<value> - Element to print.
+HELP:     =all          -   All elements.
+HELP:     =elements     -   Instructions, lines, scopes, symbols and types.
+HELP:     =instructions -   Assembler instructions.
+HELP:     =lines        -   Lines referenced in the debug information.
+HELP:     =scopes       -   A lexical block (Function, Class, etc.).
+HELP:     =sizes        -   Scope contributions to the debug information.
+HELP:     =summary      -   Summary of elements missing/added/matched/printed.
+HELP:     =symbols      -   Symbols (Variable, Members, etc.).
+HELP:     =types        -   Types (Pointer, Reference, etc.).
+HELP:     =warnings     -   Warnings detected.
+HELP: Pass @FILE as argument to read options from FILE.
+
+RUN: llvm-debuginfo-analyzer --help-hidden > %t 2>&1
+RUN: FileCheck -input-file=%t %s --check-prefix=HELP-ALL --implicit-check-not=out-file
+HELP-ALL: OVERVIEW: Printing a logical representation of low-level debug information.
+HELP-ALL: USAGE: llvm-debuginfo-analyzer{{[^ ]*}} [options] <input object files or .dSYM bundles>
+HELP-ALL: OPTIONS:
+HELP-ALL: Attribute Options:
+HELP-ALL: These control extra attributes that are added when the element is printed.
+HELP-ALL:   --attribute=<value>        - Element attributes.
+HELP-ALL:     =all                     -   Include all attributes.
+HELP-ALL:     =argument                -   Template parameters replaced by its arguments.
+HELP-ALL:     =base                    -   Base types (int, bool, etc.).
+HELP-ALL:     =coverage                -   Symbol location coverage.
+HELP-ALL:     =directories             -   Directories referenced in the debug information.
+HELP-ALL:     =discarded               -   Discarded elements by the linker.
+HELP-ALL:     =discriminator           -   Discriminators for inlined function instances.
+HELP-ALL:     =encoded                 -   Template arguments encoded in the template name.
+HELP-ALL:     =extended                -   Advanced attributes alias.
+HELP-ALL:     =filename                -   Filename where the element is defined.
+HELP-ALL:     =files                   -   Files referenced in the debug information.
+HELP-ALL:     =format                  -   Object file format name.
+HELP-ALL:     =gaps                    -   Missing debug location (gaps).
+HELP-ALL:     =generated               -   Compiler generated elements.
+HELP-ALL:     =global                  -   Element referenced across Compile Units.
+HELP-ALL:     =inserted                -   Generated inlined abstract references.
+HELP-ALL:     =level                   -   Lexical scope level (File=0, Compile Unit=1).
+HELP-ALL:     =linkage                 -   Linkage name.
+HELP-ALL:     =local                   -   Element referenced only in the Compile Unit.
+HELP-ALL:     =location                -   Element debug location.
+HELP-ALL:     =offset                  -   Debug information offset.
+HELP-ALL:     =pathname                -   Pathname where the element is defined.
+HELP-ALL:     =producer                -   Toolchain identification name.
+HELP-ALL:     =publics                 -   Function names that are public.
+HELP-ALL:     =qualified               -   The element type include parents in its name.
+HELP-ALL:     =qualifier               -   Line qualifiers (Newstatement, BasicBlock, etc.).
+HELP-ALL:     =range                   -   Debug location ranges.
+HELP-ALL:     =reference               -   Element declaration and definition references.
+HELP-ALL:     =register                -   Processor register names.
+HELP-ALL:     =standard                -   Basic attributes alias.
+HELP-ALL:     =subrange                -   Subrange encoding information for arrays.
+HELP-ALL:     =system                  -   Display PDB's MS system elements.
+HELP-ALL:     =typename                -   Include Parameters in templates.
+HELP-ALL:     =underlying              -   Underlying type for type definitions.
+HELP-ALL:     =zero                    -   Zero line numbers.
+HELP-ALL: Color Options:
+HELP-ALL:   This option category has no options.
+HELP-ALL: Compare Options:
+HELP-ALL: These control the view comparison.
+HELP-ALL:   --compare=<value>          - Elements to compare.
+HELP-ALL:     =all                     -   Compare all elements.
+HELP-ALL:     =lines                   -   Lines.
+HELP-ALL:     =scopes                  -   Scopes.
+HELP-ALL:     =symbols                 -   Symbols.
+HELP-ALL:     =types                   -   Types.
+HELP-ALL:   --compare-context          - Add the view as compare context.
+HELP-ALL: General options:
+HELP-ALL:   This option category has no options.
+HELP-ALL: Generic Options:
+HELP-ALL:   -h                         - Alias for --help
+HELP-ALL:   --help                     - Display available options (--help-hidden for more)
+HELP-ALL:   --help-hidden              - Display all available options
+HELP-ALL:   --help-list                - Display list of available options (--help-list-hidden for more)
+HELP-ALL:   --help-list-hidden         - Display list of all available options
+HELP-ALL:   --print-all-options        - Print all option values after command line parsing
+HELP-ALL:   --print-options            - Print non-default options after command line parsing
+HELP-ALL:   --version                  - Display the version of this program
+HELP-ALL: Internal Options:
+HELP-ALL: Internal traces and extra debugging code.
+HELP-ALL:   --internal=<value>         - Traces to enable.
+HELP-ALL:     =all                     -   Enable all traces.
+HELP-ALL:     =cmdline                 -   Print command line.
+HELP-ALL:     =id                      -   Print unique element ID
+HELP-ALL:     =integrity               -   Check elements integrity.
+HELP-ALL:     =none                    -   Ignore element line number.
+HELP-ALL:     =tag                     -   Debug information tags.
+HELP-ALL: Output Options:
+HELP-ALL: These control the output generated.
+HELP-ALL:   --output=<value>           - Outputs for view.
+HELP-ALL:     =all                     -   All outputs.
+HELP-ALL:     =split                   -   Split the output by Compile Units.
+HELP-ALL:     =text                    -   Use a free form text output.
+HELP-ALL:     =json                    -   Use JSON as the output format.
+HELP-ALL:   --output-file=<filename>   - Redirect output to the specified file.
+HELP-ALL:   --output-folder=<pathname> - Folder name for view splitting.
+HELP-ALL:   --output-level=<N>         - Only print to a depth of N elements.
+HELP-ALL:   --output-sort=<value>      - Primary key when ordering logical view (default: line).
+HELP-ALL:     =kind                    -   Sort by element kind.
+HELP-ALL:     =line                    -   Sort by element line number.
+HELP-ALL:     =name                    -   Sort by element name.
+HELP-ALL:     =offset                  -   Sort by element offset.
+HELP-ALL: Print Options:
+HELP-ALL: These control which elements are printed.
+HELP-ALL:   --print=<value>            - Element to print.
+HELP-ALL:     =all                     -   All elements.
+HELP-ALL:     =elements                -   Instructions, lines, scopes, symbols and types.
+HELP-ALL:     =instructions            -   Assembler instructions.
+HELP-ALL:     =lines                   -   Lines referenced in the debug information.
+HELP-ALL:     =scopes                  -   A lexical block (Function, Class, etc.).
+HELP-ALL:     =sizes                   -   Scope contributions to the debug information.
+HELP-ALL:     =summary                 -   Summary of elements missing/added/matched/printed.
+HELP-ALL:     =symbols                 -   Symbols (Variable, Members, etc.).
+HELP-ALL:     =types                   -   Types (Pointer, Reference, etc.).
+HELP-ALL:     =warnings                -   Warnings detected.
+HELP-ALL: Report Options:
+HELP-ALL: These control how the elements are printed.
+HELP-ALL:   --report=<value>           - Reports layout used for print, compare and select.
+HELP-ALL:     =all                     -   Generate all reports.
+HELP-ALL:     =children                -   Selected elements are displayed in a tree view (Include children)
+HELP-ALL:     =list                    -   Selected elements are displayed in a tabular format.
+HELP-ALL:     =parents                 -   Selected elements are displayed in a tree view. (Include parents)
+HELP-ALL:     =view                    -   Selected elements are displayed in a tree view (Include parents and children.
+HELP-ALL: Select Options:
+HELP-ALL: These control which elements are selected.
+HELP-ALL:   --select=<pattern>         - Search elements matching the given pattern.
+HELP-ALL:   --select-elements=<value>  - Conditions to use when printing elements.
+HELP-ALL:     =Discarded               -   Discarded elements by the linker.
+HELP-ALL:     =Global                  -   Element referenced across Compile Units.
+HELP-ALL:     =Optimized               -   Generated inlined abstract references.
+HELP-ALL:   --select-lines=<value>     - Line kind to use when printing lines.
+HELP-ALL:     =AlwaysStepInto          -   Always Step Into.
+HELP-ALL:     =BasicBlock              -   Basic block.
+HELP-ALL:     =Discriminator           -   Discriminator.
+HELP-ALL:     =EndSequence             -   End sequence.
+HELP-ALL:     =EpilogueBegin.          -   Epilogue begin.
+HELP-ALL:     =LineDebug               -   Debug line.
+HELP-ALL:     =LineAssembler           -   Assembler line.
+HELP-ALL:     =NeverStepInto           -   Never Step Into.
+HELP-ALL:     =NewStatement            -   New statement.
+HELP-ALL:     =PrologueEnd             -   Prologue end.
+HELP-ALL:   --select-nocase            - Ignore case distinctions when searching.
+HELP-ALL:   --select-offsets=<offset>  - Offset element to print.
+HELP-ALL:   --select-regex             - Treat any <pattern> strings as regular expressions when selecting instead of just as an exact string match.
+HELP-ALL:   --select-scopes=<value>    - Scope kind to use when printing scopes.
+HELP-ALL:     =Aggregate               -   Class, Structure or Union.
+HELP-ALL:     =Array                   -   Array.
+HELP-ALL:     =Block                   -   Lexical block.
+HELP-ALL:     =CallSite                -   Call site block.
+HELP-ALL:     =CatchBlock              -   Exception catch block.
+HELP-ALL:     =Class                   -   Class.
+HELP-ALL:     =CompileUnit             -   Compile unit.
+HELP-ALL:     =EntryPoint              -   Function entry point.
+HELP-ALL:     =Enumeration             -   Enumeration.
+HELP-ALL:     =Function                -   Function.
+HELP-ALL:     =FunctionType            -   Function type.
+HELP-ALL:     =InlinedFunction         -   Inlined function.
+HELP-ALL:     =Label                   -   Label.
+HELP-ALL:     =LexicalBlock            -   Lexical block.
+HELP-ALL:     =Namespace               -   Namespace.
+HELP-ALL:     =Root                    -   Root.
+HELP-ALL:     =Structure               -   Structure.
+HELP-ALL:     =Subprogram              -   Subprogram.
+HELP-ALL:     =Template                -   Template.
+HELP-ALL:     =TemplateAlias           -   Template alias.
+HELP-ALL:     =TemplatePack            -   Template pack.
+HELP-ALL:     =TryBlock                -   Exception try block.
+HELP-ALL:     =Union                   -   Union.
+HELP-ALL:   --select-symbols=<value>   - Symbol kind to use when printing symbols.
+HELP-ALL:     =CallSiteParameter       -   Call site parameter.
+HELP-ALL:     =Constant                -   Constant.
+HELP-ALL:     =Inheritance             -   Inheritance.
+HELP-ALL:     =Member                  -   Member.
+HELP-ALL:     =Parameter               -   Parameter.
+HELP-ALL:     =Unspecified             -   Unspecified parameter.
+HELP-ALL:     =Variable                -   Variable.
+HELP-ALL:   --select-types=<value>     - Type kind to use when printing types.
+HELP-ALL:     =Base                    -   Base Type (int, bool, etc.).
+HELP-ALL:     =Const                   -   Constant specifier.
+HELP-ALL:     =Enumerator              -   Enumerator.
+HELP-ALL:     =Import                  -   Import.
+HELP-ALL:     =ImportDeclaration       -   Import declaration.
+HELP-ALL:     =ImportModule            -   Import module.
+HELP-ALL:     =Pointer                 -   Pointer.
+HELP-ALL:     =PointerMember           -   Pointer to member.
+HELP-ALL:     =Reference               -   Reference type.
+HELP-ALL:     =Restrict                -   Restrict specifier.
+HELP-ALL:     =RvalueReference         -   Rvalue reference.
+HELP-ALL:     =Subrange                -   Array subrange.
+HELP-ALL:     =TemplateParam           -   Template Parameter.
+HELP-ALL:     =TemplateTemplateParam   -   Template template parameter.
+HELP-ALL:     =TemplateTypeParam       -   Template type parameter.
+HELP-ALL:     =TemplateValueParam      -   Template value parameter.
+HELP-ALL:     =Typedef                 -   Type definition.
+HELP-ALL:     =Unspecified             -   Unspecified type.
+HELP-ALL:     =Volatile                -   Volatile specifier.
+HELP-ALL: Warning Options:
+HELP-ALL: These control the generated warnings.
+HELP-ALL:   --warning=<value>          - Warnings to generate.
+HELP-ALL:     =all                     -   All warnings.
+HELP-ALL:     =coverages               -   Invalid symbol coverages values.
+HELP-ALL:     =lines                   -   Debug lines that are zero.
+HELP-ALL:     =locations               -   Invalid symbol locations.
+HELP-ALL:     =ranges                  -   Invalid code ranges.
+HELP-ALL: Pass @FILE as argument to read options from FILE.

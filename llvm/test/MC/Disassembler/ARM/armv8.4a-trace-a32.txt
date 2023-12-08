@@ -1,0 +1,10 @@
+# RUN: llvm-mc -triple arm-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+# RUN: not llvm-mc -triple arm-none-linux-gnu -mattr=-v8.4a --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-V84
+
+[0x12,0xf0,0x20,0xe3]
+
+#CHECK: tsb csync
+
+#CHECK-NO-V84: warning: invalid instruction encoding
+#CHECK-NO-V84: [0x12,0xf0,0x20,0xe3]
+#CHECK-NO-V84:  ^

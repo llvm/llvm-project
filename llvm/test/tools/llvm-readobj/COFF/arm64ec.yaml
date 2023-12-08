@@ -1,0 +1,27 @@
+# RUN: yaml2obj < %s | llvm-readobj - --file-headers | FileCheck %s
+# Check we can process a simple arm64ec file.
+# CHECK: Format: COFF-ARM64EC
+# CHECK: Machine: IMAGE_FILE_MACHINE_ARM64EC (0xA641)
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64EC
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+...

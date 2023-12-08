@@ -1,0 +1,29 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
+# RUN: not llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -global-isel -global-isel-abort=0 %s -o - 2>&1 | FileCheck --check-prefix=ERR %s
+
+# ERR: error: <unknown>:0:0: in function exp0 void (): intrinsic not supported on subtarget
+
+---
+name: exp0
+legalized:       true
+regBankSelected: true
+
+# CHECK: name: exp0
+body: |
+  bb.0:
+    liveins: $vgpr0
+    %0:vgpr(s32) = COPY $vgpr0
+
+    %5:vgpr(<2 x s16>) = G_BITCAST %0(s32)
+
+    ; CHECK: [[UNDEF0:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK: [[UNDEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK: EXP 1, %0, %0, [[UNDEF1]], [[UNDEF0]], 0, 1, 15, implicit $exec
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 1, 15, %5:vgpr(<2 x s16>), %5:vgpr(<2 x s16>), 0, 0
+
+    ; CHECK: [[UNDEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK: [[UNDEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK: EXP_DONE 1, %0, %0, [[UNDEF3]], [[UNDEF2]], 0, 1, 15, implicit $exec
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 1, 15, %5:vgpr(<2 x s16>), %5:vgpr(<2 x s16>), -1, 0
+
+...

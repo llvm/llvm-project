@@ -1,0 +1,7 @@
+# RUN: llvm-readobj --coff-basereloc %p/Inputs/trivial.exe.coff-arm | FileCheck %s
+
+# CHECK: Entry {
+# CHECK:  Type: ARM_MOV32(T)
+# CHECK:  Address: 0x9390
+# CHECK: }
+

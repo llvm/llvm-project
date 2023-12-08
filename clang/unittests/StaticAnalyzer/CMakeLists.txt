@@ -1,0 +1,41 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
+add_clang_unittest(StaticAnalysisTests
+  AnalyzerOptionsTest.cpp
+  APSIntTypeTest.cpp
+  BugReportInterestingnessTest.cpp
+  CallDescriptionTest.cpp
+  CallEventTest.cpp
+  ConflictingEvalCallsTest.cpp
+  FalsePositiveRefutationBRVisitorTest.cpp
+  NoStateChangeFuncVisitorTest.cpp
+  ParamRegionTest.cpp
+  RangeSetTest.cpp
+  RegisterCustomCheckersTest.cpp
+  StoreTest.cpp
+  SymbolReaperTest.cpp
+  SValTest.cpp
+  TestReturnValueUnderConstruction.cpp
+  )
+
+clang_target_link_libraries(StaticAnalysisTests
+  PRIVATE
+  clangBasic
+  clangAnalysis
+  clangAST
+  clangASTMatchers
+  clangCrossTU
+  clangFrontend
+  clangSerialization
+  clangStaticAnalyzerCore
+  clangStaticAnalyzerFrontend
+  clangTooling
+  )
+
+target_link_libraries(StaticAnalysisTests
+  PRIVATE
+  clangTesting
+  )

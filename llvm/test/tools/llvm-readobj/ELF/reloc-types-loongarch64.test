@@ -1,0 +1,211 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for loongarch64 target.
+
+# RUN: yaml2obj %s -o %t-loongarch64.o
+# RUN: llvm-readobj -r --expand-relocs %t-loongarch64.o | FileCheck %s
+
+# CHECK: Type: R_LARCH_NONE (0)
+# CHECK: Type: R_LARCH_32 (1)
+# CHECK: Type: R_LARCH_64 (2)
+# CHECK: Type: R_LARCH_RELATIVE (3)
+# CHECK: Type: R_LARCH_COPY (4)
+# CHECK: Type: R_LARCH_JUMP_SLOT (5)
+# CHECK: Type: R_LARCH_TLS_DTPMOD32 (6)
+# CHECK: Type: R_LARCH_TLS_DTPMOD64 (7)
+# CHECK: Type: R_LARCH_TLS_DTPREL32 (8)
+# CHECK: Type: R_LARCH_TLS_DTPREL64 (9)
+# CHECK: Type: R_LARCH_TLS_TPREL32 (10)
+# CHECK: Type: R_LARCH_TLS_TPREL64 (11)
+# CHECK: Type: R_LARCH_IRELATIVE (12)
+# CHECK: Type: R_LARCH_MARK_LA (20)
+# CHECK: Type: R_LARCH_MARK_PCREL (21)
+# CHECK: Type: R_LARCH_SOP_PUSH_PCREL (22)
+# CHECK: Type: R_LARCH_SOP_PUSH_ABSOLUTE (23)
+# CHECK: Type: R_LARCH_SOP_PUSH_DUP (24)
+# CHECK: Type: R_LARCH_SOP_PUSH_GPREL (25)
+# CHECK: Type: R_LARCH_SOP_PUSH_TLS_TPREL (26)
+# CHECK: Type: R_LARCH_SOP_PUSH_TLS_GOT (27)
+# CHECK: Type: R_LARCH_SOP_PUSH_TLS_GD (28)
+# CHECK: Type: R_LARCH_SOP_PUSH_PLT_PCREL (29)
+# CHECK: Type: R_LARCH_SOP_ASSERT (30)
+# CHECK: Type: R_LARCH_SOP_NOT (31)
+# CHECK: Type: R_LARCH_SOP_SUB (32)
+# CHECK: Type: R_LARCH_SOP_SL (33)
+# CHECK: Type: R_LARCH_SOP_SR (34)
+# CHECK: Type: R_LARCH_SOP_ADD (35)
+# CHECK: Type: R_LARCH_SOP_AND (36)
+# CHECK: Type: R_LARCH_SOP_IF_ELSE (37)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_10_5 (38)
+# CHECK: Type: R_LARCH_SOP_POP_32_U_10_12 (39)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_10_12 (40)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_10_16 (41)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_10_16_S2 (42)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_5_20 (43)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_0_5_10_16_S2 (44)
+# CHECK: Type: R_LARCH_SOP_POP_32_S_0_10_10_16_S2 (45)
+# CHECK: Type: R_LARCH_SOP_POP_32_U (46)
+# CHECK: Type: R_LARCH_ADD8 (47)
+# CHECK: Type: R_LARCH_ADD16 (48)
+# CHECK: Type: R_LARCH_ADD24 (49)
+# CHECK: Type: R_LARCH_ADD32 (50)
+# CHECK: Type: R_LARCH_ADD64 (51)
+# CHECK: Type: R_LARCH_SUB8 (52)
+# CHECK: Type: R_LARCH_SUB16 (53)
+# CHECK: Type: R_LARCH_SUB24 (54)
+# CHECK: Type: R_LARCH_SUB32 (55)
+# CHECK: Type: R_LARCH_SUB64 (56)
+# CHECK: Type: R_LARCH_GNU_VTINHERIT (57)
+# CHECK: Type: R_LARCH_GNU_VTENTRY (58)
+# CHECK: Type: R_LARCH_B16 (64)
+# CHECK: Type: R_LARCH_B21 (65)
+# CHECK: Type: R_LARCH_B26 (66)
+# CHECK: Type: R_LARCH_ABS_HI20 (67)
+# CHECK: Type: R_LARCH_ABS_LO12 (68)
+# CHECK: Type: R_LARCH_ABS64_LO20 (69)
+# CHECK: Type: R_LARCH_ABS64_HI12 (70)
+# CHECK: Type: R_LARCH_PCALA_HI20 (71)
+# CHECK: Type: R_LARCH_PCALA_LO12 (72)
+# CHECK: Type: R_LARCH_PCALA64_LO20 (73)
+# CHECK: Type: R_LARCH_PCALA64_HI12 (74)
+# CHECK: Type: R_LARCH_GOT_PC_HI20 (75)
+# CHECK: Type: R_LARCH_GOT_PC_LO12 (76)
+# CHECK: Type: R_LARCH_GOT64_PC_LO20 (77)
+# CHECK: Type: R_LARCH_GOT64_PC_HI12 (78)
+# CHECK: Type: R_LARCH_GOT_HI20 (79)
+# CHECK: Type: R_LARCH_GOT_LO12 (80)
+# CHECK: Type: R_LARCH_GOT64_LO20 (81)
+# CHECK: Type: R_LARCH_GOT64_HI12 (82)
+# CHECK: Type: R_LARCH_TLS_LE_HI20 (83)
+# CHECK: Type: R_LARCH_TLS_LE_LO12 (84)
+# CHECK: Type: R_LARCH_TLS_LE64_LO20 (85)
+# CHECK: Type: R_LARCH_TLS_LE64_HI12 (86)
+# CHECK: Type: R_LARCH_TLS_IE_PC_HI20 (87)
+# CHECK: Type: R_LARCH_TLS_IE_PC_LO12 (88)
+# CHECK: Type: R_LARCH_TLS_IE64_PC_LO20 (89)
+# CHECK: Type: R_LARCH_TLS_IE64_PC_HI12 (90)
+# CHECK: Type: R_LARCH_TLS_IE_HI20 (91)
+# CHECK: Type: R_LARCH_TLS_IE_LO12 (92)
+# CHECK: Type: R_LARCH_TLS_IE64_LO20 (93)
+# CHECK: Type: R_LARCH_TLS_IE64_HI12 (94)
+# CHECK: Type: R_LARCH_TLS_LD_PC_HI20 (95)
+# CHECK: Type: R_LARCH_TLS_LD_HI20 (96)
+# CHECK: Type: R_LARCH_TLS_GD_PC_HI20 (97)
+# CHECK: Type: R_LARCH_TLS_GD_HI20 (98)
+# CHECK: Type: R_LARCH_32_PCREL (99)
+# CHECK: Type: R_LARCH_RELAX (100)
+# CHECK: Type: R_LARCH_ALIGN (102)
+# CHECK: Type: R_LARCH_PCREL20_S2 (103)
+# CHECK: Type: R_LARCH_ADD6 (105)
+# CHECK: Type: R_LARCH_SUB6 (106)
+# CHECK: Type: R_LARCH_ADD_ULEB128 (107)
+# CHECK: Type: R_LARCH_SUB_ULEB128 (108)
+# CHECK: Type: R_LARCH_64_PCREL (109)
+# CHECK: Type: R_LARCH_CALL36 (110)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_LOONGARCH
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+      - Type: R_LARCH_NONE
+      - Type: R_LARCH_32
+      - Type: R_LARCH_64
+      - Type: R_LARCH_RELATIVE
+      - Type: R_LARCH_COPY
+      - Type: R_LARCH_JUMP_SLOT
+      - Type: R_LARCH_TLS_DTPMOD32
+      - Type: R_LARCH_TLS_DTPMOD64
+      - Type: R_LARCH_TLS_DTPREL32
+      - Type: R_LARCH_TLS_DTPREL64
+      - Type: R_LARCH_TLS_TPREL32
+      - Type: R_LARCH_TLS_TPREL64
+      - Type: R_LARCH_IRELATIVE
+      - Type: R_LARCH_MARK_LA
+      - Type: R_LARCH_MARK_PCREL
+      - Type: R_LARCH_SOP_PUSH_PCREL
+      - Type: R_LARCH_SOP_PUSH_ABSOLUTE
+      - Type: R_LARCH_SOP_PUSH_DUP
+      - Type: R_LARCH_SOP_PUSH_GPREL
+      - Type: R_LARCH_SOP_PUSH_TLS_TPREL
+      - Type: R_LARCH_SOP_PUSH_TLS_GOT
+      - Type: R_LARCH_SOP_PUSH_TLS_GD
+      - Type: R_LARCH_SOP_PUSH_PLT_PCREL
+      - Type: R_LARCH_SOP_ASSERT
+      - Type: R_LARCH_SOP_NOT
+      - Type: R_LARCH_SOP_SUB
+      - Type: R_LARCH_SOP_SL
+      - Type: R_LARCH_SOP_SR
+      - Type: R_LARCH_SOP_ADD
+      - Type: R_LARCH_SOP_AND
+      - Type: R_LARCH_SOP_IF_ELSE
+      - Type: R_LARCH_SOP_POP_32_S_10_5
+      - Type: R_LARCH_SOP_POP_32_U_10_12
+      - Type: R_LARCH_SOP_POP_32_S_10_12
+      - Type: R_LARCH_SOP_POP_32_S_10_16
+      - Type: R_LARCH_SOP_POP_32_S_10_16_S2
+      - Type: R_LARCH_SOP_POP_32_S_5_20
+      - Type: R_LARCH_SOP_POP_32_S_0_5_10_16_S2
+      - Type: R_LARCH_SOP_POP_32_S_0_10_10_16_S2
+      - Type: R_LARCH_SOP_POP_32_U
+      - Type: R_LARCH_ADD8
+      - Type: R_LARCH_ADD16
+      - Type: R_LARCH_ADD24
+      - Type: R_LARCH_ADD32
+      - Type: R_LARCH_ADD64
+      - Type: R_LARCH_SUB8
+      - Type: R_LARCH_SUB16
+      - Type: R_LARCH_SUB24
+      - Type: R_LARCH_SUB32
+      - Type: R_LARCH_SUB64
+      - Type: R_LARCH_GNU_VTINHERIT
+      - Type: R_LARCH_GNU_VTENTRY
+      - Type: R_LARCH_B16
+      - Type: R_LARCH_B21
+      - Type: R_LARCH_B26
+      - Type: R_LARCH_ABS_HI20
+      - Type: R_LARCH_ABS_LO12
+      - Type: R_LARCH_ABS64_LO20
+      - Type: R_LARCH_ABS64_HI12
+      - Type: R_LARCH_PCALA_HI20
+      - Type: R_LARCH_PCALA_LO12
+      - Type: R_LARCH_PCALA64_LO20
+      - Type: R_LARCH_PCALA64_HI12
+      - Type: R_LARCH_GOT_PC_HI20
+      - Type: R_LARCH_GOT_PC_LO12
+      - Type: R_LARCH_GOT64_PC_LO20
+      - Type: R_LARCH_GOT64_PC_HI12
+      - Type: R_LARCH_GOT_HI20
+      - Type: R_LARCH_GOT_LO12
+      - Type: R_LARCH_GOT64_LO20
+      - Type: R_LARCH_GOT64_HI12
+      - Type: R_LARCH_TLS_LE_HI20
+      - Type: R_LARCH_TLS_LE_LO12
+      - Type: R_LARCH_TLS_LE64_LO20
+      - Type: R_LARCH_TLS_LE64_HI12
+      - Type: R_LARCH_TLS_IE_PC_HI20
+      - Type: R_LARCH_TLS_IE_PC_LO12
+      - Type: R_LARCH_TLS_IE64_PC_LO20
+      - Type: R_LARCH_TLS_IE64_PC_HI12
+      - Type: R_LARCH_TLS_IE_HI20
+      - Type: R_LARCH_TLS_IE_LO12
+      - Type: R_LARCH_TLS_IE64_LO20
+      - Type: R_LARCH_TLS_IE64_HI12
+      - Type: R_LARCH_TLS_LD_PC_HI20
+      - Type: R_LARCH_TLS_LD_HI20
+      - Type: R_LARCH_TLS_GD_PC_HI20
+      - Type: R_LARCH_TLS_GD_HI20
+      - Type: R_LARCH_32_PCREL
+      - Type: R_LARCH_RELAX
+      - Type: R_LARCH_ALIGN
+      - Type: R_LARCH_PCREL20_S2
+      - Type: R_LARCH_ADD6
+      - Type: R_LARCH_SUB6
+      - Type: R_LARCH_ADD_ULEB128
+      - Type: R_LARCH_SUB_ULEB128
+      - Type: R_LARCH_64_PCREL
+      - Type: R_LARCH_CALL36

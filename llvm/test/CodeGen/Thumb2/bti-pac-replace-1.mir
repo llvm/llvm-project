@@ -1,0 +1,96 @@
+# RUN: llc --run-pass=arm-branch-targets %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main-arm-unknown-eabi"
+
+  define hidden i32 @_Z1fi(i32 %x) {
+  entry:
+    %add = add nsw i32 %x, 1
+    %call = tail call i32 @_Z1gi(i32 %add)
+    %sub = add nsw i32 %call, -1
+    ret i32 %sub
+  }
+
+  declare dso_local i32 @_Z1gi(i32)
+
+  !llvm.module.flags = !{!0, !1, !2}
+
+  !0 = !{i32 8, !"branch-target-enforcement", i32 1}
+  !1 = !{i32 8, !"sign-return-address", i32 1}
+  !2 = !{i32 8, !"sign-return-address-all", i32 0}
+
+...
+---
+name:            _Z1fi
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r12', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r7, $lr, $r12
+
+    frame-setup t2PAC implicit-def $r12, implicit $lr, implicit $sp
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    early-clobber $sp = frame-setup t2STR_PRE killed $r12, $sp, -4, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 12
+    frame-setup CFI_INSTRUCTION offset $ra_auth_code, -12
+    $sp = frame-setup tSUBspi $sp, 1, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    renamable $r0, dead $cpsr = nsw tADDi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @_Z1gi, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
+    renamable $r0, dead $cpsr = nsw tSUBi8 killed renamable $r0, 1, 14 /* CC::al */, $noreg
+    $sp = frame-destroy tADDspi $sp, 1, 14 /* CC::al */, $noreg
+    $r12, $sp = frame-destroy t2LDR_POST $sp, 4, 14 /* CC::al */, $noreg
+    $sp = frame-destroy t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
+    t2AUT implicit $r12, implicit $lr, implicit $sp
+    tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
+
+...
+# Check PAC is replaces with PACBTI and it has the frame-setup flag
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       frame-setup t2PACBTI

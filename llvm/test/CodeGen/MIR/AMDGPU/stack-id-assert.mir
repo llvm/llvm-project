@@ -1,0 +1,58 @@
+# This test used to crash MIRPrinter::convertStackObjects():
+# MFI can contain some dead stack objects after PEI pass, but objects storage
+# contains not dead objects only. So using objects IDs as offset in the storage
+# caused out of bounds access.
+
+# RUN: llc -march=amdgcn -start-before=si-lower-sgpr-spills -stop-after=prologepilog -verify-machineinstrs -o - %s | FileCheck %s
+
+# CHECK-LABEL: name:            foo
+# CHECK: {{^}}fixedStack:      []
+# CHECK: stack:           []
+
+# CHECK-LABEL: name:            bar
+# CHECK: fixedStack:      []
+# CHECK-NEXT: {{^}}stack:
+# CHECK-NEXT:  - { id:
+
+
+---
+name:            foo
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+---
+name:            bar
+tracksRegLiveness: true
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '' }
+  - { reg: '$vgpr1', virtual-reg: '' }
+  - { reg: '$vgpr2', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    renamable $vgpr41 = COPY $vgpr2, implicit $exec
+    renamable $vgpr40 = COPY $vgpr1, implicit $exec
+    renamable $vcc = V_CMP_NE_U32_e64 42, killed $vgpr0, implicit $exec
+    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr34_sgpr35 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+
+    ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+    renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @foo + 4, target-flags(amdgpu-gotprel32-hi) @foo + 12, implicit-def dead $scc
+    renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0
+    dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @foo, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
+
+    SI_RETURN
+
+...
+

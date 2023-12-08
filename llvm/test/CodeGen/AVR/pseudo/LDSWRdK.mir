@@ -1,0 +1,24 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+# This test checks the expansion of the 16-bit LDSWRdK pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_ldswrdrr() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_ldswrdrr
+body: |
+  bb.0.entry:
+
+    ; CHECK-LABEL: test_ldswrdrr
+
+    ; CHECK:      $r30 = LDSRdK 2559
+    ; CHECK-NEXT: $r31 = LDSRdK 2560
+
+    $r31r30 = LDSWRdK 2559
+...

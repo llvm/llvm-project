@@ -1,0 +1,17 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define void @foo() {
+  entry:
+    ret void
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    ; CHECK: [[@LINE+1]]:5: unexpected character '\'
+    \ RET64
+...

@@ -1,0 +1,928 @@
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -run-pass si-fold-operands,dead-mi-elimination -o - %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+...
+
+# GCN-LABEL: name: s_fold_and_imm_regimm_32{{$}}
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 1543, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_and_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.hi16, killed %3, %subreg.lo16, killed %4, %subreg.sub0, killed %5, %subreg.sub0_sub1
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_AND_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: v_fold_and_imm_regimm_32{{$}}
+
+# GCN: [[VAL0:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 646, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL0]],
+
+# GCN: [[VAL1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 646, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL1]],
+
+# GCN: [[VAL2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 646, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL2]],
+
+# GCN: [[VAL3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1234567, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL3]],
+
+# GCN: [[VAL4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 63, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL4]],
+
+name:            v_fold_and_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3:vgpr_32 = COPY $vgpr0
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %13:vgpr_32 = V_ASHRREV_I32_e64 31, %3, implicit $exec
+    %14:vreg_64 = REG_SEQUENCE %3, %subreg.hi16, %13, %subreg.lo16
+    %15:vreg_64 = V_LSHLREV_B64_e64 2, killed %14, implicit $exec
+    %5:sreg_32_xm0 = COPY %4.sub1
+    %20:vgpr_32 = V_ADD_CO_U32_e32 %4.sub0, %15.sub0, implicit-def $vcc, implicit $exec
+    %18:vgpr_32 = COPY killed %5
+    %17:vgpr_32 = V_ADDC_U32_e32 %15.sub1, %18, implicit-def $vcc, implicit $vcc, implicit $exec
+    %19:vreg_64 = REG_SEQUENCE %20, %subreg.hi16, killed %17, %subreg.lo16
+    %6:vgpr_32 = V_MOV_B32_e32 982, implicit $exec
+    %8:sreg_32_xm0 = S_MOV_B32 1234567
+    %16:vgpr_32 = V_MOV_B32_e32 63, implicit $exec
+
+    %9:vgpr_32 = V_AND_B32_e64 %8, %6, implicit $exec
+    FLAT_STORE_DWORD %19, %9, 0, 0, implicit $exec, implicit $flat_scr
+
+    %10:vgpr_32 = V_AND_B32_e64 %6, %8, implicit $exec
+    FLAT_STORE_DWORD %19, %10, 0, 0, implicit $exec, implicit $flat_scr
+
+    %11:vgpr_32 = V_AND_B32_e32 %8, %6, implicit $exec
+    FLAT_STORE_DWORD %19, %11, 0, 0, implicit $exec, implicit $flat_scr
+
+    %12:vgpr_32 = V_AND_B32_e64 %8, %8, implicit $exec
+    FLAT_STORE_DWORD %19, %12, 0, 0, implicit $exec, implicit $flat_scr
+
+    %13:vgpr_32 = V_AND_B32_e64 %16, %16, implicit $exec
+    FLAT_STORE_DWORD %19, %13, 0, 0, implicit $exec, implicit $flat_scr
+
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_shl_imm_regimm_32{{$}}
+# GCN: [[VAL:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed [[VAL]],
+
+name:            s_fold_shl_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %5:sreg_32_xm0_xexec = S_MOV_B32 1
+    %6:sreg_32_xm0 = COPY %4.sub1
+    %7:sreg_32_xm0 = COPY %4.sub0
+    %8:sreg_32_xm0 = S_MOV_B32 61440
+    %9:sreg_32_xm0 = S_MOV_B32 -1
+    %10:sgpr_128 = REG_SEQUENCE killed %7, %subreg.hi16, killed %6, %subreg.lo16, killed %9, %subreg.sub0, killed %8, %subreg.sub0_sub1
+    %12:sreg_32_xm0 = S_LSHL_B32 killed %5, 12, implicit-def dead $scc
+    %13:vgpr_32 = COPY %12
+    BUFFER_STORE_DWORD_OFFSET killed %13, killed %10, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_ashr_imm_regimm_32{{$}}
+# GCN: [[VAL:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 243, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed [[VAL]], killed %7,
+name:            s_fold_ashr_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %3:sreg_32_xm0_xexec = S_MOV_B32 999123
+    %4:sreg_32_xm0 = COPY %2.sub1
+    %5:sreg_32_xm0 = COPY %2.sub0
+    %6:sreg_32_xm0 = S_MOV_B32 61440
+    %7:sreg_32_xm0 = S_MOV_B32 -1
+    %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
+    %10:sreg_32_xm0 = S_ASHR_I32 killed %3, 12, implicit-def dead $scc
+    %11:vgpr_32 = COPY %10
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+# GCN-LABEL: name: v_fold_ashr_imm_regimm_32{{$}}
+# GCN: [[VAL0:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3903258, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL0]],
+
+# GCN: [[VAL1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 62452139, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL1]],
+
+# GCN: [[VAL2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1678031, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL2]],
+
+# GCN: [[VAL3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL3]],
+
+# GCN: [[VAL4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL4]],
+
+# GCN: [[VAL5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 62500, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL5]],
+
+# GCN: [[VAL6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 500000, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL6]],
+
+# GCN: [[VAL7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1920, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL7]],
+
+# GCN: [[VAL8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 487907, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL8]],
+
+# GCN: [[VAL9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL9]],
+
+name:            v_fold_ashr_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%2' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %2:vgpr_32 = COPY $vgpr0
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
+    %16:vreg_64 = REG_SEQUENCE %2, %subreg.hi16, %15, %subreg.lo16
+    %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
+    %9:sreg_32_xm0 = COPY %3.sub1
+    %21:vgpr_32 = V_ADD_CO_U32_e32 %3.sub0, %17.sub0, implicit-def $vcc, implicit $exec
+    %19:vgpr_32 = COPY killed %9
+    %18:vgpr_32 = V_ADDC_U32_e32 %17.sub1, %19, implicit-def $vcc, implicit $vcc, implicit $exec
+    %20:vreg_64 = REG_SEQUENCE %21, %subreg.hi16, killed %18, %subreg.lo16
+    %10:vgpr_32 = V_MOV_B32_e32 999234234, implicit $exec
+    %24:vgpr_32 = V_MOV_B32_e32 3871, implicit $exec
+    %6:vgpr_32 = V_MOV_B32_e32 1000000, implicit $exec
+    %7:sreg_32_xm0 = S_MOV_B32 13424252
+    %8:sreg_32_xm0 = S_MOV_B32 4
+    %27:sreg_32_xm0 = S_MOV_B32 -4
+    %29:sreg_32_xm0 = S_MOV_B32 1
+    %30:sreg_32_xm0 = S_MOV_B32 3841
+    %31:vgpr_32 = V_MOV_B32_e32 3841, implicit $exec
+    %32:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+
+    %11:vgpr_32 = V_ASHRREV_I32_e64 8, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %11, 0, 0, implicit $exec, implicit $flat_scr
+
+    %12:vgpr_32 = V_ASHRREV_I32_e64 %8, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %12, 0, 0, implicit $exec, implicit $flat_scr
+
+    %13:vgpr_32 = V_ASHR_I32_e64 %7, 3, implicit $exec
+    FLAT_STORE_DWORD %20, %13, 0, 0, implicit $exec, implicit $flat_scr
+
+    %14:vgpr_32 = V_ASHR_I32_e64 7, %29, implicit $exec
+    FLAT_STORE_DWORD %20, %14, 0, 0, implicit $exec, implicit $flat_scr
+
+    %15:vgpr_32 = V_ASHR_I32_e64 %27, %24, implicit $exec
+    FLAT_STORE_DWORD %20, %15, 0, 0, implicit $exec, implicit $flat_scr
+
+    %22:vgpr_32 = V_ASHR_I32_e64 %6, 4, implicit $exec
+    FLAT_STORE_DWORD %20, %22, 0, 0, implicit $exec, implicit $flat_scr
+
+    %23:vgpr_32 = V_ASHR_I32_e64 %6, %30, implicit $exec
+    FLAT_STORE_DWORD %20, %23, 0, 0, implicit $exec, implicit $flat_scr
+
+    %25:vgpr_32 = V_ASHR_I32_e32 %31, %31, implicit $exec
+    FLAT_STORE_DWORD %20, %25, 0, 0, implicit $exec, implicit $flat_scr
+
+    %26:vgpr_32 = V_ASHRREV_I32_e32 11, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %26, 0, 0, implicit $exec, implicit $flat_scr
+
+    %28:vgpr_32 = V_ASHR_I32_e32 %27, %32, implicit $exec
+    FLAT_STORE_DWORD %20, %28, 0, 0, implicit $exec, implicit $flat_scr
+
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_lshr_imm_regimm_32{{$}}
+# GCN: [[VAL:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1048332, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed [[VAL]], killed %7,
+name:            s_fold_lshr_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %3:sreg_32_xm0_xexec = S_MOV_B32 -999123
+    %4:sreg_32_xm0 = COPY %2.sub1
+    %5:sreg_32_xm0 = COPY %2.sub0
+    %6:sreg_32_xm0 = S_MOV_B32 61440
+    %7:sreg_32_xm0 = S_MOV_B32 -1
+    %8:sgpr_128 = REG_SEQUENCE killed %5, %subreg.hi16, killed %4, %subreg.lo16, killed %7, %subreg.sub0, killed %6, %subreg.sub0_sub1
+    %10:sreg_32_xm0 = S_LSHR_B32 killed %3, 12, implicit-def dead $scc
+    %11:vgpr_32 = COPY %10
+    BUFFER_STORE_DWORD_OFFSET killed %11, killed %8, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: v_fold_lshr_imm_regimm_32{{$}}
+# GCN: [[VAL0:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3903258, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL0]],
+
+# GCN: [[VAL1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 62452139, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL1]],
+
+# GCN: [[VAL2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1678031, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL2]],
+
+# GCN: [[VAL3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL3]],
+
+# GCN: [[VAL4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL4]],
+
+# GCN: [[VAL5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 62500, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL5]],
+
+# GCN: [[VAL6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 500000, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL6]],
+
+# GCN: [[VAL7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1920, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL7]],
+
+# GCN: [[VAL8:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 487907, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL8]],
+
+# GCN: [[VAL9:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1073741823, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, [[VAL9]],
+
+name:            v_fold_lshr_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%2' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %2:vgpr_32 = COPY $vgpr0
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
+    %16:vreg_64 = REG_SEQUENCE %2, %subreg.hi16, %15, %subreg.lo16
+    %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
+    %9:sreg_32_xm0 = COPY %3.sub1
+    %21:vgpr_32 = V_ADD_CO_U32_e32 %3.sub0, %17.sub0, implicit-def $vcc, implicit $exec
+    %19:vgpr_32 = COPY killed %9
+    %18:vgpr_32 = V_ADDC_U32_e32 %17.sub1, %19, implicit-def $vcc, implicit $vcc, implicit $exec
+    %20:vreg_64 = REG_SEQUENCE %21, %subreg.hi16, killed %18, %subreg.lo16
+    %10:vgpr_32 = V_MOV_B32_e32 999234234, implicit $exec
+    %24:vgpr_32 = V_MOV_B32_e32 3871, implicit $exec
+    %6:vgpr_32 = V_MOV_B32_e32 1000000, implicit $exec
+    %7:sreg_32_xm0 = S_MOV_B32 13424252
+    %8:sreg_32_xm0 = S_MOV_B32 4
+    %27:sreg_32_xm0 = S_MOV_B32 -4
+    %29:sreg_32_xm0 = S_MOV_B32 1
+    %30:sreg_32_xm0 = S_MOV_B32 3841
+    %31:vgpr_32 = V_MOV_B32_e32 3841, implicit $exec
+    %32:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+
+    %11:vgpr_32 = V_LSHRREV_B32_e64 8, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %11, 0, 0, implicit $exec, implicit $flat_scr
+
+    %12:vgpr_32 = V_LSHRREV_B32_e64 %8, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %12, 0, 0, implicit $exec, implicit $flat_scr
+
+    %13:vgpr_32 = V_LSHR_B32_e64 %7, 3, implicit $exec
+    FLAT_STORE_DWORD %20, %13, 0, 0, implicit $exec, implicit $flat_scr
+
+    %14:vgpr_32 = V_LSHR_B32_e64 7, %29, implicit $exec
+    FLAT_STORE_DWORD %20, %14, 0, 0, implicit $exec, implicit $flat_scr
+
+    %15:vgpr_32 = V_LSHR_B32_e64 %27, %24, implicit $exec
+    FLAT_STORE_DWORD %20, %15, 0, 0, implicit $exec, implicit $flat_scr
+
+    %22:vgpr_32 = V_LSHR_B32_e64 %6, 4, implicit $exec
+    FLAT_STORE_DWORD %20, %22, 0, 0, implicit $exec, implicit $flat_scr
+
+    %23:vgpr_32 = V_LSHR_B32_e64 %6, %30, implicit $exec
+    FLAT_STORE_DWORD %20, %23, 0, 0, implicit $exec, implicit $flat_scr
+
+    %25:vgpr_32 = V_LSHR_B32_e32 %31, %31, implicit $exec
+    FLAT_STORE_DWORD %20, %25, 0, 0, implicit $exec, implicit $flat_scr
+
+    %26:vgpr_32 = V_LSHRREV_B32_e32 11, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %26, 0, 0, implicit $exec, implicit $flat_scr
+
+    %28:vgpr_32 = V_LSHR_B32_e32 %27, %32, implicit $exec
+    FLAT_STORE_DWORD %20, %28, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+
+...
+---
+# There is only an undef use operand for %1, so there is no
+# corresponding defining instruction
+
+# GCN-LABEL: name: undefined_vreg_operand{{$}}
+# GCN: bb.0
+# GCN-NEXT: FLAT_STORE_DWORD undef %3:vreg_64, undef %2:vgpr_32,
+# GCN-NEXT: S_ENDPGM 0
+name: undefined_vreg_operand
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %2:vgpr_32 = V_XOR_B32_e64 killed %0, undef %1:vgpr_32, implicit $exec
+    FLAT_STORE_DWORD undef %3:vreg_64, %2, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+
+...
+---
+# Make sure there is no crash if one of the operands is a physical register
+# GCN-LABEL: name: constant_fold_physreg_op{{$}}
+# GCN: %3:sreg_64 = S_AND_B64 $exec, 0, implicit-def dead $scc
+
+name: constant_fold_physreg_op
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %19:sreg_64 = IMPLICIT_DEF
+    %0:sreg_64 = SI_IF killed %19, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    %6:sreg_64 = S_MOV_B64 0
+    %7:sreg_64 = S_AND_B64 $exec, killed %6, implicit-def dead $scc
+    $vcc = COPY %7
+
+  bb.3:
+    liveins: $vcc
+    SI_END_CF %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_ENDPGM 0, implicit $vcc
+
+...
+---
+# GCN-LABEL: name: s_fold_andn2_imm_regimm_32{{$}}
+# GCN: [[VAL:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1233024, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed [[VAL]],
+name:            s_fold_andn2_imm_regimm_32
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.sub0, killed %3, %subreg.sub1, killed %4, %subreg.sub2, killed %5, %subreg.sub3
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_ANDN2_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_or_imm_regimm_32{{$}}
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 1243023, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_or_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.sub0, killed %3, %subreg.sub1, killed %4, %subreg.sub2, killed %5, %subreg.sub3
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_OR_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: v_fold_or_imm_regimm_32{{$}}
+
+# GCN: %14:vgpr_32 = V_MOV_B32_e32 1234903, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %14,
+
+# GCN: %15:vgpr_32 = V_MOV_B32_e32 1234903, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %15
+
+# GCN: %16:vgpr_32 = V_MOV_B32_e32 1234903, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %16,
+
+# GCN: %17:vgpr_32 = V_MOV_B32_e32 1234567, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %17,
+
+# GCN: %3:vgpr_32 = V_MOV_B32_e32 63, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %3,
+
+name:            v_fold_or_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3:vgpr_32 = COPY $vgpr0
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %13:vgpr_32 = V_ASHRREV_I32_e64 31, %3, implicit $exec
+    %14:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %13, %subreg.sub1
+    %15:vreg_64 = V_LSHLREV_B64_e64 2, killed %14, implicit $exec
+    %5:sreg_32_xm0 = COPY %4.sub1
+    %20:vgpr_32 = V_ADD_CO_U32_e32 %4.sub0, %15.sub0, implicit-def $vcc, implicit $exec
+    %18:vgpr_32 = COPY killed %5
+    %17:vgpr_32 = V_ADDC_U32_e32 %15.sub1, %18, implicit-def $vcc, implicit $vcc, implicit $exec
+    %19:vreg_64 = REG_SEQUENCE %20, %subreg.sub0, killed %17, %subreg.sub1
+    %6:vgpr_32 = V_MOV_B32_e32 982, implicit $exec
+    %8:sreg_32_xm0 = S_MOV_B32 1234567
+    %16:vgpr_32 = V_MOV_B32_e32 63, implicit $exec
+    %9:vgpr_32 = V_OR_B32_e64 %8, %6, implicit $exec
+    FLAT_STORE_DWORD %19, %9, 0, 0, implicit $exec, implicit $flat_scr
+    %10:vgpr_32 = V_OR_B32_e64 %6, %8, implicit $exec
+    FLAT_STORE_DWORD %19, %10, 0, 0, implicit $exec, implicit $flat_scr
+    %11:vgpr_32 = V_OR_B32_e32 %8, %6, implicit $exec
+    FLAT_STORE_DWORD %19, %11, 0, 0, implicit $exec, implicit $flat_scr
+    %12:vgpr_32 = V_OR_B32_e64 %8, %8, implicit $exec
+    FLAT_STORE_DWORD %19, %12, 0, 0, implicit $exec, implicit $flat_scr
+    %13:vgpr_32 = V_OR_B32_e64 %16, %16, implicit $exec
+    FLAT_STORE_DWORD %19, %13, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_orn2_imm_regimm_32{{$}}
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 -8457, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_orn2_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.sub0, killed %3, %subreg.sub1, killed %4, %subreg.sub2, killed %5, %subreg.sub3
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_ORN2_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_nand_imm_regimm_32{{$}}
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 -1544, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_nand_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.sub0, killed %3, %subreg.sub1, killed %4, %subreg.sub2, killed %5, %subreg.sub3
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_NAND_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_nor_imm_regimm_32{{$}}
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 -1243024, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_nor_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.sub0, killed %3, %subreg.sub1, killed %4, %subreg.sub2, killed %5, %subreg.sub3
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_NOR_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+
+# GCN-LABEL: name: s_fold_xnor_imm_regimm_32{{$}}
+# GCN: %10:vgpr_32 = V_MOV_B32_e32 -1241481, implicit $exec
+# GCN: BUFFER_STORE_DWORD_OFFSET killed %10,
+name:            s_fold_xnor_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %2:sreg_32_xm0 = COPY %1.sub1
+    %3:sreg_32_xm0 = COPY %1.sub0
+    %4:sreg_32_xm0 = S_MOV_B32 61440
+    %5:sreg_32_xm0 = S_MOV_B32 -1
+    %6:sgpr_128 = REG_SEQUENCE killed %2, %subreg.sub0, killed %3, %subreg.sub1, killed %4, %subreg.sub2, killed %5, %subreg.sub3
+    %7:sreg_32_xm0 = S_MOV_B32 1234567
+    %8:sreg_32_xm0 = S_MOV_B32 9999
+    %9:sreg_32_xm0 = S_XNOR_B32 killed %7, killed %8, implicit-def dead $scc
+    %10:vgpr_32 = COPY %9
+    BUFFER_STORE_DWORD_OFFSET killed %10, killed %6, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+---
+# GCN-LABEL: name: v_fold_shl_imm_regimm_32{{$}}
+
+# GCN: %16:vgpr_32 = V_MOV_B32_e32 40955904, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %16,
+
+# GCN: %17:vgpr_32 = V_MOV_B32_e32 24, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %17,
+
+# GCN: %18:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %18,
+
+# GCN: %19:vgpr_32 = V_MOV_B32_e32 24, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %19,
+
+# GCN: %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %3,
+
+# GCN: %20:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %20,
+
+# GCN: %21:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %21,
+
+# GCN: %22:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %22,
+
+# GCN: %23:vgpr_32 = V_MOV_B32_e32 7927808, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %23,
+
+# GCN: %24:vgpr_32 = V_MOV_B32_e32 -8, implicit $exec
+# GCN: FLAT_STORE_DWORD %10, %24,
+
+name:            v_fold_shl_imm_regimm_32
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%2' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %2:vgpr_32 = COPY $vgpr0
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`, addrspace 4)
+    %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
+    %16:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %15, %subreg.sub1
+    %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
+    %9:sreg_32_xm0 = COPY %3.sub1
+    %21:vgpr_32 = V_ADD_CO_U32_e32 %3.sub0, %17.sub0, implicit-def $vcc, implicit $exec
+    %19:vgpr_32 = COPY killed %9
+    %18:vgpr_32 = V_ADDC_U32_e32 %17.sub1, %19, implicit-def $vcc, implicit $vcc, implicit $exec
+    %20:vreg_64 = REG_SEQUENCE %21, %subreg.sub0, killed %18, %subreg.sub1
+    %10:vgpr_32 = V_MOV_B32_e32 9999, implicit $exec
+    %24:vgpr_32 = V_MOV_B32_e32 3871, implicit $exec
+    %6:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %7:sreg_32_xm0 = S_MOV_B32 1
+    %27:sreg_32_xm0 = S_MOV_B32 -4
+    %11:vgpr_32 = V_LSHLREV_B32_e64 12, %10, implicit $exec
+    FLAT_STORE_DWORD %20, %11, 0, 0, implicit $exec, implicit $flat_scr
+    %12:vgpr_32 = V_LSHLREV_B32_e64 %7, 12, implicit $exec
+    FLAT_STORE_DWORD %20, %12, 0, 0, implicit $exec, implicit $flat_scr
+    %13:vgpr_32 = V_LSHL_B32_e64 %7, 12, implicit $exec
+    FLAT_STORE_DWORD %20, %13, 0, 0, implicit $exec, implicit $flat_scr
+    %14:vgpr_32 = V_LSHL_B32_e64 12, %7, implicit $exec
+    FLAT_STORE_DWORD %20, %14, 0, 0, implicit $exec, implicit $flat_scr
+    %15:vgpr_32 = V_LSHL_B32_e64 12, %24, implicit $exec
+    FLAT_STORE_DWORD %20, %15, 0, 0, implicit $exec, implicit $flat_scr
+    %22:vgpr_32 = V_LSHL_B32_e64 %6, 12, implicit $exec
+    FLAT_STORE_DWORD %20, %22, 0, 0, implicit $exec, implicit $flat_scr
+    %23:vgpr_32 = V_LSHL_B32_e64 %6, 32, implicit $exec
+    FLAT_STORE_DWORD %20, %23, 0, 0, implicit $exec, implicit $flat_scr
+    %25:vgpr_32 = V_LSHL_B32_e32 %6, %6, implicit $exec
+    FLAT_STORE_DWORD %20, %25, 0, 0, implicit $exec, implicit $flat_scr
+    %26:vgpr_32 = V_LSHLREV_B32_e32 11, %24, implicit $exec
+    FLAT_STORE_DWORD %20, %26, 0, 0, implicit $exec, implicit $flat_scr
+    %28:vgpr_32 = V_LSHL_B32_e32 %27, %6, implicit $exec
+    FLAT_STORE_DWORD %20, %28, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+
+...
+
+# This used to incorrectly interpret V_MOV_B32_sdwa as being a move
+# immediate, and interpreting the src0_modifiers field as a
+# materialized immediate.
+
+---
+# GCN-LABEL: name: no_fold_sdwa_mov_imm
+# GCN: %2:vgpr_32 = V_MOV_B32_sdwa 0, %0, 0, 5, 2, 4, implicit $exec, implicit %0(tied-def 0)
+# GCN-NEXT: [[SHIFT:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, %2, implicit $exec
+# GCN-NEXT: S_ENDPGM 0, implicit [[SHIFT]]
+
+name:            no_fold_sdwa_mov_imm
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_sdwa 0, %0:vgpr_32, 0, 5, 2, 4, implicit $exec, implicit %0:vgpr_32(tied-def 0)
+    %3:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+    %4:vgpr_32 = V_LSHRREV_B32_e64 %3:vgpr_32, %2:vgpr_32, implicit $exec
+    S_ENDPGM 0, implicit %4
+
+...
+
+---
+name:            constant_s_and_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sgpr_32 = S_AND_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_and_b32_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_implicit_def_scc_is_used
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sgpr_32 = S_AND_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]], implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit %2, implicit $scc
+
+...
+
+---
+name:            constant_s_and_b32_only_implicit_def_scc_is_dead
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_dead
+    ; GCN: S_ENDPGM 0, implicit undef $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def dead $scc
+    S_ENDPGM 0, implicit undef $scc
+
+...
+
+---
+name:            constant_s_or_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_or_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_OR_B32_:%[0-9]+]]:sgpr_32 = S_OR_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_OR_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_xor_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_xor_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_XOR_B32_:%[0-9]+]]:sgpr_32 = S_XOR_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_XOR_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_not_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_not_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_NOT_B32_:%[0-9]+]]:sgpr_32 = S_NOT_B32 32, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_NOT_B32 %0, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+# Really really implicit operand
+---
+name:            constant_v_and_b32_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_def_scc_is_used
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 32, [[V_MOV_B32_e32_]], implicit $exec, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_v_and_b32_implicit_def_vreg_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_def_vreg_is_used
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 32, [[V_MOV_B32_e32_]], implicit $exec, implicit-def %3
+    ; GCN-NEXT: S_ENDPGM 0, implicit %3
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit-def %3:vgpr_32
+    S_ENDPGM 0, implicit %3
+
+...
+---
+name:            constant_v_and_b32_implicit_use
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_use
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_e32 24, implicit $exec
+    %3:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit %2:vgpr_32
+    S_ENDPGM 0, implicit %3
+
+...

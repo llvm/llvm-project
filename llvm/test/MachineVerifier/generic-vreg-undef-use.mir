@@ -1,0 +1,25 @@
+# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+# Undef uses are illegal for generic vregs.
+
+---
+name:            test_undef_use
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 0
+
+    ; Test generic instruction
+    ; CHECK: *** Bad machine code: Generic virtual register use cannot be undef ***
+    G_STORE %0, undef %1:_(p0) :: (store (s32))
+
+    ; Make sure this fails on a post-isel generic instruction.
+    ; CHECK: *** Bad machine code: Generic virtual register use cannot be undef ***
+    $x0 = COPY undef %2:_(s64)
+
+    ; Make sure this fails with a target instruction
+    ; CHECK: *** Bad machine code: Generic virtual register use cannot be undef ***
+    RET_ReallyLR implicit $x0, implicit undef %3:_(s32)
+...
+

@@ -1,0 +1,37 @@
+//===-- POSIX header pthread.h --------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_PTHREAD_H
+#define LLVM_LIBC_PTHREAD_H
+
+#include <__llvm-libc-common.h>
+
+#define PTHREAD_STACK_MIN (1 << 14) // 16KB
+
+#define PTHREAD_MUTEX_INITIALIZER {0}
+#define PTHREAD_ONCE_INIT {0}
+
+enum {
+  PTHREAD_CREATE_JOINABLE = 0x0,
+  PTHREAD_CREATE_DETACHED = 0x1,
+
+  PTHREAD_MUTEX_NORMAL = 0x0,
+  PTHREAD_MUTEX_ERRORCHECK = 0x1,
+  PTHREAD_MUTEX_RECURSIVE = 0x2,
+  PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL,
+
+  PTHREAD_PROCESS_PRIVATE = 0x0,
+  PTHREAD_PROCESS_SHARED = 0x1,
+
+  PTHREAD_MUTEX_STALLED = 0x0,
+  PTHREAD_MUTEX_ROBUST = 0x1,
+};
+
+%%public_api()
+
+#endif // LLVM_LIBC_PTHREAD_H

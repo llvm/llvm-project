@@ -1,0 +1,64 @@
+// Header
+//
+// INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
+// INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
+// INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
+// INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NumBitmaskBytes, NumBitmaskBytes)
+// INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, BitmaskDelta, (uintptr_t)BitmaskBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
+
+RUN: printf '\201rforpl\377' > %t.profraw
+RUN: printf '\11\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\6\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\6\0\2\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Data Section
+//
+// struct ProfData {
+// #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) \
+//    Type Name;
+// #include "llvm/ProfileData/InstrProfData.inc"
+// };
+
+RUN: printf '\067\265\035\031\112\165\023\344' >> %t.profraw
+RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
+
+// Note: The CounterPtr here is off-by-one.
+//
+// Octal '\11' is 9 in decimal: this should push CounterOffset to 1. As there are two counters,
+// the profile reader should error out.
+RUN: printf '\11\0\6\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+
+// Counter Section
+
+RUN: printf '\067\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\101\0\0\0\0\0\0\0' >> %t.profraw
+
+// Name Section
+
+RUN: printf '\3\0bar\0\0\0' >> %t.profraw
+
+RUN: not llvm-profdata merge -o /dev/null %t.profraw 2>&1 | FileCheck %s
+CHECK: warning: {{.+}}: malformed instrumentation profile data: number of counters 2 is greater than the maximum number of counters 0
+CHECK: error: no profile can be merged

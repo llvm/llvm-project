@@ -1,0 +1,11 @@
+// RUN: llvm-profdata merge %S/Inputs/multiple-files.proftext %S/Inputs/highlightedRanges.profdata -o %t.profdata
+
+// RUN: llvm-cov report -object %S/Inputs/multiple-files.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefix=OBJ1
+
+// RUN: llvm-cov report %S/Inputs/multiple-files.covmapping -object %S/Inputs/highlightedRanges.covmapping -instr-profile %t.profdata | FileCheck %s -check-prefixes=OBJ1,OBJ2
+
+// OBJ1: f2.c
+// OBJ1: f4.c
+// OBJ1: f3.c
+// OBJ1: f1.c
+// OBJ2: showHighlightedRanges.cpp

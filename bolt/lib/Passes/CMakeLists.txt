@@ -1,0 +1,69 @@
+add_llvm_library(LLVMBOLTPasses
+  ADRRelaxationPass.cpp
+  Aligner.cpp
+  AllocCombiner.cpp
+  AsmDump.cpp
+  BinaryPasses.cpp
+  BinaryFunctionCallGraph.cpp
+  CMOVConversion.cpp
+  CacheMetrics.cpp
+  CallGraph.cpp
+  CallGraphWalker.cpp
+  DataflowAnalysis.cpp
+  DataflowInfoManager.cpp
+  FrameAnalysis.cpp
+  FrameOptimizer.cpp
+  FixRelaxationPass.cpp
+  FixRISCVCallsPass.cpp
+  HFSort.cpp
+  HFSortPlus.cpp
+  Hugify.cpp
+  IdenticalCodeFolding.cpp
+  IndirectCallPromotion.cpp
+  Inliner.cpp
+  Instrumentation.cpp
+  JTFootprintReduction.cpp
+  LongJmp.cpp
+  LoopInversionPass.cpp
+  LivenessAnalysis.cpp
+  MCF.cpp
+  PatchEntries.cpp
+  PettisAndHansen.cpp
+  PLTCall.cpp
+  RegAnalysis.cpp
+  RegReAssign.cpp
+  ReorderAlgorithm.cpp
+  ReorderFunctions.cpp
+  ReorderData.cpp
+  ShrinkWrapping.cpp
+  SplitFunctions.cpp
+  StackAllocationAnalysis.cpp
+  StackAvailableExpressions.cpp
+  StackPointerTracking.cpp
+  StackReachingUses.cpp
+  StokeInfo.cpp
+  TailDuplication.cpp
+  ThreeWayBranch.cpp
+  ValidateInternalCalls.cpp
+  ValidateMemRefs.cpp
+  VeneerElimination.cpp
+  RetpolineInsertion.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
+
+  LINK_COMPONENTS
+  AsmPrinter
+  MC
+  Support
+  TargetParser
+  TransformUtils
+  )
+
+target_link_libraries(LLVMBOLTPasses
+  PRIVATE
+  LLVMBOLTCore
+  LLVMBOLTUtils
+  )

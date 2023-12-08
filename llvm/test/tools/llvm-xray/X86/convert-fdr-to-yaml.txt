@@ -1,0 +1,24 @@
+; RUN: llvm-xray convert %S/Inputs/fdr-log-version-1.xray -f yaml -o - | FileCheck %s
+
+; CHECK:      ---
+; CHECK-NEXT: header:
+; CHECK-NEXT:   version:         1
+; CHECK-NEXT:   type:            1
+; CHECK-NEXT:   constant-tsc:    true
+; CHECK-NEXT:   nonstop-tsc:     true
+; CHECK-NEXT:   cycle-frequency: 5678
+; CHECK-NEXT: records:
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407340, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407346, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407347, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407387, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: '3', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407437, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407467, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 4, function: '4', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407492, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407517, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 5, function: '5', cpu: 5, thread: 5, kind: function-tail-exit, tsc: 7238225556407542, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 268435455, function: '268435455', cpu: 5, thread: 5, kind: function-enter, tsc: 7238225556407552, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 268435455, function: '268435455', cpu: 5, thread: 5, kind: function-exit, tsc: 7238225556407562, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 6, function: '6', cpu: 6, thread: 5, kind: function-enter, tsc: 7238225556407682, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 6, function: '6', cpu: 6, thread: 5, kind: function-exit, tsc: 7238225556407755, data: '' }
+; CHECK-NEXT: ...

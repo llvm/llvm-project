@@ -1,0 +1,3 @@
+module mod {
+  header "head.h"
+}

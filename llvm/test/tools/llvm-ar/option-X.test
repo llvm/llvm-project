@@ -1,0 +1,385 @@
+# REQUIRES: system-aix
+## Test the "-X" option.
+## The option specifies the type of object file llvm-ar will operate on.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: unset OBJECT_MODE
+# RUN: yaml2obj --docnum=1 -DCLASS=ELFCLASS32 %s -o elf32.o
+# RUN: yaml2obj --docnum=1 -DCLASS=ELFCLASS64 %s -o elf64.o
+
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1DF %s -o xcoff32.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o xcoff64.o
+
+## Test default -X option when creating a new archive.
+# RUN: llvm-ar -q -c archive-default.a xcoff32.o elf32.o xcoff64.o elf64.o  2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
+# RUN: llvm-ar -t -Xany archive-default.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+## Test -X32 option when creating a new archive. 
+# RUN: llvm-ar -q -c -X 32 archive-32.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
+# RUN: llvm-ar -t -Xany archive-32.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+## Test -X option will override the "OBJECT_MODE" environment variable.
+# RUN: env OBJECT_MODE=64 llvm-ar -q -c -X32 archive-32-env1.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
+# RUN: llvm-ar -t -Xany archive-32-env1.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+# RUN: env OBJECT_MODE=32_64 llvm-ar -q -c -X32 archive-32-env2.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
+# RUN: llvm-ar -t -Xany archive-32-env2.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+# RUN: env OBJECT_MODE=any llvm-ar -q -c -X32 archive-32-env3.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
+# RUN: llvm-ar -t -Xany archive-32-env3.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+## Test -X64 option when creating a new archive.
+# RUN: llvm-ar -q -c -X 64 archive-64.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF32,WARN-ELF32
+# RUN: llvm-ar -t -Xany archive-64.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ64
+
+## Test -X32_64 option when creating a new archive.
+## RUN: llvm-ar -q -c -X32_64 archive-32_64.a xcoff32.o elf32.o xcoff64.o elf64.o
+## RUN: llvm-ar -t -Xany archive-32_64.a | \
+## RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+## Test -Xany option when creating a new archive.
+# RUN: llvm-ar -q -c -Xany archive-any.a xcoff32.o elf32.o xcoff64.o elf64.o
+# RUN: llvm-ar -t -Xany archive-any.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+## Test envionment "OBJECT_MODE" when creating a new archive.
+# RUN: env OBJECT_MODE=32 llvm-ar -q -c archive-env32.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF64,WARN-ELF64
+# RUN: llvm-ar -t -Xany archive-env32.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+# RUN: env OBJECT_MODE=64 llvm-ar -q -c archive-env64.a xcoff32.o elf32.o xcoff64.o elf64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-XCOFF32,WARN-ELF32
+# RUN: llvm-ar -t -Xany archive-env64.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ64
+
+# RUN: env OBJECT_MODE=32_64 llvm-ar -q -c archive-env32_64.a xcoff32.o elf32.o xcoff64.o elf64.o
+# RUN: llvm-ar -t -Xany archive-env32_64.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+# RUN: env OBJECT_MODE=any llvm-ar -q -c archive-envany.a xcoff32.o elf32.o xcoff64.o elf64.o
+# RUN: llvm-ar -t -Xany archive-envany.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+## Test -X option for print operation.
+# RUN: llvm-ar -t archive-any.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+# RUN: llvm-ar -t -X32 archive-any.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+# RUN: llvm-ar -t -X64 archive-any.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ64
+
+# RUN: llvm-ar -t -X32_64 archive-any.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+# RUN: llvm-ar -t -Xany archive-any.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+## Test -X option for extract operation.
+# RUN: llvm-ar --output=32 -x -X32 archive-any.a
+# RUN: cmp xcoff32.o 32/xcoff32.o
+# RUN: cmp elf32.o 32/elf32.o
+# RUN: not ls 32/coff64.o
+# RUN: not ls 32/elf64.o
+
+# RUN: llvm-ar --output=64 -x -X64 archive-any.a
+# RUN: cmp xcoff64.o 64/xcoff64.o
+# RUN: cmp elf64.o 64/elf64.o
+# RUN: not ls 64/xcoff32.o
+# RUN: not ls 64/elf32.o
+
+# RUN: llvm-ar --output=32_64 -x -X32_64 archive-any.a
+# RUN: cmp xcoff32.o 32_64/xcoff32.o
+# RUN: cmp elf32.o 32_64/elf32.o
+# RUN: cmp xcoff64.o 32_64/xcoff64.o
+# RUN: cmp elf64.o 32_64/elf64.o
+
+# RUN: llvm-ar --output=any -x -Xany archive-any.a
+# RUN: cmp xcoff32.o any/xcoff32.o
+# RUN: cmp elf32.o any/elf32.o
+# RUN: cmp xcoff64.o any/xcoff64.o
+# RUN: cmp elf64.o any/elf64.o
+
+## Extract a 64-bit object file with option -X32 (or default object mode).
+# RUN: not llvm-ar --output=err64 -x archive-any.a xcoff64.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=xcoff64.o --check-prefixes=ERR64
+# RUN: not llvm-ar --output=err64 -x -X32 archive-any.a xcoff64.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=xcoff64.o --check-prefixes=ERR64
+
+# ERR64: llvm-ar: error: '[[FILE]]' was not found
+# RUN: not ls err64/xcoff64.o
+
+## Extract a 32-bit object file with option -X64.
+# RUN: not llvm-ar --output=err32 -x -X64 archive-any.a xcoff32.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=xcoff32.o --check-prefixes=ERR32
+
+# ERR32: llvm-ar: error: '[[FILE]]' was not found
+# RUN: not ls err32/xcoff32.o
+
+## Test deleting an object file from a big archive file.
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -d -X32 archive.a xcoff64.o elf64.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -d -X64 archive.a xcoff64.o elf64.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -d -Xany archive.a xcoff64.o elf64.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32
+ 
+# Test replace/insert an object file in a big archive file.
+# RUN: cp xcoff32.o xcoff.o
+# RUN: llvm-ar -q -c archive-rep.a xcoff.o
+
+## xcoff.o is a 64-bit object file here.
+# RUN: yaml2obj --docnum=2 -DFLAG=0x1F7 %s -o xcoff.o
+
+## Without -X64, -X32_64 or -Xany, nothing changed here,
+## since xcoff.o is a 64-bit object file in command line, but
+## the xcoff.o member in archive-rep.a is a 32-bit object file.
+# RUN: llvm-ar -r archive-rep.a xcoff.o
+# RUN: llvm-ar -t -Xany archive-rep.a | \
+# RUN:   FileCheck %s --check-prefixes=REP
+# RUN: llvm-nm -Xany --print-armap archive-rep.a | \
+# RUN:   FileCheck %s --check-prefixes=SYM32
+
+## With options -X64, -X32_64 or -Xany, the old 32-bit xcoff.o
+## member is still in the archive
+## and a new 64-bit object file xcoff.o is added to the archive.
+# RUN: llvm-ar -r -X64 archive-rep.a xcoff.o
+# RUN: llvm-ar -t -Xany archive-rep.a | \
+# RUN:   FileCheck %s --check-prefixes=REP,REP-DUP
+# RUN: llvm-nm -Xany --print-armap archive-rep.a | \
+# RUN:   FileCheck %s --check-prefixes=SYM32_64
+
+# REP:            xcoff.o
+# REP-DUP-NEXT:   xcoff.o
+# REP-EMPTY: 
+
+## Test move member.
+# RUN: cp archive-any.a archive.a
+## Do not move 64-bit object without options -X64, -X32_64, Xany.
+# RUN: llvm-ar -ma elf32.o archive.a xcoff64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=WARN-XCOFF64
+
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=OBJ32_64
+
+## Do not move 32-bit object with -X64.
+# RUN: llvm-ar -ma -X64 elf64.o archive.a xcoff32.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=WARN-XCOFF32
+
+# WARN-XCOFF32: warning: 'xcoff32.o' is not valid with the current object file mode
+# WARN-XCOFF64: warning: 'xcoff64.o' is not valid with the current object file mode
+# WARN-ELF32:   warning: 'elf32.o' is not valid with the current object file mode
+# WARN-ELF64:   warning: 'elf64.o' is not valid with the current object file mode
+
+# RUN: llvm-ar -ma -X64 elf64.o archive.a xcoff64.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE64
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -ma -X32_64 elf64.o archive.a xcoff64.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE64
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -ma -Xany elf64.o archive.a xcoff64.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE64
+
+# MOVE64:       xcoff32.o
+# MOVE64-NEXT:  elf32.o
+# MOVE64-NEXT:  elf64.o
+# MOVE64-NEXT:  xcoff64.o
+# MOVE64-EMPTY:
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -ma elf32.o archive.a xcoff32.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE32
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -ma -X32 elf32.o archive.a xcoff32.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE32
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -ma -X32_64 elf32.o archive.a xcoff32.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE32
+
+# RUN: cp archive-any.a archive.a
+# RUN: llvm-ar -ma -Xany elf32.o archive.a xcoff32.o
+# RUN: llvm-ar -t -Xany archive.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE32
+
+# MOVE32:       elf32.o
+# MOVE32-NEXT:  xcoff32.o
+# MOVE32-NEXT:  xcoff64.o
+# MOVE32-NEXT:  elf64.o
+# MOVE32-EMPTY:
+
+## Move after a file with a bitness that doesn't match the object mode.
+# RUN: not llvm-ar -ma xcoff64.o archive-any.a xcoff32.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=ERR-INSERT-POINT
+
+# RUN: not llvm-ar -X32 -ma xcoff64.o archive-any.a xcoff32.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=ERR-INSERT-POINT
+
+# RUN: not llvm-ar -X64 -ma xcoff32.o archive-any.a xcoff64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=ERR-INSERT-POINT
+
+# ERR-INSERT-POINT: error: insertion point not found
+
+## Test move operation for archive when there are two object files with 
+## the same name, but different bitness in archive.
+## There are two files named xcoff.o in archive-rep.a (the first one in
+## the archive is 32-bit, the second one is 64-bit).
+# RUN: cp archive-rep.a archive-rep-mov32.a
+# RUN: llvm-ar -Xany -q archive-rep-mov32.a elf32.o elf64.o
+## Move elf32.o to after the 32-bit xcoff.o.
+# RUN: llvm-ar -X32 -ma xcoff.o archive-rep-mov32.a elf32.o
+# RUN: llvm-ar -t -Xany archive-rep-mov32.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE32-DUP
+
+# MOVE32-DUP:         xcoff.o
+# MOVE32-DUP-NEXT:    elf32.o
+# MOVE32-DUP-NEXT:    xcoff.o
+# MOVE32-DUP-NEXT:    elf64.o
+
+# RUN: cp archive-rep.a archive-rep-mov64.a
+# RUN: llvm-ar -Xany -q archive-rep-mov64.a elf32.o elf64.o
+## Move elf64.o to after the 64-bit xcoff.o.
+# RUN: llvm-ar -X64 -ma xcoff.o archive-rep-mov64.a elf64.o
+# RUN: llvm-ar -t -Xany archive-rep-mov64.a | \
+# RUN:   FileCheck %s --check-prefixes=MOVE64-DUP
+
+# MOVE64-DUP:         xcoff.o
+# MOVE64-DUP-NEXT:    xcoff.o
+# MOVE64-DUP-NEXT:    elf64.o
+# MOVE64-DUP-NEXT:    elf32.o
+
+# OBJ32:          xcoff32.o
+# OBJ32-NEXT:     elf32.o
+# OBJ32-EMPTY:
+
+# OBJ64:        xcoff64.o
+# OBJ64-NEXT:   elf64.o
+# OBJ64-EMPTY:
+
+# OBJ32_64:       xcoff32.o
+# OBJ32_64-NEXT:  elf32.o
+# OBJ32_64-NEXT:  xcoff64.o
+# OBJ32_64-NEXT:  elf64.o
+# OBJ32_64-EMPTY:
+
+# SYM32:       var_0x1DF
+# SYM32-NOT:   var_0x1F7
+
+# SYM32_64:   var_0x1DF
+# SYM32_64:   var_0x1F7
+
+## Test -X option with other output formats. 
+
+# RUN: llvm-as -o 32.bc %p/Inputs/bitcode-sym32.ll
+# RUN: llvm-as -o 64.bc %p/Inputs/bitcode-sym64.ll
+# RUN: yaml2obj --docnum=3 %s -o macho32.o
+# RUN: yaml2obj --docnum=4 %s -o macho64.o
+# RUN: yaml2obj --docnum=5 %s -o wasm.o
+# RUN: yaml2obj --docnum=6 %s -o coff.o
+
+# RUN: llvm-ar -q -c archive-other32.a coff.o 32.bc 64.bc wasm.o macho32.o macho64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-64
+# RUN: llvm-ar -t -Xany archive-other32.a | \
+# RUN:   FileCheck %s --check-prefixes=OTHER32
+
+# WARN-64:      warning: '64.bc' is not valid with the current object file mode
+# WARN-64-NEXT: warning: 'macho64.o' is not valid with the current object file mode
+
+# OTHER32:       coff.o
+# OTHER32-NEXT:  32.bc
+# OTHER32-NEXT:  wasm.o
+# OTHER32-NEXT:  macho32.o
+# OTHER32-EMPTY:
+
+# RUN: llvm-ar -q -c -X64 archive-other64.a coff.o 32.bc 64.bc wasm.o macho32.o macho64.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=WARN-32
+# RUN: llvm-ar -t -Xany archive-other64.a | \
+# RUN:   FileCheck %s --check-prefixes=OTHER64
+
+# WARN-32:      warning: 'coff.o' is not valid with the current object file mode
+# WARN-32-NEXT: warning: '32.bc' is not valid with the current object file mode
+# WARN-32-NEXT: warning: 'wasm.o' is not valid with the current object file mode
+# WARN-32-NEXT: warning: 'macho32.o' is not valid with the current object file mode
+
+# OTHER64:      64.bc
+# OTHER64-NEXT: macho64.o
+# OTHER64-EMPTY:
+
+
+--- !ELF
+FileHeader:
+  Class:   [[CLASS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+Symbols:
+  - Name:    [[CLASS]]_var
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+Symbols:
+  - Name:            var_[[FLAG]]
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACE
+  cputype:    0x00000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      0
+  sizeofcmds: 0
+  flags:      0x00002000
+
+## mach-o 64 bit
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARMNT
+  Characteristics: [  ]
+sections:
+symbols:

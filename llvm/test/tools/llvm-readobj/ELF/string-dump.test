@@ -1,0 +1,57 @@
+# Check the dumping of a section as strings.
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-readobj --string-dump=.strings \
+# RUN:   --string-dump=.not_null_terminated %t > %t.readobj.out
+# RUN: FileCheck %s --input-file=%t.readobj.out
+
+# Also test the different ways --string-dump can be specified, i.e. as a short
+# flag (-p), with different prefix modes (-p .foo, -p=.foo, -p.foo), and with
+# the value being a index section number instead of a section name.
+# RUN: llvm-readobj -p.strings -p.strings -p.not_null_terminated %t | cmp %t.readobj.out -
+# RUN: llvm-readobj --string-dump=1 --string-dump=2 %t | cmp %t.readobj.out -
+# RUN: llvm-readobj -p1 -p1 -p2 %t | cmp %t.readobj.out -
+
+# Run readelf flag tests with an additional flag, --file-header, so we can test
+# -p grouped with something.
+# RUN: llvm-readelf --file-header --string-dump=.strings \
+# RUN:   --string-dump=.not_null_terminated %t > %t.readelf.out
+# RUN: FileCheck %s --input-file=%t.readelf.out
+
+# RUN: llvm-readelf -h -p .strings -p .not_null_terminated %t | cmp %t.readelf.out -
+# RUN: llvm-readelf -p.strings -hp.not_null_terminated %t  | cmp %t.readelf.out -
+# RUN: llvm-readelf -hp1 -p2 %t | cmp %t.readelf.out -
+# RUN: llvm-readelf -hp 1 -p.not_null_terminated %t | cmp %t.readelf.out -
+
+# CHECK:      String dump of section '.strings':
+# CHECK-NEXT: [ 0] here
+# CHECK-NEXT: [ 5] are
+# CHECK-NEXT: [ 9] some
+# CHECK-NEXT: [ e] strings
+# CHECK-EMPTY:
+# CHECK-NEXT: String dump of section '.not_null_terminated':
+# CHECK-NEXT: [ 0] no
+# CHECK-NEXT: [ 3] null{{$}}
+# CHECK-NOT:  {{.}}
+
+# RUN: llvm-readobj --string-dump=does_not_exist %t 2>&1 | FileCheck -DFILE=%t %s --check-prefix=WARN1
+# RUN: llvm-readobj --string-dump=42 %t 2>&1 | FileCheck %s  -DFILE=%t --check-prefix=WARN2
+
+# RUN: llvm-readelf --string-dump=does_not_exist %t 2>&1 | FileCheck -DFILE=%t %s --check-prefix=WARN1
+# RUN: llvm-readelf --string-dump=42 %t 2>&1 | FileCheck %s  -DFILE=%t --check-prefix=WARN2
+
+# WARN1: warning: '[[FILE]]': could not find section 'does_not_exist'
+# WARN2: warning: '[[FILE]]': could not find section 42
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .strings
+    Type: SHT_PROGBITS
+    Content: 686572650061726500736f6d6500737472696e677300
+  - Name: .not_null_terminated
+    Type: SHT_PROGBITS
+    Content: 6e6f006e756c6c

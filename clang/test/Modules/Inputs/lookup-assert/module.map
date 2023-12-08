@@ -1,0 +1,4 @@
+module X {
+  header "H3.h"
+  export *
+}

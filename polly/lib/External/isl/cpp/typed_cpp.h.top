@@ -1,0 +1,21 @@
+/// These are automatically generated templated C++ bindings for isl.
+///
+/// isl is a library for computing with integer sets and maps described by
+/// Presburger formulas. On top of this, isl provides various tools for
+/// polyhedral compilation, ranging from dependence analysis over scheduling
+/// to AST generation.
+
+#ifndef ISL_TYPED_CPP
+#define ISL_TYPED_CPP
+
+#include <type_traits>
+
+#include <isl/cpp.h>
+
+namespace isl {
+namespace typed {
+
+template <typename Domain, typename Range>
+struct pair {};
+
+struct Anonymous;

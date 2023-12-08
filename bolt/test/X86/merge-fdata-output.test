@@ -1,0 +1,16 @@
+# Check merge-fdata tool correctly handles `-o` option.
+RUN: merge-fdata %S/Inputs/bat_profile_1.fdata \
+RUN:             %S/Inputs/bat_profile_2.fdata \
+RUN:   | FileCheck %s
+
+RUN: merge-fdata %S/Inputs/bat_profile_1.fdata \
+RUN:             %S/Inputs/bat_profile_2.fdata \
+RUN:             -o - \
+RUN:   | FileCheck %s
+
+RUN: merge-fdata %S/Inputs/bat_profile_1.fdata \
+RUN:             %S/Inputs/bat_profile_2.fdata \
+RUN:             -o %t
+RUN: FileCheck %s < %t
+
+CHECK: 1 main 451 1 SolveCubic 0 0 302

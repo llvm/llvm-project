@@ -1,0 +1,183 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t > %t.stdout.yaml
+# RUN: obj2yaml %t -o %t.file.yaml 2>&1 | count 0
+# RUN: FileCheck --input-file=%t.stdout.yaml %s
+# RUN: diff %t.stdout.yaml %t.file.yaml
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  BP_ARM64
+    Platform ID:     Linux
+    CSD Version:     Linux 3.13.0-91-generic
+    CPU:
+      CPUID:           0x05060708
+  - Type:            LinuxAuxv
+    Content:         DEADBEEFBAADF00D
+  - Type:            LinuxMaps
+    Text:             |
+      400d9000-400db000 r-xp 00000000 b3:04 227        /system/bin/app_process
+      400db000-400dc000 r--p 00001000 b3:04 227        /system/bin/app_process
+
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x0001020304050607
+        Size of Image:   0x08090A0B
+        Checksum:        0x0C0D0E0F
+        Time Date Stamp: 47
+        Module Name:     a.out
+        Version Info:
+          Signature:            0x10111213
+          Struct Version:       0x14151617
+          File Version High:    0x18191A1B
+          File Version Low:     0x1C1D1E1F
+          Product Version High: 0x20212223
+          Product Version Low:  0x24252627
+          File Flags Mask:      0x28292A2B
+          File Flags:           0x2C2D2E2F
+          File OS:              0x30313233
+          File Type:            0x34353637
+          File Subtype:         0x38393A3B
+          File Date High:       0x3C3D3E3F
+          File Date Low:        0x40414243
+        CodeView Record: '44454647'
+        Misc Record:     '48494A4B'
+      - Base of Image:   0x4C4D4E4F50515253
+        Size of Image:   0x54555657
+        Module Name:     libb.so
+        CodeView Record: '58595A5B'
+  - Type:            ThreadList
+    Threads:
+      - Thread Id:         0x5C5D5E5F
+        Priority Class:    0x60616263
+        Environment Block: 0x6465666768696A6B
+        Context:           '7C7D7E7F80818283'
+        Stack:
+          Start of Memory Range: 0x6C6D6E6F70717273
+          Content:               '7475767778797A7B'
+  - Type:            Exception
+    Thread ID:       0x7
+    Exception Record:
+      Exception Code:       0x10
+      Exception Flags:      0x5
+      Exception Record:     0x0102030405060708
+      Exception Address:    0x0A0B0C0D0E0F1011
+      Number of Parameters: 2
+      Parameter 0: 0x22
+      Parameter 1: 0x24
+    Thread Context:  '8182838485868788'
+  - Type:            MemoryList
+    Memory Ranges:   
+      - Start of Memory Range: 0x7C7D7E7F80818283
+        Content:               '8485868788'
+  - Type:            MemoryInfoList
+    Memory Ranges:
+      - Base Address:    0x0000000000000000
+        Allocation Protect: [  ]
+        Region Size:     0x0000000000010000
+        State:           [ MEM_FREE ]
+        Protect:         [ PAGE_NO_ACCESS ]
+        Type:            [  ]
+      - Base Address:    0x0000000000010000
+        Allocation Protect: [ PAGE_READ_WRITE ]
+        Region Size:     0x0000000000010000
+        State:           [ MEM_COMMIT ]
+        Type:            [ MEM_MAPPED ]
+      - Base Address:    0x0000000000020000
+        Allocation Base: 0x0000000000000000
+        Allocation Protect: [ PAGE_READ_WRITE, PAGE_WRITECOMBINE ]
+        Reserved0:       0xDEADBEEF
+        Region Size:     0x0000000000010000
+        State:           [ MEM_COMMIT, MEM_FREE ]
+        Type:            [ MEM_PRIVATE, MEM_MAPPED ]
+        Reserved1:       0xBAADF00D
+...
+
+# CHECK:      --- !minidump
+# CHECK-NEXT: Streams:
+# CHECK-NEXT:   - Type:            SystemInfo
+# CHECK-NEXT:     Processor Arch:  BP_ARM64
+# CHECK-NEXT:     Platform ID:     Linux
+# CHECK-NEXT:     CSD Version:     Linux 3.13.0-91-generic
+# CHECK-NEXT:     CPU:
+# CHECK-NEXT:       CPUID:           0x5060708
+# CHECK-NEXT:   - Type:            LinuxAuxv
+# CHECK-NEXT:     Content:         DEADBEEFBAADF00D
+# CHECK-NEXT:   - Type:            LinuxMaps
+# CHECK-NEXT:     Text:             |
+# CHECK-NEXT:       400d9000-400db000 r-xp 00000000 b3:04 227        /system/bin/app_process
+# CHECK-NEXT:       400db000-400dc000 r--p 00001000 b3:04 227        /system/bin/app_process
+# CHECK-EMPTY:
+# CHECK-NEXT:   - Type:            ModuleList
+# CHECK-NEXT:     Modules:
+# CHECK-NEXT:       - Base of Image:   0x1020304050607
+# CHECK-NEXT:         Size of Image:   0x8090A0B
+# CHECK-NEXT:         Checksum:        0xC0D0E0F
+# CHECK-NEXT:         Time Date Stamp: 47
+# CHECK-NEXT:         Module Name:     a.out
+# CHECK-NEXT:         Version Info:
+# CHECK-NEXT:           Signature:            0x10111213
+# CHECK-NEXT:           Struct Version:       0x14151617
+# CHECK-NEXT:           File Version High:    0x18191A1B
+# CHECK-NEXT:           File Version Low:     0x1C1D1E1F
+# CHECK-NEXT:           Product Version High: 0x20212223
+# CHECK-NEXT:           Product Version Low:  0x24252627
+# CHECK-NEXT:           File Flags Mask:      0x28292A2B
+# CHECK-NEXT:           File Flags:           0x2C2D2E2F
+# CHECK-NEXT:           File OS:              0x30313233
+# CHECK-NEXT:           File Type:            0x34353637
+# CHECK-NEXT:           File Subtype:         0x38393A3B
+# CHECK-NEXT:           File Date High:       0x3C3D3E3F
+# CHECK-NEXT:           File Date Low:        0x40414243
+# CHECK-NEXT:         CodeView Record: '44454647'
+# CHECK-NEXT:         Misc Record:     48494A4B
+# CHECK-NEXT:       - Base of Image:   0x4C4D4E4F50515253
+# CHECK-NEXT:         Size of Image:   0x54555657
+# CHECK-NEXT:         Module Name:     libb.so
+# CHECK-NEXT:         CodeView Record: 58595A5B
+# CHECK-NEXT:   - Type:            ThreadList
+# CHECK-NEXT:     Threads:
+# CHECK-NEXT:       - Thread Id:         0x5C5D5E5F
+# CHECK-NEXT:         Priority Class:    0x60616263
+# CHECK-NEXT:         Environment Block: 0x6465666768696A6B
+# CHECK-NEXT:         Context:           7C7D7E7F80818283
+# CHECK-NEXT:         Stack:
+# CHECK-NEXT:           Start of Memory Range: 0x6C6D6E6F70717273
+# CHECK-NEXT:           Content:               7475767778797A7B
+# CHECK-NEXT:   - Type:            Exception
+# CHECK-NEXT:     Thread ID:       0x7
+# CHECK-NEXT:     Exception Record:
+# CHECK-NEXT:       Exception Code:       0x10
+# CHECK-NEXT:       Exception Flags:      0x5
+# CHECK-NEXT:       Exception Record:     0x102030405060708
+# CHECK-NEXT:       Exception Address:    0xA0B0C0D0E0F1011
+# CHECK-NEXT:       Number of Parameters: 2
+# CHECK-NEXT:       Parameter 0: 0x22
+# CHECK-NEXT:       Parameter 1: 0x24
+# CHECK-NEXT:     Thread Context:  '8182838485868788'
+# CHECK-NEXT:   - Type:            MemoryList
+# CHECK-NEXT:     Memory Ranges:   
+# CHECK-NEXT:       - Start of Memory Range: 0x7C7D7E7F80818283
+# CHECK-NEXT:         Content:               '8485868788'
+# CHECK-NEXT:   - Type:            MemoryInfoList
+# CHECK-NEXT:     Memory Ranges:
+# CHECK-NEXT:       - Base Address:       0x0
+# CHECK-NEXT:         Allocation Protect: [  ]
+# CHECK-NEXT:         Region Size:        0x10000
+# CHECK-NEXT:         State:              [ MEM_FREE ]
+# CHECK-NEXT:         Protect:            [ PAGE_NO_ACCESS ]
+# CHECK-NEXT:         Type:               [  ]
+# CHECK-NEXT:       - Base Address:       0x10000
+# CHECK-NEXT:         Allocation Protect: [ PAGE_READ_WRITE ]
+# CHECK-NEXT:         Region Size:        0x10000
+# CHECK-NEXT:         State:              [ MEM_COMMIT ]
+# CHECK-NEXT:         Type:               [ MEM_MAPPED ]
+# CHECK-NEXT:       - Base Address:       0x20000
+# CHECK-NEXT:         Allocation Base:    0x0
+# CHECK-NEXT:         Allocation Protect: [ PAGE_READ_WRITE, PAGE_WRITECOMBINE ]
+# CHECK-NEXT:         Reserved0:          0xDEADBEEF
+# CHECK-NEXT:         Region Size:        0x10000
+# CHECK-NEXT:         State:              [ MEM_COMMIT, MEM_FREE ]
+# CHECK-NEXT:         Type:               [ MEM_PRIVATE, MEM_MAPPED ]
+# CHECK-NEXT:         Reserved1:          0xBAADF00D
+# CHECK-NEXT: ...

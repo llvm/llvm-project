@@ -1,0 +1,273 @@
+## This test checks how we handle the --bb-addr-map option.
+
+## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
+# UNSUPPORTED: system-windows
+
+## Check 64-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
+# RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x64.o --bb-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check 64-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.v1.x64.o
+# RUN: llvm-readobj %t1.v1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.v1.x64.o --check-prefix=CHECK
+
+## Check 32-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -o %t1.x32.o
+# RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x32.o --bb-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check that a malformed section can be handled.
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DSIZE=6 -o %t2.o
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000006 -DFILE=%t2.o --check-prefix=TRUNCATED
+
+## Check that invalid metadata can be handled.
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DMETADATA=0xF000002 -o %t3.o
+# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDMD
+
+# CHECK:      BBAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: [[ADDR]]
+# CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_BB_ADDR_MAP section with index 3
+# CHECK-NEXT:     Name: <?>
+# CHECK-NEXT:     BB entries [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         ID: 0
+# CHECK-NEXT:         Offset: 0x0
+# CHECK-NEXT:         Size: 0x1
+# CHECK-NEXT:         HasReturn: No
+# CHECK-NEXT:         HasTailCall: Yes
+# CHECK-NEXT:         IsEHPad: No
+# CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: No
+# CHECK-NEXT:       }
+# CHECK-NEXT:       {
+# CHECK-NEXT:         ID: 2
+# CHECK-NEXT:         Offset: 0x4
+# CHECK-NEXT:         Size: 0x4
+# CHECK-NEXT:         HasReturn: Yes
+# CHECK-NEXT:         HasTailCall: No
+# CHECK-NEXT:         IsEHPad: Yes
+# CHECK-NEXT:         CanFallThrough: No
+# CHECK-NEXT:         HasIndirectBranch: Yes
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x22222
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     BB entries [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         ID: 4
+# CHECK-NEXT:         Offset: 0x6
+# CHECK-NEXT:         Size: 0x7
+# CHECK-NEXT:         HasReturn: No
+# CHECK-NEXT:         HasTailCall: No
+# CHECK-NEXT:         IsEHPad: No
+# CHECK-NEXT:         CanFallThrough: Yes
+# CHECK-NEXT:         HasIndirectBranch: No
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+# GNU: GNUStyle::printBBAddrMaps not implemented
+
+# TRUNCATED:      BBAddrMap [
+# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
+# TRUNCATED-NEXT: ]
+## Check that the other valid section is properly dumped.
+# TRUNCATED-NEXT: BBAddrMap [
+# TRUNCATED-NEXT:   Function {
+# TRUNCATED-NEXT:     At: 0x33333
+# TRUNCATED-NEXT:     Name: bar
+# TRUNCATED-NEXT:     BB entries [
+# TRUNCATED-NEXT:       {
+# TRUNCATED-NEXT:         ID: 6
+# TRUNCATED-NEXT:         Offset: 0x9
+# TRUNCATED-NEXT:         Size: 0xA
+# TRUNCATED-NEXT:         HasReturn: Yes
+# TRUNCATED-NEXT:         HasTailCall: Yes
+# TRUNCATED-NEXT:         IsEHPad: No
+# TRUNCATED-NEXT:         CanFallThrough: Yes
+# TRUNCATED-NEXT:         HasIndirectBranch: Yes
+# TRUNCATED-NEXT:       }
+# TRUNCATED-NEXT:       {
+# TRUNCATED-NEXT:         ID: 7
+# TRUNCATED-NEXT:         Offset: 0x1F
+# TRUNCATED-NEXT:         Size: 0xD
+# TRUNCATED-NEXT:         HasReturn: No
+# TRUNCATED-NEXT:         HasTailCall: Yes
+# TRUNCATED-NEXT:         IsEHPad: Yes
+# TRUNCATED-NEXT:         CanFallThrough: Yes
+# TRUNCATED-NEXT:         HasIndirectBranch: No
+# TRUNCATED-NEXT:       }
+# TRUNCATED-NEXT:     ]
+# TRUNCATED-NEXT:   }
+# TRUNCATED-NEXT: ]
+
+# INVALIDMD:      BBAddrMap [
+# INVALIDMD-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: invalid encoding for BBEntry::Metadata: 0xf000002
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Link:   .text
+    Entries:
+      - Version: 2
+        Address: [[ADDR=0x11111]]
+        BBEntries:
+          - ID:            0
+            AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      [[METADATA=0x2]]
+          - ID:            2
+            AddressOffset: 0x3
+            Size:          0x4
+            Metadata:      0x15
+      - Version: 2
+        Address: 0x22222
+        BBEntries:
+          - ID:            4
+            AddressOffset: 0x6
+            Size:          0x7
+            Metadata:      0x8
+  - Name: dummy_section
+    Type: SHT_PROGBITS
+    Size: 16
+  - Name: '.llvm_bb_addr_map (1)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: .text.bar
+    Entries:
+      - Version: 2
+        Address: 0x33333
+        BBEntries:
+          - ID:            6
+            AddressOffset: 0x9
+            Size:          0xa
+            Metadata:      0x1b
+          - ID:            7
+            AddressOffset: 0xc
+            Size:          0xd
+            Metadata:      0xe
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x22222
+  - Name:    bar
+    Section: .text.bar
+    Type:    STT_FUNC
+    Value:   0x33333
+
+## Check that using the SHT_LLVM_BB_ADDR_MAP_V0 section type generates the same
+## result as using the SHT_LLVM_BB_ADDR_MAP section type with Version=0.
+## The Version field is required even for SHT_LLVM_BB_ADDR_MAP_V0 but it
+## should not impact the result. This unideal behavior will be gone once
+## SHT_LLVM_BB_ADDR_MAP_V0 is deprecated.
+
+# RUN: yaml2obj --docnum=2 %s -DVERSION=255 -DSECTION_TYPE=SHT_LLVM_BB_ADDR_MAP_V0 -o %t2.type0
+# RUN: llvm-readobj %t2.type0 --bb-addr-map 2>&1 | FileCheck %s --check-prefix=V0
+
+# RUN: yaml2obj --docnum=2 %s -DVERSION=0 -DSECTION_TYPE=SHT_LLVM_BB_ADDR_MAP -o %t2.version0
+# RUN: llvm-readobj %t2.version0 --bb-addr-map 2>&1 | FileCheck %s --check-prefix=V0
+
+# V0:      BBAddrMap [
+# V0-NEXT:   Function {
+# V0-NEXT:     At:   0x11111
+# V0-NEXT:     Name: foo
+# V0-NEXT:     BB entries [
+# V0-NEXT:       {
+# V0-NEXT:         ID: 0
+# V0-NEXT:         Offset: 0x1
+# V0-NEXT:         Size: 0x2
+# V0-NEXT:         HasReturn:
+# V0-NEXT:         HasTailCall:
+# V0-NEXT:         IsEHPad:
+# V0-NEXT:         CanFallThrough:
+# V0-NEXT:         HasIndirectBranch:
+# V0-NEXT:       }
+# V0-NEXT:       {
+# V0-NEXT:         ID: 1
+# V0-NEXT:         Offset: 0x4
+# V0-NEXT:         Size: 0x5
+# V0-NEXT:         HasReturn:
+# V0-NEXT:         HasTailCall:
+# V0-NEXT:         IsEHPad:
+# V0-NEXT:         CanFallThrough:
+# V0-NEXT:         HasIndirectBranch:
+# V0-NEXT:       }
+# V0-NEXT:     ]
+# V0-NEXT:   }
+
+## Check version 1 (without BB IDs).
+# RUN: yaml2obj --docnum=2 %s -DVERSION=1 -DSECTION_TYPE=SHT_LLVM_BB_ADDR_MAP -o %t3
+# RUN: llvm-readobj %t3 --bb-addr-map 2>&1 | FileCheck %s --check-prefix=V1
+
+# V1:      BBAddrMap [
+# V1-NEXT:   Function {
+# V1-NEXT:     At:   0x11111
+# V1-NEXT:     Name: foo
+# V1-NEXT:     BB entries [
+# V1-NEXT:       {
+# V1-NEXT:         ID: 0
+# V1-NEXT:         Offset: 0x1
+# V1-NEXT:         Size: 0x2
+# V1-NEXT:         HasReturn:
+# V1-NEXT:         HasTailCall:
+# V1-NEXT:         IsEHPad:
+# V1-NEXT:         CanFallThrough:
+# V1-NEXT:         HasIndirectBranch:
+# V1-NEXT:       }
+# V1-NEXT:       {
+# V1-NEXT:         ID: 1
+# V1-NEXT:         Offset: 0x7
+# V1-NEXT:         Size: 0x5
+# V1-NEXT:         HasReturn:
+# V1-NEXT:         HasTailCall:
+# V1-NEXT:         IsEHPad:
+# V1-NEXT:         CanFallThrough:
+# V1-NEXT:         HasIndirectBranch:
+# V1-NEXT:       }
+# V1-NEXT:     ]
+# V1-NEXT:   }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .text.foo
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC]
+  - Name:  .llvm_bb_addr_map
+    Type:  [[SECTION_TYPE]]
+    Link:  .text.foo
+    Entries:
+      - Version: [[VERSION]]
+        Address: 0x11111
+        BBEntries:
+          - AddressOffset: 0x1
+            Size:          0x2
+            Metadata:      0x3
+          - AddressOffset: 0x4
+            Size:          0x5
+            Metadata:      0x6
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+    Type:    STT_FUNC
+    Value:   0x11111

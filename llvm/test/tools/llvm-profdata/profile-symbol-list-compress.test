@@ -1,0 +1,6 @@
+REQUIRES: zlib
+; RUN: llvm-profdata merge -sample -extbinary -compress-all-sections -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.1.output
+; RUN: llvm-profdata merge -sample -extbinary -compress-all-sections -prof-sym-list=%S/Inputs/profile-symbol-list-2.text %S/Inputs/sample-profile.proftext -o %t.2.output
+; RUN: llvm-profdata merge -sample -extbinary -compress-all-sections %t.1.output %t.2.output -o %t.3.output
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.3.output > %t.4.output
+; RUN: diff -b %S/Inputs/profile-symbol-list.expected %t.4.output

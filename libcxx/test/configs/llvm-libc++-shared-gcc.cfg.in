@@ -1,0 +1,26 @@
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a shared library, with GCC. This is done differently from Clang because
+# we need to explicitly link against libm for some tests with GCC.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', '-pthread'))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -Wl,-rpath,%{lib} -lc++ -lm'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

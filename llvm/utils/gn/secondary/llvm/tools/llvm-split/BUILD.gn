@@ -1,0 +1,10 @@
+executable("llvm-split") {
+  deps = [
+    "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/IR",
+    "//llvm/lib/IRReader",
+    "//llvm/lib/Support",
+    "//llvm/lib/Transforms/Utils",
+  ]
+  sources = [ "llvm-split.cpp" ]
+}

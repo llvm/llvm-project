@@ -1,0 +1,12 @@
+# RUN: not modularize %s -x c++ 2>&1 | FileCheck %s
+
+Inputs/IncludeInExtern.h
+
+# CHECK: {{.*}}{{[/\\]}}Inputs{{[/\\]}}IncludeInExtern.h:2:3:
+# CHECK-NEXT:   #include "Empty.h"
+# CHECK-NEXT:   ^
+# CHECK-NEXT: error: Include directive within extern "C" {}.
+# CHECK-NEXT: {{.*}}{{[/\\]}}Inputs{{[/\\]}}IncludeInExtern.h:1:1:
+# CHECK-NEXT: extern "C" {
+# CHECK-NEXT: ^
+# CHECK-NEXT: The "extern "C" {}" block is here.

@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
+int __attribute__((target("sse4.2"))) foo(int i) { return 0; }
+int __attribute__((target("arch=sandybridge"))) foo(int);
+int __attribute__((target("arch=ivybridge"))) foo(int i) {return 1;}
+int __attribute__((target("default"))) foo(int i) { return 2; }
+
+typedef int (*FuncPtr)(int);
+void func(FuncPtr);
+
+int bar(void) {
+  func(foo);
+  FuncPtr Free = &foo;
+  FuncPtr Free2 = foo;
+
+  return 0;
+  return Free(1) + Free(2);
+}
+
+// LINUX: @foo.ifunc = weak_odr ifunc i32 (i32), ptr @foo.resolver
+// LINUX: define{{.*}} i32 @foo.sse4.2(
+// LINUX: ret i32 0
+// LINUX: define{{.*}} i32 @foo.arch_ivybridge(
+// LINUX: ret i32 1
+// LINUX: define{{.*}} i32 @foo(
+// LINUX: ret i32 2
+
+// WINDOWS: define dso_local i32 @foo.sse4.2(
+// WINDOWS: ret i32 0
+// WINDOWS: define dso_local i32 @foo.arch_ivybridge(
+// WINDOWS: ret i32 1
+// WINDOWS: define dso_local i32 @foo(
+// WINDOWS: ret i32 2
+
+// LINUX: define{{.*}} i32 @bar()
+// LINUX: call void @func(ptr noundef @foo.ifunc)
+// LINUX: store ptr @foo.ifunc
+// LINUX: store ptr @foo.ifunc
+
+// WINDOWS: define dso_local i32 @bar()
+// WINDOWS: call void @func(ptr noundef @foo.resolver)
+// WINDOWS: store ptr @foo.resolver
+// WINDOWS: store ptr @foo.resolver
+
+// LINUX: declare i32 @foo.arch_sandybridge(
+
+// WINDOWS: declare dso_local i32 @foo.arch_sandybridge(

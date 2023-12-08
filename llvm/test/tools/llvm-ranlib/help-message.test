@@ -1,0 +1,17 @@
+## Show that the help message for llvm-ranlib can be printed with either the
+## long flag -help.
+
+# RUN: llvm-ranlib -h | FileCheck %s --check-prefix=HELP
+# RUN: llvm-ranlib -help | FileCheck %s --check-prefix=HELP
+# RUN: llvm-ranlib --help | FileCheck %s --check-prefix=HELP
+# RUN: llvm-ranlib --version | FileCheck %s --check-prefix=VERSION
+# RUN: llvm-ranlib -version | FileCheck %s --check-prefix=VERSION
+# RUN: llvm-ranlib -v | FileCheck %s --check-prefix=VERSION
+
+## Also check combined options (first -h/-v flag wins)
+# RUN: llvm-ranlib -Dh | FileCheck %s --check-prefix=HELP
+# RUN: llvm-ranlib -Dvh | FileCheck %s --check-prefix=VERSION
+# RUN: llvm-ranlib -Dhv | FileCheck %s --check-prefix=HELP
+
+# HELP: USAGE: llvm-ranlib
+# VERSION: version

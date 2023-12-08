@@ -1,0 +1,51 @@
+# RUN: llc -march=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+
+# Skip fixed stack indices in hexagon-cext. The reason is that they cannot
+# be stored as indices (stackSlot2Index) together with registers and
+# non-fixed stack slots.
+
+# Check that this doesn't crash.
+# CHECK: L2_loadrb_io %fixed-stack.0, 1496
+
+--- |
+  target triple = "hexagon"
+
+  %s.0 = type { %s.1, i32, i8, i8, i8, i8, i8, i64, %s.2, %s.5, i8 }
+  %s.1 = type { i8, i8, i8, i8 }
+  %s.2 = type { %s.3 }
+  %s.3 = type { i8, i8, %s.4, i32, i8 }
+  %s.4 = type { [3 x i8] }
+  %s.5 = type { i32, i32, [10 x %s.6], %s.9 }
+  %s.6 = type { %s.7, i8, i32, i8, %s.7 }
+  %s.7 = type { %s.8 }
+  %s.8 = type { i64, i64, i64, i64, i64, i64, i64, i64 }
+  %s.9 = type { i8, i8 }
+
+  ; Function Attrs: nounwind optsize
+  define dso_local void @f0(ptr byval(%s.0) nocapture readonly align 8 %a0) local_unnamed_addr #0 {
+  b0:
+    %v0 = getelementptr inbounds %s.0, ptr %a0, i32 0, i32 10
+    %v1 = load i8, ptr %v0, align 8
+    %v2 = tail call ptr @f1(i8 signext %v1) #0
+    unreachable
+  }
+
+  ; Function Attrs: nounwind optsize
+  declare dso_local ptr @f1(i8 signext) local_unnamed_addr #0
+
+  attributes #0 = { nounwind optsize "target-cpu"="hexagonv65" }
+
+...
+
+name: f0
+tracksRegLiveness: true
+fixedStack:
+- { id: 0, offset: 0, size: 1504, alignment: 8, isImmutable: true, isAliased: false }
+body: |
+  bb.0:
+    %0:intregs = L2_loadrb_io %fixed-stack.0, 1496
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %0:intregs
+    PS_call_nr @f1, implicit $r0, implicit-def $r29, implicit-def $r0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+...

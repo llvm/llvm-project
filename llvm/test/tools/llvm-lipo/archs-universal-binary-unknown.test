@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s -o %t
+# Tests that the output for an unknown architecture is the same as cctools lipo
+# RUN: llvm-lipo %t -archs 2>&1 | FileCheck %s
+# CHECK: i386 unknown(16777367,3)
+
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       2
+FatArchs:
+  - cputype:         0x00000007
+    cpusubtype:      0x00000003
+    offset:          0x0000000000001000
+    size:            28
+    align:           12
+  - cputype:         0x01000097
+    cpusubtype:      0x00000003
+    offset:          0x0000000000002000
+    size:            32
+    align:           12
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACE
+      cputype:         0x00000007
+      cpusubtype:      0x00000003
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00002000
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x01000097
+      cpusubtype:      0x00000003
+      filetype:        0x00000001
+      ncmds:           0
+      sizeofcmds:      0
+      flags:           0x00002000
+      reserved:        0x00000000
+...

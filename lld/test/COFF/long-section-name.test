@@ -1,0 +1,87 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link /out:%t.exe /entry:main %t.obj 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readobj --sections %t.exe | FileCheck %s
+# RUN: lld-link /debug /out:%t2.exe /entry:main %t.obj 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readobj --sections %t2.exe | FileCheck %s
+#
+# No warnings in mingw mode or with ignore flag.
+# RUN: lld-link /out:%t.exe /entry:main %t.obj /ignore:longsections 2>&1 | FileCheck %s --check-prefix=IGNORE --allow-empty
+# RUN: lld-link /out:%t.exe /entry:main %t.obj -lldmingw 2>&1 | FileCheck %s --check-prefix=IGNORE --allow-empty
+# RUN: lld-link /out:%t.exe /entry:main %t.obj -debug:dwarf 2>&1 | FileCheck %s --check-prefix=IGNORE --allow-empty
+
+# WARN: warning: section name .data_long_section_name is longer than 8 characters and will use a non-standard string table
+# WARN: warning: section name .text_long_section_name is longer than 8 characters and will use a non-standard string table
+
+# IGNORE-NOT: warning:
+
+# CHECK: Name: .eh_fram (
+# CHECK: Name: .data_long_section_name
+# CHECK: Name: .text_long_section_name
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text_long_section_name
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_DISCARDABLE ]
+    Alignment:       4
+    SectionData:     B82A000000C3
+  - Name:            .data_long_section_name
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE, IMAGE_SCN_MEM_DISCARDABLE ]
+    Alignment:       4
+    SectionData:     "00"
+  - Name:            .eh_frame
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     "00"
+symbols:
+  - Name:            "@comp.id"
+    Value:           10394907
+    SectionNumber:   65535
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .text_long_section_name
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          6
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .data_long_section_name
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .eh_frame
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

@@ -1,0 +1,28 @@
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=DAGNOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=DAGNOT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NOTDAG -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTDAG-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NEXTNOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NEXTNOT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NOTNEXT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTNEXT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=SAMENOT -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=SAMENOT-ERROR %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=NOTSAME -input-file %s %s 2>&1 | FileCheck -check-prefix=ERROR -check-prefix=NOTSAME-ERROR %s
+
+foo
+; DAGNOT: foo
+; DAGNOT-DAG-NOT: bar
+; NOTDAG: foo
+; NOTDAG-NOT-DAG: bar
+; NEXTNOT: foo
+; NEXTNOT-NEXT-NOT: bar
+; NOTNEXT: foo
+; NOTNEXT-NOT-NEXT: bar
+; SAMENOT: foo
+; SAMENOT-SAME-NOT: bar
+; NOTSAME: foo
+; NOTSAME-NOT-SAME: bar
+
+; ERROR: error: unsupported -NOT combo on prefix
+; DAGNOT-ERROR-SAME:  'DAGNOT'
+; NOTDAG-ERROR-SAME:  'NOTDAG'
+; NEXTNOT-ERROR-SAME: 'NEXTNOT'
+; NOTNEXT-ERROR-SAME: 'NOTNEXT'
+; SAMENOT-ERROR-SAME: 'SAMENOT'
+; NOTSAME-ERROR-SAME: 'NOTSAME'

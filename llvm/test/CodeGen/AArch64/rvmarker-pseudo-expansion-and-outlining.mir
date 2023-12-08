@@ -1,0 +1,83 @@
+# RUN: llc -enable-machine-outliner -start-before=aarch64-expand-pseudo -mtriple=arm64-apple-ios -o - %s | FileCheck %s
+#
+#  The calls to _cb1 & _cb2 should be followed by the marker instruction
+#  'mov x29, x29' and the attached call. Neither should get outlined.
+#
+# CHECK-LABEL: _fn1:
+# CHECK:       bb.0:
+# CHECK:        bl _cb1
+# CHECK-NEXT:   mov x29, x29
+# CHECK-NEXT:   bl _attachedcall
+# CHECK:        b _OUTLINED_FUNCTION_0
+#
+# CHECK-LABEL: _fn2:
+# CHECK:       bb.0:
+# CHECK:        bl _cb2
+# CHECK-NEXT:   mov x29, x29
+# CHECK-NEXT:   bl _attachedcall
+# CHECK:        b _OUTLINED_FUNCTION_0
+#
+# CHECK-LABEL: _OUTLINED_FUNCTION_0:
+# CHECK:       bb.0:
+# CHECK-NEXT:    orr w12, wzr, #0x3
+# CHECK-NEXT:    orr w12, wzr, #0x3
+# CHECK-NEXT:    orr w12, wzr, #0x3
+# CHECK-NEXT:    orr w12, wzr, #0x3
+# CHECK-NEXT:    ret
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64-apple-ios"
+
+  define void @fn1() {
+    ret void
+  }
+
+  define void @fn2() {
+    ret void
+  }
+
+  declare void @cb1()
+
+  declare void @cb2()
+
+  declare i8* @attachedcall()
+...
+---
+name:            fn1
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $lr
+
+    BLR_RVMARKER @attachedcall, @cb1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $lr = ORRXri $xzr, 1
+
+    RET undef $lr
+...
+---
+name:            fn2
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $lr, $x19, $x20, $lr
+
+    BLR_RVMARKER @attachedcall, @cb2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $lr = ORRXri $xzr, 1
+
+    RET undef $lr
+...

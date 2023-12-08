@@ -1,0 +1,37 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+--- |
+
+  define i32 @test(i32 %a) {
+  entry:
+    %b = alloca i32
+    %0 = alloca i32
+    store i32 %a, i32* %b
+    store i32 2, i32* %0
+    %c = load i32, i32* %b
+    ret i32 %c
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+frameInfo:
+  maxAlignment:    4
+fixedStack:
+  - { id: 0, offset: 0, size: 4, isImmutable: true, isAliased: false }
+stack:
+  - { id: 0, name: b, size: 4, alignment: 4 }
+  - { id: 1, size: 4, alignment: 4 }
+body: |
+  bb.0.entry:
+    ; CHECK: [[@LINE+1]]:18: use of undefined fixed stack object '%fixed-stack.11'
+    %0 = MOV32rm %fixed-stack.11, 1, _, 0, _
+    MOV32mr %stack.0, 1, _, 0, _, %0
+    MOV32mi %stack.1, 1, _, 0, _, 2
+    %1 = MOV32rm %stack.0, 1, _, 0, _
+    $eax = COPY %1
+    RET32 $eax
+...

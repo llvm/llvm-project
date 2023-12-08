@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-explicit-locals -wasm-keep-registers %s -o - | FileCheck %s
+
+# When a drop instruction is inserted to drop a dead register operand, the
+# original operand should be marked not dead anymore because it is now used by
+# the new drop instruction. And the operand to the new drop instruction should
+# be marked killed instead.
+---
+name: drop_test
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $arguments
+
+  bb.1:
+  ; predecessors: %bb.0
+    ; CHECK-NOT: dead %{{[0-9]+}}
+    ; CHECK: DROP_I32 killed %{{[0-9]+}}
+    dead %0:i32 = CONST_I32 0, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    RETURN implicit-def dead $arguments
+...

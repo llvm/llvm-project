@@ -1,0 +1,24 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @test(i32* %a) {
+  entry:
+    %b = load i32, i32* %a
+    ret i32 %b
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK: [[@LINE+1]]:64: expected a pointer IR value
+    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load (s32) from %ir.b)
+    RET64 $eax
+...
+

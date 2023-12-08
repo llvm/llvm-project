@@ -1,0 +1,339 @@
+RUN: dsymutil -accelerator=Pub -o - %p/../Inputs/basic.macho.i386 -f | llvm-readobj --file-headers -l -S --symbols - | FileCheck %s -check-prefixes=CHECK,CHECK32
+RUN: dsymutil -accelerator=Pub -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -f | llvm-readobj --file-headers -l -S --symbols - | FileCheck %s -check-prefixes=CHECK,CHECK64
+
+This test checks that the dSYM companion binaries generated in 32 and 64 bits
+are correct. The check are pretty strict (we check even the offsets and sizes
+of the sections) in order to test the VM address layout algorithm. As the
+debug sections are generated, this is a bit risky, but I don't expect
+dsymutil's output to change much for these tiny C programs so this should
+be OK.
+The 32bits version doesn't have object files, thus it has basically no debug
+sections.
+
+CHECK32: Format: Mach-O 32-bit i386
+CHECK32: Arch: i386
+CHECK32: AddressSize: 32bit
+CHECK64: Format: Mach-O 64-bit x86-64
+CHECK64: Arch: x86_64
+CHECK64: AddressSize: 64bit
+CHECK:   MachHeader {
+CHECK32:   Magic: Magic (0xFEEDFACE)
+CHECK32:   CpuType: X86 (0x7)
+CHECK32:   CpuSubType: CPU_SUBTYPE_I386_ALL (0x3)
+CHECK64:   Magic: Magic64 (0xFEEDFACF)
+CHECK64:   CpuType: X86-64 (0x1000007)
+CHECK64:   CpuSubType: CPU_SUBTYPE_X86_64_ALL (0x3)
+CHECK:     FileType: DWARFSymbol (0xA)
+CHECK:     NumOfLoadCommands: 7
+CHECK:     Flags [ (0x0)
+CHECK:   }
+CHECK:   Sections [
+CHECK:     Section {
+CHECK:       Name: __text
+CHECK:       Segment: __TEXT
+CHECK32:     Address: 0x1E90
+CHECK32:     Size: 0x11A
+CHECK64:     Address: 0x100000EA0
+CHECK64:     Size: 0x109
+CHECK:       Offset: 0
+CHECK:       Alignment: 4
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: Regular (0x0)
+CHECK:       Attributes [ (0x800004)
+CHECK:         PureInstructions (0x800000)
+CHECK:         SomeInstructions (0x4)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK:     Section {
+CHECK:       Name: __unwind_info
+CHECK:       Segment: __TEXT
+CHECK32:     Address: 0x1FAC
+CHECK64:     Address: 0x100000FAC
+CHECK:       Size: 0x48
+CHECK:       Offset: 0
+CHECK:       Alignment: 2
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: Regular (0x0)
+CHECK:       Attributes [ (0x0)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK32:  Section {
+CHECK32:    Name: __nl_symbol_ptr
+CHECK32:    Segment: __DATA
+CHECK32:    Address: 0x2000
+CHECK32:    Size: 0x4
+CHECK32:    Offset: 0
+CHECK32:    Alignment: 2
+CHECK32:    RelocationOffset: 0x0
+CHECK32:    RelocationCount: 0
+CHECK32:    Type: NonLazySymbolPointers (0x6)
+CHECK32:    Attributes [ (0x0)
+CHECK32:    ]
+CHECK32:    Reserved1: 0x0
+CHECK32:    Reserved2: 0x0
+CHECK32:  }
+CHECK:     Section {
+CHECK:       Name: __data
+CHECK:       Segment: __DATA
+CHECK32:     Address: 0x2004
+CHECK64:     Address: 0x100001000
+CHECK:       Size: 0x4
+CHECK:       Offset: 0
+CHECK:       Alignment: 2
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: Regular (0x0)
+CHECK:       Attributes [ (0x0)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK:     Section {
+CHECK:       Name: __common
+CHECK:       Segment: __DATA
+CHECK32:     Address: 0x2008
+CHECK64:     Address: 0x100001004
+CHECK:       Size: 0x4
+CHECK:       Offset: 0
+CHECK:       Alignment: 2
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: ZeroFill (0x1)
+CHECK:       Attributes [ (0x0)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK:     Section {
+CHECK:       Name: __bss
+CHECK:       Segment: __DATA
+CHECK32:     Address: 0x200C
+CHECK64:     Address: 0x100001008
+CHECK:       Size: 0x4
+CHECK:       Offset: 0
+CHECK:       Alignment: 2
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: ZeroFill (0x1)
+CHECK:       Attributes [ (0x0)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK64:   Section {
+CHECK64:     Name: __debug_line
+CHECK64:     Segment: __DWARF
+CHECK64:     Address: 0x100003000
+CHECK64:     Size: 0xEA
+CHECK64:     Offset: 8192
+CHECK64:     Alignment: 0
+CHECK64:     RelocationOffset: 0x0
+CHECK64:     RelocationCount: 0
+CHECK64:     Type: Regular (0x0)
+CHECK64:     Attributes [ (0x0)
+CHECK64:     ]
+CHECK64:     Reserved1: 0x0
+CHECK64:     Reserved2: 0x0
+CHECK64:   }
+CHECK64:   Section {
+CHECK64:     Name: __debug_pubnames
+CHECK64:     Segment: __DWARF
+CHECK64:     Address: 0x1000030EA
+CHECK64:     Size: 0x7F
+CHECK64:     Offset: 8426
+CHECK64:     Alignment: 0
+CHECK64:     RelocationOffset: 0x0
+CHECK64:     RelocationCount: 0
+CHECK64:     Type: Regular (0x0)
+CHECK64:     Attributes [ (0x0)
+CHECK64:     ]
+CHECK64:     Reserved1: 0x0
+CHECK64:     Reserved2: 0x0
+CHECK64:   }
+CHECK64:   Section {
+CHECK64:     Name: __debug_pubtypes
+CHECK64:     Segment: __DWARF
+CHECK64:     Address: 0x100003169
+CHECK64:     Size: 0x57
+CHECK64:     Offset: 8553
+CHECK64:     Alignment: 0
+CHECK64:     RelocationOffset: 0x0
+CHECK64:     RelocationCount: 0
+CHECK64:     Type: Regular (0x0)
+CHECK64:     Attributes [ (0x0)
+CHECK64:     ]
+CHECK64:     Reserved1: 0x0
+CHECK64:     Reserved2: 0x0
+CHECK64:   }
+CHECK64:   Section {
+CHECK64:     Name: __debug_aranges
+CHECK64:     Segment: __DWARF
+CHECK64:     Address: 0x1000031C0
+CHECK64:     Size: 0xB0
+CHECK64:     Offset: 8640
+CHECK64:     Alignment: 0
+CHECK64:     RelocationOffset: 0x0
+CHECK64:     RelocationCount: 0
+CHECK64:     Type: Regular (0x0)
+CHECK64:     Attributes [ (0x0)
+CHECK64:     ]
+CHECK64:     Reserved1: 0x0
+CHECK64:     Reserved2: 0x0
+CHECK64:   }
+CHECK64:   Section {
+CHECK64:     Name: __debug_info
+CHECK64:     Segment: __DWARF
+CHECK64:     Address: 0x100003270
+CHECK64:     Size: 0x1BC
+CHECK64:     Offset: 8816
+CHECK64:     Alignment: 0
+CHECK64:     RelocationOffset: 0x0
+CHECK64:     RelocationCount: 0
+CHECK64:     Type: Regular (0x0)
+CHECK64:     Attributes [ (0x0)
+CHECK64:     ]
+CHECK64:     Reserved1: 0x0
+CHECK64:     Reserved2: 0x0
+CHECK64:   }
+CHECK:     Section {
+CHECK:       Name: __debug_abbrev
+CHECK:       Segment: __DWARF
+CHECK32:     Address: 0x4000
+CHECK32:     Size: 0x1
+CHECK32:     Offset: 8192
+CHECK64:     Address: 0x10000342C
+CHECK64:     Size: 0x8F
+CHECK64:     Offset: 9260
+CHECK:       Alignment: 0
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: Regular (0x0)
+CHECK:       Attributes [ (0x0)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK:     Section {
+CHECK:       Name: __debug_str
+CHECK:       Segment: __DWARF
+CHECK32:     Address: 0x4001
+CHECK32:     Size: 0x1
+CHECK32:     Offset: 8193
+CHECK64:     Address: 0x1000034BB
+CHECK64:     Size: 0x9F
+CHECK64:     Offset: 9403
+CHECK:       Alignment: 0
+CHECK:       RelocationOffset: 0x0
+CHECK:       RelocationCount: 0
+CHECK:       Type: Regular (0x0)
+CHECK:       Attributes [ (0x0)
+CHECK:       ]
+CHECK:       Reserved1: 0x0
+CHECK:       Reserved2: 0x0
+CHECK:     }
+CHECK:   ]
+CHECK:   Symbols [
+CHECK:     Symbol {
+CHECK:       Name: _inc (2)
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __text
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x1F20
+CHECK64:     Value: 0x100000F20
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _inc (2)
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __text
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x1F90
+CHECK64:     Value: 0x100000F90
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _baz (7)
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __data
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x2004
+CHECK64:     Value: 0x100001000
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _private_int (12)
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __bss
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x200C
+CHECK64:     Value: 0x100001008
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: __mh_execute_header (25)
+CHECK:       Extern
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __text
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x10)
+CHECK:         ReferencedDynamically (0x10)
+CHECK:       ]
+CHECK32:     Value: 0x1000
+CHECK64:     Value: 0x100000000
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _bar (45)
+CHECK:       Extern
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __text
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x1F40
+CHECK64:     Value: 0x100000F40
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _foo (50)
+CHECK:       Extern
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __text
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x1EC0
+CHECK64:     Value: 0x100000ED0
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _main (55)
+CHECK:       Extern
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __text
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x1E90
+CHECK64:     Value: 0x100000EA0
+CHECK:     }
+CHECK:     Symbol {
+CHECK:       Name: _val (61)
+CHECK:       Extern
+CHECK:       Type: Section (0xE)
+CHECK:       Section: __common
+CHECK:       RefType: UndefinedNonLazy (0x0)
+CHECK:       Flags [ (0x0)
+CHECK:       ]
+CHECK32:     Value: 0x2008
+CHECK64:     Value: 0x100001004
+CHECK:     }
+CHECK:   ]
+

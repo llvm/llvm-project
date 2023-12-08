@@ -1,0 +1,135 @@
+## Test mips64:
+# RUN: llc -mtriple mips64-linux-gnu -emit-call-site-info -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+## Test mips64el:
+# RUN: llc -mtriple mips64el-linux-gnu -emit-call-site-info -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+
+## Following code is used for producing this test case.
+##
+## extern int fn1(long,long,long);
+## extern void clobber();
+## int fn2(long a) {
+##   clobber();
+##   int local = fn1(44, a, a+10);
+##   if (local > 10)
+##     return local + 10;
+##   return local;
+## }
+## Check that parameters value loaded by instruction ADDiu/DADDiu is
+## interpreted correctly.
+
+## Test mips64:
+# CHECK: DW_TAG_GNU_call_site
+# CHECK-NEXT: DW_AT_abstract_origin {{.*}} "fn1"
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg5 A1_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 S0_64+0)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg4 A0_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_constu 0x2c)
+# CHECK-EMPTY: 
+# CHECK-NEXT: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT:   DW_AT_location      (DW_OP_reg6 A2_64)
+# CHECK-NEXT:   DW_AT_GNU_call_site_value   (DW_OP_breg16 S0_64+10)
+--- |
+  ; ModuleID = 'mips64.ll'
+  source_filename = "m64.c"
+  target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+  target triple = "mips64-unknown-linux-gnu"
+  
+  ; Function Attrs: nounwind
+  define signext i32 @fn2(i64 signext %a) local_unnamed_addr !dbg !14 {
+  entry:
+    call void @llvm.dbg.value(metadata i64 %a, metadata !18, metadata !DIExpression()), !dbg !20
+    tail call void bitcast (void (...)* @clobber to void ()*)(), !dbg !20
+    %add = add nsw i64 %a, 10, !dbg !20
+    %call = tail call signext i32 @fn1(i64 signext 44, i64 signext %a, i64 signext %add), !dbg !20
+    call void @llvm.dbg.value(metadata i32 %call, metadata !19, metadata !DIExpression()), !dbg !20
+    %cmp = icmp sgt i32 %call, 10, !dbg !24
+    %add1 = add nsw i32 %call, 10, !dbg !20
+    %retval.0 = select i1 %cmp, i32 %add1, i32 %call, !dbg !20
+    ret i32 %retval.0, !dbg !20
+  }
+  
+  declare void @clobber(...) local_unnamed_addr
+  
+  declare !dbg !4 signext i32 @fn1(i64 signext, i64 signext, i64 signext) local_unnamed_addr
+  
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!9, !10, !11, !12}
+  !llvm.ident = !{!13}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "m.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "fn1", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7, !8, !8, !8}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  !9 = !{i32 7, !"Dwarf Version", i32 4}
+  !10 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = !{i32 1, !"wchar_size", i32 4}
+  !12 = !{i32 7, !"PIC Level", i32 1}
+  !13 = !{!"clang version 11.0.0"}
+  !14 = distinct !DISubprogram(name: "fn2", scope: !1, file: !1, line: 3, type: !15, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !17)
+  !15 = !DISubroutineType(types: !16)
+  !16 = !{!7, !8}
+  !17 = !{!18, !19}
+  !18 = !DILocalVariable(name: "a", arg: 1, scope: !14, file: !1, line: 3, type: !8)
+  !19 = !DILocalVariable(name: "local", scope: !14, file: !1, line: 5, type: !7)
+  !20 = !DILocation(line: 0, scope: !14)
+  !24 = !DILocation(line: 6, column: 14, scope: !25)
+  !25 = distinct !DILexicalBlock(scope: !14, file: !1, line: 6, column: 8)
+
+...
+---
+name:            fn2
+alignment:       8
+liveins:
+  - { reg: '$a0_64', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$ra_64', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$s0_64', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 8, fwdArgRegs: [] }
+  - { bb: 0, offset: 12, fwdArgRegs: 
+      - { arg: 0, reg: '$a0_64' }
+      - { arg: 1, reg: '$a1_64' }
+      - { arg: 2, reg: '$a2_64' } }
+body:             |
+  bb.0.entry:
+    DBG_VALUE $a0_64, $noreg, !18, !DIExpression(), debug-location !20
+    $sp_64 = DADDiu $sp_64, -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
+    SD killed $s0_64, $sp_64, 0 :: (store (s64) into %stack.1)
+    CFI_INSTRUCTION offset $ra_64, -8
+    CFI_INSTRUCTION offset $s0_64, -16
+    DBG_VALUE $s0_64, $noreg, !18, !DIExpression(), debug-location !20
+    JAL @clobber, csr_n64, implicit-def dead $ra, implicit-def $sp, debug-location !20 {
+      $s0_64 = OR64 $a0_64, $zero_64
+    }
+    renamable $a2_64 = nsw DADDiu renamable $s0_64, 10, debug-location !20
+    $a0_64 = DADDiu $zero_64, 44, debug-location !20
+    JAL @fn1, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit killed $a1_64, implicit $a2_64, implicit-def $sp, implicit-def $v0, debug-location !20 {
+      $a1_64 = OR64 killed $s0_64, $zero_64, debug-location !20
+    }
+    DBG_VALUE $v0, $noreg, !19, !DIExpression(), debug-location !20
+    renamable $at = SLTi renamable $v0, 11, debug-location !20
+    renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !20
+    renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !20
+    renamable $v0_64 = SLL64_32 killed renamable $v0, debug-location !20
+    $s0_64 = LD $sp_64, 0, debug-location !20 :: (load (s64) from %stack.1)
+    $ra_64 = LD $sp_64, 8, debug-location !20 :: (load (s64) from %stack.0)
+    PseudoReturn64 undef $ra_64, implicit $v0_64, debug-location !20 {
+      $sp_64 = DADDiu $sp_64, 16
+    }

@@ -1,0 +1,17 @@
+{
+   "context" : "{  :  }",
+   "name" : "for.cond => polly.merge_new_and_old",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_for_body[i0] -> MemRef_A[1] }"
+            }
+         ],
+         "domain" : "{ Stmt_for_body[i0] : i0 >= 0 and i0 <= 511 }",
+         "name" : "Stmt_for_body",
+         "schedule" : "{ Stmt_for_body[i0] -> [0, i0, 0] }"
+      }
+   ]
+}

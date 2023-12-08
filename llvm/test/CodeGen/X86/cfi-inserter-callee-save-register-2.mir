@@ -1,0 +1,97 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
+# Test that CFI inserter inserts .cfi_offset/.cfi_register/.cfi_rel_offset
+# properly for callee saved registers.
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+---
+# CHECK:      bb.3:
+# CHECK:      CFI_INSTRUCTION offset $rbp, -16
+# CHECK-NEXT: CFI_INSTRUCTION offset $r12, -24
+# CHECK-NEXT: CFI_INSTRUCTION register $r13, $rcx
+# CHECK-NEXT: CFI_INSTRUCTION offset $r14, -40
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+frameInfo:
+  stackSize:       16
+  offsetAdjustment: -16
+  maxAlignment:    16
+  hasCalls:        true
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 8
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -40, size: 8, alignment: 8, callee-saved-register: '$r14' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$r12' }
+  - { id: 2, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+  - { id: 3, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $edi, $r12, $r13, $r14
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    $rcx = frame-setup COPY $r13
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION offset $r12, -24
+    CFI_INSTRUCTION register $r13, $rcx
+    CFI_INSTRUCTION rel_offset $r14, -24
+    TEST8rr renamable $dil, renamable $dil, implicit-def $eflags, implicit killed $edi
+    JCC_1 %bb.2, 4, implicit killed $eflags
+    JMP_1 %bb.1
+  
+  bb.1:
+    successors: %bb.3(0x80000000)
+  
+    renamable $r12 = IMPLICIT_DEF
+    renamable $r13 = IMPLICIT_DEF
+    renamable $r14 = IMPLICIT_DEF
+    JMP_1 %bb.3
+  
+  bb.2:
+    liveins: $rcx
+    dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $rax
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r13 = frame-destroy COPY $rcx
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION restore $rbp
+    CFI_INSTRUCTION restore $r12
+    CFI_INSTRUCTION restore $r13
+    CFI_INSTRUCTION restore $r14
+    CFI_INSTRUCTION def_cfa $rsp, 8
+    RET 0, killed $rax
+  
+  bb.3:
+    successors: %bb.4(0x80000000)
+  
+    renamable $rdi = IMPLICIT_DEF
+    renamable $rsi = IMPLICIT_DEF
+  
+  bb.4:
+    liveins: $rcx
+    dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $rax
+    $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r13 = frame-destroy COPY $rcx
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION restore $rbp
+    CFI_INSTRUCTION restore $r12
+    CFI_INSTRUCTION restore $r13
+    CFI_INSTRUCTION restore $r14
+    CFI_INSTRUCTION def_cfa $rsp, 8
+    RET 0, killed $rax
+
+...

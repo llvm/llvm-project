@@ -1,0 +1,3 @@
+bool notzero(int i) {
+ return i != 0;
+}

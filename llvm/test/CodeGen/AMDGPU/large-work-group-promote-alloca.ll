@@ -1,0 +1,273 @@
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
+; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
+; RUN: opt -S -mcpu=gfx1010 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mcpu=gfx1100 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+
+; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
+; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
+
+define amdgpu_kernel void @promote_alloca_size_63(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
+entry:
+  %stack = alloca [5 x i32], align 4, addrspace(5)
+  %0 = load i32, ptr addrspace(1) %in, align 4
+  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %0
+  store i32 4, ptr addrspace(5) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %in, i32 1
+  %1 = load i32, ptr addrspace(1) %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %1
+  store i32 5, ptr addrspace(5) %arrayidx3, align 4
+  %2 = load i32, ptr addrspace(5) %stack, align 4
+  store i32 %2, ptr addrspace(1) %out, align 4
+  %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 1
+  %3 = load i32, ptr addrspace(5) %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 1
+  store i32 %3, ptr addrspace(1) %arrayidx13
+  ret void
+}
+
+; ALL: @promote_alloca_size_256.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
+
+define amdgpu_kernel void @promote_alloca_size_256(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #1 {
+entry:
+  %stack = alloca [5 x i32], align 4, addrspace(5)
+  %0 = load i32, ptr addrspace(1) %in, align 4
+  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %0
+  store i32 4, ptr addrspace(5) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %in, i32 1
+  %1 = load i32, ptr addrspace(1) %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %1
+  store i32 5, ptr addrspace(5) %arrayidx3, align 4
+  %2 = load i32, ptr addrspace(5) %stack, align 4
+  store i32 %2, ptr addrspace(1) %out, align 4
+  %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 1
+  %3 = load i32, ptr addrspace(5) %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 1
+  store i32 %3, ptr addrspace(1) %arrayidx13
+  ret void
+}
+
+; SI-NOT: @promote_alloca_size_1600.stack
+; CI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] poison, align 4
+; GFX10PLUS: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] poison, align 4
+
+define amdgpu_kernel void @promote_alloca_size_1600(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #2 {
+entry:
+  %stack = alloca [5 x i32], align 4, addrspace(5)
+  %0 = load i32, ptr addrspace(1) %in, align 4
+  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %0
+  store i32 4, ptr addrspace(5) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %in, i32 1
+  %1 = load i32, ptr addrspace(1) %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %1
+  store i32 5, ptr addrspace(5) %arrayidx3, align 4
+  %2 = load i32, ptr addrspace(5) %stack, align 4
+  store i32 %2, ptr addrspace(1) %out, align 4
+  %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 1
+  %3 = load i32, ptr addrspace(5) %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 1
+  store i32 %3, ptr addrspace(1) %arrayidx13
+  ret void
+}
+
+; ALL-LABEL: @occupancy_0(
+; CI-NOT: alloca [5 x i32]
+; SI: alloca [5 x i32]
+define amdgpu_kernel void @occupancy_0(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #3 {
+entry:
+  %stack = alloca [5 x i32], align 4, addrspace(5)
+  %0 = load i32, ptr addrspace(1) %in, align 4
+  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %0
+  store i32 4, ptr addrspace(5) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %in, i32 1
+  %1 = load i32, ptr addrspace(1) %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %1
+  store i32 5, ptr addrspace(5) %arrayidx3, align 4
+  %2 = load i32, ptr addrspace(5) %stack, align 4
+  store i32 %2, ptr addrspace(1) %out, align 4
+  %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 1
+  %3 = load i32, ptr addrspace(5) %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 1
+  store i32 %3, ptr addrspace(1) %arrayidx13
+  ret void
+}
+
+; ALL-LABEL: @occupancy_max(
+; CI-NOT: alloca [5 x i32]
+; SI: alloca [5 x i32]
+define amdgpu_kernel void @occupancy_max(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #4 {
+entry:
+  %stack = alloca [5 x i32], align 4, addrspace(5)
+  %0 = load i32, ptr addrspace(1) %in, align 4
+  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %0
+  store i32 4, ptr addrspace(5) %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %in, i32 1
+  %1 = load i32, ptr addrspace(1) %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %1
+  store i32 5, ptr addrspace(5) %arrayidx3, align 4
+  %2 = load i32, ptr addrspace(5) %stack, align 4
+  store i32 %2, ptr addrspace(1) %out, align 4
+  %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 1
+  %3 = load i32, ptr addrspace(5) %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, ptr addrspace(1) %out, i32 1
+  store i32 %3, ptr addrspace(1) %arrayidx13
+  ret void
+}
+
+; SI-LABEL: @occupancy_6(
+; CI-LABEL: @occupancy_6(
+; SI: alloca
+; CI-NOT: alloca
+define amdgpu_kernel void @occupancy_6(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
+entry:
+  %stack = alloca [42 x i8], align 4, addrspace(5)
+  %tmp = load i8, ptr addrspace(1) %in, align 1
+  %tmp4 = sext i8 %tmp to i64
+  %arrayidx1 = getelementptr inbounds [42 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp4
+  store i8 4, ptr addrspace(5) %arrayidx1, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in, i64 1
+  %tmp1 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %tmp5 = sext i8 %tmp1 to i64
+  %arrayidx3 = getelementptr inbounds [42 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp5
+  store i8 5, ptr addrspace(5) %arrayidx3, align 1
+  %tmp2 = load i8, ptr addrspace(5) %stack, align 1
+  store i8 %tmp2, ptr addrspace(1) %out, align 1
+  %arrayidx12 = getelementptr inbounds [42 x i8], ptr addrspace(5) %stack, i64 0, i64 1
+  %tmp3 = load i8, ptr addrspace(5) %arrayidx12, align 1
+  %arrayidx13 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 1
+  store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
+  ret void
+}
+
+; ALL-LABEL: @occupancy_6_over(
+; SICI: alloca [43 x i8]
+; GFX10PLUS-NOT: alloca
+
+define amdgpu_kernel void @occupancy_6_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
+entry:
+  %stack = alloca [43 x i8], align 4, addrspace(5)
+  %tmp = load i8, ptr addrspace(1) %in, align 1
+  %tmp4 = sext i8 %tmp to i64
+  %arrayidx1 = getelementptr inbounds [43 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp4
+  store i8 4, ptr addrspace(5) %arrayidx1, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in, i64 1
+  %tmp1 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %tmp5 = sext i8 %tmp1 to i64
+  %arrayidx3 = getelementptr inbounds [43 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp5
+  store i8 5, ptr addrspace(5) %arrayidx3, align 1
+  %tmp2 = load i8, ptr addrspace(5) %stack, align 1
+  store i8 %tmp2, ptr addrspace(1) %out, align 1
+  %arrayidx12 = getelementptr inbounds [43 x i8], ptr addrspace(5) %stack, i64 0, i64 1
+  %tmp3 = load i8, ptr addrspace(5) %arrayidx12, align 1
+  %arrayidx13 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 1
+  store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
+  ret void
+}
+
+; SI-LABEL: @occupancy_8(
+; CI-LABEL: @occupancy_8(
+; SI: alloca
+; CI-NOT: alloca
+define amdgpu_kernel void @occupancy_8(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #6 {
+entry:
+  %stack = alloca [32 x i8], align 4, addrspace(5)
+  %tmp = load i8, ptr addrspace(1) %in, align 1
+  %tmp4 = sext i8 %tmp to i64
+  %arrayidx1 = getelementptr inbounds [32 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp4
+  store i8 4, ptr addrspace(5) %arrayidx1, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in, i64 1
+  %tmp1 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %tmp5 = sext i8 %tmp1 to i64
+  %arrayidx3 = getelementptr inbounds [32 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp5
+  store i8 5, ptr addrspace(5) %arrayidx3, align 1
+  %tmp2 = load i8, ptr addrspace(5) %stack, align 1
+  store i8 %tmp2, ptr addrspace(1) %out, align 1
+  %arrayidx12 = getelementptr inbounds [32 x i8], ptr addrspace(5) %stack, i64 0, i64 1
+  %tmp3 = load i8, ptr addrspace(5) %arrayidx12, align 1
+  %arrayidx13 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 1
+  store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
+  ret void
+}
+
+; ALL-LABEL: @occupancy_8_over(
+; SICI: alloca [33 x i8]
+; GFX10PLUS-NOT: alloca
+
+define amdgpu_kernel void @occupancy_8_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #6 {
+entry:
+  %stack = alloca [33 x i8], align 4, addrspace(5)
+  %tmp = load i8, ptr addrspace(1) %in, align 1
+  %tmp4 = sext i8 %tmp to i64
+  %arrayidx1 = getelementptr inbounds [33 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp4
+  store i8 4, ptr addrspace(5) %arrayidx1, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in, i64 1
+  %tmp1 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %tmp5 = sext i8 %tmp1 to i64
+  %arrayidx3 = getelementptr inbounds [33 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp5
+  store i8 5, ptr addrspace(5) %arrayidx3, align 1
+  %tmp2 = load i8, ptr addrspace(5) %stack, align 1
+  store i8 %tmp2, ptr addrspace(1) %out, align 1
+  %arrayidx12 = getelementptr inbounds [33 x i8], ptr addrspace(5) %stack, i64 0, i64 1
+  %tmp3 = load i8, ptr addrspace(5) %arrayidx12, align 1
+  %arrayidx13 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 1
+  store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
+  ret void
+}
+
+; SI-LABEL: @occupancy_9(
+; CI-LABEL: @occupancy_9(
+; SI: alloca
+; CI-NOT: alloca
+define amdgpu_kernel void @occupancy_9(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
+entry:
+  %stack = alloca [28 x i8], align 4, addrspace(5)
+  %tmp = load i8, ptr addrspace(1) %in, align 1
+  %tmp4 = sext i8 %tmp to i64
+  %arrayidx1 = getelementptr inbounds [28 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp4
+  store i8 4, ptr addrspace(5) %arrayidx1, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in, i64 1
+  %tmp1 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %tmp5 = sext i8 %tmp1 to i64
+  %arrayidx3 = getelementptr inbounds [28 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp5
+  store i8 5, ptr addrspace(5) %arrayidx3, align 1
+  %tmp2 = load i8, ptr addrspace(5) %stack, align 1
+  store i8 %tmp2, ptr addrspace(1) %out, align 1
+  %arrayidx12 = getelementptr inbounds [28 x i8], ptr addrspace(5) %stack, i64 0, i64 1
+  %tmp3 = load i8, ptr addrspace(5) %arrayidx12, align 1
+  %arrayidx13 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 1
+  store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
+  ret void
+}
+
+; ALL-LABEL: @occupancy_9_over(
+; SICI: alloca [29 x i8]
+; GFX10PLUS-NOT: alloca
+
+define amdgpu_kernel void @occupancy_9_over(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
+entry:
+  %stack = alloca [29 x i8], align 4, addrspace(5)
+  %tmp = load i8, ptr addrspace(1) %in, align 1
+  %tmp4 = sext i8 %tmp to i64
+  %arrayidx1 = getelementptr inbounds [29 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp4
+  store i8 4, ptr addrspace(5) %arrayidx1, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr addrspace(1) %in, i64 1
+  %tmp1 = load i8, ptr addrspace(1) %arrayidx2, align 1
+  %tmp5 = sext i8 %tmp1 to i64
+  %arrayidx3 = getelementptr inbounds [29 x i8], ptr addrspace(5) %stack, i64 0, i64 %tmp5
+  store i8 5, ptr addrspace(5) %arrayidx3, align 1
+  %tmp2 = load i8, ptr addrspace(5) %stack, align 1
+  store i8 %tmp2, ptr addrspace(1) %out, align 1
+  %arrayidx12 = getelementptr inbounds [29 x i8], ptr addrspace(5) %stack, i64 0, i64 1
+  %tmp3 = load i8, ptr addrspace(5) %arrayidx12, align 1
+  %arrayidx13 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 1
+  store i8 %tmp3, ptr addrspace(1) %arrayidx13, align 1
+  ret void
+}
+
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="63,63" }
+attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="256,256" }
+attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="1024,1024" }
+attributes #3 = { nounwind "amdgpu-waves-per-eu"="1,10" }
+attributes #4 = { nounwind "amdgpu-waves-per-eu"="1,10" }
+attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" }
+attributes #6 = { nounwind "amdgpu-waves-per-eu"="1,8" "amdgpu-flat-work-group-size"="64,64" }
+attributes #7 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="64,64" }

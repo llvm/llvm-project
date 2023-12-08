@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=regallocfast -o - %s | FileCheck %s
+
+# Check that fastregalloc does not displace register assigned to tied def when
+# RegMask operand is present. STATEPOINT is an example of such instruction.
+# Tied def/use must be assigned to the same register.
+---
+name:            test_relocate
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $rdi
+
+    ; CHECK: renamable [[REG:\$[a-z0-9]+]] = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, renamable [[REG]](tied-def 0)
+  
+    %1:gr64 = COPY $rdi
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rax = COPY %1
+    RET 0, killed $rax
+...
+
+# Same as above but with multiple RegMask operands per instruction.
+# These regmasks have no real meaning and chosen to allow only single register to be assignable ($rbp)
+---
+name:            test_relocate_multi_regmasks
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $rdi
+
+    ; CHECK: renamable $rbp = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, renamable $rbp(tied-def 0)
+
+    %1:gr64 = COPY $rdi
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %1:gr64 = STATEPOINT 0, 0, 0, target-flags(x86-plt) 0, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64_rt_allregs, csr_64_cxx_tls_darwin_pe, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rax = COPY %1
+    RET 0, killed $rax
+...

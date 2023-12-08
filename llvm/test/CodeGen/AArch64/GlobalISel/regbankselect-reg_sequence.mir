@@ -1,0 +1,22 @@
+# RUN: llc %s -mtriple aarch64-- -o - -run-pass regbankselect | FileCheck %s
+---
+# CHECK-LABEL: foo
+# Check that we produce a valid mapping for REG_SEQUENCE.
+# This used to fail the RegisterBankInfo verify because
+# we were using the exclusively the type of the definition
+# whereas since REG_SEQUENCE are kind of target opcode
+# their definition may not have a type.
+#
+
+# CHECK: %0:fpr(s128) = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
+
+name: foo
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $d1
+
+    %0:_(s128) = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
+
+...

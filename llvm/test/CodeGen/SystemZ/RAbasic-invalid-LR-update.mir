@@ -1,0 +1,267 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=regallocbasic %s -o - | FileCheck %s
+# This test used to assert in RABasic. The problem was when we split live-ranges,
+# we were not updating the LiveRegMatrix properly and the interference calculation
+# wouldn't match what the assignment thought it could do.
+# In other words, this test case needs to trigger live-range splitting to exercise
+# the problem.
+#
+# PR33057
+--- |
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x--linux-gnu"
+  
+  define void @autogen_SD21418() #0 {
+    ret void
+  }
+  
+  attributes #0 = { "target-cpu"="z13" }
+
+...
+
+# CHECK: name: autogen_SD21418
+# Check that at least one live-range has been split
+# CHECK: id: 114, class
+---
+name:            autogen_SD21418
+alignment:       4
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: vr128bit }
+  - { id: 1, class: vr128bit }
+  - { id: 2, class: vr128bit }
+  - { id: 3, class: vr64bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: vr128bit }
+  - { id: 6, class: grx32bit }
+  - { id: 7, class: vr128bit }
+  - { id: 8, class: vr128bit }
+  - { id: 9, class: gr32bit }
+  - { id: 10, class: gr64bit }
+  - { id: 11, class: vr128bit }
+  - { id: 12, class: fp64bit }
+  - { id: 13, class: vr64bit }
+  - { id: 14, class: vr64bit }
+  - { id: 15, class: gr64bit }
+  - { id: 16, class: gr128bit }
+  - { id: 17, class: gr64bit }
+  - { id: 18, class: gr32bit }
+  - { id: 19, class: gr32bit }
+  - { id: 20, class: gr128bit }
+  - { id: 21, class: gr32bit }
+  - { id: 22, class: gr64bit }
+  - { id: 23, class: gr32bit }
+  - { id: 24, class: gr32bit }
+  - { id: 25, class: gr128bit }
+  - { id: 26, class: grx32bit }
+  - { id: 27, class: gr64bit }
+  - { id: 28, class: gr64bit }
+  - { id: 29, class: vr128bit }
+  - { id: 30, class: vr128bit }
+  - { id: 31, class: gr64bit }
+  - { id: 32, class: gr32bit }
+  - { id: 33, class: gr32bit }
+  - { id: 34, class: gr128bit }
+  - { id: 35, class: gr32bit }
+  - { id: 36, class: vr128bit }
+  - { id: 37, class: gr64bit }
+  - { id: 38, class: gr32bit }
+  - { id: 39, class: gr32bit }
+  - { id: 40, class: gr128bit }
+  - { id: 41, class: gr32bit }
+  - { id: 42, class: addr64bit }
+  - { id: 43, class: grx32bit }
+  - { id: 44, class: addr64bit }
+  - { id: 45, class: vr64bit }
+  - { id: 46, class: vr64bit }
+  - { id: 47, class: gr32bit }
+  - { id: 48, class: gr32bit }
+  - { id: 49, class: grx32bit }
+  - { id: 50, class: vr64bit }
+  - { id: 51, class: gr64bit }
+  - { id: 52, class: grx32bit }
+  - { id: 53, class: gr32bit }
+  - { id: 54, class: gr64bit }
+  - { id: 55, class: grx32bit }
+  - { id: 56, class: gr32bit }
+  - { id: 57, class: gr128bit }
+  - { id: 58, class: gr128bit }
+  - { id: 59, class: gr32bit }
+  - { id: 60, class: gr64bit }
+  - { id: 61, class: grx32bit }
+  - { id: 62, class: gr32bit }
+  - { id: 63, class: gr64bit }
+  - { id: 64, class: grx32bit }
+  - { id: 65, class: gr32bit }
+  - { id: 66, class: gr128bit }
+  - { id: 67, class: gr128bit }
+  - { id: 68, class: grx32bit }
+  - { id: 69, class: gr64bit }
+  - { id: 70, class: gr64bit }
+  - { id: 71, class: vr128bit }
+  - { id: 72, class: vr128bit }
+  - { id: 73, class: gr64bit }
+  - { id: 74, class: grx32bit }
+  - { id: 75, class: gr32bit }
+  - { id: 76, class: gr64bit }
+  - { id: 77, class: grx32bit }
+  - { id: 78, class: gr32bit }
+  - { id: 79, class: gr128bit }
+  - { id: 80, class: gr128bit }
+  - { id: 81, class: gr32bit }
+  - { id: 82, class: vr128bit }
+  - { id: 83, class: gr64bit }
+  - { id: 84, class: grx32bit }
+  - { id: 85, class: gr32bit }
+  - { id: 86, class: gr64bit }
+  - { id: 87, class: grx32bit }
+  - { id: 88, class: gr32bit }
+  - { id: 89, class: gr128bit }
+  - { id: 90, class: gr128bit }
+  - { id: 91, class: gr32bit }
+  - { id: 92, class: grx32bit }
+  - { id: 93, class: gr64bit }
+  - { id: 94, class: gr32bit }
+  - { id: 95, class: gr32bit }
+  - { id: 96, class: gr32bit }
+  - { id: 97, class: gr64bit }
+  - { id: 98, class: gr64bit }
+  - { id: 99, class: grx32bit }
+  - { id: 100, class: grx32bit }
+  - { id: 101, class: gr128bit }
+  - { id: 102, class: gr128bit }
+  - { id: 103, class: gr128bit }
+  - { id: 104, class: gr64bit }
+  - { id: 105, class: gr128bit }
+  - { id: 106, class: gr128bit }
+  - { id: 107, class: gr64bit }
+  - { id: 108, class: gr128bit }
+  - { id: 109, class: gr128bit }
+  - { id: 110, class: gr64bit }
+  - { id: 111, class: gr128bit }
+  - { id: 112, class: gr128bit }
+  - { id: 113, class: gr64bit }
+constants:       
+  - id:              0
+    value:           double 0xD55960F86F577076
+    alignment:       8
+body:             |
+  bb.0:
+    %11 = VGBM 0
+    %43 = LHIMux 0
+    %44 = LARL %const.0
+    %45 = VL64 %44, 0, $noreg :: (load (s64) from constant-pool)
+  
+  bb.1:
+    ADJCALLSTACKDOWN 0, 0
+    %12 = LZDR
+    $f0d = COPY %12
+    CallBRASL &fmod, killed $f0d, undef $f2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $f0d
+    ADJCALLSTACKUP 0, 0
+    KILL killed $f0d
+  
+  bb.2:
+    %17 = VLGVH %11, $noreg, 0
+    %19 = LHR %17.subreg_l32
+    undef %20.subreg_l64 = LGHI 0
+    %20 = DSGFR %20, %19
+    %22 = VLGVH %11, $noreg, 3
+    %24 = LHR %22.subreg_l32
+    undef %25.subreg_l64 = LGHI 0
+    %25 = DSGFR %25, %24
+    %31 = VLGVH %11, $noreg, 1
+    %33 = LHR %31.subreg_l32
+    undef %34.subreg_l64 = LGHI 0
+    %34 = DSGFR %34, %33
+    %37 = VLGVH %11, $noreg, 2
+    %39 = LHR %37.subreg_l32
+    undef %40.subreg_l64 = LGHI 0
+    %40 = DSGFR %40, %39
+    CHIMux %43, 0, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.3
+  
+  bb.3:
+    WFCDB undef %46, %45, implicit-def $cc, implicit $fpc
+    %48 = IPM implicit killed $cc
+    %48 = AFIMux %48, 268435456, implicit-def dead $cc
+    %6 = RISBMux undef %6, %48, 31, 159, 35
+    WFCDB undef %50, %45, implicit-def $cc, implicit $fpc
+    BRC 15, 6, %bb.1, implicit killed $cc
+    J %bb.4
+  
+  bb.4:
+    %36 = VLVGP %25.subreg_l64, %25.subreg_l64
+    %36 = VLVGH %36, %20.subreg_l32, $noreg, 0
+    %36 = VLVGH %36, %34.subreg_l32, $noreg, 1
+    dead %36 = VLVGH %36, %40.subreg_l32, $noreg, 2
+    %4 = LG undef %42, 0, $noreg :: (load (s64) from `i64* undef`)
+    undef %57.subreg_h64 = LLILL 0
+    undef %66.subreg_h64 = LLILL 0
+    undef %79.subreg_h64 = LLILL 0
+    undef %89.subreg_h64 = LLILL 0
+    %92 = LHIMux 0
+  
+  bb.5:
+  
+  bb.6:
+    %51 = VLGVH undef %7, $noreg, 0
+    %53 = LLHRMux %51.subreg_l32
+    %54 = VLGVH undef %1, $noreg, 0
+    %57.subreg_l32 = LLHRMux %54.subreg_l32
+    %58 = COPY %57
+    %58 = DLR %58, %53
+    %60 = VLGVH undef %7, $noreg, 3
+    %62 = LLHRMux %60.subreg_l32
+    %63 = VLGVH undef %1, $noreg, 3
+    %66.subreg_l32 = LLHRMux %63.subreg_l32
+    %67 = COPY %66
+    %67 = DLR %67, %62
+    %73 = VLGVH undef %7, $noreg, 1
+    %75 = LLHRMux %73.subreg_l32
+    %76 = VLGVH undef %1, $noreg, 1
+    %79.subreg_l32 = LLHRMux %76.subreg_l32
+    %80 = COPY %79
+    %80 = DLR %80, %75
+    %83 = VLGVH undef %7, $noreg, 2
+    %85 = LLHRMux %83.subreg_l32
+    %86 = VLGVH undef %1, $noreg, 2
+    %89.subreg_l32 = LLHRMux %86.subreg_l32
+    %90 = COPY %89
+    %90 = DLR %90, %85
+    CHIMux %92, 0, implicit-def $cc
+    BRC 14, 6, %bb.7, implicit killed $cc
+    J %bb.6
+  
+  bb.7:
+    CGHI undef %93, 0, implicit-def $cc
+    %96 = IPM implicit killed $cc
+    CGHI undef %97, 0, implicit-def $cc
+    BRC 14, 6, %bb.6, implicit killed $cc
+  
+  bb.8:
+    CHIMux %6, 0, implicit-def $cc
+    %10 = LLILL 41639
+    dead %10 = LOCGR %10, %4, 14, 6, implicit killed $cc
+    CHIMux %92, 0, implicit-def $cc
+    BRC 14, 6, %bb.5, implicit killed $cc
+    J %bb.9
+  
+  bb.9:
+    %82 = VLVGP %67.subreg_h64, %67.subreg_h64
+    %82 = VLVGH %82, %58.subreg_l32, $noreg, 0
+    %82 = VLVGH %82, %80.subreg_l32, $noreg, 1
+    dead %82 = VLVGH %82, %90.subreg_l32, $noreg, 2
+    %96 = AFIMux %96, 1879048192, implicit-def dead $cc
+    %96 = SRL %96, $noreg, 31
+    dead %11 = VLVGF %11, %96, $noreg, 1
+    %100 = LHIMux 0
+  
+  bb.10:
+    CHIMux %100, 0, implicit-def $cc
+    BRC 14, 6, %bb.10, implicit killed $cc
+    J %bb.11
+  
+  bb.11:
+    Return
+
+...

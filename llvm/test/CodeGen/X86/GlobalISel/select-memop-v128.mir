@@ -1,0 +1,133 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512F,SSE
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512F,AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512VL
+
+--- |
+  define <4 x i32> @test_load_v4i32_noalign(ptr %p1) {
+    %r = load <4 x i32>, ptr %p1, align 1
+    ret <4 x i32> %r
+  }
+
+  define <4 x i32> @test_load_v4i32_align(ptr %p1) {
+    %r = load <4 x i32>, ptr %p1, align 16
+    ret <4 x i32> %r
+  }
+
+  define ptr @test_store_v4i32_align(<4 x i32> %val, ptr %p1) {
+    store <4 x i32> %val, ptr %p1, align 16
+    ret ptr %p1
+  }
+
+  define ptr @test_store_v4i32_noalign(<4 x i32> %val, ptr %p1) {
+    store <4 x i32> %val, ptr %p1, align 1
+    ret ptr %p1
+  }
+
+...
+---
+# ALL-LABEL: name:            test_load_v4i32_noalign
+name:            test_load_v4i32_noalign
+alignment:       16
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: vecr }
+# ALL:      %0:gr64 = COPY $rdi
+# SSE:      %1:vr128 = MOVUPSrm %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1, align 1)
+# AVX:      %1:vr128 = VMOVUPSrm %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1, align 1)
+# AVX512F:  %1:vr128x = VMOVUPSZ128rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1, align 1)
+# AVX512VL: %1:vr128x = VMOVUPSZ128rm %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1, align 1)
+# ALL: $xmm0 = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $rdi
+
+    %0(p0) = COPY $rdi
+    %1(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.p1, align 1)
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
+
+...
+---
+# ALL-LABEL: name:            test_load_v4i32_align
+name:            test_load_v4i32_align
+alignment:       16
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: vecr }
+# ALL:      %0:gr64 = COPY $rdi
+# SSE:      %1:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1)
+# AVX:      %1:vr128 = VMOVAPSrm %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1)
+# AVX512F:  %1:vr128x = VMOVAPSZ128rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1)
+# AVX512VL: %1:vr128x = VMOVAPSZ128rm %0, 1, $noreg, 0, $noreg :: (load (<4 x s32>) from %ir.p1)
+# ALL: $xmm0 = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $rdi
+
+    %0(p0) = COPY $rdi
+    %1(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.p1)
+    $xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit $xmm0
+
+...
+---
+# ALL-LABEL: name:            test_store_v4i32_align
+name:            test_store_v4i32_align
+alignment:       16
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: gpr }
+# NO_AVX512F: %0:vr128 = COPY $xmm0
+# AVX512ALL:  %0:vr128x = COPY $xmm0
+# ALL:       %1:gr64 = COPY $rdi
+# SSE:       MOVAPSmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1)
+# AVX:       VMOVAPSmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1)
+# AVX512F:   VMOVAPSZ128mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1)
+# AVX512VL:  VMOVAPSZ128mr %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1)
+# ALL:       $rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $rdi, $xmm0
+
+    %0(<4 x s32>) = COPY $xmm0
+    %1(p0) = COPY $rdi
+    G_STORE %0(<4 x s32>), %1(p0) :: (store (<4 x s32>) into %ir.p1, align 16)
+    $rax = COPY %1(p0)
+    RET 0, implicit $rax
+
+...
+---
+# ALL-LABEL: name:            test_store_v4i32_noalign
+name:            test_store_v4i32_noalign
+alignment:       16
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: gpr }
+# NO_AVX512F: %0:vr128 = COPY $xmm0
+# AVX512ALL:  %0:vr128x = COPY $xmm0
+# ALL:       %1:gr64 = COPY $rdi
+# SSE:       MOVUPSmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1, align 1)
+# AVX:       VMOVUPSmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1, align 1)
+# AVX512F:   VMOVUPSZ128mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1, align 1)
+# AVX512VL:  VMOVUPSZ128mr %1, 1, $noreg, 0, $noreg, %0 :: (store (<4 x s32>) into %ir.p1, align 1)
+# ALL:       $rax = COPY %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $rdi, $xmm0
+
+    %0(<4 x s32>) = COPY $xmm0
+    %1(p0) = COPY $rdi
+    G_STORE %0(<4 x s32>), %1(p0) :: (store (<4 x s32>) into %ir.p1, align 1)
+    $rax = COPY %1(p0)
+    RET 0, implicit $rax
+
+...

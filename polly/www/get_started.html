@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  <title>Polly - Getting Started</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+</head>
+<body>
+
+<div id="box">
+<!--#include virtual="menu.html.incl"-->
+
+<div id="content">
+
+<h1>Building and Installing Polly</h1>
+You can build Polly with <a href="https://cmake.org/">cmake</a> and your preferred geneator (e.g. Ninja, make, Visual Studio, etc.).
+
+<h3 id="source">Get the code</h3>
+
+<pre>
+git clone https://github.com/llvm/llvm-project.git
+</pre>
+
+You can also get a shallow clone by running:
+
+<pre>
+git clone --depth 1 https://github.com/llvm/llvm-project.git
+</pre>
+
+<h3 id="build">Build Polly</h3>
+
+<pre>
+mkdir build && cd build
+cmake '-DLLVM_ENABLE_PROJECTS=clang;polly' ../llvm
+cmake --build .
+</pre>
+
+You can also pass arguments to cmake to specify a particular generator (e.g. <code>-G Ninja</code>) or the build type (<code>-DCMAKE_BUILD_TYPE=Release</code>). 
+
+If you just want to play around with Polly, it is recommended to do a Release+Assert build by passing 
+<code>-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON</code>.
+
+<h3>Test Polly</h3>
+
+To test Polly, you can run
+
+<pre>cmake --build . --target check-polly</pre> 
+
+<h3>Using Polly</h3>
+
+Suppose that you want to compile a program hello.c using Polly.
+
+To compile it with Polly (in the build folder), you can run:
+
+<pre>
+bin/clang -O3 -mllvm -polly hello.c
+</pre>
+
+<h3> Troubleshooting</h3>
+
+<p>
+  If you run out of memory when building with Ninja, try lowering the concurrency of Ninja (e.g. <code> ninja -j 2 </code>).
+  More tips and tricks to building and using LLVM can be found <a href="https://llvm.org/docs/GettingStarted.html#common-problems">here</a>.
+</p>
+
+<p>
+For more information on getting started with Polly and LLVM in general, see LLVM's <a href = "https://llvm.org/docs/GettingStarted.html">getting started docs</a>.
+</p>
+
+</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s | llvm-readobj --symbols - | FileCheck %s
+
+# CHECK: Symbols [
+# CHECK:   Symbol {
+# CHECK:     Name: .file
+# CHECK:     Value: 0
+# CHECK:     StorageClass: File
+# CHECK:     AuxSymbolCount: 1
+# CHECK:     AuxFileRecord {
+# CHECK:       FileName: eighteen-chars.obj{{$}}
+# CHECK:     }
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: @comp.id
+# CHECK:     Value: 13485607
+# CHECK:     StorageClass: Static
+# CHECK:     AuxSymbolCount: 0
+# CHECK:   }
+# CHECK: ]
+
+!COFF
+header: !Header
+  Machine: IMAGE_FILE_MACHINE_I386 # (0x14c)
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+sections:
+symbols:
+  - !Symbol
+    Name: .file
+    Value: 0
+    SectionNumber: -2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_FILE
+    File: eighteen-chars.obj
+  - !Symbol
+    Name: '@comp.id'
+    Value: 13485607
+    SectionNumber: -1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC

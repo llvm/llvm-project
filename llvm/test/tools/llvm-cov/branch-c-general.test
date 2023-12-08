@@ -1,0 +1,166 @@
+// Test visualization of general branch constructs in C.
+
+// RUN: llvm-profdata merge %S/Inputs/branch-c-general.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=count %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s
+// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s -check-prefix=REPORT
+
+// CHECK: simple_loops()
+// CHECK: Branch (9:15): [True: 100, False: 1]
+// CHECK: Branch (11:10): [True: 100, False: 1]
+// CHECK: Branch (13:16): [True: 75, False: 1]
+
+// CHECK: conditionals()
+// CHECK: Branch (18:19): [True: 100, False: 1]
+// CHECK: Branch (19:9): [True: 50, False: 50]
+// CHECK: Branch (20:11): [True: 50, False: 0]
+// CHECK: Branch (21:16): [True: 33, False: 17]
+// CHECK: Branch (22:11): [True: 33, False: 0]
+// CHECK: Branch (24:11): [True: 16, False: 1]
+// CHECK: Branch (27:9): [Folded - Ignored]
+// CHECK: Branch (27:14): [True: 99, False: 1]
+// CHECK: Branch (28:9): [Folded - Ignored]
+// CHECK: Branch (28:14): [True: 99, False: 1]
+
+// CHECK: early_exits()
+// CHECK: Branch (36:7): [True: 0, False: 1]
+// CHECK: Branch (38:10): [True: 51, False: 0]
+// CHECK: Branch (40:9): [True: 1, False: 50]
+// CHECK: Branch (42:9): [True: 25, False: 25]
+// CHECK: Branch (46:7): [True: 1, False: 0]
+// CHECK: Branch (49:9): [True: 1, False: 25]
+// CHECK: Branch (53:12): [True: 25, False: 0]
+// CHECK: Branch (55:7): [True: 0, False: 0]
+
+// CHECK: jumps()
+// CHECK: Branch (62:15): [True: 1, False: 0]
+// CHECK: Branch (65:9): [True: 0, False: 0]
+// CHECK: Branch (69:7): [True: 0, False: 1]
+// CHECK: Branch (73:10): [True: 0, False: 1]
+// CHECK: Branch (75:9): [True: 0, False: 1]
+// CHECK: Branch (83:7): [True: 2, False: 1]
+// CHECK: Branch (86:10): [True: 0, False: 1]
+// CHECK: Branch (89:5): [True: 1, False: 2]
+// CHECK: Branch (91:5): [True: 1, False: 2]
+// CHECK: Branch (93:5): [True: 1, False: 2]
+// CHECK: Branch (98:15): [True: 10, False: 1]
+// CHECK: Branch (101:9): [True: 0, False: 0]
+// CHECK: Branch (103:9): [True: 9, False: 1]
+
+// CHECK: switches()
+// CHECK: Branch (113:3): [True: 1, False: 0]
+// CHECK: Branch (117:63): [True: 15, False: 0]
+// CHECK: Branch (119:5): [True: 1, False: 14]
+// CHECK: Branch (120:11): [True: 0, False: 1]
+// CHECK: Branch (122:5): [True: 2, False: 13]
+// CHECK: Branch (123:11): [True: 2, False: 1]
+// CHECK: Branch (125:5): [True: 3, False: 12]
+// CHECK: Branch (126:11): [True: 3, False: 0]
+// CHECK: Branch (128:5): [True: 4, False: 11]
+// CHECK: Branch (129:11): [True: 4, False: 0]
+// CHECK: Branch (131:7): [True: 4, False: 0]
+// CHECK: Branch (132:13): [True: 4, False: 0]
+// CHECK: Branch (136:5): [True: 5, False: 10]
+// CHECK: Branch (137:11): [True: 1, False: 4]
+// CHECK: Branch (143:7): [True: 0, False: 0]
+
+// CHECK: big_switch()
+// CHECK: Branch (148:19): [True: 32, False: 1]
+// CHECK: Branch (150:5): [True: 1, False: 31]
+// CHECK: Branch (151:11): [True: 0, False: 1]
+// CHECK: Branch (153:5): [True: 1, False: 31]
+// CHECK: Branch (154:11): [True: 1, False: 1]
+// CHECK: Branch (156:5): [True: 11, False: 21]
+// CHECK: Branch (157:11): [True: 11, False: 0]
+// CHECK: Branch (161:5): [True: 1, False: 31]
+// CHECK: Branch (162:11): [True: 1, False: 0]
+// CHECK: Branch (164:5): [True: 15, False: 17]
+// CHECK: Branch (165:11): [True: 15, False: 0]
+// CHECK: Branch (170:11): [True: 1, False: 0]
+// CHECK: Branch (172:5): [True: 2, False: 30]
+// CHECK: Branch (173:11): [True: 2, False: 0]
+
+// CHECK: boolean_operators()
+// CHECK: Branch (183:9): [True: 66, False: 34]
+// CHECK: Branch (183:18): [True: 33, False: 1]
+// CHECK: Branch (185:9): [True: 66, False: 34]
+// CHECK: Branch (185:18): [True: 66, False: 0]
+// CHECK: Branch (187:9): [True: 66, False: 34]
+// CHECK: Branch (187:18): [True: 17, False: 17]
+// CHECK: Branch (187:27): [True: 16, False: 1]
+// CHECK: Branch (189:9): [True: 50, False: 50]
+// CHECK: Branch (189:18): [True: 33, False: 17]
+// CHECK: Branch (189:27): [True: 33, False: 0]
+
+// CHECK: boolop_loops()
+// CHECK: Branch (197:10): [True: 51, False: 0]
+// CHECK: Branch (197:15): [True: 50, False: 1]
+// CHECK: Branch (200:10): [True: 25, False: 26]
+// CHECK: Branch (200:21): [True: 25, False: 1]
+// CHECK: Branch (203:17): [True: 51, False: 0]
+// CHECK: Branch (203:22): [True: 50, False: 1]
+// CHECK: Branch (205:10): [True: 25, False: 26]
+// CHECK: Branch (205:21): [True: 25, False: 1]
+
+// CHECK: conditional_operator()
+// CHECK: Branch (212:11): [True: 0, False: 1]
+// CHECK: Branch (214:11): [True: 1, False: 0]
+
+// CHECK: do_fallthrough()
+// CHECK: Branch (219:19): [True: 10, False: 1]
+// CHECK: Branch (227:14): [True: 2, False: 2]
+
+// CHECK: static_func()
+// CHECK: Branch (232:19): [True: 10, False: 1]
+
+
+
+// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
+// REPORT-NEXT: ---
+// REPORT-NEXT: simple_loops                      8       0 100.00%         9       0 100.00%         6       0 100.00%
+// REPORT-NEXT: conditionals                     24       0 100.00%        15       0 100.00%        16       2  87.50%
+// REPORT-NEXT: early_exits                      20       4  80.00%        25       2  92.00%        16       6  62.50%
+// REPORT-NEXT: jumps                            39      12  69.23%        48       2  95.83%        26       9  65.38%
+// REPORT-NEXT: switches                         28       5  82.14%        38       4  89.47%        30       9  70.00%
+// REPORT-NEXT: big_switch                       25       1  96.00%        32       0 100.00%        30       6  80.00%
+// REPORT-NEXT: boolean_operators                16       0 100.00%        13       0 100.00%        22       2  90.91%
+// REPORT-NEXT: boolop_loops                     19       0 100.00%        14       0 100.00%        16       2  87.50%
+// REPORT-NEXT: conditional_operator              4       2  50.00%         8       0 100.00%         4       2  50.00%
+// REPORT-NEXT: do_fallthrough                    9       0 100.00%        12       0 100.00%         6       0 100.00%
+// REPORT-NEXT: main                              1       0 100.00%        16       0 100.00%         0       0   0.00%
+// REPORT-NEXT: c-general.c:static_func           4       0 100.00%         4       0 100.00%         2       0 100.00%
+// REPORT-NEXT: ---
+// REPORT-NEXT: TOTAL                           197      24  87.82%       234       8  96.58%       174      38  78.16%
+
+// Test file-level report.
+// RUN: llvm-profdata merge %S/Inputs/branch-c-general.proftext -o %t.profdata
+// RUN: llvm-cov report %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s -check-prefix=FILEREPORT
+// FILEREPORT: TOTAL{{.*}}174                38    78.16%
+
+// Test color True/False output.
+// RUN: llvm-cov show --use-color --show-branches=count %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s -check-prefix=USECOLOR
+// USECOLOR: Branch ({{[0-9]+}}:7): {{.*}}: 0, {{.*}}0]
+
+// Test html output.
+// RUN: llvm-cov show --show-branch-summary --show-branches=count %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c -format html -o %t.html.dir
+// RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/tmp/branch-c-general.c.html %s
+// HTML-COUNT-89: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>
+// HTML-NOT: Branch (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>
+
+// RUN: FileCheck -check-prefix HTML-INDEX -input-file %t.html.dir/index.html %s
+// HTML-INDEX-LABEL: <table>
+// HTML-INDEX: <td class='column-entry-bold'>Filename</td>
+// HTML-INDEX: <td class='column-entry-bold'>Function Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Line Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Region Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Branch Coverage</td>
+// HTML-INDEX: <a href='coverage{{.*}}branch-c-general.c.html'{{.*}}branch-c-general.c</a>
+// HTML-INDEX: <td class='column-entry-green'>
+// HTML-INDEX: 100.00% (12/12)
+// HTML-INDEX: <td class='column-entry-yellow'>
+// HTML-INDEX: 96.58% (226/234)
+// HTML-INDEX: <td class='column-entry-yellow'>
+// HTML-INDEX: 87.82% (173/197)
+// HTML-INDEX: <td class='column-entry-red'>
+// HTML-INDEX: 78.16% (136/174)
+// HTML-INDEX: <tr class='light-row-bold'>
+// HTML-INDEX: Totals

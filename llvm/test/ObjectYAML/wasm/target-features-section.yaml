@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CUSTOM
+    Name:            target_features
+    Features:
+      - Prefix:        USED
+        Name:          "foo"
+      - Prefix:        REQUIRED
+        Name:          "bar"
+      - Prefix:        DISALLOWED
+        Name:          ""
+...
+# CHECK-LABEL:  Sections:
+# CHECK-NEXT:     - Type:            CUSTOM
+# CHECK-NEXT:       Name:            target_features
+# CHECK-NEXT:       Features:
+# CHECK-NEXT:         - Prefix:        USED
+# CHECK-NEXT:           Name:          foo
+# CHECK-NEXT:         - Prefix:        REQUIRED
+# CHECK-NEXT:           Name:          bar
+# CHECK-NEXT:         - Prefix:        DISALLOWED
+# CHECK-NEXT:           Name:          ''

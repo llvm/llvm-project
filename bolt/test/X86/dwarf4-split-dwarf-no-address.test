@@ -1,0 +1,15 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc --split-dwarf-file=main.dwo   --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj %p/Inputs/dwarf4-split-dwarf-no-address-main.s -o=main.o
+; RUN: llvm-mc --split-dwarf-file=helper.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj %p/Inputs/dwarf4-split-dwarf-no-address-helper.s -o=helper.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt | FileCheck -check-prefix=BOLT %s
+
+; Testing that there are no asserts/crashes when one of the DWARF4 CUs does not modify .debug_addr
+
+; BOLT: DW_TAG_compile_unit
+; BOLT: DW_TAG_compile_unit

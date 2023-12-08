@@ -1,0 +1,519 @@
+set(TARGET_LIBC_ENTRYPOINTS
+    # ctype.h entrypoints
+    libc.src.ctype.isalnum
+    libc.src.ctype.isalpha
+    libc.src.ctype.isascii
+    libc.src.ctype.isblank
+    libc.src.ctype.iscntrl
+    libc.src.ctype.isdigit
+    libc.src.ctype.isgraph
+    libc.src.ctype.islower
+    libc.src.ctype.isprint
+    libc.src.ctype.ispunct
+    libc.src.ctype.isspace
+    libc.src.ctype.isupper
+    libc.src.ctype.isxdigit
+    libc.src.ctype.toascii
+    libc.src.ctype.tolower
+    libc.src.ctype.toupper
+    
+    # errno.h entrypoints
+    libc.src.errno.errno
+
+    # fcntl.h entrypoints
+    libc.src.fcntl.creat
+    libc.src.fcntl.open
+    libc.src.fcntl.openat
+
+    # sched.h entrypoints
+    libc.src.sched.sched_get_priority_max
+    libc.src.sched.sched_get_priority_min
+    libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_getparam
+    libc.src.sched.sched_getscheduler
+    libc.src.sched.sched_rr_get_interval
+    libc.src.sched.sched_setaffinity
+    libc.src.sched.sched_setparam
+    libc.src.sched.sched_setscheduler
+    libc.src.sched.sched_yield
+
+    # string.h entrypoints
+    libc.src.string.bcmp
+    libc.src.string.bcopy
+    libc.src.string.bzero
+    libc.src.string.index
+    libc.src.string.memccpy
+    libc.src.string.memchr
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+    libc.src.string.memmem
+    libc.src.string.memmove
+    libc.src.string.mempcpy
+    libc.src.string.memrchr
+    libc.src.string.memset
+    libc.src.string.rindex
+    libc.src.string.stpcpy
+    libc.src.string.stpncpy
+    libc.src.string.strcasecmp
+    libc.src.string.strcasestr
+    libc.src.string.strcat
+    libc.src.string.strchr
+    libc.src.string.strchrnul
+    libc.src.string.strcmp
+    libc.src.string.strcpy
+    libc.src.string.strcspn
+    libc.src.string.strdup
+    libc.src.string.strerror
+    libc.src.string.strerror_r
+    libc.src.string.strlcat
+    libc.src.string.strlcpy
+    libc.src.string.strlen
+    libc.src.string.strncasecmp
+    libc.src.string.strncat
+    libc.src.string.strncmp
+    libc.src.string.strncpy
+    libc.src.string.strndup
+    libc.src.string.strnlen
+    libc.src.string.strpbrk
+    libc.src.string.strrchr
+    libc.src.string.strsep
+    libc.src.string.strsignal
+    libc.src.string.strspn
+    libc.src.string.strstr
+    libc.src.string.strtok
+    libc.src.string.strtok_r
+
+    # inttypes.h entrypoints
+    libc.src.inttypes.imaxabs
+    libc.src.inttypes.imaxdiv
+    libc.src.inttypes.strtoimax
+    libc.src.inttypes.strtoumax
+
+    # stdlib.h entrypoints
+    libc.src.stdlib.abs
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atof
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.bsearch
+    libc.src.stdlib.div
+    libc.src.stdlib.labs
+    libc.src.stdlib.ldiv
+    libc.src.stdlib.llabs
+    libc.src.stdlib.lldiv
+    libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+    libc.src.stdlib.strtod
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtold
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+
+    # stdlib.h external entrypoints
+    libc.src.stdlib.malloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
+
+    # stdio.h entrypoints
+    libc.src.stdio.remove
+    libc.src.stdio.sprintf
+    libc.src.stdio.snprintf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vsnprintf
+    #libc.src.stdio.sscanf
+    #libc.src.stdio.scanf
+    #libc.src.stdio.fscanf
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mprotect
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.posix_madvise
+
+    # sys/random.h entrypoints
+    libc.src.sys.random.getrandom
+
+    # sys/resource.h entrypoints
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+
+    # sys/sendfile entrypoints
+    libc.src.sys.sendfile.sendfile
+
+    # sys/stat.h entrypoints
+    libc.src.sys.stat.chmod
+    libc.src.sys.stat.fchmod
+    libc.src.sys.stat.fchmodat
+    libc.src.sys.stat.fstat
+    libc.src.sys.stat.lstat
+    libc.src.sys.stat.mkdir
+    libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.stat
+
+    # sys/utsname.h entrypoints
+    libc.src.sys.utsname.uname
+
+    # sys/wait.h entrypoints
+    libc.src.sys.wait.wait
+    libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
+
+    # termios.h entrypoints
+    libc.src.termios.cfgetispeed
+    libc.src.termios.cfgetospeed
+    libc.src.termios.cfsetispeed
+    libc.src.termios.cfsetospeed
+    libc.src.termios.tcgetattr
+    libc.src.termios.tcgetsid
+    libc.src.termios.tcdrain
+    libc.src.termios.tcflow
+    libc.src.termios.tcflush
+    libc.src.termios.tcsendbreak
+    libc.src.termios.tcsetattr
+
+    # unistd.h entrypoints
+    libc.src.unistd.access
+    libc.src.unistd.chdir
+    libc.src.unistd.close
+    libc.src.unistd.dup
+    libc.src.unistd.dup2
+    libc.src.unistd.dup3
+    libc.src.unistd.execve
+    libc.src.unistd.fchdir
+    libc.src.unistd.fsync
+    libc.src.unistd.ftruncate
+    libc.src.unistd.getcwd
+    libc.src.unistd.geteuid
+    libc.src.unistd.getpid
+    libc.src.unistd.getppid
+    libc.src.unistd.getuid
+    libc.src.unistd.isatty
+    libc.src.unistd.link
+    libc.src.unistd.linkat
+    libc.src.unistd.lseek
+    libc.src.unistd.pread
+    libc.src.unistd.pwrite
+    libc.src.unistd.read
+    libc.src.unistd.readlink
+    libc.src.unistd.readlinkat
+    libc.src.unistd.rmdir
+    libc.src.unistd.symlink
+    libc.src.unistd.symlinkat
+    libc.src.unistd.sysconf
+    libc.src.unistd.truncate
+    libc.src.unistd.unlink
+    libc.src.unistd.unlinkat
+    libc.src.unistd.write
+)
+
+set(TARGET_LIBM_ENTRYPOINTS
+    # fenv.h entrypoints
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.fedisableexcept
+    libc.src.fenv.feenableexcept
+    libc.src.fenv.fegetenv
+    libc.src.fenv.fegetexcept
+    libc.src.fenv.fegetexceptflag
+    libc.src.fenv.fegetround
+    libc.src.fenv.feholdexcept
+    libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexceptflag
+    libc.src.fenv.fesetround
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.fenv.feupdateenv
+
+    # math.h entrypoints
+    libc.src.math.acosf
+    libc.src.math.acoshf
+    libc.src.math.asinf
+    libc.src.math.asinhf
+    libc.src.math.atanf
+    libc.src.math.atanhf    
+    libc.src.math.copysign
+    libc.src.math.copysignf
+    libc.src.math.copysignl
+    libc.src.math.ceil
+    libc.src.math.ceilf
+    libc.src.math.ceill
+    libc.src.math.coshf
+    libc.src.math.cosf
+    libc.src.math.erff
+    libc.src.math.exp
+    libc.src.math.expf
+    libc.src.math.exp10
+    libc.src.math.exp10f
+    libc.src.math.exp2
+    libc.src.math.exp2f
+    libc.src.math.expm1
+    libc.src.math.expm1f
+    libc.src.math.fabs
+    libc.src.math.fabsf
+    libc.src.math.fabsl
+    libc.src.math.fdim
+    libc.src.math.fdimf
+    libc.src.math.fdiml
+    libc.src.math.floor
+    libc.src.math.floorf
+    libc.src.math.floorl
+    libc.src.math.fma
+    libc.src.math.fmaf
+    libc.src.math.fmax
+    libc.src.math.fmaxf
+    libc.src.math.fmaxl
+    libc.src.math.fmin
+    libc.src.math.fminf
+    libc.src.math.fminl
+    libc.src.math.fmod
+    libc.src.math.fmodf
+    libc.src.math.frexp
+    libc.src.math.frexpf
+    libc.src.math.frexpl
+    libc.src.math.hypot
+    libc.src.math.hypotf
+    libc.src.math.ilogb
+    libc.src.math.ilogbf
+    libc.src.math.ilogbl
+    libc.src.math.llrint
+    libc.src.math.llrintf
+    libc.src.math.llrintl
+    libc.src.math.llround
+    libc.src.math.llroundf
+    libc.src.math.llroundl
+    libc.src.math.lrint
+    libc.src.math.lrintf
+    libc.src.math.lrintl
+    libc.src.math.lround
+    libc.src.math.lroundf
+    libc.src.math.lroundl
+    libc.src.math.ldexp
+    libc.src.math.ldexpf
+    libc.src.math.ldexpl
+    libc.src.math.log10
+    libc.src.math.log10f
+    libc.src.math.log1p
+    libc.src.math.log1pf
+    libc.src.math.log2
+    libc.src.math.log2f
+    libc.src.math.log
+    libc.src.math.logf
+    libc.src.math.logb
+    libc.src.math.logbf
+    libc.src.math.logbl
+    libc.src.math.modf
+    libc.src.math.modff
+    libc.src.math.modfl
+    libc.src.math.nearbyint
+    libc.src.math.nearbyintf
+    libc.src.math.nearbyintl
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.powf
+    libc.src.math.remainderf
+    libc.src.math.remainder
+    libc.src.math.remainderl
+    libc.src.math.remquof
+    libc.src.math.remquo
+    libc.src.math.remquol
+    libc.src.math.rint
+    libc.src.math.rintf
+    libc.src.math.rintl
+    libc.src.math.round
+    libc.src.math.roundf
+    libc.src.math.roundl
+    libc.src.math.scalbn
+    libc.src.math.scalbnf
+    libc.src.math.scalbnl
+    libc.src.math.sincosf
+    libc.src.math.sinhf
+    libc.src.math.sinf
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.sqrtl
+    libc.src.math.tanf
+    libc.src.math.tanhf
+    libc.src.math.trunc
+    libc.src.math.truncf
+    libc.src.math.truncl
+)
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # network.h entrypoints
+    libc.src.network.htonl
+    libc.src.network.htons
+    libc.src.network.ntohl
+    libc.src.network.ntohs
+
+    # pthread.h entrypoints
+    libc.src.pthread.pthread_atfork
+    libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_attr_init
+    libc.src.pthread.pthread_attr_getdetachstate
+    libc.src.pthread.pthread_attr_getguardsize
+    libc.src.pthread.pthread_attr_getstack
+    libc.src.pthread.pthread_attr_getstacksize
+    libc.src.pthread.pthread_attr_setdetachstate
+    libc.src.pthread.pthread_attr_setguardsize
+    libc.src.pthread.pthread_attr_setstack
+    libc.src.pthread.pthread_attr_setstacksize
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_detach
+    libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_getname_np
+    libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_key_create
+    libc.src.pthread.pthread_key_delete
+    libc.src.pthread.pthread_self
+    libc.src.pthread.pthread_setname_np
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_mutexattr_destroy
+    libc.src.pthread.pthread_mutexattr_init
+    libc.src.pthread.pthread_mutexattr_getpshared
+    libc.src.pthread.pthread_mutexattr_getrobust
+    libc.src.pthread.pthread_mutexattr_gettype
+    libc.src.pthread.pthread_mutexattr_setpshared
+    libc.src.pthread.pthread_mutexattr_setrobust
+    libc.src.pthread.pthread_mutexattr_settype
+    libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_setspecific
+
+    # sched.h entrypoints
+    libc.src.sched.__sched_getcpucount
+
+    # stdio.h entrypoints
+    libc.src.stdio.clearerr
+    libc.src.stdio.clearerr_unlocked
+    libc.src.stdio.fclose
+    libc.src.stdio.flockfile
+    libc.src.stdio.feof
+    libc.src.stdio.feof_unlocked
+    libc.src.stdio.ferror
+    libc.src.stdio.ferror_unlocked
+    libc.src.stdio.fgetc
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fputc
+    libc.src.stdio.fputs
+    libc.src.stdio.fopencookie
+    libc.src.stdio.fread
+    libc.src.stdio.fread_unlocked
+    libc.src.stdio.fseek
+    libc.src.stdio.funlockfile
+    libc.src.stdio.fwrite
+    libc.src.stdio.fwrite_unlocked
+    libc.src.stdio.getchar
+    libc.src.stdio.getchar_unlocked
+    #TODO: Look into if fprintf can be enabled for overlay on aarch64
+    libc.src.stdio.fprintf
+    libc.src.stdio.printf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.vprintf
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
+    libc.src.stdio.puts
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
+
+    # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.abort
+    libc.src.stdlib.atexit
+    libc.src.stdlib.exit
+    libc.src.stdlib.getenv
+
+    # signal.h entrypoints
+    libc.src.signal.raise
+    libc.src.signal.kill
+    libc.src.signal.sigaction
+    libc.src.signal.sigaltstack
+    libc.src.signal.sigdelset
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigfillset
+    libc.src.signal.signal
+
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
+
+    # threads.h entrypoints
+    libc.src.threads.call_once
+    libc.src.threads.cnd_broadcast
+    libc.src.threads.cnd_destroy
+    libc.src.threads.cnd_init
+    libc.src.threads.cnd_signal
+    libc.src.threads.cnd_wait
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_current
+    libc.src.threads.thrd_detach
+    libc.src.threads.thrd_equal
+    libc.src.threads.thrd_exit
+    libc.src.threads.thrd_join
+    libc.src.threads.tss_create
+    libc.src.threads.tss_delete
+    libc.src.threads.tss_get
+    libc.src.threads.tss_set
+
+    # time.h entrypoints
+    libc.src.time.asctime
+    libc.src.time.asctime_r
+    libc.src.time.clock_gettime
+    libc.src.time.clock
+    libc.src.time.difftime
+    libc.src.time.gettimeofday
+    libc.src.time.gmtime
+    libc.src.time.gmtime_r
+    libc.src.time.mktime
+    libc.src.time.nanosleep
+    libc.src.time.time
+
+    # unistd.h entrypoints
+    libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.environ
+    libc.src.unistd.execv
+    libc.src.unistd.getopt
+    libc.src.unistd.optarg
+    libc.src.unistd.optind
+    libc.src.unistd.optopt
+    libc.src.unistd.opterr
+    libc.src.unistd.swab
+
+    # sys/select.h entrypoints
+    libc.src.sys.select.select
+  )
+endif()
+
+set(TARGET_LLVMLIBC_ENTRYPOINTS
+  ${TARGET_LIBC_ENTRYPOINTS}
+  ${TARGET_LIBM_ENTRYPOINTS}
+)

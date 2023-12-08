@@ -1,0 +1,10 @@
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: cp %S/Inputs/hello64.obj %t
+# RUN: cp %S/Inputs/std64.lib %t/STD64.lib
+
+# RUN: lld-link %t/STD64.lib /out:%t.exe /entry:main \
+# RUN:   /subsystem:console %t/hello64.obj /defaultlib:STD64.lib \
+# RUN:   /verbose 2>&1 | FileCheck %s
+
+CHECK: Reading {{.*}}/STD64.lib
+CHECK-NOT: could not open 'STD64.lib'

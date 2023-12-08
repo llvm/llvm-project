@@ -1,0 +1,52 @@
+---
+TpiStream:
+  Records:
+    # uint32_t* [Index: 0x1000]
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    117
+        Attrs:           32778
+    # int64_t* [Index: 0x1001]
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    118
+        Attrs:           32778
+    # struct OnlyInMerge1 [Index: 0x1002]
+    - Kind:            LF_STRUCTURE
+      Class:           
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            'OnlyInMerge1'
+        UniqueName:      'OnlyInMerge1'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    # uint32_t** [Index: 0x1003]
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    4096
+        Attrs:           32778
+    # uint32_t*** [Index: 0x1004]
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    4099
+        Attrs:           32778
+    # int64_t* [Index: 0x1005]
+    - Kind:            LF_POINTER
+      Pointer:         
+        ReferentType:    4097
+        Attrs:           32778
+    # [uint32_t, uint32_t*, uint32_t**] [Index: 0x1006]
+    - Kind:            LF_ARGLIST
+      ArgList:         
+        ArgIndices:      [ 117, 4096, 4099 ]
+    # uint32_t (uint32_t, uint32_t*, uint32_t**) [Index: 0x1007]
+    - Kind:            LF_PROCEDURE
+      Procedure:       
+        ReturnType:      117
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4102
+...

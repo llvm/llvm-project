@@ -1,0 +1,221 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN:    -filetype=obj | llvm-readobj --unwind - | FileCheck %s
+
+# Check that that the large stack allocation is correctly represented in .xdata.
+
+# CHECK:        ExceptionData {
+# CHECK-NEXT:     FunctionLength: 156
+# CHECK-NEXT:     Version: 0
+# CHECK-NEXT:     ExceptionData: No
+# CHECK-NEXT:     EpiloguePacked: Yes
+# CHECK-NEXT:     EpilogueOffset: 11
+# CHECK-NEXT:     ByteCodeLength: 24
+# CHECK-NEXT:     Prologue [
+# CHECK-NEXT:       0xe002dac9          ; sub sp, #2993296
+# CHECK-NEXT:       0xe3                ; nop
+# CHECK-NEXT:       0xe3                ; nop
+# CHECK-NEXT:       0xe3                ; nop
+# CHECK-NEXT:       0x42                ; stp x29, x30, [sp, #16]
+# CHECK-NEXT:       0xd53f              ; str x28, [sp, #-256]!
+# CHECK-NEXT:       0xe4                ; end
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Epilogue [
+# CHECK-NEXT:       0xe002da00          ; add sp, #2990080
+# CHECK-NEXT:       0xc0c9              ; add sp, #3216
+# CHECK-NEXT:       0x42                ; ldp x29, x30, [sp, #16]
+# CHECK-NEXT:       0xd53f              ; ldr x28, [sp], #256
+# CHECK-NEXT:       0xe4                ; end
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+
+
+--- |
+  target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-windows-msvc19.11.0"
+
+  ; Function Attrs: noinline optnone
+  define dso_local i32 @"?func@@YAHH@Z"(i32 %i) #0 {
+  entry:
+    %retval = alloca i32, align 4
+    %i.addr = alloca i32, align 4
+    %A = alloca [748193 x i32], align 4
+    %a = alloca i32, align 4
+    %B = alloca [123 x i32], align 4
+    store i32 %i, i32* %i.addr, align 4
+    %0 = load i32, i32* %i.addr, align 4
+    %add = add nsw i32 %0, 2
+    store i32 %add, i32* %a, align 4
+    %call = call i32 @"?func2@@YAHXZ"()
+    %1 = load i32, i32* %i.addr, align 4
+    %cmp = icmp sgt i32 %1, 2
+    br i1 %cmp, label %if.then, label %if.else
+
+  if.then:                                          ; preds = %entry
+    %call1 = call i32 @"?func2@@YAHXZ"()
+    store i32 %call1, i32* %retval, align 4
+    br label %return
+
+  if.else:                                          ; preds = %entry
+    %arraydecay = getelementptr inbounds [123 x i32], [123 x i32]* %B, i32 0, i32 0
+    %call2 = call i32 @"?func3@@YAHPEAH@Z"(i32* %arraydecay)
+    store i32 %call2, i32* %retval, align 4
+    br label %return
+
+  return:                                           ; preds = %if.else, %if.then
+    %2 = load i32, i32* %retval, align 4
+    ret i32 %2
+  }
+
+  declare dso_local i32 @"?func2@@YAHXZ"() #1
+
+  declare dso_local i32 @"?func3@@YAHPEAH@Z"(i32*) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+
+  attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { nounwind }
+
+  !llvm.module.flags = !{!0}
+
+  !0 = !{i32 1, !"wchar_size", i32 2}
+
+...
+---
+name:            '?func@@YAHH@Z'
+alignment:       4
+exposesReturnsTwice: false
+legalized:       true
+regBankSelected: true
+selected:        true
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+registers:
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       2993328
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  2993276
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: retval, type: default, offset: -36, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: i.addr, type: default, offset: -40, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, name: A, type: default, offset: -2992812, size: 2992772, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2992780, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 3, name: a, type: default, offset: -2992816, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2992784, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 4, name: B, type: default, offset: -2993308, size: 492, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2993276, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -2993320, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -2993324, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: -32, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$x28', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.1.entry:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $w0, $x28, $fp, $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $x28, $sp, -32 :: (store (s64) into %stack.9)
+    frame-setup SEH_SaveReg_X 28, -256
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.7), (store (s64) into %stack.8)
+    frame-setup SEH_SaveFPLR 16
+    $x15 = frame-setup MOVZXi 56009, 0
+    frame-setup SEH_Nop
+    $x15 = frame-setup MOVKXi $x15, 2, 16
+    frame-setup SEH_Nop
+    frame-setup BL &__chkstk, implicit-def $lr, implicit $sp, implicit $x15
+    frame-setup SEH_Nop
+    $sp = frame-setup SUBXrx64 killed $sp, killed $x15, 28
+    frame-setup SEH_StackAlloc 2993296
+    frame-setup SEH_PrologEnd
+    $x8 = ADDXri $sp, 730, 12
+    $x8 = ADDXri $x8, 3208, 0
+    renamable $w9 = MOVi32imm 2
+    STRWui killed renamable $w0, renamable $x8, 0 :: (store (s32) into %ir.i.addr)
+    renamable $w0 = LDRWui renamable $x8, 0 :: (load (s32) from %ir.i.addr)
+    renamable $w0 = ADDWri killed renamable $w0, 2, 0
+    STRWui killed renamable $w0, $sp, 128 :: (store (s32) into %ir.a)
+    STRXui killed $x8, $sp, 1 :: (store (s64) into %stack.5)
+    STRWui killed $w9, $sp, 1 :: (store (s32) into %stack.6)
+    BL @"?func2@@YAHXZ", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    renamable $w9 = LDRWui killed renamable $x8, 0 :: (load (s32) from %ir.i.addr)
+    $w10 = LDRWui $sp, 1 :: (load (s32) from %stack.6)
+    $wzr = SUBSWrr killed renamable $w9, killed renamable $w10, implicit-def $nzcv
+    renamable $w9 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
+    TBNZW killed renamable $w9, 0, %bb.2
+    B %bb.3
+
+  bb.2.if.then:
+    successors: %bb.4(0x80000000)
+
+    BL @"?func2@@YAHXZ", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store (s32) into %ir.retval)
+    B %bb.4
+
+  bb.3.if.else:
+    successors: %bb.4(0x80000000)
+
+    $x8 = ADDXri $sp, 20, 0
+    $x0 = COPY killed renamable $x8
+    BL @"?func3@@YAHPEAH@Z", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit killed $x0, implicit-def $w0
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store (s32) into %ir.retval)
+
+  bb.4.return:
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    renamable $w0 = LDRWui killed renamable $x8, 1 :: (load (s32) from %ir.retval)
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy ADDXri $sp, 730, 12
+    frame-destroy SEH_StackAlloc 2990080
+    $sp = frame-destroy ADDXri $sp, 3216, 0
+    frame-destroy SEH_StackAlloc 3216
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.7), (load (s64) from %stack.8)
+    frame-destroy SEH_SaveFPLR 16
+    early-clobber $sp, $x28 = frame-destroy LDRXpost $sp, 32 :: (load (s64) from %stack.9)
+    frame-destroy SEH_SaveReg_X 28, -256
+    frame-destroy SEH_EpilogEnd
+    RET_ReallyLR implicit killed $w0
+
+...

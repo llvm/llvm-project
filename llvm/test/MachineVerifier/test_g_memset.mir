@@ -1,0 +1,33 @@
+#RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            test_memset
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(p0) = G_CONSTANT i64 0
+    %1:_(s64) = G_CONSTANT i64 4
+    %2:_(s8) = G_CONSTANT i8 7
+
+    ; CHECK: *** Bad machine code: memset must have 1 memory operand ***
+    G_MEMSET %0, %1, %2, 0
+
+    ; CHECK: *** Bad machine code: memset memory operand must be a store ***
+    G_MEMSET %0, %1, %2, 0 :: (load (s32))
+
+    ; CHECK: *** Bad machine code: Missing mayLoad flag ***
+    ; CHECK: *** Bad machine code: memset memory operand must be a store ***
+    G_MEMSET %0, %1, %2, 0 :: (load store (s32))
+
+    ; CHECK: *** Bad machine code: inconsistent memset address space ***
+    G_MEMSET %0, %1, %2, 0 :: (store (s32), addrspace 1)
+
+   ; CHECK: *** Bad machine code: memset operand must be a pointer ***
+    G_MEMSET %1, %1, %2, 0 :: (store (s32))
+
+...

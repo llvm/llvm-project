@@ -1,0 +1,7 @@
+module fwd { header "fwd.h" export * }
+module file { header "file.h" header "file2.h" header "other.h" export * }
+module nested {
+  module a { header "a.h" }
+  module b { header "b.h" }
+  module c { header "c.h" }
+}

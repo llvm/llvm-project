@@ -1,0 +1,280 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=greedy %s -o - \
+# RUN:   | FileCheck %s
+#
+# Test that the reg alloc hints are given in a good order that gives no more
+# than 5 LGRs in output.
+
+--- |
+  ; ModuleID = 'tc.ll'
+  source_filename = "tc.ll"
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x-unknown-linux-gnu"
+  
+  %0 = type { i32, i32, i32, float, float, float, i8*, i32 }
+  
+  define void @fun(i32 signext %arg, i32 zeroext %arg1) #0 {
+  bb:
+    %tmp = sext i32 %arg to i64
+    %tmp2 = tail call i8* @sre_malloc()
+    %tmp4 = tail call i8* @sre_malloc()
+    %tmp6 = add i32 %arg, -1
+    tail call void @malloc()
+    %0 = trunc i32 %arg to i2
+    %1 = add i2 %0, -1
+    br label %bb8
+  
+  bb8:                                              ; preds = %bb54, %bb
+    %lsr.iv6 = phi i2 [ %lsr.iv.next7, %bb54 ], [ %1, %bb ]
+    %tmp9 = phi i64 [ %tmp57, %bb54 ], [ 0, %bb ]
+    %tmp10 = phi i64 [ 0, %bb54 ], [ %tmp, %bb ]
+    %tmp12 = sub i64 %tmp, %tmp9
+    br label %bb14
+  
+  bb14:                                             ; preds = %bb39, %bb8
+    %lsr.iv8 = phi i2 [ %lsr.iv.next9, %bb39 ], [ %lsr.iv6, %bb8 ]
+    %lsr.iv = phi i32 [ %lsr.iv.next, %bb39 ], [ 1, %bb8 ]
+    %tmp15 = phi i64 [ 0, %bb8 ], [ %tmp19, %bb39 ]
+    %tmp17 = phi i32 [ %tmp6, %bb8 ], [ %tmp35, %bb39 ]
+    %tmp18 = phi i32 [ 0, %bb8 ], [ %tmp34, %bb39 ]
+    %2 = bitcast i8* %tmp2 to float**
+    %tmp19 = add nuw nsw i64 %tmp15, 1
+    %3 = zext i2 %lsr.iv8 to i64
+    %4 = mul i64 %3, -1
+    %tmp21 = getelementptr inbounds float*, float** %2, i64 %tmp15
+    %tmp22 = load float*, float** %tmp21
+    %tmp23 = trunc i64 %tmp15 to i32
+    %scevgep = getelementptr float, float* %tmp22, i64 %tmp15
+    br label %bb25
+  
+  bb25:                                             ; preds = %bb25, %bb14
+    %lsr.iv10 = phi i64 [ %lsr.iv.next11, %bb25 ], [ %4, %bb14 ]
+    %lsr.iv3 = phi float* [ %scevgep4, %bb25 ], [ %scevgep, %bb14 ]
+    %lsr.iv1 = phi i32 [ %lsr.iv.next2, %bb25 ], [ %lsr.iv, %bb14 ]
+    %tmp27 = phi i32 [ %tmp35, %bb25 ], [ %tmp17, %bb14 ]
+    %tmp28 = phi i32 [ %tmp34, %bb25 ], [ %tmp18, %bb14 ]
+    %scevgep5 = getelementptr float, float* %lsr.iv3, i64 1
+    %tmp31 = load float, float* %scevgep5
+    %tmp32 = fcmp olt float %tmp31, undef
+    %tmp34 = select i1 %tmp32, i32 %lsr.iv1, i32 %tmp28
+    %tmp35 = select i1 %tmp32, i32 %tmp23, i32 %tmp27
+    %lsr.iv.next2 = add i32 %lsr.iv1, 1
+    %scevgep4 = getelementptr float, float* %lsr.iv3, i64 1
+    %lsr.iv.next11 = add i64 %lsr.iv10, 1
+    %tmp38 = icmp eq i64 %lsr.iv.next11, 0
+    br i1 %tmp38, label %bb39, label %bb25
+  
+  bb39:                                             ; preds = %bb25
+    %lsr.iv.next = add i32 %lsr.iv, 1
+    %lsr.iv.next9 = add i2 %lsr.iv8, -1
+    %tmp41 = icmp eq i64 %tmp19, %tmp10
+    br i1 %tmp41, label %bb42, label %bb14
+  
+  bb42:                                             ; preds = %bb39
+    %5 = bitcast i8* %tmp4 to i32*
+    %tmp43 = getelementptr inbounds i32, i32* %5, i64 undef
+    %tmp44 = load i32, i32* %tmp43
+    %tmp45 = sub nsw i32 %tmp44, %arg
+    %tmp46 = sext i32 %tmp45 to i64
+    %tmp47 = getelementptr inbounds %0, %0* null, i64 %tmp46, i32 7
+    %tmp48 = load i32, i32* %tmp47
+    %tmp49 = add nsw i32 0, %tmp48
+    store i32 %tmp49, i32* undef
+    %cond = icmp eq i32 %arg1, 0
+    br i1 %cond, label %bb52, label %bb54
+  
+  bb52:                                             ; preds = %bb42
+    %tmp5312 = bitcast float* undef to float*
+    br label %bb54
+  
+  bb54:                                             ; preds = %bb42, %bb52
+    %6 = bitcast i8* %tmp4 to i32*
+    %tmp55 = add i32 0, %arg
+    %tmp56 = getelementptr inbounds i32, i32* %6, i64 undef
+    store i32 %tmp55, i32* %tmp56
+    %tmp57 = add i64 %tmp9, 1
+    %lsr.iv.next7 = add i2 %lsr.iv6, -1
+    br label %bb8
+  }
+  
+  declare i8* @sre_malloc() #0
+  
+  declare void @malloc() #0
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { "target-cpu"="z13" }
+  attributes #1 = { nounwind }
+
+...
+
+# CHECK: lgr
+# CHECK: lgr
+# CHECK: lgr
+# CHECK: lgr
+# CHECK: lgr
+# CHECK-NOT: lgr
+
+---
+name:            fun
+alignment:       16
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr64bit }
+  - { id: 1, class: addr64bit }
+  - { id: 2, class: addr64bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: gr32bit }
+  - { id: 5, class: grx32bit }
+  - { id: 6, class: addr64bit }
+  - { id: 7, class: gr64bit }
+  - { id: 8, class: grx32bit }
+  - { id: 9, class: grx32bit }
+  - { id: 10, class: addr64bit }
+  - { id: 11, class: grx32bit }
+  - { id: 12, class: grx32bit }
+  - { id: 13, class: gr64bit }
+  - { id: 14, class: gr64bit }
+  - { id: 15, class: grx32bit }
+  - { id: 16, class: gr64bit }
+  - { id: 17, class: addr64bit }
+  - { id: 18, class: addr64bit }
+  - { id: 19, class: grx32bit }
+  - { id: 20, class: grx32bit }
+  - { id: 21, class: grx32bit }
+  - { id: 22, class: grx32bit }
+  - { id: 23, class: grx32bit }
+  - { id: 24, class: grx32bit }
+  - { id: 25, class: gr64bit }
+  - { id: 26, class: gr64bit }
+  - { id: 27, class: grx32bit }
+  - { id: 28, class: grx32bit }
+  - { id: 29, class: gr64bit }
+  - { id: 30, class: grx32bit }
+  - { id: 31, class: gr64bit }
+  - { id: 32, class: gr64bit }
+  - { id: 33, class: gr32bit }
+  - { id: 34, class: grx32bit }
+  - { id: 35, class: gr64bit }
+  - { id: 36, class: gr64bit }
+  - { id: 37, class: gr64bit }
+  - { id: 38, class: grx32bit }
+  - { id: 39, class: gr64bit }
+  - { id: 40, class: grx32bit }
+  - { id: 41, class: gr64bit }
+  - { id: 42, class: gr64bit }
+  - { id: 43, class: gr64bit }
+  - { id: 44, class: gr64bit }
+  - { id: 45, class: addr64bit }
+  - { id: 46, class: gr64bit }
+  - { id: 47, class: fp32bit }
+  - { id: 48, class: fp32bit }
+  - { id: 49, class: gr32bit }
+  - { id: 50, class: gr32bit }
+  - { id: 51, class: gr64bit }
+  - { id: 52, class: addr64bit }
+  - { id: 53, class: addr64bit }
+  - { id: 54, class: gr64bit }
+  - { id: 55, class: gr32bit }
+  - { id: 56, class: addr64bit }
+  - { id: 57, class: gr64bit }
+  - { id: 58, class: grx32bit }
+  - { id: 59, class: grx32bit }
+  - { id: 60, class: addr64bit }
+  - { id: 61, class: grx32bit }
+  - { id: 62, class: grx32bit }
+  - { id: 63, class: addr64bit }
+  - { id: 64, class: addr64bit }
+  - { id: 65, class: grx32bit }
+  - { id: 66, class: grx32bit }
+  - { id: 67, class: grx32bit }
+liveins:         
+  - { reg: '$r2d', virtual-reg: '%31' }
+  - { reg: '$r3d', virtual-reg: '%32' }
+frameInfo:       
+  hasCalls:        true
+body:             |
+  bb.0.bb:
+    liveins: $r2d, $r3d
+  
+    %32:gr64bit = COPY $r3d
+    %0:gr64bit = COPY $r2d
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    %1:addr64bit = COPY $r2d
+    ADJCALLSTACKUP 0, 0
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    %2:addr64bit = COPY $r2d
+    ADJCALLSTACKUP 0, 0
+    %3:gr32bit = AHIMuxK %0.subreg_l32, -1, implicit-def dead $cc
+    ADJCALLSTACKDOWN 0, 0
+    CallBRASL @malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
+    ADJCALLSTACKUP 0, 0
+    %55:gr32bit = AHIMuxK %0.subreg_l32, 3, implicit-def dead $cc
+    %56:addr64bit = LGHI 0
+    %57:gr64bit = COPY %0
+  
+  bb.1.bb8:
+    %62:grx32bit = LHIMux 0
+    %59:grx32bit = LHIMux 1
+    undef %41.subreg_l32:gr64bit = COPY %55
+    %60:addr64bit = LGHI 0
+    %61:grx32bit = COPY %3
+  
+  bb.2.bb14:
+    %10:addr64bit = COPY %60
+    %60:addr64bit = nuw nsw LA %10, 1, $noreg
+    %43:gr64bit = RISBGN undef %43, %41, 62, 191, 0
+    %63:addr64bit = LCGR %43, implicit-def dead $cc
+    %45:addr64bit = SLLG %10, $noreg, 3
+    %64:addr64bit = SLLG %10, $noreg, 2
+    %64:addr64bit = AG %64, %1, 0, %45, implicit-def dead $cc :: (load (s64) from %ir.tmp21)
+    %65:grx32bit = COPY %59
+  
+  bb.3.bb25:
+    successors: %bb.4(0x04000000), %bb.3(0x7c000000)
+  
+    %47:fp32bit = VL32 %64, 4, $noreg :: (load (s32) from %ir.scevgep5)
+    %25:gr64bit = LA %64, 4, $noreg
+    CEBR %47, undef %48:fp32bit, implicit-def $cc, implicit $fpc
+    %62:grx32bit = LOCRMux %62, %65, 15, 4, implicit $cc
+    %61:grx32bit = LOCRMux %61, %10.subreg_l32, 15, 4, implicit killed $cc
+    %65:grx32bit = AHIMux %65, 1, implicit-def dead $cc
+    %63:addr64bit = LA %63, 1, $noreg
+    CGHI %63, 0, implicit-def $cc
+    %64:addr64bit = COPY %25
+    BRC 14, 6, %bb.3, implicit killed $cc
+    J %bb.4
+  
+  bb.4.bb39:
+    successors: %bb.5(0x04000000), %bb.2(0x7c000000)
+  
+    %59:grx32bit = AHIMux %59, 1, implicit-def dead $cc
+    %41.subreg_l32:gr64bit = AHIMux %41.subreg_l32, 3, implicit-def dead $cc
+    CGR %60, %57, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.5
+  
+  bb.5.bb42:
+    successors: %bb.6(0x30000000), %bb.7(0x50000000)
+  
+    %50:gr32bit = LMux %2, 0, $noreg :: (load (s32) from %ir.tmp43)
+    %50:gr32bit = nsw SR %50, %0.subreg_l32, implicit-def dead $cc
+    %52:addr64bit = LGFR %50
+    %52:addr64bit = MGHI %52, 40
+    MVC undef %53:addr64bit, 0, 4, %52, 32 :: (store (s32) into `i32* undef`), (load (s32) from %ir.tmp47)
+    CHIMux %32.subreg_l32, 0, implicit-def $cc
+    BRC 14, 6, %bb.7, implicit killed $cc
+    J %bb.6
+  
+  bb.6.bb52:
+  
+  bb.7.bb54:
+    STMux %0.subreg_l32, %2, 0, $noreg :: (store (s32) into %ir.tmp56)
+    %56:addr64bit = LA %56, 1, $noreg
+    %55:gr32bit = AHIMux %55, 3, implicit-def dead $cc
+    %57:gr64bit = LGHI 0
+    J %bb.1
+
+...

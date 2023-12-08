@@ -1,0 +1,359 @@
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0000000A
+  cpusubtype:      0x80000003
+  filetype:        0x00000001
+  ncmds:           15
+  sizeofcmds:      1216
+  flags:           0x00200085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         472
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        5
+    nsects:          5
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000F00
+        size:            133
+        offset:          0x00000F00
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __stubs
+        segname:         __TEXT
+        addr:            0x0000000100000F86
+        size:            6
+        offset:          0x00000F86
+        align:           1
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000408
+        reserved1:       0x00000000
+        reserved2:       0x00000006
+        reserved3:       0x00000000
+      - sectname:        __stub_helper
+        segname:         __TEXT
+        addr:            0x0000000100000F8C
+        size:            26
+        offset:          0x00000F8C
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __cstring
+        segname:         __TEXT
+        addr:            0x0000000100000FA6
+        size:            10
+        offset:          0x00000FA6
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000002
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100000FB0
+        size:            72
+        offset:          0x00000FB0
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DATA
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         7
+    initprot:        3
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __nl_symbol_ptr
+        segname:         __DATA
+        addr:            0x0000000100001000
+        size:            16
+        offset:          0x00001000
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000006
+        reserved1:       0x00000001
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __la_symbol_ptr
+        segname:         __DATA
+        addr:            0x0000000100001010
+        size:            8
+        offset:          0x00001010
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000007
+        reserved1:       0x00000003
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        280
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      8192
+    rebase_size:     8
+    bind_off:        8200
+    bind_size:       24
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   8224
+    lazy_bind_size:  16
+    export_off:      8240
+    export_size:     64
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8312
+    nsyms:           5
+    stroff:          8408
+    strsize:         64
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      3
+    iundefsym:       3
+    nundefsym:       2
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  8392
+    nindirectsyms:   4
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         /usr/lib/dyld
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            D01A2A5D-F96C-326A-80C7-FAD7D4023E07
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         29491968
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        3904
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 82115073
+      compatibility_version: 65536
+    Content:         /usr/lib/libSystem.B.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         8304
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         8312
+    datasize:        0
+LinkEditData:
+  RebaseOpcodes:
+    - Opcode:          REBASE_OPCODE_SET_TYPE_IMM
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ExtraData:
+        - 0x0000000000000010
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DONE
+      Imm:             0
+  BindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          dyld_stub_binder
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:
+        - 0x0000000000000000
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  LazyBindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:
+        - 0x0000000000000010
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _printf
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      31
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      35
+            Name:            ma
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+            Children:
+              - TerminalSize:    3
+                NodeOffset:      48
+                Name:            ximum
+                Flags:           0x0000000000000000
+                Address:         0x0000000000000F00
+                Other:           0x0000000000000000
+                ImportName:      ''
+              - TerminalSize:    3
+                NodeOffset:      53
+                Name:            in
+                Flags:           0x0000000000000000
+                Address:         0x0000000000000F40
+                Other:           0x0000000000000000
+                ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971200
+    - n_strx:          28
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971136
+    - n_strx:          37
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+    - n_strx:          45
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - _maximum
+    - _printf
+    - dyld_stub_binder
+    - ''
+    - ''
+...

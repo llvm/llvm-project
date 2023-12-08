@@ -1,0 +1,47 @@
+## Check that llvm-objcopy reports a suitable error when it
+## encounters invalid input during reading.
+
+## Failed to read section data.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: not llvm-objcopy %t1 %t1.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
+
+# ERROR1: error: '[[FILE]]': The end of the file was unexpectedly encountered: section data with offset 0x70 and size 0x4 goes past the end of the file
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Sections:
+  - SectionData:      '00007400'
+    FileOffsetToData: 0x70
+
+## Failed to read relocations.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: not llvm-objcopy %t2 %t2.out 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERROR2
+
+# ERROR2: error: '[[FILE]]': The end of the file was unexpectedly encountered: relocations with offset 0x3c and size 0x1e go past the end of the file
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Sections:
+  - NumberOfRelocations: 0x3
+    Relocations:
+      - Address: 0xE
+        Symbol:  0x12
+        Info:    0xF
+        Type:    0x3
+
+## Failed to read the symbols.
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: not llvm-objcopy %t3 %t3.out 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=ERROR3
+
+# ERROR3: error: '[[FILE]]': The end of the file was unexpectedly encountered: symbol table with offset 0x15 and size 0x24 goes past the end of the file
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:         0x01DF
+  OffsetToSymbolTable: 0x15
+Symbols:
+  - Name:         foo
+    AuxEntries:
+      - Type: AUX_CSECT

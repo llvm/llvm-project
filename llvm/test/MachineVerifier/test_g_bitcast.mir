@@ -1,0 +1,39 @@
+#RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: amdgpu-registered-target
+
+---
+name:            test_bitcast
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+   ; CHECK:  Bad machine code: bitcast cannot convert between pointers and other types
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(p0) = G_BITCAST %0
+
+    ; CHECK:  Bad machine code: bitcast cannot convert between pointers and other
+    %2:_(p0) = G_IMPLICIT_DEF
+    %3:_(s64) = G_BITCAST %2
+
+    ; CHECK: Bad machine code: bitcast sizes must match
+    %4:_(s32) = G_IMPLICIT_DEF
+    %5:_(s64) = G_BITCAST %4
+
+    ; CHECK: Bad machine code: bitcast sizes must match
+    %6:_(s32) = G_IMPLICIT_DEF
+    %7:_(<3 x s8>) = G_BITCAST %6
+
+    ; CHECK: Bad machine code: bitcast sizes must match
+    %8:_(p1) = G_IMPLICIT_DEF
+    %9:_(p3) = G_BITCAST %8
+
+    ; CHECK: Bad machine code: bitcast sizes must match
+    %10:_(p1) = G_IMPLICIT_DEF
+    %11:_(p3) = G_BITCAST %8
+
+    ; CHECK: Bad machine code: bitcast must change the type
+    %12:_(s64) = G_BITCAST %0
+...

@@ -1,0 +1,240 @@
+# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple thumbv7-- -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_legal_loads_stores() { ret void }
+  define void @test_load_store_s1() { ret void }
+  define void @test_load_from_stack() { ret void }
+
+  define void @test_load_store_64_vfp() #0 { ret void }
+  define void @test_load_store_64_novfp() #1 { ret void }
+
+  define void @test_gep_s32() { ret void }
+  define void @test_gep_s16() { ret void }
+
+  attributes #0 = { "target-features"="+vfp2" }
+  attributes #1 = { "target-features"="-vfp2sp" }
+...
+---
+name:            test_legal_loads_stores
+# CHECK-LABEL: name: test_legal_loads_stores
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; These are all legal, so we should find them unchanged in the output
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s32), %0(p0) :: (store (s32))
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s16), %0(p0) :: (store (s16))
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s8), %0(p0) :: (store (s8))
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(p0), %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_LOAD %0(p0) :: (load (s32))
+    ; CHECK-DAG: {{%[0-9]+}}:_(s16) = G_LOAD %0(p0) :: (load (s16))
+    ; CHECK-DAG: {{%[0-9]+}}:_(s8) = G_LOAD %0(p0) :: (load (s8))
+    ; CHECK-DAG: {{%[0-9]+}}:_(p0) = G_LOAD %0(p0) :: (load (p0))
+    %0(p0) = COPY $r0
+    %2(s32) = G_LOAD %0(p0) :: (load (s32))
+    G_STORE %2(s32), %0(p0) :: (store (s32))
+    %3(s16) = G_LOAD %0(p0) :: (load (s16))
+    G_STORE %3(s16), %0(p0) :: (store (s16))
+    %4(s8) = G_LOAD %0(p0) :: (load (s8))
+    G_STORE %4(s8), %0(p0) :: (store (s8))
+    %6(p0) = G_LOAD %0(p0) :: (load (p0))
+    G_STORE %6(p0), %0(p0) :: (store (p0))
+    BX_RET 14, $noreg
+...
+
+---
+name:            test_load_store_s1
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK: [[LD:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8))
+    ; CHECK: [[ASSERTZ:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[LD]], 1
+    ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASSERTZ]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[EXT]], [[ONE]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[AND]]
+    ; CHECK: G_STORE [[TRUNC]](s8), {{%[0-9]+}}(p0) :: (store (s8))
+    %0:_(p0) = COPY $r0
+    %5:_(s1) = G_LOAD %0(p0) :: (load (s1))
+    G_STORE %5(s1), %0(p0) :: (store (s1))
+    BX_RET 14, $noreg
+...
+---
+name:            test_load_from_stack
+# CHECK-LABEL: name: test_load_from_stack
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 2, offset: 8, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  # CHECK: id: [[FRAME_INDEX:[0-9]+]], type: default, offset: 8
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+
+    ; This is legal, so we should find it unchanged in the output
+    ; CHECK: [[FIVREG:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[FRAME_INDEX]]
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_LOAD [[FIVREG]](p0) :: (load (s32))
+    %0(p0) = G_FRAME_INDEX %fixed-stack.2
+    %1(s32) = G_LOAD %0(p0) :: (load (s32))
+    $r0 = COPY %1(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_load_store_64_vfp
+# CHECK-LABEL: name: test_load_store_64_vfp
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; Can't use the VFP support for unaligned operations, we need to use 32-bits
+    ; operations instead.
+    ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
+    ; CHECK-NEXT: [[V1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32), align 1)
+    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFF]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from unknown-address + 4, align 1)
+    ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store (s32), align 1)
+    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store (s32) into unknown-address + 4, align 1)
+    %0(p0) = COPY $r0
+    %1(s64) = G_LOAD %0(p0) :: (load (s64), align 1)
+    G_STORE %1(s64), %0(p0) :: (store (s64), align 1)
+
+    ; For word-aligned we can use VFP operations.
+    ; CHECK: [[V:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load (s64), align 4)
+    ; CHECK: G_STORE [[V]](s64), %0(p0) :: (store (s64), align 4)
+    %2(s64) = G_LOAD %0(p0) :: (load (s64), align 4)
+    G_STORE %2(s64), %0(p0) :: (store (s64), align 4)
+
+    BX_RET 14, $noreg
+...
+---
+name:            test_load_store_64_novfp
+# CHECK-LABEL: name: test_load_store_64_novfp
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; When we don't have VFP support, we need to use 32-bit operations.
+    ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
+    ; CHECK-NEXT: [[V1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32), align 1)
+    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFF]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from unknown-address + 4, align 1)
+    ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store (s32), align 1)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
+    ; CHECK-NEXT: G_STORE [[V2]](s32), [[COPY2]](p0) :: (store (s32) into unknown-address + 4, align 1)
+    %0(p0) = COPY $r0
+    %1(s64) = G_LOAD %0(p0) :: (load (s64), align 1)
+    G_STORE %1(s64), %0(p0) :: (store (s64), align 1)
+
+    ; CHECK: [[V1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]
+    ; CHECK-NEXT: [[V2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from unknown-address + 4)
+    ; CHECK-NEXT: G_STORE [[V1]](s32), [[ADDR1]](p0) :: (store (s32))
+    ; CHECK-NEXT: G_STORE [[V2]](s32), [[ADDR2]](p0) :: (store (s32) into unknown-address + 4)
+    %2(s64) = G_LOAD %0(p0) :: (load (s64), align 4)
+    G_STORE %2(s64), %0(p0) :: (store (s64), align 4)
+
+    BX_RET 14, $noreg
+...
+---
+name:            test_gep_s32
+# CHECK-LABEL: name: test_gep_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    %1(s32) = COPY $r1
+
+    ; CHECK: {{%[0-9]+}}:_(p0) = G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s32)
+    %2(p0) = G_PTR_ADD %0, %1(s32)
+
+    $r0 = COPY %2(p0)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_gep_s16
+# CHECK-LABEL: name: test_gep_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    %1(s16) = G_LOAD %0(p0) :: (load (s16))
+
+    ; CHECK-NOT: G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s16)
+    ; CHECK: {{%[0-9]+}}:_(p0) = G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s32)
+    ; CHECK-NOT: G_PTR_ADD {{%[0-9]+}}, {{%[0-9]+}}(s16)
+    %2(p0) = G_PTR_ADD %0, %1(s16)
+
+    $r0 = COPY %2(p0)
+    BX_RET 14, $noreg, implicit $r0
+...

@@ -1,0 +1,59 @@
+RUN: yaml2obj %S/Inputs/pdb-globals.yaml -o %t.obj
+RUN: lld-link /debug /nodefaultlib /entry:main /force /out:%t.exe /pdb:%t.pdb %t.obj
+RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
+
+RUN: lld-link /debug /nodefaultlib /entry:main /force /out:%t.exe /pdb:%t.pdb %t.obj /threads:1
+RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
+RUN: lld-link /debug /nodefaultlib /entry:main /force /out:%t.exe /pdb:%t.pdb %t.obj /threads:2
+RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
+
+# Test that we correctly distribute symbols between the globals and module
+# symbol streams.  Specifically:
+#  * S_UDT, S_GDATA32, and S_CONSTANT end up in the globals stream, and are
+#    omitted from the module stream.
+#  * S_GPROC32 and S_LPROC32 end up in the symbols stream, but S_PROCREF and
+#    S_LPROCREF are added to the globals stream that refer to the module
+#    stream.
+#  * S_LDATA32 is copied byte for byte into both streams.
+
+
+CHECK-LABEL:                        Global Symbols
+CHECK-NEXT: ============================================================
+CHECK-NEXT:   Records
+CHECK-NEXT:      444 | S_UDT [size = 20] `HelloPoint`
+CHECK-NEXT:            original type = 0x1007
+CHECK-NEXT:      240 | S_LPROCREF [size = 24] `LocalFunc`
+CHECK-NEXT:            module = 1, sum name = 0, offset = 424
+CHECK-NEXT:      192 | S_PROCREF [size = 28] `GlobalFunc`
+CHECK-NEXT:            module = 1, sum name = 0, offset = 136
+CHECK-NEXT:      220 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:            module = 1, sum name = 0, offset = 224
+CHECK-NEXT:      340 | S_CONSTANT [size = 24] `ConstexprVar`
+CHECK-NEXT:            type = 0x100B (const int), value = 18
+CHECK-NEXT:      264 | S_GDATA32 [size = 28] `__purecall`
+CHECK-NEXT:            type = 0x0403 (void*), addr = 0003:0004
+CHECK-NEXT:      292 | S_GDATA32 [size = 24] `GlobalVar`
+CHECK-NEXT:            type = 0x100C (const int*), addr = 0003:0000
+CHECK-NEXT:      316 | S_GTHREAD32 [size = 24] `GlobalTLS`
+CHECK-NEXT:            type = 0x0074 (int), addr = 0004:0000
+CHECK-NEXT:      392 | S_LTHREAD32 [size = 24] `StaticTLS`
+CHECK-NEXT:            type = 0x0074 (int), addr = 0004:0004
+CHECK-NEXT:      416 | S_UDT [size = 28] `HelloPointTypedef`
+CHECK-NEXT:            original type = 0x1007
+CHECK-NEXT:      364 | S_LDATA32 [size = 28] `ConstantVar`
+CHECK-NEXT:            type = 0x100B (const int), addr = 0002:0000
+CHECK-NEXT:      464 | S_PROCREF [size = 40] `HelloPoint::HelloPoint`
+CHECK-NEXT:            module = 1, sum name = 0, offset = 572
+
+CHECK-LABEL:                           Symbols
+CHECK-NEXT:  ============================================================
+CHECK-NEXT:    Mod 0000
+CHECK-NOT:              | S_GDATA32
+CHECK-NOT:              | S_UDT
+CHECK-NOT:              | S_GTHREAD32
+CHECK:     136 | S_GPROC32 [size = 52] `GlobalFunc`
+CHECK:     224 | S_GPROC32 [size = 44] `main`
+CHECK:     424 | S_LPROC32 [size = 52] `LocalFunc`
+CHECK:     512 | S_LDATA32 [size = 28] `ConstantVar`
+CHECK:     540 | S_LTHREAD32 [size = 24] `StaticTLS`
+CHECK:     572 | S_GPROC32 [size = 64] `HelloPoint::HelloPoint`

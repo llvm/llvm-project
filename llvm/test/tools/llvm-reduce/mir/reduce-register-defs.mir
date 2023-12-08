@@ -1,0 +1,190 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=register-defs -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS0,ALL --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefixes=RESULT0,ALL %s < %t
+
+# ALL-LABEL: name: func0
+# CHECK-INTERESTINGNESS0: V_MUL_F32
+
+# RESULT0: %mul1:vgpr_32 = IMPLICIT_DEF
+# RESULT0-NOT: V_ADD_CO_U32
+# RESULT0: %addco0:vgpr_32 = IMPLICIT_DEF
+# RESULT0-NEXT: %addco1:sreg_64_xexec = IMPLICIT_DEF
+# RESULT0-NOT: V_ADD_CO_U32
+
+---
+name: func0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    S_WAITCNT 0
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    %mul0:vgpr_32 = V_MUL_F32_e32 %vgpr0, %vgpr1, implicit $mode, implicit $exec
+    %mul1:vgpr_32 = V_MUL_F32_e32 %vgpr1, %vgpr0, implicit $mode, implicit $exec
+    %addco0:vgpr_32, %addco1:sreg_64_xexec = V_ADD_CO_U32_e64 %vgpr0, %vgpr1, 0, implicit $exec
+    S_NOP 0, implicit %addco0
+    S_NOP 0, implicit %addco1
+    S_ENDPGM 0, implicit %mul0, implicit %mul1
+...
+
+# ALL-LABEL: name: subreg_def
+# CHECK-INTERESTINGNESS0: %super.sub0
+
+# RESULT0: undef %super.sub0:vreg_64 = IMPLICIT_DEF
+# RESULT0-NEXT: %super.sub1:vreg_64 = IMPLICIT_DEF
+---
+name: subreg_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    undef %super.sub0:vreg_64 = IMPLICIT_DEF
+    %super.sub1:vreg_64 = V_ADD_F32_e32 %vgpr0, %vgpr1, implicit $mode, implicit $exec
+
+    S_NOP 0, implicit %super.sub0
+    S_ENDPGM 0, implicit %super.sub0
+...
+
+# Make sure we don't introduce multiple implicit_defs if an
+# instruction has repeated, identical defs.
+# ALL-LABEL: name: multi_def
+# CHECK-INTERESTINGNESS0: S_NOP 2
+
+# RESULT0: %redef:vgpr_32 = IMPLICIT_DEF
+# RESULT0-NOT: %redef:vgpr_32 = IMPLICIT_DEF
+---
+name: multi_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    S_NOP 1, implicit-def %redef:vgpr_32, implicit-def %redef:vgpr_32
+    S_NOP 2, implicit %redef
+...
+
+# ALL-LABEL: name: multi_def_keep_two
+# CHECK-INTERESTINGNESS0: implicit-def %def0
+# CHECK-INTERESTINGNESS0: implicit-def %def2
+
+# RESULT0: %def1:vgpr_32 = IMPLICIT_DEF
+# RESULT0-NEXT: S_NOP 1, implicit-def %def0, implicit-def %def2
+# RESULT0-NEXT: S_NOP 2, implicit %def0, implicit %def1, implicit %def2
+
+---
+name: multi_def_keep_two
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    S_NOP 1, implicit-def %def0:vgpr_32, implicit-def %def1:vgpr_32, implicit-def %def2:vgpr_32
+    S_NOP 2, implicit %def0, implicit %def1, implicit %def2
+...
+
+# ALL-LABEL: name: multi_def_subreg
+# CHECK-INTERESTINGNESS0: S_NOP 4
+
+# RESULT0: undef %redef.sub0:vreg_64 = IMPLICIT_DEF
+# RESULT0: undef %redef.sub1:vreg_64 = IMPLICIT_DEF
+---
+name: multi_def_subreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    S_NOP 3, undef implicit-def %redef.sub0:vreg_64, undef implicit-def %redef.sub1:vreg_64
+    S_NOP 4, implicit %redef
+...
+
+# ALL-LABEL: name: multi_def_subreg_same_subreg
+# CHECK-INTERESTINGNESS0: S_NOP 4
+
+# RESULT0-NOT: implicit-def %redef
+# RESULT0: undef %redef.sub0:vreg_64 = IMPLICIT_DEF
+# RESULT0-NOT: implicit-def %redef
+---
+name: multi_def_subreg_same_subreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    S_NOP 3, undef implicit-def %redef.sub0:vreg_64, undef implicit-def %redef.sub0:vreg_64
+    S_NOP 4, implicit %redef
+...
+
+# ALL-LABEL: name: tied_def
+# CHECK-INTERESTINGNESS0: V_MAC_F32
+
+# RESULT0: %mac0:vgpr_32 = V_MAC_F32_e32 %vgpr0, %vgpr1, undef %mac0, implicit $mode, implicit $exec
+# RESULT0: %mac1:vgpr_32 = IMPLICIT_DEF
+---
+name: tied_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    S_WAITCNT 0
+    %vgpr0:vgpr_32 = COPY $vgpr0
+    %vgpr1:vgpr_32 = COPY $vgpr1
+    %mac0:vgpr_32 = V_MAC_F32_e32 %vgpr0, %vgpr1, undef %mac0, implicit $mode, implicit $exec
+    %mac1:vgpr_32 = V_MAC_F32_e32 %vgpr1, %vgpr0, %mac0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %mac0, implicit %mac1
+...
+
+# ALL-LABEL: name: generic_reg
+# CHECK-INTERESTINGNESS0: %fmul:vgpr(s32) =
+# RESULT0: %fmul:vgpr(s32) = G_IMPLICIT_DEF
+---
+name: generic_reg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %vgpr0:vgpr_32(s32) = COPY $vgpr0
+    %vgpr1:vgpr_32(s32) = COPY $vgpr1
+    %fmul:vgpr(s32) = G_FMUL %vgpr0, %vgpr1
+    S_ENDPGM 0, implicit %fmul
+...
+
+# ALL-LABEL: name: terminator_def
+
+# CHECK-INTERESTINGNESS0: %exec_copy0:sreg_64_xexec = S_MOV_B64_term $exec
+
+# RESULT0: %exec_copy0:sreg_64_xexec = S_MOV_B64_term $exec
+# RESULT0-NEXT: %exec_copy1:sreg_64_xexec = S_MOV_B64_term $exec
+# RESULT-NEXT: S_CBRANCH_EXECZ
+---
+name: terminator_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr8_sgpr9
+
+    %exec_copy0:sreg_64_xexec = S_MOV_B64_term $exec
+    %exec_copy1:sreg_64_xexec = S_MOV_B64_term $exec
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    S_NOP 7
+
+  bb.2:
+    S_ENDPGM 0, implicit %exec_copy0, implicit %exec_copy1
+...

@@ -1,0 +1,3 @@
+namespace NS {
+  struct X {};
+}

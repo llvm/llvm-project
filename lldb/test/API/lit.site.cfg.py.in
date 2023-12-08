@@ -1,0 +1,54 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_include_dir = lit_config.substitute("@LLVM_INCLUDE_DIR@")
+config.llvm_shlib_dir = lit_config.substitute("@SHLIBDIR@")
+config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.lldb_obj_root = "@LLDB_BINARY_DIR@"
+config.lldb_src_root = "@LLDB_SOURCE_DIR@"
+config.lldb_libs_dir = lit_config.substitute("@LLDB_LIBS_DIR@")
+config.lldb_framework_dir = lit_config.substitute("@LLDB_FRAMEWORK_DIR@")
+config.cmake_cxx_compiler = "@CMAKE_CXX_COMPILER@"
+config.host_os = "@HOST_OS@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.shared_libs = @LLVM_ENABLE_SHARED_LIBS@
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
+config.python_executable = "@Python3_EXECUTABLE@"
+config.lua_executable = "@Lua_EXECUTABLE@"
+config.lua_test_entry = "TestLuaAPI.py"
+config.dotest_common_args_str = lit_config.substitute("@LLDB_TEST_COMMON_ARGS@")
+config.dotest_user_args_str = lit_config.substitute("@LLDB_TEST_USER_ARGS@")
+config.lldb_enable_python = @LLDB_ENABLE_PYTHON@
+config.dotest_lit_args_str = None
+config.enabled_plugins = []
+config.lldb_executable = lit_config.substitute('@LLDB_TEST_EXECUTABLE@')
+config.test_arch = '@LLDB_TEST_ARCH@'
+config.test_compiler = lit_config.substitute('@LLDB_TEST_COMPILER@')
+config.dsymutil = lit_config.substitute('@LLDB_TEST_DSYMUTIL@')
+config.has_libcxx = @LLDB_HAS_LIBCXX@
+config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
+config.libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
+config.libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
+# The API tests use their own module caches.
+config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
+config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
+
+# Plugins
+lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'
+if lldb_build_intel_pt == '1':
+    config.enabled_plugins.append('intel-pt')
+
+# Additional dotest arguments can be passed to lit by providing a
+# semicolon-separates list: --param dotest-args="arg;arg".
+dotest_lit_args_str = lit_config.params.get('dotest-args', None)
+if dotest_lit_args_str:
+    config.dotest_lit_args_str = dotest_lit_args_str
+
+# Let the main config do the real work.
+lit_config.load_config(config, os.path.join(config.lldb_src_root, "test", "API", "lit.cfg.py"))

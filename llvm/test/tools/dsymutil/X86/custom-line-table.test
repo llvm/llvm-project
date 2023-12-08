@@ -1,0 +1,42 @@
+# RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -f -o - | llvm-dwarfdump - --debug-line | FileCheck %s
+#
+# RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs -y %s -f -o - | llvm-dwarfdump - --debug-line | FileCheck %s
+
+# This test runs dsymutil on an object file with non-standard (as far
+# as llvm is concerned) line table settings.
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: basic2-custom-linetable.macho.x86_64.o
+    symbols:
+      - { sym: _foo, objAddr: 0x0, binAddr: 0x1000, size: 0x12 }
+
+# CHECK: 0x0000000000001000     19      0 {{.*}} is_stmt
+# CHECK: 0x0000000000001012     20     14 {{.*}} is_stmt prologue_end
+# CHECK: 0x0000000000001015     20     18 {{.*}}
+# CHECK: 0x0000000000001017     20     17 {{.*}}
+# CHECK: 0x0000000000001019     20     10 {{.*}}
+# CHECK: 0x000000000000101e     20     25 {{.*}}
+# CHECK: 0x0000000000001026     20     23 {{.*}}
+# CHECK: 0x000000000000102b     20     36 {{.*}}
+# CHECK: 0x000000000000103c     20     31 {{.*}}
+# CHECK: 0x000000000000103e     20      3 {{.*}}
+# CHECK: 0x0000000000001046     20      3 {{.*}} end_sequence
+
+      - { sym: _inc, objAddr: 0x0, binAddr: 0x2000, size: 0x12 }
+
+# CHECK: 0x0000000000002000     14      0 {{.*}} is_stmt
+# CHECK: 0x0000000000002004     15     10 {{.*}} is_stmt prologue_end
+# CHECK: 0x0000000000002013     15      3 {{.*}}
+# CHECK: 0x0000000000002015     15      3 {{.*}} end_sequence
+
+      - { sym: _unused1,  objAddr: 0x0, binAddr: 0x3000, size: 0x12 }
+
+# CHECK: 0x0000000000003000     10      0 {{.*}} is_stmt
+# CHECK: 0x0000000000003004     11      7 {{.*}} is_stmt prologue_end
+# CHECK: 0x000000000000300e     11      3 {{.*}}
+# CHECK: 0x0000000000003013     12      1 {{.*}} is_stmt
+# CHECK: 0x000000000000301c     12      1 {{.*}} is_stmt end_sequence
+...
+

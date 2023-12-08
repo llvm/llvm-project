@@ -1,0 +1,25 @@
+// RUN: FileCheck -input-file %s %s
+
+op1 r1
+op2 r1, r2
+; CHECK:        op1 [[REG:r[0-9]]]
+; CHECK-NEXT:   op2 [[REG]]
+
+op3 r16, r18, r21
+op4 r30, r18, r21
+; CHECK:        op3 {{r[0-9]+}}, [[REGa:r[0-9]+]], [[REGb:r[0-9]+]]
+; CHECK-NEXT:   op4 {{r[0-9]+}}, [[REGa]], [[REGb]]
+
+
+// RUN: %ProtectFileCheckOutput \
+// RUN: not FileCheck --check-prefixes INVALID-VARNAME --input-file %s %s 2>&1 \
+// RUN:   | FileCheck --check-prefix INVALID-VARNAME-MSG --strict-whitespace %s
+
+5
+4
+; INVALID-VARNAME: [[X:]]
+; INVALID-VARNAME-NEXT: [[Y:]]
+; INVALID-VARNAME-NEXT: [[X-Y]]
+; INVALID-VARNAME-MSG: simple-var-capture.txt:[[#@LINE-1]]:27: error: invalid name in string variable use
+; INVALID-VARNAME-MSG-NEXT: ; {{I}}NVALID-VARNAME-NEXT: {{\[\[X-Y\]\]}}
+; INVALID-VARNAME-MSG-NEXT:    {{^}}                          ^{{$}}

@@ -1,0 +1,801 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:tblgen.bzl", "gentbl")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "adt_tests",
+    size = "medium",
+    srcs = glob(
+        [
+            "ADT/*.cpp",
+            "ADT/*.h",
+        ],
+        allow_empty = False,
+    ),
+    shard_count = 20,
+    deps = [
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "analysis_tests",
+    size = "small",
+    srcs = glob(
+        ["Analysis/*.cpp"],
+        allow_empty = False,
+        exclude = [
+            # TODO: Add this file to the build.
+            "Analysis/TFUtilsTest.cpp",
+            "Analysis/TrainingLoggerTest.cpp",
+            "Analysis/MLModelRunnerTest.cpp",
+        ],
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:TransformUtils",
+        "//llvm:attributes_gen",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "asm_parser_tests",
+    size = "small",
+    srcs = glob(
+        ["AsmParser/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bitcode_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Bitcode/*.cpp",
+            "Bitcode/*.h",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:BitReader",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bitstream_tests",
+    size = "small",
+    srcs = glob(
+        ["Bitstream/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:BitstreamReader",
+        "//llvm:BitstreamWriter",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "codegen_tests_includes",
+    textual_hdrs = glob(
+        ["CodeGen/*.inc"],
+        allow_empty = False,
+    ),
+)
+
+cc_test(
+    name = "codegen_tests",
+    size = "medium",
+    srcs = glob(
+        [
+            "CodeGen/*.cpp",
+            "CodeGen/*.h",
+        ],
+        allow_empty = False,
+    ),
+    features = ["-layering_check"],  # #include "../lib/CodeGen/AllocationOrder.h"
+    deps = [
+        ":codegen_tests_includes",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "codegen_globalisel_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "CodeGen/GlobalISel/*.cpp",
+            "CodeGen/GlobalISel/*.h",
+        ],
+        allow_empty = False,
+    ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
+        "//llvm:Core",
+        "//llvm:FileCheckLib",
+        "//llvm:MC",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "debuginfo_tests",
+    size = "medium",
+    srcs = glob(
+        [
+            "DebugInfo/DWARF/*.cpp",
+            "DebugInfo/DWARF/*.h",
+            # TODO: Re-enable these when they stop crashing.
+            #"DebugInfo/PDB/*.cpp",
+            #"DebugInfo/PDB/*.h",
+        ],
+        allow_empty = False,
+    ),
+    args = [
+        # Skip a test that relies on reading files in a way that doesn't easily
+        # work with Bazel.
+        "--gtest_filter=-NativeSymbolReuseTest.*",
+    ],
+    features = ["-layering_check"],  # #include "../lib/CodeGen/AsmPrinter/DwarfStringPool.h"
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGenTypes",
+        "//llvm:Core",
+        "//llvm:DebugInfo",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:DebugInfoPDB",
+        "//llvm:MC",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "debuginfod_tests",
+    srcs = glob(["Debuginfod/*.cpp"]),
+    deps = [
+        "//llvm:Debuginfod",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_tests",
+    size = "small",
+    srcs = glob(
+        ["ExecutionEngine/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:ExecutionEngine",
+        "//llvm:Interpreter",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_mcjit_tests",
+    size = "medium",
+    srcs = glob(
+        [
+            "ExecutionEngine/MCJIT/*.cpp",
+            "ExecutionEngine/MCJIT/*.h",
+        ],
+        allow_empty = False,
+    ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
+        "//llvm:MCJIT",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TargetParser",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_engine_orc_tests",
+    size = "medium",
+    srcs = glob(
+        [
+            "ExecutionEngine/Orc/*.cpp",
+            "ExecutionEngine/Orc/*.h",
+        ],
+        allow_empty = False,
+    ),
+    args = [
+        # keep one-per-line
+        "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
+    ],
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:ExecutionEngine",
+        "//llvm:IRReader",
+        "//llvm:JITLink",
+        "//llvm:MC",
+        "//llvm:Object",
+        "//llvm:OrcJIT",
+        "//llvm:OrcShared",
+        "//llvm:OrcTargetProcess",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "filecheck_tests",
+    size = "small",
+    srcs = glob(
+        ["FileCheck/*.cpp"],
+        allow_empty = False,
+    ),
+    features = ["-layering_check"],  # #include "../lib/FileCheck/FileCheckImpl.h"
+    deps = [
+        "//llvm:FileCheckLib",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ir_tests",
+    size = "medium",
+    timeout = "long",  # ConstantRangeTest cases may take several seconds each.
+    srcs = glob(
+        [
+            "IR/*.cpp",
+            "IR/*.h",
+            "Support/KnownBitsTest.h",
+        ],
+        allow_empty = False,
+    ),
+    shard_count = 20,
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Scalar",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:TransformUtils",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "line_editor_tests",
+    size = "small",
+    srcs = glob(
+        ["LineEditor/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:LineEditor",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "frontend_tests",
+    size = "small",
+    srcs = glob(
+        ["Frontend/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:Core",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TransformUtils",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linker_tests",
+    size = "small",
+    srcs = glob(
+        ["Linker/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Linker",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mc_tests",
+    size = "small",
+    srcs = glob(
+        ["MC/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:BinaryFormat",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mi_tests",
+    size = "medium",
+    srcs = glob(
+        ["MI/*.cpp"],
+        allow_empty = False,
+    ),
+    features = ["-layering_check"],  # #include "../lib/CodeGen/RegisterCoalescer.h"
+    deps = [
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "objcopy_tests",
+    srcs = glob(
+        ["ObjCopy/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:ObjCopy",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "object_tests",
+    size = "small",
+    srcs = glob(
+        ["Object/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "object_yaml_tests",
+    size = "small",
+    srcs = glob(
+        ["ObjectYAML/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:DebugInfoCodeView",
+        "//llvm:Object",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+gentbl(
+    name = "option_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "Option/Opts.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/Opts.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+gentbl(
+    name = "automata_automata_gen",
+    strip_include_prefix = "TableGen",
+    tbl_outs = [(
+        "-gen-automata",
+        "TableGen/AutomataAutomata.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "TableGen/Automata.td",
+    td_srcs = ["//llvm:common_target_td_sources"] + [
+        "TableGen/Automata.td",
+    ],
+)
+
+gentbl(
+    name = "automata_tables_gen",
+    strip_include_prefix = "TableGen",
+    tbl_outs = [(
+        "-gen-searchable-tables",
+        "TableGen/AutomataTables.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "TableGen/Automata.td",
+    td_srcs = ["//llvm:common_target_td_sources"] + [
+        "TableGen/Automata.td",
+    ],
+)
+
+cc_test(
+    name = "option_tests",
+    size = "small",
+    srcs = glob(
+        ["Option/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        ":option_tests_gen",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "remarks_tests",
+    size = "small",
+    srcs = glob(
+        ["Remarks/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:BitReader",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//llvm:remark_linker",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "profile_data_tests",
+    size = "small",
+    srcs = glob(
+        ["ProfileData/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Core",
+        "//llvm:Coverage",
+        "//llvm:DebugInfo",
+        "//llvm:Object",
+        "//llvm:ProfileData",
+        "//llvm:Support",
+        "//llvm:Symbolize",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+# Note that the name of this test is important as it is used in the test itself.
+cc_test(
+    name = "SupportTests",
+    size = "medium",
+    srcs = glob(
+        [
+            "Support/*.cpp",
+            "Support/*.h",
+        ],
+        allow_empty = False,
+        exclude = [
+            "Support/ParallelTest.cpp",
+        ],
+    ),
+    args = [
+        # keep one-per-line
+        "--gtest_filter=-ProgramTest.CreateProcessTrailingSlash",
+    ],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    linkstatic = 1,
+    tags = [
+        "local",  # Not compatible with the sandbox on MacOS
+    ],
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:ProfileData",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "support_parallel_tests",
+    size = "small",
+    srcs = ["Support/ParallelTest.cpp"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    linkstatic = 1,
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:Support",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "tablegen_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "TableGen/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        ":automata_automata_gen",
+        ":automata_tables_gen",
+        "//llvm:Support",
+        "//llvm:TableGen",
+        "//llvm:TableGenGlobalISel",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "target_aarch64_tests",
+    size = "small",
+    srcs = glob(
+        ["Target/AArch64/*.cpp"],
+        allow_empty = False,
+    ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    features = ["-layering_check"],  # #include "AArch64GenInstrInfo.inc"
+    deps = [
+        "//llvm:AArch64CodeGen",
+        "//llvm:AArch64UtilsAndDesc",
+        "//llvm:AsmParser",
+        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "testing_adt_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Testing/ADT/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingADT",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "transforms_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Transforms/IPO/*.cpp",
+            "Transforms/IPO/*.h",
+            "Transforms/Utils/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:IPO",
+        "//llvm:IRReader",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:TransformUtils",
+        "//llvm:Vectorize",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "llvm_exegesis_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "tools/llvm-exegesis/*.cpp",
+            "tools/llvm-exegesis/X86/*.cpp",
+            "tools/llvm-exegesis/X86/*.h",
+        ],
+        allow_empty = False,
+    ) + [
+        "tools/llvm-exegesis/Common/AssemblerUtils.h",
+    ],
+    includes = ["tools/llvm-exegesis"],
+    deps = [
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
+        "//llvm:Exegesis",
+        "//llvm:MC",
+        "//llvm:MCDisassembler",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TestingSupport",
+        "//llvm:X86CodeGen",
+        "//llvm:X86UtilsAndDesc",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

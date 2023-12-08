@@ -1,0 +1,36 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when an invalid machine basic
+# block index is used.
+
+
+--- |
+
+  define i32 @foo(i32* %p) {
+  entry:
+    %a = load i32, i32* %p
+    %b = icmp sle i32 %a, 10
+    br i1 %b, label %0, label %1
+
+  ; <label>:0
+    ret i32 0
+
+  ; <label>:1
+    ret i32 %a
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    $eax = MOV32rm $rdi, 1, _, 0, _
+    CMP32ri8 $eax, 10, implicit-def $eflags
+    ; CHECK: [[@LINE+1]]:11: use of undefined machine basic block #4
+    JCC_1 %bb.4, 15, implicit $eflags
+
+  bb.1:
+    $eax = MOV32r0 implicit-def $eflags
+
+  bb.2:
+    RET64 $eax
+...

@@ -1,0 +1,13 @@
+# Since llvm-ar cannot create thin archives that contain any thin archives,
+# nested-thin-archive.a is a manually constructed thin archive that contains
+# another (unflattened) thin archive.
+# This test ensures that flat archives are recursively flattened.
+
+RUN: rm -f %t.a
+RUN: llvm-ar rcsT %t.a %S/Inputs/nested-thin-archive.a %S/Inputs/d.txt
+RUN: llvm-ar t %t.a | FileCheck %s
+
+CHECK:      a.txt
+CHECK-NEXT: b.txt
+CHECK-NEXT: c.txt
+CHECK-NEXT: d.txt

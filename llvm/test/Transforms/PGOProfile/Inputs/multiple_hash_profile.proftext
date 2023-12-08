@@ -1,0 +1,64 @@
+# IR level Instrumentation Flag
+:ir
+_Z3fooi
+# Func Hash:
+382993475055910911
+# Num Counters:
+2
+# Counter Values:
+18
+12
+
+# For -pgo-instr-old-cfg-hashing=true
+_Z3fooi
+# Func Hash:
+72057606922829823
+# Num Counters:
+2
+# Counter Values:
+18
+6
+
+_Z3fooi
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+0
+
+_Z3bari
+# Func Hash:
+382993475055910911
+# Num Counters:
+2
+# Counter Values:
+0
+0
+
+# For -pgo-instr-old-cfg-hashing=true
+_Z3bari
+# Func Hash:
+72057606922829823
+# Num Counters:
+2
+# Counter Values:
+0
+0
+
+_Z4m2f1v
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1
+
+# For -pgo-instr-old-cfg-hashing=true
+_Z4m2f1v
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+1

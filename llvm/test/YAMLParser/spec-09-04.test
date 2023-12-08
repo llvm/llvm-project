@@ -1,0 +1,7 @@
+# RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
+# CHECK: "first inner 1  inner 2 last"
+
+ "first
+ 	inner 1	
+ \ inner 2 \
+ last"

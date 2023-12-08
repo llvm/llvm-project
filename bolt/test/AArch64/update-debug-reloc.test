@@ -1,0 +1,9 @@
+# Verify that bolt correctly handle AArch64 relocations in case of enabling
+# update-debug-sections option.
+
+RUN: %clang %cflags -g %p/../Inputs/asm_foo.s %p/../Inputs/asm_main.c -o %t.exe
+RUN: llvm-bolt %t.exe -o %t --update-debug-sections
+
+CHECK: BOLT-INFO: Target architecture: aarch64
+CHECK-NOT: Reloc num: 10
+CHECK-NOT: unsupported relocation type

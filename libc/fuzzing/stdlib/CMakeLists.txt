@@ -1,0 +1,78 @@
+add_libc_fuzzer(
+  qsort_fuzz
+  SRCS
+    qsort_fuzz.cpp
+  DEPENDS
+    libc.src.stdlib.qsort
+)
+
+add_libc_fuzzer(
+  atof_differential_fuzz
+  SRCS
+    atof_differential_fuzz.cpp
+  HDRS
+    StringParserOutputDiff.h
+  DEPENDS
+    libc.src.stdlib.atof
+)
+
+add_libc_fuzzer(
+  strtofloat_fuzz
+  NEED_MPFR
+  SRCS
+    strtofloat_fuzz.cpp
+  DEPENDS
+    libc.src.stdlib.atof
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtod
+    libc.src.stdlib.strtold
+    libc.src.__support.FPUtil.float_properties
+)
+
+add_libc_fuzzer(
+  strtointeger_differential_fuzz
+  SRCS
+    strtointeger_differential_fuzz.cpp
+  HDRS
+    StringParserOutputDiff.h
+  DEPENDS
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+)
+
+add_libc_fuzzer(
+  strtointeger_differential_fuzz_cleaner
+  SRCS
+    strtointeger_differential_fuzz.cpp
+  HDRS
+    StringParserOutputDiff.h
+  DEPENDS
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+  COMPILE_OPTIONS
+    -DLIBC_COPT_FUZZ_ATOI_CLEANER_INPUT
+)
+
+add_libc_fuzzer(
+  strtointeger_fuzz
+  SRCS
+    strtointeger_fuzz.cpp
+  DEPENDS
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+)

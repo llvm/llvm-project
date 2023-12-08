@@ -1,0 +1,108 @@
+## Check llvm-readobj and llvm-readelf can dump files of the different ELF types.
+
+# RUN: yaml2obj %s -DTYPE=ET_NONE -o %t1
+# RUN: llvm-readobj -h %t1 | FileCheck %s --match-full-lines --check-prefix LLVM-NONE
+# RUN: llvm-readelf -h %t1 | FileCheck %s --match-full-lines --check-prefix GNU-NONE
+
+# LLVM-NONE: ElfHeader {
+# LLVM-NONE:   Type: None (0x0)
+
+# GNU-NONE: ELF Header:
+# GNU-NONE:   Type: NONE (none)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  [[TYPE]]
+
+# RUN: yaml2obj %s -DTYPE=ET_REL -o %t2
+# RUN: llvm-readobj -h %t2 | FileCheck %s --match-full-lines --check-prefix LLVM-REL
+# RUN: llvm-readelf -h %t2 | FileCheck %s --match-full-lines --check-prefix GNU-REL
+
+# LLVM-REL: ElfHeader {
+# LLVM-REL:   Type: Relocatable (0x1)
+
+# GNU-REL: ELF Header:
+# GNU-REL:   Type: REL (Relocatable file)
+
+# RUN: yaml2obj %s -DTYPE=ET_EXEC -o %t3
+# RUN: llvm-readobj -h %t3 | FileCheck %s --match-full-lines --check-prefix LLVM-EXEC
+# RUN: llvm-readelf -h %t3 | FileCheck %s --match-full-lines --check-prefix GNU-EXEC
+
+# LLVM-EXEC: ElfHeader {
+# LLVM-EXEC:   Type: Executable (0x2)
+
+# GNU-EXEC: ELF Header:
+# GNU-EXEC:   Type: EXEC (Executable file)
+
+# RUN: yaml2obj %s -DTYPE=ET_DYN -o %t4
+# RUN: llvm-readobj -h %t4 | FileCheck %s --match-full-lines --check-prefix LLVM-DYN
+# RUN: llvm-readelf -h %t4 | FileCheck %s --match-full-lines --check-prefix GNU-DYN
+
+# LLVM-DYN: ElfHeader {
+# LLVM-DYN:   Type: SharedObject (0x3)
+
+# GNU-DYN: ELF Header:
+# GNU-DYN:   Type: DYN (Shared object file)
+
+# RUN: yaml2obj %s -DTYPE=ET_CORE -o %t5
+# RUN: llvm-readobj -h %t5 | FileCheck %s --match-full-lines --check-prefix LLVM-CORE
+# RUN: llvm-readelf -h %t5 | FileCheck %s --match-full-lines --check-prefix GNU-CORE
+
+# LLVM-CORE: ElfHeader {
+# LLVM-CORE:   Type: Core (0x4)
+
+# GNU-CORE: ELF Header:
+# GNU-CORE:   Type: CORE (Core file)
+
+## Test what we dump for an arbitrary unknown ELF type.
+# RUN: yaml2obj %s -DTYPE=0xFDFF -o %t.unknown
+# RUN: llvm-readobj -h %t.unknown | FileCheck %s --match-full-lines --check-prefix LLVM-UNNKNOWN
+# RUN: llvm-readelf -h %t.unknown | FileCheck %s --match-full-lines --check-prefix GNU-UNNKNOWN
+
+# LLVM-UNNKNOWN: ElfHeader {
+# LLVM-UNNKNOWN:   Type: Unknown (0xFDFF)
+
+# GNU-UNNKNOWN: ELF Header:
+# GNU-UNNKNOWN:   Type: <unknown>: fdff
+
+# RUN: yaml2obj %s -DTYPE=0xfe00 -o %t6
+# RUN: llvm-readobj -h %t6 | FileCheck %s --match-full-lines --check-prefix LLVM-LOOS
+# RUN: llvm-readelf -h %t6 | FileCheck %s --match-full-lines --check-prefix GNU-LOOS
+
+# LLVM-LOOS: ElfHeader {
+# LLVM-LOOS:   Type: OS Specific (0xFE00)
+
+# GNU-LOOS: ELF Header:
+# GNU-LOOS:   Type: OS Specific: (fe00)
+
+# RUN: yaml2obj %s -DTYPE=0xfeff -o %t7
+# RUN: llvm-readobj -h %t7 | FileCheck %s --match-full-lines --check-prefix LLVM-HIOS
+# RUN: llvm-readelf -h %t7 | FileCheck %s --match-full-lines --check-prefix GNU-HIOS
+
+# LLVM-HIOS: ElfHeader {
+# LLVM-HIOS:   Type: OS Specific (0xFEFF)
+
+# GNU-HIOS: ELF Header:
+# GNU-HIOS:   Type: OS Specific: (feff)
+
+# RUN: yaml2obj %s -DTYPE=0xff00 -o %t8
+# RUN: llvm-readobj -h %t8 | FileCheck %s --match-full-lines --check-prefix LLVM-LOPROC
+# RUN: llvm-readelf -h %t8 | FileCheck %s --match-full-lines --check-prefix GNU-LOPROC
+
+# LLVM-LOPROC: ElfHeader {
+# LLVM-LOPROC:   Type: Processor Specific (0xFF00)
+
+# GNU-LOPROC: ELF Header:
+# GNU-LOPROC:   Type: Processor Specific: (ff00)
+
+# RUN: yaml2obj %s -DTYPE=0xffff -o %t9
+# RUN: llvm-readobj -h %t9 | FileCheck %s --match-full-lines --check-prefix LLVM-HIPROC
+# RUN: llvm-readelf -h %t9 | FileCheck %s --match-full-lines --check-prefix GNU-HIPROC
+
+# LLVM-HIPROC: ElfHeader {
+# LLVM-HIPROC:   Type: Processor Specific (0xFFFF)
+
+# GNU-HIPROC: ELF Header:
+# GNU-HIPROC:   Type: Processor Specific: (ffff)

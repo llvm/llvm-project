@@ -1,0 +1,92 @@
+# REQUIRES: aarch64
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link /entry:main /subsystem:console /out:%t.exe %t.obj %p/Inputs/library-arm64.lib /alternatename:__delayLoadHelper2=main /delayload:library.dll
+# RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck %s --check-prefix DISASM
+# RUN: llvm-readobj --coff-imports %t.exe | FileCheck %s -check-prefix IMPORTS
+
+# DISASM:  140001014:      d0000011        adrp    x17, 0x140003000
+# DISASM:  140001018:      91002231        add     x17, x17, #8
+# DISASM:  14000101c:      14000001        b       0x140001020 <.text+0x20>
+# DISASM:  140001020:      a9b37bfd        stp     x29, x30, [sp, #-208]!
+# DISASM:  140001024:      910003fd        mov     x29, sp
+# DISASM:  140001028:      a90107e0        stp     x0, x1, [sp, #16]
+# DISASM:  14000102c:      a9020fe2        stp     x2, x3, [sp, #32]
+# DISASM:  140001030:      a90317e4        stp     x4, x5, [sp, #48]
+# DISASM:  140001034:      a9041fe6        stp     x6, x7, [sp, #64]
+# DISASM:  140001038:      ad0287e0        stp     q0, q1, [sp, #80]
+# DISASM:  14000103c:      ad038fe2        stp     q2, q3, [sp, #112]
+# DISASM:  140001040:      ad0497e4        stp     q4, q5, [sp, #144]
+# DISASM:  140001044:      ad059fe6        stp     q6, q7, [sp, #176]
+# DISASM:  140001048:      aa1103e1        mov     x1, x17
+# DISASM:  14000104c:      b0000000        adrp    x0, 0x140002000
+# DISASM:  140001050:      91000000        add     x0, x0, #0
+# DISASM:  140001054:      97ffffeb        bl      0x140001000 <.text>
+# DISASM:  140001058:      aa0003f0        mov     x16, x0
+# DISASM:  14000105c:      ad459fe6        ldp     q6, q7, [sp, #176]
+# DISASM:  140001060:      ad4497e4        ldp     q4, q5, [sp, #144]
+# DISASM:  140001064:      ad438fe2        ldp     q2, q3, [sp, #112]
+# DISASM:  140001068:      ad4287e0        ldp     q0, q1, [sp, #80]
+# DISASM:  14000106c:      a9441fe6        ldp     x6, x7, [sp, #64]
+# DISASM:  140001070:      a94317e4        ldp     x4, x5, [sp, #48]
+# DISASM:  140001074:      a9420fe2        ldp     x2, x3, [sp, #32]
+# DISASM:  140001078:      a94107e0        ldp     x0, x1, [sp, #16]
+# DISASM:  14000107c:      a8cd7bfd        ldp     x29, x30, [sp], #208
+# DISASM:  140001080:      d61f0200        br      x16
+
+# IMPORTS: Format: COFF-ARM64
+# IMPORTS: Arch: aarch64
+# IMPORTS: AddressSize: 64bit
+# IMPORTS: DelayImport {
+# IMPORTS:   Name: library.dll
+# IMPORTS:   Attributes: 0x1
+# IMPORTS:   ModuleHandle: 0x3000
+# IMPORTS:   ImportAddressTable: 0x3008
+# IMPORTS:   ImportNameTable: 0x2040
+# IMPORTS:   BoundDelayImportTable: 0x0
+# IMPORTS:   UnloadDelayImportTable: 0x0
+# IMPORTS:   Import {
+# IMPORTS:     Symbol: function (0)
+# IMPORTS:     Address: 0x140001014
+# IMPORTS:   }
+# IMPORTS: }
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     00000094C0035FD6
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      function
+        Type:            IMAGE_REL_ARM64_BRANCH26
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            function
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

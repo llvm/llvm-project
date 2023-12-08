@@ -1,0 +1,360 @@
+## In this test we check how the unwind information is dumped with the use of --unwind.
+
+## First, check that both llvm-readobj and llvm-readelf are able to dump a valid unwind information.
+## Check that the output is the same for these tools.
+## The memory size of the PT_GNU_EH_FRAME equals its file size and they both are equal to 0x3c.
+## 0x3c is the size of the .eh_frame_hdr section.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x3c -DFILESIZE=0x3c -o %t1.valid
+# RUN: llvm-readobj --unwind %t1.valid | FileCheck %s
+# RUN: llvm-readelf --sections --unwind %t1.valid | FileCheck %s --check-prefixes=SIZE,CHECK
+
+## Validate the size of the .eh_frame_hdr section.
+# SIZE: [Nr] Name          Type     Address          Off    Size
+# SIZE: [ 2] .eh_frame_hdr PROGBITS 00000000004013c0 0000bc 00003c
+
+# CHECK:      EHFrameHeader {
+# CHECK-NEXT:  Address: 0x4013c0
+# CHECK-NEXT:  Offset: 0xbc
+# CHECK-NEXT:  Size: 0x3c
+# CHECK-NEXT:  Corresponding Section: .eh_frame_hdr
+# CHECK-NEXT:  Header {
+# CHECK-NEXT:    version: 1
+# CHECK-NEXT:    eh_frame_ptr_enc: 0x1b
+# CHECK-NEXT:    fde_count_enc: 0x3
+# CHECK-NEXT:    table_enc: 0x3b
+# CHECK-NEXT:    eh_frame_ptr: 0x401400
+# CHECK-NEXT:    fde_count: 6
+# CHECK-NEXT:    entry 0 {
+# CHECK-NEXT:      initial_location: 0x4004a0
+# CHECK-NEXT:      address: 0x401448
+# CHECK-NEXT:    }
+# CHECK-NEXT:    entry 1 {
+# CHECK-NEXT:      initial_location: 0x4004d0
+# CHECK-NEXT:      address: 0x401418
+# CHECK-NEXT:    }
+# CHECK-NEXT:    entry 2 {
+# CHECK-NEXT:      initial_location: 0x4005b6
+# CHECK-NEXT:      address: 0x401470
+# CHECK-NEXT:    }
+# CHECK-NEXT:    entry 3 {
+# CHECK-NEXT:      initial_location: 0x4005d0
+# CHECK-NEXT:      address: 0x401490
+# CHECK-NEXT:    }
+# CHECK-NEXT:    entry 4 {
+# CHECK-NEXT:      initial_location: 0x401250
+# CHECK-NEXT:      address: 0x4014c0
+# CHECK-NEXT:    }
+# CHECK-NEXT:    entry 5 {
+# CHECK-NEXT:      initial_location: 0x4012c0
+# CHECK-NEXT:      address: 0x4014f0
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+# CHECK-NEXT:}
+
+# CHECK:      .eh_frame section at offset 0xf8 address 0x401400:
+# CHECK-NEXT:  [0x401400] CIE length=20
+# CHECK-NEXT:    version: 1
+# CHECK-NEXT:    augmentation: zR
+# CHECK-NEXT:    code_alignment_factor: 1
+# CHECK-NEXT:    data_alignment_factor: -8
+# CHECK-NEXT:    return_address_register: 16
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:      DW_CFA_offset: reg16 -8
+# CHECK-NEXT:      DW_CFA_undefined: reg16
+
+# CHECK:       [0x401418] FDE length=20 cie=[0x401400]
+# CHECK-NEXT:    initial_location: 0x4004d0
+# CHECK-NEXT:    address_range: 0x2a (end : 0x4004fa)
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+# CHECK:       [0x401430] CIE length=20
+# CHECK-NEXT:    version: 1
+# CHECK-NEXT:    augmentation: zR
+# CHECK-NEXT:    code_alignment_factor: 1
+# CHECK-NEXT:    data_alignment_factor: -8
+# CHECK-NEXT:    return_address_register: 16
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:      DW_CFA_offset: reg16 -8
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+# CHECK:       [0x401448] FDE length=36 cie=[0x401430]
+# CHECK-NEXT:    initial_location: 0x4004a0
+# CHECK-NEXT:    address_range: 0x20 (end : 0x4004c0)
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
+# CHECK-NEXT:      DW_CFA_advance_loc: 6
+# CHECK-NEXT:      DW_CFA_def_cfa_offset: +24
+# CHECK-NEXT:      DW_CFA_advance_loc: 10
+# CHECK-NEXT:      DW_CFA_def_cfa_expression: DW_OP_breg7 +8, DW_OP_breg16 +0, DW_OP_lit15, DW_OP_and, DW_OP_lit11, DW_OP_ge, DW_OP_lit3, DW_OP_shl, DW_OP_plus
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+# CHECK:       [0x401470] FDE length=28 cie=[0x401430]
+# CHECK-NEXT:    initial_location: 0x4005b6
+# CHECK-NEXT:    address_range: 0x10 (end : 0x4005c6)
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_advance_loc: 1
+# CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
+# CHECK-NEXT:      DW_CFA_offset: reg6 -16
+# CHECK-NEXT:      DW_CFA_advance_loc: 3
+# CHECK-NEXT:      DW_CFA_def_cfa_register: reg6
+# CHECK-NEXT:      DW_CFA_advance_loc: 11
+# CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+# CHECK:       [0x401490] FDE length=44 cie=[0x401430]
+# CHECK-NEXT:    initial_location: 0x4005d0
+# CHECK-NEXT:    address_range: 0xc7f (end : 0x40124f)
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_def_cfa: reg10 +0
+# CHECK-NEXT:      DW_CFA_advance_loc: 9
+# CHECK-NEXT:      DW_CFA_expression: reg6 DW_OP_breg6 +0
+# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_def_cfa_expression: DW_OP_breg6 -8, DW_OP_deref
+# CHECK-NEXT:      DW_CFA_advance_loc2: 3174
+# CHECK-NEXT:      DW_CFA_def_cfa: reg10 +0
+# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+# CHECK:       [0x4014c0] FDE length=44 cie=[0x401430]
+# CHECK-NEXT:    initial_location: 0x401250
+# CHECK-NEXT:    address_range: 0x66 (end : 0x4012b6)
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_advance_loc: 1
+# CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
+# CHECK-NEXT:      DW_CFA_offset: reg6 -16
+# CHECK-NEXT:      DW_CFA_advance_loc: 3
+# CHECK-NEXT:      DW_CFA_def_cfa_register: reg6
+# CHECK-NEXT:      DW_CFA_advance_loc: 2
+# CHECK-NEXT:      DW_CFA_offset: reg15 -24
+# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_offset: reg14 -32
+# CHECK-NEXT:      DW_CFA_advance_loc: 7
+# CHECK-NEXT:      DW_CFA_offset: reg13 -40
+# CHECK-NEXT:      DW_CFA_offset: reg12 -48
+# CHECK-NEXT:      DW_CFA_advance_loc: 8
+# CHECK-NEXT:      DW_CFA_offset: reg3 -56
+# CHECK-NEXT:      DW_CFA_advance_loc1: 75
+# CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+# CHECK:       [0x4014f0] FDE length=20 cie=[0x401430]
+# CHECK-NEXT:    initial_location: 0x4012c0
+# CHECK-NEXT:    address_range: 0x1 (end : 0x4012c1)
+
+# CHECK:         Program:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+# CHECK-NEXT:      DW_CFA_nop:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400000
+    AddressAlign:    16
+    Content:         50C704240020400031C05AC3
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x00000000004013c0
+    AddressAlign:    4
+    Content:         011B033B3C00000006000000E0F0FFFF8800000010F1FFFF58000000F6F1FFFFB000000010F2FFFFD000000090FEFFFF0001000000FFFFFF30010000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000401400
+    AddressAlign:    8
+    Content:         1400000000000000017A5200017810011B0C070890010710140000001C000000B0F0FFFF2A00000000000000000000001400000000000000017A5200017810011B0C070890010000240000001C00000050F0FFFF20000000000E10460E184A0F0B770880003F1A3B2A332422000000001C000000440000003EF1FFFF1000000000410E108602430D064B0C07080000002C0000006400000038F1FFFF7F0C000000450C0A00491006027600450F0376780603660C0C0A00450C070800000000002C0000009400000088FDFFFF6600000000410E108602430D06428F03458E04478D058C06488307024B0C07080000000014000000C4000000C8FDFFFF01000000000000000000000000000000
+Symbols:
+  - Name:            myfunc
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400000
+    Binding:         STB_GLOBAL
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x00400000
+    PAddr:    0x00400000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_GNU_EH_FRAME
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x004013C0
+    PAddr:    0x004013C0
+    MemSize:  [[MEMSIZE]]
+    FileSize: [[FILESIZE]]
+    FirstSec: .eh_frame_hdr
+    LastSec:  .eh_frame_hdr
+
+## Document we report a error when the memory size of the PT_GNU_EH_FRAME does not match its file size.
+## TODO: we want to report a warning and continue dumping instead.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x3b -DFILESIZE=0x3c -o %t1.size.mismatch
+# RUN: not llvm-readobj --unwind %t1.size.mismatch 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.size.mismatch %s --check-prefix=SIZE-MISMATCH
+# RUN: not llvm-readelf --unwind %t1.size.mismatch 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.size.mismatch %s --check-prefix=SIZE-MISMATCH
+
+# SIZE-MISMATCH: error: '[[FILE]]': p_memsz does not match p_filesz for GNU_EH_FRAME
+
+## Check we partially dump the unwind information when the PT_GNU_EH_FRAME segment
+## points to truncated data.
+# RUN: yaml2obj --docnum=1 %s -DMEMSIZE=0x1 -DFILESIZE=0x1 -o %t1.truncated
+# RUN: not llvm-readobj --unwind %t1.truncated 2>&1 | FileCheck -DFILE=%t1.truncated %s --check-prefix=TRUNCATED
+# RUN: not llvm-readelf --unwind %t1.truncated 2>&1 | FileCheck -DFILE=%t1.truncated %s --check-prefix=TRUNCATED
+
+# TRUNCATED:      EHFrameHeader {
+# TRUNCATED-NEXT:   Address: 0x4013c0
+# TRUNCATED-NEXT:   Offset: 0xbc
+# TRUNCATED-NEXT:   Size: 0x1
+# TRUNCATED-NEXT:   Corresponding Section: .eh_frame_hdr
+# TRUNCATED-NEXT:   Header {
+# TRUNCATED-NEXT:     version: 1
+# TRUNCATED-NEXT:     eh_frame_ptr_enc: 0x0
+# TRUNCATED-NEXT: error: '[[FILE]]': unexpected encoding eh_frame_ptr_enc
+
+## Check we report an error when the tool is unable to parse .eh_frame section.
+# RUN: yaml2obj --docnum=2 %s -o %t2.exe
+# RUN: not llvm-readobj --unwind %t2.exe 2>&1 | FileCheck %s -DFILE=%t2.exe --check-prefix=NO-CIE-ERR
+
+# NO-CIE-ERR:      .eh_frame section at offset 0x40 address 0x0:
+# NO-CIE-ERR-NEXT: error: '[[FILE]]': parsing FDE data at 0x0 failed due to missing CIE
+# NO-CIE-ERR-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .eh_frame
+    Type: SHT_X86_64_UNWIND
+## The content is generated from the following code. It has no CIE.
+## See the DebugInfoX86/eh-frame-cie-id.s test case for more history.
+## .section .eh_frame,"a",@unwind
+## .long .Lend - .LCIEptr  # Length
+## .LCIEptr:
+##   .long 0xffffffff # CIE pointer
+##   .quad 0x1111abcd # Initial location
+##   .quad 0x00010000 # Address range
+## .Lend:
+    Content: 14000000FFFFFFFFCDAB1111000000000000010000000000
+
+## Check we report a error when the .eh_frame section contains truncated data.
+# RUN: yaml2obj --docnum=3 %s -o %t3.exe
+# RUN: not llvm-readobj --unwind %t3.exe 2>&1 | FileCheck %s -DFILE=%t3.exe --check-prefix=TRUNCATED-ERR
+
+# TRUNCATED-ERR:      .eh_frame section at offset 0x34 address 0x0:
+# TRUNCATED-ERR-NEXT: error: '[[FILE]]': unexpected end of data at offset 0x4
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .eh_frame
+    Type:    SHT_PROGBITS
+## Length is set to 0xFF, though the actual section length is 4.
+    Content: "FF000000"
+
+## Check we report an error when we can't read the content of the .eh_frame section.
+
+## Case A: test we report an error when the p_offset of the PT_GNU_EH_FRAME
+##         is invalid (goes past the end of the file).
+
+# RUN: yaml2obj --docnum=4 %s -o %t4 -DOFFSET=0xffff0000 -DSIZE=0x1 -DBITS=32
+# RUN: not llvm-readobj --unwind %t4 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t4 --check-prefix=BROKEN-CONTENT -DOFFSET=0xffff0000 -DSIZE=0x1
+
+# RUN: yaml2obj --docnum=4 %s -o %t5 -DOFFSET=0x1 -DSIZE=0xffff0000 -DBITS=32
+# RUN: not llvm-readobj --unwind %t5 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t5 --check-prefix=BROKEN-CONTENT -DOFFSET=0x1 -DSIZE=0xffff0000
+
+# BROKEN-CONTENT:      EHFrameHeader {
+# BROKEN-CONTENT-NEXT:   Address: 0x0
+# BROKEN-CONTENT-NEXT:   Offset:  [[OFFSET]]
+# BROKEN-CONTENT-NEXT:   Size:    [[SIZE]]
+# BROKEN-CONTENT-NEXT:   Corresponding Section:
+# BROKEN-CONTENT-NEXT: error: '[[FILE]]': program header  [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that is greater than the file size (0xe0)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+ProgramHeaders:
+  - Type:     PT_GNU_EH_FRAME
+    MemSize:  [[SIZE]]
+    FileSize: [[SIZE]]
+    Offset:   [[OFFSET]]
+
+## Case B: test we report an error when the file size of the PT_GNU_EH_FRAME
+##         is invalid (goes past the end of the file).
+# RUN: yaml2obj --docnum=4 %s -o %t6 -DOFFSET=0x100 -DSIZE=0xffff0000 -DBITS=32
+# RUN: not llvm-readobj --unwind %t6 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t6 --check-prefix=BROKEN-CONTENT -DOFFSET=0x100 -DSIZE=0xffff0000
+
+## Case C: test we report an error when the offset + the file size of the PT_GNU_EH_FRAME is so large a
+##         value that it overflows the platform address size type.
+
+# RUN: yaml2obj --docnum=4 %s -o %t7 -DOFFSET=0x1 -DSIZE=0xffffffff -DBITS=32
+# RUN: not llvm-readobj --unwind %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0x1 -DSIZE=0xffffffff
+
+# RUN: yaml2obj --docnum=4 %s -o %t8 -DOFFSET=0xffffffff -DSIZE=0x1 -DBITS=32
+# RUN: not llvm-readobj --unwind %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0xffffffff -DSIZE=0x1
+
+# RUN: yaml2obj --docnum=4 %s -o %t9 -DOFFSET=0x1 -DSIZE=0xffffffffffffffff -DBITS=64
+# RUN: not llvm-readelf --unwind %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0x1 -DSIZE=0xffffffffffffffff
+
+# RUN: yaml2obj --docnum=4 %s -o %t10 -DOFFSET=0xffffffffffffffff -DSIZE=0x1 -DBITS=64
+# RUN: not llvm-readelf --unwind %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=BROKEN-CONTENT2 -DOFFSET=0xffffffffffffffff -DSIZE=0x1
+
+# BROKEN-CONTENT2:      EHFrameHeader {
+# BROKEN-CONTENT2-NEXT:   Address: 0x0
+# BROKEN-CONTENT2-NEXT:   Offset: [[OFFSET]]
+# BROKEN-CONTENT2-NEXT:   Size:   [[SIZE]]
+# BROKEN-CONTENT2-NEXT:   Corresponding Section:
+# BROKEN-CONTENT2-NEXT: error: '[[FILE]]': program header [index 0] has a p_offset ([[OFFSET]]) + p_filesz ([[SIZE]]) that cannot be represented

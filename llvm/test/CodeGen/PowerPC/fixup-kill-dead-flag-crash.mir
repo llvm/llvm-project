@@ -1,0 +1,38 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs -start-before ppc-mi-peepholes \
+# RUN:   -stop-after ppc-mi-peepholes %s -o - | FileCheck %s
+
+---
+name: test
+#CHECK : name : test
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:g8rc = LI8 63
+
+  bb.1:
+    %3:gprc = COPY %2.sub_32:g8rc
+    ; CHECK: %4:gprc = LI 0
+    %4:gprc = XORI killed %3:gprc, 63
+    STW killed %4:gprc, %4:gprc, 100
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: test2
+#CHECK : name : test2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r3
+    %0:gprc = COPY $r3
+    %1:gprc_and_gprc_nor0 = LI 0
+    ; CHECK-NOT: COPY %1
+    %2:gprc = COPY %1:gprc_and_gprc_nor0
+    ; CHECK: %3:gprc = LI 1
+    %3:gprc = ORI killed %2:gprc, 1
+    ; CHECK: STW killed %3, killed %0, 100
+    STW killed %3:gprc, %0:gprc, 100
+    BLR8 implicit $lr8, implicit $rm
+...

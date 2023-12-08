@@ -1,0 +1,35 @@
+# RUN: llc -march=hexagon -run-pass hexagon-cext-opt -hexagon-cext-threshold=1 -o - %s | FileCheck %s
+
+# Make sure that the stores to the stack slot are not converted into rr forms.
+# CHECK: %[[REG:[0-9]+]]:intregs = PS_fi %stack.0, 267
+# CHECK: S2_pstorerbt_io %{{[0-9]+}}, %[[REG]], 0
+# CHECK: S2_pstorerbt_io %{{[0-9]+}}, %[[REG]], 0
+
+---
+name: fred
+stack:
+  - { id: 0, type: default, size: 272, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:intregs = IMPLICIT_DEF
+    %1:intregs = L2_loadrub_io killed %0:intregs, 0 :: (load (s8) from `ptr undef`, align 2)
+    %2:predregs = C2_cmpeqi %1:intregs, 5
+    %3:intregs = A2_tfrsi 0
+    S2_pstorerbt_io %2:predregs, %stack.0, 267, killed %3:intregs :: (store (s8) into %stack.0)
+    J2_jumpt %2:predregs, %bb.2, implicit-def $pc
+
+  bb.1:
+    successors: %bb.2
+
+    %4:predregs = C2_cmpeqi %1:intregs, 6
+    %5:intregs = A2_tfrsi 2
+    S2_pstorerbt_io %4:predregs, %stack.0, 267, killed %5:intregs :: (store (s8) into %stack.0)
+
+  bb.2:
+    %6:intregs = A2_tfrsi 32968
+    S2_storerh_io %stack.0, 0, killed %6:intregs :: (store (s16) into %stack.0, align 4)
+    PS_jmpret $r31, implicit-def dead $pc
+...
+

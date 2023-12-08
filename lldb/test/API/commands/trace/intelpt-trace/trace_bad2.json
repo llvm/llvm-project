@@ -1,0 +1,38 @@
+{
+  "type": "intel-pt",
+  "cpuInfo": {
+    "vendor": "GenuineIntel",
+    "family": "123",
+    "model": 79,
+    "stepping": 1
+  },
+  "processes": [
+    {
+      "pid": 1234,
+      "threads": [
+        {
+          "tid": 5678,
+          "iptTrace": "3842849.trace"
+        }
+      ],
+      "modules": [
+        {
+          "file": "a.out",
+          "systemPath": "a.out",
+          "loadAddress": 4194304,
+          "uuid": "6AA9A4E2-6F28-2F33-377D-59FECE874C71-5B41261A"
+        }
+      ]
+    },
+    {
+      "pid": 12345,
+      "threads": [
+        {
+          "tid": 56789,
+          "iptTrace": "3842849.trace"
+        }
+      ],
+      "modules": []
+    }
+  ]
+}

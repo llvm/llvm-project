@@ -1,0 +1,15 @@
+// RUN: cp %s %t.cpp
+// RUN: not clangd -enable-config=0 -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
+
+// CHECK: Testing on source file {{.*}}check-fail.test
+// CHECK: internal (cc1) args are: -cc1
+// CHECK: Building preamble...
+// CHECK: [pp_file_not_found] Line {{.*}}: 'missing.h' file not found
+// CHECK: Building AST...
+// CHECK: Testing features at each token
+// CHECK: tweak: ExpandDeducedType ==> FAIL
+// CHECK: All checks completed, 2 errors
+
+#include "missing.h"
+void fun();
+auto x = fun;

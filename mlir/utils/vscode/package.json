@@ -1,0 +1,215 @@
+{
+  "name": "vscode-mlir",
+  "displayName": "MLIR",
+  "description": "MLIR Language Extension",
+  "version": "0.0.11",
+  "publisher": "llvm-vs-code-extensions",
+  "homepage": "https://mlir.llvm.org/",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.67.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "LLVM",
+    "MLIR",
+    "PDLL",
+    "TableGen",
+    "tblgen",
+    "tablegen"
+  ],
+  "activationEvents": [
+    "onFileSystem:mlir.bytecode-mlir",
+    "onCustomEditor:mlir.bytecode",
+    "onLanguage:mlir",
+    "onLanguage:pdll",
+    "onLanguage:tablegen"
+  ],
+  "main": "./out/extension",
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -watch -p ./",
+    "format": "clang-format -i --glob=\"{src,test}/*.ts\"",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "git-clang-format": "git-clang-format"
+  },
+  "dependencies": {
+    "base64-js": "^1.5.1",
+    "chokidar": "3.5.2",
+    "vscode-languageclient": "^8.0.2-next.5"
+  },
+  "devDependencies": {
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^14.17.0",
+    "@types/vscode": "~1.67.0",
+    "@vscode/vsce": "^2.19.0",
+    "clang-format": "^1.8.0",
+    "typescript": "^4.6.4",
+    "vscode-test": "^1.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/llvm/vscode-mlir.git"
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "mlir.bytecode",
+        "displayName": "MLIR Bytecode",
+        "priority": "default",
+        "selector": [
+          {
+            "filenamePattern": "*.mlirbc"
+          }
+        ]
+      }
+    ],
+    "languages": [
+      {
+        "id": "mlir",
+        "aliases": [
+          "MLIR",
+          "mlir"
+        ],
+        "extensions": [
+          ".mlir",
+          ".mlirbc"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "mlir-injection"
+      },
+      {
+        "id": "pdll",
+        "aliases": [
+          "PDLL",
+          "pdll"
+        ],
+        "extensions": [
+          ".pdll"
+        ],
+        "configuration": "./pdll-language-configuration.json"
+      },
+      {
+        "id": "tablegen",
+        "aliases": [
+          "TableGen",
+          "tblgen"
+        ],
+        "extensions": [
+          ".td"
+        ],
+        "configuration": "./tablegen-language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mlir",
+        "scopeName": "source.mlir",
+        "path": "./grammar.json"
+      },
+      {
+        "language": "mlir-injection",
+        "scopeName": "markdown.mlir.codeblock",
+        "path": "markdown-grammar.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.mlir": "mlir",
+          "meta.embedded.block.pdll": "pdll",
+          "meta.embedded.block.tablegen": "tablegen"
+        }
+      },
+      {
+        "scopeName": "source.cpp.mlir",
+        "path": "./cpp-grammar.json",
+        "injectTo": [
+          "source.cpp"
+        ],
+        "embeddedLanguages": {
+          "source.mlir": "mlir"
+        }
+      },
+      {
+        "language": "pdll",
+        "scopeName": "source.pdll",
+        "path": "./pdll-grammar.json"
+      },
+      {
+        "language": "tablegen",
+        "scopeName": "source.tablegen",
+        "path": "./tablegen-grammar.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "MLIR",
+      "properties": {
+        "mlir.server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the mlir-lsp-server executable."
+        },
+        "mlir.pdll_server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the mlir-pdll-lsp-server executable."
+        },
+        "mlir.pdll_compilation_databases": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of `pdll_compile_commands.yml` database files containing information about .pdll files processed by the server."
+        },
+        "mlir.tablegen_server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the tblgen-lsp-server executable."
+        },
+        "mlir.tablegen_compilation_databases": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of `tablegen_compile_commands.yml` database files containing information about .td files processed by the server."
+        },
+        "mlir.onSettingsChanged": {
+          "type": "string",
+          "default": "prompt",
+          "description": "Action taken when a setting change requires a server restart to take effect.",
+          "enum": [
+            "prompt",
+            "restart",
+            "ignore"
+          ],
+          "enumDescriptions": [
+            "Prompt the user for restarting the server",
+            "Automatically restart the server",
+            "Do nothing"
+          ]
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "mlir.restart",
+        "title": "mlir: Restart language server"
+      },
+      {
+        "command": "mlir.viewPDLLOutput",
+        "title": "mlir-pdll: View PDLL output"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mlir.viewPDLLOutput",
+          "group": "z_commands",
+          "when": "editorLangId == pdll"
+        }
+      ]
+    }
+  }
+}

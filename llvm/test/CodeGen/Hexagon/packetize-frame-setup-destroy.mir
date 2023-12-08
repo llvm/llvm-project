@@ -1,0 +1,62 @@
+# RUN: llc -march=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
+
+##############################################################################
+# This test case is not really hexagon specific, but we use hexagon to get
+# bundling.
+#
+# The goal is to verify that the BUNDLE instruction is getting the
+# frame-setup/frame-destroy attribute if any of the bundled instructions got
+# the attribute.
+##############################################################################
+
+---
+name: setup
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r1, $r2
+    successors: %bb.1
+    $r3 = frame-setup L2_loadri_io $r1, 0
+    J4_cmpgtu_f_jumpnv_t killed $r3, killed $r2, %bb.1, implicit-def $pc
+
+  bb.1:
+...
+
+# CHECK-LABEL: name: setup
+# CHECK: frame-setup BUNDLE
+
+##############################################################################
+
+---
+name: destroy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r1, $r2
+    successors: %bb.1
+    $r3 = frame-destroy L2_loadri_io $r1, 0
+    J4_cmpgtu_f_jumpnv_t killed $r3, killed $r2, %bb.1, implicit-def $pc
+
+  bb.1:
+...
+
+# CHECK-LABEL: name: destroy
+# CHECK: frame-destroy BUNDLE
+
+##############################################################################
+
+---
+name: mixed
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r1, $r2
+    successors: %bb.1
+    $r3 = frame-setup L2_loadri_io $r1, 0
+    frame-destroy J4_cmpgtu_f_jumpnv_t killed $r3, killed $r2, %bb.1, implicit-def $pc
+
+  bb.1:
+...
+
+# CHECK-LABEL: name: mixed
+# CHECK: frame-setup frame-destroy BUNDLE

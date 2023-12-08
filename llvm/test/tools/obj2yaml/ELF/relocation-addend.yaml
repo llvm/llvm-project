@@ -1,0 +1,106 @@
+## Test how obj2yaml emits relocation addend descriptions.
+## We document that relocation addends are dumped as signed int64 decimal values.
+
+## Case 1: Check a 64-bit object.
+
+## Check how obj2yaml dumps an addend with an arbitrary positive value.
+## We use 1 as it is the first possible positive value.
+# RUN: yaml2obj --docnum=1 %s -o %t1 -D ADDEND=1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=ELF64 --match-full-lines -DADDEND=1
+
+# ELF64:      Relocations:
+# ELF64-NEXT:  - Symbol: foo
+# ELF64-NEXT:    Type:   R_X86_64_PC32
+# ELF64-NEXT:    Addend: [[ADDEND]]
+
+## Check how obj2yaml dumps an addend with an arbitrary negative value.
+## We use -1 as it is the first possible negative value.
+# RUN: yaml2obj --docnum=1 %s -o %t2 -D ADDEND=-1
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=ELF64 --match-full-lines -DADDEND=-1
+
+## Check how obj2yaml dumps an addend with the value INT64_MAX.
+# RUN: yaml2obj --docnum=1 %s -o %t3 -D ADDEND=9223372036854775807
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=ELF64 --match-full-lines -DADDEND=9223372036854775807
+
+## Check how obj2yaml dumps an addend with the value INT64_MIN.
+# RUN: yaml2obj --docnum=1 %s -o %t4 -D ADDEND=-9223372036854775808
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=ELF64 --match-full-lines -DADDEND=-9223372036854775808
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Type:   R_X86_64_PC32
+        Offset: 0x0
+        Symbol: foo
+        Addend: [[ADDEND]]
+Symbols:
+  - Name: foo
+
+## Check that obj2yaml omits zero addends.
+# RUN: yaml2obj --docnum=1 %s -o %t5 -D ADDEND=0
+# RUN: obj2yaml %t5 | FileCheck %s --implicit-check-not="Addend:"
+# RUN: yaml2obj --docnum=1 %s -o %t6 -D ADDEND=0x0
+# RUN: obj2yaml %t6 | FileCheck %s --implicit-check-not="Addend:"
+
+## Case 2: Check a 32-bit object.
+
+## Check how obj2yaml dumps an addend with an arbitrary positive value.
+## We use 1 as it is the first possible positive value.
+# RUN: yaml2obj --docnum=2 %s -o %t7 -D ADDEND=1
+# RUN: obj2yaml %t7 | FileCheck %s --check-prefix=ELF32 --match-full-lines -DADDEND=1
+
+# ELF32:      Relocations:
+# ELF32-NEXT:  - Symbol: foo
+# ELF32-NEXT:    Type:   R_386_PC32
+# ELF32-NEXT:    Addend: [[ADDEND]]
+
+## Check how obj2yaml dumps an addend with an arbitrary negative value.
+## We use -1 as it is the first possible negative value.
+# RUN: yaml2obj --docnum=2 %s -o %t8 -D ADDEND=-1
+# RUN: obj2yaml %t8 | FileCheck %s --check-prefix=ELF32 --match-full-lines -DADDEND=-1
+
+## Check how obj2yaml dumps an addend with the value INT32_MAX.
+# RUN: yaml2obj --docnum=2 %s -o %t9 -D ADDEND=2147483647
+# RUN: obj2yaml %t9 | FileCheck %s --check-prefix=ELF32 --match-full-lines -DADDEND=2147483647
+
+## Check how obj2yaml dumps an addend with the value INT32_MIN.
+# RUN: yaml2obj --docnum=2 %s -o %t10 -D ADDEND=-2147483648
+# RUN: obj2yaml %t10 | FileCheck %s --check-prefix=ELF32 --match-full-lines -DADDEND=-2147483648
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Type:   R_386_PC32
+        Offset: 0x0
+        Symbol: foo
+        Addend: [[ADDEND]]
+Symbols:
+  - Name: foo
+
+## Case 3: Check that obj2yaml omits zero addends.
+# RUN: yaml2obj --docnum=1 %s -o %t11 -D ADDEND=0
+# RUN: obj2yaml %t11 | FileCheck %s --implicit-check-not="Addend:"
+# RUN: yaml2obj --docnum=1 %s -o %t12 -D ADDEND=0x0
+# RUN: obj2yaml %t12 | FileCheck %s --implicit-check-not="Addend:"

@@ -1,0 +1,20 @@
+// RUN: rm -rf %t
+//
+// RUN: %clang_cc1 -fmodules -x c++ -fmodules-cache-path=%t \
+// RUN:   -fno-implicit-modules \
+// RUN:   -emit-module -fmodule-name=empty -o %t/base.pcm \
+// RUN:   %s
+//
+// RUN: %clang_cc1 -fmodules -x c++ -fmodules-cache-path=%t \
+// RUN:   -fno-implicit-modules \
+// RUN:   -emit-module -fmodule-name=empty -o %t/check.pcm \
+// RUN:   %s
+//
+// The module file should be identical each time we produce it.
+// RUN: diff %t/base.pcm %t/check.pcm
+//
+// We expect an empty module to be less than 60KB (and at least 10K, for now).
+// RUN: wc -c %t/base.pcm | FileCheck --check-prefix=CHECK-SIZE %s
+// CHECK-SIZE: {{(^|[^0-9])[1-5][0-9][0-9][0-9][0-9]($|[^0-9])}}
+
+module empty { header "Inputs/empty.h" export * }

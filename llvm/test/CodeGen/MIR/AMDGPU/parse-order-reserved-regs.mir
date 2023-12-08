@@ -1,0 +1,29 @@
+# RUN: llc -march=amdgcn -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn  -run-pass mir-canonicalizer -verify-machineinstrs -o - %s
+# RUN: llc -march=amdgcn  -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - %s
+
+# Previously getReservedRegs was called before parsing
+# machineFunctionInfo, but the AMDGPU implementation depends on
+# setting register fields to reserve there. $sgpr50 would then not be
+# reserved, resulting in a verifier error from an undefined register.
+
+---
+# CHECK: machineFunctionInfo:
+# CHECK: isEntryFunction: true
+# CHECK: scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+# CHECK: frameOffsetReg:  '$sgpr50'
+# CHECK: renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, implicit $exec :: (load (s32), addrspace 5)
+name: reserve_correct_register
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr50'
+stack:
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4 }
+
+body:             |
+  bb.0:
+    renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, implicit $exec :: (load (s32), addrspace 5)
+    S_ENDPGM 0
+...

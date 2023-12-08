@@ -1,0 +1,91 @@
+# REQUIRES: system-linux, lzma, xz
+
+# We want to keep the symbol "multiplyByThree" in the .dynamic section and not
+# have it put the default .symtab section.
+# RUN: echo "{multiplyByThree;};" > %T/dynmic-symbols.txt
+# RUN: %clang_host -Wl,--dynamic-list=%T/dynmic-symbols.txt -g -o %t.binary %p/Inputs/minidebuginfo-main.c
+
+# The following section is adapted from GDB's official documentation:
+# http://sourceware.org/gdb/current/onlinedocs/gdb/MiniDebugInfo.html#MiniDebugInfo
+
+# Extract the dynamic symbols from the main binary, there is no need
+# to also have these in the normal symbol table.
+
+# IGNORE: llvm-nm -D %t.binary --format=posix --defined-only | awk '{ print $1 }' | sort > %t.dynsyms
+
+# Extract all the text (i.e. function) symbols from the debuginfo.
+# (Note that we actually also accept "D" symbols, for the benefit
+# of platforms like PowerPC64 that use function descriptors.)
+
+# IGNORE: llvm-nm %t.binary --format=posix --defined-only | awk '{ if ($2 == "T" || $2 == "t" || $2 == "D") print $1 }' | sort > %t.funcsyms
+
+# Keep all the function symbols not already in the dynamic symbol
+# table.
+
+# IGNORE: comm -13 %t.dynsyms %t.funcsyms > %t.keep_symbols
+# The result of the preceeding command can be hardcoded
+# because we know what symbol to keep.
+# RUN: echo "multiplyByFour" > %t.keep_symbols
+
+# Separate full debug info into debug binary.
+
+# RUN: llvm-objcopy --only-keep-debug %t.binary %t.debug
+
+# Copy the full debuginfo, keeping only a minimal set of symbols and
+# removing some unnecessary sections.
+
+# RUN: llvm-objcopy -S --remove-section .gdb_index --remove-section .comment --keep-symbols=%t.keep_symbols %t.debug %t.mini_debuginfo
+
+# This command is not from the GDB manual but it slims down embedded minidebug
+# info. On top if that, it ensures that we only have the multiplyByThree symbol
+# in the .dynsym section of the main binary. The bits removing .rela.plt,
+# .rela.dyn and .dynsym sections can be removed once llvm-objcopy
+# --only-keep-debug starts to work.
+# RUN: llvm-objcopy --remove-section=.rela.plt --remove-section=.rela.dyn --remove-section=.rel.plt --remove-section=.rel.dyn \
+# RUN:   --remove-section=.gnu.version --remove-section=.gnu.hash --remove-section=.hash --remove-section=.dynsym %t.mini_debuginfo
+
+# Drop the full debug info from the original binary.
+
+# RUN: llvm-strip --strip-all -R .comment %t.binary
+
+# Inject the compressed data into the .gnu_debugdata section of the
+# original binary.
+
+# RUN: xz --force --keep %t.mini_debuginfo
+
+# RUN: llvm-objcopy --add-section .gnu_debugdata=%t.mini_debuginfo.xz %t.binary
+
+# Now run the binary and see that we can set and hit a breakpoint
+# from within the .dynsym section (multiplyByThree) and one from
+# the .symtab section embedded in the .gnu_debugdata section (multiplyByFour).
+
+# RUN: %lldb -b -o 'b multiplyByThree' -o 'b multiplyByFour' -o 'run' -o 'continue' -o 'breakpoint list -v' %t.binary | FileCheck %s --dump-input-context 20
+
+# CHECK: (lldb) b multiplyByThree
+# CHECK-NEXT: Breakpoint 1: where = minidebuginfo-set-and-hit-breakpoint.test.tmp.binary`multiplyByThree, address = 0x{{.*}}
+
+# CHECK: (lldb) b multiplyByFour
+# CHECK-NEXT: Breakpoint 2: where = minidebuginfo-set-and-hit-breakpoint.test.tmp.binary`multiplyByFour, address = 0x{{.*}}
+
+# CHECK: * thread #1, name = 'minidebuginfo-s', stop reason = breakpoint 1.1
+# CHECK: * thread #1, name = 'minidebuginfo-s', stop reason = breakpoint 2.1
+
+# CHECK: (lldb) breakpoint list -v
+# CHECK-NEXT: Current breakpoints:
+# CHECK-NEXT: 1: name = 'multiplyByThree'
+# CHECK-NEXT:  1.1:
+# CHECK-NEXT:  module = {{.*}}/minidebuginfo-set-and-hit-breakpoint.test.tmp.binary
+# CHECK-NEXT:  symbol = multiplyByThree
+# CHECK-NEXT:  address = 0x{{.*}}
+# CHECK-NEXT:  resolved = true
+# CHECK-NEXT:  hardware = false
+# CHECK-NEXT:  hit count = 1
+
+# CHECK: 2: name = 'multiplyByFour'
+# CHECK-NEXT:  2.1:
+# CHECK-NEXT:  module = {{.*}}/minidebuginfo-set-and-hit-breakpoint.test.tmp.binary
+# CHECK-NEXT:  symbol = multiplyByFour
+# CHECK-NEXT:  address = 0x{{.*}}
+# CHECK-NEXT:  resolved = true
+# CHECK-NEXT:  hardware = false
+# CHECK-NEXT:  hit count = 1

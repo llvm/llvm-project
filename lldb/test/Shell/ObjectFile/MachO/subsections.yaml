@@ -1,0 +1,126 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+#CHECK:     Showing 2 sections
+#CHECK-NEXT:  Index: 0
+#CHECK-NEXT:  ID: 0x100
+#CHECK-NEXT:  Name: __PAGEZERO
+#CHECK-NEXT:  Type: container
+#CHECK-NEXT:  Permissions: ---
+#CHECK-NEXT:  Thread specific: no
+#CHECK-NEXT:  VM address: 0x0
+#CHECK-NEXT:  VM size: 4294967296
+#CHECK-NEXT:  File size: 0
+#CHECK-NEXT:  There are no subsections
+#CHECK-EMPTY:
+#CHECK-NEXT:  Index: 1
+#CHECK-NEXT:  ID: 0x200
+#CHECK-NEXT:  Name: __TEXT
+#CHECK-NEXT:  Type: container
+#CHECK-NEXT:  Permissions: r-x
+#CHECK-NEXT:  Thread specific: no
+#CHECK-NEXT:  VM address: 0x100000000
+#CHECK-NEXT:  VM size: 4096
+#CHECK-NEXT:  File size: 4096
+#CHECK-NEXT:  Showing 3 subsections
+#CHECK-NEXT:    Index: 0
+#CHECK-NEXT:    ID: 0x1
+#CHECK-NEXT:    Name: __text
+#CHECK-NEXT:    Type: code
+#CHECK-NEXT:    Permissions: r-x
+#CHECK-NEXT:    Thread specific: no
+#CHECK-NEXT:    VM address: 0x100000f30
+#CHECK-NEXT:    VM size: 22
+#CHECK-NEXT:    File size: 22
+#CHECK-EMPTY:
+#CHECK-NEXT:    Index: 1
+#CHECK-NEXT:    ID: 0x2
+#CHECK-NEXT:    Name: __unwind_info
+#CHECK-NEXT:    Type: compact-unwind
+#CHECK-NEXT:    Permissions: r-x
+#CHECK-NEXT:    Thread specific: no
+#CHECK-NEXT:    VM address: 0x100000f48
+#CHECK-NEXT:    VM size: 76
+#CHECK-NEXT:    File size: 76
+#CHECK-EMPTY:
+#CHECK-NEXT:    Index: 2
+#CHECK-NEXT:    ID: 0x3
+#CHECK-NEXT:    Name: __eh_frame
+#CHECK-NEXT:    Type: eh-frame
+#CHECK-NEXT:    Permissions: r-x
+#CHECK-NEXT:    Thread specific: no
+#CHECK-NEXT:    VM address: 0x100000f98
+#CHECK-NEXT:    VM size: 104
+#CHECK-NEXT:    File size: 104
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000002
+  ncmds:           12
+  sizeofcmds:      728
+  flags:           0x00000085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        5
+    nsects:          3
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000F30
+        size:            22
+        offset:          0x00000F30
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100000F48
+        size:            76
+        offset:          0x00000F48
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x0000000100000F98
+        size:            104
+        offset:          0x00000F98
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x0000000B
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+...

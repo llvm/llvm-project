@@ -1,0 +1,16 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-gcov-one-line-function.c
+// CHECK-NEXT:        -:    0:Graph:instrprof-gcov-one-line-function.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-gcov-one-line-function.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    0:Programs:1
+// CHECK-NEXT:        1:    1:void foo() { }
+// CHECK-NEXT:        -:    2:
+// CHECK-NEXT:        1:    3:void bar() { }
+// CHECK-NEXT:        -:    4:
+// CHECK-NEXT:        1:    5:int main(void) {
+// CHECK-NEXT:        1:    6:    foo();
+// CHECK-NEXT:        -:    7:
+// CHECK-NEXT:        1:    8:    bar();
+// CHECK-NEXT:        -:    9:
+// CHECK-NEXT:        1:   10:    return 0;
+// CHECK-NEXT:        -:   11:}

@@ -1,0 +1,37 @@
+# RUN: llc -march=hexagon -run-pass if-converter -o - %s -verify-machineinstrs | FileCheck %s
+
+# The register r23 is live on the path bb.0->bb.2->bb.3. Make sure we add
+# an implicit use of r23 to the predicated redefinition:
+# CHECK: $r23 = A2_tfrt killed $p0, killed $r1, implicit killed $r23
+
+# LivePhysRegs::addPristines could accidentally remove a callee-saved
+# register, if it determined that it wasn't pristine. Doing that caused
+# r23 in this testcase to be dropped from the Redefs set, and subsequently
+# the necessary implicit use was not added for it.
+
+---
+name: foo
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 4, callee-saved-register: '$r23' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r1, $r23
+      $p0 = C2_cmpgti killed $r0, 0
+      J2_jumpf killed $p0, %bb.2, implicit-def $pc
+
+  bb.1:
+    successors: %bb.3
+    liveins: $r1
+      $r23 = A2_tfr killed $r1
+      J2_jump %bb.3, implicit-def $pc
+
+  bb.2:
+    successors: %bb.3
+    liveins: $r1, $r23
+      $r0 = A2_tfr $r1
+
+  bb.3:
+    liveins: $r23
+...

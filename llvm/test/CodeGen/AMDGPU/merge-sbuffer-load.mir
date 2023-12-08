@@ -1,0 +1,188 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s
+
+# CHECK-LABEL: name: merge_s_buffer_load_x2
+# CHECK: S_BUFFER_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (s64), align 4)
+
+name: merge_s_buffer_load_x2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s32))
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 4, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_x4
+# CHECK: S_BUFFER_LOAD_DWORDX4_IMM %0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
+name: merge_s_buffer_load_x4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s32))
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 4, 0 :: (dereferenceable invariant load (s32))
+    %3:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 8, 0 :: (dereferenceable invariant load (s32))
+    %4:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 12, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_x8
+# CHECK: S_BUFFER_LOAD_DWORDX8_IMM %0, 0, 0 :: (dereferenceable invariant load (s256), align 4)
+name: merge_s_buffer_load_x8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s32))
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 4, 0 :: (dereferenceable invariant load (s32))
+    %3:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 8, 0 :: (dereferenceable invariant load (s32))
+    %4:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 12, 0 :: (dereferenceable invariant load (s32))
+    %5:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 16, 0 :: (dereferenceable invariant load (s32))
+    %6:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 20, 0 :: (dereferenceable invariant load (s32))
+    %7:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 24, 0 :: (dereferenceable invariant load (s32))
+    %8:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 28, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_x8_reordered
+# CHECK: S_BUFFER_LOAD_DWORDX8_IMM %0, 0, 0 :: (dereferenceable invariant load (s256), align 4)
+name: merge_s_buffer_load_x8_reordered
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 20, 0 :: (dereferenceable invariant load (s32))
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 4, 0 :: (dereferenceable invariant load (s32))
+    %3:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s32))
+    %4:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 28, 0 :: (dereferenceable invariant load (s32))
+    %5:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 12, 0 :: (dereferenceable invariant load (s32))
+    %6:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 16, 0 :: (dereferenceable invariant load (s32))
+    %7:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 8, 0 :: (dereferenceable invariant load (s32))
+    %8:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 24, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_x8_out_of_x2
+# CHECK: S_BUFFER_LOAD_DWORDX8_IMM %0, 0, 0 :: (dereferenceable invariant load (s256), align 8)
+name: merge_s_buffer_load_x8_out_of_x2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr_64 = S_BUFFER_LOAD_DWORDX2_IMM %0:sgpr_128, 16, 0 :: (dereferenceable invariant load (s64))
+    %2:sgpr_64 = S_BUFFER_LOAD_DWORDX2_IMM %0:sgpr_128, 8, 0 :: (dereferenceable invariant load (s64))
+    %3:sgpr_64 = S_BUFFER_LOAD_DWORDX2_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s64))
+    %4:sgpr_64 = S_BUFFER_LOAD_DWORDX2_IMM %0:sgpr_128, 24, 0 :: (dereferenceable invariant load (s64))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_x8_out_of_x4
+# CHECK: S_BUFFER_LOAD_DWORDX8_IMM %0, 0, 0 :: (dereferenceable invariant load (s256), align 16)
+name: merge_s_buffer_load_x8_out_of_x4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s128))
+    %2:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %0:sgpr_128, 16, 0 :: (dereferenceable invariant load (s128))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_x8_mixed
+# CHECK: S_BUFFER_LOAD_DWORDX8_IMM %0, 0, 0 :: (dereferenceable invariant load (s256), align 16)
+name: merge_s_buffer_load_x8_mixed
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM %0:sgpr_128, 0, 0 :: (dereferenceable invariant load (s128))
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 16, 0 :: (dereferenceable invariant load (s32))
+    %3:sgpr_64 = S_BUFFER_LOAD_DWORDX2_IMM %0:sgpr_128, 24, 0 :: (dereferenceable invariant load (s64))
+    %4:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM %0:sgpr_128, 20, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: merge_s_buffer_load_sgpr_imm
+# CHECK: S_BUFFER_LOAD_DWORDX4_SGPR_IMM %0, %1, 0, 0 :: (dereferenceable invariant load (s128), align 4)
+name: merge_s_buffer_load_sgpr_imm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32 = COPY $sgpr4
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 0, 0 :: (dereferenceable invariant load (s32))
+    %3:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 4, 0 :: (dereferenceable invariant load (s32))
+    %4:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 8, 0 :: (dereferenceable invariant load (s32))
+    %5:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 12, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: no_merge_for_different_soffsets
+# CHECK: S_BUFFER_LOAD_DWORD_SGPR_IMM %0, %1, 4, 0 :: (dereferenceable invariant load (s32))
+# CHECK: S_BUFFER_LOAD_DWORD_SGPR_IMM %0, %2, 8, 0 :: (dereferenceable invariant load (s32))
+name: no_merge_for_different_soffsets
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $sgpr5
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32 = COPY $sgpr4
+    %2:sreg_32 = COPY $sgpr5
+    %3:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 4, 0 :: (dereferenceable invariant load (s32))
+    %4:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %2:sreg_32, 8, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---
+
+# CHECK-LABEL: name: no_merge_for_non_adjacent_offsets
+# CHECK: S_BUFFER_LOAD_DWORD_SGPR_IMM %0, %1, 4, 0 :: (dereferenceable invariant load (s32))
+# CHECK: S_BUFFER_LOAD_DWORD_SGPR_IMM %0, %1, 12, 0 :: (dereferenceable invariant load (s32))
+name: no_merge_for_non_adjacent_offsets
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
+
+    %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sreg_32 = COPY $sgpr4
+    %2:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 4, 0 :: (dereferenceable invariant load (s32))
+    %3:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR_IMM %0:sgpr_128, %1:sreg_32, 12, 0 :: (dereferenceable invariant load (s32))
+
+    S_ENDPGM 0
+...
+---

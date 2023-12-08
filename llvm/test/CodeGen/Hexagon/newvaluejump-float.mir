@@ -1,0 +1,19 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-nvj %s -o - | FileCheck %s
+
+# Check that we don't generate a new-value jump for a floating-point
+# instruction.
+# CHECK-NOT: J4_cmpgti_t_jumpnv_t
+
+---
+name: fred
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0
+      $r0 = F2_conv_df2w_chop $d0, implicit $usr
+      $p0 = C2_cmpgti $r0, 30
+      J2_jumpt $p0, %bb.1, implicit-def $pc
+  bb.1:
+      J2_jumpr $r31, implicit-def $pc
+...
+

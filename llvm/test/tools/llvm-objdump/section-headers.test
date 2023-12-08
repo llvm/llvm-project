@@ -1,0 +1,158 @@
+## Test various details of llvm-objdump -h (--section-headers).
+
+## Check leading and trailing whitespace for full lines.
+
+# RUN: yaml2obj %s --docnum=1 -o %t-whitespace.o
+# RUN: llvm-objdump -h --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
+# RUN: llvm-objdump -h %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE-NO-LMA --strict-whitespace
+
+# WHITESPACE:      {{^}}Sections:{{$}}
+# WHITESPACE-NEXT: {{^}}Idx Name          Size     VMA              LMA              Type{{$}}
+# WHITESPACE-NEXT: {{^}}  0               00000000 0000000000000000 0000000000000000 {{$}}
+# WHITESPACE-NEXT: {{^}}  1 .text         00000000 0000000000000000 0000000000000000 TEXT{{$}}
+# WHITESPACE-NEXT: {{^}}  2 .data         00000000 0000000000000000 0000000000000000 DATA{{$}}
+# WHITESPACE-NEXT: {{^}}  3 .bss          00000000 0000000000000000 0000000000000000 BSS{{$}}
+# WHITESPACE-NEXT: {{^}}  4 .other        00000000 0000000000000000 0000000000000000 {{$}}
+# WHITESPACE-NEXT: {{^}}  5 .debug_abbrev 00000000 0000000000000000 0000000000000000 DEBUG{{$}}
+# WHITESPACE-NEXT: {{^}}  6 .debug_info   00000000 0000000000000000 0000000000000000 DATA, DEBUG{{$}}
+
+# WHITESPACE-NO-LMA:      {{^}}Sections:{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}Idx Name          Size     VMA              Type{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  0               00000000 0000000000000000 {{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  1 .text         00000000 0000000000000000 TEXT{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  2 .data         00000000 0000000000000000 DATA{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  3 .bss          00000000 0000000000000000 BSS{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  4 .other        00000000 0000000000000000 {{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  5 .debug_abbrev 00000000 0000000000000000 DEBUG{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  6 .debug_info   00000000 0000000000000000 DATA, DEBUG{{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_WRITE]
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [SHF_ALLOC, SHF_WRITE]
+  - Name:  .other
+    Type:  SHT_REL
+  - Name:  .debug_abbrev
+    Type:  SHT_PROGBITS
+  - Name:  .debug_info
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+ 
+## Check that --section-headers and --headers are aliases for -h.
+# RUN: llvm-objdump --section-headers --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
+# RUN: llvm-objdump --headers --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
+
+## The name field automatically expands past the default 13 columns when a
+## section name is longer than that.
+## Note: check with and without --show-lma to make sure resizing happens in
+## both cases.
+
+# RUN: yaml2obj %s --docnum=2 -o %t-name13chars.o
+# RUN: llvm-objdump -h --show-lma %t-name13chars.o \
+# RUN:   | FileCheck %s --check-prefix=NAME-13 --strict-whitespace
+# RUN: llvm-objdump -h %t-name13chars.o \
+# RUN:   | FileCheck %s --check-prefix=NAME-13 --strict-whitespace
+
+# NAME-13:      Sections:
+# NAME-13-NEXT: {{^}}Idx Name          Size
+# NAME-13-NEXT: {{^}}  0               00000000
+# NAME-13-NEXT: {{^}}  1 .foo          00000000
+# NAME-13-NEXT: {{^}}  2 .thirteenchar 00000000
+# NAME-13-NEXT: {{^}}  3 .bar          00000000
+
+## Including a section with a name of length 14 expands the width of the "Name"
+## column.
+# RUN: yaml2obj %s --docnum=3 -o %t-name14chars.o
+# RUN: llvm-objdump -h --show-lma %t-name14chars.o \
+# RUN:   | FileCheck %s --check-prefix=NAME-14 --strict-whitespace
+# RUN: llvm-objdump -h %t-name14chars.o \
+# RUN:   | FileCheck %s --check-prefix=NAME-14 --strict-whitespace
+
+# NAME-14:      Sections:
+# NAME-14-NEXT: {{^}}Idx Name           Size
+# NAME-14-NEXT: {{^}}  0                00000000
+# NAME-14-NEXT: {{^}}  1 .foo           00000000
+# NAME-14-NEXT: {{^}}  2 .fourteenchars 00000000
+# NAME-14-NEXT: {{^}}  3 .bar           00000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .thirteenchar
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .fourteenchars
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+
+## Check that objdump -h only prints the necessary amount of bytes for
+## addresses.
+
+# RUN: yaml2obj %s --docnum=4 -D BITS=32 -o %t-32bit.o
+# RUN: yaml2obj %s --docnum=4 -D BITS=64 -o %t-64bit.o
+
+# RUN: llvm-objdump -h --show-lma %t-32bit.o \
+# RUN:   | FileCheck %s --check-prefix=32 --strict-whitespace
+# 32: {{^}}Idx Name          Size     VMA      LMA      Type{{$}}
+# 32: {{^}}  1 .foo          00000000 00000400 00000400 TEXT{{$}}
+
+# RUN: llvm-objdump -h %t-32bit.o \
+# RUN:   | FileCheck %s --check-prefix=32-NO-LMA --strict-whitespace
+# 32-NO-LMA: {{^}}Idx Name          Size     VMA      Type{{$}}
+# 32-NO-LMA: {{^}}  1 .foo          00000000 00000400 TEXT{{$}}
+
+# RUN: llvm-objdump -h --show-lma %t-64bit.o \
+# RUN:   | FileCheck %s --check-prefix=64 --strict-whitespace
+# 64: {{^}}Idx Name          Size     VMA              LMA              Type{{$}}
+# 64: {{^}}  1 .foo          00000000 0000000000000400 0000000000000400 TEXT{{$}}
+
+# RUN: llvm-objdump -h %t-64bit.o \
+# RUN:   | FileCheck %s --check-prefix=64-NO-LMA --strict-whitespace
+# 64-NO-LMA: {{^}}Idx Name          Size     VMA              Type{{$}}
+# 64-NO-LMA: {{^}}  1 .foo          00000000 0000000000000400 TEXT{{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x400

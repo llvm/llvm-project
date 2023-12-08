@@ -1,0 +1,11 @@
+module ModCommon {
+  header "mod_common.h"
+
+  module ModCommonSub {
+    header "mod_common_sub.h"
+  }
+}
+
+module ModTU {
+  header "mod_tu.h"
+}

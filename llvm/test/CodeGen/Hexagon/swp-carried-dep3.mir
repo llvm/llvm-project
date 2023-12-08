@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+# REQUIRES: asserts
+
+# Test that the loop carried dependence check correctly identifies a recurrence
+# when load and store use distinct increment for their pointer. To test this,
+# we check that we don't have the Rec NodeSet containing SU(5) and SU(7) which
+# requires to use a single CHECK-NOT to match such a Rec NodeSet. Fortunately
+# the atom '.' does not match a newline but anything else on a line.
+
+# CHECK-NOT: Rec NodeSet{{.+[[:space:]]}} SU(5){{.+[[:space:]]}} SU(7)
+
+...
+---
+name:            test
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    successors: %bb.3, %bb.1
+    liveins: $r0, $r1, $r2
+
+    %14:intregs = COPY $r2
+    %13:intregs = COPY $r1
+    %12:intregs = COPY $r0
+    %16:predregs = C2_cmpeqi %14, 2
+    %15:intregs = A2_tfrsi 0
+    J2_jumpt killed %16, %bb.3, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.2
+
+    %0:intregs = A2_addi %14, -2
+    %1:intregs = A2_addi %12, 10
+    %2:intregs = A2_addi %13, 4
+    %17:intregs = A2_tfrsi 0
+    %23:intregs = COPY %0
+    J2_loop0r %bb.2, %23, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.2 (machine-block-address-taken):
+    successors: %bb.3, %bb.2
+
+    %3:intregs = PHI %2, %bb.1, %10, %bb.2
+    %4:intregs = PHI %1, %bb.1, %9, %bb.2
+    %21:intregs = PHI %1, %bb.1, %22, %bb.2
+    %6:intregs = PHI %17, %bb.1, %7, %bb.2
+    %18:intregs, %10:intregs = L2_loadrh_pi %3, 2 :: (load (s16))
+    %19:intregs, %22:intregs = L2_loadrh_pi %21, 2 :: (load (s16))
+    %20:intregs = A2_addi %18, 10
+    %9:intregs = S2_storerh_pi %4, 2, killed %20 :: (store (s16))
+    %7:intregs = M2_acci %19, %6, %18
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3:
+    %11:intregs = PHI %15, %bb.0, %7, %bb.2
+    $r0 = COPY %11
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+...

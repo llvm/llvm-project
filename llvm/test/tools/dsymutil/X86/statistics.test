@@ -1,0 +1,22 @@
+# RUN: dsymutil -statistics -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil --linker llvm -statistics -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s
+#
+# CHECK: -------------------------------------------------------------------------------
+# CHECK-NEXT: Filename                                           Object         dSYM   Change
+# CHECK-NEXT: -------------------------------------------------------------------------------
+# CHECK-DAG: basic2.macho.x86_64.o {{[0-9]+}}b {{[0-9]+}}b{{.*}}{{[0-9]+}}.{{[0-9]+}}%
+# CHECK-DAG: basic3.macho.x86_64.o {{[0-9]+}}b {{[0-9]+}}b{{.*}}{{[0-9]+}}.{{[0-9]+}}%
+# CHECK-DAG: basic1.macho.x86_64.o {{[0-9]+}}b {{[0-9]+}}b{{.*}}{{[0-9]+}}.{{[0-9]+}}%
+# CHECK: -------------------------------------------------------------------------------
+# CHECK-NEXT: Total                {{[0-9]+}}b {{[0-9]+}}b{{.*}}{{[0-9]+}}.{{[0-9]+}}%
+# CHECK-NEXT: -------------------------------------------------------------------------------
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        invalid.o
+    timestamp:       1518197670
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000010, binAddr: 0x0000000100000FB0, size: 0x00000008 }
+      - { sym: _g, objAddr: 0x0000000000000000, binAddr: 0x0000000100000FA0, size: 0x00000010 }
+...

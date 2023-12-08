@@ -1,0 +1,11 @@
+RUN: llvm-dwarfdump -debug-frame %S/Inputs/empty.dSYM | FileCheck %s
+
+You can generate an empty dSYM companion file by invoking dsymutil on any
+object file.
+
+CHECK: .debug_frame contents:
+CHECK-NOT: CIE
+CHECK-NOT: FDE
+CHECK: .eh_frame contents:
+CHECK-NOT: CIE
+CHECK-NOT: FDE

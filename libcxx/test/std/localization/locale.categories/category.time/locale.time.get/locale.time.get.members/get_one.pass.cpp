@@ -1,0 +1,307 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <locale>
+
+// class time_get<charT, InputIterator>
+
+// iter_type get(iter_type s, iter_type end, ios_base& f,
+//               ios_base::iostate& err, tm *t, char format, char modifier = 0) const;
+
+#include <locale>
+#include <cassert>
+#include "test_macros.h"
+#include "test_iterators.h"
+
+typedef cpp17_input_iterator<const char*> I;
+
+typedef std::time_get<char, I> F;
+
+class my_facet
+    : public F
+{
+public:
+    explicit my_facet(std::size_t refs = 0)
+        : F(refs) {}
+};
+
+int main(int, char**)
+{
+    const my_facet f(1);
+    std::ios ios(0);
+    std::ios_base::iostate err;
+    std::tm t;
+    {
+        const char in[] = "mon";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'a');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_wday == 1);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "wednesdaY";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'A');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_wday == 3);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "June";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'b');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mon == 5);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "Jul";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'B');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mon == 6);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "Thu Jun  6 09:49:10 2009";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'c');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_wday == 4);
+        assert(t.tm_mon == 5);
+        assert(t.tm_mday == 6);
+        assert(t.tm_hour == 9);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(t.tm_year == 109);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "11";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'd');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mday == 11);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "2/1/1";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'D');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mon == 1);
+        assert(t.tm_mday == 1);
+        assert(t.tm_year == 101);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "11";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'e');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mday == 11);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "June";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'h');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mon == 5);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "19";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'H');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 19);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "12";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'm');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mon == 11);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "59";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'M');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_min == 59);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "\t\n ";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'n');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "09:49:10 PM";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 21);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "09:49:10 AM";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 9);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "12:49:10 AM";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 0);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "12:49:10 PM";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'r');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 12);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "09:49";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'R');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 9);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 0);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "60";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'S');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 0);
+        assert(t.tm_min == 0);
+        assert(t.tm_sec == 60);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "\t\n ";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 't');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "21:49:10";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'T');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 21);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "3";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'w');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_wday == 3);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "06/06/09";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'x');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_mon == 5);
+        assert(t.tm_mday == 6);
+        assert(t.tm_year == 109);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "21:49:10";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'X');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_hour == 21);
+        assert(t.tm_min == 49);
+        assert(t.tm_sec == 10);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "68";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'y');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_year == 168);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "68";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, 'Y');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(t.tm_year == -1832);
+        assert(err == std::ios_base::eofbit);
+    }
+    {
+        const char in[] = "%";
+        err = std::ios_base::goodbit;
+        t = std::tm();
+        I i = f.get(I(in), I(in+sizeof(in)-1), ios, err, &t, '%');
+        assert(base(i) == in+sizeof(in)-1);
+        assert(err == std::ios_base::eofbit);
+    }
+
+  return 0;
+}

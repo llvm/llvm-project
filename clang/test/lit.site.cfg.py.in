@@ -1,0 +1,50 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
+config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
+config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
+config.llvm_libs_dir = lit_config.substitute(path(r"@LLVM_LIBS_DIR@"))
+config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
+config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
+config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
+config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
+config.clang_lit_site_cfg = __file__
+config.clang_obj_root = path(r"@CLANG_BINARY_DIR@")
+config.clang_src_dir = path(r"@CLANG_SOURCE_DIR@")
+config.clang_tools_dir = lit_config.substitute(path(r"@CURRENT_TOOLS_DIR@"))
+config.clang_lib_dir = path(r"@CMAKE_LIBRARY_OUTPUT_DIRECTORY@")
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.host_cc = "@CMAKE_C_COMPILER@"
+config.host_cxx = "@CMAKE_CXX_COMPILER@"
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+config.have_zlib = @LLVM_ENABLE_ZLIB@
+config.have_zstd = @LLVM_ENABLE_ZSTD@
+config.clang_arcmt = @CLANG_ENABLE_ARCMT@
+config.clang_default_pie_on_linux = @CLANG_DEFAULT_PIE_ON_LINUX@
+config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
+config.clang_staticanalyzer = @CLANG_ENABLE_STATIC_ANALYZER@
+config.clang_staticanalyzer_z3 = @LLVM_WITH_Z3@
+config.clang_examples = @CLANG_BUILD_EXAMPLES@
+config.enable_shared = @ENABLE_SHARED@
+config.enable_backtrace = @ENABLE_BACKTRACES@
+config.enable_threads = @LLVM_ENABLE_THREADS@
+config.reverse_iteration = @LLVM_ENABLE_REVERSE_ITERATION@
+config.host_arch = "@HOST_ARCH@"
+config.python_executable = "@Python3_EXECUTABLE@"
+config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
+config.has_plugins = @CLANG_PLUGIN_SUPPORT@
+config.clang_vendor_uti = "@CLANG_VENDOR_UTI@"
+config.llvm_external_lit = path(r"@LLVM_EXTERNAL_LIT@")
+config.standalone_build = @CLANG_BUILT_STANDALONE@
+config.ppc_linux_default_ieeelongdouble = @PPC_LINUX_DEFAULT_IEEELONGDOUBLE@
+config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(
+    config, os.path.join(config.clang_src_dir, "test/lit.cfg.py"))

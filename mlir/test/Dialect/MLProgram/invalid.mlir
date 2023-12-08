@@ -1,0 +1,112 @@
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -verify-diagnostics %s
+
+ml_program.func @ssa_enforced(%arg0 : i32) -> i32 {
+  // expected-error @+1 {{does not dominate this use}}
+  %1 = "unregistered.dummy"(%0) : (i32) -> i32
+  // expected-note @+1 {{operand defined here}}
+  %0 = "unregistered.dummy"(%arg0) : (i32) -> i32
+  ml_program.return %0 : i32
+}
+
+// -----
+ml_program.func @return_arity_match(%arg0 : i32) -> i32 {
+  // expected-error @+1 {{enclosing function (@return_arity_match) returns 1}}
+  ml_program.return %arg0, %arg0 : i32, i32
+}
+
+// -----
+ml_program.func @return_type_match(%arg0 : i64) -> i32 {
+  // expected-error @+1 {{doesn't match function result}}
+  ml_program.return %arg0 : i64
+}
+
+// -----
+ml_program.subgraph @output_arity_match(%arg0 : i32) -> i32 {
+  // expected-error @+1 {{enclosing function (@output_arity_match) outputs 1}}
+  ml_program.output %arg0, %arg0 : i32, i32
+}
+
+// -----
+ml_program.subgraph @output_type_match(%arg0 : i64) -> i32 {
+  // expected-error @+1 {{doesn't match function result}}
+  ml_program.output %arg0 : i64
+}
+
+// -----
+// expected-error @+1 {{immutable global must have an initial value}}
+ml_program.global private @const : i32
+
+// -----
+ml_program.func @undef_global() -> i32 {
+  // expected-error @+1 {{undefined global: @nothere}}
+  %0 = ml_program.global_load_const @nothere : i32
+  ml_program.return %0 : i32
+}
+
+// -----
+ml_program.global private mutable @var : i32
+ml_program.func @mutable_const_load() -> i32 {
+  // expected-error @+1 {{op cannot load as const from mutable global @var}}
+  %0 = ml_program.global_load_const @var : i32
+  ml_program.return %0 : i32
+}
+
+// -----
+ml_program.global private @var(42 : i64) : i64
+ml_program.func @const_load_type_mismatch() -> i32 {
+  // expected-error @+1 {{cannot load from global typed 'i64' as 'i32'}}
+  %0 = ml_program.global_load_const @var : i32
+  ml_program.return %0 : i32
+}
+
+// -----
+ml_program.func @load_undef() -> i32 {
+  // expected-error @+1 {{undefined global: @nothere}}
+  %0 = ml_program.global_load @nothere : i32
+  ml_program.return %0 : i32
+}
+
+// -----
+ml_program.global private mutable @var(42 : i64) : i64
+ml_program.func @load_type_mismatch() -> i32 {
+  // expected-error @+1 {{cannot load from global typed 'i64' as 'i32'}}
+  %0 = ml_program.global_load @var : i32
+  ml_program.return %0 : i32
+}
+
+// -----
+ml_program.func @store_undef(%arg0: i32) {
+  // expected-error @+1 {{undefined global: @nothere}}
+  ml_program.global_store @nothere = %arg0 : i32
+  ml_program.return
+}
+
+// -----
+ml_program.global private mutable @var(42 : i64) : i64
+ml_program.func @store_type_mismatch(%arg0: i32) {
+  // expected-error @+1 {{cannot store to a global typed 'i64' from 'i32'}}
+  ml_program.global_store @var = %arg0 : i32
+  ml_program.return
+}
+
+// -----
+ml_program.global private @var(42 : i64) : i64
+ml_program.func @store_immutable(%arg0: i64) {
+  // expected-error @+1 {{cannot store to an immutable global @var}}
+  ml_program.global_store @var = %arg0 : i64
+  ml_program.return
+}
+
+// -----
+
+ml_program.global private mutable @global_mutable_undef : tensor<?xi32>
+ml_program.subgraph @global_load_store_tokens() -> (tensor<?xi32>, !ml_program.token) {
+  %token1 = ml_program.token
+  %0, %token2 = ml_program.global_load_graph @global_mutable_undef
+      ordering(() -> !ml_program.token) : tensor<?xi32>
+  %token3 = ml_program.global_store_graph @global_mutable_undef = %0
+  // expected-error @+1 {{expected '->'}}
+      ordering(%token1, %token2) : tensor<?xi32>
+
+  ml_program.output %0, %token3 : tensor<?xi32>, !ml_program.token
+}

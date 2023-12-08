@@ -1,0 +1,206 @@
+## Test the call site encoding in DWARF5 vs GNU extensions.
+
+## === DWARF4, tune for gdb ===
+# RUN: llc -emit-call-site-info -dwarf-version 4 -debugger-tune=gdb -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU -implicit-check-not=DW_AT_call
+
+# === DWARF5, tune for gdb ===
+# RUN: llc -dwarf-version 5 -debugger-tune=gdb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
+
+## === DWARF4, tune for lldb ===
+# RUN: llc -dwarf-version 4 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
+
+## === DWARF5, tune for lldb ===
+# RUN: llc -dwarf-version 5 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
+
+## === DWARF4, tune for sce ===
+# RUN: llc -emit-call-site-info -dwarf-version 4 -filetype=obj -debugger-tune=sce \
+# RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
+# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
+
+## === DWARF5, tune for sce ===
+# RUN: llc -emit-call-site-info -dwarf-version 5 -filetype=obj -debugger-tune=sce \
+# RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
+# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
+
+## This is based on the following reproducer:
+##
+## extern void fn();
+## extern void fn2(int x);
+## extern int fn3();
+##
+## int fn1(int (*fn4) ()) {
+##   fn();
+##   fn2(5);
+##
+##   int x = (*fn4)();
+##   if (!x)
+##     return fn3();
+##   else
+##     return -1;
+## }
+
+## Check GNU extensions:
+
+# CHECK-GNU:        DW_TAG_subprogram
+# CHECK-GNU:          DW_AT_GNU_all_call_sites    (true)
+# CHECK-GNU:        DW_TAG_GNU_call_site
+# CHECK-GNU-NEXT:     DW_AT_abstract_origin
+# CHECK-GNU-NEXT:     DW_AT_low_pc
+# CHECK-GNU:          DW_TAG_GNU_call_site_parameter
+# CHECK-GNU-NEXT:       DW_AT_location
+# CHECK-GNU-NEXT:       DW_AT_GNU_call_site_value
+# CHECK-GNU:        DW_TAG_GNU_call_site
+# CHECK-GNU-NEXT:       DW_AT_GNU_call_site_target
+# CHECK-GNU-NEXT:       DW_AT_low_pc
+# CHECK-GNU:        DW_TAG_GNU_call_site
+# CHECK-GNU-NEXT:     DW_AT_abstract_origin
+# CHECK-GNU-NEXT:     DW_AT_GNU_tail_call
+# CHECK-GNU-NEXT:     DW_AT_low_pc
+
+## Check DWARF 5:
+
+# CHECK-DWARF5:        DW_TAG_subprogram
+# CHECK-DWARF5:          DW_AT_call_all_calls    (true)
+# CHECK-DWARF5:        DW_TAG_call_site
+# CHECK-DWARF5-NEXT:     DW_AT_call_origin
+# CHECK-DWARF5-NEXT:     DW_AT_call_return_pc
+# CHECK-DWARF5:        DW_TAG_call_site
+# CHECK-DWARF5-NEXT:     DW_AT_call_origin
+# CHECK-DWARF5-NEXT:     DW_AT_call_return_pc
+# CHECK-DWARF5:          DW_TAG_call_site_parameter
+# CHECK-DWARF5-NEXT:       DW_AT_location
+# CHECK-DWARF5-NEXT:       DW_AT_call_value
+# CHECK-DWARF5:        DW_TAG_call_site
+# CHECK-DWARF5-NEXT:     DW_AT_call_target
+# CHECK-DWARF5-NEXT:     DW_AT_call_return_pc
+# CHECK-DWARF5:        DW_TAG_call_site
+# CHECK-DWARF5-NEXT:     DW_AT_call_origin
+# CHECK-DWARF5-NEXT:     DW_AT_call_tail_call
+# CHECK-DWARF5-NEXT:     DW_AT_call_pc
+
+--- |
+  ; ModuleID = 'call-site-attrs.c'
+  source_filename = "call-site-attrs.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @fn1(i32 (...)* nocapture %fn4) local_unnamed_addr !dbg !18 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 (...)* %fn4, metadata !23, metadata !DIExpression()), !dbg !25
+    tail call void (...) @fn(), !dbg !26
+    tail call void @fn2(i32 5), !dbg !27
+    %call = tail call i32 (...) %fn4(), !dbg !28
+    call void @llvm.dbg.value(metadata i32 %call, metadata !24, metadata !DIExpression()), !dbg !25
+    %tobool = icmp eq i32 %call, 0, !dbg !29
+    br i1 %tobool, label %if.then, label %cleanup, !dbg !31
+  
+  if.then:                                          ; preds = %entry
+    %call1 = tail call i32 (...) @fn3(), !dbg !32
+    ret i32 %call1, !dbg !33
+  
+  cleanup:                                          ; preds = %entry
+    ret i32 -1, !dbg !33
+  }
+  declare !dbg !4 dso_local void @fn(...) local_unnamed_addr
+  declare !dbg !7 dso_local void @fn2(i32) local_unnamed_addr
+  declare !dbg !11 dso_local i32 @fn3(...) local_unnamed_addr
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!14, !15, !16}
+  !llvm.ident = !{!17}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "call-site-attrs.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4, !7, !11}
+  !4 = !DISubprogram(name: "fn", scope: !1, file: !1, line: 1, type: !5, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, null}
+  !7 = !DISubprogram(name: "fn2", scope: !1, file: !1, line: 2, type: !8, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{null, !10}
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !DISubprogram(name: "fn3", scope: !1, file: !1, line: 3, type: !12, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{!10, null}
+  !14 = !{i32 7, !"Dwarf Version", i32 4}
+  !15 = !{i32 2, !"Debug Info Version", i32 3}
+  !16 = !{i32 1, !"wchar_size", i32 4}
+  !17 = !{!"clang version 11.0.0"}
+  !18 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 5, type: !19, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !22)
+  !19 = !DISubroutineType(types: !20)
+  !20 = !{!10, !21}
+  !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
+  !22 = !{!23, !24}
+  !23 = !DILocalVariable(name: "fn4", arg: 1, scope: !18, file: !1, line: 5, type: !21)
+  !24 = !DILocalVariable(name: "x", scope: !18, file: !1, line: 9, type: !10)
+  !25 = !DILocation(line: 0, scope: !18)
+  !26 = !DILocation(line: 6, column: 3, scope: !18)
+  !27 = !DILocation(line: 7, column: 3, scope: !18)
+  !28 = !DILocation(line: 9, column: 11, scope: !18)
+  !29 = !DILocation(line: 10, column: 8, scope: !30)
+  !30 = distinct !DILexicalBlock(scope: !18, file: !1, line: 10, column: 7)
+  !31 = !DILocation(line: 10, column: 7, scope: !18)
+  !32 = !DILocation(line: 11, column: 12, scope: !30)
+  !33 = !DILocation(line: 14, column: 1, scope: !18)
+
+...
+---
+name:            fn1
+callSites:
+  - { bb: 0, offset: 7, fwdArgRegs: [] }
+  - { bb: 0, offset: 9, fwdArgRegs: 
+      - { arg: 0, reg: '$edi' } }
+  - { bb: 0, offset: 11, fwdArgRegs: [] }
+  - { bb: 2, offset: 7, fwdArgRegs: [] }
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $rdi, $rbx
+  
+    DBG_VALUE $rdi, $noreg, !23, !DIExpression(), debug-location !25
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $rbx = MOV64rr $rdi
+    DBG_VALUE $rbx, $noreg, !23, !DIExpression(), debug-location !25
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !26
+    CALL64pcrel32 @fn, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp, debug-location !26
+    $edi = MOV32ri 5, debug-location !27
+    CALL64pcrel32 @fn2, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !27
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !28
+    CALL64r killed renamable $rbx, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !28
+    DBG_VALUE $eax, $noreg, !24, !DIExpression(), debug-location !25
+    TEST32rr killed renamable $eax, renamable $eax, implicit-def $eflags, debug-location !29
+    JCC_1 %bb.2, 4, implicit $eflags, debug-location !31
+  
+  bb.1.cleanup:
+    DBG_VALUE $eax, $noreg, !24, !DIExpression(), debug-location !25
+    DBG_VALUE $rbx, $noreg, !23, !DIExpression(), debug-location !25
+    $eax = MOV32ri -1, debug-location !33
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !33
+    DBG_VALUE $rdi, $noreg, !23, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !25
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !33
+    RET64 $eax, debug-location !33
+  
+  bb.2.if.then:
+    CFI_INSTRUCTION def_cfa_offset 16, debug-location !32
+    DBG_VALUE $eax, $noreg, !24, !DIExpression(), debug-location !25
+    DBG_VALUE $rbx, $noreg, !23, !DIExpression(), debug-location !25
+    dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !32
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !32
+    DBG_VALUE $rdi, $noreg, !23, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !25
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !32
+    TAILJMPd64 @fn3, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit $al, debug-location !32
+
+...

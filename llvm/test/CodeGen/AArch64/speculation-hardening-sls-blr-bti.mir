@@ -1,0 +1,88 @@
+# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN:     -start-before aarch64-sls-hardening \
+# RUN:     -stop-after aarch64-sls-hardening -o - %s \
+# RUN:   | FileCheck %s --check-prefixes=CHECK
+
+# Check when the BLR SLS hardening encounters a BLR/BTI bundle, the BTI
+# instruction remains after the BLR is replaced with a BL.
+# These BLR/BTI bundles are produced when calling a returns_twice function
+# (like setjmp) indirectly.
+--- |
+  $__llvm_slsblr_thunk_x8 = comdat any
+
+  define dso_local void @fn() #0 {
+  entry:
+    %fnptr = alloca ptr, align 8
+    store ptr @setjmp, ptr %fnptr, align 8
+    %0 = load ptr, ptr %fnptr, align 8
+    %call1 = call i32 %0(ptr noundef null) #1
+    ret void
+  }
+
+  ; Function Attrs: returns_twice
+  declare i32 @setjmp(ptr noundef) #1
+
+  ; Function Attrs: naked nounwind
+  define linkonce_odr hidden void @__llvm_slsblr_thunk_x8() #2 comdat {
+  entry:
+    ret void
+  }
+
+  attributes #0 = { "target-features"="+harden-sls-blr" }
+  attributes #1 = { returns_twice }
+  attributes #2 = { naked nounwind }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 8, !"branch-target-enforcement", i32 1}
+...
+---
+name:            fn
+exposesReturnsTwice: true
+tracksRegLiveness: true
+fixedStack:      []
+stack:
+  - { id: 0, name: fnptr, type: default, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $lr
+
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.1)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    $x8 = ADRP target-flags(aarch64-page, aarch64-got) @setjmp
+    renamable $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @setjmp
+    STRXui renamable $x8, $sp, 1 :: (store (s64) into %ir.fnptr)
+    $x0 = ORRXrs $xzr, $xzr, 0
+    BUNDLE implicit-def $lr, implicit-def $w30, implicit killed $x8, implicit $sp {
+      BLR killed renamable $x8, implicit-def $lr, implicit $sp
+      HINT 36
+    }
+    ; CHECK:      BUNDLE implicit-def $lr, implicit-def $w30, implicit killed $x8, implicit $sp {
+    ; CHECK-NEXT:   BL <mcsymbol __llvm_slsblr_thunk_x8>, implicit-def $lr, implicit $sp, implicit killed $x8
+    ; CHECK-NEXT:   HINT 36
+    ; CHECK-NEXT: }
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.1)
+    RET undef $lr
+...
+---
+name:            __llvm_slsblr_thunk_x8
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x8
+
+    $x16 = ORRXrs $xzr, $x8, 0
+    BR $x16
+    SpeculationBarrierISBDSBEndBB
+...

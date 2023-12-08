@@ -1,0 +1,83 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -start-after=branch-relaxation --filetype=obj -o %t.o %s
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  @reps = external dso_local global i32, align 4
+
+  define void @foo() {
+    ret void
+  }
+
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"int", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C++ TBAA"}
+...
+---
+name:            foo
+alignment:       64
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.2', '%bb.3', '%bb.4', '%bb.5' ]
+body:             |
+  bb.0:
+    successors: %bb.6(0x19999998), %bb.1(0x66666668)
+    liveins: $w0, $x1, $x2, $x3, $x4
+  
+    dead $wzr = SUBSWri renamable $w0, 3, 0, implicit-def $nzcv
+    Bcc 8, %bb.6, implicit $nzcv
+  
+  bb.1:
+    successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
+    liveins: $w0, $x1, $x2, $x3, $x4
+  
+    $x8 = ADRP target-flags(aarch64-page) %jump-table.0
+    renamable $w9 = ORRWrs $wzr, killed renamable $w0, 0, implicit-def $x9
+    renamable $x8 = ADDXri killed $x8, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0, 0
+    early-clobber renamable $x10, dead early-clobber renamable $x11 = JumpTableDest32 killed renamable $x8, killed renamable $x9, %jump-table.0
+    BR killed renamable $x10
+  
+  bb.2 (align 65536):
+    successors: %bb.3(0x50000000), %bb.6(0x30000000)
+    liveins: $x1, $x2, $x3, $x4
+  
+    renamable $x8 = ADRP target-flags(aarch64-page) @reps
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
+    dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.6, implicit $nzcv
+  
+  bb.3 (align 65536):
+    successors: %bb.4(0x50000000), %bb.6(0x30000000)
+    liveins: $x1, $x2, $x3, $x4
+  
+    renamable $x8 = ADRP target-flags(aarch64-page) @reps
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
+    dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.6, implicit $nzcv
+  
+  bb.4 (align 65536):
+    successors: %bb.5(0x50000000), %bb.6(0x30000000)
+    liveins: $x1, $x2, $x3, $x4
+  
+    renamable $x8 = ADRP target-flags(aarch64-page) @reps
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
+    dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.6, implicit $nzcv
+  
+  bb.5 (align 65536):
+    successors: %bb.6(0x30000000)
+    liveins: $x1, $x2, $x3, $x4
+  
+    renamable $x8 = ADRP target-flags(aarch64-page) @reps
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
+    dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.6, implicit $nzcv
+  
+  bb.6:
+    RET undef $lr
+
+...

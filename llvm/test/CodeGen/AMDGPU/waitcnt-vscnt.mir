@@ -1,0 +1,19 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN,GFX11 %s
+
+# GCN-LABEL: waitcnt-vscnt
+# GCN: GLOBAL_ATOMIC_ADD_RTN
+# GFX10-NEXT: S_WAITCNT 49279
+# GFX11-NEXT: S_WAITCNT 64519
+---
+name: waitcnt-vscnt
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    $sgpr4 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) undef`)
+    S_WAITCNT_VSCNT undef $sgpr_null, 0
+    $vgpr0 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 0, 1, implicit $exec :: (load store syncscope("agent") seq_cst (s32), addrspace 1)
+    S_CMP_LG_U32 killed $sgpr4, 0, implicit-def $scc
+...

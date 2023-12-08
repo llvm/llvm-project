@@ -1,0 +1,62 @@
+add_libc_fuzzer(
+  math_differential_fuzz
+  SRCS
+    math_differential_fuzz.cpp
+  HDRS
+    Compare.h
+    RemQuoDiff.h
+    SingleInputSingleOutputDiff.h
+    TwoInputSingleOutputDiff.h
+  DEPENDS
+    libc.src.math.ceil
+    libc.src.math.ceilf
+    libc.src.math.ceill
+    libc.src.math.fdim
+    libc.src.math.fdimf
+    libc.src.math.fdiml
+    libc.src.math.floor
+    libc.src.math.floorf
+    libc.src.math.floorl
+    libc.src.math.frexp
+    libc.src.math.frexpf
+    libc.src.math.frexpl
+    libc.src.math.hypotf
+    libc.src.math.ldexp
+    libc.src.math.ldexpf
+    libc.src.math.ldexpl
+    libc.src.math.logb
+    libc.src.math.logbf
+    libc.src.math.logbl
+    libc.src.math.modf
+    libc.src.math.modff
+    libc.src.math.modfl
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.sqrtl
+    libc.src.math.remainder
+    libc.src.math.remainderf
+    libc.src.math.remainderl
+    libc.src.math.remquo
+    libc.src.math.remquof
+    libc.src.math.remquol
+    libc.src.math.round
+    libc.src.math.roundf
+    libc.src.math.roundl
+    libc.src.math.trunc
+    libc.src.math.truncf
+    libc.src.math.truncl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_fuzzer(
+  nextafter_differential_fuzz
+  SRCS
+    nextafter_differential_fuzz.cpp
+  HDRS
+    TwoInputSingleOutputDiff.h
+  DEPENDS
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.nextafterl
+)

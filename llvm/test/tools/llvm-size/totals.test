@@ -1,0 +1,57 @@
+## Show that llvm-size prints the total sizes when --totals is specified.
+
+# RUN: rm -f %t.a
+# RUN: yaml2obj %s --docnum=1 -o %t.o
+# RUN: yaml2obj %s --docnum=2 -o %t2.o
+# RUN: llvm-ar rc %t.a %t.o %t2.o
+# RUN: llvm-size --totals %t.o %t.a %t2.o \
+# RUN:   | FileCheck %s -DFILE1=%t.o -DFILE2=%t2.o -DARCHIVE=%t.a
+# RUN: llvm-size -t %t.o %t.a %t2.o \
+# RUN:   | FileCheck %s -DFILE1=%t.o -DFILE2=%t2.o -DARCHIVE=%t.a
+
+# CHECK:         text    data     bss     dec     hex filename
+# CHECK-NEXT: [[FILE1]]
+# CHECK-NEXT: {{.*}}.o (ex [[ARCHIVE]])
+# CHECK-NEXT: {{.*}}2.o (ex [[ARCHIVE]])
+# CHECK-NEXT: [[FILE2]]
+# CHECK-NEXT:      18      36      72     126      7e (TOTALS)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    1
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    2
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    4
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    8
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    16
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    32

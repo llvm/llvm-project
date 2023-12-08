@@ -1,0 +1,96 @@
+# UNSUPPORTED: system-windows
+# This test is unsupported on windows because it creates paths
+# longer than MAX_PATH
+
+# Recreate the folder structure in a temp directory we can remove later.
+RUN: rm -rf %t
+RUN: mkdir -p %t/Inputs %t/tempdir
+RUN: cp %p/../Inputs/basic.macho.x86_64 %t/Inputs
+RUN: cp %p/../Inputs/basic1.macho.x86_64.o %t/Inputs
+RUN: cp %p/../Inputs/basic2.macho.x86_64.o %t/Inputs
+RUN: cp %p/../Inputs/basic3.macho.x86_64.o %t/Inputs
+
+# Verify all the files are present.
+RUN: dsymutil -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+
+# Make sure we don't crash with an empty TMPDIR.
+RUN: env TMPDIR="" dsymutil -o -f -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1
+
+# Make sure we don't leave around a temporary directory.
+RUN: env TMPDIR="%t/tempdir" dsymutil -o - -f %t/Inputs/basic.macho.x86_64
+RUN: not ls %t/tempdir/dsymutil-*
+
+# Create a reproducer.
+RUN: rm -rf %t.repro
+RUN: env DSYMUTIL_REPRODUCER_PATH=%t.repro dsymutil -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
+RUN: llvm-dwarfdump -a %t.generate | FileCheck %s
+
+RUN: rm -rf %t.diags
+RUN: env LLVM_DIAGNOSTIC_DIR=%t.diags dsymutil -gen-reproducer -f -o %t.generate -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefixes=REPRODUCER
+RUN: ls %t.diags | grep 'dsymutil-' | count 1
+
+# Remove the input files and verify that was successful.
+RUN: rm -rf %t
+RUN: not dsymutil -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
+
+RUN: not dsymutil --linker llvm -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# Use the reproducer.
+RUN: dsymutil -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker llvm -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+
+# Using a reproducer takes precedence.
+RUN: dsymutil -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+
+RUN: dsymutil --linker llvm -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+
+CHECK: .debug_info
+CHECK:  DW_TAG_compile_unit
+CHECK-NEXT:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK-NEXT:    DW_AT_language (DW_LANG_C99)
+CHECK-NEXT:    DW_AT_name ("basic1.c")
+CHECK-NEXT:    DW_AT_stmt_list (0x00000000)
+CHECK-NEXT:    DW_AT_comp_dir ("/Inputs")
+CHECK-NEXT:    DW_AT_low_pc (0x0000000100000ea0)
+CHECK:    DW_TAG_subprogram
+CHECK-NEXT:    DW_AT_name ("main")
+CHECK-NEXT:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK-NEXT:      DW_AT_decl_line (23)
+CHECK-NEXT:      DW_AT_prototyped (0x01)
+CHECK-NEXT:      DW_AT_type (0x00000063
+CHECK-NEXT:      DW_AT_external (0x01)
+CHECK-NEXT:      DW_AT_accessibility (DW_ACCESS_public)
+CHECK-NEXT:      DW_AT_low_pc (0x0000000100000ea0)
+CHECK-NEXT:      DW_AT_high_pc (0x0000000100000ec4)
+CHECK-NEXT:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK-NEXT:        DW_AT_name ("argc")
+CHECK-NEXT:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK-NEXT:        DW_AT_decl_line (23)
+CHECK-NEXT:        DW_AT_type (0x00000063
+CHECK-NEXT:        DW_AT_location (DW_OP_fbreg -8)
+CHECK:      DW_TAG_formal_parameter
+CHECK-NEXT:        DW_AT_name ("argv")
+CHECK-NEXT:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK-NEXT:        DW_AT_decl_line (23)
+CHECK-NEXT:        DW_AT_type (0x0000006a
+CHECK-NEXT:        DW_AT_location (DW_OP_fbreg -16)
+CHECK:      NULL
+CHECK:    DW_TAG_base_type
+CHECK-NEXT:      DW_AT_name ("int")
+CHECK-NEXT:      DW_AT_encoding (DW_ATE_signed)
+CHECK-NEXT:      DW_AT_byte_size (0x04)
+CHECK:    DW_TAG_pointer_type
+CHECK-NEXT:      DW_AT_type (0x0000006f
+CHECK:    DW_TAG_pointer_type
+CHECK-NEXT:      DW_AT_type (0x00000074
+CHECK:    DW_TAG_const_type
+CHECK-NEXT:      DW_AT_type (0x00000079
+CHECK:    DW_TAG_base_type
+CHECK-NEXT:      DW_AT_name ("char")
+CHECK-NEXT:      DW_AT_encoding (DW_ATE_signed_char)
+CHECK-NEXT:      DW_AT_byte_size (0x01)
+CHECK:      NULL
+
+REPRODUCER: Reproducer written
+ERROR: error: cannot parse the debug map

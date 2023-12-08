@@ -1,0 +1,284 @@
+# RUN: llc %s -o - -run-pass=removeredundantdebugvalues | FileCheck --implicit-check-not=DBG_VALUE %s
+
+## This checks that the RemoveRedundantDebugValues removes redundant
+## DBG_VALUEs. The MIR was hand-written, and foo{[2-6]}() are just
+## copies of foo(), with an extra instruction that modifies the $edi register
+## and extra (artificial) DBG_VALUE and DBG_VALUE_LIST instructions.
+
+# CHECK-LABEL: foo
+# CHECK-LABEL: bb.0.entry:
+# CHECK:      DBG_VALUE $edi
+# CHECK-NOT:  DBG_VALUE $edi
+# CHECK:      frame-setup PUSH64r
+# CHECK:      MOV32mr $rip, 1, $noreg
+# CHECK-NOT:  DBG_VALUE $edi
+
+# CHECK-LABEL: foo6
+# CHECK-LABEL: bb.0.entry:
+# CHECK:      DBG_VALUE 0
+# CHECK:      DBG_VALUE 1
+# CHECK:      frame-setup PUSH64r
+
+# CHECK-LABEL: foo2
+# CHECK-LABEL: bb.0.entry:
+# CHECK:  DBG_VALUE $edi
+# CHECK:  MOV32mr $rip, 1, $noreg
+# CHECK:  DBG_VALUE $edi
+
+# CHECK-LABEL: foo3
+# CHECK-LABEL: bb.0.entry:
+# CHECK:  DBG_VALUE $edi, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+# CHECK:  DBG_VALUE $esi, {{.*}}, !DIExpression()
+# CHECK:  DBG_VALUE $edi, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+
+# CHECK-LABEL: foo4
+# CHECK-LABEL: bb.0.entry:
+# CHECK:  DBG_VALUE $edi, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+# CHECK:  DBG_VALUE_LIST !{{.*}}
+# CHECK:  DBG_VALUE $edi, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+
+# CHECK-LABEL: foo5
+# CHECK-LABEL: bb.0.entry:
+# CHECK:  DBG_VALUE $edi, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+# CHECK:  DBG_VALUE 0, {{.*}}, !DIExpression()
+# CHECK:  DBG_VALUE $edi, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @side_effect = external dso_local local_unnamed_addr global i32, align 4
+  @value = external dso_local local_unnamed_addr global i32, align 4
+  
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @foo(i32 %param) local_unnamed_addr !dbg !8 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %param, metadata !13, metadata !DIExpression()), !dbg !14
+    store i32 %param, i32* @side_effect, align 4, !dbg !15
+    %0 = load i32, i32* @value, align 4, !dbg !20
+    call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !DIExpression()), !dbg !14
+    tail call void @bar(i32 %0), !dbg !21
+    ret i32 0, !dbg !22
+  }
+
+  define dso_local i32 @foo6(i32 %param) local_unnamed_addr !dbg !34 {
+  entry:
+    store i32 %param, i32* @side_effect, align 4, !dbg !35
+    %0 = load i32, i32* @value, align 4, !dbg !35
+    tail call void @bar(i32 %0), !dbg !35
+    ret i32 0, !dbg !35
+  }
+
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @foo2(i32 %param) local_unnamed_addr !dbg !26 {
+  entry:
+    store i32 %param, i32* @side_effect, align 4, !dbg !27
+    %0 = load i32, i32* @value, align 4, !dbg !27
+    tail call void @bar(i32 %0), !dbg !27
+    ret i32 0, !dbg !27
+  }
+
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @foo3(i32 %param) local_unnamed_addr !dbg !28 {
+  entry:
+    store i32 %param, i32* @side_effect, align 4, !dbg !29
+    %0 = load i32, i32* @value, align 4, !dbg !29
+    tail call void @bar(i32 %0), !dbg !29
+    ret i32 0, !dbg !29
+  }
+
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @foo4(i32 %param) local_unnamed_addr !dbg !30 {
+  entry:
+    store i32 %param, i32* @side_effect, align 4, !dbg !31
+    %0 = load i32, i32* @value, align 4, !dbg !31
+    tail call void @bar(i32 %0), !dbg !31
+    ret i32 0, !dbg !31
+  }
+
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @foo5(i32 %param) local_unnamed_addr !dbg !32 {
+  entry:
+    store i32 %param, i32* @side_effect, align 4, !dbg !33
+    %0 = load i32, i32* @value, align 4, !dbg !33
+    tail call void @bar(i32 %0), !dbg !33
+    ret i32 0, !dbg !33
+  }
+
+  declare !dbg !23 dso_local void @bar(i32) local_unnamed_addr
+  
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"uwtable", i32 1}
+  !7 = !{!"clang version 13.0.0"}
+  !8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{!11, !11}
+  !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !12 = !{!13}
+  !13 = !DILocalVariable(name: "param", arg: 1, scope: !8, file: !1, line: 4, type: !11)
+  !14 = !DILocation(line: 0, scope: !8)
+  !15 = !DILocation(line: 5, column: 17, scope: !8)
+  !20 = !DILocation(line: 6, column: 13, scope: !8)
+  !21 = !DILocation(line: 7, column: 5, scope: !8)
+  !22 = !DILocation(line: 8, column: 5, scope: !8)
+  !23 = !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !24, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !24 = !DISubroutineType(types: !25)
+  !25 = !{null, !11}
+  !26 = distinct !DISubprogram(name: "foo2", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !27 = !DILocation(line: 0, scope: !26)
+  !28 = distinct !DISubprogram(name: "foo3", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !29 = !DILocation(line: 0, scope: !28)
+  !30 = distinct !DISubprogram(name: "foo4", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !31 = !DILocation(line: 0, scope: !30)
+  !32 = distinct !DISubprogram(name: "foo5", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !33 = !DILocation(line: 0, scope: !32)
+  !34 = distinct !DISubprogram(name: "foo6", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !35 = !DILocation(line: 0, scope: !34)
+
+...
+---
+name:            foo
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $esi, debug-location !15 :: (store 4 into @side_effect)
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    CALL64pcrel32 @bar, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !21
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...
+---
+name:            foo2
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $esi, debug-location !15 :: (store 4 into @side_effect)
+    renamable $edi = MOV32rm $rip, 1, $noreg, @value, $noreg, debug-location !20 :: (dereferenceable load 4 from @value)
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    CALL64pcrel32 @bar, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !21
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...
+---
+name:            foo3
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $esi, debug-location !15 :: (store 4 into @side_effect)
+    renamable $esi = MOV32rm $rip, 1, $noreg, @value, $noreg, debug-location !20 :: (dereferenceable load 4 from @value)
+    DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !14
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...
+---
+name:            foo4
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $esi, debug-location !15 :: (store 4 into @side_effect)
+    renamable $esi = MOV32rm $rip, 1, $noreg, @value, $noreg, debug-location !20 :: (dereferenceable load 4 from @value)
+    DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $edi, $esi, debug-location !14
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...
+---
+name:            foo5
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $esi, debug-location !15 :: (store 4 into @side_effect)
+    renamable $esi = MOV32rm $rip, 1, $noreg, @value, $noreg, debug-location !20 :: (dereferenceable load 4 from @value)
+    DBG_VALUE 0, $noreg, !13, !DIExpression(), debug-location !14
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...
+---
+name:            foo6
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+
+    DBG_VALUE 0, $noreg, !13, !DIExpression(), debug-location !14
+    DBG_VALUE 1, $noreg, !13, !DIExpression(), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $esi, debug-location !15 :: (store 4 into @side_effect)
+    renamable $esi = MOV32rm $rip, 1, $noreg, @value, $noreg, debug-location !20 :: (dereferenceable load 4 from @value)
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...

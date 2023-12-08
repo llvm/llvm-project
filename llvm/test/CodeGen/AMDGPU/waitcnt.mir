@@ -1,0 +1,370 @@
+# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
+
+--- |
+  define amdgpu_kernel void @flat_zero_waitcnt(ptr addrspace(1) %global4,
+                                 ptr addrspace(1) %global16,
+                                 ptr %flat4,
+                                 ptr %flat16) {
+    ret void
+  }
+
+  define amdgpu_kernel void @single_fallthrough_successor_no_end_block_wait() {
+    ret void
+  }
+
+  define amdgpu_kernel void @single_branch_successor_not_next_block() {
+    ret void
+  }
+
+  define amdgpu_kernel void @preexisting_waitcnt() {
+    ret void
+  }
+
+  define amdgpu_kernel void @bundle_no_waitcnt() {
+    ret void
+  }
+
+  define amdgpu_kernel void @preexisting_waitcnt_in_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @insert_in_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @exit_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @cross_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @subregs16bit() {
+    ret void
+  }
+
+  define amdgpu_kernel void @waitcnt_backedge() {
+    ret void
+  }
+...
+---
+
+# CHECK-LABEL: name: flat_zero_waitcnt
+
+# CHECK-LABEL: bb.0:
+# CHECK: FLAT_LOAD_DWORD
+# CHECK: FLAT_LOAD_DWORDX4
+# Global loads will return in order so we should:
+# s_waitcnt vmcnt(1)
+# CHECK-NEXT: S_WAITCNT 3953
+
+# CHECK-LABEL: bb.1:
+# CHECK: FLAT_LOAD_DWORD
+# s_waitcnt vmcnt(0)
+# GFX89: S_WAITCNT 3952
+# CHECK: FLAT_LOAD_DWORDX4
+
+# CHECK-LABEL: bb.2:
+# CHECK: FLAT_LOAD_DWORD
+# s_waitcnt vmcnt(0)
+# GFX89: S_WAITCNT 3952
+# CHECK: FLAT_LOAD_DWORDX4
+
+# CHECK-LABEL: bb.3:
+# s_waitcnt vmcnt(0)
+# GFX89: S_WAITCNT 3952
+# CHECK: FLAT_LOAD_DWORD
+# CHECK: FLAT_LOAD_DWORD
+# s_waitcnt vmcnt(0) lgkmcnt(0)
+# GFX89: S_WAITCNT 112
+
+# CHECK-LABEL: bb.4:
+# GFX89-NOT: S_WAITCNT
+# CHECK: FLAT_LOAD_DWORD
+# s_waitcnt vmcnt(0) lgkmcnt(0)
+# GFX89: S_WAITCNT 112
+
+name: flat_zero_waitcnt
+
+body: |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4)
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16)
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.global16)
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
+    $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, implicit $exec, implicit $flat_scr :: (load (s128) from %ir.flat16)
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.global4)
+    $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.flat4)
+    $vgpr0 = V_MOV_B32_e32 $vgpr5, implicit $exec
+    S_ENDPGM 0
+...
+---
+# There is only a single fallthrough successor block, so there's no
+# need to wait immediately.
+
+# CHECK-LABEL: name: single_fallthrough_successor_no_end_block_wait
+# CHECK:   $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2
+# CHECK-NOT: S_WAITCNT
+
+# CHECK: bb.1:
+# CHECK-NEXT: V_LSHLREV_B64_e64
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD
+name: single_fallthrough_successor_no_end_block_wait
+
+body: |
+  bb.0:
+    successors: %bb.1
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+
+  bb.1:
+    $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
+---
+# The block has a single predecessor with a single successor, but it
+# is not the next block so it's non-obvious that the wait is not needed.
+
+
+# CHECK-LABEL: name: single_branch_successor_not_next_block
+
+# CHECK: bb.1
+# CHECK-NEXT: FLAT_STORE_DWORD
+# CHECK-NEXT: S_ENDPGM 0
+
+# CHECK: bb.2:
+# CHECK-NEXT: V_LSHLREV_B64_e64
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD
+name: single_branch_successor_not_next_block
+
+body: |
+  bb.0:
+    successors: %bb.2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+   S_BRANCH %bb.2
+
+  bb.1:
+    FLAT_STORE_DWORD $vgpr8_vgpr9, $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+
+  bb.2:
+     $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
+    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: preexisting_waitcnt{{$}}
+# CHECK: FLAT_LOAD_DWORD
+# CHECK-NEXT: S_WAITCNT 0
+# CHECK-NOT: S_WAITCNT
+name: preexisting_waitcnt
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    S_WAITCNT 0
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# CHECK-LABEL: name: bundle_no_waitcnt{{$}}
+# CHECK: FLAT_LOAD_DWORD
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: S_NOP
+# CHECK-NEXT: S_NOP
+# CHECK-NEXT: }
+# CHECK-NEXT: S_WAITCNT 112
+name: bundle_no_waitcnt
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    BUNDLE {
+      S_NOP 0
+      S_NOP 0
+    }
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# See the waitcnt inside the bundle and don't insert an extra
+# CHECK-LABEL: name: preexisting_waitcnt_in_bundle{{$}}
+# CHECK: FLAT_LOAD_DWORD
+# CHECK: S_WAITCNT 0
+# CHECK-NOT: S_WAITCNT
+name: preexisting_waitcnt_in_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    BUNDLE {
+      S_NOP 0
+      S_WAITCNT 0
+    }
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# Def and use inside bundle
+# CHECK-LABEL: name: insert_in_bundle{{$}}
+# CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+
+name: insert_in_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    }
+...
+
+---
+
+# Def is last instruction in bundle, use is outside bundle
+
+# CHECK-LABEL: name: exit_bundle{{$}}
+# CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+name: exit_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    }
+
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# Def is in bundle, use is in another bundle
+
+# CHECK-LABEL: name: cross_bundle{{$}}
+# CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+
+name: cross_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    }
+    BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
+      FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    }
+...
+
+---
+# CHECK-LABEL: name: subregs16bit
+# CHECK: S_WAITCNT 112
+# CHECK-NEXT: V_NOP_e32
+
+name: subregs16bit
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+      $vgpr0 = FLAT_LOAD_USHORT killed $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+      $vgpr1 = FLAT_LOAD_USHORT killed $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
+      V_NOP_e32 implicit $exec, implicit $vgpr0_lo16, implicit $vgpr1_lo16
+...
+
+---
+# Waitcnt required before the use of $sgpr10_sgpr11, as the S_LOAD also writes
+# to $sgpr10_sgpr11, and can occur first in the program running order.
+
+# CHECK-LABEL: name: waitcnt_backedge
+# CHECK: S_WAITCNT
+# CHECK: $sgpr10_sgpr11 = S_CSELECT_B64
+# CHECK: $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM
+
+
+name: waitcnt_backedge
+body: |
+  bb.0:
+    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 32, 0 :: (load (s128) from `ptr addrspace(4) undef`, addrspace 4)
+
+  bb.4:
+    renamable $sgpr10_sgpr11 = S_CSELECT_B64 -1, 0, implicit killed $scc
+    renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `ptr addrspace(4) undef`, align 4, addrspace 4)
+    S_CBRANCH_SCC0 %bb.9, implicit killed $scc
+
+  bb.9:
+    renamable $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr14_sgpr15, implicit $exec
+    S_CBRANCH_SCC0 %bb.14, implicit killed $scc
+
+  bb.10:
+    S_BRANCH %bb.4
+
+  bb.14:
+    S_ENDPGM 0
+...

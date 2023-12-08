@@ -1,0 +1,30 @@
+{
+  "printf": {
+    "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
+      "value": false,
+      "doc": "Disable printing floating point values in printf and friends."
+    },
+    "LIBC_CONF_PRINTF_DISABLE_INDEX_MODE": {
+      "value": false,
+      "doc": "Disable index mode in the printf format string."
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WRITE_INT": {
+      "value": false,
+      "doc": "Disable handling of %n in printf format string."
+    },
+    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
+      "value": true,
+      "doc": "Use large table for better printf long double performance."
+    }
+  },
+  "string": {
+    "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
+      "value": false,
+      "doc": "Read more than a byte at a time to perform byte-string operations like strlen."
+    },
+    "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
+      "value": false,
+      "doc": "Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - | FileCheck %s
+--- |
+  @g = common dso_local global i32 0, align 4
+
+  define i32 @test() {
+  entry:
+    store i32 0, i32* @g, align 4
+    %0 = load i32, i32* undef, align 4
+    ret i32 %0
+  }
+
+...
+---
+# Don't crash when there's no immediate operand for store.
+# CHECK-LABEL: name: test
+# CHECK: STRWui $wzr
+# CHECK: LDRWui
+name:            test
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    renamable $x8 = ADRP target-flags(aarch64-page) @g
+    STRWui $wzr, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
+    renamable $w0 = LDRWui undef renamable $x8, 0 :: (load (s32) from `i32* undef`)
+    RET_ReallyLR implicit $w0
+
+...

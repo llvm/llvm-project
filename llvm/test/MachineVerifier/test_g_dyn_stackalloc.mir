@@ -1,0 +1,25 @@
+# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_dyn_stackalloc
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    %0:_(s64) = COPY $x0
+    %1:_(p0) = COPY $x0
+    ; CHECK: Bad machine code: Too few operands
+    G_DYN_STACKALLOC
+
+    ; CHECK: dst operand 0 must be a pointer type
+    %3:_(s64) = G_DYN_STACKALLOC %0, 4
+
+    ; CHECK: src operand 1 must be a scalar reg type
+    %4:_(p0) = G_DYN_STACKALLOC 0, 4
+
+    ; CHECK: src operand 2 must be an immediate type
+    %5:_(p0) = G_DYN_STACKALLOC %0, %0
+
+...

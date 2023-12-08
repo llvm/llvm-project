@@ -1,0 +1,4 @@
+## Show that short options can be grouped.
+
+RUN: echo abcd | llvm-strings -af | FileCheck %s
+CHECK: {standard input}: abcd

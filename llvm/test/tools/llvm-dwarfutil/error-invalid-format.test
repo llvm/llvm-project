@@ -1,0 +1,6 @@
+## This test checks that llvm-dwarfutil displays an error message
+## if an input file is not valid.
+
+# RUN: not llvm-dwarfutil %s - 2>&1 | FileCheck %s -DFILE=%s
+
+# CHECK: error: '[[FILE]]': The file was not recognized as a valid object file

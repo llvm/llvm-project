@@ -1,0 +1,218 @@
+# RUN: llc -o - %s -mtriple=thumbv7-apple-ios -start-before=livedebugvalues | FileCheck %s
+# RUN: llc -o - %s -mtriple=thumbv6-apple-ios -start-before=livedebugvalues | FileCheck %s
+
+# struct A {
+#   A();
+#   virtual ~A();
+# };
+# struct B : A {
+#   B();
+#   virtual ~B();
+# };
+# B::B() {}
+# CHECK: __ZN1BC1Ev:
+# CHECK:     .loc       1 9 0 prologue_end
+# CHECK-NOT: .loc       1 0 0 prologue_end
+#
+# The location of the prologue_end marker should not be affected by the presence
+# of CFI instructions.
+
+--- |
+  %struct.B = type { %struct.A }
+  %struct.A = type { i32 (...)** }
+
+  @_ZTV1B = external unnamed_addr constant [4 x i8*]
+
+  ; Function Attrs: nounwind
+  define %struct.B* @_ZN1BC2Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !31 {
+  entry:
+    tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !33, metadata !DIExpression()), !dbg !35
+    %0 = bitcast %struct.B* %this to %struct.A*, !dbg !36
+    %call = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #0, !dbg !36
+    %1 = bitcast %struct.B* %this to i32 (...)***, !dbg !36
+    store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1B, i32 0, i32 2) to i32 (...)**), i32 (...)*** %1, align 4, !dbg !36, !tbaa !37
+    ret %struct.B* %this, !dbg !36
+  }
+
+  declare %struct.A* @_ZN1AC2Ev(%struct.A*)
+
+  ; Function Attrs: nounwind
+  define %struct.B* @_ZN1BC1Ev(%struct.B* %this) unnamed_addr #0 align 2 !dbg !40 {
+  entry:
+    tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !42, metadata !DIExpression()), !dbg !43
+    tail call void @llvm.dbg.value(metadata %struct.B* %this, metadata !33, metadata !DIExpression()) #0, !dbg !44
+    %0 = bitcast %struct.B* %this to %struct.A*, !dbg !46
+    %call.i = tail call %struct.A* @_ZN1AC2Ev(%struct.A* %0) #0, !dbg !46
+    %1 = bitcast %struct.B* %this to i32 (...)***, !dbg !46
+    store i32 (...)** bitcast (i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1B, i32 0, i32 2) to i32 (...)**), i32 (...)*** %1, align 4, !dbg !46, !tbaa !37
+    ret %struct.B* %this, !dbg !45
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  declare void @_Unwind_SjLj_Register({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
+
+  declare void @_Unwind_SjLj_Unregister({ i8*, i32, [4 x i32], i8*, i8*, [5 x i8*] }*)
+
+  ; Function Attrs: nounwind readnone
+  declare i8* @llvm.frameaddress(i32) #2
+
+  ; Function Attrs: nounwind
+  declare i8* @llvm.stacksave() #0
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackrestore(i8*) #0
+
+  ; Function Attrs: nounwind
+  declare void @llvm.eh.sjlj.setup.dispatch() #0
+
+  ; Function Attrs: nounwind readnone
+  declare i8* @llvm.eh.sjlj.lsda() #2
+
+  ; Function Attrs: nounwind readnone
+  declare void @llvm.eh.sjlj.callsite(i32) #2
+
+  ; Function Attrs: nounwind
+  declare void @llvm.eh.sjlj.functioncontext(i8*) #0
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #0
+
+  attributes #0 = { nounwind  "target-features"="+v8m" }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { nounwind readnone }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!26, !27, !28, !29}
+  !llvm.ident = !{!30}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.6.0 (trunk 224279) (llvm/trunk 224283)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2, imports: !2)
+  !1 = !DIFile(filename: "<stdin>", directory: "")
+  !2 = !{}
+  !3 = !{!4, !8}
+  !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "B", file: !5, line: 5, size: 32, align: 32, elements: !6, vtableHolder: !8, identifier: "_ZTS1B")
+  !5 = !DIFile(filename: "test1.cpp", directory: "")
+  !6 = !{!7, !21, !25}
+  !7 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !4, baseType: !8)
+  !8 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !5, line: 1, size: 32, align: 32, elements: !9, vtableHolder: !8, identifier: "_ZTS1A")
+  !9 = !{!10, !16, !20}
+  !10 = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$A", scope: !5, file: !5, baseType: !11, size: 32, flags: DIFlagArtificial)
+  !11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 32)
+  !12 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__vtbl_ptr_type", baseType: !13, size: 32)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!15}
+  !15 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !16 = !DISubprogram(name: "A", scope: !8, file: !5, line: 2, type: !17, isLocal: false, isDefinition: false, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true)
+  !17 = !DISubroutineType(types: !18)
+  !18 = !{null, !19}
+  !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 32, align: 32, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !20 = !DISubprogram(name: "~A", scope: !8, file: !5, line: 3, type: !17, isLocal: false, isDefinition: false, scopeLine: 3, containingType: !8, virtuality: DW_VIRTUALITY_virtual, virtualIndex: 0, flags: DIFlagPrototyped, isOptimized: true)
+  !21 = !DISubprogram(name: "B", scope: !4, file: !5, line: 6, type: !22, isLocal: false, isDefinition: false, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true)
+  !22 = !DISubroutineType(types: !23)
+  !23 = !{null, !24}
+  !24 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 32, align: 32, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !25 = !DISubprogram(name: "~B", scope: !4, file: !5, line: 7, type: !22, isLocal: false, isDefinition: false, scopeLine: 7, containingType: !4, virtuality: DW_VIRTUALITY_virtual, virtualIndex: 0, flags: DIFlagPrototyped, isOptimized: true)
+  !26 = !{i32 2, !"Dwarf Version", i32 4}
+  !27 = !{i32 2, !"Debug Info Version", i32 3}
+  !28 = !{i32 1, !"wchar_size", i32 4}
+  !29 = !{i32 1, !"min_enum_size", i32 4}
+  !30 = !{!"clang version 3.6.0 (trunk 224279) (llvm/trunk 224283)"}
+  !31 = distinct !DISubprogram(name: "B", linkageName: "_ZN1BC2Ev", scope: !4, file: !5, line: 9, type: !22, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !21, retainedNodes: !32)
+  !32 = !{!33}
+  !33 = !DILocalVariable(name: "this", arg: 1, scope: !31, type: !34, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 32, align: 32)
+  !35 = !DILocation(line: 0, scope: !31)
+  !36 = !DILocation(line: 9, scope: !31)
+  !37 = !{!38, !38, i64 0}
+  !38 = !{!"vtable pointer", !39, i64 0}
+  !39 = !{!"Simple C/C++ TBAA"}
+  !40 = distinct !DISubprogram(name: "B", linkageName: "_ZN1BC1Ev", scope: !4, file: !5, line: 9, type: !22, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, declaration: !21, retainedNodes: !41)
+  !41 = !{!42}
+  !42 = !DILocalVariable(name: "this", arg: 1, scope: !40, type: !34, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !43 = !DILocation(line: 0, scope: !40)
+  !44 = !DILocation(line: 0, scope: !31, inlinedAt: !45)
+  !45 = !DILocation(line: 9, scope: !40)
+  !46 = !DILocation(line: 9, scope: !31, inlinedAt: !45)
+
+...
+---
+name:            _ZN1BC2Ev
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  stackSize:       8
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, stack-id: default,
+      callee-saved-register: '$lr', callee-saved-restored: false }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: default,
+      callee-saved-register: '$r4' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r4, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r4, -8
+    DBG_VALUE debug-use $r0, debug-use $noreg, !33, !DIExpression(), debug-location !35
+    $r4 = tMOVr $r0, 14, $noreg
+    DBG_VALUE debug-use $r4, debug-use $noreg, !33, !DIExpression(), debug-location !35
+    tBL 14, $noreg, @_ZN1AC2Ev, csr_ios, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def dead $r0, debug-location !36
+    $r0 = t2MOVi16_ga_pcrel target-flags(arm-lo16, arm-nonlazy) @_ZTV1B, 0, debug-location !36
+    $r0 = t2MOVTi16_ga_pcrel killed $r0, target-flags(arm-hi16, arm-nonlazy) @_ZTV1B, 0, debug-location !36
+    $r0 = tPICADD killed $r0, 0, debug-location !36
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg, debug-location !36 :: (load (s32) from got)
+    renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 8, 14, $noreg, debug-location !36
+    tSTRi killed renamable $r0, renamable $r4, 0, 14, $noreg, debug-location !36 :: (store (s32) into %ir.1, !tbaa !37)
+    $r0 = tMOVr killed $r4, 14, $noreg, debug-location !36
+    tPOP_RET 14, $noreg, def $r4, def $pc, implicit killed $r0, debug-location !36
+
+...
+---
+name:            _ZN1BC1Ev
+alignment:       2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  stackSize:       8
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, stack-id: default,
+      callee-saved-register: '$lr', callee-saved-restored: false }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: default,
+      callee-saved-register: '$r4' }
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r4, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r4, -8
+    DBG_VALUE debug-use $r0, debug-use $noreg, !42, !DIExpression(), debug-location !43
+    DBG_VALUE debug-use $r0, debug-use $noreg, !33, !DIExpression(), debug-location !44
+    $r4 = tMOVr $r0, 14, $noreg
+    DBG_VALUE debug-use $r4, debug-use $noreg, !33, !DIExpression(), debug-location !44
+    DBG_VALUE debug-use $r4, debug-use $noreg, !42, !DIExpression(), debug-location !43
+    tBL 14, $noreg, @_ZN1AC2Ev, csr_ios, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def dead $r0, debug-location !46
+    $r0 = t2MOVi16_ga_pcrel target-flags(arm-lo16, arm-nonlazy) @_ZTV1B, 0, debug-location !46
+    $r0 = t2MOVTi16_ga_pcrel killed $r0, target-flags(arm-hi16, arm-nonlazy) @_ZTV1B, 0, debug-location !46
+    $r0 = tPICADD killed $r0, 0, debug-location !46
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg, debug-location !46 :: (load (s32) from got)
+    renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 8, 14, $noreg, debug-location !46
+    tSTRi killed renamable $r0, renamable $r4, 0, 14, $noreg, debug-location !46 :: (store (s32) into %ir.1, !tbaa !37)
+    $r0 = tMOVr killed $r4, 14, $noreg, debug-location !45
+    tPOP_RET 14, $noreg, def $r4, def $pc, implicit killed $r0, debug-location !45
+
+...

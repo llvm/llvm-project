@@ -1,0 +1,6 @@
+{
+  "mappings" :
+    {
+     "Foo.h" : "Foo/Foo.h"
+    }
+}

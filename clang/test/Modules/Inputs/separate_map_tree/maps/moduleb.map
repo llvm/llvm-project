@@ -1,0 +1,4 @@
+module B {
+  header "../src/public-in-b.h"
+  private header "../src/public-in-c.h"
+}

@@ -1,0 +1,3 @@
+struct SomeDecl {
+  int x;
+};

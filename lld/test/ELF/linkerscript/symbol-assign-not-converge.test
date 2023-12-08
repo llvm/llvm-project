@@ -1,0 +1,20 @@
+# REQUIRES: aarch64, x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t.o
+# RUN: not ld.lld %t.o -T %s -o /dev/null 2>&1 | FileCheck %s
+
+## AArch64 needs thunks and has different address finalization process, so test
+## it as well.
+# RUN: llvm-mc -filetype=obj -triple=aarch64 /dev/null -o %t.o
+# RUN: not ld.lld %t.o -T %s -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: assignment to symbol a does not converge
+
+SECTIONS {
+  . = 0x1000;
+  a = b;
+  b = c;
+  c = d;
+  d = e;
+  e = f;
+  f = .;
+}

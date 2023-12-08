@@ -1,0 +1,56 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t > %t.stdout.yaml
+# RUN: obj2yaml %t -o %t.file.yaml 2>&1 | count 0
+# RUN: FileCheck --input-file=%t.stdout.yaml %s
+# RUN: diff %t.stdout.yaml %t.file.yaml
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        3548
+  PartCount:       7
+  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
+Parts:
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            120
+  - Name:            FKE4
+    Size:            1688
+  - Name:            FKE5
+    Size:            20
+  - Name:            DXIL
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            8
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+...
+
+
+
+
+#CHECK:        - Name:            DXIL
+#CHECK-NEXT:     Size:            28
+#CHECK-NEXT:     Program:
+#CHECK-NEXT:       MajorVersion:    6
+#CHECK-NEXT:       MinorVersion:    5
+#CHECK-NEXT:       ShaderKind:      5
+#CHECK-NEXT:       Size:            8
+#CHECK-NEXT:       DXILMajorVersion: 1
+#CHECK-NEXT:       DXILMinorVersion: 5
+#CHECK-NEXT:       DXILSize:        4
+#CHECK-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE

@@ -1,0 +1,17 @@
+Some basic tests for supplementing instrumentation profile with sample profile
+with flattening.
+
+Test bar.cc:bar's counters will be set to PseudoHot.
+RUN: llvm-profdata merge \
+RUN:     -supplement-instr-with-sample=%p/Inputs/flatten_sample.proftext \
+RUN:     %p/Inputs/flatten_instr.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FLATTEN
+
+FLATTEN:  bar.cc:bar:
+FLATTEN-NEXT:    Hash: 0x00000000000008ae
+FLATTEN-NEXT:    Counters: 10    <PseudoHot>
+FLATTEN:  foo:
+FLATTEN-NEXT:    Hash: 0x0000000000000457
+FLATTEN-NEXT:    Counters: 5
+FLATTEN-NEXT:    Block counts: [10000, 50, 2000, 40, 6000]
+FLATTEN-NOT:  goo:

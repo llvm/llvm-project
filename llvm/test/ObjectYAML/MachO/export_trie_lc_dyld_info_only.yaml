@@ -1,0 +1,197 @@
+# RUN: yaml2obj %s -o=%t
+# RUN: obj2yaml %t | FileCheck %s
+# RUN: llvm-objdump --macho --exports-trie %t | FileCheck %s --check-prefix=OBJDUMP-VERIFY
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           16
+  sizeofcmds:      1408
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         552
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          8192
+    fileoff:         0
+    filesize:        8192
+    maxprot:         7
+    initprot:        5
+    nsects:          6
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __DATA
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        4096
+    maxprot:         7
+    initprot:        3
+    nsects:          3
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294979584
+    vmsize:          4096
+    fileoff:         12288
+    filesize:        2508
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      12288
+    rebase_size:     8
+    bind_off:        12296
+    bind_size:       96
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   12392
+    lazy_bind_size:  624
+    export_off:      13016
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          13080
+    nsyms:           30
+    stroff:          13700
+    strsize:         1096
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       9
+    iextdefsym:      9
+    nextdefsym:      2
+    iundefsym:       11
+    nundefsym:       19
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  13560
+    nindirectsyms:   35
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         /usr/lib/dyld
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            461A1B28-822F-3F38-B670-645419E636F5
+  - cmd:             LC_VERSION_MIN_MACOSX
+    cmdsize:         16
+    version:         658176
+    sdk:             658176
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        4448
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         48
+    dylib:           
+      name:            24
+      timestamp:       2
+      current_version: 7864576
+      compatibility_version: 65536
+    Content:         '/usr/lib/libc++.1.dylib'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:           
+      name:            24
+      timestamp:       2
+      current_version: 80349697
+      compatibility_version: 65536
+    Content:         /usr/lib/libSystem.B.dylib
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         13064
+    datasize:        16
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         13080
+    datasize:        0
+LinkEditData:    
+  ExportTrie:      
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0000000000000000
+    Address:         0x0000000000000000
+    Other:           0x0000000000000000
+    ImportName:      ''
+    Children:        
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0000000000000000
+        Address:         0x0000000000000000
+        Other:           0x0000000000000000
+        ImportName:      ''
+        Children:        
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0000000000000000
+            Address:         0x0000000000000000
+            Other:           0x0000000000000000
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0000000000000000
+            Address:         0x0000000000003FA0
+            Other:           0x0000000000000000
+            ImportName:      ''
+...
+
+#CHECK: ExportTrie:      
+#CHECK:     TerminalSize:    0
+#CHECK:     NodeOffset:      0
+#CHECK:     Name:            ''
+#CHECK:     Children:        
+#CHECK:       - TerminalSize:    0
+#CHECK:         NodeOffset:      5
+#CHECK:         Name:            _
+#CHECK:         Children:        
+#CHECK:           - TerminalSize:    2
+#CHECK:             NodeOffset:      33
+#CHECK:             Name:            _mh_execute_header
+#CHECK:             Address:         0x0
+#CHECK:           - TerminalSize:    3
+#CHECK:             NodeOffset:      37
+#CHECK:             Name:            main
+#CHECK:             Address:         0x3FA0
+
+# OBJDUMP-VERIFY: Exports trie:
+# OBJDUMP-VERIFY: 0x100000000  __mh_execute_header
+# OBJDUMP-VERIFY: 0x100003FA0  _main

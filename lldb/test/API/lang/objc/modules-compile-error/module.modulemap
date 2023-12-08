@@ -1,0 +1,1 @@
+module LLDBTestModule { header "module.h" export * }

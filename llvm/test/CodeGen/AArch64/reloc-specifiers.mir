@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=arm64-windows -start-after=prologepilog -show-mc-encoding \
+# RUN: -o - %s | FileCheck %s
+
+--- |
+  define void @bar() { ret void }
+...
+
+---
+name:            bar
+body: |
+  bb.0:
+    ; CHECK-LABEL: bar
+
+    ; CHECK: movz    x0, #:abs_g1_s:.Lfoo$frame_escape_0 // encoding: [0bAAA00000,A,0b101AAAAA,0xd2]
+    ; CHECK: fixup A - offset: 0, value: :abs_g1_s:.Lfoo$frame_escape_0, kind: fixup_aarch64_movw
+    renamable $x0 = MOVZXi target-flags(aarch64-g1, aarch64-s) <mcsymbol .Lfoo$frame_escape_0>, 16
+
+    ; CHECK: movk    x0, #:abs_g0_nc:.Lfoo$frame_escape_0 // encoding: [0bAAA00000,A,0b100AAAAA,0xf2]
+    ; CHECK: fixup A - offset: 0, value: :abs_g0_nc:.Lfoo$frame_escape_0, kind: fixup_aarch64_movw
+    renamable $x0 = MOVKXi $x0, target-flags(aarch64-g0, aarch64-nc) <mcsymbol .Lfoo$frame_escape_0>, 0
+...

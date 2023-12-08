@@ -1,0 +1,43 @@
+# RUN: llc -run-pass=twoaddressinstruction -mtriple=x86_64-- -o - %s -experimental-debug-variable-locations | FileCheck %s
+#
+# REQUIRES: x86-registered-target
+#
+# Test that a new instruction (LEA) is created when the two-addr add below is
+# converted to three address; and that an appropriate substitution is created.
+# Maybe at some point we'll normalise DBG_INSTR_REFs on output, but until then,
+# lets not.
+#
+# CHECK:      debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+#
+# CHECK:      LEA64_32r
+# CHECK-SAME: debug-instr-number 2
+#
+# CHECK:      DBG_INSTR_REF dbg-instr-ref(1, 0)
+---
+name:            test1
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $edi
+
+    %0:gr32 = COPY killed $edi
+    %1:gr32 = SHL32ri killed %0, 5, implicit-def dead $eflags
+    %2:gr32 = ADD32ri_DB killed %1, 3, implicit-def dead $eflags, debug-instr-number 1
+    DBG_INSTR_REF dbg-instr-ref(1, 0)
+    $eax = COPY killed %2
+    RET 0, killed $eax
+
+...
+

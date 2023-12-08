@@ -1,0 +1,24 @@
+# RUN: llc -mtriple aarch64-- -run-pass irtranslator -simplify-mir %s -o %t \
+# RUN:   -verify-machineinstrs; llc -mtriple aarch64-- -run-pass legalizer \
+# RUN:   -simplify-mir %t -x mir -o - -verify-machineinstrs | FileCheck %s
+
+# Test that MIRParser is able to deserialize back MIR MIRPrinter serialized,
+# specifically overloaded intrinsic names in this case which aren't required
+# to encode all the concrete arg types in the name at MIR level.
+
+--- |
+  define i32 @int_aarch64_sdiv(i32 %a, i32 %b) nounwind readnone ssp {
+  ; CHECK-LABEL: name: int_aarch64_sdiv
+  ; CHECK: liveins: $w0, $w1
+  ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+  ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.sdiv), [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK: $w0 = COPY [[INT]](s32)
+  ; CHECK: RET_ReallyLR implicit $w0
+  entry:
+    %sdiv = call i32 @llvm.aarch64.sdiv.i32(i32 %a, i32 %b)
+    ret i32 %sdiv
+  }
+
+  declare i32 @llvm.aarch64.sdiv.i32(i32, i32) nounwind readnone
+...

@@ -1,0 +1,203 @@
+# RUN: llc %s -run-pass=machine-cp -o - | FileCheck %s --implicit-check-not=DBG_VALUE
+
+## Ensure that when the destination register of a copy instruction is used by a
+## DBG_VALUE/DBG_VALUE_LIST, and then that instruction is deleted during copy
+## propagation, the debug use is updated to the source register.
+##
+## Do the same for DBG_PHI instructions.
+
+# CHECK: ![[VAR_V:[0-9]+]] = !DILocalVariable(name: "v"
+# CHECK-LABEL: body:
+
+# CHECK: DBG_PHI $r0, 1
+# CHECK: DBG_VALUE $r0, $noreg, ![[VAR_V]], !DIExpression()
+# CHECK: DBG_VALUE_LIST ![[VAR_V]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), $r0, 0
+
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "arm-unknown-linux-gnueabi"
+
+  %struct.atomic_t.0.6.15.24.48.51.54.57 = type { i32 }
+  %struct.mm_struct.2.8.17.26.50.53.56.59 = type { %struct.anon.1.7.16.25.49.52.55.58 }
+  %struct.anon.1.7.16.25.49.52.55.58 = type { i32 }
+
+  @dup_mm_err = external dso_local local_unnamed_addr global i32, align 4, !dbg !0
+
+  declare dso_local i32 @atomic_long_read(%struct.atomic_t.0.6.15.24.48.51.54.57*) local_unnamed_addr #0
+
+  declare dso_local i32 @get_mm_counter(%struct.mm_struct.2.8.17.26.50.53.56.59*, i32) local_unnamed_addr #0
+
+  define dso_local i32 @dup_mm() local_unnamed_addr !dbg !16 {
+  entry:
+    %call = tail call i32 bitcast (i32 (...)* @kmem_cache_alloc to i32 (i32)*)(i32 0)
+    br i1 undef, label %cleanup, label %if.end
+
+  if.end:                                           ; preds = %entry
+    %tobool1.not = icmp eq i32 undef, 0
+    br i1 %tobool1.not, label %if.end3, label %free_pt
+
+  if.end3:                                          ; preds = %if.end
+    call void @llvm.dbg.value(metadata !DIArgList(i32 %call, i32 0), metadata !30, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !40
+    %0 = load volatile i32, i32* undef, align 4
+    br label %cleanup
+
+  free_pt:                                          ; preds = %if.end
+    store i32 0, i32* undef, align 4
+    br label %cleanup
+
+  cleanup:                                          ; preds = %free_pt, %if.end3, %entry
+    %retval.0 = phi i32 [ %call, %if.end3 ], [ 0, %entry ], [ 0, %free_pt ]
+    ret i32 %retval.0
+  }
+
+  declare dso_local i32 @kmem_cache_alloc(...) local_unnamed_addr
+
+  declare void @llvm.dbg.label(metadata)
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!14, !15}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "dup_mm_err", scope: !2, file: !3, line: 5, type: !12, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 13.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !9, globals: !13, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "machine-cp-updates-dbg-reg.ll", directory: "/")
+  !4 = !{!5}
+  !5 = !DICompositeType(tag: DW_TAG_enumeration_type, file: !3, line: 4, baseType: !6, size: 32, elements: !7)
+  !6 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+  !7 = !{!8}
+  !8 = !DIEnumerator(name: "MM_SHMEMPAGES", value: 0, isUnsigned: true)
+  !9 = !{!10}
+  !10 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 32)
+  !11 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !12)
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !{!0}
+  !14 = !{i32 2, !"Debug Info Version", i32 3}
+  !15 = !{i32 1, !"min_enum_size", i32 4}
+  !16 = distinct !DISubprogram(name: "dup_mm", scope: !3, file: !3, line: 14, type: !17, scopeLine: 14, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !19)
+  !17 = !DISubroutineType(types: !18)
+  !18 = !{!12}
+  !19 = !{!20, !28, !29}
+  !20 = !DILocalVariable(name: "mm", scope: !16, file: !3, line: 15, type: !21)
+  !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 32)
+  !22 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "mm_struct", file: !3, line: 7, size: 32, elements: !23)
+  !23 = !{!24}
+  !24 = !DIDerivedType(tag: DW_TAG_member, scope: !22, file: !3, line: 8, baseType: !25, size: 32)
+  !25 = distinct !DICompositeType(tag: DW_TAG_structure_type, scope: !22, file: !3, line: 8, size: 32, elements: !26)
+  !26 = !{!27}
+  !27 = !DIDerivedType(tag: DW_TAG_member, name: "binfmt", scope: !25, file: !3, line: 9, baseType: !12, size: 32)
+  !28 = !DILabel(scope: !16, name: "free_pt", file: !3, line: 22)
+  !29 = !DILabel(scope: !16, name: "fail_nomem", file: !3, line: 24)
+  !30 = !DILocalVariable(name: "v", arg: 1, scope: !31, file: !3, line: 6, type: !34)
+  !31 = distinct !DISubprogram(name: "atomic_long_read", scope: !3, file: !3, line: 6, type: !32, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !39)
+  !32 = !DISubroutineType(types: !33)
+  !33 = !{!12, !34}
+  !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !35, size: 32)
+  !35 = !DIDerivedType(tag: DW_TAG_typedef, name: "atomic_t", file: !3, line: 3, baseType: !36)
+  !36 = distinct !DICompositeType(tag: DW_TAG_structure_type, file: !3, line: 1, size: 32, elements: !37)
+  !37 = !{!38}
+  !38 = !DIDerivedType(tag: DW_TAG_member, name: "counter", scope: !36, file: !3, line: 2, baseType: !12, size: 32)
+  !39 = !{!30}
+  !40 = !DILocation(line: 0, scope: !31, inlinedAt: !41)
+  !41 = distinct !DILocation(line: 12, column: 3, scope: !42, inlinedAt: !48)
+  !42 = distinct !DISubprogram(name: "get_mm_counter", scope: !3, file: !3, line: 11, type: !43, scopeLine: 11, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !45)
+  !43 = !DISubroutineType(types: !44)
+  !44 = !{!22, !21, !12}
+  !45 = !{!46, !47}
+  !46 = !DILocalVariable(name: "mm", arg: 1, scope: !42, file: !3, line: 11, type: !21)
+  !47 = !DILocalVariable(name: "member", arg: 2, scope: !42, file: !3, line: 11, type: !12)
+  !48 = distinct !DILocation(line: 20, column: 3, scope: !16)
+
+...
+---
+name:            dup_mm
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x40000000), %bb.1(0x40000000)
+    liveins: $r4, $lr
+
+    $sp = frame-setup STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r4, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r4, -8
+    renamable $r4 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    $r0 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    BL @kmem_cache_alloc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp, implicit-def $r0
+    CMPri renamable $r4, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    Bcc %bb.4, 1 /* CC::ne */, killed $cpsr
+
+  bb.1.if.end:
+    successors: %bb.2(0x30000000), %bb.3(0x50000000)
+    liveins: $r0
+
+    renamable $r4 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    CMPri renamable $r4, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    Bcc %bb.3, 1 /* CC::ne */, killed $cpsr
+
+  bb.2.if.end3:
+    liveins: $r0
+
+    dead renamable $r1 = LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (volatile load (s32) from `i32* undef`)
+    renamable $r4 = COPY killed renamable $r0
+    DBG_PHI $r4, 1
+    DBG_VALUE $r4, $noreg, !30, !DIExpression(), debug-location !40
+    DBG_VALUE_LIST !30, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value), $r4, 0, debug-location !40
+    $r0 = COPY killed renamable $r4
+    $sp = frame-destroy LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc, implicit $r0
+
+  bb.3.free_pt:
+    successors: %bb.4(0x80000000)
+    liveins: $r4
+
+    STRi12 renamable $r4, undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into `i32* undef`)
+
+  bb.4.cleanup:
+    liveins: $r4
+
+    $r0 = COPY killed renamable $r4
+    $sp = frame-destroy LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc, implicit $r0
+
+...

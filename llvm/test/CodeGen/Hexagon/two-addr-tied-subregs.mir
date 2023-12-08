@@ -1,0 +1,56 @@
+# RUN: llc -march hexagon -run-pass livevars -run-pass twoaddressinstruction  -verify-machineinstrs -o - %s | FileCheck %s
+
+
+###############################################################################
+
+---
+name:            test1
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $d0
+
+    %0:doubleregs = COPY killed $d0
+    %1:intregs = S2_lsr_i_r_acc %0.isub_lo, %0.isub_lo, 16
+
+...
+
+# Verify that both uses if %0.isub_lo are replaced here.
+# (we used to get %1:intregs = S2_lsr_i_r_acc %1, %1.isub_lo, 16)
+#
+# CHECK-LABEL: name:            test1
+# CHECK:  bb.0.entry:
+# CHECK:      %0:doubleregs = COPY killed $d0
+# CHECK-NEXT: %1:intregs = COPY killed %0.isub_lo
+# CHECK-NEXT: %1:intregs = S2_lsr_i_r_acc %1, %1, 16
+
+
+###############################################################################
+
+---
+name:            test2
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $d0
+
+    %0:doubleregs = COPY killed $d0
+    %1:intregs = S2_lsr_i_r_acc %0.isub_lo, %0.isub_hi, 16
+
+...
+
+# Verify that the use of %0.isub_hi isn't replaced here.
+# (we used to get %1:intregs = S2_lsr_i_r_acc %1, %1.isub_hi, 16)
+#
+# We also used to get an incorrect "killed" for %0 in the second COPY.
+# So we verify that we do not get machine verifier complaints here.
+# An improvement could be to get a "killed" attribute on the last
+# use of %0.isub_hi, but we do not need it for the IR to be valid.
+#
+# CHECK-LABEL: name:            test2
+# CHECK:  bb.0.entry:
+# CHECK:      %0:doubleregs = COPY killed $d0
+# CHECK-NEXT: %1:intregs = COPY %0.isub_lo
+# CHECK-NEXT: %1:intregs = S2_lsr_i_r_acc %1, %0.isub_hi, 16
+
+###############################################################################

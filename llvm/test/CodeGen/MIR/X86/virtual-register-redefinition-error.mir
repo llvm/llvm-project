@@ -1,0 +1,26 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @test(i32 %a) {
+  body:
+    ret i32 %a
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+# CHECK: [[@LINE+1]]:11: redefinition of virtual register '%0'
+  - { id: 0, class: gr32 }
+body: |
+  bb.0.body:
+    liveins: %edi
+
+    %0 = COPY %edi
+    %eax = COPY %0
+    RET64 %eax
+...
+

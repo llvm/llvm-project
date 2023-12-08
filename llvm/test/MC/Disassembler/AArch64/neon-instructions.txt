@@ -1,0 +1,2637 @@
+# RUN: llvm-mc  -triple aarch64-none-linux-gnu -mattr=+neon -disassemble < %s | FileCheck %s
+# RUN: llvm-mc  -triple arm64-none-linux-gnu -mattr=+neon -disassemble < %s | FileCheck %s
+
+#------------------------------------------------------------------------------
+# Vector Integer Add/Sub
+#------------------------------------------------------------------------------
+# CHECK: add v31.8b, v31.8b, v31.8b
+# CHECK: sub v0.2d, v0.2d, v0.2d
+0xff 0x87 0x3f 0x0e
+0x00 0x84 0xe0 0x6e
+
+#------------------------------------------------------------------------------
+# Vector Floating-Point Add/Sub
+#------------------------------------------------------------------------------
+
+# CHECK: fadd v0.4s, v0.4s, v0.4s
+# CHECK: fsub v31.2s, v31.2s, v31.2s
+0x00 0xd4 0x20 0x4e
+0xff 0xd7 0xbf 0x0e
+
+#------------------------------------------------------------------------------
+# Vector Integer Mul
+#------------------------------------------------------------------------------
+# CHECK: mul v0.8b, v1.8b, v2.8b
+0x20 0x9c 0x22 0x0e
+
+#------------------------------------------------------------------------------
+# Vector Floating-Point Mul/Div
+#------------------------------------------------------------------------------
+# CHECK: fmul v0.2s, v1.2s, v2.2s
+# CHECK: fdiv v31.2s, v31.2s, v31.2s
+0x20 0xdc 0x22 0x2e
+0xff 0xff 0x3f 0x2e
+
+#----------------------------------------------------------------------
+# Vector Polynomial Multiply
+#----------------------------------------------------------------------
+# CHECK: pmul v0.8b, v15.8b, v16.8b
+# CHECK: pmul v31.16b, v7.16b, v8.16b
+0xe0 0x9d 0x30 0x2e
+0xff 0x9c 0x28 0x6e
+
+#------------------------------------------------------------------------------
+# Vector And, Orr, Eor, Orn, Bic
+#------------------------------------------------------------------------------
+# CHECK: and v2.8b, v2.8b, v2.8b
+# CHECK: orr v31.16b, v31.16b, v30.16b
+# CHECK: eor v0.16b, v1.16b, v2.16b
+# CHECK: orn v9.16b, v10.16b, v11.16b
+# CHECK: bic v31.8b, v30.8b, v29.8b
+0x42 0x1c 0x22 0x0e
+0xff 0x1f 0xbe 0x4e
+0x20 0x1c 0x22 0x6e
+0x49 0x1d 0xeb 0x4e
+0xdf 0x1f 0x7d 0x0e
+
+#------------------------------------------------------------------------------
+# Vector Bsl, Bit, Bif
+#------------------------------------------------------------------------------
+# CHECK: bsl v0.8b, v1.8b, v2.8b
+# CHECK: bit v31.16b, v31.16b, v31.16b
+# CHECK: bif v0.16b, v1.16b, v2.16b
+0x20 0x1c 0x62 0x2e
+0xff 0x1f 0xbf 0x6e
+0x20 0x1c 0xe2 0x6e
+
+
+#------------------------------------------------------------------------------
+# Vector Integer Multiply-accumulate and Multiply-subtract
+#------------------------------------------------------------------------------
+# CHECK: mla v0.8b, v1.8b, v2.8b
+# CHECK: mls v31.4h, v31.4h, v31.4h
+0x20 0x94 0x22 0x0e
+0xff 0x97 0x7f 0x2e
+
+#------------------------------------------------------------------------------
+# Vector Floating-Point Multiply-accumulate and Multiply-subtract
+#------------------------------------------------------------------------------
+# CHECK: fmla v0.2s, v1.2s, v2.2s
+# CHECK: fmls v31.2s, v31.2s, v31.2s
+0x20 0xcc 0x22 0x0e
+0xff 0xcf 0xbf 0x0e
+
+#------------------------------------------------------------------------------
+# Vector Move Immediate Shifted
+# Vector Move Inverted Immediate Shifted
+# Vector Bitwise Bit Clear (AND NOT) - immediate
+# Vector Bitwise OR - immedidate
+#------------------------------------------------------------------------------
+# CHECK: movi v31.4s, #255, lsl #24
+# CHECK: mvni v0.2s, #{{0x0|0}}
+# CHECK: bic v15.4h, #15, lsl #8
+# CHECK: orr v16.8h, #31
+0xff 0x67 0x07 0x4f
+0x00 0x04 0x00 0x2f
+0xef 0xb5 0x00 0x2f
+0xf0 0x97 0x00 0x4f
+
+#------------------------------------------------------------------------------
+# Vector Move Immediate Masked
+# Vector Move Inverted Immediate Masked
+#------------------------------------------------------------------------------
+# CHECK: movi v8.2s, #8, msl #8
+# CHECK: mvni v16.4s, #16, msl #16
+0x08 0xc5 0x00 0x0f
+0x10 0xd6 0x00 0x6f
+
+#------------------------------------------------------------------------------
+# Vector Immediate - per byte
+# Vector Move Immediate - bytemask, per doubleword
+# Vector Move Immediate - bytemask, one doubleword
+#------------------------------------------------------------------------------
+# CHECK: movi v16.8b, #255
+# CHECK: movi v31.16b, #31
+# CHECK: movi d15, #0xff00ff00ff00ff
+# CHECK: movi v31.2d, #0xff0000ff0000ffff
+0xf0 0xe7 0x07 0x0f
+0xff 0xe7 0x00 0x4f
+0xaf 0xe6 0x02 0x2f
+0x7f 0xe6 0x04 0x6f
+
+#------------------------------------------------------------------------------
+# Vector Floating Point Move Immediate
+#------------------------------------------------------------------------------
+# CHECK: fmov v0.2s, #13.0
+# CHECK: fmov v15.4s, #1.0
+# CHECK: fmov v31.2d, #-1.25
+0x40 0xf5 0x01 0x0f
+0x0f 0xf6 0x03 0x4f
+0x9f 0xf6 0x07 0x6f
+
+#------------------------------------------------------------------------------
+# Vector Move - register
+#------------------------------------------------------------------------------
+
+# CHECK: mov v1.16b, v15.16b
+# CHECK: mov v25.8b, v4.8b
+0xe1 0x1d 0xaf 0x4e
+0x99 0x1c 0xa4 0x0e
+
+#----------------------------------------------------------------------
+# Vector Absolute Difference and Accumulate (Signed, Unsigned)
+# Vector Absolute Difference (Signed, Unsigned)
+# Vector Absolute Difference (Floating Point)
+#----------------------------------------------------------------------
+
+# CHECK: uaba v0.8b, v1.8b, v2.8b
+# CHECK: saba v31.16b, v30.16b, v29.16b
+# CHECK: uabd v15.4h, v16.4h, v17.4h
+# CHECK: sabd v5.4h, v4.4h, v6.4h
+# CHECK: fabd v1.4s, v31.4s, v16.4s
+0x20 0x7c 0x22 0x2e
+0xdf 0x7f 0x3d 0x4e
+0x0f 0x76 0x71 0x2e
+0x85 0x74 0x66 0x0e
+0xe1 0xd7 0xb0 0x6e
+
+#----------------------------------------------------------------------
+# Scalar Integer Add
+# Scalar Integer Sub
+#----------------------------------------------------------------------
+
+# CHECK: add d17, d31, d29
+# CHECK: sub d15, d5, d16
+0xf1 0x87 0xfd 0x5e
+0xaf 0x84 0xf0 0x7e
+
+#----------------------------------------------------------------------
+# Vector Reciprocal Square Root Step (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: frsqrts v31.2d, v15.2d, v8.2d
+0xff 0xfd 0xe8 0x4e
+
+#----------------------------------------------------------------------
+# Vector Reciprocal Step (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: frecps  v5.4s, v7.4s, v16.4s
+0xe5 0xfc 0x30 0x4e
+
+#----------------------------------------------------------------------
+# Vector Absolute Compare Mask Less Than Or Equal (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: facge v0.4s, v31.4s, v16.4s
+0xe0 0xef 0x30 0x6e
+
+#----------------------------------------------------------------------
+# Vector Absolute Compare Mask Less Than (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: facgt v31.2d, v29.2d, v28.2d
+0xbf 0xef 0xfc 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Equal (Integer)
+#----------------------------------------------------------------------
+# CHECK: cmeq v5.16b, v15.16b, v31.16b
+0xe5 0x8d 0x3f 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Higher or Same (Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: cmhs v1.8b, v16.8b, v30.8b
+0x01 0x3e 0x3e 0x2e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than or Equal (Integer)
+#----------------------------------------------------------------------
+# CHECK: cmge v20.4h, v11.4h, v23.4h
+0x74 0x3d 0x77 0x0e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Higher (Unsigned Integer)
+# CHECK: cmhi v13.8h, v3.8h, v27.8h
+0x6d 0x34 0x7b 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than (Integer)
+#----------------------------------------------------------------------
+# CHECK: cmgt v9.4s, v4.4s, v28.4s
+0x89 0x34 0xbc 0x4e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Bitwise Test (Integer)
+#----------------------------------------------------------------------
+# CHECK: cmtst v21.2s, v19.2s, v18.2s
+0x75 0x8e 0xb2 0x0e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Equal (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmeq v0.2s, v15.2s, v16.2s
+0xe0 0xe5 0x30 0x0e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than Or Equal (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmge v31.4s, v7.4s, v29.4s
+0xff 0xe4 0x3d 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmgt v17.4s, v8.4s, v25.4s
+0x11 0xe5 0xb9 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Equal to Zero (Integer)
+#----------------------------------------------------------------------
+# CHECK: cmeq v31.16b, v15.16b, #{{0x0|0}}
+0xff 0x99 0x20 0x4e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than or Equal to Zero (Signed Integer)
+#----------------------------------------------------------------------
+# CHECK: cmge v3.8b, v15.8b, #{{0x0|0}}
+0xe3 0x89 0x20 0x2e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than Zero (Signed Integer)
+#----------------------------------------------------------------------
+# CHECK: cmgt v22.2s, v9.2s, #{{0x0|0}}
+0x36 0x89 0xa0 0x0e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Less Than or Equal To Zero (Signed Integer)
+#----------------------------------------------------------------------
+# CHECK: cmle v5.2d, v14.2d, #{{0x0|0}}
+0xc5 0x99 0xe0 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Less Than Zero (Signed Integer)
+#----------------------------------------------------------------------
+# CHECK: cmlt v13.8h, v11.8h, #{{0x0|0}}
+0x6d 0xa9 0x60 0x4e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Equal to Zero (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmeq v15.2s, v21.2s, #0.0
+0xaf 0xda 0xa0 0x0e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than or Equal to Zero (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmge v14.2d, v13.2d, #0.0
+0xae 0xc9 0xe0 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Greater Than Zero (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmgt v9.4s, v23.4s, #0.0
+0xe9 0xca 0xa0 0x4e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Less Than or Equal To Zero (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmle v11.2d, v6.2d, #0.0
+0xcb 0xd8 0xe0 0x6e
+
+#----------------------------------------------------------------------
+# Vector Compare Mask Less Than Zero (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fcmlt v12.4s, v25.4s, #0.0
+0x2c 0xeb 0xa0 0x4e
+
+
+#------------------------------------------------------------------------------
+# Vector Integer Halving Add (Signed)
+# Vector Integer Halving Add (Unsigned)
+# Vector Integer Halving Sub (Signed)
+# Vector Integer Halving Sub (Unsigned)
+#------------------------------------------------------------------------------
+# CHECK: shadd v0.8b, v31.8b, v29.8b
+# CHECK: uhadd v15.16b, v16.16b, v17.16b
+# CHECK: shsub v0.4h, v1.4h, v2.4h
+# CHECK: uhadd v5.8h, v7.8h, v8.8h
+# CHECK: shsub v9.2s, v11.2s, v21.2s
+# CHECK: uhsub v22.4s, v30.4s, v19.4s
+0xe0 0x07 0x3d 0x0e
+0x0f 0x06 0x31 0x6e
+0x20 0x24 0x62 0x0e
+0xe5 0x04 0x68 0x6e
+0x69 0x25 0xb5 0x0e
+0xd6 0x27 0xb3 0x6e
+
+#------------------------------------------------------------------------------
+# Vector Integer Rouding Halving Add (Signed)
+# Vector Integer Rouding Halving Add (Unsigned)
+#------------------------------------------------------------------------------
+# CHECK: srhadd v3.8b, v5.8b, v7.8b
+# CHECK: urhadd v7.16b, v17.16b, v27.16b
+# CHECK: srhadd v10.4h, v11.4h, v13.4h
+# CHECK: urhadd v1.8h, v2.8h, v3.8h
+# CHECK: srhadd v4.2s, v5.2s, v6.2s
+# CHECK: urhadd v7.4s, v7.4s, v7.4s
+0xa3 0x14 0x27 0x0e
+0x27 0x16 0x3b 0x6e
+0x6a 0x15 0x6d 0x0e
+0x41 0x14 0x63 0x6e
+0xa4 0x14 0xa6 0x0e
+0xe7 0x14 0xa7 0x6e
+
+#------------------------------------------------------------------------------
+# Vector Integer Saturating Add (Signed)
+# Vector Integer Saturating Add (Unsigned)
+# Vector Integer Saturating Sub (Signed)
+# Vector Integer Saturating Sub (Unsigned)
+#------------------------------------------------------------------------------
+# CHECK: sqsub v0.8b, v1.8b, v2.8b
+# CHECK: sqadd v0.16b, v1.16b, v2.16b
+# CHECK: uqsub v0.4h, v1.4h, v2.4h
+# CHECK: uqadd v0.8h, v1.8h, v2.8h
+# CHECK: sqadd v0.2s, v1.2s, v2.2s
+# CHECK: sqsub v0.4s, v1.4s, v2.4s
+# CHECK: sqsub v0.2d, v1.2d, v2.2d
+0x20 0x2c 0x22 0x0e
+0x20 0x0c 0x22 0x4e
+0x20 0x2c 0x62 0x2e
+0x20 0x0c 0x62 0x6e
+0x20 0x0c 0xa2 0x0e
+0x20 0x2c 0xa2 0x4e
+0x20 0x2c 0xe2 0x4e
+
+#------------------------------------------------------------------------------
+# Scalar Integer Saturating Add (Signed)
+# Scalar Integer Saturating Add (Unsigned)
+# Scalar Integer Saturating Sub (Signed)
+# Scalar Integer Saturating Add (Unsigned)
+#------------------------------------------------------------------------------
+# CHECK: sqadd b20, b11, b15
+# CHECK: uqadd h0, h1, h5
+# CHECK: sqsub s20, s10, s7
+# CHECK: uqsub d16, d16, d16
+0x74 0x0d 0x2f 0x5e
+0x20 0x0c 0x65 0x7e
+0x54 0x2d 0xa7 0x5e
+0x10 0x2e 0xf0 0x7e
+
+
+#----------------------------------------------------------------------
+# Vector Shift Left (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: sshl v10.8b, v15.8b, v22.8b
+# CHECK: ushl v10.16b, v5.16b, v2.16b
+# CHECK: sshl v10.4h, v15.4h, v22.4h
+# CHECK: ushl v10.8h, v5.8h, v2.8h
+# CHECK: sshl v10.2s, v15.2s, v22.2s
+# CHECK: ushl v10.4s, v5.4s, v2.4s
+# CHECK: sshl v0.2d, v1.2d, v2.2d
+0xea 0x45 0x36 0x0e
+0xaa 0x44 0x22 0x6e
+0xea 0x45 0x76 0x0e
+0xaa 0x44 0x62 0x6e
+0xea 0x45 0xb6 0x0e
+0xaa 0x44 0xa2 0x6e
+0x20 0x44 0xe2 0x4e
+
+#----------------------------------------------------------------------
+# Vector Saturating Shift Left (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: sqshl v1.8b, v15.8b, v22.8b
+# CHECK: uqshl v2.16b, v14.16b, v23.16b
+# CHECK: sqshl v3.4h, v13.4h, v24.4h
+# CHECK: uqshl v4.8h, v12.8h, v25.8h
+# CHECK: sqshl v5.2s, v11.2s, v26.2s
+# CHECK: uqshl v6.4s, v10.4s, v27.4s
+# CHECK: uqshl v0.2d, v1.2d, v2.2d
+0xe1 0x4d 0x36 0x0e
+0xc2 0x4d 0x37 0x6e
+0xa3 0x4d 0x78 0x0e
+0x84 0x4d 0x79 0x6e
+0x65 0x4d 0xba 0x0e
+0x46 0x4d 0xbb 0x6e
+0x20 0x4c 0xe2 0x6e
+
+#----------------------------------------------------------------------
+# Vector Rouding Shift Left (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: srshl v10.8b, v5.8b, v22.8b
+# CHECK: urshl v10.16b, v5.16b, v2.16b
+# CHECK: srshl v1.4h, v5.4h, v31.4h
+# CHECK: urshl v1.8h, v5.8h, v2.8h
+# CHECK: srshl v10.2s, v15.2s, v2.2s
+# CHECK: urshl v1.4s, v5.4s, v2.4s
+# CHECK: urshl v0.2d, v1.2d, v2.2d
+0xaa 0x54 0x36 0x0e
+0xaa 0x54 0x22 0x6e
+0xa1 0x54 0x7f 0x0e
+0xa1 0x54 0x62 0x6e
+0xea 0x55 0xa2 0x0e
+0xa1 0x54 0xa2 0x6e
+0x20 0x54 0xe2 0x6e
+
+#----------------------------------------------------------------------
+# Vector Saturating Rouding Shift Left (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: sqrshl v1.8b, v15.8b, v22.8b
+# CHECK: uqrshl v2.16b, v14.16b, v23.16b
+# CHECK: sqrshl v3.4h, v13.4h, v24.4h
+# CHECK: uqrshl v4.8h, v12.8h, v25.8h
+# CHECK: sqrshl v5.2s, v11.2s, v26.2s
+# CHECK: uqrshl v6.4s, v10.4s, v27.4s
+# CHECK: uqrshl v6.4s, v10.4s, v27.4s
+0xe1 0x5d 0x36 0x0e
+0xc2 0x5d 0x37 0x6e
+0xa3 0x5d 0x78 0x0e
+0x84 0x5d 0x79 0x6e
+0x65 0x5d 0xba 0x0e
+0x46 0x5d 0xbb 0x6e
+0x46 0x5d 0xbb 0x6e
+
+#----------------------------------------------------------------------
+# Scalar Integer Shift Left (Signed, Unsigned)
+#----------------------------------------------------------------------
+# CHECK: sshl d31, d31, d31
+# CHECK: ushl d0, d0, d0
+0xff 0x47 0xff 0x5e
+0x00 0x44 0xe0 0x7e
+
+#----------------------------------------------------------------------
+# Scalar Integer Saturating Shift Left (Signed, Unsigned)
+#----------------------------------------------------------------------
+# CHECK: sqshl d31, d31, d31
+# CHECK: uqshl s23, s20, s16
+# CHECK: sqshl h3, h4, h15
+# CHECK: uqshl b11, b20, b30
+0xff 0x4f 0xff 0x5e
+0x97 0x4e 0xb0 0x7e
+0x83 0x4c 0x6f 0x5e
+0x8b 0x4e 0x3e 0x7e
+
+#----------------------------------------------------------------------
+# Scalar Integer Rouding Shift Left (Signed, Unsigned)
+#----------------------------------------------------------------------
+# CHECK: srshl d16, d16, d16
+# CHECK: urshl d8, d7, d4
+0x10 0x56 0xf0 0x5e
+0xe8 0x54 0xe4 0x7e
+
+#----------------------------------------------------------------------
+# Scalar Integer Saturating Rounding Shift Left (Signed, Unsigned)
+#----------------------------------------------------------------------
+# CHECK: sqrshl d31, d31, d31
+# CHECK: uqrshl s23, s20, s16
+# CHECK: sqrshl h3, h4, h15
+# CHECK: uqrshl b11, b20, b30
+0xff 0x5f 0xff 0x5e
+0x97 0x5e 0xb0 0x7e
+0x83 0x5c 0x6f 0x5e
+0x8b 0x5e 0x3e 0x7e
+
+#----------------------------------------------------------------------
+# Vector Maximum (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: smax v1.8b, v15.8b, v22.8b
+# CHECK: umax v2.16b, v14.16b, v23.16b
+# CHECK: smax v3.4h, v13.4h, v24.4h
+# CHECK: umax v4.8h, v12.8h, v25.8h
+# CHECK: smax v5.2s, v11.2s, v26.2s
+# CHECK: umax v6.4s, v10.4s, v27.4s
+0xe1 0x65 0x36 0x0e
+0xc2 0x65 0x37 0x6e
+0xa3 0x65 0x78 0x0e
+0x84 0x65 0x79 0x6e
+0x65 0x65 0xba 0x0e
+0x46 0x65 0xbb 0x6e
+
+#----------------------------------------------------------------------
+# Vector Minimum (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: umin v1.8b, v15.8b, v22.8b
+# CHECK: smin v2.16b, v14.16b, v23.16b
+# CHECK: umin v3.4h, v13.4h, v24.4h
+# CHECK: smin v4.8h, v12.8h, v25.8h
+# CHECK: umin v5.2s, v11.2s, v26.2s
+# CHECK: smin v6.4s, v10.4s, v27.4s
+0xe1 0x6d 0x36 0x2e
+0xc2 0x6d 0x37 0x4e
+0xa3 0x6d 0x78 0x2e
+0x84 0x6d 0x79 0x4e
+0x65 0x6d 0xba 0x2e
+0x46 0x6d 0xbb 0x4e
+
+#----------------------------------------------------------------------
+# Vector Maximum (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fmax v29.2s, v28.2s, v25.2s
+# CHECK: fmax v9.4s, v8.4s, v5.4s
+# CHECK: fmax v11.2d, v10.2d, v7.2d
+0x9d 0xf7 0x39 0x0e
+0x09 0xf5 0x25 0x4e
+0x4b 0xf5 0x67 0x4e
+
+#----------------------------------------------------------------------
+# Vector Minimum (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fmin v29.2s, v28.2s, v25.2s
+# CHECK: fmin v9.4s, v8.4s, v5.4s
+# CHECK: fmin v11.2d, v10.2d, v7.2d
+0x9d 0xf7 0xb9 0x0e
+0x09 0xf5 0xa5 0x4e
+0x4b 0xf5 0xe7 0x4e
+
+#----------------------------------------------------------------------
+# Vector maxNum (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fmaxnm v9.2s, v8.2s, v5.2s
+# CHECK: fmaxnm v9.4s, v8.4s, v5.4s
+# CHECK: fmaxnm v11.2d, v10.2d, v7.2d
+0x09 0xc5 0x25 0x0e
+0x09 0xc5 0x25 0x4e
+0x4b 0xc5 0x67 0x4e
+
+#----------------------------------------------------------------------
+# Vector minNum (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fminnm v2.2s, v8.2s, v25.2s
+# CHECK: fminnm v9.4s, v8.4s, v5.4s
+# CHECK: fminnm v11.2d, v10.2d, v7.2d
+0x02 0xc5 0xb9 0x0e
+0x09 0xc5 0xa5 0x4e
+0x4b 0xc5 0xe7 0x4e
+
+
+#----------------------------------------------------------------------
+# Vector Maximum Pairwise (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: smaxp v1.8b, v15.8b, v22.8b
+# CHECK: umaxp v2.16b, v14.16b, v23.16b
+# CHECK: smaxp v3.4h, v13.4h, v24.4h
+# CHECK: umaxp v4.8h, v12.8h, v25.8h
+# CHECK: smaxp v5.2s, v11.2s, v26.2s
+# CHECK: umaxp v6.4s, v10.4s, v27.4s
+0xe1 0xa5 0x36 0x0e
+0xc2 0xa5 0x37 0x6e
+0xa3 0xa5 0x78 0x0e
+0x84 0xa5 0x79 0x6e
+0x65 0xa5 0xba 0x0e
+0x46 0xa5 0xbb 0x6e
+
+#----------------------------------------------------------------------
+# Vector Minimum Pairwise (Signed and Unsigned Integer)
+#----------------------------------------------------------------------
+# CHECK: uminp v1.8b, v15.8b, v22.8b
+# CHECK: sminp v2.16b, v14.16b, v23.16b
+# CHECK: uminp v3.4h, v13.4h, v24.4h
+# CHECK: sminp v4.8h, v12.8h, v25.8h
+# CHECK: uminp v5.2s, v11.2s, v26.2s
+# CHECK: sminp v6.4s, v10.4s, v27.4s
+0xe1 0xad 0x36 0x2e
+0xc2 0xad 0x37 0x4e
+0xa3 0xad 0x78 0x2e
+0x84 0xad 0x79 0x4e
+0x65 0xad 0xba 0x2e
+0x46 0xad 0xbb 0x4e
+
+#----------------------------------------------------------------------
+# Vector Maximum Pairwise (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fmaxp v29.2s, v28.2s, v25.2s
+# CHECK: fmaxp v9.4s, v8.4s, v5.4s
+# CHECK: fmaxp v11.2d, v10.2d, v7.2d
+0x9d 0xf7 0x39 0x2e
+0x09 0xf5 0x25 0x6e
+0x4b 0xf5 0x67 0x6e
+
+#----------------------------------------------------------------------
+# Vector Minimum Pairwise (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fminp v29.2s, v28.2s, v25.2s
+# CHECK: fminp v9.4s, v8.4s, v5.4s
+# CHECK: fminp v11.2d, v10.2d, v7.2d
+0x9d 0xf7 0xb9 0x2e
+0x09 0xf5 0xa5 0x6e
+0x4b 0xf5 0xe7 0x6e
+
+#----------------------------------------------------------------------
+# Vector maxNum Pairwise (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fmaxnmp v9.2s, v8.2s, v5.2s
+# CHECK: fmaxnmp v9.4s, v8.4s, v5.4s
+# CHECK: fmaxnmp v11.2d, v10.2d, v7.2d
+0x09 0xc5 0x25 0x2e
+0x09 0xc5 0x25 0x6e
+0x4b 0xc5 0x67 0x6e
+
+#----------------------------------------------------------------------
+# Vector minNum Pairwise (Floating Point)
+#----------------------------------------------------------------------
+# CHECK: fminnmp v2.2s, v8.2s, v25.2s
+# CHECK: fminnmp v9.4s, v8.4s, v5.4s
+# CHECK: fminnmp v11.2d, v10.2d, v7.2d
+0x02 0xc5 0xb9 0x2e
+0x09 0xc5 0xa5 0x6e
+0x4b 0xc5 0xe7 0x6e
+
+#------------------------------------------------------------------------------
+# Vector Add Pairwise (Integer)
+#------------------------------------------------------------------------------
+# CHECK: addp v31.8b, v31.8b, v31.8b
+# CHECK: addp v0.2d, v0.2d, v0.2d
+0xff 0xbf 0x3f 0x0e
+0x00 0xbc 0xe0 0x4e
+
+#------------------------------------------------------------------------------
+# Vector Add Pairwise (Floating Point)
+#------------------------------------------------------------------------------
+# CHECK: faddp v0.4s, v0.4s, v0.4s
+# CHECK: faddp v31.2s, v31.2s, v31.2s
+0x00 0xd4 0x20 0x6e
+0xff 0xd7 0x3f 0x2e
+
+
+#------------------------------------------------------------------------------
+# Vector Saturating Doubling Multiply High
+# Vector Saturating Rouding Doubling Multiply High
+#------------------------------------------------------------------------------
+# CHECK: sqdmulh v31.2s, v31.2s, v31.2s
+# CHECK: sqdmulh v5.4s, v7.4s, v9.4s
+# CHECK: sqrdmulh v31.4h, v3.4h, v13.4h
+# CHECK: sqrdmulh v0.8h, v10.8h, v20.8h
+0xff 0xb7 0xbf 0x0e
+0xe5 0xb4 0xa9 0x4e
+0x7f 0xb4 0x6d 0x2e
+0x40 0xb5 0x74 0x6e
+
+#------------------------------------------------------------------------------
+# Vector Multiply Extended
+#------------------------------------------------------------------------------
+# CHECK: fmulx v1.2s, v22.2s, v2.2s
+# CHECK: fmulx v21.4s, v15.4s, v3.4s
+# CHECK: fmulx v11.2d, v5.2d, v23.2d
+0xc1 0xde 0x22 0x0e
+0xf5 0xdd 0x23 0x4e
+0xab 0xdc 0x77 0x4e
+
+#----------------------------------------------------------------------
+# Vector Shift Left long 
+#----------------------------------------------------------------------
+# CHECK: shll2	v2.8h, v4.16b, #8
+# CHECK: shll2	v6.4s, v8.8h, #16
+# CHECK: shll2	v6.2d, v8.4s, #32
+# CHECK: shll	v2.8h, v4.8b, #8
+# CHECK: shll	v6.4s, v8.4h, #16
+# CHECK: shll	v6.2d, v8.2s, #32
+
+0x82,0x38,0x21,0x6e
+0x06,0x39,0x61,0x6e
+0x06,0x39,0xa1,0x6e
+0x82,0x38,0x21,0x2e
+0x06,0x39,0x61,0x2e
+0x06,0x39,0xa1,0x2e
+
+#----------------------------------------------------------------------
+# Vector Shift Left by Immediate
+#----------------------------------------------------------------------
+# CHECK: shl v0.4h, v1.4h, #3
+# CHECK: shl v0.16b, v1.16b, #3
+# CHECK: shl v0.4s, v1.4s, #3
+# CHECK: shl v0.2d, v1.2d, #3
+0x20,0x54,0x13,0x0f
+0x20,0x54,0x0b,0x4f
+0x20,0x54,0x23,0x4f
+0x20,0x54,0x43,0x4f
+
+#----------------------------------------------------------------------
+# Vector Shift Left Long (Signed, Unsigned) by Immediate
+#----------------------------------------------------------------------
+# CHECK: sshll v0.2d, v1.2s, #3
+# CHECK: sshll2 v0.4s, v1.8h, #3
+# CHECK: ushll v0.4s, v1.4h, #3
+# CHECK: ushll2 v0.8h, v1.16b, #3
+0x20 0xa4 0x23 0x0f
+0x20 0xa4 0x13 0x4f
+0x20 0xa4 0x13 0x2f
+0x20 0xa4 0x0b 0x6f
+
+#-----------------------------------------------------------------------------
+#Integer shift right (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: sshr v0.8b, v1.8b, #3
+# CHECK: sshr v0.4h, v1.4h, #3
+# CHECK: sshr v0.2s, v1.2s, #3
+# CHECK: sshr v0.16b, v1.16b, #3
+# CHECK: sshr v0.8h, v1.8h, #3
+# CHECK: sshr v0.4s, v1.4s, #3
+# CHECK: sshr v0.2d, v1.2d, #3
+0x20,0x04,0x0d,0x0f
+0x20,0x04,0x1d,0x0f
+0x20,0x04,0x3d,0x0f
+0x20,0x04,0x0d,0x4f
+0x20,0x04,0x1d,0x4f
+0x20,0x04,0x3d,0x4f
+0x20,0x04,0x7d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer shift right (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: ushr v0.8b, v1.8b, #3
+# CHECK: ushr v0.4h, v1.4h, #3
+# CHECK: ushr v0.2s, v1.2s, #3
+# CHECK: ushr v0.16b, v1.16b, #3
+# CHECK: ushr v0.8h, v1.8h, #3
+# CHECK: ushr v0.4s, v1.4s, #3
+# CHECK: ushr v0.2d, v1.2d, #3
+0x20,0x04,0x0d,0x2f
+0x20,0x04,0x1d,0x2f
+0x20,0x04,0x3d,0x2f
+0x20,0x04,0x0d,0x6f
+0x20,0x04,0x1d,0x6f
+0x20,0x04,0x3d,0x6f
+0x20,0x04,0x7d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer shift right and accumulate (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: ssra v0.8b, v1.8b, #3
+# CHECK: ssra v0.4h, v1.4h, #3
+# CHECK: ssra v0.2s, v1.2s, #3
+# CHECK: ssra v0.16b, v1.16b, #3
+# CHECK: ssra v0.8h, v1.8h, #3
+# CHECK: ssra v0.4s, v1.4s, #3
+# CHECK: ssra v0.2d, v1.2d, #3
+0x20,0x14,0x0d,0x0f
+0x20,0x14,0x1d,0x0f
+0x20,0x14,0x3d,0x0f
+0x20,0x14,0x0d,0x4f
+0x20,0x14,0x1d,0x4f
+0x20,0x14,0x3d,0x4f
+0x20,0x14,0x7d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer shift right and accumulate (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: usra v0.8b, v1.8b, #3
+# CHECK: usra v0.4h, v1.4h, #3
+# CHECK: usra v0.2s, v1.2s, #3
+# CHECK: usra v0.16b, v1.16b, #3
+# CHECK: usra v0.8h, v1.8h, #3
+# CHECK: usra v0.4s, v1.4s, #3
+# CHECK: usra v0.2d, v1.2d, #3
+0x20,0x14,0x0d,0x2f
+0x20,0x14,0x1d,0x2f
+0x20,0x14,0x3d,0x2f
+0x20,0x14,0x0d,0x6f
+0x20,0x14,0x1d,0x6f
+0x20,0x14,0x3d,0x6f
+0x20,0x14,0x7d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer rounding shift right (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: srshr v0.8b, v1.8b, #3
+# CHECK: srshr v0.4h, v1.4h, #3
+# CHECK: srshr v0.2s, v1.2s, #3
+# CHECK: srshr v0.16b, v1.16b, #3
+# CHECK: srshr v0.8h, v1.8h, #3
+# CHECK: srshr v0.4s, v1.4s, #3
+# CHECK: srshr v0.2d, v1.2d, #3
+0x20,0x24,0x0d,0x0f
+0x20,0x24,0x1d,0x0f
+0x20,0x24,0x3d,0x0f
+0x20,0x24,0x0d,0x4f
+0x20,0x24,0x1d,0x4f
+0x20,0x24,0x3d,0x4f
+0x20,0x24,0x7d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer rounding shift right (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: urshr v0.8b, v1.8b, #3
+# CHECK: urshr v0.4h, v1.4h, #3
+# CHECK: urshr v0.2s, v1.2s, #3
+# CHECK: urshr v0.16b, v1.16b, #3
+# CHECK: urshr v0.8h, v1.8h, #3
+# CHECK: urshr v0.4s, v1.4s, #3
+# CHECK: urshr v0.2d, v1.2d, #3
+0x20,0x24,0x0d,0x2f
+0x20,0x24,0x1d,0x2f
+0x20,0x24,0x3d,0x2f
+0x20,0x24,0x0d,0x6f
+0x20,0x24,0x1d,0x6f
+0x20,0x24,0x3d,0x6f
+0x20,0x24,0x7d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer rounding shift right and accumulate (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: srsra v0.8b, v1.8b, #3
+# CHECK: srsra v0.4h, v1.4h, #3
+# CHECK: srsra v0.2s, v1.2s, #3
+# CHECK: srsra v0.16b, v1.16b, #3
+# CHECK: srsra v0.8h, v1.8h, #3
+# CHECK: srsra v0.4s, v1.4s, #3
+# CHECK: srsra v0.2d, v1.2d, #3
+0x20,0x34,0x0d,0x0f
+0x20,0x34,0x1d,0x0f
+0x20,0x34,0x3d,0x0f
+0x20,0x34,0x0d,0x4f
+0x20,0x34,0x1d,0x4f
+0x20,0x34,0x3d,0x4f
+0x20,0x34,0x7d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer rounding shift right and accumulate (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: ursra v0.8b, v1.8b, #3
+# CHECK: ursra v0.4h, v1.4h, #3
+# CHECK: ursra v0.2s, v1.2s, #3
+# CHECK: ursra v0.16b, v1.16b, #3
+# CHECK: ursra v0.8h, v1.8h, #3
+# CHECK: ursra v0.4s, v1.4s, #3
+# CHECK: ursra v0.2d, v1.2d, #3
+0x20,0x34,0x0d,0x2f
+0x20,0x34,0x1d,0x2f
+0x20,0x34,0x3d,0x2f
+0x20,0x34,0x0d,0x6f
+0x20,0x34,0x1d,0x6f
+0x20,0x34,0x3d,0x6f
+0x20,0x34,0x7d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer shift right and insert
+#-----------------------------------------------------------------------------
+# CHECK: sri v0.8b, v1.8b, #3
+# CHECK: sri v0.4h, v1.4h, #3
+# CHECK: sri v0.2s, v1.2s, #3
+# CHECK: sri v0.16b, v1.16b, #3
+# CHECK: sri v0.8h, v1.8h, #3
+# CHECK: sri v0.4s, v1.4s, #3
+# CHECK: sri v0.2d, v1.2d, #3
+0x20,0x44,0x0d,0x2f
+0x20,0x44,0x1d,0x2f
+0x20,0x44,0x3d,0x2f
+0x20,0x44,0x0d,0x6f
+0x20,0x44,0x1d,0x6f
+0x20,0x44,0x3d,0x6f
+0x20,0x44,0x7d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer shift left and insert
+#-----------------------------------------------------------------------------
+# CHECK: sli v0.8b, v1.8b, #3
+# CHECK: sli v0.4h, v1.4h, #3
+# CHECK: sli v0.2s, v1.2s, #3
+# CHECK: sli v0.16b, v1.16b, #3
+# CHECK: sli v0.8h, v1.8h, #3
+# CHECK: sli v0.4s, v1.4s, #3
+# CHECK: sli v0.2d, v1.2d, #3
+0x20,0x54,0x0b,0x2f
+0x20,0x54,0x13,0x2f
+0x20,0x54,0x23,0x2f
+0x20,0x54,0x0b,0x6f
+0x20,0x54,0x13,0x6f
+0x20,0x54,0x23,0x6f
+0x20,0x54,0x43,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift left unsigned
+#-----------------------------------------------------------------------------
+# CHECK: sqshlu v0.8b, v1.8b, #3
+# CHECK: sqshlu v0.4h, v1.4h, #3
+# CHECK: sqshlu v0.2s, v1.2s, #3
+# CHECK: sqshlu v0.16b, v1.16b, #3
+# CHECK: sqshlu v0.8h, v1.8h, #3
+# CHECK: sqshlu v0.4s, v1.4s, #3
+# CHECK: sqshlu v0.2d, v1.2d, #3
+0x20,0x64,0x0b,0x2f
+0x20,0x64,0x13,0x2f
+0x20,0x64,0x23,0x2f
+0x20,0x64,0x0b,0x6f
+0x20,0x64,0x13,0x6f
+0x20,0x64,0x23,0x6f
+0x20,0x64,0x43,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift left (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: sqshl v0.8b, v1.8b, #3
+# CHECK: sqshl v0.4h, v1.4h, #3
+# CHECK: sqshl v0.2s, v1.2s, #3
+# CHECK: sqshl v0.16b, v1.16b, #3
+# CHECK: sqshl v0.8h, v1.8h, #3
+# CHECK: sqshl v0.4s, v1.4s, #3
+# CHECK: sqshl v0.2d, v1.2d, #3
+0x20,0x74,0x0b,0x0f
+0x20,0x74,0x13,0x0f
+0x20,0x74,0x23,0x0f
+0x20,0x74,0x0b,0x4f
+0x20,0x74,0x13,0x4f
+0x20,0x74,0x23,0x4f
+0x20,0x74,0x43,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift left (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: uqshl v0.8b, v1.8b, #3
+# CHECK: uqshl v0.4h, v1.4h, #3
+# CHECK: uqshl v0.2s, v1.2s, #3
+# CHECK: uqshl v0.16b, v1.16b, #3
+# CHECK: uqshl v0.8h, v1.8h, #3
+# CHECK: uqshl v0.4s, v1.4s, #3
+# CHECK: uqshl v0.2d, v1.2d, #3
+0x20,0x74,0x0b,0x2f
+0x20,0x74,0x13,0x2f
+0x20,0x74,0x23,0x2f
+0x20,0x74,0x0b,0x6f
+0x20,0x74,0x13,0x6f
+0x20,0x74,0x23,0x6f
+0x20,0x74,0x43,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer shift right narrow
+#-----------------------------------------------------------------------------
+# CHECK: shrn v0.8b, v1.8h, #3
+# CHECK: shrn v0.4h, v1.4s, #3
+# CHECK: shrn v0.2s, v1.2d, #3
+# CHECK: shrn2 v0.16b, v1.8h, #3
+# CHECK: shrn2 v0.8h, v1.4s, #3
+# CHECK: shrn2 v0.4s, v1.2d, #3
+0x20,0x84,0x0d,0x0f
+0x20,0x84,0x1d,0x0f
+0x20,0x84,0x3d,0x0f
+0x20,0x84,0x0d,0x4f
+0x20,0x84,0x1d,0x4f
+0x20,0x84,0x3d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift right unsigned narrow (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: sqshrun v0.8b, v1.8h, #3
+# CHECK: sqshrun v0.4h, v1.4s, #3
+# CHECK: sqshrun v0.2s, v1.2d, #3
+# CHECK: sqshrun2 v0.16b, v1.8h, #3
+# CHECK: sqshrun2 v0.8h, v1.4s, #3
+# CHECK: sqshrun2 v0.4s, v1.2d, #3
+0x20,0x84,0x0d,0x2f
+0x20,0x84,0x1d,0x2f
+0x20,0x84,0x3d,0x2f
+0x20,0x84,0x0d,0x6f
+0x20,0x84,0x1d,0x6f
+0x20,0x84,0x3d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer rounding shift right narrow
+#-----------------------------------------------------------------------------
+# CHECK: rshrn v0.8b, v1.8h, #3
+# CHECK: rshrn v0.4h, v1.4s, #3
+# CHECK: rshrn v0.2s, v1.2d, #3
+# CHECK: rshrn2 v0.16b, v1.8h, #3
+# CHECK: rshrn2 v0.8h, v1.4s, #3
+# CHECK: rshrn2 v0.4s, v1.2d, #3
+0x20,0x8c,0x0d,0x0f
+0x20,0x8c,0x1d,0x0f
+0x20,0x8c,0x3d,0x0f
+0x20,0x8c,0x0d,0x4f
+0x20,0x8c,0x1d,0x4f
+0x20,0x8c,0x3d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift right rounded unsigned narrow (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: sqrshrun v0.8b, v1.8h, #3
+# CHECK: sqrshrun v0.4h, v1.4s, #3
+# CHECK: sqrshrun v0.2s, v1.2d, #3
+# CHECK: sqrshrun2 v0.16b, v1.8h, #3
+# CHECK: sqrshrun2 v0.8h, v1.4s, #3
+# CHECK: sqrshrun2 v0.4s, v1.2d, #3
+0x20,0x8c,0x0d,0x2f
+0x20,0x8c,0x1d,0x2f
+0x20,0x8c,0x3d,0x2f
+0x20,0x8c,0x0d,0x6f
+0x20,0x8c,0x1d,0x6f
+0x20,0x8c,0x3d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift right narrow (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: sqshrn v0.8b, v1.8h, #3
+# CHECK: sqshrn v0.4h, v1.4s, #3
+# CHECK: sqshrn v0.2s, v1.2d, #3
+# CHECK: sqshrn2 v0.16b, v1.8h, #3
+# CHECK: sqshrn2 v0.8h, v1.4s, #3
+# CHECK: sqshrn2 v0.4s, v1.2d, #3
+0x20,0x94,0x0d,0x0f
+0x20,0x94,0x1d,0x0f
+0x20,0x94,0x3d,0x0f
+0x20,0x94,0x0d,0x4f
+0x20,0x94,0x1d,0x4f
+0x20,0x94,0x3d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift right narrow (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: uqshrn v0.8b, v1.8h, #3
+# CHECK: uqshrn v0.4h, v1.4s, #3
+# CHECK: uqshrn v0.2s, v1.2d, #3
+# CHECK: uqshrn2 v0.16b, v1.8h, #3
+# CHECK: uqshrn2 v0.8h, v1.4s, #3
+# CHECK: uqshrn2 v0.4s, v1.2d, #3
+0x20,0x94,0x0d,0x2f
+0x20,0x94,0x1d,0x2f
+0x20,0x94,0x3d,0x2f
+0x20,0x94,0x0d,0x6f
+0x20,0x94,0x1d,0x6f
+0x20,0x94,0x3d,0x6f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift right rounded narrow (Signed)
+#-----------------------------------------------------------------------------
+# CHECK: sqrshrn v0.8b, v1.8h, #3
+# CHECK: sqrshrn v0.4h, v1.4s, #3
+# CHECK: sqrshrn v0.2s, v1.2d, #3
+# CHECK: sqrshrn2 v0.16b, v1.8h, #3
+# CHECK: sqrshrn2 v0.8h, v1.4s, #3
+# CHECK: sqrshrn2 v0.4s, v1.2d, #3
+0x20,0x9c,0x0d,0x0f
+0x20,0x9c,0x1d,0x0f
+0x20,0x9c,0x3d,0x0f
+0x20,0x9c,0x0d,0x4f
+0x20,0x9c,0x1d,0x4f
+0x20,0x9c,0x3d,0x4f
+
+#-----------------------------------------------------------------------------
+#Integer saturating shift right rounded narrow (Unsigned)
+#-----------------------------------------------------------------------------
+# CHECK: uqrshrn v0.8b, v1.8h, #3
+# CHECK: uqrshrn v0.4h, v1.4s, #3
+# CHECK: uqrshrn v0.2s, v1.2d, #3
+# CHECK: uqrshrn2 v0.16b, v1.8h, #3
+# CHECK: uqrshrn2 v0.8h, v1.4s, #3
+# CHECK: uqrshrn2 v0.4s, v1.2d, #3
+0x20,0x9c,0x0d,0x2f
+0x20,0x9c,0x1d,0x2f
+0x20,0x9c,0x3d,0x2f
+0x20,0x9c,0x0d,0x6f
+0x20,0x9c,0x1d,0x6f
+0x20,0x9c,0x3d,0x6f
+
+#-----------------------------------------------------------------------------
+#Fixed-point convert to floating-point
+#-----------------------------------------------------------------------------
+# CHECK: scvtf v0.2s, v1.2s, #3
+# CHECK: scvtf v0.4s, v1.4s, #3
+# CHECK: scvtf v0.2d, v1.2d, #3
+# CHECK: ucvtf v0.2s, v1.2s, #3
+# CHECK: ucvtf v0.4s, v1.4s, #3
+# CHECK: ucvtf v0.2d, v1.2d, #3
+
+0x20,0xe4,0x3d,0x0f
+0x20,0xe4,0x3d,0x4f
+0x20,0xe4,0x7d,0x4f
+0x20,0xe4,0x3d,0x2f
+0x20,0xe4,0x3d,0x6f
+0x20,0xe4,0x7d,0x6f
+
+#-----------------------------------------------------------------------------
+#Floating-point convert to fixed-point
+#-----------------------------------------------------------------------------
+# CHECK: fcvtzs v0.2s, v1.2s, #3
+# CHECK: fcvtzs v0.4s, v1.4s, #3
+# CHECK: fcvtzs v0.2d, v1.2d, #3
+# CHECK: fcvtzu v0.2s, v1.2s, #3
+# CHECK: fcvtzu v0.4s, v1.4s, #3
+# CHECK: fcvtzu v0.2d, v1.2d, #3
+0x20,0xfc,0x3d,0x0f
+0x20,0xfc,0x3d,0x4f
+0x20,0xfc,0x7d,0x4f
+0x20,0xfc,0x3d,0x2f
+0x20,0xfc,0x3d,0x6f
+0x20,0xfc,0x7d,0x6f
+
+
+#------------------------------------------------------------------------------
+# Vector with 3 operands having different data types
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Long
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Long - Variant 1
+#------------------------------------------------------------------------------
+
+# CHECK: saddl v0.8h, v1.8b, v2.8b
+# CHECK: saddl v0.4s, v1.4h, v2.4h
+# CHECK: saddl v0.2d, v1.2s, v2.2s
+0x20 0x00 0x22 0x0e
+0x20 0x00 0x62 0x0e
+0x20 0x00 0xa2 0x0e
+
+# CHECK: saddl2 v0.4s, v1.8h, v2.8h
+# CHECK: saddl2 v0.8h, v1.16b, v2.16b
+# CHECK: saddl2 v0.2d, v1.4s, v2.4s
+0x20 0x00 0x62 0x4e
+0x20 0x00 0x22 0x4e
+0x20 0x00 0xa2 0x4e
+
+# CHECK: uaddl v0.8h, v1.8b, v2.8b
+# CHECK: uaddl v0.4s, v1.4h, v2.4h
+# CHECK: uaddl v0.2d, v1.2s, v2.2s
+0x20 0x00 0x22 0x2e
+0x20 0x00 0x62 0x2e
+0x20 0x00 0xa2 0x2e
+
+# CHECK: uaddl2 v0.8h, v1.16b, v2.16b
+# CHECK: uaddl2 v0.4s, v1.8h, v2.8h
+# CHECK: uaddl2 v0.2d, v1.4s, v2.4s
+0x20 0x00 0x22 0x6e
+0x20 0x00 0x62 0x6e
+0x20 0x00 0xa2 0x6e
+
+# CHECK: ssubl v0.8h, v1.8b, v2.8b
+# CHECK: ssubl v0.4s, v1.4h, v2.4h
+# CHECK: ssubl v0.2d, v1.2s, v2.2s
+0x20 0x20 0x22 0x0e
+0x20 0x20 0x62 0x0e
+0x20 0x20 0xa2 0x0e
+
+# CHECK: ssubl2 v0.8h, v1.16b, v2.16b
+# CHECK: ssubl2 v0.4s, v1.8h, v2.8h
+# CHECK: ssubl2 v0.2d, v1.4s, v2.4s
+0x20 0x20 0x22 0x4e
+0x20 0x20 0x62 0x4e
+0x20 0x20 0xa2 0x4e
+
+# CHECK: usubl v0.8h, v1.8b, v2.8b
+# CHECK: usubl v0.4s, v1.4h, v2.4h
+# CHECK: usubl v0.2d, v1.2s, v2.2s
+0x20 0x20 0x22 0x2e
+0x20 0x20 0x62 0x2e
+0x20 0x20 0xa2 0x2e
+
+# CHECK: usubl2 v0.8h, v1.16b, v2.16b
+# CHECK: usubl2 v0.4s, v1.8h, v2.8h
+# CHECK: usubl2 v0.2d, v1.4s, v2.4s
+0x20 0x20 0x22 0x6e
+0x20 0x20 0x62 0x6e
+0x20 0x20 0xa2 0x6e
+
+# CHECK: sabal v0.8h, v1.8b, v2.8b
+# CHECK: sabal v0.4s, v1.4h, v2.4h
+# CHECK: sabal v0.2d, v1.2s, v2.2s
+0x20 0x50 0x22 0x0e
+0x20 0x50 0x62 0x0e
+0x20 0x50 0xa2 0x0e
+
+# CHECK: sabal2 v0.8h, v1.16b, v2.16b
+# CHECK: sabal2 v0.4s, v1.8h, v2.8h
+# CHECK: sabal2 v0.2d, v1.4s, v2.4s
+0x20 0x50 0x22 0x4e
+0x20 0x50 0x62 0x4e
+0x20 0x50 0xa2 0x4e
+
+# CHECK: uabal v0.8h, v1.8b, v2.8b
+# CHECK: uabal v0.4s, v1.4h, v2.4h
+# CHECK: uabal v0.2d, v1.2s, v2.2s
+0x20 0x50 0x22 0x2e
+0x20 0x50 0x62 0x2e
+0x20 0x50 0xa2 0x2e
+
+# CHECK: uabal2 v0.8h, v1.16b, v2.16b
+# CHECK: uabal2 v0.4s, v1.8h, v2.8h
+# CHECK: uabal2 v0.2d, v1.4s, v2.4s
+0x20 0x50 0x22 0x6e
+0x20 0x50 0x62 0x6e
+0x20 0x50 0xa2 0x6e
+
+# CHECK: sabdl v0.8h, v1.8b, v2.8b
+# CHECK: sabdl v0.4s, v1.4h, v2.4h
+# CHECK: sabdl v0.2d, v1.2s, v2.2s
+0x20 0x70 0x22 0x0e
+0x20 0x70 0x62 0x0e
+0x20 0x70 0xa2 0x0e
+
+# CHECK: sabdl2 v0.8h, v1.16b, v2.16b
+# CHECK: sabdl2 v0.4s, v1.8h, v2.8h
+# CHECK: sabdl2 v0.2d, v1.4s, v2.4s
+0x20 0x70 0x22 0x4e
+0x20 0x70 0x62 0x4e
+0x20 0x70 0xa2 0x4e
+
+# CHECK: uabdl v0.8h, v1.8b, v2.8b
+# CHECK: uabdl v0.4s, v1.4h, v2.4h
+# CHECK: uabdl v0.2d, v1.2s, v2.2s
+0x20 0x70 0x22 0x2e
+0x20 0x70 0x62 0x2e
+0x20 0x70 0xa2 0x2e
+
+# CHECK: uabdl2 v0.8h, v1.16b, v2.16b
+# CHECK: uabdl2 v0.4s, v1.8h, v2.8h
+# CHECK: uabdl2 v0.2d, v1.4s, v2.4s
+0x20 0x70 0x22 0x6e
+0x20 0x70 0x62 0x6e
+0x20 0x70 0xa2 0x6e
+
+# CHECK: smlal v0.8h, v1.8b, v2.8b
+# CHECK: smlal v0.4s, v1.4h, v2.4h
+# CHECK: smlal v0.2d, v1.2s, v2.2s
+0x20 0x80 0x22 0x0e
+0x20 0x80 0x62 0x0e
+0x20 0x80 0xa2 0x0e
+
+# CHECK: smlal2 v0.8h, v1.16b, v2.16b
+# CHECK: smlal2 v0.4s, v1.8h, v2.8h
+# CHECK: smlal2 v0.2d, v1.4s, v2.4s
+0x20 0x80 0x22 0x4e
+0x20 0x80 0x62 0x4e
+0x20 0x80 0xa2 0x4e
+
+# CHECK: umlal v0.8h, v1.8b, v2.8b
+# CHECK: umlal v0.4s, v1.4h, v2.4h
+# CHECK: umlal v0.2d, v1.2s, v2.2s
+
+0x20 0x80 0x22 0x2e
+0x20 0x80 0x62 0x2e
+0x20 0x80 0xa2 0x2e
+
+# CHECK: umlal2 v0.8h, v1.16b, v2.16b
+# CHECK: umlal2 v0.4s, v1.8h, v2.8h
+# CHECK: umlal2 v0.2d, v1.4s, v2.4s
+0x20 0x80 0x22 0x6e
+0x20 0x80 0x62 0x6e
+0x20 0x80 0xa2 0x6e
+
+# CHECK: smlsl v0.8h, v1.8b, v2.8b
+# CHECK: smlsl v0.4s, v1.4h, v2.4h
+# CHECK: smlsl v0.2d, v1.2s, v2.2s
+0x20 0xa0 0x22 0x0e
+0x20 0xa0 0x62 0x0e
+0x20 0xa0 0xa2 0x0e
+
+# CHECK: smlsl2 v0.8h, v1.16b, v2.16b
+# CHECK: smlsl2 v0.4s, v1.8h, v2.8h
+# CHECK: smlsl2 v0.2d, v1.4s, v2.4s
+0x20 0xa0 0x22 0x4e
+0x20 0xa0 0x62 0x4e
+0x20 0xa0 0xa2 0x4e
+
+# CHECK: umlsl v0.8h, v1.8b, v2.8b
+# CHECK: umlsl v0.4s, v1.4h, v2.4h
+# CHECK: umlsl v0.2d, v1.2s, v2.2s
+0x20 0xa0 0x22 0x2e
+0x20 0xa0 0x62 0x2e
+0x20 0xa0 0xa2 0x2e
+
+# CHECK: umlsl2 v0.8h, v1.16b, v2.16b
+# CHECK: umlsl2 v0.4s, v1.8h, v2.8h
+# CHECK: umlsl2 v0.2d, v1.4s, v2.4s
+0x20 0xa0 0x22 0x6e
+0x20 0xa0 0x62 0x6e
+0x20 0xa0 0xa2 0x6e
+
+# CHECK: smull v0.8h, v1.8b, v2.8b
+# CHECK: smull v0.4s, v1.4h, v2.4h
+# CHECK: smull v0.2d, v1.2s, v2.2s
+0x20 0xc0 0x22 0x0e
+0x20 0xc0 0x62 0x0e
+0x20 0xc0 0xa2 0x0e
+
+# CHECK: smull2 v0.8h, v1.16b, v2.16b
+# CHECK: smull2 v0.4s, v1.8h, v2.8h
+# CHECK: smull2 v0.2d, v1.4s, v2.4s
+0x20 0xc0 0x22 0x4e
+0x20 0xc0 0x62 0x4e
+0x20 0xc0 0xa2 0x4e
+
+# CHECK: umull v0.8h, v1.8b, v2.8b
+# CHECK: umull v0.4s, v1.4h, v2.4h
+# CHECK: umull v0.2d, v1.2s, v2.2s
+0x20 0xc0 0x22 0x2e
+0x20 0xc0 0x62 0x2e
+0x20 0xc0 0xa2 0x2e
+
+# CHECK: umull2 v0.8h, v1.16b, v2.16b
+# CHECK: umull2 v0.4s, v1.8h, v2.8h
+# CHECK: umull2 v0.2d, v1.4s, v2.4s
+0x20 0xc0 0x22 0x6e
+0x20 0xc0 0x62 0x6e
+0x20 0xc0 0xa2 0x6e
+
+#------------------------------------------------------------------------------
+# Long - Variant 2
+#------------------------------------------------------------------------------
+
+# CHECK: sqdmlal v0.4s, v1.4h, v2.4h
+# CHECK: sqdmlal v0.2d, v1.2s, v2.2s
+0x20 0x90 0x62 0x0e
+0x20 0x90 0xa2 0x0e
+
+# CHECK: sqdmlal2 v0.4s, v1.8h, v2.8h
+# CHECK: sqdmlal2 v0.2d, v1.4s, v2.4s
+0x20 0x90 0x62 0x4e
+0x20 0x90 0xa2 0x4e
+
+# CHECK: sqdmlsl v0.4s, v1.4h, v2.4h
+# CHECK: sqdmlsl v0.2d, v1.2s, v2.2s
+0x20 0xb0 0x62 0x0e
+0x20 0xb0 0xa2 0x0e
+
+# CHECK: sqdmlsl2 v0.4s, v1.8h, v2.8h
+# CHECK: sqdmlsl2 v0.2d, v1.4s, v2.4s
+0x20 0xb0 0x62 0x4e
+0x20 0xb0 0xa2 0x4e
+
+# CHECK: sqdmull v0.4s, v1.4h, v2.4h
+# CHECK: sqdmull v0.2d, v1.2s, v2.2s
+0x20 0xd0 0x62 0x0e
+0x20 0xd0 0xa2 0x0e
+
+# CHECK: sqdmull2 v0.4s, v1.8h, v2.8h
+# CHECK: sqdmull2 v0.2d, v1.4s, v2.4s
+0x20 0xd0 0x62 0x4e
+0x20 0xd0 0xa2 0x4e
+
+#------------------------------------------------------------------------------
+# Long - Variant 3
+#------------------------------------------------------------------------------
+
+# CHECK: pmull v0.8h, v1.8b, v2.8b
+0x20 0xe0 0x22 0x0e
+
+# CHECK: pmull2 v0.8h, v1.16b, v2.16b
+0x20 0xe0 0x22 0x4e
+
+#------------------------------------------------------------------------------
+# Widen
+#------------------------------------------------------------------------------
+
+# CHECK: saddw v0.8h, v1.8h, v2.8b
+# CHECK: saddw v0.4s, v1.4s, v2.4h
+# CHECK: saddw v0.2d, v1.2d, v2.2s
+0x20 0x10 0x22 0x0e
+0x20 0x10 0x62 0x0e
+0x20 0x10 0xa2 0x0e
+
+# CHECK: saddw2 v0.8h, v1.8h, v2.16b
+# CHECK: saddw2 v0.4s, v1.4s, v2.8h
+# CHECK: saddw2 v0.2d, v1.2d, v2.4s
+0x20 0x10 0x22 0x4e
+0x20 0x10 0x62 0x4e
+0x20 0x10 0xa2 0x4e
+
+# CHECK: uaddw v0.8h, v1.8h, v2.8b
+# CHECK: uaddw v0.4s, v1.4s, v2.4h
+# CHECK: uaddw v0.2d, v1.2d, v2.2s
+0x20 0x10 0x22 0x2e
+0x20 0x10 0x62 0x2e
+0x20 0x10 0xa2 0x2e
+
+# CHECK: uaddw2 v0.8h, v1.8h, v2.16b
+# CHECK: uaddw2 v0.4s, v1.4s, v2.8h
+# CHECK: uaddw2 v0.2d, v1.2d, v2.4s
+0x20 0x10 0x22 0x6e
+0x20 0x10 0x62 0x6e
+0x20 0x10 0xa2 0x6e
+
+# CHECK: ssubw v0.8h, v1.8h, v2.8b
+# CHECK: ssubw v0.4s, v1.4s, v2.4h
+# CHECK: ssubw v0.2d, v1.2d, v2.2s
+0x20 0x30 0x22 0x0e
+0x20 0x30 0x62 0x0e
+0x20 0x30 0xa2 0x0e
+
+# CHECK: ssubw2 v0.8h, v1.8h, v2.16b
+# CHECK: ssubw2 v0.4s, v1.4s, v2.8h
+# CHECK: ssubw2 v0.2d, v1.2d, v2.4s
+0x20 0x30 0x22 0x4e
+0x20 0x30 0x62 0x4e
+0x20 0x30 0xa2 0x4e
+
+# CHECK: usubw v0.8h, v1.8h, v2.8b
+# CHECK: usubw v0.4s, v1.4s, v2.4h
+# CHECK: usubw v0.2d, v1.2d, v2.2s
+0x20 0x30 0x22 0x2e
+0x20 0x30 0x62 0x2e
+0x20 0x30 0xa2 0x2e
+
+# CHECK: usubw2 v0.8h, v1.8h, v2.16b
+# CHECK: usubw2 v0.4s, v1.4s, v2.8h
+# CHECK: usubw2 v0.2d, v1.2d, v2.4s
+0x20 0x30 0x22 0x6e
+0x20 0x30 0x62 0x6e
+0x20 0x30 0xa2 0x6e
+
+#------------------------------------------------------------------------------
+# Narrow
+#------------------------------------------------------------------------------
+
+# CHECK: addhn v0.8b, v1.8h, v2.8h
+# CHECK: addhn v0.4h, v1.4s, v2.4s
+# CHECK: addhn v0.2s, v1.2d, v2.2d
+0x20 0x40 0x22 0x0e
+0x20 0x40 0x62 0x0e
+0x20 0x40 0xa2 0x0e
+
+# CHECK: addhn2 v0.16b, v1.8h, v2.8h
+# CHECK: addhn2 v0.8h, v1.4s, v2.4s
+# CHECK: addhn2 v0.4s, v1.2d, v2.2d
+0x20 0x40 0x22 0x4e
+0x20 0x40 0x62 0x4e
+0x20 0x40 0xa2 0x4e
+
+# CHECK: raddhn v0.8b, v1.8h, v2.8h
+# CHECK: raddhn v0.4h, v1.4s, v2.4s
+# CHECK: raddhn v0.2s, v1.2d, v2.2d
+0x20 0x40 0x22 0x2e
+0x20 0x40 0x62 0x2e
+0x20 0x40 0xa2 0x2e
+
+# CHECK: raddhn2 v0.16b, v1.8h, v2.8h
+# CHECK: raddhn2 v0.8h, v1.4s, v2.4s
+# CHECK: raddhn2 v0.4s, v1.2d, v2.2d
+0x20 0x40 0x22 0x6e
+0x20 0x40 0x62 0x6e
+0x20 0x40 0xa2 0x6e
+
+# CHECK: rsubhn v0.8b, v1.8h, v2.8h
+# CHECK: rsubhn v0.4h, v1.4s, v2.4s
+# CHECK: rsubhn v0.2s, v1.2d, v2.2d
+0x20 0x60 0x22 0x2e
+0x20 0x60 0x62 0x2e
+0x20 0x60 0xa2 0x2e
+
+# CHECK: rsubhn2 v0.16b, v1.8h, v2.8h
+# CHECK: rsubhn2 v0.8h, v1.4s, v2.4s
+# CHECK: rsubhn2 v0.4s, v1.2d, v2.2d
+0x20 0x60 0x22 0x6e
+0x20 0x60 0x62 0x6e
+0x20 0x60 0xa2 0x6e
+
+#----------------------------------------------------------------------
+# Scalar Integer Saturating Doubling Multiply Half High
+#----------------------------------------------------------------------
+# CHECK: sqdmulh h10, h11, h12
+# CHECK: sqdmulh s20, s21, s2
+0x6a,0xb5,0x6c,0x5e
+0xb4,0xb6,0xa2,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Integer Saturating Rounding Doubling Multiply Half High
+#----------------------------------------------------------------------
+# CHECK: sqrdmulh h10, h11, h12
+# CHECK: sqrdmulh s20, s21, s2
+0x6a,0xb5,0x6c,0x7e
+0xb4,0xb6,0xa2,0x7e
+
+#----------------------------------------------------------------------
+# Floating-point multiply extended
+#----------------------------------------------------------------------
+# CHECK: fmulx s20, s22, s15
+# CHECK: fmulx d23, d11, d1
+0xd4,0xde,0x2f,0x5e
+0x77,0xdd,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Floating-point Reciprocal Step
+#----------------------------------------------------------------------
+# CHECK: frecps s21, s16, s13
+# CHECK: frecps d22, d30, d21
+0x15,0xfe,0x2d,0x5e
+0xd6,0xff,0x75,0x5e
+
+#----------------------------------------------------------------------
+# Floating-point Reciprocal Square Root Step
+#----------------------------------------------------------------------
+# CHECK: frsqrts s21, s5, s12
+# CHECK: frsqrts d8, d22, d18
+0xb5,0xfc,0xac,0x5e
+0xc8,0xfe,0xf2,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Signed Integer Convert To Floating-point
+#----------------------------------------------------------------------
+# CHECK: scvtf s22, s13
+# CHECK: scvtf d21, d12
+0xb6,0xd9,0x21,0x5e
+0x95,0xd9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Unsigned Integer Convert To Floating-point
+#----------------------------------------------------------------------
+# CHECK: ucvtf s22, s13
+# CHECK: ucvtf d21, d14
+0xb6,0xd9,0x21,0x7e
+0xd5,0xd9,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Reciprocal Estimate
+#----------------------------------------------------------------------
+# CHECK: frecpe s19, s14
+# CHECK: frecpe d13, d13
+0xd3,0xd9,0xa1,0x5e
+0xad,0xd9,0xe1,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Reciprocal Exponent
+#----------------------------------------------------------------------
+# CHECK: frecpx s18, s10
+# CHECK: frecpx d16, d19
+0x52,0xf9,0xa1,0x5e
+0x70,0xfa,0xe1,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Reciprocal Square Root Estimate
+#----------------------------------------------------------------------
+# CHECK: frsqrte s22, s13
+# CHECK: frsqrte d21, d12
+0xb6,0xd9,0xa1,0x7e
+0x95,0xd9,0xe1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Compare Bitwise Equal
+#----------------------------------------------------------------------
+# CHECK: cmeq d20, d21, d22
+0xb4,0x8e,0xf6,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Compare Bitwise Equal To Zero
+#----------------------------------------------------------------------
+# CHECK: cmeq d20, d21, #{{0x0|0}}
+0xb4,0x9a,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Compare Unsigned Higher Or Same
+#----------------------------------------------------------------------
+# CHECK: cmhs d20, d21, d22
+0xb4,0x3e,0xf6,0x7e
+
+        
+#----------------------------------------------------------------------
+# Scalar Compare Signed Greather Than Or Equal
+#----------------------------------------------------------------------
+# CHECK: cmge d20, d21, d22
+0xb4,0x3e,0xf6,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Compare Signed Greather Than Or Equal To Zero
+#----------------------------------------------------------------------
+# CHECK: cmge d20, d21, #{{0x0|0}}
+0xb4,0x8a,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Compare Unsigned Higher
+#----------------------------------------------------------------------
+# CHECK: cmhi d20, d21, d22
+0xb4,0x36,0xf6,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Compare Signed Greater Than
+#----------------------------------------------------------------------
+# CHECK: cmgt d20, d21, d22
+0xb4,0x36,0xf6,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Compare Signed Greater Than Zero
+#----------------------------------------------------------------------
+# CHECK: cmgt d20, d21, #{{0x0|0}}
+0xb4,0x8a,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Compare Signed Less Than Or Equal To Zero
+#----------------------------------------------------------------------
+# CHECK: cmle d20, d21, #{{0x0|0}}
+0xb4,0x9a,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Compare Less Than Zero
+#----------------------------------------------------------------------
+# CHECK: cmlt d20, d21, #{{0x0|0}}
+0xb4,0xaa,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Compare Bitwise Test Bits
+#----------------------------------------------------------------------
+# CHECK: cmtst d20, d21, d22
+0xb4,0x8e,0xf6,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Equal
+#----------------------------------------------------------------------
+# CHECK: fcmeq s10, s11, s12
+# CHECK: fcmeq d20, d21, d22
+0x6a,0xe5,0x2c,0x5e
+0xb4,0xe6,0x76,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Equal To Zero
+#----------------------------------------------------------------------
+# CHECK: fcmeq s10, s11, #0.0
+# CHECK: fcmeq d20, d21, #0.0
+0x6a,0xd9,0xa0,0x5e
+0xb4,0xda,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Greater Than Or Equal
+#----------------------------------------------------------------------
+# CHECK: fcmge s10, s11, s12
+# CHECK: fcmge d20, d21, d22
+0x6a,0xe5,0x2c,0x7e
+0xb4,0xe6,0x76,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Greater Than Or Equal To Zero
+#----------------------------------------------------------------------
+# CHECK: fcmge s10, s11, #0.0
+# CHECK: fcmge d20, d21, #0.0
+0x6a,0xc9,0xa0,0x7e
+0xb4,0xca,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Greather Than
+#----------------------------------------------------------------------
+# CHECK: fcmgt s10, s11, s12
+# CHECK: fcmgt d20, d21, d22
+0x6a,0xe5,0xac,0x7e
+0xb4,0xe6,0xf6,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Greather Than Zero
+#----------------------------------------------------------------------
+# CHECK: fcmgt s10, s11, #0.0
+# CHECK: fcmgt d20, d21, #0.0
+0x6a,0xc9,0xa0,0x5e
+0xb4,0xca,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Less Than Or Equal To Zero
+#----------------------------------------------------------------------
+# CHECK: fcmle s10, s11, #0.0
+# CHECK: fcmle d20, d21, #0.0
+0x6a,0xd9,0xa0,0x7e
+0xb4,0xda,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Compare Mask Less Than
+#----------------------------------------------------------------------
+# CHECK: fcmlt s10, s11, #0.0
+# CHECK: fcmlt d20, d21, #0.0
+0x6a,0xe9,0xa0,0x5e
+0xb4,0xea,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Absolute Compare Mask Greater Than Or Equal
+#----------------------------------------------------------------------
+# CHECK: facge s10, s11, s12
+# CHECK: facge d20, d21, d22
+0x6a,0xed,0x2c,0x7e
+0xb4,0xee,0x76,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Absolute Compare Mask Greater Than
+#----------------------------------------------------------------------
+# CHECK: facgt s10, s11, s12   
+# CHECK: facgt d20, d21, d22   
+0x6a,0xed,0xac,0x7e
+0xb4,0xee,0xf6,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Absolute Value
+#----------------------------------------------------------------------
+# CHECK: abs d29, d24
+0x1d,0xbb,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Signed Saturating Absolute Value
+#----------------------------------------------------------------------
+# CHECK: sqabs b19, b14
+# CHECK: sqabs h21, h15
+# CHECK: sqabs s20, s12
+# CHECK: sqabs d18, d12
+0xd3,0x79,0x20,0x5e
+0xf5,0x79,0x60,0x5e
+0x94,0x79,0xa0,0x5e
+0x92,0x79,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Negate
+#----------------------------------------------------------------------
+# CHECK: neg d29, d24
+0x1d,0xbb,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Signed Saturating Negate
+#----------------------------------------------------------------------
+# CHECK: sqneg b19, b14
+# CHECK: sqneg h21, h15
+# CHECK: sqneg s20, s12
+# CHECK: sqneg d18, d12
+0xd3,0x79,0x20,0x7e
+0xf5,0x79,0x60,0x7e
+0x94,0x79,0xa0,0x7e
+0x92,0x79,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Signed Saturating Accumulated of Unsigned Value
+#----------------------------------------------------------------------
+# CHECK: suqadd b19, b14
+# CHECK: suqadd h20, h15
+# CHECK: suqadd s21, s12
+# CHECK: suqadd d18, d22
+0xd3,0x39,0x20,0x5e
+0xf4,0x39,0x60,0x5e
+0x95,0x39,0xa0,0x5e
+0xd2,0x3a,0xe0,0x5e
+
+#----------------------------------------------------------------------
+# Unsigned Saturating Accumulated of Signed Value
+#----------------------------------------------------------------------
+# CHECK: usqadd b19, b14
+# CHECK: usqadd h20, h15
+# CHECK: usqadd s21, s12
+# CHECK: usqadd d18, d22
+0xd3,0x39,0x20,0x7e
+0xf4,0x39,0x60,0x7e
+0x95,0x39,0xa0,0x7e
+0xd2,0x3a,0xe0,0x7e
+
+#----------------------------------------------------------------------
+# Signed Saturating Doubling Multiply-Add Long
+#----------------------------------------------------------------------
+# CHECK: sqdmlal s17, h27, h12
+# CHECK: sqdmlal d19, s24, s12
+0x71,0x93,0x6c,0x5e
+0x13,0x93,0xac,0x5e
+        
+#----------------------------------------------------------------------
+# Signed Saturating Doubling Multiply-Subtract Long
+#----------------------------------------------------------------------
+# CHECK: sqdmlsl s14, h12, h25
+# CHECK: sqdmlsl d12, s23, s13
+0x8e,0xb1,0x79,0x5e
+0xec,0xb2,0xad,0x5e
+        
+#----------------------------------------------------------------------
+# Signed Saturating Doubling Multiply Long
+#----------------------------------------------------------------------
+# CHECK: sqdmull s12, h22, h12
+# CHECK: sqdmull d15, s22, s12
+0xcc,0xd2,0x6c,0x5e
+0xcf,0xd2,0xac,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Signed Saturating Extract Unsigned Narrow
+#----------------------------------------------------------------------
+# CHECK: sqxtun b19, h14
+# CHECK: sqxtun h21, s15
+# CHECK: sqxtun s20, d12
+0xd3,0x29,0x21,0x7e
+0xf5,0x29,0x61,0x7e
+0x94,0x29,0xa1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Signed Saturating Extract Signed Narrow
+#----------------------------------------------------------------------
+# CHECK: sqxtn b18, h18
+# CHECK: sqxtn h20, s17
+# CHECK: sqxtn s19, d14
+0x52,0x4a,0x21,0x5e
+0x34,0x4a,0x61,0x5e
+0xd3,0x49,0xa1,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Unsigned Saturating Extract Narrow
+#----------------------------------------------------------------------
+# CHECK: uqxtn b18, h18
+# CHECK: uqxtn h20, s17
+# CHECK: uqxtn s19, d14
+0x52,0x4a,0x21,0x7e
+0x34,0x4a,0x61,0x7e
+0xd3,0x49,0xa1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Signed Shift Right (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sshr d15, d16, #12
+0x0f,0x06,0x74,0x5f
+
+#----------------------------------------------------------------------
+# Scalar Unsigned Shift Right (Immediate)
+#----------------------------------------------------------------------
+# CHECK: ushr d10, d17, #18
+0x2a,0x06,0x6e,0x7f
+
+#----------------------------------------------------------------------
+# Scalar Signed Rounding Shift Right (Immediate)
+#----------------------------------------------------------------------
+# CHECK: srshr d19, d18, #7
+0x53,0x26,0x79,0x5f
+
+#----------------------------------------------------------------------
+# Scalar Unigned Rounding Shift Right (Immediate)
+#----------------------------------------------------------------------
+# CHECK: urshr d20, d23, #31
+0xf4,0x26,0x61,0x7f
+
+#----------------------------------------------------------------------
+# Scalar Signed Shift Right and Accumulate (Immediate)
+#----------------------------------------------------------------------
+# CHECK: ssra d18, d12, #21
+0x92,0x15,0x6b,0x5f
+
+#----------------------------------------------------------------------
+# Scalar Unsigned Shift Right and Accumulate (Immediate)
+#----------------------------------------------------------------------
+# CHECK: usra d20, d13, #61
+0xb4,0x15,0x43,0x7f
+
+#----------------------------------------------------------------------
+# Scalar Signed Rounding Shift Right and Accumulate (Immediate)
+#----------------------------------------------------------------------
+# CHECK: srsra d15, d11, #19
+0x6f,0x35,0x6d,0x5f
+
+#----------------------------------------------------------------------
+# Scalar Unsigned Rounding Shift Right and Accumulate (Immediate)
+#----------------------------------------------------------------------
+# CHECK: ursra d18, d10, #13
+0x52,0x35,0x73,0x7f
+
+#----------------------------------------------------------------------
+# Scalar Shift Left (Immediate)
+#----------------------------------------------------------------------
+# CHECK: shl d7, d10, #12
+0x47,0x55,0x4c,0x5f
+
+#----------------------------------------------------------------------
+# Signed Saturating Shift Left (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sqshl b11, b19, #7
+# CHECK: sqshl h13, h18, #11
+# CHECK: sqshl s14, s17, #22
+# CHECK: sqshl d15, d16, #51
+0x6b,0x76,0x0f,0x5f
+0x4d,0x76,0x1b,0x5f
+0x2e,0x76,0x36,0x5f
+0x0f,0x76,0x73,0x5f
+
+#----------------------------------------------------------------------
+# Unsigned Saturating Shift Left (Immediate)
+#----------------------------------------------------------------------
+# CHECK: uqshl b18, b15, #6
+# CHECK: uqshl h11, h18, #7
+# CHECK: uqshl s14, s19, #18
+# CHECK: uqshl d15, d12, #19
+0xf2,0x75,0x0e,0x7f
+0x4b,0x76,0x17,0x7f
+0x6e,0x76,0x32,0x7f
+0x8f,0x75,0x53,0x7f
+
+#----------------------------------------------------------------------
+# Signed Saturating Shift Left Unsigned (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sqshlu b15, b18, #6
+# CHECK: sqshlu h19, h17, #6
+# CHECK: sqshlu s16, s14, #25
+# CHECK: sqshlu d11, d13, #32
+0x4f,0x66,0x0e,0x7f
+0x33,0x66,0x16,0x7f
+0xd0,0x65,0x39,0x7f
+0xab,0x65,0x60,0x7f
+
+#----------------------------------------------------------------------
+# Shift Right And Insert (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sri d10, d12, #14
+0x8a,0x45,0x72,0x7f
+
+#----------------------------------------------------------------------
+# Shift Left And Insert (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sli d10, d14, #12
+0xca,0x55,0x4c,0x7f
+
+#----------------------------------------------------------------------
+# Signed Saturating Shift Right Narrow (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sqshrn b10, h15, #5
+# CHECK: sqshrn h17, s10, #4
+# CHECK: sqshrn s18, d10, #31
+0xea,0x95,0x0b,0x5f
+0x51,0x95,0x1c,0x5f
+0x52,0x95,0x21,0x5f
+
+#----------------------------------------------------------------------
+# Unsigned Saturating Shift Right Narrow (Immediate)
+#----------------------------------------------------------------------
+# CHECK: uqshrn b12, h10, #7
+# CHECK: uqshrn h10, s14, #5
+# CHECK: uqshrn s10, d12, #13
+0x4c,0x95,0x09,0x7f
+0xca,0x95,0x1b,0x7f
+0x8a,0x95,0x33,0x7f
+
+#----------------------------------------------------------------------
+# Signed Saturating Rounded Shift Right Narrow (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sqrshrn b10, h13, #2
+# CHECK: sqrshrn h15, s10, #6
+# CHECK: sqrshrn s15, d12, #9
+0xaa,0x9d,0x0e,0x5f
+0x4f,0x9d,0x1a,0x5f
+0x8f,0x9d,0x37,0x5f
+
+#----------------------------------------------------------------------
+# Unsigned Saturating Rounded Shift Right Narrow (Immediate)
+#----------------------------------------------------------------------
+# CHECK: uqrshrn b10, h12, #5
+# CHECK: uqrshrn h12, s10, #14
+# CHECK: uqrshrn s10, d10, #25
+0x8a,0x9d,0x0b,0x7f
+0x4c,0x9d,0x12,0x7f
+0x4a,0x9d,0x27,0x7f
+
+#----------------------------------------------------------------------
+# Signed Saturating Shift Right Unsigned Narrow (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sqshrun b15, h10, #7
+# CHECK: sqshrun h20, s14, #3
+# CHECK: sqshrun s10, d15, #15
+0x4f,0x85,0x09,0x7f
+0xd4,0x85,0x1d,0x7f
+0xea,0x85,0x31,0x7f
+
+#----------------------------------------------------------------------
+# Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
+#----------------------------------------------------------------------
+# CHECK: sqrshrun b17, h10, #6
+# CHECK: sqrshrun h10, s13, #15
+# CHECK: sqrshrun s22, d16, #31
+0x51,0x8d,0x0a,0x7f
+0xaa,0x8d,0x11,0x7f
+0x16,0x8e,0x21,0x7f
+
+#----------------------------------------------------------------------
+# Scalar Signed Fixed-point Convert To Floating-Point (Immediate)
+#----------------------------------------------------------------------
+# CHECK: scvtf s22, s13, #32
+# CHECK: scvtf d21, d12, #64
+0xb6,0xe5,0x20,0x5f
+0x95,0xe5,0x40,0x5f
+
+#----------------------------------------------------------------------
+# Scalar Unsigned Fixed-point Convert To Floating-Point (Immediate)
+#----------------------------------------------------------------------
+# CHECK: ucvtf s22, s13, #32
+# CHECK: ucvtf d21, d14, #64
+0xb6,0xe5,0x20,0x7f
+0xd5,0xe5,0x40,0x7f
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Fixed-point (Immediate)
+#----------------------------------------------------------------------
+# CHECK: fcvtzs s21, s12, #1
+# CHECK: fcvtzs d21, d12, #1
+0x95,0xfd,0x3f,0x5f
+0x95,0xfd,0x7f,0x5f
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Fixed-point (Immediate)
+#----------------------------------------------------------------------
+# CHECK: fcvtzu s21, s12, #1
+# CHECK: fcvtzu d21, d12, #1
+0x95,0xfd,0x3f,0x7f
+0x95,0xfd,0x7f,0x7f
+
+#----------------------------------------------------------------------
+# Vector load/store multiple N-element structure
+#----------------------------------------------------------------------
+# CHECK: ld1 { v0.16b }, [x0]
+# CHECK: ld1 { v15.8h, v16.8h }, [x15]
+# CHECK: ld1 { v31.4s, v0.4s, v1.4s }, [sp]
+# CHECK: ld1 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
+0x00,0x70,0x40,0x4c
+0xef,0xa5,0x40,0x4c
+0xff,0x6b,0x40,0x4c
+0x00,0x2c,0x40,0x4c
+
+# CHECK: ld2 { v0.8b, v1.8b }, [x0]
+# CHECK: ld3 { v15.4h, v16.4h, v17.4h }, [x15]
+# CHECK: ld4 { v31.2s, v0.2s, v1.2s, v2.2s }, [sp]
+0x00,0x80,0x40,0x0c
+0xef,0x45,0x40,0x0c
+0xff,0x0b,0x40,0x0c
+
+# CHECK: st1 { v0.16b }, [x0]
+# CHECK: st1 { v15.8h, v16.8h }, [x15]
+# CHECK: st1 { v31.4s, v0.4s, v1.4s }, [sp]
+# CHECK: st1 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
+0x00,0x70,0x00,0x4c
+0xef,0xa5,0x00,0x4c
+0xff,0x6b,0x00,0x4c
+0x00,0x2c,0x00,0x4c
+
+# CHECK: st2 { v0.8b, v1.8b }, [x0]
+# CHECK: st3 { v15.4h, v16.4h, v17.4h }, [x15]
+# CHECK: st4 { v31.2s, v0.2s, v1.2s, v2.2s }, [sp]
+0x00,0x80,0x00,0x0c
+0xef,0x45,0x00,0x0c
+0xff,0x0b,0x00,0x0c
+
+#----------------------------------------------------------------------
+# Vector load/store multiple N-element structure (post-index)
+#----------------------------------------------------------------------
+# CHECK: ld1 { v15.8h }, [x15], x2
+# CHECK: ld1 { v31.4s, v0.4s }, [sp], #32
+# CHECK: ld1 { v0.2d, v1.2d, v2.2d }, [x0], #48
+# CHECK: ld1 { v0.8b, v1.8b, v2.8b, v3.8b }, [x0], x3
+0xef,0x75,0xc2,0x4c
+0xff,0xab,0xdf,0x4c
+0x00,0x6c,0xdf,0x4c
+0x00,0x20,0xc3,0x0c
+
+# CHECK: ld2 { v0.16b, v1.16b }, [x0], x1
+# CHECK: ld3 { v15.8h, v16.8h, v17.8h }, [x15], x2
+# CHECK: ld4 { v31.4s, v0.4s, v1.4s, v2.4s }, [sp], #64
+0x00,0x80,0xc1,0x4c
+0xef,0x45,0xc2,0x4c
+0xff,0x0b,0xdf,0x4c
+
+
+# CHECK: st1 { v15.8h }, [x15], x2
+# CHECK: st1 { v31.4s, v0.4s }, [sp], #32
+# CHECK: st1 { v0.2d, v1.2d, v2.2d }, [x0], #48
+# CHECK: st1 { v0.8b, v1.8b, v2.8b, v3.8b }, [x0], x3
+0xef,0x75,0x82,0x4c
+0xff,0xab,0x9f,0x4c
+0x00,0x6c,0x9f,0x4c
+0x00,0x20,0x83,0x0c
+
+# CHECK: st2 { v0.16b, v1.16b }, [x0], x1
+# CHECK: st3 { v15.8h, v16.8h, v17.8h }, [x15], x2
+# CHECK: st4 { v31.4s, v0.4s, v1.4s, v2.4s }, [sp], #64
+0x00,0x80,0x81,0x4c
+0xef,0x45,0x82,0x4c
+0xff,0x0b,0x9f,0x4c
+
+#----------------------------------------------------------------------
+# Vector load single N-element structure to all lane of N
+# consecutive registers (N = 1,2,3,4)
+#----------------------------------------------------------------------
+# CHECK: ld1r { v0.16b }, [x0]
+# CHECK: ld1r { v15.8h }, [x15]
+# CHECK: ld2r { v31.4s, v0.4s }, [sp]
+# CHECK: ld2r { v0.2d, v1.2d }, [x0]
+# CHECK: ld3r { v0.8b, v1.8b, v2.8b }, [x0]
+# CHECK: ld3r { v15.4h, v16.4h, v17.4h }, [x15]
+# CHECK: ld4r { v31.2s, v0.2s, v1.2s, v2.2s }, [sp]
+# CHECK: ld4r { v31.1d, v0.1d, v1.1d, v2.1d }, [sp]
+0x00,0xc0,0x40,0x4d
+0xef,0xc5,0x40,0x4d
+0xff,0xcb,0x60,0x4d
+0x00,0xcc,0x60,0x4d
+0x00,0xe0,0x40,0x0d
+0xef,0xe5,0x40,0x0d
+0xff,0xeb,0x60,0x0d
+0xff,0xef,0x60,0x0d
+
+#----------------------------------------------------------------------
+# Vector load/store single N-element structure to/from one lane of N
+# consecutive registers (N = 1,2,3,4)
+#----------------------------------------------------------------------
+# CHECK: ld1 { v0.b }[9], [x0]
+# CHECK: ld2 { v15.h, v16.h }[7], [x15]
+# CHECK: ld3 { v31.s, v0.s, v1.s }[3], [sp]
+# CHECK: ld4 { v0.d, v1.d, v2.d, v3.d }[1], [x0]
+# CHECK: st1 { v0.d }[1], [x0]
+# CHECK: st2 { v31.s, v0.s }[3], [sp]
+# CHECK: st3 { v15.h, v16.h, v17.h }[7], [x15]
+# CHECK: st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0]
+0x00,0x04,0x40,0x4d
+0xef,0x59,0x60,0x4d
+0xff,0xb3,0x40,0x4d
+0x00,0xa4,0x60,0x4d
+0x00,0x84,0x00,0x4d
+0xff,0x93,0x20,0x4d
+0xef,0x79,0x00,0x4d
+0x00,0x24,0x20,0x4d
+
+#----------------------------------------------------------------------
+# Post-index of vector load single N-element structure to all lane of N
+# consecutive registers (N = 1,2,3,4)
+#----------------------------------------------------------------------
+# CHECK: ld1r { v0.16b }, [x0], #1
+# CHECK: ld1r { v15.8h }, [x15], #2
+# CHECK: ld2r { v31.4s, v0.4s }, [sp], #8
+# CHECK: ld2r { v0.2d, v1.2d }, [x0], #16
+# CHECK: ld3r { v0.8b, v1.8b, v2.8b }, [x0], #3
+# CHECK: ld3r { v15.4h, v16.4h, v17.4h }, [x15], #6
+# CHECK: ld4r { v31.2s, v0.2s, v1.2s, v2.2s }, [sp], x30
+# CHECK: ld4r { v31.1d, v0.1d, v1.1d, v2.1d }, [sp], x7
+0x00,0xc0,0xdf,0x4d
+0xef,0xc5,0xdf,0x4d
+0xff,0xcb,0xff,0x4d
+0x00,0xcc,0xff,0x4d
+0x00,0xe0,0xdf,0x0d
+0xef,0xe5,0xdf,0x0d
+0xff,0xeb,0xfe,0x0d
+0xff,0xef,0xe7,0x0d
+
+#----------------------------------------------------------------------
+# Post-index of vector load/store single N-element structure to/from
+#  one lane of N consecutive registers (N = 1,2,3,4)
+#----------------------------------------------------------------------
+# CHECK: ld1 { v0.b }[9], [x0], #1
+# CHECK: ld2 { v15.h, v16.h }[7], [x15], #4
+# CHECK: ld3 { v31.s, v0.s, v1.s }[3], [sp], x3
+# CHECK: ld4 { v0.d, v1.d, v2.d, v3.d }[1], [x0], #32
+# CHECK: ld4 { v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
+# CHECK: st1 { v0.d }[1], [x0], #8
+# CHECK: st2 { v31.s, v0.s }[3], [sp], #8
+# CHECK: st3 { v15.h, v16.h, v17.h }[7], [x15], #6
+# CHECK: st4 { v0.b, v1.b, v2.b, v3.b }[9], [x0], x5
+0x00,0x04,0xdf,0x4d
+0xef,0x59,0xff,0x4d
+0xff,0xb3,0xc3,0x4d
+0x00,0xa4,0xff,0x4d
+0x00,0x78,0xe0,0x4d
+0x00,0x84,0x9f,0x4d
+0xff,0x93,0xbf,0x4d
+0xef,0x79,0x9f,0x4d
+0x00,0x24,0xa5,0x4d
+
+#----------------------------------------------------------------------
+# Bitwise extract
+#----------------------------------------------------------------------
+0x20,0x18,0x02,0x2e
+0x20,0x18,0x02,0x6e
+# CHECK: ext v0.8b, v1.8b, v2.8b, #{{0x3|3}}
+# CHECK: ext v0.16b, v1.16b, v2.16b, #{{0x3|3}}
+
+#----------------------------------------------------------------------
+# unzip with 3 same vectors to get primary result
+#----------------------------------------------------------------------
+# CHECK: uzp1	v1.8b, v1.8b, v2.8b
+# CHECK: uzp1	v2.16b, v1.16b, v2.16b
+# CHECK: uzp1	v3.4h, v1.4h, v2.4h
+# CHECK: uzp1	v4.8h, v1.8h, v2.8h
+# CHECK: uzp1	v5.2s, v1.2s, v2.2s
+# CHECK: uzp1	v6.4s, v1.4s, v2.4s
+# CHECK: uzp1	v7.2d, v1.2d, v2.2d
+0x21,0x18,0x02,0x0e
+0x22,0x18,0x02,0x4e
+0x23,0x18,0x42,0x0e
+0x24,0x18,0x42,0x4e
+0x25,0x18,0x82,0x0e
+0x26,0x18,0x82,0x4e
+0x27,0x18,0xc2,0x4e
+
+#----------------------------------------------------------------------
+# transpose with 3 same vectors to get primary result
+#----------------------------------------------------------------------
+# CHECK: trn1	v8.8b, v1.8b, v2.8b
+# CHECK: trn1	v9.16b, v1.16b, v2.16b
+# CHECK: trn1	v10.4h, v1.4h, v2.4h
+# CHECK: trn1	v27.8h, v7.8h, v2.8h
+# CHECK: trn1	v12.2s, v7.2s, v2.2s
+# CHECK: trn1	v29.4s, v6.4s, v2.4s
+# CHECK: trn1	v14.2d, v6.2d, v2.2d
+0x28,0x28,0x02,0x0e
+0x29,0x28,0x02,0x4e
+0x2a,0x28,0x42,0x0e
+0xfb,0x28,0x42,0x4e
+0xec,0x28,0x82,0x0e
+0xdd,0x28,0x82,0x4e
+0xce,0x28,0xc2,0x4e
+
+#----------------------------------------------------------------------
+# zip with 3 same vectors to get primary result
+#----------------------------------------------------------------------
+# CHECK: zip1	v31.8b, v5.8b, v2.8b
+# CHECK: zip1	v0.16b, v5.16b, v2.16b
+# CHECK: zip1	v17.4h, v4.4h, v2.4h
+# CHECK: zip1	v2.8h, v4.8h, v2.8h
+# CHECK: zip1	v19.2s, v3.2s, v2.2s
+# CHECK: zip1	v4.4s, v3.4s, v2.4s
+# CHECK: zip1	v21.2d, v2.2d, v2.2d
+0xbf,0x38,0x02,0x0e
+0xa0,0x38,0x02,0x4e
+0x91,0x38,0x42,0x0e
+0x82,0x38,0x42,0x4e
+0x73,0x38,0x82,0x0e
+0x64,0x38,0x82,0x4e
+0x55,0x38,0xc2,0x4e
+
+#----------------------------------------------------------------------
+# unzip with 3 same vectors to get secondary result
+#----------------------------------------------------------------------
+# CHECK: uzp2	v6.8b, v2.8b, v2.8b
+# CHECK: uzp2	v23.16b, v1.16b, v2.16b
+# CHECK: uzp2	v8.4h, v1.4h, v2.4h
+# CHECK: uzp2	v25.8h, v0.8h, v2.8h
+# CHECK: uzp2	v10.2s, v0.2s, v2.2s
+# CHECK: uzp2	v27.4s, v7.4s, v2.4s
+# CHECK: uzp2	v12.2d, v7.2d, v2.2d
+0x46,0x58,0x02,0x0e
+0x37,0x58,0x02,0x4e
+0x28,0x58,0x42,0x0e
+0x19,0x58,0x42,0x4e
+0x0a,0x58,0x82,0x0e
+0xfb,0x58,0x82,0x4e
+0xec,0x58,0xc2,0x4e
+
+#----------------------------------------------------------------------
+# transpose with 3 same vectors to get secondary result
+#----------------------------------------------------------------------
+# CHECK: trn2	v29.8b, v6.8b, v2.8b
+# CHECK: trn2	v14.16b, v6.16b, v2.16b
+# CHECK: trn2	v31.4h, v5.4h, v2.4h
+# CHECK: trn2	v0.8h, v5.8h, v2.8h
+# CHECK: trn2	v17.2s, v4.2s, v2.2s
+# CHECK: trn2	v2.4s, v4.4s, v2.4s
+# CHECK: trn2	v19.2d, v3.2d, v2.2d
+0xdd,0x68,0x02,0x0e
+0xce,0x68,0x02,0x4e
+0xbf,0x68,0x42,0x0e
+0xa0,0x68,0x42,0x4e
+0x91,0x68,0x82,0x0e
+0x82,0x68,0x82,0x4e
+0x73,0x68,0xc2,0x4e
+
+#----------------------------------------------------------------------
+# zip with 3 same vectors to get secondary result
+#----------------------------------------------------------------------
+# CHECK: zip2	v4.8b, v3.8b, v2.8b
+# CHECK: zip2	v21.16b, v2.16b, v2.16b
+# CHECK: zip2	v6.4h, v2.4h, v2.4h
+# CHECK: zip2	v23.8h, v1.8h, v2.8h
+# CHECK: zip2	v8.2s, v1.2s, v2.2s
+# CHECK: zip2	v25.4s, v0.4s, v2.4s
+# CHECK: zip2	v10.2d, v0.2d, v2.2d
+0x64,0x78,0x02,0x0e
+0x55,0x78,0x02,0x4e
+0x46,0x78,0x42,0x0e
+0x37,0x78,0x42,0x4e
+0x28,0x78,0x82,0x0e
+0x19,0x78,0x82,0x4e
+0x0a,0x78,0xc2,0x4e
+
+#----------------------------------------------------------------------
+# Scalar Floating Point  multiply (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: fmul s0, s1, v1.s[0]
+# CHECK: fmul s0, s1, v1.s[3]
+# CHECK: fmul d0, d1, v1.d[0]
+# CHECK: fmul d0, d1, v1.d[1]
+# CHECK: fmul d15, d15, v15.d[1]
+0x20 0x90 0x81 0x5f
+0x20 0x98 0xa1 0x5f
+0x20 0x90 0xc1 0x5f
+0x20 0x98 0xc1 0x5f
+0xef 0x99 0xcf 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Floating Point  multiply extended (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: fmulx s3, s5, v7.s[0]
+# CHECK: fmulx s3, s5, v7.s[3]
+# CHECK: fmulx s3, s5, v15.s[3]
+# CHECK: fmulx d0, d4, v8.d[0]
+# CHECK: fmulx d0, d4, v8.d[1]
+0xa3 0x90 0x87 0x7f
+0xa3 0x98 0xa7 0x7f
+0xa3 0x98 0xaf 0x7f
+0x80 0x90 0xc8 0x7f
+0x80 0x98 0xc8 0x7f
+
+#----------------------------------------------------------------------
+# Scalar Floating Point fused multiply-add (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: fmla s0, s1, v1.s[0]
+# CHECK: fmla s0, s1, v1.s[3]
+# CHECK: fmla d0, d1, v1.d[0]
+# CHECK: fmla d0, d1, v1.d[1]
+# CHECK: fmla d15, d15, v15.d[1]
+0x20 0x10 0x81 0x5f
+0x20 0x18 0xa1 0x5f
+0x20 0x10 0xc1 0x5f
+0x20 0x18 0xc1 0x5f
+0xef 0x19 0xcf 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Floating Point fused multiply-sub (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: fmls s3, s5, v7.s[0]
+# CHECK: fmls s3, s5, v7.s[3]
+# CHECK: fmls s3, s5, v15.s[3]
+# CHECK: fmls d0, d4, v8.d[0]
+# CHECK: fmls d0, d4, v8.d[1]
+0xa3 0x50 0x87 0x5f
+0xa3 0x58 0xa7 0x5f
+0xa3 0x58 0xaf 0x5f
+0x80 0x50 0xc8 0x5f
+0x80 0x58 0xc8 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Signed saturating doubling
+# multiply-add long (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: sqdmlal s0, h0, v0.h[0]
+# CHECK: sqdmlal s0, h0, v0.h[1]
+# CHECK: sqdmlal s0, h0, v0.h[2]
+# CHECK: sqdmlal s0, h0, v0.h[3]
+# CHECK: sqdmlal s0, h0, v0.h[4]
+# CHECK: sqdmlal s0, h0, v0.h[5]
+# CHECK: sqdmlal s0, h0, v0.h[6]
+# CHECK: sqdmlal s0, h0, v0.h[7]
+# CHECK: sqdmlal d8, s9, v15.s[0]
+# CHECK: sqdmlal d8, s9, v15.s[1]
+# CHECK: sqdmlal d8, s9, v15.s[2]
+# CHECK: sqdmlal d8, s9, v15.s[3]
+0x00 0x30 0x40 0x5f
+0x00 0x30 0x50 0x5f
+0x00 0x30 0x60 0x5f
+0x00 0x30 0x70 0x5f
+0x00 0x38 0x40 0x5f
+0x00 0x38 0x50 0x5f
+0x00 0x38 0x60 0x5f
+0x00 0x38 0x70 0x5f
+0x28 0x31 0x8f 0x5f
+0x28 0x31 0xaf 0x5f
+0x28 0x39 0x8f 0x5f
+0x28 0x39 0xaf 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Signed saturating doubling
+# multiply-sub long (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: sqdmlsl s0, h0, v0.h[0]
+# CHECK: sqdmlsl s0, h0, v0.h[1]
+# CHECK: sqdmlsl s0, h0, v0.h[2]
+# CHECK: sqdmlsl s0, h0, v0.h[3]
+# CHECK: sqdmlsl s0, h0, v0.h[4]
+# CHECK: sqdmlsl s0, h0, v0.h[5]
+# CHECK: sqdmlsl s0, h0, v0.h[6]
+# CHECK: sqdmlsl s0, h0, v0.h[7]
+# CHECK: sqdmlsl d8, s9, v15.s[0]
+# CHECK: sqdmlsl d8, s9, v15.s[1]
+# CHECK: sqdmlsl d8, s9, v15.s[2]
+# CHECK: sqdmlsl d8, s9, v15.s[3]
+0x00 0x70 0x40 0x5f
+0x00 0x70 0x50 0x5f
+0x00 0x70 0x60 0x5f
+0x00 0x70 0x70 0x5f
+0x00 0x78 0x40 0x5f
+0x00 0x78 0x50 0x5f
+0x00 0x78 0x60 0x5f
+0x00 0x78 0x70 0x5f
+0x28 0x71 0x8f 0x5f
+0x28 0x71 0xaf 0x5f
+0x28 0x79 0x8f 0x5f
+0x28 0x79 0xaf 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Signed saturating doubling multiply long (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: sqdmull s1, h1, v1.h[0]
+# CHECK: sqdmull s1, h1, v1.h[1]
+# CHECK: sqdmull s1, h1, v1.h[2]
+# CHECK: sqdmull s1, h1, v1.h[3]
+# CHECK: sqdmull s1, h1, v1.h[4]
+# CHECK: sqdmull s1, h1, v1.h[5]
+# CHECK: sqdmull s1, h1, v1.h[6]
+# CHECK: sqdmull s1, h1, v1.h[7]
+# CHECK: sqdmull d1, s1, v4.s[0]
+# CHECK: sqdmull d1, s1, v4.s[1]
+# CHECK: sqdmull d1, s1, v4.s[2]
+# CHECK: sqdmull d1, s1, v4.s[3]
+0x21 0xb0 0x41 0x5f
+0x21 0xb0 0x51 0x5f
+0x21 0xb0 0x61 0x5f
+0x21 0xb0 0x71 0x5f
+0x21 0xb8 0x41 0x5f
+0x21 0xb8 0x51 0x5f
+0x21 0xb8 0x61 0x5f
+0x21 0xb8 0x71 0x5f
+0x21 0xb0 0x84 0x5f
+0x21 0xb0 0xa4 0x5f
+0x21 0xb8 0x84 0x5f
+0x21 0xb8 0xa4 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Signed saturating doubling multiply returning
+# high half (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: sqdmulh h7, h1, v14.h[0]
+# CHECK: sqdmulh h7, h15, v8.h[1]
+# CHECK: sqdmulh h7, h15, v8.h[2]
+# CHECK: sqdmulh h7, h15, v8.h[3]
+# CHECK: sqdmulh h7, h15, v8.h[4]
+# CHECK: sqdmulh h7, h15, v8.h[5]
+# CHECK: sqdmulh h7, h15, v8.h[6]
+# CHECK: sqdmulh h7, h15, v8.h[7]
+# CHECK: sqdmulh s15, s3, v4.s[0]
+# CHECK: sqdmulh s15, s14, v16.s[1]
+# CHECK: sqdmulh s15, s15, v16.s[2]
+# CHECK: sqdmulh s15, s16, v17.s[3]
+0x27 0xc0 0x4e 0x5f
+0xe7 0xc1 0x58 0x5f
+0xe7 0xc1 0x68 0x5f
+0xe7 0xc1 0x78 0x5f
+0xe7 0xc9 0x48 0x5f
+0xe7 0xc9 0x58 0x5f
+0xe7 0xc9 0x68 0x5f
+0xe7 0xc9 0x78 0x5f
+0x6f 0xc0 0x84 0x5f
+0xcf 0xc1 0xb0 0x5f
+0xef 0xc9 0x90 0x5f
+0x0f 0xca 0xb1 0x5f
+
+#----------------------------------------------------------------------
+# Scalar Signed saturating rounding doubling multiply
+# returning high half (scalar, by element)
+#----------------------------------------------------------------------
+# CHECK: sqrdmulh h7, h1, v14.h[0]
+# CHECK: sqrdmulh h7, h15, v8.h[1]
+# CHECK: sqrdmulh h7, h15, v8.h[2]
+# CHECK: sqrdmulh h7, h15, v8.h[3]
+# CHECK: sqrdmulh h7, h15, v8.h[4]
+# CHECK: sqrdmulh h7, h15, v8.h[5]
+# CHECK: sqrdmulh h7, h15, v8.h[6]
+# CHECK: sqrdmulh h7, h15, v8.h[7]
+# CHECK: sqrdmulh s15, s3, v4.s[0]
+# CHECK: sqrdmulh s15, s14, v16.s[1]
+# CHECK: sqrdmulh s15, s15, v16.s[2]
+# CHECK: sqrdmulh s15, s16, v17.s[3]
+0x27 0xd0 0x4e 0x5f
+0xe7 0xd1 0x58 0x5f
+0xe7 0xd1 0x68 0x5f
+0xe7 0xd1 0x78 0x5f
+0xe7 0xd9 0x48 0x5f
+0xe7 0xd9 0x58 0x5f
+0xe7 0xd9 0x68 0x5f
+0xe7 0xd9 0x78 0x5f
+0x6f 0xd0 0x84 0x5f
+0xcf 0xd1 0xb0 0x5f
+0xef 0xd9 0x90 0x5f
+0x0f 0xda 0xb1 0x5f
+
+#----------------------------------------------------------------------
+#Duplicate element (scalar)
+#----------------------------------------------------------------------
+# CHECK: {{dup|mov}} b0, v0.b[15]
+# CHECK: {{dup|mov}} h2, v31.h[5]
+# CHECK: {{dup|mov}} s17, v2.s[2]
+# CHECK: {{dup|mov}} d6, v12.d[1]
+0x00 0x04 0x1f 0x5e
+0xe2 0x07 0x16 0x5e
+0x51 0x04 0x14 0x5e
+0x86 0x05 0x18 0x5e
+
+#----------------------------------------------------------------------
+# Table look up
+#----------------------------------------------------------------------
+0x20,0x00,0x02,0x0e
+0xf0,0x23,0x02,0x0e
+0x20,0x40,0x02,0x0e
+0xf0,0x62,0x02,0x0e
+# CHECK: tbl v0.8b, { v1.16b }, v2.8b
+# CHECK: tbl v16.8b, { v31.16b, v0.16b }, v2.8b
+# CHECK: tbl v0.8b, { v1.16b, v2.16b, v3.16b }, v2.8b
+# CHECK: tbl v16.8b, { v23.16b, v24.16b, v25.16b, v26.16b }, v2.8b
+
+0x20,0x00,0x02,0x4e
+0xf0,0x23,0x02,0x4e
+0x20,0x40,0x02,0x4e
+0xe0,0x63,0x02,0x4e
+# CHECK: tbl v0.16b, { v1.16b }, v2.16b
+# CHECK: tbl v16.16b, { v31.16b, v0.16b }, v2.16b
+# CHECK: tbl v0.16b, { v1.16b, v2.16b, v3.16b }, v2.16b
+# CHECK: tbl v0.16b, { v31.16b, v0.16b, v1.16b, v2.16b }, v2.16b
+
+0x20,0x10,0x02,0x0e
+0xf0,0x33,0x02,0x0e
+0x20,0x50,0x02,0x0e
+0xf0,0x72,0x02,0x0e
+# CHECK: tbx v0.8b, { v1.16b }, v2.8b
+# CHECK: tbx v16.8b, { v31.16b, v0.16b }, v2.8b
+# CHECK: tbx v0.8b, { v1.16b, v2.16b, v3.16b }, v2.8b
+# CHECK: tbx v16.8b, { v23.16b, v24.16b, v25.16b, v26.16b }, v2.8b
+
+0x20,0x10,0x02,0x4e
+0xf0,0x33,0x02,0x4e
+0x20,0x50,0x02,0x4e
+0xf0,0x73,0x02,0x4e
+# CHECK: tbx v0.16b, { v1.16b }, v2.16b
+# CHECK: tbx v16.16b, { v31.16b, v0.16b }, v2.16b
+# CHECK: tbx v0.16b, { v1.16b, v2.16b, v3.16b }, v2.16b
+# CHECK: tbx v16.16b, { v31.16b, v0.16b, v1.16b, v2.16b }, v2.16b
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Lower Precision Narrow, Rounding To
+# Odd
+#----------------------------------------------------------------------
+# CHECK: fcvtxn s22, d13
+0xb6,0x69,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding To Nearest
+# With Ties To Away
+#----------------------------------------------------------------------
+# CHECK: fcvtas s12, s13
+# CHECK: fcvtas d21, d14
+
+0xac,0xc9,0x21,0x5e
+0xd5,0xc9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding To
+# Nearest With Ties To Away
+#----------------------------------------------------------------------
+# CHECK: fcvtau s12, s13
+# CHECK: fcvtau d21, d14
+0xac,0xc9,0x21,0x7e
+0xd5,0xc9,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding Toward
+# Minus Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtms s22, s13
+# CHECK: fcvtms d21, d14
+0xb6,0xb9,0x21,0x5e
+0xd5,0xb9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
+# Minus Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtmu s12, s13
+# CHECK: fcvtmu d21, d14
+0xac,0xb9,0x21,0x7e
+0xd5,0xb9,0x61,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding To Nearest
+# With Ties To Even
+#----------------------------------------------------------------------
+
+# CHECK: fcvtns s22, s13
+# CHECK: fcvtns d21, d14
+
+0xb6,0xa9,0x21,0x5e
+0xd5,0xa9,0x61,0x5e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding To
+# Nearest With Ties To Even
+#----------------------------------------------------------------------
+
+# CHECK: fcvtnu s12, s13
+# CHECK: fcvtnu d21, d14
+0xac,0xa9,0x21,0x7e
+0xd5,0xa9,0x61,0x7e
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding Toward
+# Positive Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtps s22, s13
+# CHECK: fcvtps d21, d14
+0xb6,0xa9,0xa1,0x5e
+0xd5,0xa9,0xe1,0x5e
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward
+# Positive Infinity
+#----------------------------------------------------------------------
+# CHECK: fcvtpu s12, s13
+# CHECK: fcvtpu d21, d14
+0xac,0xa9,0xa1,0x7e
+0xd5,0xa9,0xe1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Signed Integer, Rounding Toward Zero
+#----------------------------------------------------------------------
+# CHECK: fcvtzs s12, s13
+# CHECK: fcvtzs d21, d14
+0xac,0xb9,0xa1,0x5e
+0xd5,0xb9,0xe1,0x5e
+        
+#----------------------------------------------------------------------
+# Scalar Floating-point Convert To Unsigned Integer, Rounding Toward 
+# Zero
+#----------------------------------------------------------------------
+# CHECK: fcvtzu s12, s13
+# CHECK: fcvtzu d21, d14
+0xac,0xb9,0xa1,0x7e
+0xd5,0xb9,0xe1,0x7e
+
+#----------------------------------------------------------------------
+# Scalar Floating-point Absolute Difference
+#----------------------------------------------------------------------
+# CHECK: fabd s29, s24, s20
+# CHECK: fabd d29, d24, d20
+0x1d,0xd7,0xb4,0x7e
+0x1d,0xd7,0xf4,0x7e

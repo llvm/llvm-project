@@ -1,0 +1,5 @@
+RUN: not llvm-symbolizer --obj=%p/Inputs/macho-universal 0x1f84 2>&1 | FileCheck %s
+
+CHECK-NOT: main
+CHECK: {{.*}}llvm-symbolizer{{.*}}: error: '{{.*}}macho-universal': Unknown architecture
+CHECK-NOT: main

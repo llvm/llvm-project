@@ -1,0 +1,47 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/insert-after.s -o %t1.o
+
+## Main linker script contains .text and .data sections. Here
+## we check that can use INSERT AFTER to insert sections .foo.data
+## and .foo.text at the right places.
+
+# RUN: ld.lld %t1.o -o %t1 --script %p/Inputs/insert-after.script --script %s
+# RUN: llvm-readelf -S -l %t1 | FileCheck %s
+# CHECK:      Name      Type     Address          Off    Size   ES Flg
+# CHECK-NEXT:           NULL     0000000000000000 000000
+# CHECK-NEXT: .text     PROGBITS 0000000000000000 001000 000008 00  AX
+# CHECK-NEXT: .foo.text PROGBITS 0000000000000008 001008 000008 00  AX
+# CHECK-NEXT: .data     PROGBITS 0000000000000010 001010 000008 00  WA
+# CHECK-NEXT: .foo.data PROGBITS 0000000000000018 001018 000008 00  WA
+# CHECK-NEXT: .byte     PROGBITS 0000000000000020 001020 000001 00  WA
+# CHECK:      Type
+# CHECK-NEXT: LOAD {{.*}} R E
+# CHECK-NEXT: LOAD {{.*}} RW
+# CHECK-NEXT: GNU_STACK {{.*}} RW
+
+## There is no main linker script. INSERT AFTER just reorders output sections,
+## without making more layout changes. Address/offset assignments are different
+## with a main linker script.
+
+# RUN: ld.lld --script %s %t1.o -o %t2
+# RUN: llvm-readelf -S -l %t2 | FileCheck --check-prefix=CHECK2 %s
+# CHECK2:      Name      Type     Address            Off      Size   ES Flg
+# CHECK2-NEXT:           NULL
+# CHECK2-NEXT: .text     PROGBITS 000000000020{{.*}} [[#%x,]] 000008 00  AX
+# CHECK2-NEXT: .foo.text PROGBITS [[#%x,]]           [[#%x,]] 000008 00  AX
+# CHECK2-NEXT: .data     PROGBITS [[#%x,]]           [[#%x,]] 000008 00  WA
+# CHECK2-NEXT: .foo.data PROGBITS [[#%x,]]           [[#%x,]] 000008 00  WA
+# CHECK2-NEXT: .byte     PROGBITS [[#%x,]]           [[#%x,]] 000001 00  WA
+# CHECK2:      Type      {{.*}} Flg Align
+# CHECK2-NEXT: PHDR      {{.*}} R   0x8
+# CHECK2-NEXT: LOAD      {{.*}} R   0x1000
+# CHECK2-NEXT: LOAD      {{.*}} R E 0x1000
+# CHECK2-NEXT: LOAD      {{.*}} RW  0x1000
+# CHECK2-NEXT: GNU_STACK {{.*}} RW  0
+
+SECTIONS { .byte : { BYTE(0) } } INSERT AFTER .data;
+
+SECTIONS { .foo.data : { *(.foo.data) } } INSERT AFTER .data;
+
+## The input section .foo.text is an orphan. It will be placed in .foo.text
+SECTIONS { .foo.text : {} } INSERT AFTER .text;

@@ -1,0 +1,171 @@
+# RUN: llc -run-pass=stack-coloring %s -o - | FileCheck %s
+
+## Test %stack.1 is merged into %stack.0 and there is no MemoryMemOperand
+## referencing %stack.1. This regression test is sensitive to the StackColoring
+## algorithm. Please adjust or delete this test if the merging strategy
+## changes.
+
+# CHECK:    {{^}}stack:
+# CHECK-NEXT: - { id: 0,
+# CHECK-NOT:  - { id: 1,
+# CHECK:      - { id: 2,
+# CHECK-NOT: %stack.1
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "E-m:e-p:32:32-i64:64-n32"
+  target triple = "powerpc-unknown-freebsd13.0"
+
+  %struct.__va_list_tag = type { i8, i8, i16, i8*, i8* }
+  ; Function Attrs: argmemonly nounwind willreturn
+  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
+  define dso_local void @atf_tc_fail_nonfatal(i8* %fmt, ...) !dbg !3 {
+  entry:
+    %buf.i.i = alloca [1024 x i8], align 1
+    %ap2.i.i = alloca [1 x %struct.__va_list_tag], align 4
+    br i1 undef, label %format_reason_ap.exit.i, label %if.then6.i.i
+
+  if.then6.i.i:                                     ; preds = %entry
+    %0 = bitcast [1 x %struct.__va_list_tag]* %ap2.i.i to i8*
+    call void @llvm.lifetime.start.p0i8(i64 12, i8* nonnull %0)
+    call void @llvm.va_copy(i8* nonnull %0, i8* nonnull null)
+    ret void
+
+  format_reason_ap.exit.i:                          ; preds = %entry
+    %1 = bitcast [1024 x i8]* %buf.i.i to i8*
+    call void @llvm.lifetime.start.p0i8(i64 1024, i8* nonnull %1)
+    call void @fprintf(i8* nonnull %1)
+    ret void
+  }
+  declare void @fprintf(i8*)
+  ; Function Attrs: nounwind
+  declare void @llvm.va_copy(i8*, i8*) #1
+
+  attributes #0 = { argmemonly nounwind willreturn }
+  attributes #1 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "tc.c", directory: "")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "atf_tc_fail_nonfatal", scope: !1, file: !1, line: 1067, type: !4, scopeLine: 1068, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !4 = !DISubroutineType(types: !5)
+  !5 = !{}
+
+...
+---
+name:            atf_tc_fail_nonfatal
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprc }
+  - { id: 1, class: gprc }
+  - { id: 2, class: gprc }
+  - { id: 3, class: gprc }
+  - { id: 4, class: gprc }
+  - { id: 5, class: gprc }
+  - { id: 6, class: gprc }
+  - { id: 7, class: gprc }
+  - { id: 8, class: f8rc }
+  - { id: 9, class: f8rc }
+  - { id: 10, class: f8rc }
+  - { id: 11, class: f8rc }
+  - { id: 12, class: f8rc }
+  - { id: 13, class: f8rc }
+  - { id: 14, class: f8rc }
+  - { id: 15, class: f8rc }
+  - { id: 16, class: crbitrc }
+  - { id: 17, class: gprc }
+  - { id: 18, class: gprc }
+  - { id: 19, class: gprc }
+  - { id: 20, class: gprc }
+liveins:
+  - { reg: '$r3', virtual-reg: '%0' }
+  - { reg: '$r4', virtual-reg: '%1' }
+  - { reg: '$r5', virtual-reg: '%2' }
+  - { reg: '$r6', virtual-reg: '%3' }
+  - { reg: '$r7', virtual-reg: '%4' }
+  - { reg: '$r8', virtual-reg: '%5' }
+  - { reg: '$r9', virtual-reg: '%6' }
+  - { reg: '$r10', virtual-reg: '%7' }
+  - { reg: '$f1', virtual-reg: '%8' }
+  - { reg: '$f2', virtual-reg: '%9' }
+  - { reg: '$f3', virtual-reg: '%10' }
+  - { reg: '$f4', virtual-reg: '%11' }
+  - { reg: '$f5', virtual-reg: '%12' }
+  - { reg: '$f6', virtual-reg: '%13' }
+  - { reg: '$f7', virtual-reg: '%14' }
+  - { reg: '$f8', virtual-reg: '%15' }
+frameInfo:
+  maxAlignment:    8
+  hasCalls:        true
+fixedStack:
+  - { id: 0, offset: 8, size: 4, alignment: 8, isImmutable: true }
+stack:
+  - { id: 0, name: buf.i.i, size: 1024, alignment: 1 }
+  - { id: 1, name: ap2.i.i, size: 12, alignment: 8 }
+  - { id: 2, size: 96, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8
+
+    %15:f8rc = COPY $f8
+    %14:f8rc = COPY $f7
+    %13:f8rc = COPY $f6
+    %12:f8rc = COPY $f5
+    %11:f8rc = COPY $f4
+    %10:f8rc = COPY $f3
+    %9:f8rc = COPY $f2
+    %8:f8rc = COPY $f1
+    %7:gprc = COPY $r10
+    %6:gprc = COPY $r9
+    %5:gprc = COPY $r8
+    %4:gprc = COPY $r7
+    %3:gprc = COPY $r6
+    %2:gprc = COPY $r5
+    %1:gprc = COPY $r4
+    %0:gprc = COPY $r3
+    STW %0, 0, %stack.2 :: (store (s32) into %stack.2, align 8)
+    STW %1, 4, %stack.2 :: (store (s32) into %stack.2 + 4)
+    STW %2, 8, %stack.2 :: (store (s32) into %stack.2 + 8, align 8)
+    STW %3, 12, %stack.2 :: (store (s32))
+    STW %4, 16, %stack.2 :: (store (s32) into %stack.2 + 16, align 8)
+    STW %5, 20, %stack.2 :: (store (s32))
+    STW %6, 24, %stack.2 :: (store (s32) into %stack.2 + 24, align 8)
+    STW %7, 28, %stack.2 :: (store (s32))
+    STFD %8, 32, %stack.2 :: (store (s64))
+    STFD %9, 40, %stack.2 :: (store (s64))
+    STFD %10, 48, %stack.2 :: (store (s64))
+    STFD %11, 56, %stack.2 :: (store (s64))
+    STFD %12, 64, %stack.2 :: (store (s64))
+    STFD %13, 72, %stack.2 :: (store (s64))
+    STFD %14, 80, %stack.2 :: (store (s64))
+    STFD %15, 88, %stack.2 :: (store (s64))
+    %16:crbitrc = IMPLICIT_DEF
+    BC killed %16, %bb.2
+    B %bb.1
+
+  bb.1.if.then6.i.i:
+    LIFETIME_START %stack.1.ap2.i.i
+    %17:gprc = LWZ 8, $zero :: (load (s32), align 8)
+    STW killed %17, 8, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 8, basealign 8)
+    %18:gprc = LWZ 4, $zero :: (load (s32))
+    STW killed %18, 4, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 4, basealign 8)
+    %19:gprc = LWZ 0, $zero :: (load (s32), align 8)
+    STW killed %19, 0, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i, basealign 8)
+    BLR implicit $lr, implicit $rm
+
+  bb.2.format_reason_ap.exit.i:
+    LIFETIME_START %stack.0.buf.i.i
+    ADJCALLSTACKDOWN 8, 0, implicit-def dead $r1, implicit $r1
+    %20:gprc = ADDI %stack.0.buf.i.i, 0
+    $r3 = COPY %20
+    BL @fprintf, csr_svr432, implicit-def dead $lr, implicit $rm, implicit $r3, implicit-def $r1
+    ADJCALLSTACKUP 8, 0, implicit-def dead $r1, implicit $r1
+    BLR implicit $lr, implicit $rm
+
+...

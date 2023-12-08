@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fobjc-arc -x objective-c++ %s.result
+// RUN: arcmt-test --args -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c++ %s > %t
+// RUN: diff %t %s.result
+
+#include "Common.h"
+
+@interface NSString : NSObject
++(id)string;
+@end
+
+struct foo {
+    NSString *s;
+    foo(NSString *s): s(s){
+        @autoreleasepool {
+            [NSString string];
+        }
+    }
+    ~foo(){  }
+private:
+    foo(foo const &);
+    foo &operator=(foo const &);
+};
+
+int main(){
+    @autoreleasepool {
+
+        foo f([NSString string]);
+
+    }
+    return 0;
+}

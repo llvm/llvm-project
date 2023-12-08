@@ -1,0 +1,23 @@
+# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/alias \
+# RUN: %p/../Inputs/alias/foobar -o - | llvm-dwarfdump - 2>&1 | FileCheck %s
+
+# RUN: dsymutil --linker llvm -f -oso-prepend-path=%p/../Inputs/alias \
+# RUN: %p/../Inputs/alias/foobar -o - | llvm-dwarfdump - 2>&1 | FileCheck %s
+
+# CHECK-NOT: could not find object file symbol for symbol
+# CHECK: DW_AT_name ("foo.c")
+# CHECK: DW_AT_name ("bar.c")
+
+# Source:
+#   $ cat foo.c
+#   int foo = 1;
+#   $ cat bar.c
+#   extern int bar;
+#   int main() {
+#     return bar;
+#   }
+
+# Compile with:
+#   $ clang -g -O0 bar.c -c -o bar.o
+#   $ clang -g -O0 foo.c -c -o foo.o
+#   $ ld -arch x86_64 -macosx_version_min 10.13.0 foo.o bar.o -lSystem -alias _foo _bar -o foobar

@@ -1,0 +1,118 @@
+# RUN: yaml2obj %s | llvm-readobj --sections -r - | FileCheck %s
+
+!ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS32
+  Data: ELFDATA2MSB
+  Type: ET_REL
+  Machine: EM_MIPS
+
+Sections:
+- Name: .text
+  Type: SHT_PROGBITS
+  Content: "0000000000000000"
+  AddressAlign: 16
+  Flags: [SHF_ALLOC]
+
+- Name: .rel.text
+  Type: SHT_REL
+  Info: .text
+  AddressAlign: 4
+  Relocations:
+    - Offset: 0x1
+      Symbol: glob1
+      Type: R_MIPS_32
+    - Offset: 0x1
+      Symbol: glob2
+      Type: R_MIPS_CALL16
+    - Offset: 0x2
+      Symbol: loc1
+      Type: R_MIPS_LO16
+
+- Name: .rela.text
+  Type: SHT_RELA
+  Link: .symtab
+  Info: .text
+  AddressAlign: 4
+  Relocations:
+    - Offset: 0x1
+      Addend: 1
+      Symbol: glob1
+      Type: R_MIPS_32
+    - Offset: 0x1
+      Addend: 2
+      Symbol: glob2
+      Type: R_MIPS_CALL16
+    - Offset: 0x2
+      Addend: 3
+      Symbol: loc1
+      Type: R_MIPS_LO16
+
+Symbols:
+  - Name:    loc1
+  - Name:    loc2
+  - Name:    glob1
+    Section: .text
+    Value:   0x0
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    glob2
+    Binding: STB_GLOBAL
+  - Name:    weak1
+    Binding: STB_WEAK
+
+# CHECK:        Section {
+# CHECK-NEXT:     Index: 0
+# CHECK:        }
+# CHECK:        Section {
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Name: .text (16)
+# CHECK:        }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 2
+# CHECK-NEXT:     Name: .rel.text (1)
+# CHECK-NEXT:     Type: SHT_REL (0x9)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset: 0x{{[0-9A-F]+}}
+# CHECK-NEXT:     Size: 24
+# CHECK-NEXT:     Link: 4
+# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     AddressAlignment: 4
+# CHECK-NEXT:     EntrySize: 8
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 3
+# CHECK-NEXT:     Name: .rela.text (11)
+# CHECK-NEXT:     Type: SHT_RELA (0x4)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset: 0x{{[0-9A-F]+}}
+# CHECK-NEXT:     Size: 36
+# CHECK-NEXT:     Link: 4
+# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     AddressAlignment: 4
+# CHECK-NEXT:     EntrySize: 12
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 4
+# CHECK-NEXT:     Name: .symtab (40)
+# CHECK:        }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 5
+# CHECK-NEXT:     Name: .strtab (32)
+# CHECK:        }
+# CHECK:        Relocations [
+# CHECK-NEXT:     Section (2) .rel.text {
+# CHECK-NEXT:       0x1 R_MIPS_32 glob1
+# CHECK-NEXT:       0x1 R_MIPS_CALL16 glob2
+# CHECK-NEXT:       0x2 R_MIPS_LO16 loc1
+# CHECK-NEXT:     }
+# CHECK-NEXT:     Section (3) .rela.text {
+# CHECK-NEXT:       0x1 R_MIPS_32 glob1 0x1
+# CHECK-NEXT:       0x1 R_MIPS_CALL16 glob2 0x2
+# CHECK-NEXT:       0x2 R_MIPS_LO16 loc1 0x3
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]

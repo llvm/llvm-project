@@ -1,0 +1,9 @@
+# UNSUPPORTED: lldb-repro
+#
+# RUN: cat %s | %lldb --script-language lua 2>&1 | FileCheck %s
+script
+print(95000 + 126)
+quit
+target list
+# CHECK: 95126
+# CHECK: No targets

@@ -1,0 +1,36 @@
+# REQUIRES: asserts
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=branch-folder -o /dev/null %s 2>&1 | FileCheck %s
+
+# BranchFolding breaks this function due to phis
+
+# CHECK: MachineFunctionProperties required by Control Flow Optimizer pass are not met by function func.
+# CHECK-NEXT: Required properties: NoPHIs
+# CHECK-NEXT: Current properties: IsSSA, TracksLiveness{{$}}
+---
+name:            func
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15, $sgpr16
+
+    %0:sreg_32_xm0_xexec = IMPLICIT_DEF
+    %1:sreg_64 = IMPLICIT_DEF
+
+  bb.1:
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    %3:sreg_64 = IMPLICIT_DEF
+    S_BRANCH %bb.4
+
+  bb.3:
+    %4:sreg_64 = PHI undef %1, %bb.1, undef %3, %bb.4
+    S_CBRANCH_EXECNZ %bb.5, implicit $exec
+
+  bb.4:
+    S_BRANCH %bb.3
+
+  bb.5:
+
+...

@@ -1,0 +1,55 @@
+REQUIRES: shell
+
+RUN: rm -rf %t && mkdir %t && cd %t
+RUN: cp %S/Inputs/test.gcno %S/Inputs/test.gcda .
+
+RUN: llvm-cov gcov -i test.cpp 2> %t.err | FileCheck %s --check-prefixes=OUT
+RUN: FileCheck %s --check-prefix=I < test.cpp.gcov
+RUN: cp test.cpp.gcov saved.cpp.gcov
+
+# -i does not read source files. No ENOENT diagnostic.
+RUN: count 0 < %t.err
+
+# -n suppresses the .gcov output.
+RUN: llvm-cov gcov -i -n test. | FileCheck %s --check-prefixes=OUT
+RUN: not ls test..gcov
+
+# The output filename is formed by appending ".gcov" to the specifiled filename.
+RUN: llvm-cov gcov -i test. | FileCheck %s --check-prefix=OUT
+RUN: cmp test..gcov saved.cpp.gcov
+
+RUN: llvm-cov gcov -i -b test.cpp | FileCheck %s --check-prefixes=OUT,OUT-B
+RUN: FileCheck %s --check-prefixes=I,I-B --match-full-lines --strict-whitespace < test.cpp.gcov
+
+# Many other options are ignored.
+RUN: rm -f test.cpp.gcov && llvm-cov gcov -i -a -c -l -p -u -x test.cpp
+RUN: cmp test.cpp.gcov saved.cpp.gcov
+
+         OUT:File 'test.cpp'
+    OUT-NEXT:Lines executed:81.40% of 43
+  OUT-B-NEXT:Branches executed:100.00% of 15
+  OUT-B-NEXT:Taken at least once:86.67% of 15
+  OUT-B-NEXT:No calls
+   OUT-EMPTY:
+    OUT-NEXT:File 'test.h'
+    OUT-NEXT:Lines executed:100.00% of 1
+  OUT-B-NEXT:No branches
+  OUT-B-NEXT:No calls
+   OUT-EMPTY:
+
+       I:file:test.cpp
+       I:function:10,4294967296,_ZN1A1BEv
+  I-NEXT:function:12,0,_Z7uselessv
+  I-NEXT:function:14,0,_Z12more_uselessv
+  I-NEXT:function:18,1,_Z3foov
+  I-NEXT:function:23,0,_Z3barv
+  I-NEXT:function:28,4,_Z6assignii
+  I-NEXT:function:32,1,_Z15initialize_gridv
+  I-NEXT:function:38,1,main
+       I:lcount:10,4294967296
+       I:lcount:33,3
+I-B-NEXT:branch:33,taken
+I-B-NEXT:branch:33,taken
+       I:file:test.h
+  I-NEXT:function:2,1,_ZN1AC2Ev
+  I-NEXT:lcount:2,1

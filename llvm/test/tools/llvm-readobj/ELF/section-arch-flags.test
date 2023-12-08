@@ -1,0 +1,140 @@
+## Check how we dump arch specific ELF section flags.
+
+# RUN: yaml2obj --docnum 1 %s -o %t-hex.o
+# RUN: llvm-readobj -S %t-hex.o | FileCheck --check-prefix=HEX-LLVM %s
+# RUN: llvm-readelf -S %t-hex.o | FileCheck --check-prefix=HEX-GNU %s
+
+# HEX-LLVM:      Flags [ (0x10000000)
+# HEX-LLVM-NEXT:   SHF_HEX_GPREL (0x10000000)
+# HEX-LLVM-NEXT: ]
+
+# HEX-GNU: [Nr] Name Type     Address  Off    Size   ES Flg Lk Inf Al
+# HEX-GNU: [ 1] .hex PROGBITS 00000000 000034 000000 00   p  0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_HEXAGON
+Sections:
+  - Name:  .hex
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_HEX_GPREL ]
+
+# RUN: yaml2obj --docnum 2 %s -o %t-mips.o
+# RUN: llvm-readobj -S %t-mips.o | FileCheck --check-prefix=MIPS-LLVM %s
+# RUN: llvm-readelf -S %t-mips.o | FileCheck --check-prefix=MIPS-GNU %s
+
+# MIPS-GNU: [Nr] Name  Type     Address  Off    Size   ES Flg Lk Inf Al
+# MIPS-GNU: [ 1] .mips PROGBITS 00000000 000034 000000 00  op  0   0  0
+
+# MIPS-LLVM:      Flags [ (0xFF000000)
+# MIPS-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_ADDR (0x40000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_GPREL (0x10000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_LOCAL (0x4000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_MERGE (0x20000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_NAMES (0x2000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_NODUPES (0x1000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_NOSTRIP (0x8000000)
+# MIPS-LLVM-NEXT:   SHF_MIPS_STRING (0x80000000)
+# MIPS-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:  .mips
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_MIPS_NODUPES, SHF_MIPS_NAMES, SHF_MIPS_LOCAL, SHF_MIPS_NOSTRIP,
+              SHF_MIPS_GPREL, SHF_MIPS_MERGE, SHF_MIPS_ADDR, SHF_MIPS_STRING ]
+
+## Test what we print when a MIPS object has the SHF_MIPS_STRING flag.
+## SHF_MIPS_STRING has a value of 0x80000000, which matches the value of SHF_EXCLUDE.
+
+# RUN: yaml2obj --docnum 3 %s -o %t-mips-exclude.o
+# RUN: llvm-readobj -S %t-mips-exclude.o | FileCheck --check-prefix=MIPS-EXCLUDE-LLVM %s
+# RUN: llvm-readelf -S %t-mips-exclude.o | FileCheck --check-prefix=MIPS-EXCLUDE-GNU %s
+
+# MIPS-EXCLUDE-LLVM:      Name: .mips
+# MIPS-EXCLUDE-LLVM-NEXT: Type: SHT_PROGBITS
+# MIPS-EXCLUDE-LLVM-NEXT: Flags [ (0x80000000)
+# MIPS-EXCLUDE-LLVM-NEXT:  SHF_EXCLUDE (0x80000000)
+# MIPS-EXCLUDE-LLVM-NEXT:  SHF_MIPS_STRING (0x80000000)
+# MIPS-EXCLUDE-LLVM-NEXT: ]
+
+# MIPS-EXCLUDE-GNU: [Nr] Name  Type     Address  Off    Size   ES Flg Lk Inf Al
+# MIPS-EXCLUDE-GNU: [ 1] .mips PROGBITS 00000000 000034 000000 00   E  0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:  .mips
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_MIPS_STRING ]
+
+# RUN: yaml2obj --docnum 4 %s -o %t-x86_64.o
+# RUN: llvm-readobj -S %t-x86_64.o | FileCheck --check-prefix=X86_64-LLVM %s
+# RUN: llvm-readelf -S %t-x86_64.o | FileCheck --check-prefix=X86_64-GNU %s
+
+# X86_64-LLVM:      Name: .x86_64
+# X86_64-LLVM-NEXT: Type: SHT_PROGBITS
+# X86_64-LLVM-NEXT: Flags [ (0x10000000)
+# X86_64-LLVM-NEXT:   SHF_X86_64_LARGE (0x10000000)
+# X86_64-LLVM-NEXT: ]
+
+# X86_64-LLVM:      Name: .with.exclude
+# X86_64-LLVM-NEXT: Type: SHT_PROGBITS
+# X86_64-LLVM-NEXT: Flags [ (0x90000000)
+# X86_64-LLVM-NEXT:   SHF_EXCLUDE (0x80000000)
+# X86_64-LLVM-NEXT:   SHF_X86_64_LARGE (0x10000000)
+# X86_64-LLVM-NEXT: ]
+
+## GNU prints 'l' before 'E', despite otherwise printing upper-case letters first.
+# X86_64-GNU: [Nr] Name          Type     Address          Off    Size   ES Flg Lk Inf Al
+# X86_64-GNU: [ 1] .x86_64       PROGBITS 0000000000000000 000040 000000 00   l 0   0  0
+# X86_64-GNU: [ 2] .with.exclude PROGBITS 0000000000000000 000040 000000 00  lE 0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .x86_64
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_X86_64_LARGE ]
+  - Name:  .with.exclude
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_X86_64_LARGE, SHF_EXCLUDE ]
+
+# RUN: yaml2obj --docnum 5 %s -o %t-arm.o
+# RUN: llvm-readobj -S %t-arm.o | FileCheck --check-prefix=ARM-LLVM %s
+# RUN: llvm-readelf -S %t-arm.o | FileCheck --check-prefix=ARM-GNU %s
+
+# ARM-LLVM:      Flags [ (0x20000000)
+# ARM-LLVM-NEXT:   SHF_ARM_PURECODE (0x20000000)
+# ARM-LLVM-NEXT: ]
+
+# ARM-GNU: [Nr] Name Type     Address          Off    Size   ES Flg Lk Inf Al
+# ARM-GNU: [ 1] foo  PROGBITS 0000000000000000 000040 000000 00   y 0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name:  foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ARM_PURECODE ]

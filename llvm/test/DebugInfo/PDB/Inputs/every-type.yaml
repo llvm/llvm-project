@@ -1,0 +1,292 @@
+---
+TpiStream:
+  Records:
+    # int*									                        [Index: 0x1000]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    116            # int
+        Attrs:           32778
+  # const int*                                      [Index: 0x1001]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x1000
+      Modifiers:     [ Const ]
+  # char*                                           [Index: 0x1002]
+  - Kind:            LF_POINTER
+    Pointer:
+      ReferentType:    1136           # char*
+      Attrs:           32778
+  # (int, char **)                                  [Index: 0x1003]
+  - Kind:            LF_ARGLIST
+    ArgList:
+      ArgIndicies:  [ 116, 0x1002 ]
+  # (int, double)                                   [Index: 0x1004]
+  - Kind:            LF_ARGLIST
+    ArgList:
+      ArgIndicies:  [ 116, 65 ]       # (int, double)
+  # int main(int argc, char **argv)                 [Index: 0x1005]
+  - Kind:            LF_PROCEDURE
+    Procedure:
+      ReturnType:      117            # int
+      CallConv:        NearC          # __cdecl
+      Options:         [ None ]
+      ParameterCount:  2
+      ArgumentList:    0x1003         # (int, char**)
+  #	<label>                                         [Index: 0x1006]
+  - Kind:            LF_LABEL
+    Label:
+      Mode:          Near
+  # <forward decl>
+  # class FooClass;                                 [Index: 0x1007]
+  - Kind:            LF_STRUCTURE
+    Class:
+      MemberCount:     0
+      Options:         [ None, ForwardReference ]
+      FieldList:       0
+      Name:            'FooClass'
+      DerivationList:  0
+      VTableShape:     0
+      Size:            0
+  # char*                                           [Index: 0x1008]
+  - Kind:            LF_POINTER
+    Pointer:
+      ReferentType:    0x1007         # FooClass
+      Attrs:           33802          # const
+  # int (FooClass::)(int, char **)                  [Index: 0x1009]
+  - Kind:            LF_MFUNCTION
+    MemberFunction:
+      ReturnType:      116            # int
+      ClassType:       0x1007         # FooClass
+      ThisType:        0x1008         # const FooClass*
+      CallConv:        ThisCall
+      Options:         [ None ]
+      ParameterCount:  2
+      ArgumentList:    0x1003         # (int, char**)
+      ThisPointerAdjustment: 0
+  # int (FooClass::)(int, double)                   [Index: 0x100A]
+  - Kind:            LF_MFUNCTION
+    MemberFunction:
+      ReturnType:      116            # int
+      ClassType:       0x1007         # FooClass
+      ThisType:        0x1008         # const FooClass*
+      CallConv:        ThisCall
+      Options:         [ None ]
+      ParameterCount:  2
+      ArgumentList:    0x1004         # (int, double)
+      ThisPointerAdjustment: 0
+  # <method overload list>
+  # int (FooClass::)(int, char **)
+  # int (FooClass::)(int, double)                   [Index: 0x100B]
+  - Kind:            LF_METHODLIST
+    MethodOverloadList:
+      Methods:
+        - Type:            0x1009        # int (FooClass::)(int, char **)
+          Attrs:           3             # public
+          VFTableOffset:   -1
+          Name:            ''
+        - Type:            0x100A        # int (FooClass::)(int, double)
+          Attrs:           3             # public
+          VFTableOffset:   -1
+          Name:            ''
+  # <Field List>
+  #   A, B, C                                       [Index: 0x100C]
+  - Kind:            LF_FIELDLIST
+    FieldList:
+      - Kind:            LF_ENUMERATE
+        Enumerator:
+          Attrs:           3
+          Value:           0
+          Name:            A
+      - Kind:            LF_ENUMERATE
+        Enumerator:
+          Attrs:           3
+          Value:           1
+          Name:            B
+      - Kind:            LF_ENUMERATE
+        Enumerator:
+          Attrs:           3
+          Value:           2
+          Name:            C
+  # enum FooClass::Enum : uint32_t {
+  #   A, B, C
+  # };                                              [Index: 0x100D]
+  - Kind:            LF_ENUM
+    Enum:
+      NumEnumerators:  3
+      Options:         [ None, Nested ]
+      FieldList:       0x100C
+      Name:            'FooClass::Enum'
+      UnderlyingType:  117
+  # <Field List>
+  # public:
+  #   enum FooEnum : uint32_t {
+  #     A, B, C
+  #   };
+  #   FooEnum EnumMember;
+  #   static int StaticInt;
+  #   int FooClass::OverloadedMethod(int, char **);
+  #   int FooClass::OverloadedMethod(int, double);
+  #   int FooClass::RegularMethod(int, double);
+  #                                                 [Index: 0x100E]
+  - Kind:            LF_FIELDLIST
+    FieldList:
+      # enum FooEnum : uint32_t {
+      #   A, B, C
+      # };
+      - Kind:            LF_NESTTYPE
+        NestedType:
+          Type:            0x100D
+          Name:            FooEnum
+      # FooEnum EnumMember;
+      - Kind:            LF_MEMBER
+        DataMember:
+          Attrs:           3           # public
+          Type:            0x100D      # void*
+          FieldOffset:     0
+          Name:            EnumMember
+      # static int StaticInt;
+      - Kind:            LF_STMEMBER
+        StaticDataMember:
+          Attrs:           3           # public
+          Type:            116         # int
+          Name:            StaticInt
+      # int FooClass::OverloadedMethod(int, char **);
+      # int FooClass::OverloadedMethod(int, double);
+      - Kind:            LF_METHOD
+        OverloadedMethod:
+          NumOverloads:    2
+          MethodList:      0x100B
+          Name:            OverloadedMethod
+      # int FooClass::RegularMethod(int, double);
+      - Kind:            LF_ONEMETHOD
+        OneMethod:
+          Type:            0x100A
+          Attrs:           3          # public
+          VFTableOffset:   -1
+          Name:            RegularMethod
+  # class FooClass {
+  # public:
+  #   enum FooEnum : uint32_t {
+  #     A, B, C
+  #   };
+  #   FooEnum EnumMember;
+  #   static int StaticInt;
+  #   int FooClass::OverloadedMethod(int, char **);
+  #   int FooClass::OverloadedMethod(int, double);
+  #   int FooClass::RegularMethod(int, double);
+  # };                                              [Index: 0x100F]
+  - Kind:            LF_CLASS
+    Class:
+      MemberCount:     6
+      Options:         [ None ]
+      FieldList:       0x100E
+      Name:            'FooClass'
+      DerivationList:  0
+      VTableShape:     0
+      Size:            4
+  # struct FooStructure;                            [Index: 0x1010]
+  - Kind:            LF_STRUCTURE
+    Class:
+      MemberCount:     6
+      Options:         [ None ]
+      FieldList:       0x100E
+      Name:            'FooStructure'
+      DerivationList:  0
+      VTableShape:     0
+      Size:            4
+  # interface FooInterface;                         [Index: 0x1011]
+  - Kind:            LF_INTERFACE
+    Class:
+      MemberCount:     6
+      Options:         [ None ]
+      FieldList:       0x100E
+      Name:            'FooInterface'
+      DerivationList:  0
+      VTableShape:     0
+      Size:            4
+  # <field list>
+  # : public FooClass                               [Index: 0x1012]
+  - Kind:            LF_FIELDLIST
+    FieldList:
+      - Kind:            LF_BCLASS
+        Attrs:           3           # public
+        Type:            0x100F      # FooClass
+        Offset:          0
+  # <field list>
+  # : public virtual FooClass                       [Index: 0x1013]
+  - Kind:            LF_FIELDLIST
+    FieldList:
+      - Kind:            LF_VBCLASS
+        Attrs:           3           # public
+        BaseType:        0x100F      # FooClass
+        VBPtrType:       0x1001      # const int *
+        VBPtrOffset:     0
+        VTableIndex:     1
+  # struct Inherit : public FooClass {};             [Index: 0x1014]
+  - Kind:            LF_STRUCTURE
+    Class:
+      MemberCount:     1
+      Options:         [ None ]
+      FieldList:       0x100E
+      Name:            'Inherit'
+      DerivationList:  0x1012
+      VTableShape:     0
+      Size:            4
+  # class VInherit : public virtual FooClass {};             [Index: 0x1015]
+  - Kind:            LF_STRUCTURE
+    Class:
+      MemberCount:     1
+      Options:         [ None ]
+      FieldList:       0x100E
+      Name:            'Inherit'
+      DerivationList:  0x1012
+      VTableShape:     0
+      Size:            4
+  # const volatile enum FooClass::Enum : uint32_t {          [Index: 0x1016]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x100D
+      Modifiers:     [ Const, Volatile ]
+  # const volatile struct Inherit : public FooClass {} {     [Index: 0x1017]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x1014
+      Modifiers:     [ Const, Volatile ]
+  # const volatile class FooClass {                          [Index: 0x1018]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x100F
+      Modifiers:     [ Const, Volatile ]
+  # const volatile interface FooInterface {                  [Index: 0x1019]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x1011
+      Modifiers:     [ Const, Volatile ]
+
+# // Member type records. These are generally not length prefixed, and appear
+# // inside of a field list record.
+# MEMBER_RECORD(LF_VFUNCTAB, 0x1409, VFPtr)
+
+# MEMBER_RECORD_ALIAS(LF_BINTERFACE, 0x151a, BaseInterface, BaseClass)
+
+# MEMBER_RECORD_ALIAS(LF_IVBCLASS, 0x1402, IndirectVirtualBaseClass,
+#                     VirtualBaseClass)
+
+
+# TYPE_RECORD(LF_ARRAY, 0x1503, Array)
+# TYPE_RECORD(LF_UNION, 0x1506, Union)
+# TYPE_RECORD(LF_TYPESERVER2, 0x1515, TypeServer2)
+# TYPE_RECORD(LF_VFTABLE, 0x151d, VFTable)
+# TYPE_RECORD(LF_VTSHAPE, 0x000a, VFTableShape)
+
+# TYPE_RECORD(LF_BITFIELD, 0x1205, BitField)
+
+
+# // ID leaf records. Subsequent leaf types may be referenced from .debug$S.
+# TYPE_RECORD(LF_FUNC_ID, 0x1601, FuncId)
+# TYPE_RECORD(LF_MFUNC_ID, 0x1602, MemberFuncId)
+# TYPE_RECORD(LF_BUILDINFO, 0x1603, BuildInfo)
+# TYPE_RECORD(LF_SUBSTR_LIST, 0x1604, StringList)
+# TYPE_RECORD(LF_STRING_ID, 0x1605, StringId)
+# TYPE_RECORD(LF_UDT_SRC_LINE, 0x1606, UdtSourceLine)
+# TYPE_RECORD(LF_UDT_MOD_SRC_LINE, 0x1607, UdtModSourceLine)

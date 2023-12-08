@@ -1,0 +1,147 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking %s -o - | FileCheck -check-prefix=GCN %s
+
+---
+# GCN-LABEL: name: reduce_and_saveexec
+# GCN:      $exec = S_AND_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_and_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_AND_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_and_saveexec_commuted
+# GCN:      $exec = S_AND_B64 killed $vcc, $exec
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_and_saveexec_commuted
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_AND_B64 killed $vcc, $exec, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_and_saveexec_liveout
+# GCN:      $sgpr0_sgpr1 = S_AND_B64 $exec, killed $vcc
+# GCN-NEXT: $exec = COPY
+name: reduce_and_saveexec_liveout
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_AND_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: and_saveexec
+# GCN:      $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: and_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = COPY $exec
+    $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
+    $exec = S_MOV_B64_term $sgpr2_sgpr3
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_or_saveexec
+# GCN:      $exec = S_OR_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_or_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_xor_saveexec
+# GCN:      $exec = S_XOR_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_xor_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_XOR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_andn2_saveexec
+# GCN:      $exec = S_ANDN2_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_andn2_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_ANDN2_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_orn2_saveexec
+# GCN:      $exec = S_ORN2_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_orn2_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_ORN2_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_nand_saveexec
+# GCN:      $exec = S_NAND_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_nand_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_NAND_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_nor_saveexec
+# GCN:      $exec = S_NOR_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_nor_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_NOR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---
+# GCN-LABEL: name: reduce_xnor_saveexec
+# GCN:      $exec = S_XNOR_B64 $exec, killed $vcc
+# GCN-NEXT: S_ENDPGM 0
+name: reduce_xnor_saveexec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $vcc = IMPLICIT_DEF
+    $sgpr0_sgpr1 = S_XNOR_B64 $exec, killed $vcc, implicit-def $scc
+    $exec = COPY killed $sgpr0_sgpr1
+    S_ENDPGM 0
+...
+---

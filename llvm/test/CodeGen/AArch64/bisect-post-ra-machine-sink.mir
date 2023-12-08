@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs  -o - %s | FileCheck -check-prefix=RUN-POSTRA %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=postra-machine-sink -opt-bisect-limit=0 -verify-machineinstrs  -o - %s | FileCheck -check-prefix=BISECT-NO-RUN-POSTRA %s
+
+---
+
+# Make sure the pass is run.
+# Sink w19 to %bb.1.
+# RUN-POSTRA-LABEL: name: sinkcopy1
+# RUN-POSTRA: bb.0:
+# RUN-POSTRA-NOT: $w19 = COPY killed $w0
+# RUN-POSTRA: bb.1:
+# RUN-POSTRA: liveins: $w0, $w1
+# RUN-POSTRA: renamable $w19 = COPY killed $w0
+
+# Make sure the pass it not run.
+# BISECT-NO-RUN-POSTRA-LABEL: name: sinkcopy1
+# BISECT-NO-RUN-POSTRA: bb.0:
+# BISECT-NO-RUN-POSTRA: $w19 = COPY killed $w0
+# BISECT-NO-RUN-POSTRA: bb.1:
+# BISECT-NO-RUN-POSTRA: liveins: $w1, $w19
+
+name: sinkcopy1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
+    renamable  $w19 = COPY killed $w0
+    Bcc 11, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.1:
+    liveins: $w1, $w19
+    $w0 = ADDWrr $w1, $w19
+    RET $x0
+
+  bb.2:
+    $w0 = COPY $wzr
+    RET   $x0
+...

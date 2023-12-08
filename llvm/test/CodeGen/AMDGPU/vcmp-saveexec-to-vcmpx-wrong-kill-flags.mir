@@ -1,0 +1,60 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1030 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX1030 %s
+
+---
+
+# GFX1030-LABEL: name: vcmp_saveexec_to_vcmpx_wrong_kill_flags_src0
+# GFX1030: V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
+# GFX1030: V_CMPX_EQ_U32_nosdst_e64 $vgpr0, 0, implicit-def $exec, implicit $exec
+name: vcmp_saveexec_to_vcmpx_wrong_kill_flags_src0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr43, $sgpr44, $sgpr45, $sgpr55, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $vgpr40, $vgpr41, $vgpr76, $vgpr77, $vgpr78, $vgpr95, $vgpr109, $vgpr110, $vgpr111, $sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000000C, $sgpr52_sgpr53_sgpr54_sgpr55:0x0000000000000003, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr60_sgpr61, $vgpr92_vgpr93_vgpr94_vgpr95:0x000000000000003F, $vgpr104_vgpr105_vgpr106_vgpr107:0x000000000000003F, $vgpr46_vgpr47:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000C, $vgpr72_vgpr73:0x000000000000000F, $vgpr74_vgpr75:0x000000000000000F, $vgpr88_vgpr89:0x000000000000000C, $vgpr90_vgpr91:0x0000000000000003, $vgpr124_vgpr125:0x000000000000000F, $vgpr126_vgpr127:0x000000000000000F
+
+    renamable $vgpr0 = V_AND_B32_e32 128, $vgpr90, implicit $exec
+    renamable $vcc_lo = V_CMP_EQ_U32_e64 $vgpr0, 0, implicit $exec
+    renamable $sgpr4 = V_CMP_NE_U32_e64 0, killed $vgpr0, implicit $exec
+    renamable $sgpr48 = S_MOV_B32 0
+    renamable $sgpr68 = COPY renamable $sgpr66
+    renamable $sgpr5 = COPY $exec_lo, implicit-def $exec_lo
+    renamable $sgpr6 = S_AND_B32 renamable $sgpr5, killed renamable $vcc_lo, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term killed renamable $sgpr6
+...
+
+# GFX1030-LABEL: name: vcmp_saveexec_to_vcmpx_wrong_kill_flags_src1
+# GFX1030: V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
+# GFX1030: V_CMPX_EQ_U32_nosdst_e64 0, $vgpr0, implicit-def $exec, implicit $exec
+name: vcmp_saveexec_to_vcmpx_wrong_kill_flags_src1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr43, $sgpr44, $sgpr45, $sgpr55, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $vgpr40, $vgpr41, $vgpr76, $vgpr77, $vgpr78, $vgpr95, $vgpr109, $vgpr110, $vgpr111, $sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000000C, $sgpr52_sgpr53_sgpr54_sgpr55:0x0000000000000003, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr60_sgpr61, $vgpr92_vgpr93_vgpr94_vgpr95:0x000000000000003F, $vgpr104_vgpr105_vgpr106_vgpr107:0x000000000000003F, $vgpr46_vgpr47:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000C, $vgpr72_vgpr73:0x000000000000000F, $vgpr74_vgpr75:0x000000000000000F, $vgpr88_vgpr89:0x000000000000000C, $vgpr90_vgpr91:0x0000000000000003, $vgpr124_vgpr125:0x000000000000000F, $vgpr126_vgpr127:0x000000000000000F
+
+    renamable $vgpr0 = V_AND_B32_e32 128, $vgpr90, implicit $exec
+    renamable $vcc_lo = V_CMP_EQ_U32_e64 0, $vgpr0, implicit $exec
+    renamable $sgpr4 = V_CMP_NE_U32_e64 0, killed $vgpr0, implicit $exec
+    renamable $sgpr48 = S_MOV_B32 0
+    renamable $sgpr68 = COPY renamable $sgpr66
+    renamable $sgpr5 = COPY $exec_lo, implicit-def $exec_lo
+    renamable $sgpr6 = S_AND_B32 renamable $sgpr5, killed renamable $vcc_lo, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term killed renamable $sgpr6
+...
+
+# GFX1030-LABEL: name: vcmp_saveexec_to_vcmpx_wrong_kill_flags_non_reg
+# GFX1030: V_CMP_NE_U32_e64 0, killed $vgpr0, implicit $exec
+# GFX1030: V_CMPX_EQ_U32_nosdst_e64 0, 8, implicit-def $exec, implicit $exec
+name: vcmp_saveexec_to_vcmpx_wrong_kill_flags_non_reg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr43, $sgpr44, $sgpr45, $sgpr55, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $vgpr40, $vgpr41, $vgpr76, $vgpr77, $vgpr78, $vgpr95, $vgpr109, $vgpr110, $vgpr111, $sgpr48_sgpr49_sgpr50_sgpr51:0x000000000000000C, $sgpr52_sgpr53_sgpr54_sgpr55:0x0000000000000003, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr60_sgpr61, $vgpr92_vgpr93_vgpr94_vgpr95:0x000000000000003F, $vgpr104_vgpr105_vgpr106_vgpr107:0x000000000000003F, $vgpr46_vgpr47:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000C, $vgpr72_vgpr73:0x000000000000000F, $vgpr74_vgpr75:0x000000000000000F, $vgpr88_vgpr89:0x000000000000000C, $vgpr90_vgpr91:0x0000000000000003, $vgpr124_vgpr125:0x000000000000000F, $vgpr126_vgpr127:0x000000000000000F
+
+    renamable $vgpr0 = V_AND_B32_e32 128, $vgpr90, implicit $exec
+    renamable $vcc_lo = V_CMP_EQ_U32_e64 0, 8, implicit $exec
+    renamable $sgpr4 = V_CMP_NE_U32_e64 0, killed $vgpr0, implicit $exec
+    renamable $sgpr48 = S_MOV_B32 0
+    renamable $sgpr68 = COPY renamable $sgpr66
+    renamable $sgpr5 = COPY $exec_lo, implicit-def $exec_lo
+    renamable $sgpr6 = S_AND_B32 renamable $sgpr5, killed renamable $vcc_lo, implicit-def dead $scc
+    $exec_lo = S_MOV_B32_term killed renamable $sgpr6
+...

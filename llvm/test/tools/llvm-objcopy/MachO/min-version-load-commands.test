@@ -1,0 +1,20 @@
+## This test verifies that llvm-objcopy correctly handles min os version load commands.
+## We use separate input files since one binary is not allowed to contain more than one
+## load command of this type (LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_MACOSX,
+## LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS).
+
+# RUN: yaml2obj %p/Inputs/min_iphoneos_version_lc.yaml -o %t.iphoneos
+# RUN: llvm-objcopy %t.iphoneos %t.iphoneos.copy
+# RUN: cmp %t.iphoneos %t.iphoneos.copy
+
+# RUN: yaml2obj %p/Inputs/min_macos_version_lc.yaml -o %t.macos
+# RUN: llvm-objcopy %t.macos %t.macos.copy
+# RUN: cmp %t.macos %t.macos.copy
+
+# RUN: yaml2obj %p/Inputs/min_tvos_version_lc.yaml -o %t.tvos
+# RUN: llvm-objcopy %t.tvos %t.tvos.copy
+# RUN: cmp %t.tvos %t.tvos.copy
+
+# RUN: yaml2obj %p/Inputs/min_watchos_version_lc.yaml -o %t.watchos
+# RUN: llvm-objcopy %t.watchos %t.watchos.copy
+# RUN: cmp %t.watchos %t.watchos.copy

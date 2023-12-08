@@ -1,0 +1,40 @@
+RUN: split-file %s %t
+RUN: llvm-symbolizer --filter-markup < %t/log > %t.out 2> %t.err
+RUN: FileCheck %s --input-file=%t.out --match-full-lines \
+RUN:   --implicit-check-not {{.}}
+RUN: FileCheck %s --check-prefix=ERR -input-file=%t.err --match-full-lines
+
+CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=abb50d82b6bdc861 [0x0-0x0](rwx),[0x1-0x1](r),[0x2-0x2](w),[0x3-0x3](x),[0x4-0x4](rwx),[0xa-0xb](r)[[END:\]{3}]]
+
+ERR: error: expected at least 3 field(s); found 0
+ERR: error: unknown mmap type
+ERR: error: expected 6 field(s); found 3
+ERR: error: expected address; found '1'
+ERR: error: expected size; found '-1'
+ERR: error: expected mode; found ''
+ERR: error: expected mode; found 'g'
+ERR: error: expected mode; found 'wr'
+ERR: error: overlapping mmap: #0x0 [0xa-0xb]
+ERR: error: overlapping mmap: #0x0 [0xa-0xb]
+ERR: error: overlapping mmap: #0x0 [0xa-0xb]
+
+;--- log
+{{{module:0:a.o:elf:abb50d82b6bdc861}}}
+{{{mmap:0x1:1:load:0:r:0}}}
+{{{mmap:0x2:1:load:0:w:0}}}
+{{{mmap:0x3:1:load:0:x:0}}}
+{{{mmap:0x4:1:load:0:rwx:0}}}
+{{{mmap:0x0:1:load:0:RWX:0}}}
+{{{mmap:0xa:2:load:0:r:0}}}
+
+{{{mmap}}}
+{{{mmap:0:1:unknown}}}
+{{{mmap:0:10000000:load}}}
+{{{mmap:1:10000000:load:0:r:0}}}
+{{{mmap:0:-1:load:0:r:0}}}
+{{{mmap:0:10000000:load:0::0}}}
+{{{mmap:0:10000000:load:0:g:0}}}
+{{{mmap:0:10000000:load:0:wr:0}}}
+{{{mmap:0xa:1:load:0:r:0}}}
+{{{mmap:0x9:2:load:0:r:0}}}
+{{{mmap:0x9:5:load:0:r:0}}}

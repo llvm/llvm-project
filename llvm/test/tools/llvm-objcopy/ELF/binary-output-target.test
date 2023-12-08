@@ -1,0 +1,145 @@
+# RUN: echo abcd > %t.txt
+
+# RUN: llvm-objcopy -I binary -O elf64-littleaarch64 %t.txt %t.aarch64.o
+# RUN: llvm-readobj --file-headers %t.aarch64.o | FileCheck %s --check-prefixes=CHECK,LE,AARCH64,64
+
+# RUN: llvm-objcopy -I binary -O elf32-littlearm %t.txt %t.arm.o
+# RUN: llvm-readobj --file-headers %t.arm.o | FileCheck %s --check-prefixes=CHECK,LE,ARM,32
+
+# RUN: llvm-objcopy -I binary -O elf32-i386 %t.txt %t.i386.o
+# RUN: llvm-readobj --file-headers %t.i386.o | FileCheck %s --check-prefixes=CHECK,LE,I386,32
+
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 %t.txt %t.x86-64.o
+# RUN: llvm-readobj --file-headers %t.x86-64.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,64
+
+# RUN: llvm-objcopy -I binary -O elf32-bigmips %t.txt %t.mips.o
+# RUN: llvm-readobj --file-headers %t.mips.o | FileCheck %s --check-prefixes=CHECK,BE,MIPS,32
+
+# RUN: llvm-objcopy -I binary -O elf32-powerpc %t.txt %t.ppc32be.o
+# RUN: llvm-readobj --file-headers %t.ppc32be.o | FileCheck %s --check-prefixes=CHECK,BE,PPC32,PPC32BE,32
+
+# RUN: llvm-objcopy -I binary -O elf32-powerpcle %t.txt %t.ppc32le.o
+# RUN: llvm-readobj --file-headers %t.ppc32le.o | FileCheck %s --check-prefixes=CHECK,LE,PPC32,PPC32LE,32
+
+# RUN: llvm-objcopy -I binary -O elf64-powerpc %t.txt %t.ppc64be.o
+# RUN: llvm-readobj --file-headers %t.ppc64be.o | FileCheck %s --check-prefixes=CHECK,BE,PPC64,PPC64BE,64
+
+# RUN: llvm-objcopy -I binary -O elf64-powerpcle %t.txt %t.ppc64le.o
+# RUN: llvm-readobj --file-headers %t.ppc64le.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64,PPC64LE,64
+
+# RUN: llvm-objcopy -I binary -O elf32-littleriscv %t.txt %t.rv32.o
+# RUN: llvm-readobj --file-headers %t.rv32.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32
+
+# RUN: llvm-objcopy -I binary -O elf64-littleriscv %t.txt %t.rv64.o
+# RUN: llvm-readobj --file-headers %t.rv64.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64
+
+# RUN: llvm-objcopy -I binary -O elf32-sparc %t.txt %t.sparc.o
+# RUN: llvm-readobj --file-headers %t.sparc.o | FileCheck %s --check-prefixes=CHECK,BE,SPARC,32
+
+# RUN: llvm-objcopy -I binary -O elf32-sparcel %t.txt %t.sparcel.o
+# RUN: llvm-readobj --file-headers %t.sparcel.o | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32
+
+# RUN: llvm-objcopy -I binary -O elf32-hexagon %t.txt %t.hexagon.o
+# RUN: llvm-readobj --file-headers %t.hexagon.o | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32
+
+# RUN: llvm-objcopy -I binary -O elf32-loongarch %t.txt %t.la32.o
+# RUN: llvm-readobj --file-headers %t.la32.o | FileCheck %s --check-prefixes=CHECK,LE,LA32,32
+
+# RUN: llvm-objcopy -I binary -O elf64-loongarch %t.txt %t.la64.o
+# RUN: llvm-readobj --file-headers %t.la64.o | FileCheck %s --check-prefixes=CHECK,LE,LA64,64
+
+# CHECK: Format:
+# 32-SAME:      elf32-
+# 64-SAME:      elf64-
+# AARCH64-SAME: littleaarch64
+# ARM-SAME:     littlearm
+# HEXAGON-SAME: hexagon
+# I386-SAME:    i386
+# LA32-SAME:    loongarch{{$}}
+# LA64-SAME:    loongarch{{$}}
+# MIPS-SAME:    mips{{$}}
+# RISCV32-SAME: riscv{{$}}
+# RISCV64-SAME: riscv{{$}}
+# PPCBE-SAME:   powerpc{{$}}
+# PPCLE-SAME:   powerpcle{{$}}
+# SPARC-SAME:   sparc
+# SPARCEL-SAME: sparc
+# X86-64-SAME:  x86-64
+
+# AARCH64-NEXT: Arch: aarch64
+# ARM-NEXT:     Arch: arm
+# HEXAGON-NEXT: Arch: hexagon
+# I386-NEXT:    Arch: i386
+# LA32-NEXT:    Arch: loongarch32
+# LA64-NEXT:    Arch: loongarch64
+# MIPS-NEXT:    Arch: mips{{$}}
+# PPC32BE-NEXT: Arch: powerpc{{$}}
+# PPC32LE-NEXT: Arch: powerpcle{{$}}
+# PPC64BE-NEXT: Arch: powerpc64{{$}}
+# PPC64LE-NEXT: Arch: powerpc64le{{$}}
+# RISCV32-NEXT: Arch: riscv32
+# RISCV64-NEXT: Arch: riscv64
+# SPARC-NEXT:   Arch: sparc{{$}}
+# SPARCEL-NEXT: Arch: sparcel
+# X86-64-NEXT:  Arch: x86_64
+
+# 32-NEXT:      AddressSize: 32bit
+# 64-NEXT:      AddressSize: 64bit
+
+# CHECK:        ElfHeader {
+# CHECK-NEXT:     Ident {
+# CHECK-NEXT:       Magic: (7F 45 4C 46)
+# 32-NEXT:          Class: 32-bit (0x1)
+# 64-NEXT:          Class: 64-bit (0x2)
+# LE-NEXT:          DataEncoding: LittleEndian (0x1)
+# BE-NEXT:          DataEncoding: BigEndian (0x2)
+# CHECK-NEXT:       FileVersion: 1
+# CHECK-NEXT:       OS/ABI: SystemV (0x0)
+# CHECK-NEXT:       ABIVersion: 0
+# CHECK-NEXT:       Unused: (00 00 00 00 00 00 00)
+# CHECK-NEXT:     }
+# CHECK-NEXT:     Type: Relocatable (0x1)
+
+## In GNU objcopy, e_machine is EM_NONE unless -B is specifid.
+## It is not very clear why it behaves this way.
+## We fill in the field regardless of -B.
+# AARCH64-NEXT:   Machine: EM_AARCH64 (0xB7)
+# ARM-NEXT:       Machine: EM_ARM (0x28)
+# HEXAGON-NEXT:   Machine: EM_HEXAGON (0xA4)
+# I386-NEXT:      Machine: EM_386 (0x3)
+# LA32-NEXT:      Machine: EM_LOONGARCH (0x102)
+# LA64-NEXT:      Machine: EM_LOONGARCH (0x102)
+# MIPS-NEXT:      Machine: EM_MIPS (0x8)
+# PPC32-NEXT:     Machine: EM_PPC (0x14)
+# PPC64-NEXT:     Machine: EM_PPC64 (0x15)
+# RISCV32-NEXT:   Machine: EM_RISCV (0xF3)
+# RISCV64-NEXT:   Machine: EM_RISCV (0xF3)
+# SPARC-NEXT:     Machine: EM_SPARC (0x2)
+# SPARCEL-NEXT:   Machine: EM_SPARC (0x2)
+# X86-64-NEXT:    Machine: EM_X86_64 (0x3E)
+
+# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Entry: 0x0
+# CHECK-NEXT:     ProgramHeaderOffset:
+# CHECK-NEXT:     SectionHeaderOffset:
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# 32-NEXT:        HeaderSize: 52
+# 64-NEXT:        HeaderSize: 64
+# 32-NEXT:        ProgramHeaderEntrySize: 0
+# 64-NEXT:        ProgramHeaderEntrySize: 0
+# CHECK-NEXT:     ProgramHeaderCount: 0
+# 32-NEXT:        SectionHeaderEntrySize: 40
+# 64-NEXT:        SectionHeaderEntrySize: 64
+# CHECK-NEXT:     SectionHeaderCount: 4
+# CHECK-NEXT:     StringTableSectionIndex:
+# CHECK-NEXT:   }
+
+## ELFOSABI_NONE = ELFOSABI_SYSV = 0 is the default.
+## "-freebsd" suffixed target name can change the field to ELFOSABI_FREEBSD.
+
+## Many uses of objcopy use no spaces in the flags, make sure that also works.
+# RUN: llvm-objcopy -Ibinary -O elf64-x86-64-freebsd %t.txt %t.freebsd.o
+# RUN: llvm-readobj --file-headers %t.freebsd.o | FileCheck %s --check-prefixes=FREEBSD
+
+# FREEBSD: OS/ABI: FreeBSD

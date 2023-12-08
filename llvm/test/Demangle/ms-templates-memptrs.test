@@ -1,0 +1,96 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+??$CallMethod@UC@NegativeNVOffset@@$I??_912@$BA@AEPPPPPPPM@A@@@YAXAAUC@NegativeNVOffset@@@Z
+; CHECK: void __cdecl CallMethod<struct NegativeNVOffset::C, {[thunk]: __thiscall NegativeNVOffset::C::`vcall'{0, {flat}}, 4294967292, 0}>(struct NegativeNVOffset::C &)
+
+??$CallMethod@UM@@$0A@@@YAXAAUM@@@Z
+; CHECK: void __cdecl CallMethod<struct M, 0>(struct M &)
+
+??$CallMethod@UM@@$H??_91@$BA@AEA@@@YAXAAUM@@@Z
+; CHECK: void __cdecl CallMethod<struct M, {[thunk]: __thiscall M::`vcall'{0, {flat}}, 0}>(struct M &)
+
+??$CallMethod@UM@@$H?f@1@QAEXXZA@@@YAXAAUM@@@Z
+; CHECK: void __cdecl CallMethod<struct M, {public: void __thiscall M::f(void), 0}>(struct M &)
+
+??$CallMethod@UO@@$H??_91@$BA@AE3@@YAXAAUO@@@Z
+; CHECK: void __cdecl CallMethod<struct O, {[thunk]: __thiscall O::`vcall'{0, {flat}}, 4}>(struct O &)
+
+??$CallMethod@US@@$0A@@@YAXAAUS@@@Z
+; CHECK: void __cdecl CallMethod<struct S, 0>(struct S &)
+
+??$CallMethod@US@@$1??_91@$BA@AE@@YAXAAUS@@@Z
+; CHECK: void __cdecl CallMethod<struct S, &[thunk]: __thiscall S::`vcall'{0, {flat}}>(struct S &)
+
+??$CallMethod@US@@$1?f@1@QAEXXZ@@YAXAAUS@@@Z
+; CHECK: void __cdecl CallMethod<struct S, &public: void __thiscall S::f(void)>(struct S &)
+
+??$CallMethod@UU@@$0A@@@YAXAAUU@@@Z
+; CHECK: void __cdecl CallMethod<struct U, 0>(struct U &)
+
+??$CallMethod@UU@@$J??_91@$BA@AEA@A@A@@@YAXAAUU@@@Z
+; CHECK: void __cdecl CallMethod<struct U, {[thunk]: __thiscall U::`vcall'{0, {flat}}, 0, 0, 0}>(struct U &)
+
+??$CallMethod@UU@@$J?f@1@QAEXXZA@A@A@@@YAXAAUU@@@Z
+; CHECK: void __cdecl CallMethod<struct U, {public: void __thiscall U::f(void), 0, 0, 0}>(struct U &)
+
+??$CallMethod@UV@@$0A@@@YAXAAUV@@@Z
+; CHECK: void __cdecl CallMethod<struct V, 0>(struct V &)
+
+??$CallMethod@UV@@$I??_91@$BA@AEA@A@@@YAXAAUV@@@Z
+; CHECK: void __cdecl CallMethod<struct V, {[thunk]: __thiscall V::`vcall'{0, {flat}}, 0, 0}>(struct V &)
+
+??$CallMethod@UV@@$I?f@1@QAEXXZA@A@@@YAXAAUV@@@Z
+; CHECK: void __cdecl CallMethod<struct V, {public: void __thiscall V::f(void), 0, 0}>(struct V &)
+
+??$ReadField@UA@@$0?0@@YAHAAUA@@@Z
+; CHECK: int __cdecl ReadField<struct A, -1>(struct A &)
+
+??$ReadField@UA@@$0A@@@YAHAAUA@@@Z
+; CHECK: int __cdecl ReadField<struct A, 0>(struct A &)
+
+??$ReadField@UI@@$03@@YAHAAUI@@@Z
+; CHECK: int __cdecl ReadField<struct I, 4>(struct I &)
+
+??$ReadField@UI@@$0A@@@YAHAAUI@@@Z
+; CHECK: int __cdecl ReadField<struct I, 0>(struct I &)
+
+??$ReadField@UM@@$0A@@@YAHAAUM@@@Z
+; CHECK: int __cdecl ReadField<struct M, 0>(struct M &)
+
+??$ReadField@UM@@$0BA@@@YAHAAUM@@@Z
+; CHECK: int __cdecl ReadField<struct M, 16>(struct M &)
+
+??$ReadField@UM@@$0M@@@YAHAAUM@@@Z
+; CHECK: int __cdecl ReadField<struct M, 12>(struct M &)
+
+??$ReadField@US@@$03@@YAHAAUS@@@Z
+; CHECK: int __cdecl ReadField<struct S, 4>(struct S &)
+
+??$ReadField@US@@$07@@YAHAAUS@@@Z
+; CHECK: int __cdecl ReadField<struct S, 8>(struct S &)
+
+??$ReadField@US@@$0A@@@YAHAAUS@@@Z
+; CHECK: int __cdecl ReadField<struct S, 0>(struct S &)
+
+??$ReadField@UU@@$0A@@@YAHAAUU@@@Z
+; CHECK: int __cdecl ReadField<struct U, 0>(struct U &)
+
+??$ReadField@UU@@$G3A@A@@@YAHAAUU@@@Z
+; CHECK: int __cdecl ReadField<struct U, {4, 0, 0}>(struct U &)
+
+??$ReadField@UU@@$G7A@A@@@YAHAAUU@@@Z
+; CHECK: int __cdecl ReadField<struct U, {8, 0, 0}>(struct U &)
+
+??$ReadField@UV@@$0A@@@YAHAAUV@@@Z
+; CHECK: int __cdecl ReadField<struct V, 0>(struct V &)
+
+??$ReadField@UV@@$F7A@@@YAHAAUV@@@Z
+; CHECK: int __cdecl ReadField<struct V, {8, 0}>(struct V &)
+
+??$ReadField@UV@@$FM@A@@@YAHAAUV@@@Z
+; CHECK: int __cdecl ReadField<struct V, {12, 0}>(struct V &)
+
+?Q@@3$$QEAP8Foo@@EAAXXZEA
+; CHECK: void (__cdecl Foo::*&&Q)(void)

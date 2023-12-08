@@ -1,0 +1,37 @@
+## This test checks that the debug info contained in the source file
+## is fully copied to the destination file when the source and
+## destination are the same file.
+
+## Check --no-separate-debug-file.
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t1
+# RUN: llvm-dwarfutil --no-separate-debug-file %t1 %t1
+# RUN: llvm-dwarfdump -a %t1 | FileCheck --check-prefix=CHECK-DEBUG %s
+
+## Check --separate-debug-file.
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t1
+# RUN: llvm-dwarfutil --separate-debug-file %t1 %t1
+# RUN: llvm-objdump --headers %t1 | FileCheck --check-prefix=CHECK-NON-DEBUG %s
+# RUN: llvm-dwarfdump -a %t1.debug | FileCheck --check-prefix=CHECK-DEBUG %s
+
+# CHECK-NON-DEBUG-NOT: .debug_abbrev
+# CHECK-NON-DEBUG-NOT: .debug_info
+# CHECK-NON-DEBUG: .gnu_debuglink
+# CHECK-NON-DEBUG-NOT: .debug_abbrev
+# CHECK-NON-DEBUG-NOT: .debug_info
+
+# CHECK-DEBUG: .debug_abbrev
+# CHECK-DEBUG: DW_TAG_compile_unit
+# CHECK-DEBUG: .debug_info
+# CHECK-DEBUG: DW_TAG_compile_unit
+# CHECK-DEBUG: DW_AT_producer{{.*}}"by_hand"
+# CHECK-DEBUG: DW_AT_language{{.*}}DW_LANG_C_plus_plus
+# CHECK-DEBUG: DW_AT_name{{.*}}"CU1"
+# CHECK-DEBUG: DW_TAG_class_type
+# CHECK-DEBUG: DW_AT_name{{.*}}"class1"
+# CHECK-DEBUG: DW_TAG_base_type
+# CHECK-DEBUG: DW_AT_name{{.*}}"int"
+# CHECK-DEBUG: DW_AT_name{{.*}}"char"
+# CHECK-DEBUG: DW_AT_name{{.*}}"float"
+# CHECK-DEBUG: DW_TAG_pointer_type
+# CHECK-DEBUG: DW_TAG_variable
+# CHECK-DEBUG: DW_AT_name{{.*}}"var1"

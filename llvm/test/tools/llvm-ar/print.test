@@ -1,0 +1,99 @@
+## Test Print output
+# XFAIL: system-darwin
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: echo file1 > %t/1.txt
+# RUN: echo file2 > %t/2.txt
+# RUN: echo file3 > %t/3.txt
+
+# RUN: llvm-ar -rc %t/archive.a %t/1.txt %t/2.txt %t/3.txt
+
+## Print empty archive:
+# RUN: llvm-ar --format=gnu  cr %t/empty.a
+# RUN: llvm-ar p %t/empty.a 2>&1 | count 0
+# RUN: llvm-ar pv %t/empty.a 2>&1 | count 0
+
+## Print without member:
+# RUN: llvm-ar p %t/archive.a \
+# RUN:   | FileCheck %s --check-prefix=WITHOUT --match-full-lines --implicit-check-not {{.}}
+
+# WITHOUT:      file1
+# WITHOUT-NEXT: file2
+# WITHOUT-NEXT: file3
+
+# RUN: llvm-ar pv %t/archive.a \
+# RUN:   | FileCheck %s --check-prefix=WITHOUT-VERBOSE --match-full-lines --implicit-check-not {{.}}
+
+# WITHOUT-VERBOSE:      Printing 1.txt
+# WITHOUT-VERBOSE-NEXT: file1
+# WITHOUT-VERBOSE-NEXT: Printing 2.txt
+# WITHOUT-VERBOSE-NEXT: file2
+# WITHOUT-VERBOSE-NEXT: Printing 3.txt
+# WITHOUT-VERBOSE-NEXT: file3
+
+## Print single member:
+# RUN: llvm-ar p %t/archive.a %t/2.txt  \
+# RUN:   | FileCheck %s --check-prefix=SINGLE --match-full-lines --implicit-check-not {{.}}
+
+# SINGLE: file2
+
+# RUN: llvm-ar pv %t/archive.a %t/2.txt  \
+# RUN:   | FileCheck %s --check-prefix=SINGLE-VERBOSE --match-full-lines --implicit-check-not {{.}}
+
+# SINGLE-VERBOSE:      Printing 2.txt
+# SINGLE-VERBOSE-NEXT: file2
+
+## Print multiple members:
+# RUN: llvm-ar p %t/archive.a %t/2.txt %t/1.txt \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE --match-full-lines --implicit-check-not {{.}}
+
+# MULTIPLE:      file1
+# MULTIPLE-NEXT: file2
+
+# RUN: llvm-ar pv %t/archive.a %t/2.txt %t/1.txt \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE-VERBOSE --match-full-lines --implicit-check-not {{.}}
+
+# MULTIPLE-VERBOSE:      Printing 1.txt
+# MULTIPLE-VERBOSE-NEXT: file1
+# MULTIPLE-VERBOSE-NEXT: Printing 2.txt
+# MULTIPLE-VERBOSE-NEXT: file2
+
+## Print same member:
+# RUN: not llvm-ar p %t/archive.a %t/2.txt %t/2.txt 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SAME -DFILE=%t/2.txt
+
+# SAME-DAG: file2
+# SAME-DAG: error: '[[FILE]]' was not found
+
+## Print same member when containing multiple members with shared name:
+# llvm-ar -q %t/archive.a %t/2.txt
+# RUN: not llvm-ar p %t/archive.a %t/2.txt %t/2.txt 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SAME -DFILE=%t/2.txt
+
+## No archive:
+# RUN: not llvm-ar p 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-ARCHIVE
+# 
+# NO-ARCHIVE: error: an archive name must be specified
+
+## Archive does not exist:
+# RUN: not llvm-ar p %t/missing.a 2>&1 \
+# RUN:   | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=MISSING-ARCHIVE -DARCHIVE=%t/missing.a
+
+# MISSING-ARCHIVE: error: unable to load '[[ARCHIVE]]': [[MSG]]
+
+## Member does not exist:
+# RUN: not llvm-ar p %t/archive.a %t-missing.txt 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t-missing.txt
+
+# MISSING-FILE: error: '[[FILE]]' was not found
+
+## Print empty thin archive:
+# RUN: llvm-ar Trc %t/thin-archive-empty.a
+# RUN: llvm-ar p %t/thin-archive-empty.a 2>&1 | count 0
+# RUN: llvm-ar pv %t/thin-archive-empty.a 2>&1 | count 0
+
+## Print thin archive:
+# RUN: llvm-ar Trc %t/thin-archive.a %t/1.txt %t/2.txt %t/3.txt
+# RUN: llvm-ar p %t/archive.a %t/2.txt \
+# RUN:   | FileCheck %s --check-prefix=SINGLE --match-full-lines --implicit-check-not {{.}}

@@ -1,0 +1,161 @@
+## Show that yaml2obj supports custom section data for Mach-O YAML inputs.
+
+## Case 1: The size of content is greater than the section size.
+# RUN: not yaml2obj --docnum=1 %s -o %t1 2>&1 | FileCheck %s --check-prefix=CASE1
+# CASE1: error: Section size must be greater than or equal to the content size
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      232
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         392
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000000
+        size:            0
+        offset:          0x00000188
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         CDAB3412
+
+## Case 2: The content size equals the section size.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=CASE2
+# CASE2:       Index: 0
+# CASE2-NEXT:  Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
+# CASE2-NEXT:  Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# CASE2-NEXT:  Address: 0x0
+# CASE2-NEXT:  Size: 0x4
+# CASE2-NEXT:  Offset: 392
+# CASE2-NEXT:  Alignment: 2
+# CASE2-NEXT:  RelocationOffset: 0x0
+# CASE2-NEXT:  RelocationCount: 0
+# CASE2-NEXT:  Type: Regular (0x0)
+# CASE2-NEXT:  Attributes [ (0x0)
+# CASE2-NEXT:  ]
+# CASE2-NEXT:  Reserved1: 0x0
+# CASE2-NEXT:  Reserved2: 0x0
+# CASE2-NEXT:  Reserved3: 0x0
+# CASE2-NEXT:  SectionData (
+# CASE2-NEXT:    0000: CDAB3412                             |..4.|
+# CASE2-NEXT:  )
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      232
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         392
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000000
+        size:            4
+        offset:          0x00000188
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         CDAB3412
+
+## Case 3: The content size is less than the section size. In this case, the area
+## after the custom content is filled with zeroes.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --sections --section-data %t3 | FileCheck %s --check-prefix=CASE3
+# CASE3:       Index: 0
+# CASE3-NEXT:  Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:  Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:  Address: 0x0
+# CASE3-NEXT:  Size: 0x4
+# CASE3-NEXT:  Offset: 392
+# CASE3-NEXT:  Alignment: 2
+# CASE3-NEXT:  RelocationOffset: 0x0
+# CASE3-NEXT:  RelocationCount: 0
+# CASE3-NEXT:  Type: Regular (0x0)
+# CASE3-NEXT:  Attributes [ (0x0)
+# CASE3-NEXT:  ]
+# CASE3-NEXT:  Reserved1: 0x0
+# CASE3-NEXT:  Reserved2: 0x0
+# CASE3-NEXT:  Reserved3: 0x0
+# CASE3-NEXT:  SectionData (
+# CASE3-NEXT:    0000: AA000000                             |....|
+# CASE3-NEXT:  )
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      232
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         392
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000000
+        size:            4
+        offset:          0x00000188
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         AA

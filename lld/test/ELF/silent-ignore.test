@@ -1,0 +1,29 @@
+RUN: ld.lld --version \
+RUN:   -d \
+RUN:   -g \
+RUN:   -long-plt \
+RUN:   --no-add-needed \
+RUN:   -no-copy-dt-needed-entries \
+RUN:   -no-ctors-in-init-array \
+RUN:   -no-keep-memory \
+RUN:   --no-relax \
+RUN:   -no-warn-mismatch \
+RUN:   -rpath-link . \
+RUN:   -secure-plt \
+RUN:   -sort-common \
+RUN:   -stats \
+RUN:   -warn-execstack \
+RUN:   -warn-once \
+RUN:   -warn-shared-textrel \
+RUN:   -EB \
+RUN:   -EL \
+RUN:   -G 0
+RUN: not ld.lld --version --not-an-ignored-argument
+
+Test some options that we reject (including those what we used to silently ignore).
+
+--detect-odr-violations is a gold-specific option that we don't implement and if
+we do, probably in a different way under a different spelling.
+RUN: not ld.lld --detect-odr-violations 2>&1 | FileCheck %s
+
+CHECK: error: unknown argument

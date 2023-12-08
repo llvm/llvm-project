@@ -1,0 +1,25 @@
+; RUN: llvm-rc -no-preprocess /l 40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-rc -no-preprocess /l40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess -l 40A %p/Inputs/language.rc %t.res
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess --language 40A %p/Inputs/language.rc %t.res
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess -l 0x40A %p/Inputs/language.rc %t.res
+; RUN: llvm-readobj %t.res | FileCheck %s
+
+; CHECK:      Resource name (int): 1
+; CHECK-NEXT: Data version:
+; CHECK-NEXT: Memory flags:
+; CHECK-NEXT: Language ID: 2049
+
+; CHECK:      Resource name (int): 2
+; CHECK-NEXT: Data version:
+; CHECK-NEXT: Memory flags:
+; CHECK-NEXT: Language ID: 1034
+
+; CHECK:      Resource name (int): 3
+; CHECK-NEXT: Data version:
+; CHECK-NEXT: Memory flags:
+; CHECK-NEXT: Language ID: 4099

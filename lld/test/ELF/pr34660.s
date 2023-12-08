@@ -1,0 +1,26 @@
+# REQUIRES: aarch64
+
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-none %s -o %t.o
+# RUN: ld.lld --hash-style=sysv -shared %t.o -o %t
+# RUN: llvm-objdump %t -d --no-show-raw-insn | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-readelf %t --symbols | FileCheck %s --check-prefix=SYM
+
+# It would be much easier to understand/read this test if llvm-objdump would print
+# the immediates in hex.
+# IMM = hex(65540) = 0x10004
+# PC = 0x10000
+# As the relocation is PC-relative, IMM + PC = 0x20004 which is the VA of the
+# correct symbol.
+
+# DISASM: Disassembly of section .text:
+# DISASM-EMPTY:
+# DISASM-NEXT: <.text>:
+# DISASM-NEXT:   1022c:       ldr     x8, 0x30294
+
+# SYM: Symbol table '.symtab'
+# SYM:  0000000000030294     0 NOTYPE  LOCAL  DEFAULT [[#]] patatino
+
+  ldr x8, patatino
+  .data
+  .zero 4
+patatino:

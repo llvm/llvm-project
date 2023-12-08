@@ -1,0 +1,48 @@
+# RUN: llc -march=amdgcn -mcpu=gfx902 -o - %s -run-pass si-form-memory-clauses -verify-machineinstrs | FileCheck -check-prefix=XNACK %s
+
+# The SIFormMemoryClauses pass must not form a clause (indicated by BUNDLE)
+# from the two adjacent smem instructions, because the first one has its
+# result coalesced with an operand.
+
+# XNACK-LABEL: body:
+# XNACK-NOT: BUNDLE
+
+---
+name:            _amdgpu_cs_main
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+fixedStack:      []
+stack:           []
+constants:       []
+body:             |
+  bb.0:
+    liveins: $sgpr2, $sgpr3, $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr1
+    %1:sgpr_32 = COPY $sgpr12
+    %2:sgpr_32 = COPY $sgpr3
+    undef %3.sub0:sgpr_128 = COPY $sgpr2
+    %4:vgpr_32 = COPY $vgpr0
+    %5:sgpr_32 = COPY $sgpr14
+    %6:sgpr_32 = COPY $sgpr13
+    %7:sreg_64_xexec = S_GETPC_B64
+    %7.sub0:sreg_64_xexec = COPY %1
+    %3.sub1:sgpr_128 = S_AND_B32 %2, 65535, implicit-def dead $scc
+    %3.sub3:sgpr_128 = S_MOV_B32 151468
+    %3.sub2:sgpr_128 = S_MOV_B32 -1
+    %7.sub0:sreg_64_xexec = S_LOAD_DWORD_IMM %7, 48, 0 :: (load (s32) from `ptr addrspace(4) undef`, addrspace 4)
+    %8:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_IMM %3, 640, 0 :: (dereferenceable invariant load (s64))
+    undef %9.sub0:vreg_128 = V_LSHL_ADD_U32_e64 %6, 4, %4, implicit $exec
+    %9.sub1:vreg_128 = V_LSHL_ADD_U32_e64 %5, 4, %0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+
+

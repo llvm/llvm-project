@@ -1,0 +1,14 @@
+# This file allows users to call find_package(Flang) and pick up our targets.
+
+@FLANG_CONFIG_CODE@
+
+set(LLVM_VERSION @LLVM_VERSION_MAJOR@.@LLVM_VERSION_MINOR@.@LLVM_VERSION_PATCH@)
+find_package(LLVM ${LLVM_VERSION} EXACT REQUIRED CONFIG
+             HINTS "@FLANG_CONFIG_LLVM_CMAKE_DIR@")
+
+set(FLANG_EXPORTED_TARGETS "@FLANG_EXPORTS@")
+set(FLANG_CMAKE_DIR "@FLANG_CONFIG_CMAKE_DIR@")
+set(FLANG_INCLUDE_DIRS "@FLANG_CONFIG_INCLUDE_DIRS@")
+
+# Provide all our library targets to users.
+@FLANG_CONFIG_INCLUDE_EXPORTS@

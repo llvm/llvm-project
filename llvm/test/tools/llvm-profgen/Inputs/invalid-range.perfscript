@@ -1,0 +1,19 @@
+ PERF_RECORD_MMAP2 1243676/1243676: [0x201000(0x1000) @ 0 00:1d 224517108 1044165]: r-xp /home/noinline-cs-pseudoprobe.perfbin
+
+	          20179e
+	          2017f9
+	    7f83e84e7793
+	5541f689495641d7
+ 0x2017cf/0x20179e/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0  0x2017d8/0x2017e3/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0  0x2017cf/0x20179e/P/-/-/0
+
+
+// The consecutive pairs 0x2017bf/0x201760 and 0x2017d8/0x2017e3 form an invalid execution range [0x2017e3, 0x2017bf], should be ignored to avoid bogus instruction ranges.
+
+
+	          20179e
+	          2017f9
+	    7f83e84e7793
+	5541f689495641d7
+ 0x2017cf/0x20179e/P/-/-/0  0x2017cf/0x20179e/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0  0x2017cf/0x20179e/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0  0x2017cf/0x20179e/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0  0x2017cf/0x20179e/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0  0x2017cf/0x20179e/P/-/-/0  0x20177f/0x2017c4/P/-/-/0  0x2017bf/0x201760/P/-/-/0
+
+// Duplicated LBR entries "0x2017cf/0x20179e/P/-/-/0  0x2017cf/0x20179e/P/-/-/0", the range [0x20179e, 0x2017cf] is cross unconditional jmp, should be ignored to avoid bogus instruction ranges.

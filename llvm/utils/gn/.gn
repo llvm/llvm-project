@@ -1,0 +1,19 @@
+# Since this can't be at the toplevel, you either need to pass
+# `--dotfile=llvm/utils/gn/.gn --root=.` to the `gn gen` command
+# or use llvm/utils/gn/gn.py which calls gn with these two flags added.
+
+buildconfig = "//llvm/utils/gn/build/BUILDCONFIG.gn"
+
+# Disallow all calls to exec_script. We should be very conservative about
+# whitelisting things here.
+exec_script_whitelist = []
+
+# Execute action() targets using Python 3.
+script_executable = "python3"
+
+# The normal GN setup is to have BUILD.gn files in-tree and a root BUILD.gn
+# file.  Since LLVM's GN build is unofficial, set secondary_source to tell GN
+# that e.g. llvm/lib/Demangle/BUILD.gn is found at
+# llvm/utils/gn/secondary/llvm/lib/Demangle/BUILD.gn and that the root BUILD.gn
+# file is at llvm/utils/gn/secondary/BUILD.gn
+secondary_source = "//llvm/utils/gn/secondary/"

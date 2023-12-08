@@ -1,0 +1,7 @@
+# RUN: %lldb -x -b -s %s | FileCheck %s
+settings show use-color
+q
+# This tests that LLDB turns off use-color if the output file is not an
+# interactive terminal. In this example, use-color should be off because LLDB
+# is run just by the non-interactive lit test runner.
+# CHECK: use-color (boolean) = false

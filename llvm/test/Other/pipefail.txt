@@ -1,0 +1,2 @@
+REQUIRES: shell
+RUN: ((false | true) && echo true || echo false) | grep false

@@ -1,0 +1,20 @@
+Basic tests for testing text dump functions.
+
+RUN: llvm-profdata show --all-functions -counts --text %p/Inputs/basic.proftext > %t-basic.proftext1
+RUN: llvm-profdata merge -o %t-basic.proftext2 --text  %p/Inputs/basic.proftext
+RUN: llvm-profdata merge --text %p/Inputs/basic.proftext | diff %t-basic.proftext2 -
+
+RUN: llvm-profdata merge -binary -o %t-basic.profdata1 %t-basic.proftext1
+RUN: llvm-profdata merge -o %t-basic.profdata2 %t-basic.proftext2
+
+RUN: llvm-profdata show --all-functions -counts  %t-basic.profdata1 > %t-basic.dump3
+RUN: llvm-profdata show --all-functions -counts  %t-basic.profdata2 > %t-basic.dump4
+
+RUN: llvm-profdata merge -text -o %t-basic.proftext5 %t-basic.profdata1
+RUN: llvm-profdata merge -text -o %t-basic.proftext6 %t-basic.profdata2
+
+RUN: diff %t-basic.dump3 %t-basic.dump4
+RUN: diff %t-basic.proftext5 %t-basic.proftext6
+
+RUN: not llvm-profdata merge -gcc -o %t-basic-profdata3 %t-basic.proftext2 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+UNKNOWN: unknown format is specified

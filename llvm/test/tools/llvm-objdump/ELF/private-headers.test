@@ -1,0 +1,65 @@
+## Check that with ELF input --private-headers outputs the program header,
+## dynamic section and version definitions.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --private-headers %t | FileCheck %s
+
+# CHECK:      Program Header:
+# CHECK-NEXT: LOAD off    0x00000000000000b0 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# CHECK-NEXT: filesz 0x000000000000003d memsz 0x000000000000003d flags ---
+# CHECK-NEXT: DYNAMIC off 0x00000000000000cd vaddr 0x000000000000101d paddr 0x000000000000101d align 2**0
+# CHECK-NEXT: filesz 0x0000000000000020 memsz 0x0000000000000020 flags ---
+# CHECK:      Dynamic Section:
+# CHECK-NEXT:  NEEDED bar
+# CHECK:      Version definitions:
+# CHECK-NEXT: 1 0x01 0x075bcd15 foo
+# CHECK-NEXT: 2 0x02 0x3ade68b1 VERSION_1
+# CHECK-NEXT:                   VERSION_2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Content: "0062617200666F6F0056455253494F4E5F320056455253494F4E5F3100"
+    # Content is: bar, foo, VERSION_2, VERSION_1
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0
+  - Name:            .gnu.version_d
+    Type:            SHT_GNU_verdef
+    Entries:
+      - Version:         1
+        Flags:           1
+        VersionNdx:      1
+        Hash:            123456789
+        Names:
+          - foo
+      - Version:         1
+        Flags:           2
+        VersionNdx:      2
+        Hash:            987654321
+        Names:
+          - VERSION_1
+          - VERSION_2
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x101D
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+DynamicSymbols:
+  - Name:    bar
+    Binding: STB_GLOBAL

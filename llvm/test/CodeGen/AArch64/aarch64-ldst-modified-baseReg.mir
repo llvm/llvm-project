@@ -1,0 +1,105 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
+#
+# When the AArch64 Load Store Optimization pass tries to convert load instructions
+# into a ldp instruction, and when the base register of the second ldr instruction
+# has been modified in between these two ldr instructions, the conversion should not
+# occur.
+#
+# For example, for the following pattern:
+#     ldr x9 [x10]
+#     ldr x10 [x8]
+#     ldr x10 [x10, 8],
+# the first and third ldr instructions cannot be converted to ldp x9, x10, [x10].
+#
+# CHECK-LABEL: name: ldr-modified-baseReg-no-ldp1
+# CHECK-NOT: LDP
+# CHECK: $x9 = LDRXui $x10, 1 :: (load (s64))
+# CHECK: $x10 = LDURXi $x8, 1 :: (load (s64))
+# CHECK: $x10 = LDRXui $x10, 0 :: (load (s64))
+# CHECK: RET
+---
+name: ldr-modified-baseReg-no-ldp1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x8, $x10
+
+    $x9 = LDRXui $x10, 1 :: (load (s64))
+    $x10 = LDURXi $x8, 1 :: (load (s64))
+    $x10 = LDRXui $x10, 0 :: (load (s64))
+    RET undef $lr, implicit undef $w0
+...
+
+# CHECK-LABEL: name: str-modified-baseReg-no-stp1
+# CHECK-NOT: STP
+# CHECK: STRXui $x9, $x10, 1 :: (store (s64))
+# CHECK: $x10 = LDRXui $x8, 0 :: (load (s64))
+# CHECK: STRXui $x10, $x10, 0 :: (store (s64))
+# CHECK: RET
+---
+name: str-modified-baseReg-no-stp1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x9, $x8, $x10
+
+    STRXui $x9, $x10, 1 :: (store (s64))
+    $x10 = LDRXui $x8, 0 :: (load (s64))
+    STRXui $x10, $x10, 0 :: (store (s64))
+    RET undef $lr, implicit undef $w0
+...
+
+# CHECK-LABEL: name: ldr-modified-baseReg-no-ldp2
+# CHECK-NOT: LDP
+# CHECK: $x9 = LDRXui $x10, 1 :: (load (s64))
+# CHECK: $x10 = MOVi64imm 13
+# CHECK: $x11 = LDRXui $x10, 0 :: (load (s64))
+# CHECK: RET
+---
+name: ldr-modified-baseReg-no-ldp2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x8, $x10
+
+    $x9 = LDRXui $x10, 1 :: (load (s64))
+    $x10 = MOVi64imm 13
+    $x11 = LDRXui $x10, 0 :: (load (s64))
+    RET undef $lr, implicit undef $w0
+...
+
+# CHECK-LABEL: name: ldr-modified-baseReg-no-ldp3
+# CHECK-NOT: LDP
+# CHECK: $x9 = LDRXui $x10, 1 :: (load (s64))
+# CHECK: $x10 = ADDXri $x8, $x11, 0
+# CHECK: $x12 = LDRXui $x10, 0 :: (load (s64))
+# CHECK: RET
+---
+name: ldr-modified-baseReg-no-ldp3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x8, $x10, $x11
+
+    $x9 = LDRXui $x10, 1 :: (load (s64))
+    $x10 = ADDXri $x8, $x11, 0
+    $x12 = LDRXui $x10, 0 :: (load (s64))
+    RET undef $lr, implicit undef $w0
+...
+
+# CHECK-LABEL: name: ldr-modified-baseAddr-convert-to-ldp
+# CHECK: $x12, $x9 = LDPXi $x10, 0 :: (load (s64))
+# CHECK: STRXui $x11, $x10, 1 :: (store (s64))
+# CHECK: RET
+---
+name: ldr-modified-baseAddr-convert-to-ldp
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x8, $x10, $x11
+
+    $x9 = LDRXui $x10, 1 :: (load (s64))
+    STRXui $x11, $x10, 1 :: (store (s64))
+    $x12 = LDRXui $x10, 0 :: (load (s64))
+    RET undef $lr, implicit undef $w0
+...

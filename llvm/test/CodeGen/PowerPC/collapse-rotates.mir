@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=powerpc64le--linux-gnu -start-before ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s
+
+--- |
+  ; ModuleID = 'b.ll'
+  source_filename = "b.ll"
+  target datalayout = "e-m:e-i64:64-n32:64"
+  
+  define dso_local i64 @test(i64 %l) {
+  entry:
+    %shl = shl i64 %l, 3
+    ret i64 %shl
+  }
+
+...
+---
+name:            test
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '$x3', virtual-reg: '%0' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x3
+  
+    %0:g8rc = COPY $x3
+    %1:g8rc = RLDICL %0, 2, 32
+    %2:g8rc = RLDICR %1, 3, 58
+    $x3 = COPY %2
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+
+...
+# CHECK: rldic 3, 3, 5, 29

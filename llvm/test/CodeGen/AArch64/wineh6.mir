@@ -1,0 +1,132 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN:    -filetype=obj | llvm-readobj --unwind - | FileCheck %s
+# Check save_fplr_x, set_fp, alloc_s
+
+# CHECK: 	ExceptionData {
+# CHECK-NEXT:      FunctionLength: 92
+# CHECK-NEXT:      Version: 0
+# CHECK-NEXT:      ExceptionData: No
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 1
+# CHECK-NEXT:      ByteCodeLength: 4
+# CHECK-NEXT:      Prologue [
+# CHECK-NEXT:        0x02                ; sub sp, #32
+# CHECK-NEXT:        0xe1                ; mov fp, sp
+# CHECK-NEXT:        0x81                ; stp x29, x30, [sp, #-16]!
+# CHECK-NEXT:        0xe4                ; end
+# CHECK-NEXT:      ]
+# CHECK-NEXT:      Epilogue [
+# CHECK-NEXT:        0xe1                ; mov sp, fp
+# CHECK-NEXT:        0x81                ; ldp x29, x30, [sp], #16
+# CHECK-NEXT:        0xe4                ; end
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+...
+---
+name:            '?func@@YAHHHHH@Z'
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI: true
+registers:
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+  - { reg: '$w2', virtual-reg: '' }
+  - { reg: '$w3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  24
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: default, offset: -20, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: -24, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, name: '', type: default, offset: -28, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -12, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 3, name: '', type: default, offset: -32, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -16, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 4, name: '', type: default, offset: -40, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -24, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 5, name: '', type: variable-sized, offset: -40,
+      alignment: 1, stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -24, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $w2, $w3, $lr
+
+    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.7), (store (s64) into %stack.8)
+    frame-setup SEH_SaveFPLR_X -16
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup SEH_SetFP
+    $sp = frame-setup SUBXri $sp, 32, 0
+    frame-setup SEH_StackAlloc 32
+    frame-setup SEH_PrologEnd
+    STURWi killed renamable $w3, $fp, -4
+    STURWi killed renamable $w2, $fp, -8
+    STURWi killed renamable $w1, $fp, -12
+    STURWi killed renamable $w0, $fp, -16
+    renamable $x8 = LDURSWi $fp, -16
+    renamable $x8 = ADDXri killed renamable $x8, 15, 0
+    renamable $x8 = UBFMXri killed renamable $x8, 4, 63
+    $x15 = COPY renamable $x8
+    STURXi killed $x8, $fp, -32 :: (store (s64) into %stack.6)
+    BL &__chkstk, csr_aarch64_stackprobe_windows, implicit-def dead $lr, implicit $sp, implicit killed $x15
+    renamable $x8 = COPY $sp
+    $x15 = LDURXi $fp, -32 :: (load (s64) from %stack.6)
+    renamable $x8 = SUBSXrs killed renamable $x8, killed renamable $x15, 4, implicit-def dead $nzcv
+    $sp = COPY renamable $x8
+    STURXi killed renamable $x8, $fp, -24
+    renamable $x0 = LDURXi $fp, -24
+    renamable $w1 = COPY $wzr
+    $w0 = COPY killed renamable $w1
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy ADDXri $fp, 0, 0
+    frame-destroy SEH_SetFP
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2
+    frame-destroy SEH_SaveFPLR_X -16
+    frame-destroy SEH_EpilogEnd
+    RET_ReallyLR implicit killed $w0
+
+...

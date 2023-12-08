@@ -1,0 +1,68 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+
+# Check that an unpaired register that is even isn't paired with lr.
+
+# CHECK: early-clobber $sp = frame-setup STPXpre killed $x19, killed $x20, $sp, -4
+# CHECK-NEXT: frame-setup SEH_SaveRegP_X 19, 20, -32
+# CHECK-NEXT: frame-setup STRXui killed $x22, $sp, 2
+# CHECK-NEXT: frame-setup SEH_SaveReg 22, 16
+# CHECK-NEXT: frame-setup STRXui killed $lr, $sp, 3
+# CHECK-NEXT: frame-setup SEH_SaveReg 30, 24
+# CHECK-NEXT: frame-setup SEH_PrologEnd
+
+--- |
+
+  define dso_local i32 @func(i32 %a) { ret i32 %a }
+  declare dso_local i32 @other()
+
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  4
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x22, $x19, $x20
+
+    BL @other, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    $x19 = ADDXrr $x0, $x0
+    $x20 = ADDXrr $x19, $x0
+    $x22 = ADDXrr $x20, killed $x19
+    $x0 = ADDXrr $x0, killed $x22
+
+    RET_ReallyLR
+
+...

@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the cfi directives correctly.
+
+--- |
+
+  declare void @foo()
+
+  define void @trivial_fp_func() {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+...
+---
+name:            trivial_fp_func
+# CHECK-LABEL: name: trivial_fp_func
+body: |
+  bb.0.entry:
+    ; CHECK: CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    ; CHECK: CFI_INSTRUCTION def_cfa_register $w29
+    frame-setup CFI_INSTRUCTION def_cfa_register $w29
+    ; CHECK: CFI_INSTRUCTION def_cfa_offset -8
+    frame-setup CFI_INSTRUCTION def_cfa_offset -8
+    ; CHECK: CFI_INSTRUCTION llvm_def_aspace_cfa $w29, 16, 6
+    frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $w29, 16, 6
+    ; CHECK: CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    ; CHECK: CFI_INSTRUCTION rel_offset $w30, -8
+    frame-setup CFI_INSTRUCTION rel_offset $w30, -8
+    ; CHECK: CFI_INSTRUCTION adjust_cfa_offset -8
+    frame-setup CFI_INSTRUCTION adjust_cfa_offset -8
+    CFI_INSTRUCTION restore $w30
+    ; CHECK: CFI_INSTRUCTION restore $w30
+    CFI_INSTRUCTION undefined $w30
+    ; CHECK: CFI_INSTRUCTION undefined $w30
+    CFI_INSTRUCTION same_value $w29
+    ; CHECK: CFI_INSTRUCTION same_value $w29
+    CFI_INSTRUCTION register $w20, $w30
+    ; CHECK: CFI_INSTRUCTION register $w20, $w30
+    CFI_INSTRUCTION remember_state
+    ; CHECK: CFI_INSTRUCTION remember_state
+    CFI_INSTRUCTION restore_state
+    ; CHECK: CFI_INSTRUCTION restore_state
+    CFI_INSTRUCTION escape 0x61, 0x62, 0x63
+    ; CHECK: CFI_INSTRUCTION escape 0x61, 0x62, 0x63{{$}}
+    CFI_INSTRUCTION window_save
+    ; CHECK: CFI_INSTRUCTION window_save
+    CFI_INSTRUCTION negate_ra_sign_state
+    ; CHECK: CFI_INSTRUCTION negate_ra_sign_state
+    RET_ReallyLR

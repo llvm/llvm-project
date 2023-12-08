@@ -1,0 +1,3 @@
+# RUN: not modularize %S/Inputs/CompileError/module.modulemap 2>&1 | FileCheck %s
+
+# CHECK: {{.*}}{{[/\\]}}Inputs{{[/\\]}}CompileError{{[/\\]}}HasError.h:1:9: error: unknown type name 'WithoutDep'

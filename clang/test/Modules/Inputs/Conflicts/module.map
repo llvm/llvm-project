@@ -1,0 +1,10 @@
+module Conflicts {
+  explicit module A {
+    header "conflict_a.h"
+    conflict B, "we just don't like B"
+  }
+
+  module B {
+    header "conflict_b.h"
+  }
+}

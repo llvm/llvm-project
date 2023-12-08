@@ -1,0 +1,23 @@
+# RUN: llc -run-pass si-optimize-exec-masking-pre-ra -march=amdgcn -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN %s
+---
+# GCN-LABEL: name: opt_exec_copy_fold
+# GCN:             %2:vreg_64 = COPY $exec
+name:            opt_exec_copy_fold
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0_sgpr1' }
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %0:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr0_sgpr1, implicit $exec
+    %1:sreg_64 = V_CMP_NE_U32_e64 0, %0, implicit $exec
+    %2:vreg_64 = COPY $exec
+    %3:sreg_64 = V_CMP_EQ_U64_e64 %1, %2, implicit $exec
+    $scc = COPY %3
+    S_CBRANCH_SCC0 %bb.1, implicit $scc
+  
+  bb.1:
+...
+
+

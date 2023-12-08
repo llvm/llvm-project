@@ -1,0 +1,19 @@
+! RUN: %flang_fc1 -fdebug-dump-symbols %s 2>&1 | FileCheck --dump-input-context=500 %s
+!CHECK: Global scope: size=0 alignment=1 sourceRange=0 bytes
+!CHECK: IntrinsicModules scope: size=0 alignment=1 sourceRange=0 bytes
+!CHECK: Module scope: __fortran_builtins
+!CHECK: Module scope: __cuda_builtins size=0 alignment=1
+!CHECK: Module scope: __fortran_type_info
+!CHECK: Module scope: m size=0 alignment=1
+!CHECK: Subprogram scope: devsubr size=0 alignment=1
+module m
+  implicit none
+ contains
+  attributes(device) subroutine devsubr()
+  !CHECK: blockdim: Use from blockdim in __cuda_builtins
+  !CHECK: blockidx: Use from blockidx in __cuda_builtins
+  !CHECK: griddim: Use from griddim in __cuda_builtins
+  !CHECK: threadidx: Use from threadidx in __cuda_builtins
+  !CHECK: warpsize: Use from warpsize in __cuda_builtins
+  end subroutine
+end module
