@@ -1732,39 +1732,31 @@ ArrayAttr DepthwiseConv1DOp::getIndexingMaps() {
     return cached;
 
   MLIRContext *context = getContext();
-  SmallVector<AffineExpr> symbolBindings(
-      {getAffineSymbolExpr(0, context), getAffineSymbolExpr(1, context),
-       getAffineSymbolExpr(2, context),
-       getAffineConstantExpr(getStrides().getValues<int64_t>()[0], context),
-       getAffineSymbolExpr(4, context),
-       getAffineConstantExpr(getDilations().getValues<int64_t>()[0], context)});
-  // Don't actually do something stupid like this
-  SmallVector<StringRef> rawStrings =
-      (getChannelFirst())
-          ? SmallVector<StringRef>({
-                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
-                "-> (d0, d2, d1 * s3 + d3 * s5)>",
-                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
-                "-> (d2, d3)>",
-                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
-                "-> (d0, d2, d1)>",
-            })
-          : SmallVector<StringRef>({
-                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
-                "-> (d0, d1 * s3 + d3 * s5, d2)>",
-                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
-                "-> (d3, d2)>",
-                "affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4, s5] "
-                "-> (d0, d1, d2)>",
-            });
-  SmallVector<AffineMap> maps(llvm::map_range(rawStrings, [&](StringRef &m) {
-    return simplifyAffineMap(
-        llvm::cast<AffineMapAttr>(parseAttribute(m, context))
-            .getValue()
-            .replaceDimsAndSymbols({}, symbolBindings, 4, 0));
-  }));
 
-  cached = Builder(context).getAffineMapArrayAttr(maps);
+  // Domain: (n, w, c, kw)
+  AffineExpr n = getAffineDimExpr(0, context);
+  AffineExpr w = getAffineDimExpr(1, context);
+  AffineExpr c = getAffineDimExpr(2, context);
+  AffineExpr kw = getAffineDimExpr(3, context);
+
+  // Temp subsitute for channel position attr
+  int64_t channelPos = (getChannelFirst()) ? 1 : 2;
+  // Initialze operand accesses in nw order and insert c according to channel
+  // position
+  SmallVector<AffineExpr> inExprs(
+      {n, w * getStrides().getValues<int64_t>()[0] +
+              kw * getDilations().getValues<int64_t>()[0]});
+  SmallVector<AffineExpr> kExprs({kw});
+  SmallVector<AffineExpr> outExprs({n, w});
+  inExprs.insert(inExprs.begin() + channelPos, c);
+  kExprs.insert(
+      channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, c);
+  outExprs.insert(outExprs.begin() + channelPos, c);
+
+  cached = Builder(context).getAffineMapArrayAttr(
+      {AffineMap::get(4, 0, inExprs, context),
+       AffineMap::get(4, 0, kExprs, context),
+       AffineMap::get(4, 0, outExprs, context)});
   getOperation()->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
   return cached;
 }

@@ -395,18 +395,19 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
     Performs 1-D depthwise convolution with switchable channel position; either first or last.
   }];
   let description = [{
+    Domain: N, OW, C, KW
 
-    Channel position is determined by the `BoolAttr` `channel_first`. If true,
-    layout is
+    Layout of operands is determined by the `channel_first` `BoolAttr`:
 
-    Input: `NCW`
-    Kernel: `CW`
+    `channel_first == true`:
+      Input: `NCW`
+      Kernel: `CW`
+      Output: `NCW`
 
-    otherwise
-
-    Input: `NWC`
-    Kernel: `WC`
-
+    `channel_first == false`:
+      Input: `NWC`
+      Kernel: `WC`
+      Output: `NWC`
 
   }];
 
