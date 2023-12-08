@@ -10,9 +10,9 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include <memory>
 
 namespace mlir {
@@ -85,7 +85,8 @@ std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 struct FunctionAttrTypes {
-  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
+  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind =
+      mlir::LLVM::framePointerKind::FramePointerKind::None;
 };
 
 std::unique_ptr<mlir::Pass> createFunctionAttrPass();

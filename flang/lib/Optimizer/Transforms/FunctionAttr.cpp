@@ -40,10 +40,10 @@ void FunctionAttrPass::runOnOperation() {
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
-  mlir::MLIRContext* context = &getContext();
+  mlir::MLIRContext *context = &getContext();
   if (framePointerKind != mlir::LLVM::framePointerKind::FramePointerKind::None)
     func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
-                                      context, framePointerKind));
+                                       context, framePointerKind));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
