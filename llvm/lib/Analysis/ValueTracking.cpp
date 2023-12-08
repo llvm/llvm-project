@@ -1465,8 +1465,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
             Q.IIQ.getMetadata(cast<Instruction>(I), LLVMContext::MD_range))
       computeKnownBitsFromRangeMetadata(*MD, Known);
     if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
-      computeKnownBits(RV, Known2, Depth + 1, Q);
-      Known = Known.unionWith(Known2);
+      if (RV->getType() == I->getType()) {
+        computeKnownBits(RV, Known2, Depth + 1, Q);
+        Known = Known.unionWith(Known2);
+      }
     }
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -2712,7 +2714,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
         return isKnownNonZero(RP, Depth, Q);
     } else if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
-      if (isKnownNonZero(RV, Depth, Q))
+      if (RV->getType() == I->getType() && isKnownNonZero(RV, Depth, Q))
         return true;
     }
 
