@@ -29,16 +29,16 @@ defm MEMORY_LOADTAG_A#B: I<(outs rc:$taggedptr), (ins rc:$src),
                     "memory.loadtag\t",
                     0xfc13>;
 
-defm MEMORY_STORETAG_A#B: I<(outs), (ins rc:$src rc:$b16),
+defm MEMORY_STORETAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
                     (outs), (ins),
-                    [(int_wasm_memory_storetag rc:$src rc:$b16)],
+                    [(int_wasm_memory_storetag rc:$src, rc:$b16)],
                     "memory.storetag\t$src, $b16",
                     "memory.storetag\t",
                     0xfc14>;
 
-defm MEMORY_STOREZTAG_A#B: I<(outs), (ins rc:$src rc:$b16),
+defm MEMORY_STOREZTAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
                     (outs), (ins),
-                    [(int_wasm_memory_storeztag rc:$src rc:$b16)],
+                    [(int_wasm_memory_storeztag rc:$src, rc:$b16)],
                     "memory.storeztag\t$src, $b16",
                     "memory.storeztag\t",
                     0xfc15>;
