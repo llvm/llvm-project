@@ -26,6 +26,11 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   assert(i - s.begin() == 3);
   assert(s == "123abc456");
   LIBCPP_ASSERT(is_string_asan_correct(s));
+  typename S::iterator j = s.insert(s.begin() + 6, {'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a',
+                                                    'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'});
+  assert(j - s.begin() == 6);
+  assert(s == "123abcaaaaaaaaaaaaaaaaaaaaaaaaa456");
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

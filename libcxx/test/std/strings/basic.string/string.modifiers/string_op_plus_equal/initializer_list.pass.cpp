@@ -33,6 +33,12 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   s += {'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'};
   assert(s == "123abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
   LIBCPP_ASSERT(is_string_asan_correct(s));
+
+  s += {'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x',
+        'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x',
+        'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x', 'x'};
+  assert(s == "123abcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

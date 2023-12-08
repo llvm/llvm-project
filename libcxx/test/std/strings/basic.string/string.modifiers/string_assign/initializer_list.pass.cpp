@@ -22,8 +22,18 @@
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
   S s("123");
+
+  s.assign({'a', 'b'});
+  assert(s == "ab");
+  LIBCPP_ASSERT(is_string_asan_correct(s));
+
   s.assign({'a', 'b', 'c'});
   assert(s == "abc");
+  LIBCPP_ASSERT(is_string_asan_correct(s));
+
+  s.assign({'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a',
+            'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a'});
+  assert(s == "aaaaaaaaaaaaaaaaaaaaaaaaa");
   LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 

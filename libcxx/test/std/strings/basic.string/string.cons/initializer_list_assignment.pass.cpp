@@ -49,6 +49,15 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     LIBCPP_ASSERT(is_string_asan_correct(s));
     LIBCPP_ASSERT(is_string_asan_correct(result));
   }
+  {
+    typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, Alloc<wchar_t>> S;
+    S s;
+    S& result = (s = {L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a', L'a'});
+    assert(s == L"aaaaaaaaaaaaaaaaaaaaaaaaa");
+    assert(&result == &s);
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+    LIBCPP_ASSERT(is_string_asan_correct(result));
+  }
 #endif
 }
 // clang-format on
