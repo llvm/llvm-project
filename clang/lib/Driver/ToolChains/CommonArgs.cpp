@@ -2583,9 +2583,7 @@ void tools::addMachineOutlinerArgs(const Driver &D,
       // We only support -moutline in AArch64 and ARM targets right now. If
       // we're not compiling for these, emit a warning and ignore the flag.
       // Otherwise, add the proper mllvm flags.
-      if (!(Triple.isARM() || Triple.isThumb() ||
-            Triple.getArch() == llvm::Triple::aarch64 ||
-            Triple.getArch() == llvm::Triple::aarch64_32)) {
+      if (!(Triple.isARM() || Triple.isThumb() || Triple.isAArch64())) {
         D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       } else {
         addArg(Twine("-enable-machine-outliner"));

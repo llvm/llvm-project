@@ -306,6 +306,7 @@ struct BuiltinTypeDeclBuilder {
   }
 
   TemplateParameterListBuilder addTemplateArgumentList();
+  BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names);
 };
 
 struct TemplateParameterListBuilder {
@@ -360,11 +361,19 @@ struct TemplateParameterListBuilder {
     return Builder;
   }
 };
+} // namespace
 
 TemplateParameterListBuilder BuiltinTypeDeclBuilder::addTemplateArgumentList() {
   return TemplateParameterListBuilder(*this);
 }
-} // namespace
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names) {
+  TemplateParameterListBuilder Builder = this->addTemplateArgumentList();
+  for (StringRef Name : Names)
+    Builder.addTypeParameter(Name);
+  return Builder.finalizeTemplateArgs();
+}
 
 HLSLExternalSemaSource::~HLSLExternalSemaSource() {}
 
@@ -390,7 +399,7 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   // Force external decls in the HLSL namespace to load from the PCH.
   (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
-  forwardDeclareHLSLTypes();
+  defineHLSLTypesWithForwardDeclarations();
 
   // This adds a `using namespace hlsl` directive. In DXC, we don't put HLSL's
   // built in types inside a namespace, but we are planning to change that in
@@ -467,18 +476,32 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
                      .Record;
 }
 
-void HLSLExternalSemaSource::forwardDeclareHLSLTypes() {
+/// Set up common members and attributes for buffer types
+static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
+                                              ResourceClass RC,
+                                              ResourceKind RK) {
+  return BuiltinTypeDeclBuilder(Decl)
+      .addHandleMember()
+      .addDefaultHandleConstructor(S, RC)
+      .annotateResourceClass(RC, RK);
+}
+
+void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addTemplateArgumentList()
-             .addTypeParameter("element_type", SemaPtr->getASTContext().FloatTy)
-             .finalizeTemplateArgs()
+             .addSimpleTemplateParams({"element_type"})
              .Record;
-  if (!Decl->isCompleteDefinition())
-    Completions.insert(
-        std::make_pair(Decl->getCanonicalDecl(),
-                       std::bind(&HLSLExternalSemaSource::completeBufferType,
-                                 this, std::placeholders::_1)));
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+                    ResourceKind::TypedBuffer)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
+}
+
+void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
+                                          CompletionFunction Fn) {
+  Completions.insert(std::make_pair(Record->getCanonicalDecl(), Fn));
 }
 
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
@@ -495,13 +518,4 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (It == Completions.end())
     return;
   It->second(Record);
-}
-
-void HLSLExternalSemaSource::completeBufferType(CXXRecordDecl *Record) {
-  BuiltinTypeDeclBuilder(Record)
-      .addHandleMember()
-      .addDefaultHandleConstructor(*SemaPtr, ResourceClass::UAV)
-      .addArraySubscriptOperators()
-      .annotateResourceClass(ResourceClass::UAV, ResourceKind::TypedBuffer)
-      .completeDefinition();
 }

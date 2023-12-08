@@ -830,7 +830,7 @@ int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
 }
 
 void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, const char *Symbol) {
-  std::lock_guard<std::mutex> Lock(JDStatesMutex);
+  std::unique_lock<std::mutex> Lock(JDStatesMutex);
   auto *JDS = getJITDylibStateByHeader(DSOHandle);
   if (!JDS) {
     std::ostringstream ErrStream;
@@ -860,10 +860,12 @@ void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, const char *Symbol) {
 
   // Otherwise call back to the controller to try to request that the symbol
   // be materialized.
+  Lock.unlock();
   if (auto Err = requestPushSymbols(*JDS, {Symbols.data(), Symbols.size()})) {
     DLFcnError = toString(std::move(Err));
     return nullptr;
   }
+  Lock.lock();
 
   // Try another local resolution.
   visitSymbolAddrs(*JDS, Symbols, [&](size_t Idx, ElemResult E) {
