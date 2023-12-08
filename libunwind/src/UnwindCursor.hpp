@@ -33,6 +33,7 @@
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
     (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
      defined(_LIBUNWIND_TARGET_S390X))
+#include <fcntl.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -2700,19 +2701,18 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // [1] https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/vdso/sigreturn.S
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use process_vm_readv to read
-  // the memory safely instead. process_vm_readv was added in Linux 3.2, and
-  // AArch64 supported was added in Linux 3.7, so the syscall is guaranteed to
-  // be present. Unfortunately, there are Linux AArch64 environments where the
-  // libc wrapper for the syscall might not be present (e.g. Android 5), so call
-  // the syscall directly instead.
+  // directly accessing it could cause a segfault. Use pipe/write/read to read
+  // the memory safely instead.
+  int pipefd[2];
+  if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
+    return false;
   uint32_t instructions[2];
-  struct iovec local_iov = {&instructions, sizeof instructions};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
-  long bytesRead =
-      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  const auto bufferSize = sizeof instructions;
+  if (write(pipefd[1], reinterpret_cast<void *>(pc), bufferSize) != bufferSize)
+    return false;
+  const auto bytesRead = read(pipefd[0], instructions, bufferSize);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (bytesRead != sizeof instructions || instructions[0] != 0xd2801168 ||
+  if (bytesRead != bufferSize || instructions[0] != 0xd2801168 ||
       instructions[1] != 0xd4000001)
     return false;
 
@@ -2762,17 +2762,20 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  int pipefd[2];
+  if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
+    return false;
   uint32_t instructions[2];
-  struct iovec local_iov = {&instructions, sizeof instructions};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
-  long bytesRead =
-      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  const auto bufferSize = sizeof instructions;
+  if (write(pipefd[1], reinterpret_cast<void *>(pc), bufferSize) != bufferSize)
+    return false;
+  const auto bytesRead = read(pipefd[0], instructions, bufferSize);
   // Look for the two instructions used in the sigreturn trampoline
   // __vdso_rt_sigreturn:
   //
   // 0x08b00893 li a7,0x8b
   // 0x00000073 ecall
-  if (bytesRead != sizeof instructions || instructions[0] != 0x08b00893 ||
+  if (bytesRead != bufferSize || instructions[0] != 0x08b00893 ||
       instructions[1] != 0x00000073)
     return false;
 
@@ -2822,13 +2825,18 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // onto the stack.
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use process_vm_readv to
+  // directly accessing it could cause a segfault. Use pipe/write/read to
   // read the memory safely instead.
   uint16_t inst;
-  struct iovec local_iov = {&inst, sizeof inst};
-  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof inst};
-  long bytesRead = process_vm_readv(getpid(), &local_iov, 1, &remote_iov, 1, 0);
-  if (bytesRead == sizeof inst && (inst == 0x0a77 || inst == 0x0aad)) {
+  int pipefd[2];
+  if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
+    return false;
+  uint16_t inst;
+  const auto bufferSize = sizeof inst;
+  if (write(pipefd[1], reinterpret_cast<void *>(pc), bufferSize) != bufferSize)
+    return false;
+  const auto bytesRead = read(pipefd[0], &inst, bufferSize);
+  if (bytesRead == bufferSize && (inst == 0x0a77 || inst == 0x0aad)) {
     _info = {};
     _info.start_ip = pc;
     _info.end_ip = pc + 2;
