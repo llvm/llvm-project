@@ -103,6 +103,40 @@ constexpr bool operator_tests() {
   }
   {
     // What operators are valid for an iterator derived from a stride view
+    // over a sized input view.
+    using View               = InputView<SizedInputIterator>;
+    using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<View>>;
+
+    static_assert(is_plus_plusable_post<StrideViewIterator>);
+    static_assert(is_plus_plusable_pre<StrideViewIterator>);
+    static_assert(!is_minus_minusable_post<StrideViewIterator>);
+    static_assert(!is_minus_minusable_pre<StrideViewIterator>);
+    static_assert(!is_plus_equalable<StrideViewIterator>);
+    static_assert(!is_minus_equalable<StrideViewIterator>);
+    static_assert(is_iterator_minusable<StrideViewIterator>);
+    static_assert(!is_difference_plusable<StrideViewIterator>);
+    static_assert(!is_difference_minusable<StrideViewIterator>);
+    static_assert(!is_relationally_comparable<StrideViewIterator>);
+  }
+  {
+    // What operators are valid for an iterator derived from a stride view
+    // over a sized forward view.
+    using View               = InputView<SizedForwardIterator>;
+    using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<View>>;
+
+    static_assert(is_plus_plusable_post<StrideViewIterator>);
+    static_assert(is_plus_plusable_pre<StrideViewIterator>);
+    static_assert(!is_minus_minusable_post<StrideViewIterator>);
+    static_assert(!is_minus_minusable_pre<StrideViewIterator>);
+    static_assert(!is_plus_equalable<StrideViewIterator>);
+    static_assert(!is_minus_equalable<StrideViewIterator>);
+    static_assert(is_iterator_minusable<StrideViewIterator>);
+    static_assert(!is_difference_plusable<StrideViewIterator>);
+    static_assert(!is_difference_minusable<StrideViewIterator>);
+    static_assert(!is_relationally_comparable<StrideViewIterator>);
+  }
+  {
+    // What operators are valid for an iterator derived from a stride view
     // over a bidirectional view.
     using View               = InputView<bidirectional_iterator<int*>>;
     using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<View>>;
