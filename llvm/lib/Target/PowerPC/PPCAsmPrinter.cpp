@@ -1654,25 +1654,24 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
   // non-zero offset to the TLS variable address.
   // For when TLS variables are extern, this is safe to do because we can
   // assume that the address of extern TLS variables are zero.
-  if (FinalAddress < 32768)
-    Expr = MCBinaryExpr::createAdd(
-        Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
-  else {
+  Expr = MCBinaryExpr::createAdd(
+      Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
+  if (FinalAddress >= 32768) {
     // Handle the written offset for cases where:
     //   TLS variable address + Offset > 32KB.
 
-    // The assembly that is printed is actually:
+    // The assembly that is printed will look like:
     //  TLSVar@le + Offset - Delta
     // where Delta is a multiple of 64KB: ((FinalAddress + 32768) & ~0xFFFF).
-    ptrdiff_t OffsetDelta = Offset - ((FinalAddress + 32768) & ~0xFFFF);
+    ptrdiff_t Delta = ((FinalAddress + 32768) & ~0xFFFF);
     // Check that the total instruction displacement fits within [-32768,32768).
-    ptrdiff_t InstDisp = TLSVarAddress + OffsetDelta;
+    ptrdiff_t InstDisp = TLSVarAddress + Offset - Delta;
     assert((InstDisp < 32768) ||
            (InstDisp >= -32768) &&
                "Expecting the instruction displacement for local-exec TLS "
                "variables to be between [-32768, 32768)!");
     Expr = MCBinaryExpr::createAdd(
-        Expr, MCConstantExpr::create(OffsetDelta, OutContext), OutContext);
+        Expr, MCConstantExpr::create(-Delta, OutContext), OutContext);
   }
 
   return Expr;
