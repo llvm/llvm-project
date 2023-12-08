@@ -146,8 +146,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
   if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
-  else if (isa<GlobalIFunc>(CalleeV) &&
-           MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+  else if (isa<GlobalIFunc>(CalleeV)) {
     // IR IFuncs can't be forward declared (only defined), so the callee must be
     // in the same TU and therefore we can direct-call it without worrying about
     // it being out of range.
