@@ -2027,18 +2027,6 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   uint64_t StringTableSize = 0;
   std::optional<DynRegionInfo> DynSymFromTable;
   for (const Elf_Dyn &Dyn : dynamic_table()) {
-    if (Obj.getHeader().e_machine == EM_AARCH64) {
-      switch (Dyn.d_tag) {
-      case ELF::DT_AARCH64_AUTH_RELRSZ:
-        DynRelrRegion.Size = Dyn.getVal();
-        DynRelrRegion.SizePrintName = "DT_AARCH64_AUTH_RELRSZ value";
-        continue;
-      case ELF::DT_AARCH64_AUTH_RELRENT:
-        DynRelrRegion.EntSize = Dyn.getVal();
-        DynRelrRegion.EntSizePrintName = "DT_AARCH64_AUTH_RELRENT value";
-        continue;
-      }
-    }
     switch (Dyn.d_tag) {
     case ELF::DT_HASH:
       HashTable = reinterpret_cast<const Elf_Hash *>(
@@ -2102,12 +2090,10 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       break;
     case ELF::DT_RELR:
     case ELF::DT_ANDROID_RELR:
-    case ELF::DT_AARCH64_AUTH_RELR:
       DynRelrRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_RELRSZ:
     case ELF::DT_ANDROID_RELRSZ:
-    case ELF::DT_AARCH64_AUTH_RELRSZ:
       DynRelrRegion.Size = Dyn.getVal();
       DynRelrRegion.SizePrintName = Dyn.d_tag == ELF::DT_RELRSZ
                                         ? "DT_RELRSZ value"
@@ -2115,7 +2101,6 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       break;
     case ELF::DT_RELRENT:
     case ELF::DT_ANDROID_RELRENT:
-    case ELF::DT_AARCH64_AUTH_RELRENT:
       DynRelrRegion.EntSize = Dyn.getVal();
       DynRelrRegion.EntSizePrintName = Dyn.d_tag == ELF::DT_RELRENT
                                            ? "DT_RELRENT value"
@@ -2482,8 +2467,6 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_PREINIT_ARRAYSZ:
   case DT_RELRSZ:
   case DT_RELRENT:
-  case DT_AARCH64_AUTH_RELRSZ:
-  case DT_AARCH64_AUTH_RELRENT:
   case DT_ANDROID_RELSZ:
   case DT_ANDROID_RELASZ:
     return std::to_string(Value) + " (bytes)";
@@ -3816,12 +3799,9 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
 }
 
 template <class ELFT>
-static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
-                                   const typename ELFT::Ehdr &EHeader) {
+static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
-  bool IsRelr =
-      SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR ||
-      (EHeader.e_machine == EM_AARCH64 && SType == ELF::SHT_AARCH64_AUTH_RELR);
+  bool IsRelr = SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR;
   if (ELFT::Is64Bits)
     OS << "    ";
   else
@@ -3846,18 +3826,15 @@ void GNUELFDumper<ELFT>::printDynamicRelocHeader(unsigned Type, StringRef Name,
   uint64_t Offset = Reg.Addr - this->Obj.base();
   OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
      << utohexstr(Offset, /*LowerCase=*/true) << " contains " << Reg.Size << " bytes:\n";
-  printRelocHeaderFields<ELFT>(OS, Type, this->Obj.getHeader());
+  printRelocHeaderFields<ELFT>(OS, Type);
 }
 
 template <class ELFT>
-static bool isRelocationSec(const typename ELFT::Shdr &Sec,
-                            const typename ELFT::Ehdr &EHeader) {
+static bool isRelocationSec(const typename ELFT::Shdr &Sec) {
   return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
          Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
          Sec.sh_type == ELF::SHT_ANDROID_RELA ||
-         Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-         (EHeader.e_machine == EM_AARCH64 &&
-          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR);
+         Sec.sh_type == ELF::SHT_ANDROID_RELR;
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
@@ -3873,10 +3850,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       return RelasOrErr->size();
     }
 
-    if (!opts::RawRelr &&
-        (Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-         (this->Obj.getHeader().e_machine == EM_AARCH64 &&
-          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR))) {
+    if (!opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
+                           Sec.sh_type == ELF::SHT_ANDROID_RELR)) {
       Expected<Elf_Relr_Range> RelrsOrErr = this->Obj.relrs(Sec);
       if (!RelrsOrErr)
         return RelrsOrErr.takeError();
@@ -3888,7 +3863,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
 
   bool HasRelocSections = false;
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (!isRelocationSec<ELFT>(Sec, this->Obj.getHeader()))
+    if (!isRelocationSec<ELFT>(Sec))
       continue;
     HasRelocSections = true;
 
@@ -3905,7 +3880,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << utohexstr(Offset, /*LowerCase=*/true) << " contains " << EntriesNum
        << " entries:\n";
-    printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
+    printRelocHeaderFields<ELFT>(OS, Sec.sh_type);
     this->printRelocationsHelper(Sec);
   }
   if (!HasRelocSections)
@@ -5338,31 +5313,6 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
 }
 
 template <class ELFT>
-static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
-                             ArrayRef<uint8_t> Desc) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  OS << "    AArch64 PAuth ABI tag: ";
-  if (Desc.size() < 16) {
-    OS << format("<corrupted size: expected at least 16, got %d>", Desc.size());
-    return false;
-  }
-
-  uint64_t Platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t Version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  OS << format("platform 0x%x, version 0x%x", Platform, Version);
-
-  if (Desc.size() > 16)
-    OS << ", additional info 0x"
-       << toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16));
-
-  return true;
-}
-
-template <class ELFT>
 void GNUELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
     const ArrayRef<uint8_t> AndroidNoteDesc,
@@ -5761,10 +5711,6 @@ const NoteType AndroidNoteTypes[] = {
      "NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)"},
 };
 
-const NoteType ARMNoteTypes[] = {
-    {ELF::NT_ARM_TYPE_PAUTH_ABI_TAG, "NT_ARM_TYPE_PAUTH_ABI_TAG"},
-};
-
 const NoteType CoreNoteTypes[] = {
     {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
     {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
@@ -5883,8 +5829,6 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     return FindNote(LLVMOMPOFFLOADNoteTypes);
   if (Name == "Android")
     return FindNote(AndroidNoteTypes);
-  if (Name == "ARM")
-    return FindNote(ARMNoteTypes);
 
   if (ELFType == ELF::ET_CORE)
     return FindNote(CoreNoteTypes);
@@ -6039,9 +5983,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNote(OS, Type, Descriptor))
-        return Error::success();
-    } else if (Name == "ARM") {
-      if (printAArch64Note<ELFT>(OS, Type, Descriptor))
         return Error::success();
     }
     if (!Descriptor.empty()) {
@@ -6235,13 +6176,11 @@ void ELFDumper<ELFT>::forEachRelocationDo(
                               toString(std::move(E)));
   };
 
-  // SHT_RELR/SHT_ANDROID_RELR/SHT_AARCH64_AUTH_RELR sections do not have an
-  // associated symbol table. For them we should not treat the value of the
-  // sh_link field as an index of a symbol table.
+  // SHT_RELR/SHT_ANDROID_RELR sections do not have an associated symbol table.
+  // For them we should not treat the value of the sh_link field as an index of
+  // a symbol table.
   const Elf_Shdr *SymTab;
-  if (Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_RELR &&
-      !(Obj.getHeader().e_machine == EM_AARCH64 &&
-        Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR)) {
+  if (Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_RELR) {
     Expected<const Elf_Shdr *> SymTabOrErr = Obj.getSection(Sec.sh_link);
     if (!SymTabOrErr) {
       Warn(SymTabOrErr.takeError(), "unable to locate a symbol table for");
@@ -6269,10 +6208,6 @@ void ELFDumper<ELFT>::forEachRelocationDo(
       Warn(RangeOrErr.takeError());
     }
     break;
-  case ELF::SHT_AARCH64_AUTH_RELR:
-    if (Obj.getHeader().e_machine != EM_AARCH64)
-      break;
-    [[fallthrough]];
   case ELF::SHT_RELR:
   case ELF::SHT_ANDROID_RELR: {
     Expected<Elf_Relr_Range> RangeOrErr = Obj.relrs(Sec);
@@ -6969,7 +6904,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
   ListScope D(W, "Relocations");
 
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (!isRelocationSec<ELFT>(Sec, this->Obj.getHeader()))
+    if (!isRelocationSec<ELFT>(Sec))
       continue;
 
     StringRef Name = this->getPrintableSectionName(Sec);
@@ -7611,29 +7546,6 @@ static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
 }
 
 template <class ELFT>
-static bool printAarch64NoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
-                                      ScopedPrinter &W) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  if (Desc.size() < 16)
-    return false;
-
-  uint64_t platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  W.printNumber("Platform", platform);
-  W.printNumber("Version", version);
-
-  if (Desc.size() > 16)
-    W.printString("Additional info",
-                  toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16)));
-
-  return true;
-}
-
-template <class ELFT>
 void LLVMELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
     const ArrayRef<uint8_t> AndroidNoteDesc,
@@ -7768,9 +7680,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNoteLLVMStyle(Type, Descriptor, W))
-        return Error::success();
-    } else if (Name == "ARM") {
-      if (printAarch64NoteLLVMStyle<ELFT>(Type, Descriptor, W))
         return Error::success();
     }
     if (!Descriptor.empty()) {
