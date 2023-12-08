@@ -273,7 +273,6 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     break;
   case ELF::EM_AARCH64:
     switch (Type) {
-      STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_AUTH_RELR);
       STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
       STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
     }
