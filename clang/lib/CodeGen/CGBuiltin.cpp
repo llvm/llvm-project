@@ -20559,7 +20559,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *B16 = EmitScalarExpr(E->getArg(1));
     return Builder.CreateCall(Callee, {Ptr, B16});
   }
-  case WebAssembly::BI__builtin_wasm_memory_storeztag: {
+  case WebAssembly::BI__builtin_wasm_memory_storez1tag: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storez1tag);
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     Value *B16 = EmitScalarExpr(E->getArg(1));
