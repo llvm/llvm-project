@@ -28,6 +28,7 @@ namespace mlir {
 namespace linalg {
 class IteratorTypeAttr;
 class LinalgOp;
+class DepthwiseConvolutionOpInterface;
 
 namespace detail {
 /// Implementation of the method that check if given operands
@@ -115,6 +116,11 @@ bool isaCopyOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
+// DictionaryAttr getStridesDict(DepthwiseConvolutionOpInterface op);
+DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
+DenseIntElementsAttr getDilationsAttr(DepthwiseConvolutionOpInterface op);
+BoolAttr getChannelFirstAttr(DepthwiseConvolutionOpInterface op);
+ArrayAttr getIndexingMaps(DepthwiseConvolutionOpInterface op);
 /// Returns true if the block contains a contraction of the following form:
 ///
 ///   %0 = <elemwise>(permutation-of(cu(block-argument-0),

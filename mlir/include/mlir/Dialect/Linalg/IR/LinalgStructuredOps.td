@@ -389,7 +389,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 //===----------------------------------------------------------------------===//
 
 def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
-  [AttrSizedOperandSegments, LinalgConvolutionOpInterface]> {
+  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
     
   let summary = [{
     Performs 1-D depthwise convolution with switchable channel position; either first or last.
@@ -414,10 +414,10 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
     let arguments = (ins
       Variadic<TensorOrMemref>:$inputs,
       Variadic<TensorOrMemref>:$inits,
-      DefaultValuedOptionalAttr<BoolAttr, "true">:$channel_first,
-      DefaultValuedOptionalAttr<RankedI64ElementsAttr<[1]>,
+      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
+      DefaultValuedAttr<RankedI64ElementsAttr<[1]>,
         "{ static_cast<int64_t>(1) }">:$strides,
-      DefaultValuedOptionalAttr<RankedI64ElementsAttr<[1]>,
+      DefaultValuedAttr<RankedI64ElementsAttr<[1]>,
         "{ static_cast<int64_t>(1) }">:$dilations
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
@@ -435,7 +435,8 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
     let extraClassDeclaration = structuredOpsBaseDecls # [{
       // Declare functions necessary for LinalgStructuredInterface.
       SmallVector<utils::IteratorType> getIteratorTypesArray();
-      ArrayAttr getIndexingMaps();
+      // Figure out how to get implementation in `LinalgDepthwiseConvolutionOpInterface` working 
+      ArrayAttr getIndexingMaps() { return detail::getIndexingMaps(*this); };
       std::string getLibraryCallName() {
         return "op_has_no_registered_library_name";
       }

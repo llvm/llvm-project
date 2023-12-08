@@ -178,6 +178,8 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
   ];
 }
 
+
+
 def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
   let description = [{
     A fill operation is defined in general terms:
@@ -871,7 +873,51 @@ def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
           return {};
         }]
       >
-  ];
+  ]; 
 }
+
+def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpInterface", [LinalgConvolutionOpInterface]> {
+    let description = [{
+      A depthwise convolution is defined in general terms:
+      1. it is a convolution as defined by `ConvolutionOpInterface`
+      1. `in_channels = K * out_channels` for some integer `K`
+      4. The indexing maps of the input have expressions that satisfy
+      ```
+        AffineExpr ::== AffineDimExpr | ConvolvedExpr
+        ConvolvedExpr ::== MulExpr (`+` MulExpr)+
+        MulExpr ::== AffineDimExpr (`*` (AffineConstantExpr | AffineSymbolExpr))?
+      ```
+    }];
+    let cppNamespace = "::mlir::linalg";
+    let verify = [{ return detail::verifyConvolutionInterface($_op); }];
+    let methods = [
+      InterfaceMethod<[{
+        Returns strides attribute.
+      }],
+      "::mlir::DenseIntElementsAttr", "getStridesAttr", (ins),
+        /*methodBody=*/[{}],
+        /*defaultImplementation=*/[{
+          printf("whatever\n");
+          return detail::getStridesAttr($_op);
+        }]>,
+      InterfaceMethod<[{
+        Returns dilations attribute.
+      }],
+      "::mlir::DenseIntElementsAttr", "getDilationsAttr", (ins),
+        /*methodBody=*/[{}],
+        /*defaultImplementation=*/[{
+          printf("whatever\n");
+          return detail::getDilationsAttr($_op);
+        }]>,
+      InterfaceMethod<[{
+        Returns channel dim attribute.
+      }],
+      "::mlir::BoolAttr", "getChannelFirstAttr", (ins),
+        /*methodBody=*/[{}],
+        /*defaultImplementation=*/[{
+          return detail::getChannelFirstAttr($_op);
+        }]>
+    ];
+  }
 
 #endif // LINALG_IR_LINALGINTERFACES

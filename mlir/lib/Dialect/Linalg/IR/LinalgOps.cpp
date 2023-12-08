@@ -1725,41 +1725,90 @@ SmallVector<utils::IteratorType> DepthwiseConv1DOp::getIteratorTypesArray() {
   ;
 }
 
-ArrayAttr DepthwiseConv1DOp::getIndexingMaps() {
-  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(
-      LinalgDialect::kMemoizedIndexingMapsAttrName);
-  if (cached)
-    return cached;
+// ArrayAttr getNDIndexngMaps(DepthwiseConvolutionOpInterface op) {
+//   ArrayAttr cached = op->getAttrOfType<ArrayAttr>(
+//       LinalgDialect::kMemoizedIndexingMapsAttrName);
+//   if (cached)
+//     return cached;
 
-  MLIRContext *context = getContext();
+//   MLIRContext *ctx = op.getContext();
+//   auto numSpatial = op.image().getType().cast<ShapedType>().getRank() - 2;
+//   // Domain: (n, w, c, kw)
+//   AffineExpr n = getAffineDimExpr(0, ctx);
+//   SmallVector<AffineExpr> s(llvm::map_range(llvm::seq<int64_t>(1, numSpatial), [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
+//   AffineExpr c = getAffineDimExpr(numSpatial + 1, ctx);
+//   SmallVector<AffineExpr> ks(llvm::map_range(llvm::seq<int64_t>(numSpatial + 2, 2 * (numSpatial + 1)), [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
 
-  // Domain: (n, w, c, kw)
-  AffineExpr n = getAffineDimExpr(0, context);
-  AffineExpr w = getAffineDimExpr(1, context);
-  AffineExpr c = getAffineDimExpr(2, context);
-  AffineExpr kw = getAffineDimExpr(3, context);
+//   // Temp subsitute for channel position attr
+//   int64_t channelPos = (1) ? 1 : numSpatial + 1;
+  
+//   // Initialze operand accesses in nw order and insert c according to channel
+//   // position
+//   SmallVector<AffineExpr> inExprs, outExprs = {n};
+//   for (const auto &[sp, ksp, st, di] : llvm::zip(s, ks, op.getStridesAttr().getValues<int64_t>(), op.getDilationsAttr().getValues<int64_t>())) {
+//     inExprs.push_back(sp * st + ksp * di);
+//     outExprs.push_back(sp);
+//   }
+//   SmallVector<AffineExpr> kExprs(ks);
+//   inExprs.insert(inExprs.begin() + channelPos, c);
+//   kExprs.insert(
+//       channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, c);
+//   outExprs.insert(outExprs.begin() + channelPos, c);
 
-  // Temp subsitute for channel position attr
-  int64_t channelPos = (getChannelFirst()) ? 1 : 2;
-  // Initialze operand accesses in nw order and insert c according to channel
-  // position
-  SmallVector<AffineExpr> inExprs(
-      {n, w * getStrides().getValues<int64_t>()[0] +
-              kw * getDilations().getValues<int64_t>()[0]});
-  SmallVector<AffineExpr> kExprs({kw});
-  SmallVector<AffineExpr> outExprs({n, w});
-  inExprs.insert(inExprs.begin() + channelPos, c);
-  kExprs.insert(
-      channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, c);
-  outExprs.insert(outExprs.begin() + channelPos, c);
+//   n.dump();
+//   for (auto sp : s)
+//     sp.dump();
+//   c.dump();
+//   for (auto ksp : ks)
+//     ksp.dump();
 
-  cached = Builder(context).getAffineMapArrayAttr(
-      {AffineMap::get(4, 0, inExprs, context),
-       AffineMap::get(4, 0, kExprs, context),
-       AffineMap::get(4, 0, outExprs, context)});
-  getOperation()->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
-  return cached;
-}
+//   for (auto b : inExprs)
+//     b.dump();
+
+//   cached = Builder(ctx).getAffineMapArrayAttr(
+//       {AffineMap::get(4, 0, inExprs, ctx),
+//        AffineMap::get(4, 0, kExprs, ctx),
+//        AffineMap::get(4, 0, outExprs, ctx)});
+//   op->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+//   return cached;
+// }
+
+// ArrayAttr DepthwiseConv1DOp::getIndexingMaps() {
+//   return getNDIndexngMaps(this);
+//   // ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(
+//   //     LinalgDialect::kMemoizedIndexingMapsAttrName);
+//   // if (cached)
+//   //   return cached;
+
+//   // MLIRContext *context = getContext();
+
+//   // // Domain: (n, w, c, kw)
+//   // AffineExpr n = getAffineDimExpr(0, context);
+//   // AffineExpr w = getAffineDimExpr(1, context);
+//   // AffineExpr c = getAffineDimExpr(2, context);
+//   // AffineExpr kw = getAffineDimExpr(3, context);
+
+//   // // Temp subsitute for channel position attr
+//   // int64_t channelPos = (getChannelFirst()) ? 1 : 2;
+//   // // Initialze operand accesses in nw order and insert c according to channel
+//   // // position
+//   // SmallVector<AffineExpr> inExprs(
+//   //     {n, w * getStrides().getValues<int64_t>()[0] +
+//   //             kw * getDilations().getValues<int64_t>()[0]});
+//   // SmallVector<AffineExpr> kExprs({kw});
+//   // SmallVector<AffineExpr> outExprs({n, w});
+//   // inExprs.insert(inExprs.begin() + channelPos, c);
+//   // kExprs.insert(
+//   //     channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, c);
+//   // outExprs.insert(outExprs.begin() + channelPos, c);
+
+//   // cached = Builder(context).getAffineMapArrayAttr(
+//   //     {AffineMap::get(4, 0, inExprs, context),
+//   //      AffineMap::get(4, 0, kExprs, context),
+//   //      AffineMap::get(4, 0, outExprs, context)});
+//   // getOperation()->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+//   // return cached;
+// }
 
 void DepthwiseConv1DOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
