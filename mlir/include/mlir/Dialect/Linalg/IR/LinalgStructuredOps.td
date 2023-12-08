@@ -413,7 +413,11 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
     let arguments = (ins
       Variadic<TensorOrMemref>:$inputs,
       Variadic<TensorOrMemref>:$inits,
-      DefaultValuedOptionalAttr<BoolAttr, "true">:$channel_first
+      DefaultValuedOptionalAttr<BoolAttr, "true">:$channel_first,
+      DefaultValuedOptionalAttr<RankedI64ElementsAttr<[1]>,
+        "{ static_cast<int64_t>(1) }">:$strides,
+      DefaultValuedOptionalAttr<RankedI64ElementsAttr<[1]>,
+        "{ static_cast<int64_t>(1) }">:$dilations
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
     let regions = (region AnyRegion:$region);

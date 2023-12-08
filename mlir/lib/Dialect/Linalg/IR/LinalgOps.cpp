@@ -1726,15 +1726,18 @@ SmallVector<utils::IteratorType> DepthwiseConv1DOp::getIteratorTypesArray() {
 }
 
 ArrayAttr DepthwiseConv1DOp::getIndexingMaps() {
-  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(LinalgDialect::kMemoizedIndexingMapsAttrName);
+  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(
+      LinalgDialect::kMemoizedIndexingMapsAttrName);
   if (cached)
     return cached;
 
   MLIRContext *context = getContext();
   SmallVector<AffineExpr> symbolBindings(
       {getAffineSymbolExpr(0, context), getAffineSymbolExpr(1, context),
-       getAffineSymbolExpr(2, context), getAffineConstantExpr(1, context),
-       getAffineSymbolExpr(4, context), getAffineConstantExpr(1, context)});
+       getAffineSymbolExpr(2, context),
+       getAffineConstantExpr(getStrides().getValues<int64_t>()[0], context),
+       getAffineSymbolExpr(4, context),
+       getAffineConstantExpr(getDilations().getValues<int64_t>()[0], context)});
   // Don't actually do something stupid like this
   SmallVector<StringRef> rawStrings =
       (getChannelFirst())
