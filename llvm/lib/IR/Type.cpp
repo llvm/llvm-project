@@ -141,16 +141,9 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
       Ty->getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
 
-  // At this point we have only various mismatches of the first class types
-  // remaining and ptr->ptr. Just select the lossless conversions. Everything
-  // else is not lossless. Conservatively assume we can't losslessly convert
-  // between pointers with different address spaces.
-  if (auto *PTy = dyn_cast<PointerType>(this)) {
-    if (auto *OtherPTy = dyn_cast<PointerType>(Ty))
-      return PTy->getAddressSpace() == OtherPTy->getAddressSpace();
-    return false;
-  }
-  return false;  // Other types have no identity values
+  // Conservatively assume we can't losslessly convert between pointers with
+  // different address spaces.
+  return false;
 }
 
 bool Type::isEmptyTy() const {
