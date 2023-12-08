@@ -1003,6 +1003,8 @@ public:
     return StmtVisitor<StructAccessBase, Expr *>::Visit(E);
   }
 
+  Expr *VisitStmt(Stmt *S) { return nullptr; }
+
   // These are the types we expect to return (in order of most to least
   // likely):
   //
@@ -1054,13 +1056,6 @@ public:
       return E;
     return Visit(E->getSubExpr());
   }
-
-  // Invalid operations. Pointer arithmetic may lead to security violations.
-  Expr *VisitBinaryOperator(BinaryOperator *E) { return nullptr; }
-  Expr *VisitUnaryPostDec(UnaryOperator *E) { return nullptr; }
-  Expr *VisitUnaryPostInc(UnaryOperator *E) { return nullptr; }
-  Expr *VisitUnaryPreDec(UnaryOperator *E) { return nullptr; }
-  Expr *VisitUnaryPreInc(UnaryOperator *E) { return nullptr; }
 };
 
 } // end anonymous namespace
@@ -1094,12 +1089,13 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
 
   Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
                                   "struct.load");
-  return EmitCountedByFieldExpr(Res, CountedByRD, VD);
+  return EmitCountedByFieldExprImpl(Res, CountedByRD, VD);
 }
 
-llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(llvm::Value *CountedByInst,
-                                                     const RecordDecl *RD,
-                                                     const ValueDecl *VD) {
+llvm::Value *
+CodeGenFunction::EmitCountedByFieldExprImpl(llvm::Value *CountedByInst,
+                                            const RecordDecl *RD,
+                                            const ValueDecl *VD) {
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 8> Indices{Zero};
 
