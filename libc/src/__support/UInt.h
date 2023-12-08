@@ -25,12 +25,13 @@
 
 namespace LIBC_NAMESPACE::cpp {
 
+// BigInt has the same semantics as the 'standard integer types' and can be
+// safely 'bit_cast'ed to compatible types.
 template <size_t Bits, bool Signed> struct BigInt {
-
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in BigInt should be a multiple of 64.");
   LIBC_INLINE_VAR static constexpr size_t WORDCOUNT = Bits / 64;
-  uint64_t val[WORDCOUNT]{};
+  uint64_t val[WORDCOUNT];
 
   LIBC_INLINE_VAR static constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
