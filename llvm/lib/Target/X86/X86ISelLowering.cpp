@@ -48707,7 +48707,7 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   if (useVPTERNLOG(Subtarget, VT)) {
     // Emit a VPTERNLOG node directly - 0xCA is the imm code for A?B:C.
     // VPTERNLOG is only available as vXi32/64-bit types.
-    MVT OpSVT = EltSizeInBits == 32 ? MVT::i32 : MVT::i64;
+    MVT OpSVT = EltSizeInBits <= 32 ? MVT::i32 : MVT::i64;
     MVT OpVT =
         MVT::getVectorVT(OpSVT, VT.getSizeInBits() / OpSVT.getSizeInBits());
     SDValue A = DAG.getBitcast(OpVT, N0.getOperand(1));
