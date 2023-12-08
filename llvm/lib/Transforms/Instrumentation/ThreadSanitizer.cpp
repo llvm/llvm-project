@@ -222,21 +222,19 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
 
   TsanVectorScatter[0] = M.getOrInsertFunction(
       SmallString<32>("__tsan_scatter_vector4"), Attr, IRB.getVoidTy(),
-      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(4)),
+      VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(4)),
       IRB.getInt32Ty(), IRB.getInt8Ty());
   TsanVectorScatter[1] = M.getOrInsertFunction(
       SmallString<32>("__tsan_scatter_vector8"), Attr, IRB.getVoidTy(),
-      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(8)),
-      IRB.getInt32Ty(),
-      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(4)),
+      VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(8)),
       IRB.getInt32Ty(), IRB.getInt8Ty());
   TsanVectorGather[0] = M.getOrInsertFunction(
       SmallString<32>("__tsan_gather_vector4"), Attr, IRB.getVoidTy(),
-      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(4)),
+      VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(4)),
       IRB.getInt32Ty(), IRB.getInt8Ty());
   TsanVectorGather[1] = M.getOrInsertFunction(
       SmallString<32>("__tsan_gather_vector8"), Attr, IRB.getVoidTy(),
-      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(8)),
+      VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(8)),
       IRB.getInt32Ty(), IRB.getInt8Ty());
 
   for (size_t i = 0; i < kNumberOfAccessSizes; ++i) {
