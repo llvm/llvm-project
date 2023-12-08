@@ -40,33 +40,35 @@ define i32 @va1(ptr %fmt, ...) {
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
-  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
-  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
-  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
-  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
-  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
-  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX7]](p0) :: (dereferenceable load (p0) from %ir.va)
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX7]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (p0) from %ir.va)
+  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; RV32-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV32-NEXT:   $x10 = COPY [[LOAD1]](s32)
   ; RV32-NEXT:   PseudoRET implicit $x10
@@ -76,33 +78,35 @@ define i32 @va1(ptr %fmt, ...) {
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX7]](p0) :: (dereferenceable load (p0) from %ir.va, align 4)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX7]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (p0) from %ir.va, align 4)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s64)
+  ; RV64-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD1]](s32)
   ; RV64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
@@ -125,36 +129,38 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; ILP32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; ILP32-NEXT: {{  $}}
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; ILP32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; ILP32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; ILP32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; ILP32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; ILP32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; ILP32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; ILP32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; ILP32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; ILP32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; ILP32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; ILP32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; ILP32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; ILP32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; ILP32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; ILP32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; ILP32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; ILP32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; ILP32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; ILP32-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C]]
-  ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C1]]
-  ; ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
-  ; ILP32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
+  ; ILP32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; ILP32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; ILP32-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C1]]
+  ; ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+  ; ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C2]]
+  ; ILP32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
+  ; ILP32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C3]]
   ; ILP32-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -168,36 +174,38 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; RV32D-ILP32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32D-ILP32-NEXT: {{  $}}
   ; RV32D-ILP32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32D-ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32D-ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32D-ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32D-ILP32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32D-ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C]]
-  ; RV32D-ILP32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; RV32D-ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C1]]
-  ; RV32D-ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
-  ; RV32D-ILP32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32D-ILP32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32D-ILP32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32D-ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C1]]
+  ; RV32D-ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+  ; RV32D-ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C2]]
+  ; RV32D-ILP32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
+  ; RV32D-ILP32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C3]]
   ; RV32D-ILP32-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -211,36 +219,38 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; RV32D-ILP32F-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32D-ILP32F-NEXT: {{  $}}
   ; RV32D-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32D-ILP32F-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32D-ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32D-ILP32F-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32D-ILP32F-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32D-ILP32F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32F-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C]]
-  ; RV32D-ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; RV32D-ILP32F-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C1]]
-  ; RV32D-ILP32F-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
-  ; RV32D-ILP32F-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32D-ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32D-ILP32F-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32D-ILP32F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32F-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C1]]
+  ; RV32D-ILP32F-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+  ; RV32D-ILP32F-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C2]]
+  ; RV32D-ILP32F-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
+  ; RV32D-ILP32F-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C3]]
   ; RV32D-ILP32F-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -254,36 +264,38 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; RV32D-ILP32D-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32D-ILP32D-NEXT: {{  $}}
   ; RV32D-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32D-ILP32D-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32D-ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32D-ILP32D-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32D-ILP32D-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32D-ILP32D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32D-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C]]
-  ; RV32D-ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; RV32D-ILP32D-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C1]]
-  ; RV32D-ILP32D-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
-  ; RV32D-ILP32D-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32D-ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32D-ILP32D-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32D-ILP32D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32D-NEXT:   [[MUL:%[0-9]+]]:_(s32) = G_MUL [[VAARG]], [[C1]]
+  ; RV32D-ILP32D-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+  ; RV32D-ILP32D-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nuw G_ADD [[MUL]], [[C2]]
+  ; RV32D-ILP32D-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16
+  ; RV32D-ILP32D-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C3]]
   ; RV32D-ILP32D-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -297,37 +309,39 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; LP64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; LP64-NEXT: {{  $}}
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; LP64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; LP64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; LP64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; LP64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; LP64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; LP64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; LP64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; LP64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; LP64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; LP64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; LP64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; LP64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; LP64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; LP64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; LP64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; LP64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; LP64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; LP64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; LP64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; LP64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; LP64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; LP64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; LP64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; LP64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; LP64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; LP64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; LP64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; LP64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; LP64-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; LP64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; LP64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; LP64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; LP64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; LP64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VAARG]](s32)
-  ; LP64-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; LP64-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
+  ; LP64-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C1]]
+  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+  ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C2]]
+  ; LP64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
+  ; LP64-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C3]]
   ; LP64-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -342,37 +356,39 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; LP64F-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; LP64F-NEXT: {{  $}}
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; LP64F-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; LP64F-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; LP64F-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; LP64F-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; LP64F-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; LP64F-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; LP64F-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; LP64F-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; LP64F-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; LP64F-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; LP64F-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; LP64F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; LP64F-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; LP64F-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; LP64F-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; LP64F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; LP64F-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; LP64F-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; LP64F-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; LP64F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; LP64F-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; LP64F-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; LP64F-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; LP64F-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; LP64F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; LP64F-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; LP64F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; LP64F-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; LP64F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64F-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VAARG]](s32)
-  ; LP64F-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; LP64F-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
+  ; LP64F-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C1]]
+  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+  ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C2]]
+  ; LP64F-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
+  ; LP64F-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C3]]
   ; LP64F-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -387,37 +403,39 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; LP64D-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; LP64D-NEXT: {{  $}}
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; LP64D-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; LP64D-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; LP64D-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; LP64D-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; LP64D-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; LP64D-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; LP64D-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; LP64D-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; LP64D-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; LP64D-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; LP64D-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; LP64D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; LP64D-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; LP64D-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; LP64D-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; LP64D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; LP64D-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; LP64D-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; LP64D-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; LP64D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; LP64D-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; LP64D-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; LP64D-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; LP64D-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; LP64D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; LP64D-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; LP64D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; LP64D-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; LP64D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64D-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VAARG]](s32)
-  ; LP64D-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; LP64D-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
+  ; LP64D-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C1]]
+  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+  ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C2]]
+  ; LP64D-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
+  ; LP64D-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C3]]
   ; LP64D-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
@@ -442,30 +460,32 @@ define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32-NEXT:   $x10 = COPY [[VAARG]](s32)
   ; RV32-NEXT:   PseudoRET implicit $x10
   ;
@@ -474,30 +494,32 @@ define i32 @va1_va_arg(ptr %fmt, ...) nounwind {
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[VAARG]](s32)
   ; RV64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64-NEXT:   PseudoRET implicit $x10
@@ -633,38 +655,40 @@ define i64 @va2(ptr %fmt, ...) nounwind {
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
-  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (dereferenceable load (s32) from %ir.va)
-  ; RV32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C]]
-  ; RV32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C1]]
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; RV32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (s32) from %ir.va)
+  ; RV32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C1]]
+  ; RV32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV32-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
-  ; RV32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C2]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX7]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s32)
+  ; RV32-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV32-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
@@ -677,38 +701,40 @@ define i64 @va2(ptr %fmt, ...) nounwind {
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
-  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (dereferenceable load (s32) from %ir.va)
-  ; RV64-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C]]
-  ; RV64-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C1]]
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; RV64-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (s32) from %ir.va)
+  ; RV64-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C1]]
+  ; RV64-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV64-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
-  ; RV64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C2]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX7]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s64)
+  ; RV64-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV64-NEXT:   $x10 = COPY [[LOAD1]](s64)
@@ -734,30 +760,32 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX7]](p0), 8
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX1]](p0), 8
   ; RV32-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[VAARG]](s64)
   ; RV32-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32-NEXT:   $x11 = COPY [[UV1]](s32)
@@ -768,30 +796,32 @@ define i64 @va2_va_arg(ptr %fmt, ...) nounwind {
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX7]](p0), 8
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX1]](p0), 8
   ; RV64-NEXT:   $x10 = COPY [[VAARG]](s64)
   ; RV64-NEXT:   PseudoRET implicit $x10
   %va = alloca ptr
@@ -918,32 +948,34 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
   ; RV32-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX5]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (dereferenceable load (s32) from %ir.va)
-  ; RV32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C]]
-  ; RV32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C1]]
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
+  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; RV32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (s32) from %ir.va)
+  ; RV32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C1]]
+  ; RV32-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV32-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
-  ; RV32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C2]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX5]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s32)
+  ; RV32-NEXT:   G_STORE [[PTR_ADD5]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV32-NEXT:   [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[MV]], [[LOAD1]]
@@ -959,35 +991,37 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.0, align 16)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.0 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.0 + 16, align 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.0 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.0 + 32, align 16)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX6]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (dereferenceable load (s32) from %ir.va)
-  ; RV64-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C]]
-  ; RV64-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C1]]
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.0 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; RV64-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -8
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (s32) from %ir.va)
+  ; RV64-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[C1]]
+  ; RV64-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ADD]], [[C2]]
   ; RV64-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ADD]](s32)
-  ; RV64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C2]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX6]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[INTTOPTR]], [[C3]](s64)
+  ; RV64-NEXT:   G_STORE [[PTR_ADD6]](p0), [[FRAME_INDEX1]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[AND]](s32)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[INTTOPTR1]](p0) :: (load (s64) from %ir.3)
   ; RV64-NEXT:   [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[COPY1]], [[LOAD1]]
@@ -1018,24 +1052,26 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
   ; RV32-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX5]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX5]](p0), 8
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX1]](p0), 8
   ; RV32-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[MV]], [[VAARG]]
   ; RV32-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ADD]](s64)
   ; RV32-NEXT:   $x10 = COPY [[UV]](s32)
@@ -1049,27 +1085,29 @@ define i64 @va3_va_arg(i32 %a, i64 %b, ...) nounwind {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.0, align 16)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.0 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.0 + 16, align 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.0 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.0 + 32, align 16)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX6]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX6]](p0), 8
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.0 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s64) = G_VAARG [[FRAME_INDEX1]](p0), 8
   ; RV64-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY1]], [[VAARG]]
   ; RV64-NEXT:   $x10 = COPY [[ADD]](s64)
   ; RV64-NEXT:   PseudoRET implicit $x10
@@ -1219,40 +1257,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; ILP32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; ILP32-NEXT: {{  $}}
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; ILP32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; ILP32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; ILP32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; ILP32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; ILP32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; ILP32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; ILP32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; ILP32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; ILP32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; ILP32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; ILP32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; ILP32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; ILP32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; ILP32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; ILP32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; ILP32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; ILP32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; ILP32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; ILP32-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; ILP32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.vargs, align 1)
-  ; ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; ILP32-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs)
+  ; ILP32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; ILP32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; ILP32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.vargs)
+  ; ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; ILP32-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; ILP32-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; ILP32-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; ILP32-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; ILP32-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; ILP32-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; ILP32-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; ILP32-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1264,40 +1304,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; RV32D-ILP32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32D-ILP32-NEXT: {{  $}}
   ; RV32D-ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32D-ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32D-ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32D-ILP32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32D-ILP32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; RV32D-ILP32-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.vargs, align 1)
-  ; RV32D-ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; RV32D-ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs)
+  ; RV32D-ILP32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32D-ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; RV32D-ILP32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; RV32D-ILP32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.vargs)
+  ; RV32D-ILP32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; RV32D-ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV32D-ILP32-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; RV32D-ILP32-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32D-ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; RV32D-ILP32-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; RV32D-ILP32-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1309,40 +1351,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; RV32D-ILP32F-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32D-ILP32F-NEXT: {{  $}}
   ; RV32D-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32D-ILP32F-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32D-ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32D-ILP32F-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; RV32D-ILP32F-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.vargs, align 1)
-  ; RV32D-ILP32F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32F-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; RV32D-ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs)
+  ; RV32D-ILP32F-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32D-ILP32F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; RV32D-ILP32F-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; RV32D-ILP32F-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.vargs)
+  ; RV32D-ILP32F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32F-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; RV32D-ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV32D-ILP32F-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32F-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32F-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; RV32D-ILP32F-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32F-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32F-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32D-ILP32F-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; RV32D-ILP32F-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; RV32D-ILP32F-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1354,40 +1398,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; RV32D-ILP32D-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32D-ILP32D-NEXT: {{  $}}
   ; RV32D-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32D-ILP32D-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32D-ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32D-ILP32D-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; RV32D-ILP32D-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s32) into %ir.vargs, align 1)
-  ; RV32D-ILP32D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32D-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; RV32D-ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs)
+  ; RV32D-ILP32D-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32D-ILP32D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; RV32D-ILP32D-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; RV32D-ILP32D-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.vargs)
+  ; RV32D-ILP32D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32D-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; RV32D-ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV32D-ILP32D-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32D-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; RV32D-ILP32D-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; RV32D-ILP32D-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32D-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; RV32D-ILP32D-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32D-ILP32D-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; RV32D-ILP32D-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; RV32D-ILP32D-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1400,40 +1446,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; LP64-NEXT: {{  $}}
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; LP64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; LP64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; LP64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; LP64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; LP64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; LP64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; LP64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; LP64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; LP64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; LP64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; LP64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; LP64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; LP64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; LP64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; LP64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; LP64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; LP64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; LP64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; LP64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; LP64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; LP64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; LP64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; LP64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; LP64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; LP64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; LP64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; LP64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; LP64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; LP64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; LP64-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; LP64-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.vargs, align 1)
-  ; LP64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
+  ; LP64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; LP64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; LP64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; LP64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.vargs)
+  ; LP64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; LP64-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; LP64-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; LP64-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; LP64-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1447,40 +1495,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; LP64F-NEXT: {{  $}}
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64F-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; LP64F-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; LP64F-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; LP64F-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; LP64F-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; LP64F-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; LP64F-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; LP64F-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; LP64F-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; LP64F-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; LP64F-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; LP64F-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; LP64F-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; LP64F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; LP64F-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; LP64F-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; LP64F-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; LP64F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; LP64F-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; LP64F-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; LP64F-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; LP64F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; LP64F-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; LP64F-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; LP64F-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; LP64F-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; LP64F-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; LP64F-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.vargs, align 1)
-  ; LP64F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64F-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
+  ; LP64F-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; LP64F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; LP64F-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; LP64F-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.vargs)
+  ; LP64F-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64F-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; LP64F-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64F-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64F-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; LP64F-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64F-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64F-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64F-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; LP64F-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; LP64F-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1494,40 +1544,42 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; LP64D-NEXT: {{  $}}
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; LP64D-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; LP64D-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; LP64D-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; LP64D-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; LP64D-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; LP64D-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; LP64D-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; LP64D-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; LP64D-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; LP64D-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; LP64D-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; LP64D-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; LP64D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; LP64D-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; LP64D-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; LP64D-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; LP64D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; LP64D-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; LP64D-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; LP64D-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; LP64D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; LP64D-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; LP64D-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; LP64D-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; LP64D-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
-  ; LP64D-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
-  ; LP64D-NEXT:   G_VASTART [[FRAME_INDEX7]](p0) :: (store (s64) into %ir.vargs, align 1)
-  ; LP64D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64D-NEXT:   G_VACOPY [[FRAME_INDEX8]](p0), [[FRAME_INDEX7]]
-  ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
+  ; LP64D-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; LP64D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.vargs
+  ; LP64D-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.wargs
+  ; LP64D-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.vargs)
+  ; LP64D-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64D-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX2]](p0), [[FRAME_INDEX1]](p0)
+  ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   $x10 = COPY [[LOAD]](p0)
   ; LP64D-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; LP64D-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64D-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
-  ; LP64D-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX7]](p0), 4
+  ; LP64D-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64D-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
+  ; LP64D-NEXT:   [[VAARG3:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64D-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[VAARG1]], [[VAARG]]
   ; LP64D-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[VAARG2]]
   ; LP64D-NEXT:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[VAARG3]]
@@ -1561,33 +1613,35 @@ define i32 @va6_no_fixed_args(...) nounwind {
   ; RV32: bb.1 (%ir-block.0):
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; RV32-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.7, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.0, align 16)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.6)
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.0 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.5, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.0 + 8, align 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.4)
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.0 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.3, align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.0 + 16, align 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.2)
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.0 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.1, align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.0 + 24, align 8)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX7]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX8]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX8]](p0), 4
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %fixed-stack.0 + 28)
+  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD6]], [[C]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32-NEXT:   $x10 = COPY [[VAARG]](s32)
   ; RV32-NEXT:   PseudoRET implicit $x10
   ;
@@ -1595,33 +1649,35 @@ define i32 @va6_no_fixed_args(...) nounwind {
   ; RV64: bb.1 (%ir-block.0):
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
-  ; RV64-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.7, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.0, align 16)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.6)
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.0 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.0 + 16, align 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.0 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.0 + 32, align 16)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.0 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.0 + 48, align 16)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX7]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX8]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX8]](p0), 4
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD6]](p0) :: (store (s64) into %fixed-stack.0 + 56)
+  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD6]], [[C]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[VAARG:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[VAARG]](s32)
   ; RV64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64-NEXT:   PseudoRET implicit $x10
@@ -1640,34 +1696,36 @@ define i32 @va_large_stack(ptr %fmt, ...) {
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.6)
-  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.5, align 8)
-  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.4)
-  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32) into %fixed-stack.3, align 16)
-  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32) into %fixed-stack.2)
-  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32) into %fixed-stack.1, align 8)
-  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32) into %fixed-stack.0)
-  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.large
-  ; RV32-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.va
-  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX8]](p0) :: (store (s32) into %ir.va, align 1)
-  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.va)
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C]](s32)
-  ; RV32-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX8]](p0) :: (store (p0) into %ir.va)
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.large
+  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.va
+  ; RV32-NEXT:   G_VASTART [[FRAME_INDEX2]](p0) :: (store (s32) into %ir.va)
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.va)
+  ; RV32-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; RV32-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX2]](p0) :: (store (p0) into %ir.va)
   ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV32-NEXT:   $x10 = COPY [[LOAD1]](s32)
   ; RV32-NEXT:   PseudoRET implicit $x10
@@ -1677,34 +1735,36 @@ define i32 @va_large_stack(ptr %fmt, ...) {
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.6)
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %fixed-stack.5, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %fixed-stack.4)
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64) into %fixed-stack.3, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64) into %fixed-stack.2)
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64) into %fixed-stack.1, align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64) into %fixed-stack.0)
-  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.large
-  ; RV64-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.va
-  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX8]](p0) :: (store (s64) into %ir.va, align 1)
-  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (dereferenceable load (p0) from %ir.va, align 4)
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C]](s64)
-  ; RV64-NEXT:   G_STORE [[PTR_ADD]](p0), [[FRAME_INDEX8]](p0) :: (store (p0) into %ir.va, align 4)
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.large
+  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.va
+  ; RV64-NEXT:   G_VASTART [[FRAME_INDEX2]](p0) :: (store (s64) into %ir.va)
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.va, align 4)
+  ; RV64-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; RV64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[LOAD]], [[C1]](s64)
+  ; RV64-NEXT:   G_STORE [[PTR_ADD7]](p0), [[FRAME_INDEX2]](p0) :: (store (p0) into %ir.va, align 4)
   ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.argp.cur)
   ; RV64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD1]](s32)
   ; RV64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
