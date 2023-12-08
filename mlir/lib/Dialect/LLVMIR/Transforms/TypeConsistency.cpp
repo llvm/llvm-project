@@ -164,7 +164,7 @@ static std::optional<uint64_t> gepToByteOffset(DataLayout &layout, GEPOp gep) {
     int32_t gepIndex = indexInt.getInt();
     if (gepIndex < 0)
       return std::nullopt;
-    indices.push_back((uint32_t)gepIndex);
+    indices.push_back(static_cast<uint32_t>(gepIndex));
   }
 
   uint64_t offset = indices[0] * layout.getTypeSize(gep.getElemType());
