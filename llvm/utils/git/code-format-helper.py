@@ -185,7 +185,7 @@ class DarkerFormatHelper(FormatHelper):
             "--check",
             "--diff",
             "-r",
-            f"{args.start_rev}..{args.end_rev}",
+            f"{args.start_rev}...{args.end_rev}",
         ] + py_files
         print(f"Running: {' '.join(darker_cmd)}")
         self.darker_cmd = darker_cmd
