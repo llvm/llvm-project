@@ -11,5 +11,7 @@ add_lldb_unittest(ThreadTests
       lldbInterpreter
       lldbBreakpoint
       lldbPluginPlatformLinux
+      lldbPluginPlatformWindows
+      lldbPluginProcessWindowsCommon
   )
 

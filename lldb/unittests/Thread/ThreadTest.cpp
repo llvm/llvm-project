@@ -8,9 +8,20 @@
 
 #include "lldb/Target/Thread.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
+#include <thread>
+#ifdef _WIN32
+#include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/windows.h"
+
+#include "Plugins/Platform/Windows/PlatformWindows.h"
+#include "Plugins/Process/Windows/Common/LocalDebugDelegate.h"
+#include "Plugins/Process/Windows/Common/ProcessWindows.h"
+#include "Plugins/Process/Windows/Common/TargetThreadWindows.h"
+#endif
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/HostThread.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -21,14 +32,33 @@ using namespace lldb_private::repro;
 using namespace lldb;
 
 namespace {
+
+#ifdef _WIN32
+using SetThreadDescriptionFunctionPtr = HRESULT
+WINAPI (*)(HANDLE hThread, PCWSTR lpThreadDescription);
+
+static SetThreadDescriptionFunctionPtr SetThreadName;
+#endif
+
 class ThreadTest : public ::testing::Test {
 public:
   void SetUp() override {
     FileSystem::Initialize();
     HostInfo::Initialize();
+#ifdef _WIN32
+    HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
+    if (hModule) {
+      SetThreadName = reinterpret_cast<SetThreadDescriptionFunctionPtr>(
+          ::GetProcAddress(hModule, "SetThreadDescription"));
+    }
+    PlatformWindows::Initialize();
+#endif
     platform_linux::PlatformLinux::Initialize();
   }
   void TearDown() override {
+#ifdef _WIN32
+    PlatformWindows::Terminate();
+#endif
     platform_linux::PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
@@ -87,6 +117,47 @@ TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
 
   return target_sp;
 }
+
+#ifdef _WIN32
+std::shared_ptr<TargetThreadWindows>
+CreateWindowsThread(const ProcessWindowsSP &process_sp, std::thread &t) {
+  HostThread host_thread((lldb::thread_t)t.native_handle());
+  ThreadSP thread_sp =
+      std::make_shared<TargetThreadWindows>(*process_sp.get(), host_thread);
+  return std::static_pointer_cast<TargetThreadWindows>(thread_sp);
+}
+
+TEST_F(ThreadTest, GetThreadDescription) {
+  if (!SetThreadName)
+    return;
+
+  ArchSpec arch(HostInfo::GetArchitecture());
+  Platform::SetHostPlatform(PlatformWindows::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  auto process_sp = std::static_pointer_cast<ProcessWindows>(
+      ProcessWindows::CreateInstance(target_sp, listener_sp, nullptr, false));
+  ASSERT_TRUE(process_sp);
+
+  std::thread t([]() {});
+  auto thread_sp = CreateWindowsThread(process_sp, t);
+  DWORD tid = thread_sp->GetHostThread().GetNativeThread().GetThreadId();
+  HANDLE hThread = ::OpenThread(THREAD_SET_LIMITED_INFORMATION, FALSE, tid);
+  ASSERT_TRUE(hThread);
+
+  SetThreadName(hThread, L"thread name");
+  ::CloseHandle(hThread);
+  ASSERT_STREQ(thread_sp->GetName(), "thread name");
+
+  t.join();
+}
+#endif
 
 TEST_F(ThreadTest, SetStopInfo) {
   ArchSpec arch("powerpc64-pc-linux");
