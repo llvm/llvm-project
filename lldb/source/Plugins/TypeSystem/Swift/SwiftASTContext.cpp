@@ -1000,6 +1000,7 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   // for the protocol conforming types.
   lang_opts.AllowModuleWithCompilerErrors = true;
   lang_opts.EnableTargetOSChecking = false;
+  lang_opts.EnableModuleLoadingRemarks = true;
 
   // Bypass deserialization safety to allow deserializing internal details from
   // swiftmodule files.
