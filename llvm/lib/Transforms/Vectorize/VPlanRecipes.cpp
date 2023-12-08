@@ -343,9 +343,10 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
       Value *Step;
       {
         BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-        IRBuilder<>::InsertPointGuard Guard(Builder);
-        Builder.SetInsertPoint(VectorPH->getTerminator());
-        Step = createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
+        IRBuilder<> PHBuilder(VectorPH->getTerminator());
+        // Step is loop-invariant, calls to vscale will be placed in the
+        // preheader.
+        Step = createStepForVF(PHBuilder, Phi->getType(), State.VF, State.UF);
       }
       return Builder.CreateAdd(Phi, Step, Name, hasNoUnsignedWrap(),
                                hasNoSignedWrap());
@@ -807,6 +808,7 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-CAST ";
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
 }

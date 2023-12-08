@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2516 { // dr2516: yes
+namespace dr2516 { // dr2516: 3.0
                    // NB: reusing 1482 test
 #if __cplusplus >= 201103L
 template <typename T> struct S {
