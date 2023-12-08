@@ -22,11 +22,6 @@ int16x8_t incompat_neon_smc(int16x8_t splat) __arm_streaming_compatible {
   return (int16x8_t)__builtin_neon_vqaddq_v((int8x16_t)splat, (int8x16_t)splat, 33);
 }
 
-void incompat_sme_norm(svbool_t pg, void const *ptr) __arm_shared_za {
-  // expected-warning@+1 {{builtin call has undefined behaviour when called from a non-streaming function}}
-  return __builtin_sme_svld1_hor_za128(0, 0, pg, ptr);
-}
-
 void incompat_sme_smc(svbool_t pg, void const *ptr) __arm_streaming_compatible __arm_shared_za {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming compatible function}}
   return __builtin_sme_svld1_hor_za128(0, 0, pg, ptr);

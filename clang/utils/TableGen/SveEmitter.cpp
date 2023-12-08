@@ -1386,12 +1386,6 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "#define __aio static __inline__ __attribute__((__always_inline__, "
         "__nodebug__, __overloadable__))\n\n";
 
-  OS << "#ifdef __ARM_FEATURE_SME\n";
-  OS << "#define __asc __attribute__((arm_streaming_compatible))\n";
-  OS << "#else\n";
-  OS << "#define __asc\n";
-  OS << "#endif\n\n";
-
   // Add reinterpret functions.
   for (auto [N, Suffix] :
        std::initializer_list<std::pair<unsigned, const char *>>{

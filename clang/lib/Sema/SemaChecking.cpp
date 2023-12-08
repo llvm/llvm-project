@@ -3196,10 +3196,11 @@ static bool hasSMEZAState(unsigned BuiltinID) {
 
 bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
-    std::optional<ArmStreamingType> BuiltinType;
+    ArmStreamingType BuiltinType;
 
     switch (BuiltinID) {
     default:
+      BuiltinType = ArmNonStreaming;
       break;
 #define GET_SME_STREAMING_ATTRS
 #include "clang/Basic/arm_sme_streaming_attrs.inc"
@@ -3207,7 +3208,7 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     if (BuiltinType)
-      checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
+      checkArmStreamingBuiltin(*this, TheCall, FD, BuiltinType);
 
     if (hasSMEZAState(BuiltinID) && !hasSMEZAState(FD))
       Diag(TheCall->getBeginLoc(),
