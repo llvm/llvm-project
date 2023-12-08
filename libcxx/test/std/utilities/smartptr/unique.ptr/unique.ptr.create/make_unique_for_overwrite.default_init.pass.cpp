@@ -27,6 +27,9 @@ constexpr char pattern = 0xDE;
 
 void* operator new(std::size_t count) {
   void* ptr = std::malloc(count);
+  if (!ptr) {
+    std::abort(); // placate MSVC's unchecked malloc warning
+  }
   for (std::size_t i = 0; i < count; ++i) {
     *(reinterpret_cast<char*>(ptr) + i) = pattern;
   }
