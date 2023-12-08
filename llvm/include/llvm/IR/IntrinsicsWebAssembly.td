@@ -346,10 +346,16 @@ def int_wasm_tls_base :
 //===----------------------------------------------------------------------===//
 
 def int_wasm_memory_randomtag :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [], "llvm.wasm.memory.randomtag">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.randomtag">;
+
+def int_wasm_memory_copytag :
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.copytag",>;
+
+def int_wasm_memory_subtag :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.subtag">;
 
 def int_wasm_memory_loadtag :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [], "llvm.wasm.memory.loadtag">;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [IntrReadMem], "llvm.wasm.memory.loadtag">;
 
 def int_wasm_memory_storetag :
   DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_anyint_ty], [], "llvm.wasm.memory.storetag">;
