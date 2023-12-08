@@ -872,13 +872,21 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
 
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
-  // TODO: expand them all here instead of in backend.
-  return (RMW->isFloatingPointOperation() ||
-          RMW->getOperation() == AtomicRMWInst::UIncWrap ||
-          RMW->getOperation() == AtomicRMWInst::UDecWrap ||
-          RMW->getType()->isIntegerTy(128))
-             ? AtomicExpansionKind::CmpXChg
-             : AtomicExpansionKind::None;
+  // Don't expand subword operations as they require special treatment.
+  if (RMW->getType()->isIntegerTy(8) || RMW->getType()->isIntegerTy(16))
+    return AtomicExpansionKind::None;
+
+  // Don't expand if there is a target instruction available.
+  if (Subtarget.hasInterlockedAccess1() &&
+      (RMW->getType()->isIntegerTy(32) || RMW->getType()->isIntegerTy(64)) &&
+      (RMW->getOperation() == AtomicRMWInst::BinOp::Add ||
+       RMW->getOperation() == AtomicRMWInst::BinOp::Sub ||
+       RMW->getOperation() == AtomicRMWInst::BinOp::And ||
+       RMW->getOperation() == AtomicRMWInst::BinOp::Or ||
+       RMW->getOperation() == AtomicRMWInst::BinOp::Xor))
+    return AtomicExpansionKind::None;
+
+  return AtomicExpansionKind::CmpXChg;
 }
 
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
@@ -4350,6 +4358,31 @@ SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
   return Chain;
 }
 
+// Prepare for a Compare And Swap for a subword operation. This needs to be
+// done in memory with 4 bytes at natural alignment.
+static void getCSAddressAndShifts(SDValue Addr, SelectionDAG &DAG, SDLoc DL,
+                                  SDValue &AlignedAddr, SDValue &BitShift,
+                                  SDValue &NegBitShift) {
+  EVT PtrVT = Addr.getValueType();
+  EVT WideVT = MVT::i32;
+
+  // Get the address of the containing word.
+  AlignedAddr = DAG.getNode(ISD::AND, DL, PtrVT, Addr,
+                            DAG.getConstant(-4, DL, PtrVT));
+
+  // Get the number of bits that the word must be rotated left in order
+  // to bring the field to the top bits of a GR32.
+  BitShift = DAG.getNode(ISD::SHL, DL, PtrVT, Addr,
+                         DAG.getConstant(3, DL, PtrVT));
+  BitShift = DAG.getNode(ISD::TRUNCATE, DL, WideVT, BitShift);
+
+  // Get the complementing shift amount, for rotating a field in the top
+  // bits back to its proper position.
+  NegBitShift = DAG.getNode(ISD::SUB, DL, WideVT,
+                            DAG.getConstant(0, DL, WideVT), BitShift);
+
+}
+
 // Op is an 8-, 16-bit or 32-bit ATOMIC_LOAD_* operation.  Lower the first
 // two into the fullword ATOMIC_LOADW_* operation given by Opcode.
 SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
@@ -4357,7 +4390,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
                                                    unsigned Opcode) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
 
-  // 32-bit operations need no code outside the main loop.
+  // 32-bit operations need no special handling.
   EVT NarrowVT = Node->getMemoryVT();
   EVT WideVT = MVT::i32;
   if (NarrowVT == WideVT)
@@ -4369,7 +4402,6 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   SDValue Src2 = Node->getVal();
   MachineMemOperand *MMO = Node->getMemOperand();
   SDLoc DL(Node);
-  EVT PtrVT = Addr.getValueType();
 
   // Convert atomic subtracts of constants into additions.
   if (Opcode == SystemZISD::ATOMIC_LOADW_SUB)
@@ -4378,20 +4410,8 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
       Src2 = DAG.getConstant(-Const->getSExtValue(), DL, Src2.getValueType());
     }
 
-  // Get the address of the containing word.
-  SDValue AlignedAddr = DAG.getNode(ISD::AND, DL, PtrVT, Addr,
-                                    DAG.getConstant(-4, DL, PtrVT));
-
-  // Get the number of bits that the word must be rotated left in order
-  // to bring the field to the top bits of a GR32.
-  SDValue BitShift = DAG.getNode(ISD::SHL, DL, PtrVT, Addr,
-                                 DAG.getConstant(3, DL, PtrVT));
-  BitShift = DAG.getNode(ISD::TRUNCATE, DL, WideVT, BitShift);
-
-  // Get the complementing shift amount, for rotating a field in the top
-  // bits back to its proper position.
-  SDValue NegBitShift = DAG.getNode(ISD::SUB, DL, WideVT,
-                                    DAG.getConstant(0, DL, WideVT), BitShift);
+  SDValue AlignedAddr, BitShift, NegBitShift;
+  getCSAddressAndShifts(Addr, DAG, DL, AlignedAddr, BitShift, NegBitShift);
 
   // Extend the source operand to 32 bits and prepare it for the inner loop.
   // ATOMIC_SWAPW uses RISBG to rotate the field left, but all other
@@ -4423,38 +4443,24 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_OP(SDValue Op,
   return DAG.getMergeValues(RetOps, DL);
 }
 
-// Op is an ATOMIC_LOAD_SUB operation.  Lower 8- and 16-bit operations
-// into ATOMIC_LOADW_SUBs and decide whether to convert 32- and 64-bit
-// operations into additions.
+// Op is an ATOMIC_LOAD_SUB operation.  Lower 8- and 16-bit operations into
+// ATOMIC_LOADW_SUBs and convert 32- and 64-bit operations into additions.
 SDValue SystemZTargetLowering::lowerATOMIC_LOAD_SUB(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
   EVT MemVT = Node->getMemoryVT();
   if (MemVT == MVT::i32 || MemVT == MVT::i64) {
-    // A full-width operation.
+    // A full-width operation: negate and use LAA(G).
     assert(Op.getValueType() == MemVT && "Mismatched VTs");
+    assert(Subtarget.hasInterlockedAccess1() &&
+           "Should have been expanded by AtomicExpand pass.");
     SDValue Src2 = Node->getVal();
-    SDValue NegSrc2;
     SDLoc DL(Src2);
-
-    if (auto *Op2 = dyn_cast<ConstantSDNode>(Src2)) {
-      // Use an addition if the operand is constant and either LAA(G) is
-      // available or the negative value is in the range of A(G)FHI.
-      int64_t Value = (-Op2->getAPIntValue()).getSExtValue();
-      if (isInt<32>(Value) || Subtarget.hasInterlockedAccess1())
-        NegSrc2 = DAG.getConstant(Value, DL, MemVT);
-    } else if (Subtarget.hasInterlockedAccess1())
-      // Use LAA(G) if available.
-      NegSrc2 = DAG.getNode(ISD::SUB, DL, MemVT, DAG.getConstant(0, DL, MemVT),
-                            Src2);
-
-    if (NegSrc2.getNode())
-      return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MemVT,
-                           Node->getChain(), Node->getBasePtr(), NegSrc2,
-                           Node->getMemOperand());
-
-    // Use the node as-is.
-    return Op;
+    SDValue NegSrc2 =
+      DAG.getNode(ISD::SUB, DL, MemVT, DAG.getConstant(0, DL, MemVT), Src2);
+    return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MemVT,
+                         Node->getChain(), Node->getBasePtr(), NegSrc2,
+                         Node->getMemOperand());
   }
 
   return lowerATOMIC_LOAD_OP(Op, DAG, SystemZISD::ATOMIC_LOADW_SUB);
@@ -4492,22 +4498,9 @@ SDValue SystemZTargetLowering::lowerATOMIC_CMP_SWAP(SDValue Op,
   // Convert 8-bit and 16-bit compare and swap to a loop, implemented
   // via a fullword ATOMIC_CMP_SWAPW operation.
   int64_t BitSize = NarrowVT.getSizeInBits();
-  EVT PtrVT = Addr.getValueType();
 
-  // Get the address of the containing word.
-  SDValue AlignedAddr = DAG.getNode(ISD::AND, DL, PtrVT, Addr,
-                                    DAG.getConstant(-4, DL, PtrVT));
-
-  // Get the number of bits that the word must be rotated left in order
-  // to bring the field to the top bits of a GR32.
-  SDValue BitShift = DAG.getNode(ISD::SHL, DL, PtrVT, Addr,
-                                 DAG.getConstant(3, DL, PtrVT));
-  BitShift = DAG.getNode(ISD::TRUNCATE, DL, WideVT, BitShift);
-
-  // Get the complementing shift amount, for rotating a field in the top
-  // bits back to its proper position.
-  SDValue NegBitShift = DAG.getNode(ISD::SUB, DL, WideVT,
-                                    DAG.getConstant(0, DL, WideVT), BitShift);
+  SDValue AlignedAddr, BitShift, NegBitShift;
+  getCSAddressAndShifts(Addr, DAG, DL, AlignedAddr, BitShift, NegBitShift);
 
   // Construct the ATOMIC_CMP_SWAPW node.
   SDVTList VTList = DAG.getVTList(WideVT, MVT::i32, MVT::Other);
@@ -7951,20 +7944,17 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
   return JoinMBB;
 }
 
-// Implement EmitInstrWithCustomInserter for pseudo ATOMIC_LOAD{,W}_*
-// or ATOMIC_SWAP{,W} instruction MI.  BinOpcode is the instruction that
-// performs the binary operation elided by "*", or 0 for ATOMIC_SWAP{,W}.
-// BitSize is the width of the field in bits, or 0 if this is a partword
-// ATOMIC_LOADW_* or ATOMIC_SWAPW instruction, in which case the bitsize
-// is one of the operands.  Invert says whether the field should be
-// inverted after performing BinOpcode (e.g. for NAND).
+// Implement EmitInstrWithCustomInserter for subword pseudo ATOMIC_LOADW_* or
+// ATOMIC_SWAPW instruction MI.  BinOpcode is the instruction that performs
+// the binary operation elided by "*", or 0 for ATOMIC_SWAPW.  Invert says
+// whether the field should be inverted after performing BinOpcode (e.g. for
+// NAND).
 MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
     MachineInstr &MI, MachineBasicBlock *MBB, unsigned BinOpcode,
-    unsigned BitSize, bool Invert) const {
+    bool Invert) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool IsSubWord = (BitSize < 32);
 
   // Extract the operands.  Base can be a register or a frame index.
   // Src2 can be a register or immediate.
@@ -7972,31 +7962,22 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   MachineOperand Base = earlyUseOperand(MI.getOperand(1));
   int64_t Disp = MI.getOperand(2).getImm();
   MachineOperand Src2 = earlyUseOperand(MI.getOperand(3));
-  Register BitShift = IsSubWord ? MI.getOperand(4).getReg() : Register();
-  Register NegBitShift = IsSubWord ? MI.getOperand(5).getReg() : Register();
+  Register BitShift = MI.getOperand(4).getReg();
+  Register NegBitShift = MI.getOperand(5).getReg();
+  unsigned BitSize = MI.getOperand(6).getImm();
   DebugLoc DL = MI.getDebugLoc();
-  if (IsSubWord)
-    BitSize = MI.getOperand(6).getImm();
-
-  // Subword operations use 32-bit registers.
-  const TargetRegisterClass *RC = (BitSize <= 32 ?
-                                   &SystemZ::GR32BitRegClass :
-                                   &SystemZ::GR64BitRegClass);
-  unsigned LOpcode  = BitSize <= 32 ? SystemZ::L  : SystemZ::LG;
-  unsigned CSOpcode = BitSize <= 32 ? SystemZ::CS : SystemZ::CSG;
 
   // Get the right opcodes for the displacement.
-  LOpcode  = TII->getOpcodeForOffset(LOpcode,  Disp);
-  CSOpcode = TII->getOpcodeForOffset(CSOpcode, Disp);
+  unsigned LOpcode  = TII->getOpcodeForOffset(SystemZ::L,  Disp);
+  unsigned CSOpcode = TII->getOpcodeForOffset(SystemZ::CS, Disp);
   assert(LOpcode && CSOpcode && "Displacement out of range");
 
   // Create virtual registers for temporary results.
-  Register OrigVal       = MRI.createVirtualRegister(RC);
-  Register OldVal        = MRI.createVirtualRegister(RC);
-  Register NewVal        = (BinOpcode || IsSubWord ?
-                            MRI.createVirtualRegister(RC) : Src2.getReg());
-  Register RotatedOldVal = (IsSubWord ? MRI.createVirtualRegister(RC) : OldVal);
-  Register RotatedNewVal = (IsSubWord ? MRI.createVirtualRegister(RC) : NewVal);
+  Register OrigVal       = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register OldVal        = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register NewVal        = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register RotatedOldVal = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register RotatedNewVal = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
 
   // Insert a basic block for the main loop.
   MachineBasicBlock *StartMBB = MBB;
@@ -8023,39 +8004,28 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), OldVal)
     .addReg(OrigVal).addMBB(StartMBB)
     .addReg(Dest).addMBB(LoopMBB);
-  if (IsSubWord)
-    BuildMI(MBB, DL, TII->get(SystemZ::RLL), RotatedOldVal)
-      .addReg(OldVal).addReg(BitShift).addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::RLL), RotatedOldVal)
+    .addReg(OldVal).addReg(BitShift).addImm(0);
   if (Invert) {
     // Perform the operation normally and then invert every bit of the field.
-    Register Tmp = MRI.createVirtualRegister(RC);
+    Register Tmp = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
     BuildMI(MBB, DL, TII->get(BinOpcode), Tmp).addReg(RotatedOldVal).add(Src2);
-    if (BitSize <= 32)
-      // XILF with the upper BitSize bits set.
-      BuildMI(MBB, DL, TII->get(SystemZ::XILF), RotatedNewVal)
-        .addReg(Tmp).addImm(-1U << (32 - BitSize));
-    else {
-      // Use LCGR and add -1 to the result, which is more compact than
-      // an XILF, XILH pair.
-      Register Tmp2 = MRI.createVirtualRegister(RC);
-      BuildMI(MBB, DL, TII->get(SystemZ::LCGR), Tmp2).addReg(Tmp);
-      BuildMI(MBB, DL, TII->get(SystemZ::AGHI), RotatedNewVal)
-        .addReg(Tmp2).addImm(-1);
-    }
+    // XILF with the upper BitSize bits set.
+    BuildMI(MBB, DL, TII->get(SystemZ::XILF), RotatedNewVal)
+      .addReg(Tmp).addImm(-1U << (32 - BitSize));
   } else if (BinOpcode)
     // A simply binary operation.
     BuildMI(MBB, DL, TII->get(BinOpcode), RotatedNewVal)
         .addReg(RotatedOldVal)
         .add(Src2);
-  else if (IsSubWord)
+  else
     // Use RISBG to rotate Src2 into position and use it to replace the
     // field in RotatedOldVal.
     BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RotatedNewVal)
       .addReg(RotatedOldVal).addReg(Src2.getReg())
       .addImm(32).addImm(31 + BitSize).addImm(32 - BitSize);
-  if (IsSubWord)
-    BuildMI(MBB, DL, TII->get(SystemZ::RLL), NewVal)
-      .addReg(RotatedNewVal).addReg(NegBitShift).addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::RLL), NewVal)
+    .addReg(RotatedNewVal).addReg(NegBitShift).addImm(0);
   BuildMI(MBB, DL, TII->get(CSOpcode), Dest)
       .addReg(OldVal)
       .addReg(NewVal)
@@ -8070,50 +8040,40 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   return DoneMBB;
 }
 
-// Implement EmitInstrWithCustomInserter for pseudo
-// ATOMIC_LOAD{,W}_{,U}{MIN,MAX} instruction MI.  CompareOpcode is the
+// Implement EmitInstrWithCustomInserter for subword pseudo
+// ATOMIC_LOADW_{,U}{MIN,MAX} instruction MI.  CompareOpcode is the
 // instruction that should be used to compare the current field with the
 // minimum or maximum value.  KeepOldMask is the BRC condition-code mask
-// for when the current field should be kept.  BitSize is the width of
-// the field in bits, or 0 if this is a partword ATOMIC_LOADW_* instruction.
+// for when the current field should be kept.
 MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
     MachineInstr &MI, MachineBasicBlock *MBB, unsigned CompareOpcode,
-    unsigned KeepOldMask, unsigned BitSize) const {
+    unsigned KeepOldMask) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool IsSubWord = (BitSize < 32);
 
   // Extract the operands.  Base can be a register or a frame index.
   Register Dest = MI.getOperand(0).getReg();
   MachineOperand Base = earlyUseOperand(MI.getOperand(1));
   int64_t Disp = MI.getOperand(2).getImm();
   Register Src2 = MI.getOperand(3).getReg();
-  Register BitShift = (IsSubWord ? MI.getOperand(4).getReg() : Register());
-  Register NegBitShift = (IsSubWord ? MI.getOperand(5).getReg() : Register());
+  Register BitShift = MI.getOperand(4).getReg();
+  Register NegBitShift = MI.getOperand(5).getReg();
+  unsigned BitSize = MI.getOperand(6).getImm();
   DebugLoc DL = MI.getDebugLoc();
-  if (IsSubWord)
-    BitSize = MI.getOperand(6).getImm();
-
-  // Subword operations use 32-bit registers.
-  const TargetRegisterClass *RC = (BitSize <= 32 ?
-                                   &SystemZ::GR32BitRegClass :
-                                   &SystemZ::GR64BitRegClass);
-  unsigned LOpcode  = BitSize <= 32 ? SystemZ::L  : SystemZ::LG;
-  unsigned CSOpcode = BitSize <= 32 ? SystemZ::CS : SystemZ::CSG;
 
   // Get the right opcodes for the displacement.
-  LOpcode  = TII->getOpcodeForOffset(LOpcode,  Disp);
-  CSOpcode = TII->getOpcodeForOffset(CSOpcode, Disp);
+  unsigned LOpcode  = TII->getOpcodeForOffset(SystemZ::L,  Disp);
+  unsigned CSOpcode = TII->getOpcodeForOffset(SystemZ::CS, Disp);
   assert(LOpcode && CSOpcode && "Displacement out of range");
 
   // Create virtual registers for temporary results.
-  Register OrigVal       = MRI.createVirtualRegister(RC);
-  Register OldVal        = MRI.createVirtualRegister(RC);
-  Register NewVal        = MRI.createVirtualRegister(RC);
-  Register RotatedOldVal = (IsSubWord ? MRI.createVirtualRegister(RC) : OldVal);
-  Register RotatedAltVal = (IsSubWord ? MRI.createVirtualRegister(RC) : Src2);
-  Register RotatedNewVal = (IsSubWord ? MRI.createVirtualRegister(RC) : NewVal);
+  Register OrigVal       = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register OldVal        = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register NewVal        = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register RotatedOldVal = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register RotatedAltVal = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
+  Register RotatedNewVal = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
 
   // Insert 3 basic blocks for the loop.
   MachineBasicBlock *StartMBB  = MBB;
@@ -8139,9 +8099,8 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), OldVal)
     .addReg(OrigVal).addMBB(StartMBB)
     .addReg(Dest).addMBB(UpdateMBB);
-  if (IsSubWord)
-    BuildMI(MBB, DL, TII->get(SystemZ::RLL), RotatedOldVal)
-      .addReg(OldVal).addReg(BitShift).addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::RLL), RotatedOldVal)
+    .addReg(OldVal).addReg(BitShift).addImm(0);
   BuildMI(MBB, DL, TII->get(CompareOpcode))
     .addReg(RotatedOldVal).addReg(Src2);
   BuildMI(MBB, DL, TII->get(SystemZ::BRC))
@@ -8153,10 +8112,9 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   //   %RotatedAltVal = RISBG %RotatedOldVal, %Src2, 32, 31 + BitSize, 0
   //   # fall through to UpdateMBB
   MBB = UseAltMBB;
-  if (IsSubWord)
-    BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RotatedAltVal)
-      .addReg(RotatedOldVal).addReg(Src2)
-      .addImm(32).addImm(31 + BitSize).addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RotatedAltVal)
+    .addReg(RotatedOldVal).addReg(Src2)
+    .addImm(32).addImm(31 + BitSize).addImm(0);
   MBB->addSuccessor(UpdateMBB);
 
   //  UpdateMBB:
@@ -8170,9 +8128,8 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), RotatedNewVal)
     .addReg(RotatedOldVal).addMBB(LoopMBB)
     .addReg(RotatedAltVal).addMBB(UseAltMBB);
-  if (IsSubWord)
-    BuildMI(MBB, DL, TII->get(SystemZ::RLL), NewVal)
-      .addReg(RotatedNewVal).addReg(NegBitShift).addImm(0);
+  BuildMI(MBB, DL, TII->get(SystemZ::RLL), NewVal)
+    .addReg(RotatedNewVal).addReg(NegBitShift).addImm(0);
   BuildMI(MBB, DL, TII->get(CSOpcode), Dest)
       .addReg(OldVal)
       .addReg(NewVal)
@@ -8187,7 +8144,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   return DoneMBB;
 }
 
-// Implement EmitInstrWithCustomInserter for pseudo ATOMIC_CMP_SWAPW
+// Implement EmitInstrWithCustomInserter for subword pseudo ATOMIC_CMP_SWAPW
 // instruction MI.
 MachineBasicBlock *
 SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
@@ -9004,171 +8961,44 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitExt128(MI, MBB, true);
 
   case SystemZ::ATOMIC_SWAPW:
-    return emitAtomicLoadBinary(MI, MBB, 0, 0);
-  case SystemZ::ATOMIC_SWAP_32:
-    return emitAtomicLoadBinary(MI, MBB, 0, 32);
-  case SystemZ::ATOMIC_SWAP_64:
-    return emitAtomicLoadBinary(MI, MBB, 0, 64);
+    return emitAtomicLoadBinary(MI, MBB, 0);
 
   case SystemZ::ATOMIC_LOADW_AR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AR, 0);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::AR);
   case SystemZ::ATOMIC_LOADW_AFI:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AFI, 0);
-  case SystemZ::ATOMIC_LOAD_AR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AR, 32);
-  case SystemZ::ATOMIC_LOAD_AHI:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AHI, 32);
-  case SystemZ::ATOMIC_LOAD_AFI:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AFI, 32);
-  case SystemZ::ATOMIC_LOAD_AGR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AGR, 64);
-  case SystemZ::ATOMIC_LOAD_AGHI:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AGHI, 64);
-  case SystemZ::ATOMIC_LOAD_AGFI:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::AGFI, 64);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::AFI);
 
   case SystemZ::ATOMIC_LOADW_SR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::SR, 0);
-  case SystemZ::ATOMIC_LOAD_SR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::SR, 32);
-  case SystemZ::ATOMIC_LOAD_SGR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::SGR, 64);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::SR);
 
   case SystemZ::ATOMIC_LOADW_NR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NR, 0);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::NR);
   case SystemZ::ATOMIC_LOADW_NILH:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH, 0);
-  case SystemZ::ATOMIC_LOAD_NR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NR, 32);
-  case SystemZ::ATOMIC_LOAD_NILL:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILL, 32);
-  case SystemZ::ATOMIC_LOAD_NILH:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH, 32);
-  case SystemZ::ATOMIC_LOAD_NILF:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILF, 32);
-  case SystemZ::ATOMIC_LOAD_NGR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NGR, 64);
-  case SystemZ::ATOMIC_LOAD_NILL64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILL64, 64);
-  case SystemZ::ATOMIC_LOAD_NILH64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH64, 64);
-  case SystemZ::ATOMIC_LOAD_NIHL64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NIHL64, 64);
-  case SystemZ::ATOMIC_LOAD_NIHH64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NIHH64, 64);
-  case SystemZ::ATOMIC_LOAD_NILF64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILF64, 64);
-  case SystemZ::ATOMIC_LOAD_NIHF64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NIHF64, 64);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH);
 
   case SystemZ::ATOMIC_LOADW_OR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OR, 0);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::OR);
   case SystemZ::ATOMIC_LOADW_OILH:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILH, 0);
-  case SystemZ::ATOMIC_LOAD_OR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OR, 32);
-  case SystemZ::ATOMIC_LOAD_OILL:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILL, 32);
-  case SystemZ::ATOMIC_LOAD_OILH:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILH, 32);
-  case SystemZ::ATOMIC_LOAD_OILF:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILF, 32);
-  case SystemZ::ATOMIC_LOAD_OGR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OGR, 64);
-  case SystemZ::ATOMIC_LOAD_OILL64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILL64, 64);
-  case SystemZ::ATOMIC_LOAD_OILH64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILH64, 64);
-  case SystemZ::ATOMIC_LOAD_OIHL64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OIHL64, 64);
-  case SystemZ::ATOMIC_LOAD_OIHH64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OIHH64, 64);
-  case SystemZ::ATOMIC_LOAD_OILF64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILF64, 64);
-  case SystemZ::ATOMIC_LOAD_OIHF64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::OIHF64, 64);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::OILH);
 
   case SystemZ::ATOMIC_LOADW_XR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XR, 0);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::XR);
   case SystemZ::ATOMIC_LOADW_XILF:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XILF, 0);
-  case SystemZ::ATOMIC_LOAD_XR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XR, 32);
-  case SystemZ::ATOMIC_LOAD_XILF:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XILF, 32);
-  case SystemZ::ATOMIC_LOAD_XGR:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XGR, 64);
-  case SystemZ::ATOMIC_LOAD_XILF64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XILF64, 64);
-  case SystemZ::ATOMIC_LOAD_XIHF64:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::XIHF64, 64);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::XILF);
 
   case SystemZ::ATOMIC_LOADW_NRi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NR, 0, true);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::NR, true);
   case SystemZ::ATOMIC_LOADW_NILHi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH, 0, true);
-  case SystemZ::ATOMIC_LOAD_NRi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NR, 32, true);
-  case SystemZ::ATOMIC_LOAD_NILLi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILL, 32, true);
-  case SystemZ::ATOMIC_LOAD_NILHi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH, 32, true);
-  case SystemZ::ATOMIC_LOAD_NILFi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILF, 32, true);
-  case SystemZ::ATOMIC_LOAD_NGRi:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NGR, 64, true);
-  case SystemZ::ATOMIC_LOAD_NILL64i:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILL64, 64, true);
-  case SystemZ::ATOMIC_LOAD_NILH64i:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH64, 64, true);
-  case SystemZ::ATOMIC_LOAD_NIHL64i:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NIHL64, 64, true);
-  case SystemZ::ATOMIC_LOAD_NIHH64i:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NIHH64, 64, true);
-  case SystemZ::ATOMIC_LOAD_NILF64i:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILF64, 64, true);
-  case SystemZ::ATOMIC_LOAD_NIHF64i:
-    return emitAtomicLoadBinary(MI, MBB, SystemZ::NIHF64, 64, true);
+    return emitAtomicLoadBinary(MI, MBB, SystemZ::NILH, true);
 
   case SystemZ::ATOMIC_LOADW_MIN:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CR,
-                                SystemZ::CCMASK_CMP_LE, 0);
-  case SystemZ::ATOMIC_LOAD_MIN_32:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CR,
-                                SystemZ::CCMASK_CMP_LE, 32);
-  case SystemZ::ATOMIC_LOAD_MIN_64:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CGR,
-                                SystemZ::CCMASK_CMP_LE, 64);
-
+    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CR, SystemZ::CCMASK_CMP_LE);
   case SystemZ::ATOMIC_LOADW_MAX:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CR,
-                                SystemZ::CCMASK_CMP_GE, 0);
-  case SystemZ::ATOMIC_LOAD_MAX_32:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CR,
-                                SystemZ::CCMASK_CMP_GE, 32);
-  case SystemZ::ATOMIC_LOAD_MAX_64:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CGR,
-                                SystemZ::CCMASK_CMP_GE, 64);
-
+    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CR, SystemZ::CCMASK_CMP_GE);
   case SystemZ::ATOMIC_LOADW_UMIN:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLR,
-                                SystemZ::CCMASK_CMP_LE, 0);
-  case SystemZ::ATOMIC_LOAD_UMIN_32:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLR,
-                                SystemZ::CCMASK_CMP_LE, 32);
-  case SystemZ::ATOMIC_LOAD_UMIN_64:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLGR,
-                                SystemZ::CCMASK_CMP_LE, 64);
-
+    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLR, SystemZ::CCMASK_CMP_LE);
   case SystemZ::ATOMIC_LOADW_UMAX:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLR,
-                                SystemZ::CCMASK_CMP_GE, 0);
-  case SystemZ::ATOMIC_LOAD_UMAX_32:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLR,
-                                SystemZ::CCMASK_CMP_GE, 32);
-  case SystemZ::ATOMIC_LOAD_UMAX_64:
-    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLGR,
-                                SystemZ::CCMASK_CMP_GE, 64);
+    return emitAtomicLoadMinMax(MI, MBB, SystemZ::CLR, SystemZ::CCMASK_CMP_GE);
 
   case SystemZ::ATOMIC_CMP_SWAPW:
     return emitAtomicCmpSwapW(MI, MBB);
