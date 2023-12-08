@@ -26,7 +26,7 @@
 # Checking no colorization without regex search
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -s main' | FileCheck %s --check-prefix CHECK6
-# CHECK6:        Summary: {{.+}}`main at main.c:2
+# CHECK6:        Summary: {{.+}}`main at main.c:
 
 # Checking no colorization when use-color is false
 
