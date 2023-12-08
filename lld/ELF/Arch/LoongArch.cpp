@@ -592,9 +592,13 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     return;
 
   case R_LARCH_CALL36: {
-    // This relocation type is designed for the adjancent pcaddu18i+jirl pair,
-    // so patch these 2 instructions in one time.
-    checkInt(loc, val, 38, rel);
+    // This relocation is designed for the adjancent pcaddu18i+jirl pair that
+    // are patched in one time. Because of sign extension of these insns'
+    // immediate fields, the relocation range is [-128G - 0x20000, +128G -
+    // 0x20000) (of course must be 4-bytes aligned).
+    if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
+      reportRangeError(loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
+                       llvm::maxIntN(38) - 0x20000);
     checkAlignment(loc, val, 4, rel);
     // Since jirl performs sign extension on the offset immediate, adds (1<<17)
     // to original val to get the correct hi20.
