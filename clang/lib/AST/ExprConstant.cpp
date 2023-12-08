@@ -5566,7 +5566,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::AttributedStmtClass: {
     const auto *AS = cast<AttributedStmt>(S);
     const auto *SS = AS->getSubStmt();
-    MSConstexprContextRAII msConstexprContext(
+    MSConstexprContextRAII ConstexprContext(
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
     return EvaluateStmt(Result, Info, SS, Case);
