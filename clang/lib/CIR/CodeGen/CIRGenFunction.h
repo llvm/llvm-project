@@ -882,6 +882,8 @@ public:
 
   mlir::Type convertType(clang::QualType T);
 
+  mlir::LogicalResult buildAsmStmt(const clang::AsmStmt &S);
+
   mlir::LogicalResult buildIfStmt(const clang::IfStmt &S);
 
   mlir::LogicalResult buildReturnStmt(const clang::ReturnStmt &S);
