@@ -65,9 +65,7 @@ class RISCVInitUndef : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInitUndef() : MachineFunctionPass(ID) {
-    initializeRISCVInitUndefPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVInitUndef() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
