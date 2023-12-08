@@ -349,7 +349,7 @@ def int_wasm_memory_randomtag :
   DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.randomtag">;
 
 def int_wasm_memory_copytag :
-  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.copytag",>;
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.copytag">;
 
 def int_wasm_memory_subtag :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_ptr_ty, llvm_ptr_ty], [IntrNoMem], "llvm.wasm.memory.subtag">;
