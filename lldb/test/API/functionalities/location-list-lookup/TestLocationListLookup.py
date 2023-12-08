@@ -26,7 +26,8 @@ class LocationListLookupTestCase(TestBase):
         # make sure we can read out the local
         # variables (with both `frame var` and `expr`)
         for f in process.GetSelectedThread().frames:
-            if f.GetDisplayFunctionName().startswith("Foo::bar"):
+            frame_name = f.GetDisplayFunctionName()
+            if frame_name is not None and frame_name.startswith("Foo::bar"):
                 argv = f.GetValueForVariablePath("argv").GetChildAtIndex(0)
                 strm = lldb.SBStream()
                 argv.GetDescription(strm)
@@ -38,7 +39,6 @@ class LocationListLookupTestCase(TestBase):
 
     @skipIf(oslist=["linux"], archs=["arm"])
     @skipIfDarwin
-    @skipIfWindows  # GetDisplayFunctionName returns None
     def test_loclist_frame_var(self):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)
