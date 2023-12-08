@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
@@ -209,6 +210,20 @@ constexpr StringRef SumExample =
       %r = add nsw i32 %x, %y
       ret i32 %r
     }
+  )";
+
+constexpr StringRef SumDebugExample =
+    R"(
+    define i32 @sum(i32 %x, i32 %y) {
+    entry:
+      %r = add nsw i32 %x, %y
+      ret i32 %r
+    }
+    !llvm.module.flags = !{!0}
+    !llvm.dbg.cu = !{!1}
+    !0 = !{i32 2, !"Debug Info Version", i32 3}
+    !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
+    !2 = !DIFile(filename: "sum.c", directory: "/tmp")
   )";
 
 } // end anonymous namespace.
@@ -522,7 +537,7 @@ struct jit_descriptor {
 // We put information about the JITed function in this global, which the
 // debugger reads.  Make sure to specify the version statically, because the
 // debugger checks the version before we can set it during runtime.
-struct jit_descriptor __jit_debug_descriptor;
+extern struct jit_descriptor __jit_debug_descriptor;
 
 static void *findLastDebugDescriptorEntryPtr() {
   struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;
@@ -532,9 +547,14 @@ static void *findLastDebugDescriptorEntryPtr() {
 }
 }
 
-#if defined(_AIX) or not defined(__ELF__)
+#if defined(_AIX) or not(defined(__ELF__) or defined(__MACH__))
 TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
 #else
+static LLVM_ATTRIBUTE_USED void linkComponents() {
+  errs() << "Linking in runtime functions\n"
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n';
+}
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {
 #endif
   if (LLVMErrorRef E = LLVMOrcLLJITEnableDebugSupport(Jit))
@@ -542,7 +562,7 @@ TEST_F(OrcCAPITestBase, EnableDebugSupport) {
            << "): " << toString(E);
 
   void *Before = findLastDebugDescriptorEntryPtr();
-  LLVMMemoryBufferRef ObjBuffer = createTestObject(SumExample, "sum.ll");
+  LLVMMemoryBufferRef ObjBuffer = createTestObject(SumDebugExample, "sum.ll");
   LLVMOrcObjectLayerRef ObjLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
   if (LLVMErrorRef E =
           LLVMOrcObjectLayerAddObjectFile(ObjLayer, MainDylib, ObjBuffer))
