@@ -16,7 +16,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
