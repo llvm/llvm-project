@@ -134,6 +134,8 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+  bool supportsTargetAttributeTune() const override { return false; }
 
   bool isValidFeatureName(StringRef Feature) const override {
     // We pass soft-float-abi in as a -target-feature, but the backend figures

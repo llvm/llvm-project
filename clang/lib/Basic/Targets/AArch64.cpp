@@ -1085,13 +1085,17 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
+      if (Split.first == "")
+        continue;
       const std::optional<llvm::AArch64::ArchInfo> AI =
           llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
-      if (!AI)
+      if (!AI) {
+        Ret.Features.push_back("+UNKNOWN");
         continue;
+      }
       Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);

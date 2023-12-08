@@ -63,6 +63,14 @@ int __attribute__((target("tune=cortex-a710,tune=neoverse-n2"))) pear_tree(void)
 // no warning - branch-protection should work on aarch64
 int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 5; }
 
+//expected-warning@+1 {{unknown 'arch=armv8-a-typo' in the 'target' attribute string; 'target' attribute ignored}}
+void __attribute__((target("arch=armv8-a-typo"))) typo_arch1(void) {}
+
+#elifdef __arm__
+
+//expected-warning@+1 {{unknown 'arch=armv8-b-typo' in the 'target' attribute string; 'target' attribute ignored}}
+void __attribute__((target("arch=armv8-b-typo"))) typo_arch2(void) {}
+
 #elifdef __powerpc__
 
 int __attribute__((target("float128,arch=pwr9"))) foo(void) { return 4; }

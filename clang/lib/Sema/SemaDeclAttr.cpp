@@ -3462,6 +3462,9 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 
   for (const auto &Feature : ParsedAttrs.Features) {
     auto CurFeature = StringRef(Feature).drop_front(); // remove + or -.
+    if (CurFeature == "UNKNOWN")
+      return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+             << Unknown << None << AttrStr << Target;
     if (!Context.getTargetInfo().isValidFeatureName(CurFeature))
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << CurFeature << Target;
