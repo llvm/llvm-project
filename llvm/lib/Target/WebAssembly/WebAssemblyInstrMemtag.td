@@ -11,10 +11,17 @@
 /// Instructions that handle memtags
 //===----------------------------------------------------------------------===//
 
-defm MEMORY_RANDOMTAG: I<(outs I64:$dst), (ins I64:$src),
+multiclass MemoryTaggingOps<WebAssemblyRegClass rc, string B> {
+
+defm MEMORY_RANDOMTAG_A#B: I<(outs rc:$dst), (ins rc:$src),
                     (outs), (ins),
-                    [(set I64:$dst,
-		    	(int_wasm_memory_randomtag I64:$src))],
+                    [(set rc:$dst,
+		    	(int_wasm_memory_randomtag rc:$src))],
                     "memory.randomtag\t$dst, $src",
                     "memory.randomtag\t",
                     0xfc12, true>;
+
+}
+
+defm : MemoryTaggingOps<I32, "32">;
+defm : MemoryTaggingOps<I64, "64">;
