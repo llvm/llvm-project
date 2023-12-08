@@ -1,12 +1,11 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops | FileCheck %s
-// RUN: mlir-opt %s -convert-linalg-to-parallel-loops | FileCheck --check-prefix=CHECKPARALLEL %s
+// RUN: mlir-opt %s -convert-linalg-to-loops | FileCheck %s --check-prefixes=COMMON,CHECK
+// RUN: mlir-opt %s -convert-linalg-to-parallel-loops | FileCheck --check-prefixes=COMMON,CHECKPARALLEL %s
 
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s -convert-linalg-to-loops -test-lower-to-llvm -o=/dev/null 2>&1
 
-// CHECK: #[[$stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
-
-// CHECKPARALLEL: #[[$stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// COMMON: #[[$stride1Dilation1:.*]] = affine_map<(d0, d1) -> (d0 + d1)>
+// COMMON: #[[$stride3Dilation2:.*]] = affine_map<(d0, d1) -> (d0 * 3 + d1 * 2)>
 
 func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = arith.constant 0 : index
@@ -842,6 +841,66 @@ func.func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32
 //       CHECKPARALLEL:         %[[inc:.*]] = arith.mulf %[[vb]], %[[va]] : f32
 //       CHECKPARALLEL:         %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
 //       CHECKPARALLEL:         store %[[res]], %[[arg2]][%[[arg3]], %[[arg4]], %[[arg5]]] : memref<?x?x?xf32>
+
+
+func.func @gen_depthwise_channel_first_memref(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?x?xf32>) {
+    linalg.depthwise_conv_1d {channel_first = true} ins(%arg0, %arg1: memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
+    return
+}
+
+//    COMMON-LABEL: func @gen_depthwise_channel_first_memref
+//    COMMON-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//    COMMON-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//    COMMON-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//         COMMON: %[[c0:.*]] = arith.constant 0 : index
+//         COMMON: %[[c1:.*]] = arith.constant 1 : index
+//         COMMON: %[[c2:.*]] = arith.constant 2 : index
+//         COMMON: %[[dim0:.*]] = memref.dim %[[arg0]], %[[c0]] : memref<?x?x?xf32>
+//         COMMON: %[[dim1:.*]] = memref.dim %[[arg0]], %[[c1]] : memref<?x?x?xf32>
+//         COMMON: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c1]] : memref<?x?xf32>
+//         COMMON: %[[dim3:.*]] = memref.dim %[[arg2]], %[[c2]] : memref<?x?x?xf32>
+//          CHECK: scf.for %[[n:.*]] = %[[c0]] to %[[dim0]] step %[[c1]] {
+//          CHECK:   scf.for %[[ow:.*]] = %[[c0]] to %[[dim3]] step %[[c1]] {
+//          CHECK:     scf.for %[[c:.*]] = %[[c0]] to %[[dim1]] step %[[c1]] {
+//  CHECKPARALLEL: scf.parallel (%[[n:.*]], %[[ow:.*]], %[[c:.*]]) = (%[[c0]], %[[c0]], %[[c0]])  to (%[[dim0]], %[[dim3]], %[[dim1]])
+//         COMMON:       scf.for %[[kw:.*]] = %[[c0]] to %[[dim2]] step %[[c1]] {
+//         COMMON:         %[[aff:.*]] = affine.apply #[[$stride1Dilation1]](%[[ow]], %[[kw]])
+//         COMMON:         %[[vb:.*]] = memref.load %[[arg0]][%[[n]], %[[c]], %[[aff]]] : memref<?x?x?xf32>
+//         COMMON:         %[[va:.*]] = memref.load %[[arg1]][%[[c]], %[[kw]]] : memref<?x?xf32>
+//         COMMON:         %[[vc:.*]] = memref.load %[[arg2]][%[[n]], %[[c]], %[[ow]]] : memref<?x?x?xf32>
+//         COMMON:         %[[inc:.*]] = arith.mulf %[[vb]], %[[va]] : f32
+//         COMMON:         %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
+//         COMMON:         store %[[res]], %[[arg2]][%[[n]], %[[c]], %[[ow]]] : memref<?x?x?xf32>
+
+
+func.func @gen_depthwise_channel_last_memref(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?x?xf32>) {
+    linalg.depthwise_conv_1d {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
+    return
+}
+
+//    COMMON-LABEL: func @gen_depthwise_channel_last_memref
+//    COMMON-SAME: %[[arg0:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//    COMMON-SAME: %[[arg1:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//    COMMON-SAME: %[[arg2:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//         COMMON-DAG: %[[c0:.*]] = arith.constant 0 : index
+//         COMMON-DAG: %[[c1:.*]] = arith.constant 1 : index
+//         COMMON-DAG: %[[c2:.*]] = arith.constant 2 : index
+//         COMMON-DAG: %[[dim0:.*]] = memref.dim %[[arg0]], %[[c0]] : memref<?x?x?xf32>
+//         COMMON-DAG: %[[dim1:.*]] = memref.dim %[[arg0]], %[[c2]] : memref<?x?x?xf32>
+//         COMMON-DAG: %[[dim2:.*]] = memref.dim %[[arg1]], %[[c0]] : memref<?x?xf32>
+//         COMMON-DAG: %[[dim3:.*]] = memref.dim %[[arg2]], %[[c1]] : memref<?x?x?xf32>
+//          CHECK: scf.for %[[n:.*]] = %[[c0]] to %[[dim0]] step %[[c1]] {
+//          CHECK:   scf.for %[[ow:.*]] = %[[c0]] to %[[dim3]] step %[[c1]] {
+//          CHECK:     scf.for %[[c:.*]] = %[[c0]] to %[[dim1]] step %[[c1]] {
+//  CHECKPARALLEL: scf.parallel (%[[n:.*]], %[[ow:.*]], %[[c:.*]]) = (%[[c0]], %[[c0]], %[[c0]])  to (%[[dim0]], %[[dim3]], %[[dim1]])
+//         COMMON:       scf.for %[[kw:.*]] = %[[c0]] to %[[dim2]] step %[[c1]] {
+//         COMMON:         %[[aff:.*]] = affine.apply #[[$stride3Dilation2]](%[[ow]], %[[kw]])
+//         COMMON:         %[[vb:.*]] = memref.load %[[arg0]][%[[n]], %[[aff]], %[[c]]] : memref<?x?x?xf32>
+//         COMMON:         %[[va:.*]] = memref.load %[[arg1]][%[[kw]], %[[c]]] : memref<?x?xf32>
+//         COMMON:         %[[vc:.*]] = memref.load %[[arg2]][%[[n]], %[[ow]], %[[c]]] : memref<?x?x?xf32>
+//         COMMON:         %[[inc:.*]] = arith.mulf %[[vb]], %[[va]] : f32
+//         COMMON:         %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
+//         COMMON:         store %[[res]], %[[arg2]][%[[n]], %[[ow]], %[[c]]] : memref<?x?x?xf32>
 
 // -----
 
