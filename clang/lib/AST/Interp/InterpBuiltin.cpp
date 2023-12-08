@@ -34,6 +34,19 @@ PrimType getIntPrimType(const InterpState &S) {
   llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
+PrimType getLongPrimType(const InterpState &S) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned LongWidth = TI.getLongWidth();
+
+  if (LongWidth == 64)
+    return PT_Sint64;
+  else if (LongWidth == 32)
+    return PT_Sint32;
+  else if (LongWidth == 16)
+    return PT_Sint16;
+  llvm_unreachable("long isn't 16, 32 or 64 bit?");
+}
+
 /// Peek an integer value from the stack into an APSInt.
 static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   if (Offset == 0)
@@ -108,6 +121,19 @@ static void pushAPSInt(InterpState &S, const APSInt &Val) {
   default:
     llvm_unreachable("Invalid integer bitwidth");
   }
+}
+
+/// Pushes \p Val to the stack, as a target-dependent 'long'.
+static void pushLong(InterpState &S, int64_t Val) {
+  PrimType LongType = getLongPrimType(S);
+  if (LongType == PT_Sint64)
+    S.Stk.push<Integral<64, true>>(Integral<64, true>::from(Val));
+  else if (LongType == PT_Sint32)
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Val));
+  else if (LongType == PT_Sint16)
+    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Val));
+  else
+    llvm_unreachable("Long isn't 16, 32 or 64 bit?");
 }
 
 static void pushSizeT(InterpState &S, uint64_t Val) {
@@ -533,6 +559,26 @@ static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// __builtin_expect(long, long)
+// __builtin_expect_with_probability(long, long, double)
+static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  // The return value is simply the value of the first parameter.
+  // We ignore the probability.
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3);
+
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  unsigned Offset = align(primSize(getLongPrimType(S))) * 2;
+  if (NumArgs == 3)
+    Offset += align(primSize(PT_Float));
+
+  APSInt Val = peekToAPSInt(S.Stk, ArgT, Offset);
+  pushLong(S, Val.getSExtValue());
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -699,6 +745,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_classify_type:
     if (!interp__builtin_classify_type(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability:
+    if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
       return false;
     break;
 

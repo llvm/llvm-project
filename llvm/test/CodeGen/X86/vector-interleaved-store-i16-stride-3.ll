@@ -1218,7 +1218,7 @@ define void @store_i16_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[0,1,2,3],zmm4[4,5,6,7]
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm4 = <5,5,u,6,6,u,7,7,u,8,8,u,9,9,u,10>
 ; AVX512F-NEXT:    vpermd (%rdx), %zmm4, %zmm5
-; AVX512F-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm3, %zmm5
+; AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm3, %zmm5
 ; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm3
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm6 = [128,128,128,128,12,13,128,128,128,128,14,15,128,128,128,128,16,17,128,128,128,128,18,19,128,128,128,128,20,21,128,128]
 ; AVX512F-NEXT:    vpshufb %ymm6, %ymm3, %ymm3
@@ -2386,7 +2386,7 @@ define void @store_i16_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm18 = <5,5,u,6,6,u,7,7,u,8,8,u,9,9,u,10>
 ; AVX512F-NEXT:    vpermd 64(%rdx), %zmm18, %zmm10
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm22 = [0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
-; AVX512F-NEXT:    vpternlogq $184, %zmm0, %zmm22, %zmm10
+; AVX512F-NEXT:    vpternlogd $184, %zmm0, %zmm22, %zmm10
 ; AVX512F-NEXT:    vmovdqa 96(%rdi), %ymm0
 ; AVX512F-NEXT:    vmovdqa %ymm6, %ymm2
 ; AVX512F-NEXT:    vpshufb %ymm6, %ymm0, %ymm0
@@ -2469,7 +2469,7 @@ define void @store_i16_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
 ; AVX512F-NEXT:    vpermd (%rdx), %zmm18, %zmm1
-; AVX512F-NEXT:    vpternlogq $184, %zmm0, %zmm22, %zmm1
+; AVX512F-NEXT:    vpternlogd $184, %zmm0, %zmm22, %zmm1
 ; AVX512F-NEXT:    vmovdqa64 %zmm1, 64(%rcx)
 ; AVX512F-NEXT:    vmovdqa64 %zmm6, 128(%rcx)
 ; AVX512F-NEXT:    vmovdqa64 %zmm5, 192(%rcx)
