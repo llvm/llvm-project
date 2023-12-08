@@ -5520,6 +5520,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CGM.AdjustMemoryAttribute(CalleePtr->getName(), Callee.getAbstractInfo(),
                                 Attrs);
   }
+  // We may not have a FunctionDecl*, but we still need to support strictfp.
+  if (Builder.getIsFPConstrained()) {
+    // All calls within a strictfp function are marked strictfp
+    Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
+  }
+
   // Add call-site nomerge attribute if exists.
   if (InNoMergeAttributedStmt)
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoMerge);
@@ -5587,10 +5593,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       !isa_and_nonnull<FunctionDecl>(TargetDecl))
     EmitKCFIOperandBundle(ConcreteCallee, BundleList);
 
+#if 0 // XXX Why is this here? Duplicate!
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
+#endif
 
   AssumeAlignedAttrEmitter AssumeAlignedAttrEmitter(*this, TargetDecl);
   Attrs = AssumeAlignedAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);

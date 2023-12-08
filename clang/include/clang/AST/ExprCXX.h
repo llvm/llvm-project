@@ -1698,6 +1698,10 @@ public:
   SourceRange getParenOrBraceRange() const { return ParenOrBraceRange; }
   void setParenOrBraceRange(SourceRange Range) { ParenOrBraceRange = Range; }
 
+  /// Determine whether the function was declared in source context
+  /// that requires constrained FP intrinsics
+  bool UsesFPIntrin() const { return Constructor->UsesFPIntrin(); }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXConstructExprClass ||
            T->getStmtClass() == CXXTemporaryObjectExprClass;

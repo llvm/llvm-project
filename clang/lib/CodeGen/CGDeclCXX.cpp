@@ -1012,6 +1012,11 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
 
   CurEHLocation = D->getBeginLoc();
 
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(D->getInit())) {
+    if (CE->UsesFPIntrin())
+      Builder.setIsFPConstrained(true);
+  }
+
   StartFunction(GlobalDecl(D, DynamicInitKind::Initializer),
                 getContext().VoidTy, Fn, getTypes().arrangeNullaryFunction(),
                 FunctionArgList());
