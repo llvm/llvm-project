@@ -896,10 +896,13 @@ Arm and AArch64 Support
 
   Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
-  * Arm Cortex-A520 (cortex-a520).
-  * Arm Cortex-A720 (cortex-a720).
-  * Arm Cortex-X4 (cortex-x4).
-  * Arm Cortex-M52 (cortex-m52).
+  --target=arm
+     * Arm Cortex-M52 (cortex-m52).
+
+  --target=aarch64
+     * Arm Cortex-A520 (cortex-a520).
+     * Arm Cortex-A720 (cortex-a720).
+     * Arm Cortex-X4 (cortex-x4).
 
 Android Support
 ^^^^^^^^^^^^^^^
