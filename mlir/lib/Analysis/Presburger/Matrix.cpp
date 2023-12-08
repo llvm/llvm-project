@@ -561,10 +561,11 @@ FracMatrix FracMatrix::gramSchmidt() const {
   // of any of the previous vectors.
   for (unsigned i = 1, e = getNumRows(); i < e; i++) {
     for (unsigned j = 0; j < i; j++) {
-      Fraction jDotProd = dotProduct(orth.getRow(j), orth.getRow(j));
-      assert(jDotProd != 0 && "linearly dependent vectors passed to gramSchmidt()!");
-      Fraction projectionScale = dotProduct(orth.getRow(i), orth.getRow(j)) /
-                                 jDotProd;
+      Fraction jNormSquared = dotProduct(orth.getRow(j), orth.getRow(j));
+      assert(jNormSquared != 0 && "some row became zero! Inputs to this "
+                                  "function must be linearly independent.");
+      Fraction projectionScale =
+          dotProduct(orth.getRow(i), orth.getRow(j)) / jNormSquared;
       orth.addToRow(j, i, -projectionScale);
     }
   }
