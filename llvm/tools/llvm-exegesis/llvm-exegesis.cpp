@@ -410,8 +410,18 @@ static void runBenchmarkConfigurations(
       std::optional<StringRef> DumpFile;
       if (DumpObjectToDisk.getNumOccurrences())
         DumpFile = DumpObjectToDisk;
-      AllResults.emplace_back(
-          ExitOnErr(Runner.runConfiguration(std::move(RC), DumpFile)));
+      auto [Err, InstrBenchmark] =
+          Runner.runConfiguration(std::move(RC), DumpFile);
+      if (Err) {
+        // Errors from executing the snippets are fine.
+        // All other errors are a framework issue and should fail.
+        if (!Err.isA<SnippetCrash>()) {
+          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+          exit(1);
+        }
+        InstrBenchmark.Error = toString(std::move(Err));
+      }
+      AllResults.push_back(std::move(InstrBenchmark));
     }
     Benchmark &Result = AllResults.front();
 
