@@ -254,8 +254,12 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
       s->Printf(", value = 0x%16.16" PRIx64,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
-  llvm::StringRef ansi_prefix = target->GetDebugger().GetRegexMatchAnsiPrefix();
-  llvm::StringRef ansi_suffix = target->GetDebugger().GetRegexMatchAnsiSuffix();
+  llvm::StringRef ansi_prefix;
+  llvm::StringRef ansi_suffix;
+  if (target) {
+    ansi_prefix = target->GetDebugger().GetRegexMatchAnsiPrefix();
+    ansi_suffix = target->GetDebugger().GetRegexMatchAnsiSuffix();
+  }
   if (ConstString demangled = m_mangled.GetDemangledName()) {
     s->PutCString(", name=\"");
     s->PutCStringColorHighlighted(demangled.GetStringRef(), pattern,
