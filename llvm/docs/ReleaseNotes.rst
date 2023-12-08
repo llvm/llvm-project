@@ -205,8 +205,8 @@ Changes to the C API
 * Added the following functions for manipulating operand bundles, as well as
   building ``call`` and ``invoke`` instructions that use operand bundles:
 
-  * ``LLVMBuildCall3``
-  * ``LLVMBuildInvoke3``
+  * ``LLVMBuildCallWithOperandBundles``
+  * ``LLVMBuildInvokeWithOperandBundles``
   * ``LLVMCreateOperandBundle``
   * ``LLVMDisposeOperandBundle``
   * ``LLVMGetNumOperandBundles``

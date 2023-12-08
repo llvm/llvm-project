@@ -3180,11 +3180,10 @@ LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                                       ArrayRef(unwrap(Args), NumArgs), Name));
 }
 
-LLVMValueRef LLVMBuildInvoke3(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
-                              LLVMValueRef *Args, unsigned NumArgs,
-                              LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
-                              LLVMOperandBundleRef *Bundles,
-                              unsigned NumBundles, const char *Name) {
+LLVMValueRef LLVMBuildInvokeWithOperandBundles(
+    LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn, LLVMValueRef *Args,
+    unsigned NumArgs, LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
+    LLVMOperandBundleRef *Bundles, unsigned NumBundles, const char *Name) {
   SmallVector<OperandBundleDef, 8> OBs;
   for (auto *Bundle : ArrayRef(Bundles, NumBundles)) {
     OperandBundleDef *OB = unwrap(Bundle);
@@ -3923,10 +3922,11 @@ LLVMValueRef LLVMBuildCall2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                                     ArrayRef(unwrap(Args), NumArgs), Name));
 }
 
-LLVMValueRef LLVMBuildCall3(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
-                            LLVMValueRef *Args, unsigned NumArgs,
-                            LLVMOperandBundleRef *Bundles, unsigned NumBundles,
-                            const char *Name) {
+LLVMValueRef
+LLVMBuildCallWithOperandBundles(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                LLVMValueRef Fn, LLVMValueRef *Args,
+                                unsigned NumArgs, LLVMOperandBundleRef *Bundles,
+                                unsigned NumBundles, const char *Name) {
   FunctionType *FTy = unwrap<FunctionType>(Ty);
   SmallVector<OperandBundleDef, 8> OBs;
   for (auto *Bundle : ArrayRef(Bundles, NumBundles)) {

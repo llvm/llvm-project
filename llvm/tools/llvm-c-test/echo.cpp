@@ -562,8 +562,9 @@ struct FunCloner {
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
         LLVMBasicBlockRef Then = DeclareBB(LLVMGetNormalDest(Src));
         LLVMBasicBlockRef Unwind = DeclareBB(LLVMGetUnwindDest(Src));
-        Dst = LLVMBuildInvoke3(Builder, FnTy, Fn, Args.data(), ArgCount, Then,
-                               Unwind, Bundles.data(), Bundles.size(), Name);
+        Dst = LLVMBuildInvokeWithOperandBundles(
+            Builder, FnTy, Fn, Args.data(), ArgCount, Then, Unwind,
+            Bundles.data(), Bundles.size(), Name);
         CloneAttrs(Src, Dst);
         for (auto Bundle : Bundles)
           LLVMDisposeOperandBundle(Bundle);
@@ -783,8 +784,9 @@ struct FunCloner {
         }
         LLVMTypeRef FnTy = CloneType(LLVMGetCalledFunctionType(Src));
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
-        Dst = LLVMBuildCall3(Builder, FnTy, Fn, Args.data(), ArgCount,
-                             Bundles.data(), Bundles.size(), Name);
+        Dst = LLVMBuildCallWithOperandBundles(Builder, FnTy, Fn, Args.data(),
+                                              ArgCount, Bundles.data(),
+                                              Bundles.size(), Name);
         LLVMSetTailCallKind(Dst, LLVMGetTailCallKind(Src));
         CloneAttrs(Src, Dst);
         for (auto Bundle : Bundles)

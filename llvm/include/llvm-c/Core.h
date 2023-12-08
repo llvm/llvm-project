@@ -3901,11 +3901,10 @@ LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
                               const char *Name);
-LLVMValueRef LLVMBuildInvoke3(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
-                              LLVMValueRef *Args, unsigned NumArgs,
-                              LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
-                              LLVMOperandBundleRef *Bundles,
-                              unsigned NumBundles, const char *Name);
+LLVMValueRef LLVMBuildInvokeWithOperandBundles(
+    LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn, LLVMValueRef *Args,
+    unsigned NumArgs, LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
+    LLVMOperandBundleRef *Bundles, unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildUnreachable(LLVMBuilderRef);
 
 /* Exception Handling */
@@ -4201,10 +4200,11 @@ LLVMValueRef LLVMBuildPhi(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildCall2(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
                             LLVMValueRef *Args, unsigned NumArgs,
                             const char *Name);
-LLVMValueRef LLVMBuildCall3(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
-                            LLVMValueRef *Args, unsigned NumArgs,
-                            LLVMOperandBundleRef *Bundles, unsigned NumBundles,
-                            const char *Name);
+LLVMValueRef
+LLVMBuildCallWithOperandBundles(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
+                                LLVMValueRef *Args, unsigned NumArgs,
+                                LLVMOperandBundleRef *Bundles,
+                                unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildSelect(LLVMBuilderRef, LLVMValueRef If,
                              LLVMValueRef Then, LLVMValueRef Else,
                              const char *Name);
