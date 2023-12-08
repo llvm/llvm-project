@@ -2138,8 +2138,6 @@ void Fortran::lower::mapSymbolAttributes(
       if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        if (argType.isa<fir::RecordType>())
-          TODO(loc, "derived type argument passed by value");
         mlir::Type symType = converter.genType(sym);
         addr = builder.create<fir::AllocaOp>(loc, symType);
         if (isCptrByVal) {
