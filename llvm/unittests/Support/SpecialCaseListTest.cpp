@@ -25,8 +25,8 @@ protected:
                                                        std::string &Error,
                                                        bool UseGlobs = true) {
     auto S = List.str();
-    if (UseGlobs)
-      S = (Twine("#!special-case-list-v2\n") + S).str();
+    if (!UseGlobs)
+      S = (Twine("#!special-case-list-v1\n") + S).str();
     std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(S);
     return SpecialCaseList::create(MB.get(), Error);
   }
@@ -46,8 +46,8 @@ protected:
     SmallString<64> Path;
     sys::fs::createTemporaryFile("SpecialCaseListTest", "temp", FD, Path);
     raw_fd_ostream OF(FD, true, true);
-    if (UseGlobs)
-      OF << "#!special-case-list-v2\n";
+    if (!UseGlobs)
+      OF << "#!special-case-list-v1\n";
     OF << Contents;
     OF.close();
     return std::string(Path.str());
