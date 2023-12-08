@@ -84,6 +84,7 @@ OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
 }
 
 enum class OpenACCSpecialTokenKind {
+  ReadOnly,
   DevNum,
   Queues,
 };
@@ -93,6 +94,8 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return false;
 
   switch (Kind) {
+  case OpenACCSpecialTokenKind::ReadOnly:
+    return Tok.getIdentifierInfo()->isStr("readonly");
   case OpenACCSpecialTokenKind::DevNum:
     return Tok.getIdentifierInfo()->isStr("devnum");
   case OpenACCSpecialTokenKind::Queues:
@@ -203,7 +206,7 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
 
   // Just #pragma acc can get us immediately to the end, make sure we don't
   // introspect on the spelling before then.
-  if (FirstTok.isAnnotation()) {
+  if (FirstTok.isNot(tok::identifier)) {
     P.Diag(FirstTok, diag::err_acc_missing_directive);
     return OpenACCDirectiveKind::Invalid;
   }
@@ -221,11 +224,8 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   if (ExDirKind >= OpenACCDirectiveKindEx::Invalid) {
     switch (ExDirKind) {
     case OpenACCDirectiveKindEx::Invalid: {
-      if (!FirstTok.is(tok::identifier))
-        P.Diag(FirstTok, diag::err_expected) << tok::identifier;
-      else
-        P.Diag(FirstTok, diag::err_acc_invalid_directive)
-            << 0 << FirstTok.getIdentifierInfo();
+      P.Diag(FirstTok, diag::err_acc_invalid_directive)
+          << 0 << FirstTok.getIdentifierInfo();
       return OpenACCDirectiveKind::Invalid;
     }
     case OpenACCDirectiveKindEx::Enter:
@@ -422,8 +422,7 @@ void Parser::ParseOpenACCCacheVarList() {
   // specifications.  First, see if we have `readonly:`, else we back-out and
   // treat it like the beginning of a reference to a potentially-existing
   // `readonly` variable.
-  if (getCurToken().is(tok::identifier) &&
-      getCurToken().getIdentifierInfo()->isStr("readonly") &&
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::ReadOnly, Tok) &&
       NextToken().is(tok::colon)) {
     // Consume both tokens.
     ConsumeToken();
