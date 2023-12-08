@@ -12,7 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "llvm/Support/CodeGen.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include <memory>
 
 namespace mlir {
@@ -85,7 +85,7 @@ std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 struct FunctionAttrTypes {
-  llvm::FramePointerKind framePointerKind;
+  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 };
 
 std::unique_ptr<mlir::Pass> createFunctionAttrPass();

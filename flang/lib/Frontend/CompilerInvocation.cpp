@@ -248,13 +248,21 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
     llvm::StringRef s = a->getValue();
-    assert(s == "none" || s == "non-leaf" || s == "all");
-    if (s == "none")
+    
+    if (!(s=="none" || s=="no-leaf" || s=="all")) {
+    const auto debugWarningId = diags.getCustomDiagID(
+        clang::DiagnosticsEngine::Warning, "Frame pointer: %0");
+    diags.Report(debugWarningId).AddString(a->getValue());
+    }
+
+    if (s == "none") {
       opts.setFramePointer(llvm::FramePointerKind::None);
-    else if (s == "non-leaf")
-      opts.setFramePointer(llvm::FramePointerKind::NonLeaf);
-    else
-      opts.setFramePointer(llvm::FramePointerKind::All);
+    } else {
+      if (s == "non-leaf")
+        opts.setFramePointer(llvm::FramePointerKind::NonLeaf);
+      else
+        opts.setFramePointer(llvm::FramePointerKind::All);
+    }
   }
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))

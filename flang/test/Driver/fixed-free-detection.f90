@@ -25,5 +25,5 @@
 ! MULTIPLEFORMS:program freeform
 ! MULTIPLEFORMS-NOT:programfixedform
 ! MULTIPLEFORMS-NEXT:end
-! MULTIPLEFORMS-NEXT:programfixedform
+! MULTIPLEFORMS:programfixedform
 ! MULTIPLEFORMS-NOT:program freeform

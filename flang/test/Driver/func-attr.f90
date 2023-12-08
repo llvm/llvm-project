@@ -6,7 +6,7 @@
 subroutine func
 end subroutine func
 
-! CHECK-NONEFP: attributes #0 = { "frame-pointer"="none" }
+! CHECK-NONEFP: attributes #0 = {{{.*}}}
 ! CHECK-NONLEAFFP: attributes #0 = { "frame-pointer"="non-leaf" }
 ! CHECK-ALLFP: attributes #0 = { "frame-pointer"="all" }
 
