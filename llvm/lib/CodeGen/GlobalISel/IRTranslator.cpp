@@ -2435,6 +2435,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
     return true;
   }
+  case Intrinsic::prefetch: {
+    Value *Addr = CI.getOperand(0);
+    ConstantInt *RW = cast<ConstantInt>(CI.getOperand(1));
+    ConstantInt *Locality = cast<ConstantInt>(CI.getOperand(2));
+    ConstantInt *CacheType = cast<ConstantInt>(CI.getOperand(3));
+
+    MIRBuilder.buildPrefetch(getOrCreateVReg(*Addr), RW->getZExtValue(),
+                             Locality->getZExtValue(),
+                             CacheType->getZExtValue());
+
+    return true;
+  }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
