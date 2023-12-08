@@ -206,7 +206,7 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
 
   // Just #pragma acc can get us immediately to the end, make sure we don't
   // introspect on the spelling before then.
-  if (FirstTok.isAnnotation()) {
+  if (FirstTok.isNot(tok::identifier)) {
     P.Diag(FirstTok, diag::err_acc_missing_directive);
     return OpenACCDirectiveKind::Invalid;
   }
@@ -224,11 +224,8 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   if (ExDirKind >= OpenACCDirectiveKindEx::Invalid) {
     switch (ExDirKind) {
     case OpenACCDirectiveKindEx::Invalid: {
-      if (!FirstTok.is(tok::identifier))
-        P.Diag(FirstTok, diag::err_expected) << tok::identifier;
-      else
-        P.Diag(FirstTok, diag::err_acc_invalid_directive)
-            << 0 << FirstTok.getIdentifierInfo();
+      P.Diag(FirstTok, diag::err_acc_invalid_directive)
+          << 0 << FirstTok.getIdentifierInfo();
       return OpenACCDirectiveKind::Invalid;
     }
     case OpenACCDirectiveKindEx::Enter:
