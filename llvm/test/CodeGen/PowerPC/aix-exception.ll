@@ -180,7 +180,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:  L..C0:
 ; ASM:    .tc _ZTIi[TC],_ZTIi[UA]
 ; ASM:  L..C1:
-; ASM:    .tc __ehinfo.1[TC],__ehinfo.1
+; ASM:    .tc __ehinfo.1[TE],__ehinfo.1
 
 declare ptr @__cxa_allocate_exception(i32)
 declare void @__cxa_throw(ptr, ptr, ptr)
