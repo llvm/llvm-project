@@ -2185,6 +2185,39 @@ def MemCpyOp : CIR_Op<"libc.memcpy"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+def MemChrOp : CIR_Op<"libc.memchr"> {
+  let arguments = (ins Arg<CIR_PointerType, "", [MemRead]>:$src,
+                       CIR_IntType:$pattern,
+                       CIR_IntType:$len);
+  let summary = "libc's `memchr`";
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let description = [{
+    Search for `pattern` in data range from `src` to `src` + `len`.
+    provides a bound to the search in `src`. `result` is a pointer to found
+    `pattern` or a null pointer.
+
+    Examples:
+
+    ```mlir
+    %p = cir.libc.memchr(%src : !cir.ptr<!void>, %pattern : !u32i, %len : !u32i) -> !cir.ptr<!void>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    `(`
+      $src `:` qualified(type($src))
+      `,` $pattern `:` type($pattern)
+      `,` $len `:` type($len)
+    `)` `->` qualified(type($result)) attr-dict
+  }];
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FAbsOp
 //===----------------------------------------------------------------------===//
 
