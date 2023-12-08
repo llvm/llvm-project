@@ -556,7 +556,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
 
   /// Argument class merging as described in System V ABI 3.2.3 point 4.
   ArgClass mergeClass(ArgClass accum, ArgClass field) const {
-    assert((Accum != ArgClass::Memory && Accum != ArgClass::ComplexX87) &&
+    assert((accum != ArgClass::Memory && accum != ArgClass::ComplexX87) &&
            "Invalid accumulated classification during merge.");
     if (accum == field || field == NoClass)
       return accum;
