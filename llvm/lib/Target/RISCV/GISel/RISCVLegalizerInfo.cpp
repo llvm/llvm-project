@@ -317,6 +317,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
+  // va_list must be a pointer, but most sized types are pretty easy to handle
+  // as the destination.
+  getActionDefinitionsBuilder(G_VAARG)
+      // TODO: Implement narrowScalar and widenScalar for G_VAARG for types
+      // outside the [s32, sXLen] range.
+      .clampScalar(0, s32, sXLen)
+      .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
+
   getLegacyLegalizerInfo().computeTables();
 }
 
