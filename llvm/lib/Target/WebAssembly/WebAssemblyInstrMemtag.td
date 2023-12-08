@@ -63,7 +63,7 @@ defm MEMORY_STORE1TAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
                     (outs), (ins),
                     [(int_wasm_memory_store1tag rc:$src, rc:$b16)],
                     "memory.store1tag\t$src, $b16",
-                    "memory.storetag\t",
+                    "memory.store1tag\t",
                     0xfc26>;
 
 defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
