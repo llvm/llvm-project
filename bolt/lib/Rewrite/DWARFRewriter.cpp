@@ -284,7 +284,7 @@ public:
 
   void emitUnit(DWARFUnit &Unit, DIE &UnitDIE) {
     emitUnitHeader(Unit, UnitDIE);
-    emitDIE(UnitDIE);
+    Asm->emitDwarfDIE(UnitDIE);
   }
 };
 

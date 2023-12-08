@@ -201,7 +201,7 @@ public:
                        const Offset2UnitMap &UnitMacroMap,
                        OffsetsStringPool &StringPool);
 
-private:
+protected:
   inline void warn(const Twine &Warning, StringRef Context = "") {
     if (WarningHandler)
       WarningHandler(Warning, Context, nullptr);
