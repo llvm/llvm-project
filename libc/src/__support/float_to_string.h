@@ -704,7 +704,7 @@ FloatToString<long double>::get_negative_block(int block_index) {
   if (exponent < 0) {
     const int32_t idx = -exponent / IDX_SIZE;
 
-    cpp::UInt<MID_INT_SIZE> val;
+    cpp::UInt<MID_INT_SIZE> val(0);
 #ifdef LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
     // ------------------------------ TABLE MODE -------------------------------
     const int32_t SHIFT_CONST = TABLE_SHIFT_CONST;
