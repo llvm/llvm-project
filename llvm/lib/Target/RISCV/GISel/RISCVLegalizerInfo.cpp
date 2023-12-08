@@ -75,10 +75,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   using namespace TargetOpcode;
 
-  auto AllVecTys = std::initializer_list<LLT>{
-      nxv1s8,  nxv2s8,   nxv4s8,  nxv8s8,   nxv16s8,  nxv32s8, nxv64s8, nxv1s16,
-      nxv2s16, nxv4s16,  nxv8s16, nxv16s16, nxv32s16, nxv1s32, nxv2s32, nxv4s32,
-      nxv8s32, nxv16s32, nxv1s64, nxv2s64,  nxv4s64,  nxv8s64};
+  auto AllVecTys = {nxv1s8,   nxv2s8,  nxv4s8,  nxv8s8,  nxv16s8, nxv32s8,
+                    nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
+                    nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
+                    nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
