@@ -9,7 +9,7 @@
 // RUN: ls -l default.profraw | FileCheck %s
 
 // CHECK:     default.profraw
-// CEHCK-NOT: incorrect-profile-name.profraw
+// CHECK-NOT: incorrect-profile-name.profraw
 
 #include <stdio.h>
 int f() { return 0; }
