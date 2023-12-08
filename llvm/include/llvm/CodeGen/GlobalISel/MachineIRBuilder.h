@@ -1194,7 +1194,7 @@ public:
                                 const SrcOp &Op0, const SrcOp &Op1,
                                 std::optional<unsigned> Flags = std::nullopt);
 
-  /// Build and insert a \p Res = G_IS_FPCLASS \p Pred, \p Src, \p Mask
+  /// Build and insert a \p Res = G_IS_FPCLASS \p Src, \p Mask
   MachineInstrBuilder buildIsFPClass(const DstOp &Res, const SrcOp &Src,
                                      unsigned Mask) {
     return buildInstr(TargetOpcode::G_IS_FPCLASS, {Res},

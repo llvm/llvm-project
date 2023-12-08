@@ -572,7 +572,7 @@ BenchmarkRunner::createFunctionExecutor(
   llvm_unreachable("ExecutionMode is outside expected range");
 }
 
-Expected<Benchmark> BenchmarkRunner::runConfiguration(
+std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     RunnableConfiguration &&RC,
     const std::optional<StringRef> &DumpFile) const {
   Benchmark &InstrBenchmark = RC.InstrBenchmark;
@@ -583,8 +583,7 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
     auto ObjectFilePath =
         writeObjectFile(ObjectFile.getBinary()->getData(), *DumpFile);
     if (Error E = ObjectFilePath.takeError()) {
-      InstrBenchmark.Error = toString(std::move(E));
-      return std::move(InstrBenchmark);
+      return {std::move(E), std::move(InstrBenchmark)};
     }
     outs() << "Check generated assembly with: /usr/bin/objdump -d "
            << *ObjectFilePath << "\n";
@@ -592,20 +591,17 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
 
   if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure) {
     InstrBenchmark.Error = "actual measurements skipped.";
-    return std::move(InstrBenchmark);
+    return {Error::success(), std::move(InstrBenchmark)};
   }
 
   Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>> Executor =
       createFunctionExecutor(std::move(ObjectFile), RC.InstrBenchmark.Key);
   if (!Executor)
-    return Executor.takeError();
+    return {Executor.takeError(), std::move(InstrBenchmark)};
   auto NewMeasurements = runMeasurements(**Executor);
 
   if (Error E = NewMeasurements.takeError()) {
-    if (!E.isA<SnippetCrash>())
-      return std::move(E);
-    InstrBenchmark.Error = toString(std::move(E));
-    return std::move(InstrBenchmark);
+    return {std::move(E), std::move(InstrBenchmark)};
   }
   assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
@@ -618,7 +614,7 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
   }
   InstrBenchmark.Measurements = std::move(*NewMeasurements);
 
-  return std::move(InstrBenchmark);
+  return {Error::success(), std::move(InstrBenchmark)};
 }
 
 Expected<std::string>
