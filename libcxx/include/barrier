@@ -310,7 +310,7 @@ public:
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
-        : __b_(__count, _VSTD::move(__completion)) {
+        : __b_(__count, std::move(__completion)) {
         _LIBCPP_ASSERT_UNCATEGORIZED(
             __count >= 0,
             "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
@@ -332,7 +332,7 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void wait(arrival_token&& __phase) const
     {
-        __b_.wait(_VSTD::move(__phase));
+        __b_.wait(std::move(__phase));
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_wait()

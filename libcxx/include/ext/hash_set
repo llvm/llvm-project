@@ -642,9 +642,9 @@ operator==(const hash_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
     {
         _EqRng __xeq = __x.equal_range(*__i);
         _EqRng __yeq = __y.equal_range(*__i);
-        if (_VSTD::distance(__xeq.first, __xeq.second) !=
-            _VSTD::distance(__yeq.first, __yeq.second) ||
-                  !_VSTD::is_permutation(__xeq.first, __xeq.second, __yeq.first))
+        if (std::distance(__xeq.first, __xeq.second) !=
+            std::distance(__yeq.first, __yeq.second) ||
+                  !std::is_permutation(__xeq.first, __xeq.second, __yeq.first))
             return false;
         __i = __xeq.second;
     }

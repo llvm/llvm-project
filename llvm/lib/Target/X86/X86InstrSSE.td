@@ -7359,11 +7359,6 @@ defm VPDPBUSDS  : avx_vnni_rm<0x51, "vpdpbusds", X86Vpdpbusds, 0>;
 defm VPDPWSSD   : avx_vnni_rm<0x52, "vpdpwssd",  X86Vpdpwssd, 1>;
 defm VPDPWSSDS  : avx_vnni_rm<0x53, "vpdpwssds", X86Vpdpwssds, 1>;
 
-def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
-                             (X86vpmaddwd node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
-
 let Predicates = [HasAVXVNNI, NoVLX_Or_NoVNNI] in {
   def : Pat<(v8i32 (add VR256:$src1,
                         (X86vpmaddwd_su VR256:$src2, VR256:$src3))),

@@ -40,7 +40,7 @@ inclusive_scan(_InputIterator __first, _InputIterator __last, _OutputIterator __
     typename iterator_traits<_InputIterator>::value_type __init = *__first;
     *__result++ = __init;
     if (++__first != __last)
-      return _VSTD::inclusive_scan(__first, __last, __result, __b, __init);
+      return std::inclusive_scan(__first, __last, __result, __b, __init);
   }
 
   return __result;
@@ -50,7 +50,7 @@ template <class _InputIterator, class _OutputIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator inclusive_scan(_InputIterator __first,
                                                                                        _InputIterator __last,
                                                                                        _OutputIterator __result) {
-  return _VSTD::inclusive_scan(__first, __last, __result, _VSTD::plus<>());
+  return std::inclusive_scan(__first, __last, __result, std::plus<>());
 }
 
 #endif // _LIBCPP_STD_VER >= 17

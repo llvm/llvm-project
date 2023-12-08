@@ -635,6 +635,10 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::Cmp:
     O << " " << CmpInst::getPredicateName(getPredicate());
     break;
+  case OperationType::DisjointOp:
+    if (DisjointFlags.IsDisjoint)
+      O << " disjoint";
+    break;
   case OperationType::PossiblyExactOp:
     if (ExactFlags.IsExact)
       O << " exact";
@@ -651,6 +655,10 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::GEPOp:
     if (GEPFlags.IsInBounds)
       O << " inbounds";
+    break;
+  case OperationType::NonNegOp:
+    if (NonNegFlags.NonNeg)
+      O << " nneg";
     break;
   case OperationType::Other:
     break;

@@ -1150,7 +1150,7 @@ complex<typename __promote<_Tp, _Up>::type>
 pow(const complex<_Tp>& __x, const complex<_Up>& __y)
 {
     typedef complex<typename __promote<_Tp, _Up>::type> result_type;
-    return _VSTD::pow(result_type(__x), result_type(__y));
+    return std::pow(result_type(__x), result_type(__y));
 }
 
 template<class _Tp, class _Up, __enable_if_t<is_arithmetic<_Up>::value, int> = 0>
@@ -1159,7 +1159,7 @@ complex<typename __promote<_Tp, _Up>::type>
 pow(const complex<_Tp>& __x, const _Up& __y)
 {
     typedef complex<typename __promote<_Tp, _Up>::type> result_type;
-    return _VSTD::pow(result_type(__x), result_type(__y));
+    return std::pow(result_type(__x), result_type(__y));
 }
 
 template<class _Tp, class _Up, __enable_if_t<is_arithmetic<_Tp>::value, int> = 0>
@@ -1168,7 +1168,7 @@ complex<typename __promote<_Tp, _Up>::type>
 pow(const _Tp& __x, const complex<_Up>& __y)
 {
     typedef complex<typename __promote<_Tp, _Up>::type> result_type;
-    return _VSTD::pow(result_type(__x), result_type(__y));
+    return std::pow(result_type(__x), result_type(__y));
 }
 
 // __sqr, computes pow(x, 2)

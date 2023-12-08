@@ -353,19 +353,19 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     queue(queue&& __q)
         _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
-        : c(_VSTD::move(__q.c)) {}
+        : c(std::move(__q.c)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     queue& operator=(queue&& __q)
         _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
-        {c = _VSTD::move(__q.c); return *this;}
+        {c = std::move(__q.c); return *this;}
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI
     explicit queue(const container_type& __c)  : c(__c) {}
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
-    explicit queue(container_type&& __c) : c(_VSTD::move(__c)) {}
+    explicit queue(container_type&& __c) : c(std::move(__c)) {}
 #endif // _LIBCPP_CXX03_LANG
     template <class _Alloc>
         _LIBCPP_HIDE_FROM_ABI
@@ -387,12 +387,12 @@ public:
         _LIBCPP_HIDE_FROM_ABI
         queue(container_type&& __c, const _Alloc& __a,
                        __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
-            : c(_VSTD::move(__c), __a) {}
+            : c(std::move(__c), __a) {}
     template <class _Alloc>
         _LIBCPP_HIDE_FROM_ABI
         queue(queue&& __q, const _Alloc& __a,
                        __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
-            : c(_VSTD::move(__q.c), __a) {}
+            : c(std::move(__q.c), __a) {}
 
 #endif // _LIBCPP_CXX03_LANG
 
@@ -414,7 +414,7 @@ public:
     void push(const value_type& __v) {c.push_back(__v);}
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
-    void push(value_type&& __v)      {c.push_back(_VSTD::move(__v));}
+    void push(value_type&& __v)      {c.push_back(std::move(__v));}
 
 #if _LIBCPP_STD_VER >= 23
     template <_ContainerCompatibleRange<_Tp> _Range>
@@ -434,10 +434,10 @@ public:
         _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER >= 17
         decltype(auto) emplace(_Args&&... __args)
-            { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+            { return c.emplace_back(std::forward<_Args>(__args)...);}
 #else
         void     emplace(_Args&&... __args)
-            {        c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+            {        c.emplace_back(std::forward<_Args>(__args)...);}
 #endif
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
@@ -447,7 +447,7 @@ public:
     void swap(queue& __q)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value)
     {
-        using _VSTD::swap;
+        using std::swap;
         swap(c, __q.c);
     }
 
@@ -616,13 +616,13 @@ public:
     priority_queue(priority_queue&& __q)
         _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value &&
                    is_nothrow_move_constructible<value_compare>::value)
-        : c(_VSTD::move(__q.c)), comp(_VSTD::move(__q.comp)) {}
+        : c(std::move(__q.c)), comp(std::move(__q.comp)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     priority_queue& operator=(priority_queue&& __q)
         _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value &&
                    is_nothrow_move_assignable<value_compare>::value)
-        {c = _VSTD::move(__q.c); comp = _VSTD::move(__q.comp); return *this;}
+        {c = std::move(__q.c); comp = std::move(__q.comp); return *this;}
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI
@@ -870,7 +870,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(const _Compare& __comp
     : c(__c),
       comp(__comp)
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -879,10 +879,10 @@ template <class _Tp, class _Container, class _Compare>
 inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& __comp,
                                                           container_type&& __c)
-    : c(_VSTD::move(__c)),
+    : c(std::move(__c)),
       comp(__comp)
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -895,7 +895,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(_InputIter __f, _Input
     : c(__f, __l),
       comp(__comp)
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 template <class _Tp, class _Container, class _Compare>
@@ -908,7 +908,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(_InputIter __f, _Input
       comp(__comp)
 {
     c.insert(c.end(), __f, __l);
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -919,11 +919,11 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(_InputIter __f, _InputIter __l,
                                                           const value_compare& __comp,
                                                           container_type&& __c)
-    : c(_VSTD::move(__c)),
+    : c(std::move(__c)),
       comp(__comp)
 {
     c.insert(c.end(), __f, __l);
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -958,7 +958,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& _
     : c(__c, __a),
       comp(__comp)
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 template <class _Tp, class _Container, class _Compare>
@@ -981,10 +981,10 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(const value_compare& _
                                                           container_type&& __c,
                                                           const _Alloc& __a,
                        __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
-    : c(_VSTD::move(__c), __a),
+    : c(std::move(__c), __a),
       comp(__comp)
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 template <class _Tp, class _Container, class _Compare>
@@ -993,8 +993,8 @@ inline
 priority_queue<_Tp, _Container, _Compare>::priority_queue(priority_queue&& __q,
                                                           const _Alloc& __a,
                        __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
-    : c(_VSTD::move(__q.c), __a),
-      comp(_VSTD::move(__q.comp))
+    : c(std::move(__q.c), __a),
+      comp(std::move(__q.comp))
 {
 }
 
@@ -1009,7 +1009,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(
     : c(__f, __l, __a),
       comp()
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 template <class _Tp, class _Container, class _Compare>
@@ -1022,7 +1022,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(
     : c(__f, __l, __a),
       comp(__comp)
 {
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 template <class _Tp, class _Container, class _Compare>
@@ -1036,7 +1036,7 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(
       comp(__comp)
 {
     c.insert(c.end(), __f, __l);
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -1047,11 +1047,11 @@ priority_queue<_Tp, _Container, _Compare>::priority_queue(
         _InputIter __f, _InputIter __l, const value_compare& __comp,
         container_type&& __c, const _Alloc& __a,
         __enable_if_t<uses_allocator<container_type, _Alloc>::value>*)
-    : c(_VSTD::move(__c), __a),
+    : c(std::move(__c), __a),
       comp(__comp)
 {
     c.insert(c.end(), __f, __l);
-    _VSTD::make_heap(c.begin(), c.end(), comp);
+    std::make_heap(c.begin(), c.end(), comp);
 }
 #endif  // _LIBCPP_CXX03_LANG
 
@@ -1061,7 +1061,7 @@ void
 priority_queue<_Tp, _Container, _Compare>::push(const value_type& __v)
 {
     c.push_back(__v);
-    _VSTD::push_heap(c.begin(), c.end(), comp);
+    std::push_heap(c.begin(), c.end(), comp);
 }
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -1071,8 +1071,8 @@ inline
 void
 priority_queue<_Tp, _Container, _Compare>::push(value_type&& __v)
 {
-    c.push_back(_VSTD::move(__v));
-    _VSTD::push_heap(c.begin(), c.end(), comp);
+    c.push_back(std::move(__v));
+    std::push_heap(c.begin(), c.end(), comp);
 }
 
 template <class _Tp, class _Container, class _Compare>
@@ -1081,8 +1081,8 @@ inline
 void
 priority_queue<_Tp, _Container, _Compare>::emplace(_Args&&... __args)
 {
-    c.emplace_back(_VSTD::forward<_Args>(__args)...);
-    _VSTD::push_heap(c.begin(), c.end(), comp);
+    c.emplace_back(std::forward<_Args>(__args)...);
+    std::push_heap(c.begin(), c.end(), comp);
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -1092,7 +1092,7 @@ inline
 void
 priority_queue<_Tp, _Container, _Compare>::pop()
 {
-    _VSTD::pop_heap(c.begin(), c.end(), comp);
+    std::pop_heap(c.begin(), c.end(), comp);
     c.pop_back();
 }
 
@@ -1103,7 +1103,7 @@ priority_queue<_Tp, _Container, _Compare>::swap(priority_queue& __q)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value &&
                    __is_nothrow_swappable<value_compare>::value)
 {
-    using _VSTD::swap;
+    using std::swap;
     swap(c, __q.c);
     swap(comp, __q.comp);
 }

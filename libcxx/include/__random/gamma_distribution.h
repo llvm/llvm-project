@@ -137,7 +137,7 @@ gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
             const result_type __w = __u * (1 - __u);
             if (__w != 0)
             {
-                const result_type __y = _VSTD::sqrt(__c / __w) *
+                const result_type __y = std::sqrt(__c / __w) *
                                         (__u - result_type(0.5));
                 __x = __b + __y;
                 if (__x >= 0)
@@ -145,7 +145,7 @@ gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
                     const result_type __z = 64 * __w * __w * __w * __v * __v;
                     if (__z <= 1 - 2 * __y * __y / __x)
                         break;
-                    if (_VSTD::log(__z) <= 2 * (__b * _VSTD::log(__x / __b) - __y))
+                    if (std::log(__z) <= 2 * (__b * std::log(__x / __b) - __y))
                         break;
                 }
             }
@@ -159,14 +159,14 @@ gamma_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
             const result_type __es = __egen(__g);
             if (__u <= 1 - __a)
             {
-                __x = _VSTD::pow(__u, 1 / __a);
+                __x = std::pow(__u, 1 / __a);
                 if (__x <= __es)
                     break;
             }
             else
             {
-                const result_type __e = -_VSTD::log((1-__u)/__a);
-                __x = _VSTD::pow(1 - __a + __a * __e, 1 / __a);
+                const result_type __e = -std::log((1-__u)/__a);
+                __x = std::pow(1 - __a + __a * __e, 1 / __a);
                 if (__x <= __e + __es)
                     break;
             }
