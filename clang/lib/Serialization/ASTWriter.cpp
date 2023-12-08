@@ -1413,7 +1413,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
       // If we have calculated signature, there is no need to store
       // the size or timestamp.
-      Record.push_back(M.Signature ? 0 : M.File->getSize());
+      Record.push_back(M.Signature ? 0 : M.File.getSize());
       Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
 
       llvm::append_range(Record, M.Signature);
