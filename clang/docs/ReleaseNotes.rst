@@ -669,6 +669,12 @@ Bug Fixes in This Version
   Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
+- Fix crash due to incorrectly allowing conversion functions in copy elision.
+  Fixes (`#39319 <https://github.com/llvm/llvm-project/issues/39319>`_) and
+  (`#60182 <https://github.com/llvm/llvm-project/issues/60182>`_) and
+  (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
+  (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
+  (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
