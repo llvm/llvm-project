@@ -7035,27 +7035,13 @@ define i64 @mul_u24_zext_add64(i32 %x, i32 %y, i64 %z) {
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-SDAG-LABEL: mul_u24_zext_add64:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
-; GFX900-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX900-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-GISEL-LABEL: mul_u24_zext_add64:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX90A-SDAG-LABEL: mul_u24_zext_add64:
-; GFX90A-SDAG:       ; %bb.0:
-; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-SDAG-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v1, v[2:3]
-; GFX90A-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: mul_u24_zext_add64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: mul_u24_zext_add64:
 ; GFX10:       ; %bb.0:
