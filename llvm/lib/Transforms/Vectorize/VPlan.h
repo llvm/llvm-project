@@ -2646,7 +2646,7 @@ public:
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }
 
-  /// Returns VF * UF for the vector loop region.
+  /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
   /// Mark the plan to indicate that using Value2VPValue is not safe any
