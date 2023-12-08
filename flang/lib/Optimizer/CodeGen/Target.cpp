@@ -107,9 +107,10 @@ getSizeAndAlignment(mlir::Location loc, mlir::Type ty,
         logical.getContext(), kindMap.getLogicalBitsize(logical.getFKind()));
     return getSizeAndAlignment(loc, intTy, dl, kindMap);
   }
-  if (auto logical = mlir::dyn_cast<fir::CharacterType>(ty)) {
+  if (auto character = mlir::dyn_cast<fir::CharacterType>(ty)) {
     mlir::Type intTy = mlir::IntegerType::get(
-        logical.getContext(), kindMap.getLogicalBitsize(logical.getFKind()));
+        character.getContext(),
+        kindMap.getCharacterBitsize(character.getFKind()));
     return getSizeAndAlignment(loc, intTy, dl, kindMap);
   }
   TODO(loc, "computing size of a component");
