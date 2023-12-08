@@ -198,6 +198,18 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    # Tests that require 64-bit architecture
+    Feature(
+        name="32-bit-pointer",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) {
+              static_assert(sizeof(void *) == 4);
+            }
+          """,
+        ),
+    ),
     # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
     # on all supported platforms.
     Feature(
@@ -565,18 +577,6 @@ DEFAULT_FEATURES += [
             # TODO(ldionne) Please provide the correct value.
             "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
             cfg.available_features,
-        ),
-    ),
-    # Tests that require 64-bit architecture
-    Feature(
-        name="32-bit-pointer",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            int main(int, char**) {
-              static_assert(sizeof(void *) == 4);
-            }
-          """,
         ),
     ),
 ]
