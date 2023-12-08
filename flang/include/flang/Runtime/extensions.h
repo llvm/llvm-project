@@ -15,6 +15,7 @@
 #define FORTRAN_PROCEDURE_NAME(name) name##_
 
 #include <cstdint>
+#include <cstddef>
 
 extern "C" {
 
@@ -29,7 +30,7 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
     std::int32_t &n, std::int8_t *arg, std::int64_t length);
 
 // GNU extension subroutine GETLOG(C).
-void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *name, std::int64_t length);
+void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *name, std::int64_t length);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

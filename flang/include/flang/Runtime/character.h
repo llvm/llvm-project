@@ -12,7 +12,7 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstring>
+#include <string.h>
 
 template <typename TO, typename FROM>
 void CopyAndPad(
@@ -26,9 +26,9 @@ void CopyAndPad(
       to[j] = static_cast<TO>(' ');
     }
   } else if (toChars <= fromChars) {
-    std::memcpy(to, from, toChars * sizeof(TO));
+    memcpy(to, from, toChars * sizeof(TO));
   } else {
-    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }

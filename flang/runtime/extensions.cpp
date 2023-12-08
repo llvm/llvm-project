@@ -15,48 +15,24 @@
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-
-#include <cstdlib> // wcstombs_s
-#include <lmcons.h> // UNLEN=256
-#include <wchar.h> // wchar_t cast to LPWSTR
-#pragma comment(lib, "Advapi32.lib") // Link Advapi32.lib for GetUserName
-#define LOGIN_NAME_MAX UNLEN
-
-inline int getlogin_r(char *buf, size_t bufSize) {
-  wchar_t w_username[UNLEN + 1];
-  DWORD nameLen{UNLEN + 1};
-
-  if (GetUserName(w_username, &nameLen)) {
-    // Convert the wchar_t string to a regular C string using wcstombs_s
-    if (wcstombs_s(nullptr, buf, bufSize, w_username, _TRUNCATE) != 0) {
-      // Conversion failed
-      return -1;
-    }
-    return (buf[0] == '\0' ? -1 : 0);
-  } else {
-    return -1;
-  }
-}
-
-#elif _REENTRANT || _POSIX_C_SOURCE >= 199506L
+#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 // System is posix-compliant and has getlogin_r
 #include <unistd.h>
-#else
-// System is not posix-compliant
-inline int getlogin_r(char *buf, size_t bufSize) {
-  std::memset(buf, ' ', bufSize - 1);
-  buf[bufSize - 1] = '\0';
-  return 0;
-}
 #endif
 
 extern "C" {
 
 namespace Fortran::runtime {
+
+void GetUsernameEnvVar(
+    const char *envName, std::byte *arg, std::int64_t length) {
+  Descriptor name{
+      *Descriptor::Create(1, sizeof(envName), const_cast<char *>(envName), 0)};
+  Descriptor value{*Descriptor::Create(1, length, arg, 0)};
+
+  RTNAME(GetEnvVariable)
+  (name, &value, nullptr, false, nullptr, __FILE__, __LINE__);
+}
 namespace io {
 // SUBROUTINE FLUSH(N)
 //   FLUSH N
@@ -79,7 +55,8 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 }
 
 // CALL GETLOG(USRNAME)
-void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
+void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
+#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
   const int nameMaxLen{LOGIN_NAME_MAX + 1};
   char str[nameMaxLen];
 
@@ -89,17 +66,14 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
     CopyAndPad(reinterpret_cast<char *>(arg), str, length, std::strlen(str));
   } else {
     // error occur: get username from environment variable
-#ifdef _WIN32
-    char envName[]{"USERNAME"};
-#else
-    char envName[]{"LOGNAME"};
-#endif
-    Descriptor name{*Descriptor::Create(1, sizeof(envName), envName, 0)};
-    Descriptor value{*Descriptor::Create(1, length, arg, 0)};
-
-    RTNAME(GetEnvVariable)
-    (name, &value, nullptr, false, nullptr, __FILE__, __LINE__);
+    GetUsernameEnvVar("LOGNAME", arg, length);
   }
+#elif define(_WIN32)
+  // Get username from environment to avid link to Advapi32.lib
+  GetUsernameEnvVar("USERNAME", arg, length)
+#else
+  GetUsernameEnvVar("LOGNAME", arg, length);
+#endif
 }
 
 } // namespace Fortran::runtime

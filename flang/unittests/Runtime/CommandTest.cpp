@@ -13,12 +13,10 @@
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
 #include <cstdlib>
+#include <cstddef>
 
-#ifdef _WIN32
-#include <lmcons.h> // UNLEN=256
-#define LOGIN_NAME_MAX UNLEN
-#else
-#include <limits.h> // LOGIN_NAME_MAX
+#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
+#include <limits.h> // LOGIN_NAME_MAX used in getlog test
 #endif
 
 using namespace Fortran::runtime;
@@ -65,6 +63,13 @@ protected:
     assert(res.length() <= len && "No room to pad");
     res.append(len - res.length(), ' ');
     return res;
+  }
+
+  void CheckCharEqStr(const char *value, const std::string &expected) const {
+    ASSERT_NE(value, nullptr);
+    EXPECT_EQ(std::strncmp(value, expected.c_str(), expected.size()), 0)
+        << "expected: " << expected << "\n"
+        << "value: " << value;
   }
 
   void CheckDescriptorEqStr(
@@ -514,7 +519,7 @@ TEST_F(EnvironmentVariables, GetlogGetName) {
   char input[charLen]{"\0\0"};
 
   FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::int8_t *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input), charLen);
 
   EXPECT_NE(input[0], '\0');
 }
@@ -525,7 +530,40 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
   char input[charLen];
 
   FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::int8_t *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input), charLen);
 
   EXPECT_EQ(input[charLen - 1], ' ');
 }
+
+#ifdef _WIN32 // Test ability to get name from environment variable
+
+TEST_F(EnvironmentVariables, GetlogEnvGetName) {
+  const int charLen{11};
+  char input[charLen]{"XXXXXXXXX"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::byte *>(input), charLen);
+
+  CheckCharEqStr(input, "loginName");
+}
+
+TEST_F(EnvironmentVariables, GetlogEnvBufferShort) {
+  const int charLen{7};
+  char input[charLen]{"XXXXXX"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::byte *>(input), charLen);
+
+  CheckCharEqStr(input, "loginN");
+}
+
+TEST_F(EnvironmentVariables, GetlogEnvPadSpace) {
+  const int charLen{12};
+  char input[charLen]{"XXXXXXXXXX"};
+
+  FORTRAN_PROCEDURE_NAME(getlog)
+  (reinterpret_cast<std::byte *>(input), charLen);
+
+  CheckCharEqStr(input, "loginName ");
+}
+#endif
