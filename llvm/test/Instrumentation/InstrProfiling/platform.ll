@@ -25,7 +25,7 @@
 ; WINDOWS: @__profd_foo = private global {{.*}}, section ".lprfd$M", align 8
 ; AIX: @__profd_foo = private {{.*}}, section "__llvm_prf_data", align 8
 
-; ELF: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1
+; ELF: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names"{{.*}}, align 1
 ; WINDOWS: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}lprfn$M", align 1
 ; AIX: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1
 

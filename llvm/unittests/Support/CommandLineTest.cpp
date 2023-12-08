@@ -1347,29 +1347,32 @@ struct AutoDeleteFile {
   }
 };
 
+static std::string interceptStdout(std::function<void()> F) {
+  outs().flush(); // flush any output from previous tests
+  AutoDeleteFile File;
+  {
+    OutputRedirector Stdout(fileno(stdout));
+    if (!Stdout.Valid)
+      return "";
+    File.FilePath = Stdout.FilePath;
+    F();
+    outs().flush();
+  }
+  auto Buffer = MemoryBuffer::getFile(File.FilePath);
+  if (!Buffer)
+    return "";
+  return Buffer->get()->getBuffer().str();
+}
+
 template <void (*Func)(const cl::Option &)>
 class PrintOptionTestBase : public ::testing::Test {
 public:
   // Return std::string because the output of a failing EXPECT check is
   // unreadable for StringRef. It also avoids any lifetime issues.
   template <typename... Ts> std::string runTest(Ts... OptionAttributes) {
-    outs().flush();  // flush any output from previous tests
-    AutoDeleteFile File;
-    {
-      OutputRedirector Stdout(fileno(stdout));
-      if (!Stdout.Valid)
-        return "";
-      File.FilePath = Stdout.FilePath;
-
-      StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
-                                          OptionAttributes...);
-      Func(TestOption);
-      outs().flush();
-    }
-    auto Buffer = MemoryBuffer::getFile(File.FilePath);
-    if (!Buffer)
-      return "";
-    return Buffer->get()->getBuffer().str();
+    StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
+                                        OptionAttributes...);
+    return interceptStdout([&]() { Func(TestOption); });
   }
 
   enum class OptionValue { Val };
@@ -2204,6 +2207,42 @@ TEST(CommandLineTest, DefaultValue) {
   EXPECT_EQ("str-init-value", StrInitOption);
   EXPECT_TRUE(StrInitOption.Default.hasValue());
   EXPECT_EQ(1, StrInitOption.getNumOccurrences());
+}
+
+TEST(CommandLineTest, HelpWithoutSubcommands) {
+  // Check that the help message does not contain the "[subcommand]" placeholder
+  // and the "SUBCOMMANDS" section if there are no subcommands.
+  cl::ResetCommandLineParser();
+  StackOption<bool> Opt("opt", cl::init(false));
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout([]() { cl::PrintHelpMessage(); });
+  EXPECT_NE(std::string::npos, Output.find("USAGE: prog [options]")) << Output;
+  EXPECT_EQ(std::string::npos, Output.find("SUBCOMMANDS:")) << Output;
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, HelpWithSubcommands) {
+  // Check that the help message contains the "[subcommand]" placeholder in the
+  // "USAGE" line and describes subcommands.
+  cl::ResetCommandLineParser();
+  StackSubCommand SC1("sc1", "First Subcommand");
+  StackSubCommand SC2("sc2", "Second Subcommand");
+  StackOption<bool> SC1Opt("sc1", cl::sub(SC1), cl::init(false));
+  StackOption<bool> SC2Opt("sc2", cl::sub(SC2), cl::init(false));
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout([]() { cl::PrintHelpMessage(); });
+  EXPECT_NE(std::string::npos,
+            Output.find("USAGE: prog [subcommand] [options]"))
+      << Output;
+  EXPECT_NE(std::string::npos, Output.find("SUBCOMMANDS:")) << Output;
+  EXPECT_NE(std::string::npos, Output.find("sc1 - First Subcommand")) << Output;
+  EXPECT_NE(std::string::npos, Output.find("sc2 - Second Subcommand"))
+      << Output;
+  cl::ResetCommandLineParser();
 }
 
 } // anonymous namespace

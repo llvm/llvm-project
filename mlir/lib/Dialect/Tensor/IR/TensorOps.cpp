@@ -168,6 +168,41 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
   return droppedDims;
 }
 
+/// Given a ranked tensor type and a range of values that defines its dynamic
+/// dimension sizes, turn all dynamic sizes that have a constant value into
+/// static dimension sizes.
+static RankedTensorType
+foldDynamicToStaticDimSizes(RankedTensorType type, ValueRange dynamicSizes,
+                            SmallVector<Value> &foldedDynamicSizes) {
+  SmallVector<int64_t> staticShape(type.getShape().begin(),
+                                   type.getShape().end());
+  assert(type.getNumDynamicDims() ==
+             static_cast<int64_t>(dynamicSizes.size()) &&
+         "incorrect number of dynamic sizes");
+
+  // Compute new static and dynamic sizes.
+  unsigned ctr = 0;
+  for (int64_t i = 0, e = type.getRank(); i < e; ++i) {
+    if (type.isDynamicDim(i)) {
+      Value dynamicSize = dynamicSizes[ctr++];
+      std::optional<int64_t> cst = getConstantIntValue(dynamicSize);
+      if (cst.has_value()) {
+        // Dynamic size must be non-negative.
+        if (cst.value() < 0) {
+          foldedDynamicSizes.push_back(dynamicSize);
+          continue;
+        }
+        staticShape[i] = *cst;
+      } else {
+        foldedDynamicSizes.push_back(dynamicSize);
+      }
+    }
+  }
+
+  return RankedTensorType::get(staticShape, type.getElementType(),
+                               type.getEncoding());
+}
+
 //===----------------------------------------------------------------------===//
 // BitcastOp
 //===----------------------------------------------------------------------===//
@@ -889,37 +924,16 @@ struct ReplaceEmptyTensorStaticShapeDims : OpRewritePattern<EmptyOp> {
 
   LogicalResult matchAndRewrite(EmptyOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<int64_t> staticShape(op.getType().getShape().begin(),
-                                     op.getType().getShape().end());
-    SmallVector<Value> dynamicSizes;
-
-    // Compute new static and dynamic sizes.
-    unsigned ctr = 0;
-    bool changedType = false;
-    for (int64_t i = 0; i < op.getType().getRank(); ++i) {
-      if (op.getType().isDynamicDim(i)) {
-        Value dynamicSize = op.getDynamicSizes()[ctr++];
-        std::optional<int64_t> cst = getConstantIntValue(dynamicSize);
-        if (cst.has_value()) {
-          // dynamic size must be non-negative.
-          if (cst.value() < 0)
-            return failure();
-          staticShape[i] = *cst;
-          changedType = true;
-        } else {
-          dynamicSizes.push_back(dynamicSize);
-        }
-      }
-    }
+    SmallVector<Value> foldedDynamicSizes;
+    RankedTensorType foldedTensorType = foldDynamicToStaticDimSizes(
+        op.getType(), op.getDynamicSizes(), foldedDynamicSizes);
 
     // Stop here if no dynamic size was promoted to static.
-    if (!changedType)
+    if (foldedTensorType == op.getType())
       return failure();
 
-    auto tensorType = RankedTensorType::get(
-        staticShape, op.getType().getElementType(), op.getType().getEncoding());
-    auto newOp =
-        rewriter.create<EmptyOp>(op.getLoc(), tensorType, dynamicSizes);
+    auto newOp = rewriter.create<EmptyOp>(op.getLoc(), foldedTensorType,
+                                          foldedDynamicSizes);
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -1347,28 +1361,6 @@ LogicalResult GenerateOp::reifyResultShapes(
   return success();
 }
 
-/// Extract operands and shape from a tensor with dynamic extents.
-static void operandsAndShape(TensorType resultType,
-                             Operation::operand_range dynamicExtents,
-                             SmallVectorImpl<Value> &newOperands,
-                             SmallVectorImpl<int64_t> &newShape) {
-  auto operandsIt = dynamicExtents.begin();
-  for (int64_t dim : resultType.getShape()) {
-    if (!ShapedType::isDynamic(dim)) {
-      newShape.push_back(dim);
-      continue;
-    }
-    APInt index;
-    if (!matchPattern(*operandsIt, m_ConstantInt(&index))) {
-      newShape.push_back(ShapedType::kDynamic);
-      newOperands.push_back(*operandsIt++);
-      continue;
-    }
-    newShape.push_back(index.getSExtValue());
-    operandsIt++;
-  }
-}
-
 LogicalResult GenerateOp::verify() {
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
@@ -1376,14 +1368,6 @@ LogicalResult GenerateOp::verify() {
   if (getNumOperands() != resultType.getNumDynamicDims())
     return emitError("must have as many index operands as dynamic extents "
                      "in the result type");
-  // Ensure operands are non-negative.
-  SmallVector<Value> newOperands;
-  SmallVector<int64_t> newShape;
-  operandsAndShape(resultType, getDynamicExtents(), newOperands, newShape);
-  for (int64_t newdim : newShape) {
-    if (newdim < 0 && !ShapedType::isDynamic(newdim))
-      return emitError("tensor dimensions must be non-negative");
-  }
   return success();
 }
 
@@ -1433,34 +1417,24 @@ namespace {
 struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
   using OpRewritePattern<GenerateOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(GenerateOp tensorFromElements,
+  LogicalResult matchAndRewrite(GenerateOp generateOp,
                                 PatternRewriter &rewriter) const final {
-    auto resultType =
-        llvm::cast<RankedTensorType>(tensorFromElements.getResult().getType());
+    SmallVector<Value> foldedDynamicSizes;
+    RankedTensorType foldedTensorType = foldDynamicToStaticDimSizes(
+        generateOp.getType(), generateOp.getDynamicExtents(),
+        foldedDynamicSizes);
 
-    if (resultType.hasStaticShape())
+    // Stop here if no dynamic size was promoted to static.
+    if (foldedTensorType == generateOp.getType())
       return failure();
 
-    Operation::operand_range dynamicExtents =
-        tensorFromElements.getDynamicExtents();
-    SmallVector<Value> newOperands;
-    SmallVector<int64_t> newShape;
-    operandsAndShape(resultType, dynamicExtents, newOperands, newShape);
-
-    if (!hasValidSizesOffsets(newShape))
-      return failure();
-
-    if (newOperands.size() == tensorFromElements.getDynamicExtents().size())
-      return failure();
-
-    auto loc = tensorFromElements.getLoc();
-    auto newOp = rewriter.create<GenerateOp>(
-        loc, RankedTensorType::get(newShape, resultType.getElementType()),
-        newOperands);
-    rewriter.inlineRegionBefore(tensorFromElements.getBody(), newOp.getBody(),
+    auto loc = generateOp.getLoc();
+    auto newOp =
+        rewriter.create<GenerateOp>(loc, foldedTensorType, foldedDynamicSizes);
+    rewriter.inlineRegionBefore(generateOp.getBody(), newOp.getBody(),
                                 newOp.getBody().begin());
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(tensorFromElements, resultType,
-                                                newOp);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(generateOp,
+                                                generateOp.getType(), newOp);
     return success();
   }
 };
