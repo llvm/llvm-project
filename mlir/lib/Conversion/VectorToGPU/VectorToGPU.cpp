@@ -303,8 +303,9 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
 /// `getSlice`. In scf.for we only want to include as part of the slice elements
 /// that are part of the use/def chain.
 static SetVector<Operation *>
-getSliceContract(Operation *op, BackwardSliceOptions backwardSliceOptions,
-                 ForwardSliceOptions forwardSliceOptions) {
+getSliceContract(Operation *op,
+                 const BackwardSliceOptions &backwardSliceOptions,
+                 const ForwardSliceOptions &forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
   unsigned currentIndex = 0;
