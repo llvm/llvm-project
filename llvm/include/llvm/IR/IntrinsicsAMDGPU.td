@@ -595,6 +595,18 @@ def int_amdgcn_cvt_sr_pk_bf16_f32 : DefaultAttrsIntrinsic<
   [llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty, llvm_v2i16_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_pk_bf16_f32">;
 
+class AMDGPUPKBF16BinaryIntrinsic<string name> : DefaultAttrsIntrinsic<
+  [llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_" # name # "_bf16">;
+
+def int_amdgcn_pk_add_bf16 : AMDGPUPKBF16BinaryIntrinsic<"pk_add">;
+def int_amdgcn_pk_mul_bf16 : AMDGPUPKBF16BinaryIntrinsic<"pk_mul">;
+def int_amdgcn_pk_max_num_bf16 : AMDGPUPKBF16BinaryIntrinsic<"pk_max_num">;
+def int_amdgcn_pk_min_num_bf16 : AMDGPUPKBF16BinaryIntrinsic<"pk_min_num">;
+def int_amdgcn_pk_fma_bf16 : DefaultAttrsIntrinsic<
+  [llvm_v2i16_ty], [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v2i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_pk_fma_bf16">;
+
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
