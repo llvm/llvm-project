@@ -94,7 +94,7 @@ template <size_t Bits> struct DyadicFloat {
       return 0.0;
 
     // Assume that it is normalized, and output is also normal.
-    constexpr size_t PRECISION = FloatProperties<T>::MANTISSA_WIDTH + 1;
+    constexpr uint32_t PRECISION = FloatProperties<T>::MANTISSA_WIDTH + 1;
     using output_bits_t = typename FPBits<T>::UIntType;
 
     int exp_hi = exponent + static_cast<int>((Bits - 1) +
