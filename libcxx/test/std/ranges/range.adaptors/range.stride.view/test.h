@@ -129,8 +129,6 @@ struct InputIterBase {
   constexpr Derived operator++(int) { return {}; }
 
   friend constexpr bool operator==(const Derived&, const Derived&) { return true; }
-  friend constexpr bool operator==(const std::default_sentinel_t&, const Derived&) { return true; }
-  friend constexpr bool operator==(const Derived&, const std::default_sentinel_t&) { return true; }
 };
 
 template <std::input_iterator T, std::sentinel_for<T> S = sentinel_wrapper<T>>
@@ -252,6 +250,8 @@ struct SizedInputIterator {
     return left.__v_ - right.__v_;
   }
 };
+static_assert(std::input_iterator<SizedInputIterator>);
+static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
 
 // TODO: Cleanup
 struct SizedForwardIterator {
@@ -282,5 +282,7 @@ struct SizedForwardIterator {
     return left.__v_ - right.__v_;
   }
 };
+static_assert(std::input_iterator<SizedForwardIterator>);
+static_assert(std::sized_sentinel_for<SizedForwardIterator, SizedForwardIterator>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
