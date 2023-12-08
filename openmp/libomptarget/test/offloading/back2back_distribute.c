@@ -22,6 +22,11 @@ int main(int argc, char *argv[]) {
   double * b = (double *) malloc(MAX_N * sizeof(double));
   double * c = (double *) malloc(MAX_N * sizeof(double));
 
+
+  for (int i = 0 ; i < MAX_N ; i++) {
+    d[i] = d_h[i] = a_h[i] = 0.0;
+  }
+
 #pragma omp target enter data map(to:a[:MAX_N],b[:MAX_N],c[:MAX_N],d[:MAX_N])
 
   for (int n = 32 ; n < MAX_N ; n+=5000) {
