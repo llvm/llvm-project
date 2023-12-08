@@ -1,0 +1,17 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @foo(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, %arg0 : !s32i, ["tmp"] {alignment = 16 : i64}
+    cir.return 
+  }
+}
+
+//      MLIR: module {
+// MLIR-NEXT:  llvm.func @foo(%arg0: i32) attributes {cir.extra_attrs = #cir<extra({})>} {
+// MLIR-NEXT:    %0 = llvm.alloca %arg0 x i32 {alignment = 16 : i64} : (i32) -> !llvm.ptr
+// MLIR-NEXT:    llvm.return
+// MLIR-NEXT:  }
+// MLIR-NEXT: }

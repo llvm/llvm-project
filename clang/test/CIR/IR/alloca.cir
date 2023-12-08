@@ -1,0 +1,21 @@
+// Test the CIR operations can parse and print correctly (roundtrip)
+
+// RUN: cir-opt %s | cir-opt | FileCheck %s
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+
+module  {
+  cir.func @foo(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, %arg0 : !s32i, ["tmp"] {alignment = 16 : i64}
+    cir.return
+  }
+}
+
+//CHECK: module  {
+
+//CHECK-NEXT:  cir.func @foo(%arg0: !s32i) {
+//CHECK-NEXT:    %0 = cir.alloca !s32i, cir.ptr <!s32i>, %arg0 : !s32i, ["tmp"] {alignment = 16 : i64}
+//CHECK-NEXT:    cir.return
+//CHECK-NEXT:  }
+
+//CHECK: }
