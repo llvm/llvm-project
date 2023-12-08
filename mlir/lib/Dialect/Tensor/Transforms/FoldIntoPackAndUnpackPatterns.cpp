@@ -152,14 +152,12 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
               });
 
     Value output = packOp.createDestinationTensor(
-        rewriter, transposeOp.getLoc(), packOp.getSource(),
-        opFoldResultsTiles, newPackInnerDimsPosVec,
-        newPackOuterDimsPermVec);
+        rewriter, transposeOp.getLoc(), packOp.getSource(), opFoldResultsTiles,
+        newPackInnerDimsPosVec, newPackOuterDimsPermVec);
 
     rewriter.replaceOpWithNewOp<PackOp>(
         transposeOp, packOp.getSource(), output, newPackInnerDimsPosVec,
-        opFoldResultsTiles, packOp.getPaddingValue(),
-        newPackOuterDimsPermVec);
+        opFoldResultsTiles, packOp.getPaddingValue(), newPackOuterDimsPermVec);
 
     return success();
   }
