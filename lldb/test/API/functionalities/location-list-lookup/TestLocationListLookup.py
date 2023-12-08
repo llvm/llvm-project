@@ -7,10 +7,7 @@ from lldbsuite.test import lldbutil
 
 
 class LocationListLookupTestCase(TestBase):
-    @skipIf(oslist=["linux"], archs=["arm"])
-    def test_loclist(self):
-        self.build()
-
+    def launch(self) -> lldb.SBProcess:
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -22,6 +19,9 @@ class LocationListLookupTestCase(TestBase):
         self.assertTrue(process.IsValid())
         self.assertTrue(process.is_stopped)
 
+        return process
+
+    def check_local_vars(self, process: lldb.SBProcess, check_expr: bool):
         # Find `bar` on the stack, then
         # make sure we can read out the local
         # variables (with both `frame var` and `expr`)
@@ -32,5 +32,17 @@ class LocationListLookupTestCase(TestBase):
                 argv.GetDescription(strm)
                 self.assertNotEqual(strm.GetData().find("a.out"), -1)
 
-                process.GetSelectedThread().SetSelectedFrame(f.idx)
-                self.expect_expr("this", result_type="Foo *")
+                if check_expr:
+                    process.GetSelectedThread().SetSelectedFrame(f.idx)
+                    self.expect_expr("this", result_type="Foo *")
+
+    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIfDarwin
+    def test_loclist_frame_var(self):
+        self.build()
+        self.check_local_vars(self.launch(), check_expr=False)
+
+    @skipUnlessDarwin
+    def test_loclist_expr(self):
+        self.build()
+        self.check_local_vars(self.launch(), check_expr=True)
