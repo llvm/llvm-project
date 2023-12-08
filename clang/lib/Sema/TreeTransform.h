@@ -13662,6 +13662,22 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     return ExprError();
   }
 
+  // Check the number of the Concept template parameters
+  size_t conceptParams = 0;
+  for (auto P : *E->getTemplateParameterList()) {
+    const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+    if (CD && CD->hasTypeConstraint()) {
+      conceptParams++;
+    }
+  }
+
+  if (conceptParams > 0 &&
+      conceptParams == E->getTemplateParameterList()->size()) {
+    getSema().Diag(E->getTemplateParameterList()->getLAngleLoc(),
+                   diag::err_expected_non_concept_template_parameter);
+    return ExprError();
+  }
+
   // Copy the LSI before ActOnFinishFunctionBody removes it.
   // FIXME: This is dumb. Store the lambda information somewhere that outlives
   // the call operator.
