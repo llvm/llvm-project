@@ -102,7 +102,9 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getSourceLanguage(), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
-      /*Flags=*/"", /*RV=*/0);
+      /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
+      static_cast<llvm::DICompileUnit::DebugEmissionKind>(
+          attr.getEmissionKind()));
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on
@@ -328,7 +330,10 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
-    llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
+    llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
+    // Fallback: Ignore callee if it has no debug scope.
+    if (!llvmLoc)
+      llvmLoc = callerLoc;
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
     // A scope of a DILocation cannot be null.

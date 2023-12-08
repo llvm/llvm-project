@@ -2256,9 +2256,10 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // with no common bits set, convert it to X+Y.
   if (I->getOpcode() == Instruction::Or &&
       shouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
-      haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
-                          SimplifyQuery(I->getModule()->getDataLayout(),
-                                        /*DT=*/nullptr, /*AC=*/nullptr, I))) {
+      (cast<PossiblyDisjointInst>(I)->isDisjoint() ||
+       haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
+                           SimplifyQuery(I->getModule()->getDataLayout(),
+                                         /*DT=*/nullptr, /*AC=*/nullptr, I)))) {
     Instruction *NI = convertOrWithNoCommonBitsToAdd(I);
     RedoInsts.insert(I);
     MadeChange = true;
@@ -2554,7 +2555,7 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   // Make a "pairmap" of how often each operand pair occurs.
   for (BasicBlock *BI : RPOT) {
     for (Instruction &I : *BI) {
-      if (!I.isAssociative())
+      if (!I.isAssociative() || !I.isBinaryOp())
         continue;
 
       // Ignore nodes that aren't at the root of trees.

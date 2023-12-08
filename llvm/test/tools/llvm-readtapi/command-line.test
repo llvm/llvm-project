@@ -8,7 +8,7 @@
 CHECK: OVERVIEW: LLVM TAPI file reader and manipulator
 CHECK: USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o <output>]*
 CHECK: OPTIONS:
-CHECK:   -help    display this help
+CHECK:   -help    - display this help
 
 MULTI_ACTION: error: only one of the following actions can be specified: -merge -compare
 FILE_FORMAT: error: deprecated filetype 'tbd-v2' is not supported to write

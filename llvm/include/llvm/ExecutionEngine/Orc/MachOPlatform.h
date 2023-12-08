@@ -207,12 +207,12 @@ private:
     Error prepareSymbolTableRegistration(jitlink::LinkGraph &G,
                                          JITSymTabVector &JITSymTabInfo);
     Error addSymbolTableRegistration(jitlink::LinkGraph &G,
+                                     MaterializationResponsibility &MR,
                                      JITSymTabVector &JITSymTabInfo,
                                      bool InBootstrapPhase);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
-    ExecutorAddr HeaderAddr;
 
     // FIXME: ObjCImageInfos and HeaderAddrs need to be cleared when
     // JITDylibs are removed.

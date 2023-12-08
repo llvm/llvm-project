@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_BPF_BPFCORE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 
@@ -53,6 +54,9 @@ public:
   static Instruction *insertPassThrough(Module *M, BasicBlock *BB,
                                         Instruction *Input,
                                         Instruction *Before);
+  static void removeArrayAccessCall(CallInst *Call);
+  static void removeStructAccessCall(CallInst *Call);
+  static void removeUnionAccessCall(CallInst *Call);
 };
 
 } // namespace llvm

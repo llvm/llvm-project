@@ -62,7 +62,7 @@ public:
     template<class _OutputIterator>
         _LIBCPP_HIDE_FROM_ABI
         void param(_OutputIterator __dest) const
-            {_VSTD::copy(__v_.begin(), __v_.end(), __dest);}
+            {std::copy(__v_.begin(), __v_.end(), __dest);}
 
     seed_seq(const seed_seq&) = delete;
     void operator=(const seed_seq&) = delete;
@@ -91,7 +91,7 @@ seed_seq::generate(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
     if (__first != __last)
     {
-        _VSTD::fill(__first, __last, 0x8b8b8b8b);
+        std::fill(__first, __last, 0x8b8b8b8b);
         const size_t __n = static_cast<size_t>(__last - __first);
         const size_t __s = __v_.size();
         const size_t __t = (__n >= 623) ? 11
@@ -101,7 +101,7 @@ seed_seq::generate(_RandomAccessIterator __first, _RandomAccessIterator __last)
                          : (__n - 1) / 2;
         const size_t __p = (__n - __t) / 2;
         const size_t __q = __p + __t;
-        const size_t __m = _VSTD::max(__s + 1, __n);
+        const size_t __m = std::max(__s + 1, __n);
         // __k = 0;
         {
             result_type __r = 1664525 * _Tp(__first[0] ^ __first[__p]
