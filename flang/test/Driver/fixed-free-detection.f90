@@ -5,16 +5,16 @@
 !--------------------------
 ! FLANG DRIVER (flang)
 !--------------------------
-! RUN: %flang -E -Xflang -fno-reformat %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
-! RUN: %flang -E -Xflang -fno-reformat %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
-! RUN: %flang -E -Xflang -fno-reformat %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
+! RUN: %flang -fomit-frame-pointer -E -Xflang -fno-reformat %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
+! RUN: %flang -fomit-frame-pointer -E -Xflang -fno-reformat %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
+! RUN: %flang -fomit-frame-pointer -E -Xflang -fno-reformat %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
 
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang_fc1)
 !-----------------------------------------
-! RUN: %flang_fc1 -E -fno-reformat %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
-! RUN: %flang_fc1 -E -fno-reformat %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
-! RUN: %flang_fc1 -E -fno-reformat %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
+! RUN: %flang_fc1 -mframe-pointer=none -E -fno-reformat %S/Inputs/free-form-test.f90  2>&1 | FileCheck %s --check-prefix=FREEFORM
+! RUN: %flang_fc1 -mframe-pointer=none -E -fno-reformat %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
+! RUN: %flang_fc1 -mframe-pointer=none -E -fno-reformat %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
 
 ! FREEFORM:program freeform
 ! FREEFORM-NOT:programfixedform
@@ -25,5 +25,5 @@
 ! MULTIPLEFORMS:program freeform
 ! MULTIPLEFORMS-NOT:programfixedform
 ! MULTIPLEFORMS-NEXT:end
-! MULTIPLEFORMS:programfixedform
+! MULTIPLEFORMS-NEXT:programfixedform
 ! MULTIPLEFORMS-NOT:program freeform
