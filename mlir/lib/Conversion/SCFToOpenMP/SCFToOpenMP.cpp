@@ -340,8 +340,10 @@ namespace {
 
 struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
-  ParallelOpLowering(MLIRContext *context)
-      : OpRewritePattern<scf::ParallelOp>(context) {}
+  unsigned numThreads;
+
+  ParallelOpLowering(MLIRContext *context, unsigned numThreads)
+      : OpRewritePattern<scf::ParallelOp>(context), numThreads(numThreads) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
@@ -390,6 +392,12 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
     // Create the parallel wrapper.
     auto ompParallel = rewriter.create<omp::ParallelOp>(loc);
+    if (numThreads > 1) {
+      rewriter.setInsertionPoint(ompParallel);
+      mlir::Value numThreadsVar = rewriter.create<LLVM::ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(numThreads));
+      ompParallel.getNumThreadsVarMutable().assign(numThreadsVar);
+    }
     {
 
       OpBuilder::InsertionGuard guard(rewriter);
@@ -443,14 +451,14 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 };
 
 /// Applies the conversion patterns in the given function.
-static LogicalResult applyPatterns(ModuleOp module) {
+static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads) {
   ConversionTarget target(*module.getContext());
   target.addIllegalOp<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>();
   target.addLegalDialect<omp::OpenMPDialect, LLVM::LLVMDialect,
                          memref::MemRefDialect>();
 
   RewritePatternSet patterns(module.getContext());
-  patterns.add<ParallelOpLowering>(module.getContext());
+  patterns.add<ParallelOpLowering>(module.getContext(), numThreads);
   FrozenRewritePatternSet frozen(std::move(patterns));
   return applyPartialConversion(module, target, frozen);
 }
@@ -463,7 +471,7 @@ struct SCFToOpenMPPass
 
   /// Pass entry point.
   void runOnOperation() override {
-    if (failed(applyPatterns(getOperation())))
+    if (failed(applyPatterns(getOperation(), numThreads)))
       signalPassFailure();
   }
 };
