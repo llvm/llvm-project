@@ -550,7 +550,8 @@ class NeonEmitter {
 
   void createIntrinsic(Record *R, SmallVectorImpl<Intrinsic *> &Out);
   void genBuiltinsDef(raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs);
-  void genStreamingSVECompatibleList(raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs);
+  void genStreamingSVECompatibleList(raw_ostream &OS,
+                                     SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,

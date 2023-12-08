@@ -3210,19 +3210,19 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
 bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
-        std::optional<ArmStreamingType> BuiltinType;
-      switch (BuiltinID) {
-      default:
-        break;
+    std::optional<ArmStreamingType> BuiltinType;
+    switch (BuiltinID) {
+    default:
+      break;
 #define GET_SVE_STREAMING_ATTRS
 #include "clang/Basic/arm_sve_streaming_attrs.inc"
 #undef GET_SVE_STREAMING_ATTRS
-      }
-      if (BuiltinType)
-        checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
     }
+    if (BuiltinType)
+      checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
+  }
   // Range check SVE intrinsics that take immediate values.
-  SmallVector<std::tuple<int,int,int>, 3> ImmChecks;
+  SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
 
   switch (BuiltinID) {
   default:
