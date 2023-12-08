@@ -123,12 +123,9 @@ public:
   void removeUser(VPUser &User) {
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    for (const auto &U : Users) {
-      if (U == &User) {
-        Users.erase(&U);
-        return;
-      }
-    }
+    auto *I = llvm::find(Users, &User);
+    if (I != Users.end())
+      Users.erase(I);
   }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
