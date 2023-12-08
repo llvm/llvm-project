@@ -1605,6 +1605,10 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def  : Pat<(vt (vselect LASX256:$xa, LASX256:$xk, LASX256:$xj)),
              (XVBITSEL_V LASX256:$xj, LASX256:$xk, LASX256:$xa)>;
 
+// fneg
+def : Pat<(fneg (v8f32 LASX256:$xj)), (XVBITREVI_W LASX256:$xj, 31)>;
+def : Pat<(fneg (v4f64 LASX256:$xj)), (XVBITREVI_D LASX256:$xj, 63)>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern
