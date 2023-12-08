@@ -9,7 +9,7 @@
 ! VERSION-NEXT: Thread model:
 ! VERSION-NEXT: InstalledDir:
 
-! ERROR: flang-{{[0-9]+}}: error: unknown argument '--versions'; did you mean '--version'?
+! ERROR: flang{{.*}}: error: unknown argument '--versions'; did you mean '--version'?
 
 ! VERSION-FC1: LLVM version
 
