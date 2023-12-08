@@ -53,9 +53,9 @@ constexpr void iterate_stride(M m, const std::array<int, M::extents_type::rank()
   constexpr int r = static_cast<int>(M::extents_type::rank()) - 1 - static_cast<int>(sizeof...(Args));
   if constexpr (-1 == r) {
     ASSERT_NOEXCEPT(m(args...));
-    size_t expected_val = [&]<size_t... Pos>(std::index_sequence<Pos...>) {
+    size_t expected_val = static_cast<size_t>([&]<size_t... Pos>(std::index_sequence<Pos...>) {
       return ((args * strides[Pos]) + ... + 0);
-    }(std::make_index_sequence<M::extents_type::rank()>());
+    }(std::make_index_sequence<M::extents_type::rank()>()));
     assert(expected_val == static_cast<size_t>(m(args...)));
   } else {
     for (typename M::index_type i = 0; i < m.extents().extent(r); i++) {
