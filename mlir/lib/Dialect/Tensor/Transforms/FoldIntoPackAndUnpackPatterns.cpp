@@ -115,19 +115,19 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
          ++i) {
       // If tensor.pack has outer_dims_perm attribute, then consider it during
       // index translation.
-      if (packOuterDimsPerm.size())
-        translatedPosition = packOuterDimsPerm[transposePerm[i]];
-      else
+      if (packOuterDimsPerm.size()) {
+        // Note: static_cast is added around transposePerm[i] to suppress the
+        // compiler warning of comparison between variables of different types.
+        if (static_cast<unsigned long>(transposePerm[i]) <
+            packOuterDimsPerm.size())
+          translatedPosition = packOuterDimsPerm[transposePerm[i]];
+        else
+          return rewriter.notifyMatchFailure(
+              transposeOp,
+              "Cannot fold in tensor.pack if a tile dimension was transposed "
+              "with a non-tile dimension in linalg.transpose.");
+      } else
         translatedPosition = transposePerm[i];
-
-      // Note: static_cast was added around translatedPosition to suppress the
-      // compiler warning of comparison between variables of different types.
-      if (static_cast<unsigned long>(translatedPosition) >=
-          transposePerm.size() - packInnerTiles.size())
-        return rewriter.notifyMatchFailure(
-            transposeOp,
-            "Cannot fold in tensor.pack if a tile dimension was transposed "
-            "with a non-tile dimension in linalg.transpose.");
 
       newPackOuterDimsPermVec.push_back(translatedPosition);
     }
@@ -168,100 +168,11 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
     return success();
   }
 };
-
-/// Fold 'transpose' -> 'pack' into 'pack' since 'pack' already has transpose
-/// semantics.
-struct FoldConsumerPackWithProducerLinalgTransposeOp
-    : public OpRewritePattern<PackOp> {
-  using OpRewritePattern<PackOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(PackOp packOp,
-                                PatternRewriter &rewriter) const override {
-    auto packInputTensor = packOp.getOperand(0);
-    auto transposeOp = packInputTensor.getDefiningOp<linalg::TransposeOp>();
-
-    if (!transposeOp)
-      return failure();
-
-    auto packInnerDimsPos = packOp.getInnerDimsPos();
-    auto packInnerTiles = packOp.getStaticInnerTiles();
-    auto packOuterDimsPerm = packOp.getOuterDimsPerm();
-    auto transposePerm = transposeOp.getPermutation();
-    SmallVector<int64_t> newPackOuterDimsPermVec;
-    SmallVector<int64_t> newPackInnerDimsPosVec;
-    SmallVector<int64_t> newPackInnerTilesVec;
-
-    // Variable for storing translated position after considering original
-    // outer_dims_perm and permutation attributes of tensor.pack and
-    // linalg.transpose.
-    int64_t translatedPosition;
-
-    // Process transpose operation for non-tiled outer dimensions of the tensor.
-    for (unsigned int i = 0; i < transposePerm.size() - packInnerTiles.size();
-         ++i) {
-      // If tensor.pack has outer_dims_perm attribute, then consider it during
-      // index translation.
-      if (packOuterDimsPerm.size())
-        translatedPosition = packOuterDimsPerm[transposePerm[i]];
-      else
-        translatedPosition = transposePerm[i];
-
-      // Note: static_cast was added around translatedPosition to suppress the
-      // compiler warning of comparison between variables of different types.
-      if (static_cast<unsigned long>(translatedPosition) >=
-          transposePerm.size() - packInnerTiles.size())
-        return rewriter.notifyMatchFailure(
-            packOp,
-            "Cannot fold in tensor.pack if a tile dimension was transposed "
-            "with a non-tile dimension in linalg.transpose.");
-
-      newPackOuterDimsPermVec.push_back(translatedPosition);
-    }
-
-    // Process transpose operation for tiled inner dimensions of the tensor.
-    for (unsigned int i = transposePerm.size() - packInnerTiles.size();
-         i < transposePerm.size(); ++i) {
-      translatedPosition =
-          transposePerm[i] - (transposePerm.size() - packInnerTiles.size());
-
-      newPackInnerTilesVec.push_back(packInnerTiles[translatedPosition]);
-      newPackInnerDimsPosVec.push_back(packInnerDimsPos[translatedPosition]);
-    }
-
-    SmallVector<OpFoldResult> opFoldResultsTiles;
-    opFoldResultsTiles.reserve(newPackInnerTilesVec.size());
-
-    transform(newPackInnerTilesVec, std::back_inserter(opFoldResultsTiles),
-              [&rewriter](int64_t value) {
-                return IntegerAttr::get(IndexType::get(rewriter.getContext()),
-                                        value);
-              });
-
-    ArrayRef<OpFoldResult> newPackInnerTilesArrayRef(opFoldResultsTiles);
-
-    Value output = packOp.createDestinationTensor(
-        rewriter, packOp.getLoc(), transposeOp.getOperand(0),
-        newPackInnerTilesArrayRef, 
-        static_cast<ArrayRef<int64_t>>(newPackInnerDimsPosVec),
-        static_cast<ArrayRef<int64_t>>(newPackOuterDimsPermVec));
-
-    output.dump();
-
-    rewriter.replaceOpWithNewOp<PackOp>(
-        packOp, transposeOp.getOperand(0), output, 
-        static_cast<ArrayRef<int64_t>>(newPackInnerDimsPosVec),
-        newPackInnerTilesArrayRef, packOp.getPaddingValue(),
-        static_cast<ArrayRef<int64_t>>(newPackOuterDimsPermVec));
-
-    return success();
-  }
-};
 } // namespace
 
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns) {
   patterns.insert<FoldUnpackWithExtractSliceOp, FoldPadWithPackOp,
-                  FoldProducerPackWithConsumerLinalgTransposeOp,
-                  FoldConsumerPackWithProducerLinalgTransposeOp>(
+                  FoldProducerPackWithConsumerLinalgTransposeOp>(
       patterns.getContext());
 }
 

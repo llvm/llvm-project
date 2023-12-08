@@ -117,36 +117,35 @@ func.func @pad_pack_different_padding_value(%src: tensor<16641x16xf32>) -> tenso
 
 // -----
 
-func.func @linalg_transpose_tensor_pack_fold(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x2x56x57x32xf32> {
-  %0 = tensor.empty() : tensor<1x56x57x64xf32>
-  %transposed = linalg.transpose
-    ins(%arg0 : tensor<56x57x1x64xf32>)
-    outs(%0 : tensor<1x56x57x64xf32>)
-    permutation = [2, 0, 1, 3]
-
-  %1 = tensor.empty() : tensor<1x2x56x57x32xf32>
-  %pack = tensor.pack %transposed
-    outer_dims_perm = [0, 3, 1, 2]
+func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x57x56x2x32xf32> {
+  %0 = tensor.empty() : tensor<56x2x1x57x32xf32>
+  %pack = tensor.pack %arg0
+    outer_dims_perm = [0, 3, 2, 1]
     inner_dims_pos = [3]
     inner_tiles = [32]
-    into %1 : tensor<1x56x57x64xf32> -> tensor<1x2x56x57x32xf32>
-  return %pack : tensor<1x2x56x57x32xf32>
+    into %0 : tensor<56x57x1x64xf32> -> tensor<56x2x1x57x32xf32>
+
+  %1 = tensor.empty() : tensor<1x57x56x2x32xf32>
+  %transposed = linalg.transpose
+    ins(%pack : tensor<56x2x1x57x32xf32>)
+    outs(%1 : tensor<1x57x56x2x32xf32>)
+    permutation = [2, 3, 0, 1, 4]
+  return %transposed : tensor<1x57x56x2x32xf32>
 }
-//      CHECK: func @linalg_transpose_tensor_pack_fold(
+//      CHECK: func @tensor_pack_linalg_transpose_fold(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
-//      CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<1x2x56x57x32xf32>
+//      CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<1x57x56x2x32xf32>
 //      CHECK:   %[[PACK:.+]] = tensor.pack %[[ARG0]]
-// CHECK-SAME:      outer_dims_perm = [2, 3, 0, 1]
+// CHECK-SAME:      outer_dims_perm = [2, 1, 0, 3]
 // CHECK-SAME:      inner_dims_pos = [3] inner_tiles = [32] 
 // CHECK-SAME:       into %[[INIT]]
 //      CHECK:   return %[[PACK]]
 
 // -----
 
-func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x2x56x57x32xf32> {
+func.func @tensor_pack_linalg_transpose_fold_no_outer_dims_perm(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x2x56x57x32xf32> {
   %0 = tensor.empty() : tensor<56x57x1x2x32xf32>
   %pack = tensor.pack %arg0
-    outer_dims_perm = [0, 1, 2, 3]
     inner_dims_pos = [3]
     inner_tiles = [32]
     into %0 : tensor<56x57x1x64xf32> -> tensor<56x57x1x2x32xf32>
@@ -158,7 +157,7 @@ func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>) -> t
     permutation = [2, 3, 0, 1, 4]
   return %transposed : tensor<1x2x56x57x32xf32>
 }
-//      CHECK: func @tensor_pack_linalg_transpose_fold(
+//      CHECK: func @tensor_pack_linalg_transpose_fold_no_outer_dims_perm(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
 //      CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<1x2x56x57x32xf32>
 //      CHECK:   %[[PACK:.+]] = tensor.pack %[[ARG0]]
@@ -166,3 +165,51 @@ func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>) -> t
 // CHECK-SAME:      inner_dims_pos = [3] inner_tiles = [32] 
 // CHECK-SAME:       into %[[INIT]]
 //      CHECK:   return %[[PACK]]
+
+// -----
+
+func.func @tensor_pack_linalg_transpose_fold_tile_dims_transpose(%arg0: tensor<56x64x4x64xf32>) -> tensor<2x2x56x2x32x32x2xf32> {
+  %0 = tensor.empty() : tensor<56x2x2x2x32x2x32xf32>
+  %pack = tensor.pack %arg0
+    outer_dims_perm = [0, 1, 2, 3]
+    inner_dims_pos = [1, 2, 3]
+    inner_tiles = [32, 2, 32]
+    into %0 : tensor<56x64x4x64xf32> -> tensor<56x2x2x2x32x2x32xf32>
+
+  %1 = tensor.empty() : tensor<2x2x56x2x32x32x2xf32>
+  %transposed = linalg.transpose
+    ins(%pack : tensor<56x2x2x2x32x2x32xf32>)
+    outs(%1 : tensor<2x2x56x2x32x32x2xf32>)
+    permutation = [2, 3, 0, 1, 6, 4, 5]
+  return %transposed : tensor<2x2x56x2x32x32x2xf32>
+}
+//      CHECK: func @tensor_pack_linalg_transpose_fold_tile_dims_transpose(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<56x64x4x64xf32>)
+//      CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<2x2x56x2x32x32x2xf32>
+//      CHECK:   %[[PACK:.+]] = tensor.pack %[[ARG0]]
+// CHECK-SAME:      outer_dims_perm = [2, 3, 0, 1]
+// CHECK-SAME:      inner_dims_pos = [3, 1, 2] inner_tiles = [32, 32, 2] 
+// CHECK-SAME:       into %[[INIT]]
+//      CHECK:   return %[[PACK]]
+
+// -----
+
+func.func @tensor_pack_linalg_transpose_fold_tile_dims_outer_dims_transpose(%arg0: tensor<56x64x4x64xf32>) -> tensor<2x2x2x2x32x32x56xf32> {
+  %0 = tensor.empty() : tensor<56x2x2x2x32x2x32xf32>
+  %pack = tensor.pack %arg0
+    outer_dims_perm = [0, 1, 2, 3]
+    inner_dims_pos = [1, 2, 3]
+    inner_tiles = [32, 2, 32]
+    into %0 : tensor<56x64x4x64xf32> -> tensor<56x2x2x2x32x2x32xf32>
+
+  %1 = tensor.empty() : tensor<2x2x2x2x32x32x56xf32>
+  %transposed = linalg.transpose
+    ins(%pack : tensor<56x2x2x2x32x2x32xf32>)
+    outs(%1 : tensor<2x2x2x2x32x32x56xf32>)
+    permutation = [2, 3, 5, 1, 6, 4, 0]
+  return %transposed : tensor<2x2x2x2x32x32x56xf32>
+}
+//      CHECK: func @tensor_pack_linalg_transpose_fold_tile_dims_outer_dims_transpose(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<56x64x4x64xf32>)
+//      CHECK:   tensor.pack
+//      CHECK:   linalg.transpose
