@@ -9,6 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NOT:    LV: Found {{.*}} scalar instruction:   %ptr.iv.2.next = getelementptr inbounds i8, ptr %ptr.iv.2, i64 1
 ;
 ; CHECK:        VPlan 'Initial VPlan for VF={vscale x 2},UF>=1' {
+; CHECK-NEXT:   Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:   Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:   Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
@@ -25,7 +26,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%lv> = load ir<%ptr.iv.2>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%lv>, ir<1>
 ; CHECK-NEXT:     WIDEN store ir<%ptr.iv.2>, ir<%add>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT:   }
