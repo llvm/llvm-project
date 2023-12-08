@@ -144,14 +144,15 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
-  if (isa<GlobalIFunc>(CalleeV) &&
-      MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
-    // ld64 requires that .symbol_resolvers to be called via a stub, so these
-    // must always be a direct call.
-    Info.Callee = MachineOperand::CreateGA(cast<GlobalIFunc>(CalleeV), 0);
-  } else if (const Function *F = dyn_cast<Function>(CalleeV))
+  if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
-  else
+  else if (isa<GlobalIFunc>(CalleeV) &&
+      MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+    // IR IFuncs can't be forward declared (only defined), so the callee must be
+    // in the same TU and therefore we can direct-call it without worrying about
+    // it being out of range.
+    Info.Callee = MachineOperand::CreateGA(cast<GlobalIFunc>(CalleeV), 0);
+  } else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
   Register ReturnHintAlignReg;
