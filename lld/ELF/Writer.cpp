@@ -502,15 +502,15 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.ppc64LongBranchTarget);
   }
 
-  if (config->emachine == EM_RISCV && config->riscvTbljal) {
+  if (config->emachine == EM_RISCV && config->riscvTbljal){
     in.riscvTableJumpSection = std::make_unique<TableJumpSection>();
-    add(*in.riscvTableJumpSection);
 
     Symbol *s = symtab.addSymbol(Defined{
         /*file=*/nullptr, "__jvt_base$", STB_GLOBAL, STT_NOTYPE, STT_NOTYPE,
         /*value=*/0, /*size=*/0, in.riscvTableJumpSection.get()});
     s->isUsedInRegularObj = true;
   }
+    
 
   in.gotPlt = std::make_unique<GotPltSection>();
   add(*in.gotPlt);
@@ -1768,8 +1768,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (!config->relocatable && config->emachine == EM_RISCV)
     riscvFinalizeRelax(pass);
 
-  if (config->riscvTbljal && in.riscvTableJumpSection->getSizeReduction() <= 0)
-    warn("Table Jump Relaxation didn't got any reduction for code size.");
+  if (config->riscvTbljal && in.riscvTableJumpSection->getSizeReduction() > 0)
+    ctx.inputSections.push_back(&(*in.riscvTableJumpSection));
 
   if (config->relocatable)
     for (OutputSection *sec : outputSections)
