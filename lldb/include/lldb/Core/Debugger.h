@@ -325,6 +325,10 @@ public:
 
   llvm::StringRef GetAutosuggestionAnsiSuffix() const;
 
+  llvm::StringRef GetRegexMatchAnsiPrefix() const;
+
+  llvm::StringRef GetRegexMatchAnsiSuffix() const;
+
   bool GetShowDontUsePoHint() const;
 
   bool GetUseSourceCache() const;
