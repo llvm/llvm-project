@@ -60,9 +60,12 @@ to use the freshly built lld and compiler-rt.
 We will go over some of the special options passed to the ``cmake`` command
 above.
 
-* **Enabled Projects** - Since we want to build and install clang, lld
-  and compiler-rt along with the libc, we specify
-  ``clang;libc;lld;compiler-rt`` as the list of enabled projects.
+* **Enabled Projects** - Since we want to build and install ``clang``, ``lld``
+  and ``compiler-rt`` along with the ``libc``, we specify
+  ``clang;libc;lld;compiler-rt`` as the list of enabled projects. ``clang`` is 
+  typically required along the full build as we employ the ``TableGen`` 
+  facilities to create headers. One may also add ``clang-tools-extra`` since
+  the in-tree ``clang-tidy/clangd`` can provide some essential checks for ``libc``.
 * **The full build option** - Since we want to do build the full libc, we pass
   ``-DLLVM_LIBC_FULL_BUILD=ON``.
 * **Scudo related options** - LLVM's libc uses
