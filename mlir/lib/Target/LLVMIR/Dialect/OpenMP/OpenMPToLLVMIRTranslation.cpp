@@ -244,6 +244,92 @@ static llvm::BasicBlock *convertOmpOpRegions(
   return continuationBlock;
 }
 
+/// Finds the set of \c llvm.alloca instructions associated to \c LLVM::AllocaOp
+/// MLIR operations for primitive types that are defined outside of the given
+/// \p region but only used inside of it.
+static void
+gatherSinkableAllocas(const LLVM::ModuleTranslation &moduleTranslation,
+                      Region &region,
+                      SetVector<llvm::AllocaInst *> &allocasToSink) {
+  Operation *op = region.getParentOp();
+
+  auto processLoadStore = [&](auto loadStoreOp) {
+    Value addr = loadStoreOp.getAddr();
+    Operation *addrOp = addr.getDefiningOp();
+
+    // The destination address is already defined in this region or it is not an
+    // llvm.alloca operation, so skip it.
+    if (!isa_and_present<LLVM::AllocaOp>(addrOp) || op->isAncestor(addrOp))
+      return;
+
+    // Get LLVM value to which the address is mapped. It has to be mapped to the
+    // allocation instruction of a scalar type to be marked as sinkable by this
+    // function.
+    llvm::Value *llvmAddr = moduleTranslation.lookupValue(addr);
+    if (!isa_and_present<llvm::AllocaInst>(llvmAddr))
+      return;
+
+    auto *llvmAlloca = cast<llvm::AllocaInst>(llvmAddr);
+    if (llvmAlloca->getAllocatedType()->getPrimitiveSizeInBits() == 0)
+      return;
+
+    // Check that the address is only used inside of the region.
+    bool addressUsedOnlyInternally = true;
+    for (auto &addrUse : addr.getUses()) {
+      if (!op->isAncestor(addrUse.getOwner())) {
+        addressUsedOnlyInternally = false;
+        break;
+      }
+    }
+
+    if (!addressUsedOnlyInternally)
+      return;
+
+    allocasToSink.insert(llvmAlloca);
+  };
+
+  region.walk([&processLoadStore](Operation *op) {
+    if (auto loadOp = dyn_cast<LLVM::LoadOp>(op))
+      processLoadStore(loadOp);
+    else if (auto storeOp = dyn_cast<LLVM::StoreOp>(op))
+      processLoadStore(storeOp);
+  });
+}
+
+/// Converts the given region that appears within an OpenMP dialect operation to
+/// LLVM IR, according to the process described in \c convertOmpOpRegions(), and
+/// marks the lifetime of allocas read/written exclusively inside of the region
+/// but defined outside of it.
+///
+/// This information enables later compilation stages to sink these allocations
+/// inside of the region, such as when outlining it into a separate function.
+static llvm::BasicBlock *convertOmpOpRegionsWithAllocaLifetimes(
+    Region &region, StringRef blockName, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation, LogicalResult &bodyGenStatus) {
+  SetVector<llvm::AllocaInst *> allocasToSink;
+  gatherSinkableAllocas(moduleTranslation, region, allocasToSink);
+
+  for (auto *alloca : allocasToSink) {
+    unsigned size = alloca->getAllocatedType()->getPrimitiveSizeInBits() / 8;
+    builder.CreateLifetimeStart(alloca, builder.getInt64(size));
+  }
+
+  llvm::BasicBlock *continuationBlock = convertOmpOpRegions(
+      region, blockName, builder, moduleTranslation, bodyGenStatus);
+
+  if (!allocasToSink.empty()) {
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetInsertPoint(continuationBlock, continuationBlock->begin());
+
+    for (auto *alloca : allocasToSink) {
+      unsigned size = alloca->getAllocatedType()->getPrimitiveSizeInBits() / 8;
+      builder.CreateLifetimeEnd(alloca, builder.getInt64(size));
+    }
+  }
+
+  return continuationBlock;
+}
+
 /// Convert ProcBindKind from MLIR-generated enum to LLVM enum.
 static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   switch (kind) {
@@ -910,8 +996,9 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Convert the body of the loop.
     builder.restoreIP(ip);
-    convertOmpOpRegions(loop.getRegion(), "omp.wsloop.region", builder,
-                        moduleTranslation, bodyGenStatus);
+    convertOmpOpRegionsWithAllocaLifetimes(loop.getRegion(),
+                                           "omp.wsloop.region", builder,
+                                           moduleTranslation, bodyGenStatus);
   };
 
   // Delegate actual loop construction to the OpenMP IRBuilder.
@@ -1151,8 +1238,9 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Convert the body of the loop.
     builder.restoreIP(ip);
-    convertOmpOpRegions(loop.getRegion(), "omp.simdloop.region", builder,
-                        moduleTranslation, bodyGenStatus);
+    convertOmpOpRegionsWithAllocaLifetimes(loop.getRegion(),
+                                           "omp.simdloop.region", builder,
+                                           moduleTranslation, bodyGenStatus);
   };
 
   // Delegate actual loop construction to the OpenMP IRBuilder.
