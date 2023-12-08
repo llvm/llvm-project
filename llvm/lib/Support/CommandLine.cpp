@@ -2372,7 +2372,7 @@ public:
 
     if (Sub == &SubCommand::getTopLevel()) {
       outs() << "USAGE: " << GlobalParser->ProgramName;
-      if (Subs.size() > 2)
+      if (!Subs.empty())
         outs() << " [subcommand]";
       outs() << " [options]";
     } else {
