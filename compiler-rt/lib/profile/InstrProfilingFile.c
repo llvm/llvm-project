@@ -711,6 +711,7 @@ static void resetFilenameToDefault(void) {
   memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
   lprofCurFilename.FilenamePat = DefaultProfileName;
   lprofCurFilename.PNS = PNS_default;
+  __llvm_profile_disable_continuous_mode();
 }
 
 static unsigned getMergePoolSize(const char *FilenamePat, int *I) {
