@@ -426,7 +426,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
             if (T == C.UnsignedShortTy || T == C.ShortTy)
               return NoMatchTypeConfusion;
             if (T == C.UnsignedCharTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             if (T == C.SignedCharTy)
               return Match;
             break;
@@ -437,39 +437,39 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
             if (T == C.UnsignedCharTy)
               return Match;
             if (T == C.SignedCharTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::Short:
             if (T == C.UnsignedShortTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::UShort:
             if (T == C.ShortTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::Int:
             if (T == C.UnsignedIntTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::UInt:
             if (T == C.IntTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::Long:
             if (T == C.UnsignedLongTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::ULong:
             if (T == C.LongTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::LongLong:
             if (T == C.UnsignedLongLongTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           case BuiltinType::ULongLong:
             if (T == C.LongLongTy)
-              return MatchSignedness;
+              return NoMatchSignedness;
             break;
           }
           // "Partially matched" because of promotions?

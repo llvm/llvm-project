@@ -275,8 +275,6 @@ public:
     /// The conversion specifier and the argument type are compatible. For
     /// instance, "%d" and int.
     Match = 1,
-    /// The conversion specifier and the argument type have different sign
-    MatchSignedness,
     /// The conversion specifier and the argument type are compatible because of
     /// default argument promotions. For instance, "%hhd" and int.
     MatchPromotion,
@@ -286,6 +284,8 @@ public:
     /// The conversion specifier and the argument type are disallowed by the C
     /// standard, but are in practice harmless. For instance, "%p" and int*.
     NoMatchPedantic,
+    /// The conversion specifier and the argument type have different sign.
+    NoMatchSignedness,
     /// The conversion specifier and the argument type are compatible, but still
     /// seems likely to be an error. For instance, "%hd" and _Bool.
     NoMatchTypeConfusion,

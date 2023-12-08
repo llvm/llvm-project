@@ -1,7 +1,15 @@
 // RUN: %clang_cc1 -std=c11 -fsyntax-only -verify -Wformat -Wformat-signedness %s
 
+#include <limits.h>
+
 int printf(const char *restrict format, ...);
 int scanf(const char * restrict, ...);
+
+enum foo {
+    minus_one = -1,
+    int_val = INT_MAX,
+    unsigned_val = (unsigned)INT_MIN
+};
 
 void test_printf_bool(_Bool x)
 {
@@ -62,6 +70,13 @@ void test_printf_unsigned_long_long(unsigned long long x)
     printf("%llx", x); // no-warning
 }
 
+void test_printf_enum(enum foo x)
+{
+    printf("%ld", x); // no-warning
+    printf("%lu", x); // expected-warning{{format specifies type 'unsigned long' but the argument has underlying type 'long'}}
+    printf("%lx", x); // expected-warning{{format specifies type 'unsigned long' but the argument has underlying type 'long'}}
+}
+
 void test_scanf_char(char *y) {
   scanf("%c", y); // no-warning
 }
@@ -104,4 +119,10 @@ void test_scanf_unsigned_longlong(unsigned long long *x) {
   scanf("%lld", x); // expected-warning{{format specifies type 'long long *' but the argument has type 'unsigned long long *'}}
   scanf("%llu", x); // no-warning
   scanf("%llx", x); // no-warning
+}
+
+void test_scanf_enum(enum foo *x) {
+  scanf("%ld", x); // no-warning
+  scanf("%lu", x); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum foo *'}}
+  scanf("%lx", x); // expected-warning{{format specifies type 'unsigned long *' but the argument has type 'enum foo *'}}
 }

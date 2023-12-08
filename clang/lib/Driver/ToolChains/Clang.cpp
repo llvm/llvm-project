@@ -6306,8 +6306,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fdeprecated-macro");
   }
 
-  Args.AddLastArg(CmdArgs, options::OPT_Wformat_signedness);
-
   // Translate GCC's misnamer '-fasm' arguments to '-fgnu-keywords'.
   if (Arg *Asm = Args.getLastArg(options::OPT_fasm, options::OPT_fno_asm)) {
     if (Asm->getOption().matches(options::OPT_fasm))
