@@ -1092,10 +1092,8 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   return EmitCountedByFieldExprImpl(Res, CountedByRD, VD);
 }
 
-llvm::Value *
-CodeGenFunction::EmitCountedByFieldExprImpl(llvm::Value *CountedByInst,
-                                            const RecordDecl *RD,
-                                            const ValueDecl *VD) {
+llvm::Value *CodeGenFunction::EmitCountedByFieldExprImpl(
+    llvm::Value *CountedByInst, const RecordDecl *RD, const ValueDecl *VD) {
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 8> Indices{Zero};
 
