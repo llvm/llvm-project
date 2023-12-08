@@ -1035,10 +1035,7 @@ enum Register_Flag : uint8_t {
 
 namespace AMDGPU {
 namespace Barrier {
-enum Type {
-  TRAP = -2,
-  WORKGROUP = -1
-};
+enum Type { TRAP = -2, WORKGROUP = -1 };
 } // namespace Barrier
 } // namespace AMDGPU
 
