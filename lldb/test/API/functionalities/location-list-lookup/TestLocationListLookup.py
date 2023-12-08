@@ -38,7 +38,7 @@ class LocationListLookupTestCase(TestBase):
 
     @skipIf(oslist=["linux"], archs=["arm"])
     @skipIfDarwin
-    @skipIfWindows # GetDisplayFunctionName returns None
+    @skipIfWindows  # GetDisplayFunctionName returns None
     def test_loclist_frame_var(self):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)
