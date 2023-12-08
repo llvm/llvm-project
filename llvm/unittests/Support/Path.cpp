@@ -882,7 +882,7 @@ TEST_F(FileSystemTest, TempFiles) {
   int FD2;
   SmallString<64> TempPath2;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD2, TempPath2));
-  ASSERT_TRUE(TempPath2.endswith(".temp"));
+  ASSERT_TRUE(TempPath2.ends_with(".temp"));
   ASSERT_NE(TempPath.str(), TempPath2.str());
 
   fs::file_status A, B;
@@ -908,7 +908,7 @@ TEST_F(FileSystemTest, TempFiles) {
 
   SmallString<64> TempPath3;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "", TempPath3));
-  ASSERT_FALSE(TempPath3.endswith("."));
+  ASSERT_FALSE(TempPath3.ends_with("."));
   FileRemover Cleanup3(TempPath3);
 
   // Create a hard link to Temp1.
