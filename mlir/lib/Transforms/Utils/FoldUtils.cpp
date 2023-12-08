@@ -16,40 +16,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
-
-// Fuse `foldedLocation` into the Location of `retainedOp`.
-// This will result in `retainedOp` having a FusedLoc with a StringAttr tag
-// "OpFold" to help trace the source of the fusion. If `retainedOp` already had
-// a FusedLoc with the same tag, `foldedLocation` will simply be appended to it.
-// Usage:
-// - When an op is deduplicated, fuse the location of the op to be removed into
-//   the op that is retained.
-// - When an op is hoisted to the front/back of a block, fuse the location of
-//   the parent region of the block into the hoisted op.
-static void appendFoldedLocation(Operation *retainedOp,
-                                 Location foldedLocation) {
-  constexpr std::string_view tag = "OpFold";
-  // Append into existing fused location if it has the same tag.
-  if (auto existingFusedLoc =
-          retainedOp->getLoc().dyn_cast<FusedLocWith<StringAttr>>()) {
-    StringAttr existingMetadata = existingFusedLoc.getMetadata();
-    if (existingMetadata.strref().equals(tag)) {
-      SmallVector<Location> locations(existingFusedLoc.getLocations());
-      locations.push_back(foldedLocation);
-      Location newFusedLoc =
-          FusedLoc::get(retainedOp->getContext(), locations, existingMetadata);
-      retainedOp->setLoc(newFusedLoc);
-      return;
-    }
-  }
-  // Create a new fusedloc with retainedOp's loc and foldedLocation.
-  Location newFusedLoc = FusedLoc::get(
-      retainedOp->getContext(), {retainedOp->getLoc(), foldedLocation},
-      StringAttr::get(retainedOp->getContext(), tag));
-  retainedOp->setLoc(newFusedLoc);
-}
 
 /// Given an operation, find the parent region that folded constants should be
 /// inserted into.
@@ -361,4 +330,33 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   referencedDialects[constOp].assign({dialect, newDialect});
   auto newIt = uniquedConstants.insert({newKey, constOp});
   return newIt.first->second;
+}
+
+void OperationFolder::appendFoldedLocation(Operation *retainedOp,
+                                           Location foldedLocation) {
+  // Append into existing fused location if it has the same tag.
+  if (auto existingFusedLoc =
+          dyn_cast<FusedLocWith<StringAttr>>(retainedOp->getLoc())) {
+    StringAttr existingMetadata = existingFusedLoc.getMetadata();
+    if (existingMetadata == fusedLocationTag) {
+      ArrayRef<Location> existingLocations = existingFusedLoc.getLocations();
+      SetVector<Location> locations(existingLocations.begin(),
+                                    existingLocations.end());
+      locations.insert(foldedLocation);
+      Location newFusedLoc = FusedLoc::get(
+          retainedOp->getContext(), locations.takeVector(), existingMetadata);
+      retainedOp->setLoc(newFusedLoc);
+      return;
+    }
+  }
+
+  // Create a new fusedloc with retainedOp's loc and foldedLocation.
+  // If they're already equal, no need to fuse.
+  if (retainedOp->getLoc() == foldedLocation)
+    return;
+
+  Location newFusedLoc =
+      FusedLoc::get(retainedOp->getContext(),
+                    {retainedOp->getLoc(), foldedLocation}, fusedLocationTag);
+  retainedOp->setLoc(newFusedLoc);
 }
