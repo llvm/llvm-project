@@ -1544,6 +1544,9 @@ def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
 def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
   MetaVarName<"<arg>">, MarshallingInfoStringVector<LangOpts<"CommentOpts.BlockCommandNames">>;
+defm define_target_os_macros : OptInCC1FFlag<"define-target-os-macros",
+  "Enable", "Disable", " predefined target OS macros",
+  [CoreOption, CC1Option]>;
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
