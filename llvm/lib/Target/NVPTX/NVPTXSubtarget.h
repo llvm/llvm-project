@@ -88,7 +88,11 @@ public:
   unsigned int getSmVersion() const { return FullSmVersion / 10; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   std::string getTargetName() const { return TargetName; }
-  bool isSm90a() const { return getFullSmVersion() == 901; }
+
+  // GPUs with "a" suffix have include architecture-accelerated features that
+  // are supported on the specified architecture only, hence such targets do not
+  // follow the onion layer model.
+  bool hasAAFeatures() const { return getFullSmVersion() % 10; }
 
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
