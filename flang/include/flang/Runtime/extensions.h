@@ -14,8 +14,8 @@
 
 #define FORTRAN_PROCEDURE_NAME(name) name##_
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 extern "C" {
 

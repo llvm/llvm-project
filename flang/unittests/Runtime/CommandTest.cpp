@@ -12,8 +12,8 @@
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 #include <limits.h> // LOGIN_NAME_MAX used in getlog test
@@ -524,6 +524,7 @@ TEST_F(EnvironmentVariables, GetlogGetName) {
   EXPECT_NE(input[0], '\0');
 }
 
+#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
   // guarantee 1 char longer than max, last char should be pad space
   const int charLen{LOGIN_NAME_MAX + 2};
@@ -534,9 +535,9 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
 
   EXPECT_EQ(input[charLen - 1], ' ');
 }
+#endif
 
 #ifdef _WIN32 // Test ability to get name from environment variable
-
 TEST_F(EnvironmentVariables, GetlogEnvGetName) {
   const int charLen{11};
   char input[charLen]{"XXXXXXXXX"};

@@ -68,9 +68,9 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
     // error occur: get username from environment variable
     GetUsernameEnvVar("LOGNAME", arg, length);
   }
-#elif define(_WIN32)
+#elif _WIN32
   // Get username from environment to avid link to Advapi32.lib
-  GetUsernameEnvVar("USERNAME", arg, length)
+  GetUsernameEnvVar("USERNAME", arg, length);
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
