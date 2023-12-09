@@ -26417,6 +26417,20 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "void g() {}",
                CtorDtorCode, Style);
 
+  Style.ReferenceAlignment = FormatStyle::ReferenceAlignmentStyle::RAS_Left;
+  constexpr StringRef OperatorOverloadCode(
+      "struct Foo {\n"
+      "[[maybe_unused]] void operator+();\n"
+      "};\n"
+      "[[nodiscard]] Foo& operator-(Foo&);");
+  verifyFormat("struct Foo {\n"
+               "  [[maybe_unused]]\n"
+               "  void operator+();\n"
+               "};\n"
+               "[[nodiscard]]\n"
+               "Foo& operator-(Foo&);",
+               OperatorOverloadCode, Style);
+
   Style.BreakBeforeBraces = FormatStyle::BS_Linux;
   verifyFormat("struct Foo {\n"
                "  [[deprecated]]\n"
