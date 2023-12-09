@@ -102,6 +102,10 @@ bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
     ::exit(RetCode);
 }
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+static unsigned computePageSize();
+#endif
+
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/Process.inc"
@@ -113,9 +117,7 @@ bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <windows.h>
-#endif
 
-#if defined(_WIN32) || defined(__CYGWIN__)
 // This function retrieves the page size using GetNativeSystemInfo() and is
 // present solely so it can be called once to initialize the self_process member
 // below.
