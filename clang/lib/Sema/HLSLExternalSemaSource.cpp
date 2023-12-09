@@ -119,8 +119,8 @@ struct BuiltinTypeDeclBuilder {
                                                 ResourceKind RK) {
     if (Record->isCompleteDefinition())
       return *this;
-    Record->addAttr(
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RC, RK));
+    Record->addAttr(HLSLResourceAttr::CreateImplicit(Record->getASTContext(),
+                                                     RC, RK, /*IsROV=*/false));
     return *this;
   }
 
