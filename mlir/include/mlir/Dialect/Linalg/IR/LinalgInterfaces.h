@@ -191,7 +191,6 @@ LogicalResult verifyConvolutionInterface(Operation *op);
 /// Verify that `op` conforms to the DepthwiseConvolutionOpInterface.
 LogicalResult verifyDepthwiseConvolutionInterface(Operation *op);
 
-LogicalResult verifyConvolutionInterface(Operation *op);
 /// Verify that `op` conforms to the FillOpInterface.
 LogicalResult verifyFillInterface(Operation *op);
 
