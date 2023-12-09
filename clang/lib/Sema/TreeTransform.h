@@ -6439,26 +6439,28 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
       Sema::ExpressionEvaluationContextRecord::EK_Decltype);
 
-  auto EE = T->getUnderlyingExpr();
-  if (EE->isInstantiationDependent()) {
-    // Check the number of the Concept template parameters
-    size_t conceptParams = 0;
-    if (auto lambdaExpr = dyn_cast<LambdaExpr>(EE)) {
-      if (lambdaExpr->getTemplateParameterList()) {
-        for (auto P : *lambdaExpr->getTemplateParameterList()) {
-          const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-          if (CD && CD->hasTypeConstraint()) {
-            conceptParams++;
-          }
-        }
+  // while(auto EE = T->getUnderlyingExpr()){}
+  // if (EE->isInstantiationDependent()) {
 
-        if (conceptParams > 0 &&
-            conceptParams == lambdaExpr->getTemplateParameterList()->size()) {
-          return QualType();
-        }
-      }
-    }
-  }
+  //   // Check the number of the Concept template parameters
+  //   size_t conceptParams = 0;
+  //   if (auto lambdaExpr = dyn_cast<LambdaExpr>(EE)) {
+  //     if (lambdaExpr->getTemplateParameterList()) {
+  //       for (auto P : *lambdaExpr->getTemplateParameterList()) {
+  //         const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+  //         if (CD && CD->hasTypeConstraint()) {
+  //           conceptParams++;
+  //         }
+  //       }
+
+  //       if (conceptParams > 0 &&
+  //           conceptParams == lambdaExpr->getTemplateParameterList()->size())
+  //           {
+  //         return QualType();
+  //       }
+  //     }
+  //   }
+  // }
 
   ExprResult E = getDerived().TransformExpr(T->getUnderlyingExpr());
   if (E.isInvalid())
