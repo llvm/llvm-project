@@ -75,4 +75,15 @@ def LoweringPrepare : Pass<"cir-lowering-prepare"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def IdiomRecognizer : Pass<"cir-idiom-recognizer"> {
+  let summary = "Raise calls to C/C++ libraries to CIR operations";
+  let description = [{
+    This pass recognize idiomatic C++ usage and incorporate C++ standard
+    containers, library functions calls, and types into CIR operation,
+    attributes and types.
+  }];
+  let constructor = "mlir::createIdiomRecognizerPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 #endif // MLIR_DIALECT_CIR_PASSES
