@@ -3711,7 +3711,8 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       }
     }
 
-    if (FunctionTemplate->getTemplateParameters()->size() == conceptParams &&
+    if (conceptParams > 0 &&
+        FunctionTemplate->getTemplateParameters()->size() == conceptParams &&
         Info.getNumExplicitArgs() > 0) {
       return TDK_SubstitutionFailure;
     }
