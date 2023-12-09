@@ -202,6 +202,7 @@ module;
 #  error "please update the header information for <text_encoding> in headers_not_available in utils/libcxx/header_information.py"
 #endif // __has_include(<text_encoding>)
 
-export module std;
+export module std.compat;
 
 @LIBCXX_MODULE_STD_INCLUDE_SOURCES@
+@LIBCXX_MODULE_STD_COMPAT_INCLUDE_SOURCES@
