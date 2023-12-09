@@ -3222,20 +3222,7 @@ Sema::TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
       *FunctionType = Function->getType();
     return TDK_Success;
   }
-  // if (FunctionTemplate->getTemplateParameterList()) {
-  // Check the number of the Concept template parameters
-  size_t conceptParams = 0;
-  for (auto P : *TemplateParams) {
-    const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-    if (CD && CD->hasTypeConstraint()) {
-      conceptParams++;
-    }
-  }
 
-  if (conceptParams == TemplateParams->size()) {
-    return TDK_Success;
-  }
-  // }
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
