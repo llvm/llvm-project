@@ -104,7 +104,7 @@ public:
     return File;
   }
 
-  OptionalFileEntryRefDegradesToFileEntryPtr getFile() const {
+  OptionalFileEntryRef getFile() const {
     if (auto *P = Val.getPointer())
       return FileEntryRef(*P);
     return std::nullopt;
