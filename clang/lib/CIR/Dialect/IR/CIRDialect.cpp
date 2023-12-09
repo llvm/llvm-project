@@ -2047,6 +2047,7 @@ void CallOp::print(::mlir::OpAsmPrinter &state) {
   state << ")";
   llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
   elidedAttrs.push_back("callee");
+  elidedAttrs.push_back("ast");
   state.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
   state << ' ' << ":";
   state << ' ';

@@ -1124,7 +1124,7 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   assert(!MustTailCall && "Must tail NYI");
   mlir::cir::CallOp callOP = nullptr;
   RValue Call = buildCall(FnInfo, Callee, ReturnValue, Args, &callOP,
-                          E == MustTailCall, getLoc(E->getExprLoc()));
+                          E == MustTailCall, getLoc(E->getExprLoc()), E);
 
   assert(!getDebugInfo() && "Debug Info NYI");
 

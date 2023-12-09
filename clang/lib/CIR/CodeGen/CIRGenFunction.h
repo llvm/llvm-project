@@ -747,7 +747,8 @@ public:
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
                    const CallArgList &Args, mlir::cir::CallOp *callOrInvoke,
-                   bool IsMustTail, mlir::Location loc);
+                   bool IsMustTail, mlir::Location loc,
+                   std::optional<const clang::CallExpr *> E = std::nullopt);
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
                    const CallArgList &Args,
@@ -755,7 +756,7 @@ public:
                    bool IsMustTail = false) {
     assert(currSrcLoc && "source location must have been set");
     return buildCall(CallInfo, Callee, ReturnValue, Args, callOrInvoke,
-                     IsMustTail, *currSrcLoc);
+                     IsMustTail, *currSrcLoc, std::nullopt);
   }
   RValue buildCall(clang::QualType FnType, const CIRGenCallee &Callee,
                    const clang::CallExpr *E, ReturnValueSlot returnValue,
