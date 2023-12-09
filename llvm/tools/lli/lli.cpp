@@ -75,13 +75,6 @@
 #include <io.h>
 #endif
 
-#ifdef __CYGWIN__
-#include <cygwin/version.h>
-#if defined(CYGWIN_VERSION_DLL_MAJOR) && CYGWIN_VERSION_DLL_MAJOR<1007
-#define DO_NOTHING_ATEXIT 1
-#endif
-#endif
-
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;

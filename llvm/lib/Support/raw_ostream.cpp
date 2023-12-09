@@ -38,10 +38,6 @@
 # include <unistd.h>
 #endif
 
-#if defined(__CYGWIN__)
-#include <io.h>
-#endif
-
 #if defined(_MSC_VER)
 #include <io.h>
 #ifndef STDIN_FILENO
