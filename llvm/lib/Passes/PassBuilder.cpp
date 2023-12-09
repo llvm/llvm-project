@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
