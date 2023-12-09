@@ -363,7 +363,8 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
                                  mlir::cir::CallOp *callOrInvoke,
-                                 bool IsMustTail, mlir::Location loc) {
+                                 bool IsMustTail, mlir::Location loc,
+                                 std::optional<const clang::CallExpr *> E) {
   auto builder = CGM.getBuilder();
   // FIXME: We no longer need the types from CallArgs; lift up and simplify
 
@@ -617,6 +618,10 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   } else {
     llvm_unreachable("expected call variant to be handled");
   }
+
+  if (E)
+    theCall.setAstAttr(
+        mlir::cir::ASTCallExprAttr::get(builder.getContext(), *E));
 
   if (callOrInvoke)
     callOrInvoke = &theCall;
