@@ -1056,7 +1056,7 @@ bool index::emitIndexDataForModuleFile(const Module *Mod,
 
   auto astReader = CI.getASTReader();
   serialization::ModuleFile *ModFile =
-      astReader->getModuleManager().lookup(Mod->getASTFile());
+      astReader->getModuleManager().lookup(*Mod->getASTFile());
   assert(ModFile && "no module file loaded for module ?");
   return produceIndexDataForModuleFile(*ModFile, CI, IndexOpts, RecordOpts,
                                        ParentUnitWriter);

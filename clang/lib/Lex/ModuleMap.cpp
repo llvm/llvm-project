@@ -1076,9 +1076,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
     if (!canInfer)
       return nullptr;
   } else {
-    OptionalFileEntryRefDegradesToFileEntryPtr ModuleMapRef =
-        getModuleMapFileForUniquing(Parent);
-    ModuleMapFile = ModuleMapRef;
+    ModuleMapFile = getModuleMapFileForUniquing(Parent);
   }
 
   // Look for an umbrella header.
