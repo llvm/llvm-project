@@ -5786,7 +5786,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                 PartialDiagnostic(diag::err_module_file_conflict,
                                   ContextObj->DiagAllocator)
                 << CurrentModule->getTopLevelModuleName() << CurFile->getName()
-                << F.File->getName();
+                << F.File.getName();
             return DiagnosticError::create(CurrentImportLoc, ConflictError);
           }
         }
