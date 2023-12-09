@@ -2384,8 +2384,6 @@ public:
 
   bool isRVVType(unsigned ElementCount) const;
 
-  bool isRVVType() const;
-
   bool isRVVType(unsigned Bitwidth, bool IsFloat, bool IsBFloat = false) const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
@@ -7282,14 +7280,6 @@ inline bool Type::isOCLExtOpaqueType() const {
 inline bool Type::isOpenCLSpecificType() const {
   return isSamplerT() || isEventT() || isImageType() || isClkEventT() ||
          isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
-}
-
-inline bool Type::isRVVType() const {
-#define RVV_TYPE(Name, Id, SingletonId) \
-  isSpecificBuiltinType(BuiltinType::Id) ||
-  return
-#include "clang/Basic/RISCVVTypes.def"
-    false; // end of boolean or operation.
 }
 
 inline bool Type::isRVVType(unsigned ElementCount) const {

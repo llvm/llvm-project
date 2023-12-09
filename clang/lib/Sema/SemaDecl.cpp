@@ -8914,7 +8914,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
-  if (T->isRVVType())
+  if (T->isRVVSizelessBuiltinType())
     checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext));
 }
 
