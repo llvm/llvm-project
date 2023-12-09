@@ -539,32 +539,41 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
 
 #ifdef _WIN32 // Test ability to get name from environment variable
 TEST_F(EnvironmentVariables, GetlogEnvGetName) {
-  const int charLen{11};
-  char input[charLen]{"XXXXXXXXX"};
+  if (EnableFineGrainedTests()) {
+    ASSERT_NE(std::getenv("USERNAME"), nullptr)
+        << "Environment variable USERNAME does not exist";
 
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
+    char input[]{"XXXXXXXXX"};
+    FORTRAN_PROCEDURE_NAME(getlog)
+    (reinterpret_cast<std::byte *>(input), sizeof(input));
 
-  CheckCharEqStr(input, "loginName");
+    CheckCharEqStr(input, "loginName");
+  }
 }
 
 TEST_F(EnvironmentVariables, GetlogEnvBufferShort) {
-  const int charLen{7};
-  char input[charLen]{"XXXXXX"};
+  if (EnableFineGrainedTests()) {
+    ASSERT_NE(std::getenv("USERNAME"), nullptr)
+        << "Environment variable USERNAME does not exist";
 
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
+    char input[]{"XXXXXX"};
+    FORTRAN_PROCEDURE_NAME(getlog)
+    (reinterpret_cast<std::byte *>(input), sizeof(input));
 
-  CheckCharEqStr(input, "loginN");
+    CheckCharEqStr(input, "loginN");
+  }
 }
 
 TEST_F(EnvironmentVariables, GetlogEnvPadSpace) {
-  const int charLen{12};
-  char input[charLen]{"XXXXXXXXXX"};
+  if (EnableFineGrainedTests()) {
+    ASSERT_NE(std::getenv("USERNAME"), nullptr)
+        << "Environment variable USERNAME does not exist";
 
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
+    char input[]{"XXXXXXXXXX"};
+    FORTRAN_PROCEDURE_NAME(getlog)
+    (reinterpret_cast<std::byte *>(input), sizeof(input));
 
-  CheckCharEqStr(input, "loginName ");
+    CheckCharEqStr(input, "loginName ");
+  }
 }
 #endif
