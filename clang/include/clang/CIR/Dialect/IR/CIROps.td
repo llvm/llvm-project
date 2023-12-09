@@ -1841,7 +1841,8 @@ def FuncOp : CIR_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def CallOp : CIR_Op<"call",
-    [DeclareOpInterfaceMethods<CallOpInterface>, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+    [DeclareOpInterfaceMethods<CallOpInterface>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "call operation";
   let description = [{
     The `call` operation represents a direct call to a function that is within
@@ -1867,7 +1868,9 @@ def CallOp : CIR_Op<"call",
     ```
   }];
 
-  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee, Variadic<AnyType>:$operands);
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+                       Variadic<AnyType>:$operands,
+                       OptionalAttr<ASTCallExprInterface>:$ast);
   let results = (outs Variadic<AnyType>);
 
   let builders = [
