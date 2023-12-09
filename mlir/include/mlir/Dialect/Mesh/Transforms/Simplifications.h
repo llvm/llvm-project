@@ -66,6 +66,15 @@ void populateAllReduceEndomorphismSimplificationPatterns(
       return false;
     }
 
+    // Dont't use simplify if the all-reduce is used other than by the
+    // algebraic op.
+    // TODO: maybe handle this by an additional pass that later reverses the
+    // simplification if there are other uses left other optimizations have
+    // been done.
+    if (!allReduceOp->hasOneUse()) {
+      return false;
+    }
+
     if (!referenceOp) {
       return true;
     }
