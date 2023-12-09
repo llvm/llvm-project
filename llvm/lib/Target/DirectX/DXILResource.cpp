@@ -233,9 +233,8 @@ void ResourceBase::print(raw_ostream &OS, StringRef IDPrefix,
 }
 
 UAVResource::UAVResource(uint32_t I, FrontendResource R)
-    : ResourceBase(I, R),
-      Shape(static_cast<ResourceBase::Kinds>(R.getResourceKind())),
-      GloballyCoherent(false), HasCounter(false), IsROV(false), ExtProps() {
+    : ResourceBase(I, R), Shape(R.getResourceKind()), GloballyCoherent(false),
+      HasCounter(false), IsROV(false), ExtProps() {
   parseSourceType(R.getSourceType());
 }
 

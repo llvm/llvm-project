@@ -1,11 +1,12 @@
 // RUN: %clang -### --target=arm64-apple-darwin %s 2>&1 | FileCheck %s --check-prefix=DARWIN-DEFAULT
-// DARWIN-DEFAULT: "-fdefine-target-os-macros"
+// DARWIN-DEFAULT-NOT: "-fdefine-target-os-macros"
 
 // RUN: %clang -### --target=arm-none-linux-gnu %s 2>&1 | FileCheck %s --check-prefix=NON-DARWIN-DEFAULT
 // RUN: %clang -### --target=x86_64-pc-win32 %s 2>&1 | FileCheck %s --check-prefix=NON-DARWIN-DEFAULT
 // NON-DARWIN-DEFAULT-NOT: "-fdefine-target-os-macros"
 
-// RUN: %clang -dM -E --target=arm64-apple-macos %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-macos \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=1         \
 // RUN:                -DIPHONE=0      \
@@ -20,7 +21,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-ios %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-ios \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -35,7 +37,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-ios-macabi %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-ios-macabi \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -50,7 +53,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-ios-simulator %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-ios-simulator \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -65,7 +69,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-tvos %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-tvos \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -80,7 +85,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-tvos-simulator %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-tvos-simulator \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -95,7 +101,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-watchos %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-watchos \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -110,7 +117,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-watchos-simulator %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-watchos-simulator \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=1      \
@@ -125,7 +133,8 @@
 // RUN:                -DLINUX=0       \
 // RUN:                -DUNIX=0
 
-// RUN: %clang -dM -E --target=arm64-apple-driverkit %s 2>&1 \
+// RUN: %clang -dM -E --target=arm64-apple-driverkit \
+// RUN:        -fdefine-target-os-macros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
 // RUN:                -DOSX=0         \
 // RUN:                -DIPHONE=0      \
