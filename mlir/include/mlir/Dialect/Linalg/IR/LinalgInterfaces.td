@@ -900,8 +900,9 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
   LinalgConvolutionOpInterface]> {
   let description = [{
     A depthwise convolution is defined in general terms:
-    1. it is a convolution as defined by `ConvolutionOpInterface`
-    1. `in_channels = K * out_channels` for some integer `K`
+    1. it is a convolution as defined by `ConvolutionOpInterface`.
+    2. `in_channels = K * out_channels` for some integer `K`.
+    3. `input_rank == output_rank == kernel_rank + 1` (including batch dim in input and output)
     4. The indexing maps of the input have expressions that satisfy
     ```
       AffineExpr ::== AffineDimExpr | ConvolvedExpr

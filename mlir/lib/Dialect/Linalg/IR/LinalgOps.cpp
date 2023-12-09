@@ -1730,6 +1730,12 @@ void DepthwiseConv2DOp::getEffects(
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
 }
+void DepthwiseConv3DOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
+                        getDpsInits());
+}
 
 //===----------------------------------------------------------------------===//
 // TransposeOp

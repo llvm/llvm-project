@@ -18,6 +18,15 @@ func.func @gen_depthwise_2D_channel_first_memref(%arg0: memref<64x16x10x10xf32>,
 
 // -----
 
+// CHECK-LABEL: func @gen_depthwise_3D_channel_first_memref
+func.func @gen_depthwise_3D_channel_first_memref(%arg0: memref<64x16x10x10xf32>, %arg1: memref<16x3x3xf32>, %arg2: memref<64x16x8x8xf32>) {
+  // CHECK: depthwise_conv_3d {{.*}}channel_first = true
+    linalg.depthwise_conv_3d {channel_first = true} ins(%arg0, %arg1: memref<64x16x10x10xf32>, memref<16x3x3xf32>) outs(%arg2: memref<64x16x8x8xf32>)
+    return
+}
+
+// -----
+
 // CHECK-LABEL: func @gen_depthwise_channel_last_memref
 func.func @gen_depthwise_channel_last_memref(%arg0: memref<64x26x16xf32>, %arg1: memref<3x16xf32>, %arg2: memref<64x8x16xf32>) {
   // CHECK: depthwise_conv_1d {{.*}}channel_first = false 

@@ -496,6 +496,60 @@ def DepthwiseConv2DOp : LinalgStructuredBase_Op<"depthwise_conv_2d",
     }];
 }
 
+def DepthwiseConv3DOp : LinalgStructuredBase_Op<"depthwise_conv_3d",
+  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
+    
+  let summary = [{
+    Performs 3-D depthwise convolution with switchable channel position; either first or last.
+  }];
+  let description = [{
+    Domain: N, OD, OH, OW, C, KD, KH, KW
+
+    Layout of operands is determined by the `channel_first` `BoolAttr`:
+
+    `channel_first == true`:
+      Input: `NCDHW`
+      Kernel: `CDHW`
+      Output: `NCDHW`
+
+    `channel_first == false`:
+      Input: `NDHWC`
+      Kernel: `DHWC`
+      Output: `NDHWC`
+
+  }];
+
+    let arguments = (ins
+      Variadic<TensorOrMemref>:$inputs,
+      Variadic<TensorOrMemref>:$inits,
+      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
+      DefaultValuedAttr<RankedI64ElementsAttr<[3]>,
+        "{ static_cast<int64_t>(1) }">:$strides,
+      DefaultValuedAttr<RankedI64ElementsAttr<[3]>,
+        "{ static_cast<int64_t>(1) }">:$dilations
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    // TODO: Figure out how to move this to the interface
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      void print(::mlir::OpAsmPrinter &printer) {
+        return detail::depthwise_convolution_impl::print(*this, printer);
+      }
+      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                        ::mlir::OperationState &result) {
+        return detail::depthwise_convolution_impl::parse(parser, result);
+      }
+      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                                mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+        return detail::depthwise_convolution_impl::regionBuilder;
+      }
+      // Implement functions necessary for DestinationStyleOpInterface.
+      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+    }];
+}
+
 //===----------------------------------------------------------------------===//
 // Transpose op.
 //===----------------------------------------------------------------------===//
