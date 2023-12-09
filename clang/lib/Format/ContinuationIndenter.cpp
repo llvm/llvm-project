@@ -583,14 +583,21 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       return true;
   }
 
-  // If the return type spans multiple lines, wrap before the function name.
-  const bool WrapBeforeName =
-      Current.is(TT_FunctionDeclarationName) &&
-      !State.Line->ReturnTypeWrapped && Previous.isNot(tok::kw_template) &&
-      Current.isNot(tok::kw_operator) && CurrentState.BreakBeforeParameter;
+  const auto WrapBeforeName = [&]() {
+    // If the return type spans multiple lines, wrap before the function name.
+    if (Current.isNot(TT_FunctionDeclarationName) ||
+        State.Line->ReturnTypeWrapped) {
+      return false;
+    }
+    if (Previous.is(tok::kw_template) || Current.is(tok::kw_operator))
+      return false;
+    if (!CurrentState.BreakBeforeParameter)
+      return false;
+    return true;
+  };
 
   // Don't break before a C# function when no break after return type.
-  if (WrapBeforeName &&
+  if (WrapBeforeName() &&
       (!Style.isCSharp() ||
        Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None)) {
     return true;
@@ -598,7 +605,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   // Don't always break between a JavaScript `function` and the function
   // name.
-  if (WrapBeforeName && !Style.isJavaScript())
+  if (WrapBeforeName() && !Style.isJavaScript())
     return true;
 
   // The following could be precomputed as they do not depend on the state.
