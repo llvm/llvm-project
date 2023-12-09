@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++2b -triple x86_64-unknown-unknown %s -verify
 
 
-namespace dr2621 { // dr2621: yes
+namespace dr2621 { // dr2621: 16
 enum class E { a };
 namespace One {
 using E_t = E;
@@ -101,7 +101,7 @@ int y = dr2640_a\N{LOTUS}); // expected-error {{character <U+1FAB7> not allowed 
 
   // dr2642: na
 
-namespace dr2644 { // dr2644: yes
+namespace dr2644 { // dr2644: 8
 
 auto z = [a = 42](int a) { // expected-error {{a lambda parameter cannot shadow an explicitly captured entity}} \
                            // expected-note {{variable 'a' is explicitly captured here}}
@@ -111,7 +111,7 @@ auto z = [a = 42](int a) { // expected-error {{a lambda parameter cannot shadow 
 }
 
 #if __cplusplus >= 202302L
-namespace dr2650 { // dr2650: yes
+namespace dr2650 { // dr2650: 17
 template <class T, T> struct S {};
 template <class T> int f(S<T, T{}>*); // expected-note {{type 'X' of non-type template parameter is not a structural type}}
 class X {
