@@ -944,8 +944,10 @@ Error MachOPlatformRuntimeState::lookupSymbols(
   // be materialized.
   std::vector<std::pair<std::string_view, bool>> MissingSymbols;
   MissingSymbols.reserve(MissingSymbolIndexes.size());
-  printdbg("requesting push of %i missing symbols...\n",
-           MissingSymbolIndexes.size());
+  ORC_RT_DEBUG({
+    printdbg("requesting push of %i missing symbols...\n",
+             MissingSymbolIndexes.size());
+  });
   for (auto MissingIdx : MissingSymbolIndexes)
     MissingSymbols.push_back(Symbols[MissingIdx]);
 
