@@ -33,6 +33,7 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       clang::ASTContext &astCtx,
                                       bool enableVerifier, bool enableLifetime,
                                       llvm::StringRef lifetimeOpts,
+                                      llvm::StringRef idiomRecognizerOpts,
                                       bool &passOptParsingFailure);
 } // namespace cir
 

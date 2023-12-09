@@ -507,6 +507,7 @@ public:
   std::string ARCMTMigrateReportOut;
 
   std::string ClangIRLifetimeCheckOpts;
+  std::string ClangIRIdiomRecognizerOpts;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.

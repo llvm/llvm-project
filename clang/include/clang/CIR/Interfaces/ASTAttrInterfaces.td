@@ -191,7 +191,7 @@ let cppNamespace = "::mlir::cir" in {
   def ASTCallExprInterface : AttrInterface<"ASTCallExprInterface",
       [ASTExprInterface]> {
     let methods = [
-      InterfaceMethod<"", "bool", "isStdFunctionCall",
+      InterfaceMethod<"", "bool", "isCalleeInStdNamespace",
                       (ins), [{}], /*defaultImplementation=*/ [{
           // Check that the entity being called is in standard
           // "std" namespace.
@@ -215,6 +215,21 @@ let cppNamespace = "::mlir::cir" in {
               nqual->getName().compare("std") != 0)
             return false;
 
+          return true;
+        }]
+      >,
+      InterfaceMethod<"", "bool", "isStdFunctionCall",
+                      (ins "llvm::StringRef":$fn),
+                      [{}], /*defaultImplementation=*/ [{
+          if (!isCalleeInStdNamespace())
+            return false;
+          auto fnDecl = $_attr.getAst()->getDirectCallee();
+          if (!fnDecl)
+            return false;
+          // We're looking for `std::<name>`.
+          if (!fnDecl->getIdentifier() ||
+              fnDecl->getName().compare(fn) != 0)
+            return false;
           return true;
         }]
       >

@@ -60,6 +60,8 @@ using namespace cir;
 using namespace clang;
 
 static std::string sanitizePassOptions(llvm::StringRef o) {
+  if (o.empty())
+    return "";
   std::string opts{o};
   // MLIR pass options are space separated, but we use ';' in clang since
   // space aren't well supported, switch it back.
@@ -169,15 +171,18 @@ public:
       // Sanitize passes options. MLIR uses spaces between pass options
       // and since that's hard to fly in clang, we currently use ';'.
       std::string lifetimeOpts;
+      std::string idiomRecognizerOpts;
       if (feOptions.ClangIRLifetimeCheck)
         lifetimeOpts = sanitizePassOptions(feOptions.ClangIRLifetimeCheckOpts);
+      idiomRecognizerOpts =
+          sanitizePassOptions(feOptions.ClangIRIdiomRecognizerOpts);
 
       // Setup and run CIR pipeline.
       bool passOptParsingFailure = false;
       if (runCIRToCIRPasses(mlirMod, mlirCtx.get(), C,
                             !feOptions.ClangIRDisableCIRVerifier,
                             feOptions.ClangIRLifetimeCheck, lifetimeOpts,
-                            passOptParsingFailure)
+                            idiomRecognizerOpts, passOptParsingFailure)
               .failed()) {
         if (passOptParsingFailure)
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)
