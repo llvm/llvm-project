@@ -3646,24 +3646,6 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (CheckNonDependent())
     return TDK_NonDependentConversionFailure;
 
-  if (FunctionTemplate->getTemplateParameters()) {
-    // Check the number of the Concept template parameters
-    size_t conceptParams = 0;
-    for (auto P : *FunctionTemplate->getTemplateParameters()) {
-      const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-      if (CD && CD->hasTypeConstraint()) {
-        conceptParams++;
-      }
-    }
-
-    if (conceptParams > 0 &&
-        conceptParams == FunctionTemplate->getTemplateParameters()->size()) {
-      // getSema().Diag(E->getTemplateParameterList()->getLAngleLoc(),
-      //                diag::err_expected_non_concept_template_parameter);
-      return TDK_SubstitutionFailure;
-    }
-  }
-
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
       TemplateArgumentList::CreateCopy(Context, SugaredBuilder);
@@ -3717,6 +3699,22 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (Trap.hasErrorOccurred()) {
     Specialization->setInvalidDecl(true);
     return TDK_SubstitutionFailure;
+  }
+
+  if (FunctionTemplate->getTemplateParameters()) {
+    // Check the number of the Concept template parameters
+    size_t conceptParams = 0;
+    for (auto P : *FunctionTemplate->getTemplateParameters()) {
+      const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+      if (CD && CD->hasTypeConstraint()) {
+        conceptParams++;
+      }
+    }
+
+    if (FunctionTemplate->getTemplateParameters()->size() - conceptParams !=
+        Info.getNumExplicitArgs()) {
+      return TDK_SubstitutionFailure;
+    }
   }
 
   // C++2a [temp.deduct]p5
