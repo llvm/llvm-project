@@ -114,7 +114,6 @@ static unsigned computePageSize();
 #include "Windows/Process.inc"
 #endif
 
-
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <windows.h>
 
