@@ -16,17 +16,17 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "bool", "hasOwnerAttr", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->template hasAttr<clang::OwnerAttr>();
+          return $_attr.getAst()->template hasAttr<clang::OwnerAttr>();
         }]
       >,
       InterfaceMethod<"", "bool", "hasPointerAttr", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->template hasAttr<clang::PointerAttr>();
+          return $_attr.getAst()->template hasAttr<clang::PointerAttr>();
         }]
       >,
       InterfaceMethod<"", "bool", "hasInitPriorityAttr", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->template hasAttr<clang::InitPriorityAttr>();
+          return $_attr.getAst()->template hasAttr<clang::InitPriorityAttr>();
         }]
       >
     ];
@@ -37,12 +37,12 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "clang::DeclarationName", "getDeclName", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->getDeclName();
+          return $_attr.getAst()->getDeclName();
         }]
       >,
       InterfaceMethod<"", "llvm::StringRef", "getName", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->getName();
+          return $_attr.getAst()->getName();
         }]
       >
     ];
@@ -60,13 +60,13 @@ let cppNamespace = "::mlir::cir" in {
       InterfaceMethod<"", "void", "mangleDynamicInitializer", (ins "llvm::raw_ostream&":$Out), [{}],
         /*defaultImplementation=*/ [{
           std::unique_ptr<clang::MangleContext> MangleCtx(
-            $_attr.getAstDecl()->getASTContext().createMangleContext());
-            MangleCtx->mangleDynamicInitializer($_attr.getAstDecl(), Out);
+            $_attr.getAst()->getASTContext().createMangleContext());
+            MangleCtx->mangleDynamicInitializer($_attr.getAst(), Out);
           }]
       >,
       InterfaceMethod<"", "clang::VarDecl::TLSKind", "getTLSKind", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->getTLSKind();
+          return $_attr.getAst()->getTLSKind();
         }]
       >
     ];
@@ -77,12 +77,12 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "bool", "isOverloadedOperator", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->isOverloadedOperator();
+          return $_attr.getAst()->isOverloadedOperator();
         }]
       >,
       InterfaceMethod<"", "bool", "isStatic", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->isStatic();
+          return $_attr.getAst()->isStatic();
         }]
       >
     ];
@@ -93,21 +93,21 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "bool", "isCopyAssignmentOperator", (ins), [{}],
         /*defaultImplementation=*/ [{
-          if (auto decl = dyn_cast<clang::CXXMethodDecl>($_attr.getAstDecl()))
+          if (auto decl = dyn_cast<clang::CXXMethodDecl>($_attr.getAst()))
             return decl->isCopyAssignmentOperator();
           return false;
         }]
       >,
       InterfaceMethod<"", "bool", "isMoveAssignmentOperator", (ins), [{}],
         /*defaultImplementation=*/ [{
-          if (auto decl = dyn_cast<clang::CXXMethodDecl>($_attr.getAstDecl()))
+          if (auto decl = dyn_cast<clang::CXXMethodDecl>($_attr.getAst()))
             return decl->isMoveAssignmentOperator();
           return false;
         }]
       >,
       InterfaceMethod<"", "bool", "isConst", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->isConst();
+          return $_attr.getAst()->isConst();
       }]
       >
     ];
@@ -118,12 +118,12 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "bool", "isDefaultConstructor", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->isDefaultConstructor();
+          return $_attr.getAst()->isDefaultConstructor();
         }]
       >,
       InterfaceMethod<"", "bool", "isCopyConstructor", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->isCopyConstructor();
+          return $_attr.getAst()->isCopyConstructor();
         }]
       >
     ];
@@ -143,7 +143,7 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "clang::TagTypeKind", "getTagKind", (ins), [{}],
         /*defaultImplementation=*/ [{
-          return $_attr.getAstDecl()->getTagKind();
+          return $_attr.getAst()->getTagKind();
         }]
       >
     ];
@@ -154,16 +154,16 @@ let cppNamespace = "::mlir::cir" in {
     let methods = [
       InterfaceMethod<"", "bool", "isLambda", (ins), [{}],
         /*defaultImplementation=*/ [{
-          if (auto ast = clang::dyn_cast<clang::CXXRecordDecl>($_attr.getAstDecl()))
+          if (auto ast = clang::dyn_cast<clang::CXXRecordDecl>($_attr.getAst()))
             return ast->isLambda();
           return false;
         }]
       >,
       InterfaceMethod<"", "bool", "hasPromiseType", (ins), [{}],
         /*defaultImplementation=*/ [{
-          if (!clang::isa<clang::ClassTemplateSpecializationDecl>($_attr.getAstDecl()))
+          if (!clang::isa<clang::ClassTemplateSpecializationDecl>($_attr.getAst()))
             return false;
-          for (const auto *sub : $_attr.getAstDecl()->decls()) {
+          for (const auto *sub : $_attr.getAst()->decls()) {
             if (auto subRec = clang::dyn_cast<clang::CXXRecordDecl>(sub)) {
               if (subRec->getDeclName().isIdentifier() &&
                   subRec->getName() == "promise_type") {
