@@ -15,6 +15,35 @@ from libcxx.header_information import headers_not_available
 
 
 def write_file(module):
+
+    # TODO REMOVE THIS HACK, WE NEED A BETTER WAY TO DETECT C HEADERS
+    Module_headers = (
+        module_headers
+        if module == "std"
+        else [
+            "cassert",
+            "cctype",
+            "cerrno",
+            "cfenv",
+            "cfloat",
+            "cinttypes",
+            "climits",
+            "clocale",
+            "cmath",
+            "csetjmp",
+            "csignal",
+            "cstdarg",
+            "cstddef",
+            "cstdint",
+            "cstdio",
+            "cstdlib",
+            "cstring",
+            "ctime",
+            "cuchar",
+            "cwchar",
+            "cwctype",
+        ]
+    )
     libcxx_module_directory = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "modules"
     )
@@ -44,7 +73,7 @@ module;
 // and the headers of Table 25: C++ headers for C library facilities [tab:headers.cpp.c]
 """
         )
-        for header in module_headers:
+        for header in Module_headers:
             if header in header_restrictions:
                 module_cpp_in.write(
                     f"""\
@@ -69,8 +98,9 @@ module;
         module_cpp_in.write(
             f"""
 export module {module};
+{'export import std;' if module == 'std.compat' else ''}
 
-@LIBCXX_MODULE_STD_INCLUDE_SOURCES@
+{'@LIBCXX_MODULE_STD_INCLUDE_SOURCES@' if module == 'std' else ''}
 {'@LIBCXX_MODULE_STD_COMPAT_INCLUDE_SOURCES@' if module == 'std.compat' else ''}"""
         )
 
