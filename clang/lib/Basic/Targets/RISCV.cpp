@@ -347,10 +347,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
   if (Result)
     return *Result;
 
-  if (ISAInfo->isSupportedExtensionFeature(Feature))
-    return ISAInfo->hasExtension(Feature);
-
-  return false;
+  return ISAInfo->hasExtension(Feature);
 }
 
 /// Perform initialization based on the user configured set of features.
