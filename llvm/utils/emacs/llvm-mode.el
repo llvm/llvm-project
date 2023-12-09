@@ -117,5 +117,4 @@
 (add-to-list 'auto-mode-alist (cons "\\.ll\\'" 'llvm-mode))
 
 (provide 'llvm-mode)
-
 ;;; llvm-mode.el ends here

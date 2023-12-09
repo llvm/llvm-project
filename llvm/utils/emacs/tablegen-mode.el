@@ -125,5 +125,4 @@
 (add-to-list 'auto-mode-alist (cons (purecopy "\\.td\\'")  'tablegen-mode))
 
 (provide 'tablegen-mode)
-
 ;;; tablegen-mode.el ends here
