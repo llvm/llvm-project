@@ -920,7 +920,7 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   // Check the number of the Concept template parameters
   for (auto P : TemplateAC) {
     // const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-    if (!P->isTypeDependent()) {
+    if (!P->isValueDependent()) {
       return false;
     }
   }
