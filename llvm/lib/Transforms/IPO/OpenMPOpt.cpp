@@ -2054,7 +2054,7 @@ private:
                       << " functions, result: " << Changed << ".\n");
 
     if (Changed == ChangeStatus::CHANGED)
-      OMPInfoCache.invalidate();
+      OMPInfoCache.invalidateAnalyses();
 
     return Changed == ChangeStatus::CHANGED;
   }
