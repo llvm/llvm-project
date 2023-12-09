@@ -918,16 +918,11 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
       *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
 
   // Check the number of the Concept template parameters
-  size_t conceptParams = 0;
-  for (auto P : *Template->getTemplateParameters()) {
-    const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-    if (CD && CD->hasTypeConstraint()) {
-      conceptParams++;
+  for (auto P : TemplateAC) {
+    // const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+    if (!P->isTypeDependent()) {
+      return false;
     }
-  }
-
-  if (conceptParams > 0 && conceptParams == TemplateArgs.size()) {
-    return false;
   }
 
   llvm::SmallVector<Expr *, 1> Converted;
