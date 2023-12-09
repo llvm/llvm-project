@@ -37,6 +37,8 @@ struct convertible_from_int {
 void meow(std::reference_wrapper<int>) {}
 void meow(convertible_from_int) {}
 
+std::reference_wrapper<int> purr();
+
 int main(int, char**)
 {
   {
@@ -58,7 +60,6 @@ int main(int, char**)
     meow(0);
   }
   {
-    extern std::reference_wrapper<int> purr();
     ASSERT_SAME_TYPE(decltype(true ? purr() : 0), int);
   }
 #if TEST_STD_VER > 14
