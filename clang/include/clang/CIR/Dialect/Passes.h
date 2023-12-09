@@ -30,6 +30,8 @@ std::unique_ptr<Pass> createMergeCleanupsPass();
 std::unique_ptr<Pass> createDropASTPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
 std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
+std::unique_ptr<Pass> createIdiomRecognizerPass();
+std::unique_ptr<Pass> createIdiomRecognizerPass(clang::ASTContext *astCtx);
 
 //===----------------------------------------------------------------------===//
 // Registration
