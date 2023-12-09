@@ -754,7 +754,7 @@ Expected<cas::ObjectRef> IncludeTreeBuilder::getObjectForFile(Preprocessor &PP,
     return *ModuleIncludesBufferRef;
   }
   assert(FI.getContentCache().OrigEntry);
-  auto &FileRef = ObjectForFile[FI.getContentCache().OrigEntry];
+  auto &FileRef = ObjectForFile[*FI.getContentCache().OrigEntry];
   if (!FileRef) {
     auto Ref = getObjectForFileNonCached(SM.getFileManager(), FI);
     if (!Ref)
