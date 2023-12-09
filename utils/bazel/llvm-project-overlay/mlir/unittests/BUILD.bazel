@@ -101,6 +101,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:Analysis",
+        "//mlir:Debug",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",

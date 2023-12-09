@@ -152,6 +152,7 @@ public:
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
+    MSVC2022_3 = 1933,
   };
 
   enum SYCLMajorVersion {
