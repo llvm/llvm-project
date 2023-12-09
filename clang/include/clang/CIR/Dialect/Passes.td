@@ -84,6 +84,14 @@ def IdiomRecognizer : Pass<"cir-idiom-recognizer"> {
   }];
   let constructor = "mlir::createIdiomRecognizerPass()";
   let dependentDialects = ["cir::CIRDialect"];
+
+  let options = [
+    ListOption<"remarksList", "remarks", "std::string",
+               "Diagnostic remarks to enable"
+               " Supported styles: {all|found-calls}", "llvm::cl::ZeroOrMore">,
+    Option<"historyLimit", "history_limit", "unsigned", /*default=*/"1",
+           "Max amount of diagnostics to emit on pointer history">
+  ];
 }
 
 #endif // MLIR_DIALECT_CIR_PASSES

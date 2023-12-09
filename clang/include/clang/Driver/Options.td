@@ -3063,6 +3063,10 @@ def fclangir_lifetime_check : Flag<["-"], "fclangir-lifetime-check">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   Alias<fclangir_lifetime_check_EQ>, AliasArgs<["history=invalid,null"]>,
   HelpText<"Run lifetime checker">;
+def fclangir_idiom_recognizer_EQ : Joined<["-"], "fclangir-idiom-recognizer=">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Pass configuration options to CIR idiom recognizer">,
+  MarshallingInfoString<FrontendOpts<"ClangIRIdiomRecognizerOpts">>;
 
 def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   Visibility<[ClangOption, CC1Option]>,
