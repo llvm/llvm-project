@@ -8,11 +8,13 @@
 
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -204,6 +206,171 @@ findPermutationsIndexingOperand(LinalgOp linalgOp, OpOperand *opOperand,
 namespace {
 auto par = utils::IteratorType::parallel;
 auto red = utils::IteratorType::reduction;
+// TODO: Figure out a way to not copy this from LinalgOps.cpp
+class RegionBuilderHelper {
+public:
+  RegionBuilderHelper(MLIRContext *context, Block &block)
+      : context(context), block(block) {}
+
+  // Build the unary functions defined by OpDSL.
+  Value buildUnaryFn(UnaryFn unaryFn, Value arg) {
+    if (!isFloatingPoint(arg))
+      llvm_unreachable("unsupported non numeric type");
+    OpBuilder builder = getBuilder();
+    switch (unaryFn) {
+    case UnaryFn::exp:
+      return builder.create<math::ExpOp>(arg.getLoc(), arg);
+    case UnaryFn::log:
+      return builder.create<math::LogOp>(arg.getLoc(), arg);
+    case UnaryFn::abs:
+      return builder.create<math::AbsFOp>(arg.getLoc(), arg);
+    case UnaryFn::ceil:
+      return builder.create<math::CeilOp>(arg.getLoc(), arg);
+    case UnaryFn::floor:
+      return builder.create<math::FloorOp>(arg.getLoc(), arg);
+    case UnaryFn::negf:
+      return builder.create<arith::NegFOp>(arg.getLoc(), arg);
+    }
+    llvm_unreachable("unsupported unary function");
+  }
+
+  // Build the binary functions defined by OpDSL.
+  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1) {
+    bool allComplex = isComplex(arg0) && isComplex(arg1);
+    bool allFloatingPoint = isFloatingPoint(arg0) && isFloatingPoint(arg1);
+    bool allInteger = isInteger(arg0) && isInteger(arg1);
+    bool allBool = allInteger && arg0.getType().getIntOrFloatBitWidth() == 1 &&
+                   arg1.getType().getIntOrFloatBitWidth() == 1;
+    if (!allComplex && !allFloatingPoint && !allInteger)
+      llvm_unreachable("unsupported non numeric type");
+    OpBuilder builder = getBuilder();
+    switch (binaryFn) {
+    case BinaryFn::add:
+      if (allComplex)
+        return builder.create<complex::AddOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::AddFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        return builder.create<arith::OrIOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::AddIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::sub:
+      if (allComplex)
+        return builder.create<complex::SubOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::SubFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        llvm_unreachable("unsupported operation: sub with bools");
+      return builder.create<arith::SubIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::mul:
+      if (allComplex)
+        return builder.create<complex::MulOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::MulFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        return builder.create<arith::AndIOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::div:
+      if (allComplex)
+        return builder.create<complex::DivOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::DivFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        llvm_unreachable("unsupported operation: div with bools");
+      return builder.create<arith::DivSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::div_unsigned:
+      if (!allInteger || allBool)
+        llvm_unreachable("unsupported operation: unsigned div not on uint");
+      return builder.create<arith::DivUIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max_signed:
+      assert(!allComplex);
+      if (allFloatingPoint)
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min_signed:
+      assert(!allComplex);
+      if (allFloatingPoint)
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::max_unsigned:
+      assert(!allComplex);
+      if (allFloatingPoint)
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MaxUIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::min_unsigned:
+      assert(!allComplex);
+      if (allFloatingPoint)
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
+      return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
+    }
+    llvm_unreachable("unsupported binary function");
+  }
+
+  // Build the type functions defined by OpDSL.
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+    switch (typeFn) {
+    case TypeFn::cast_signed:
+      return cast(toType, operand, false);
+    case TypeFn::cast_unsigned:
+      return cast(toType, operand, true);
+    }
+    llvm_unreachable("unsupported type conversion function");
+  }
+
+  void yieldOutputs(ValueRange values) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    builder.create<YieldOp>(loc, values);
+  }
+
+  Value constant(const std::string &value) {
+    OpBuilder builder = getBuilder();
+    Location loc = builder.getUnknownLoc();
+    Attribute valueAttr = parseAttribute(value, builder.getContext());
+    return builder.create<arith::ConstantOp>(loc, ::cast<TypedAttr>(valueAttr));
+  }
+
+  Value index(int64_t dim) {
+    OpBuilder builder = getBuilder();
+    return builder.create<IndexOp>(builder.getUnknownLoc(), dim);
+  }
+
+  Type getIntegerType(unsigned width) {
+    return IntegerType::get(context, width);
+  }
+
+  Type getFloat32Type() { return Float32Type::get(context); }
+  Type getFloat64Type() { return Float64Type::get(context); }
+
+private:
+  // Generates operations to cast the given operand to a specified type.
+  // If the cast cannot be performed, a warning will be issued and the
+  // operand returned as-is (which will presumably yield a verification
+  // issue downstream).
+  Value cast(Type toType, Value operand, bool isUnsignedCast) {
+    OpBuilder builder = getBuilder();
+    auto loc = operand.getLoc();
+    return convertScalarToDtype(builder, loc, operand, toType, isUnsignedCast);
+  }
+
+  bool isComplex(Value value) {
+    return llvm::isa<ComplexType>(value.getType());
+  }
+  bool isFloatingPoint(Value value) {
+    return llvm::isa<FloatType>(value.getType());
+  }
+  bool isInteger(Value value) {
+    return llvm::isa<IntegerType>(value.getType());
+  }
+
+  OpBuilder getBuilder() {
+    OpBuilder builder(context);
+    builder.setInsertionPointToEnd(&block);
+    return builder;
+  }
+
+  MLIRContext *context;
+  Block &block;
+};
 } // namespace
 
 /// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
@@ -664,6 +831,16 @@ mlir::linalg::detail::getChannelFirstAttr(DepthwiseConvolutionOpInterface op) {
   return op.getChannelFirstAttr();
 }
 
+ArrayAttr mlir::linalg::detail::getIteratorTypes(DepthwiseConvolutionOpInterface op) {
+  int64_t numSpatialDims =
+        op.image().getType().cast<ShapedType>().getRank() - 2;
+  SmallVector<Attribute> iteratorTypes(2 + numSpatialDims, IteratorTypeAttr::get(op.getContext(), par));
+  SmallVector<Attribute> reductions(numSpatialDims, IteratorTypeAttr::get(op.getContext(), red));
+  iteratorTypes.insert(iteratorTypes.end(), reductions.begin(), reductions.end());
+
+  return Builder(op.getContext()).getArrayAttr(iteratorTypes);
+}
+
 ArrayAttr
 mlir::linalg::detail::getIndexingMaps(DepthwiseConvolutionOpInterface op) {
   ArrayAttr cached = op->getAttrOfType<ArrayAttr>(
@@ -707,6 +884,26 @@ mlir::linalg::detail::getIndexingMaps(DepthwiseConvolutionOpInterface op) {
        AffineMap::get(2 + 2 * numSpatial, 0, outExprs, ctx)});
   op->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
   return cached;
+}
+
+void mlir::linalg::detail::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                                         ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "DepthwiseConv1DOp regionBuilder expects 3 (>=0) args");
+  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  SmallVector<Value> yields;
+
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(1));
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
+  Value value4 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  yields.push_back(value4);
+  helper.yieldOutputs(yields);
 }
 
 mlir::linalg::detail::MatchConvolutionResult

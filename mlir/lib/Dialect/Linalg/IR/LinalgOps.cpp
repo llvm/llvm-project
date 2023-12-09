@@ -1676,25 +1676,6 @@ LogicalResult ReduceOp::verify() {
 // DepthwiseConv1DOp
 //===----------------------------------------------------------------------===//
 
-void DepthwiseConv1DOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                      ArrayRef<NamedAttribute> attrs) {
-  assert(block.getNumArguments() == 3 &&
-         "DepthwiseConv1DOp regionBuilder expects 3 (>=0) args");
-  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
-  SmallVector<Value> yields;
-
-  Value value1 =
-      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
-                         block.getArgument(0));
-  Value value2 =
-      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
-                         block.getArgument(1));
-  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
-  Value value4 =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
-  yields.push_back(value4);
-  helper.yieldOutputs(yields);
-}
 
 void DepthwiseConv1DOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
@@ -1718,13 +1699,6 @@ void DepthwiseConv1DOp::build(
                        inputs, inits, bodyBuild);
 }
 
-SmallVector<utils::IteratorType> DepthwiseConv1DOp::getIteratorTypesArray() {
-  return SmallVector<utils::IteratorType>{
-      utils::IteratorType::parallel, utils::IteratorType::parallel,
-      utils::IteratorType::parallel, utils::IteratorType::reduction};
-  ;
-}
-
 void DepthwiseConv1DOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -1734,7 +1708,7 @@ void DepthwiseConv1DOp::getEffects(
 
 ParseResult DepthwiseConv1DOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
-  return parseNamedStructuredOp(parser, result, getNumRegionArgs(),
+  return parseNamedStructuredOp(parser, result, 3,
                                 getRegionBuilder());
 }
 
@@ -1742,32 +1716,11 @@ void DepthwiseConv1DOp::print(OpAsmPrinter &p) {
   printNamedStructuredOp(p, getOperation(), getDpsInputs(), getDpsInits());
 }
 
-LogicalResult DepthwiseConv1DOp::verify() { return success(); }
-
 //===----------------------------------------------------------------------===//
 // DepthwiseConv2DOp
 //===----------------------------------------------------------------------===//
 
 // TODO: refactor into base implementation for all spatial dims
-void DepthwiseConv2DOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                      ArrayRef<NamedAttribute> attrs) {
-  assert(block.getNumArguments() == 3 &&
-         "DepthwiseConv2DOp regionBuilder expects 3 (>=0) args");
-  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
-  SmallVector<Value> yields;
-
-  Value value1 =
-      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
-                         block.getArgument(0));
-  Value value2 =
-      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
-                         block.getArgument(1));
-  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
-  Value value4 =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
-  yields.push_back(value4);
-  helper.yieldOutputs(yields);
-}
 
 void DepthwiseConv2DOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
@@ -1791,14 +1744,6 @@ void DepthwiseConv2DOp::build(
                        inputs, inits, bodyBuild);
 }
 
-SmallVector<utils::IteratorType> DepthwiseConv2DOp::getIteratorTypesArray() {
-  return SmallVector<utils::IteratorType>{
-      utils::IteratorType::parallel,  utils::IteratorType::parallel,
-      utils::IteratorType::parallel,  utils::IteratorType::parallel,
-      utils::IteratorType::reduction, utils::IteratorType::reduction};
-  ;
-}
-
 void DepthwiseConv2DOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -1808,15 +1753,13 @@ void DepthwiseConv2DOp::getEffects(
 
 ParseResult DepthwiseConv2DOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
-  return parseNamedStructuredOp(parser, result, getNumRegionArgs(),
+  return parseNamedStructuredOp(parser, result, 3,
                                 getRegionBuilder());
 }
 
 void DepthwiseConv2DOp::print(OpAsmPrinter &p) {
   printNamedStructuredOp(p, getOperation(), getDpsInputs(), getDpsInits());
 }
-
-LogicalResult DepthwiseConv2DOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TransposeOp

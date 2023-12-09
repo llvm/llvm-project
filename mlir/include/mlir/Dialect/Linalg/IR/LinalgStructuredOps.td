@@ -430,27 +430,14 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
         CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
     ];
     let hasCustomAssemblyFormat = 1;
-    let hasVerifier = 1;
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{
-      // Declare functions necessary for LinalgStructuredInterface.
-      SmallVector<utils::IteratorType> getIteratorTypesArray();
-      // Figure out how to get implementation in `LinalgDepthwiseConvolutionOpInterface` working 
-      ArrayAttr getIndexingMaps() { return detail::getIndexingMaps(*this); };
-      std::string getLibraryCallName() {
-        return "op_has_no_registered_library_name";
-      }
-
-      static void regionBuilder(ImplicitLocOpBuilder &b,
-                              Block &block, ArrayRef<NamedAttribute> attrs);
-
-      // Implement functions necessary for DestinationStyleOpInterface.
       static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
                                 mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-        return regionBuilder;
+        return detail::regionBuilder;
       }
-      static unsigned getNumRegionArgs() { return 3; }
+      // Implement functions necessary for DestinationStyleOpInterface.
       MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
     }];
 }
@@ -497,27 +484,14 @@ def DepthwiseConv2DOp : LinalgStructuredBase_Op<"depthwise_conv_2d",
         CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
     ];
     let hasCustomAssemblyFormat = 1;
-    let hasVerifier = 1;
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{
-      // Declare functions necessary for LinalgStructuredInterface.
-      SmallVector<utils::IteratorType> getIteratorTypesArray();
-      // Figure out how to get implementation in `LinalgDepthwiseConvolutionOpInterface` working 
-      ArrayAttr getIndexingMaps() { return detail::getIndexingMaps(*this); };
-      std::string getLibraryCallName() {
-        return "op_has_no_registered_library_name";
-      }
-
-      static void regionBuilder(ImplicitLocOpBuilder &b,
-                              Block &block, ArrayRef<NamedAttribute> attrs);
-
-      // Implement functions necessary for DestinationStyleOpInterface.
       static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
                                 mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-        return regionBuilder;
+        return detail::regionBuilder;
       }
-      static unsigned getNumRegionArgs() { return 3; }
+      // Implement functions necessary for DestinationStyleOpInterface.
       MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
     }];
 }
