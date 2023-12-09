@@ -90,7 +90,7 @@ class ModuleMap {
 
   /// The directory used for Clang-supplied, builtin include headers,
   /// such as "stdint.h".
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr BuiltinIncludeDir;
+  OptionalDirectoryEntryRef BuiltinIncludeDir;
 
   /// Language options used to parse the module map itself.
   ///
@@ -419,16 +419,12 @@ public:
   /// Set the target information.
   void setTarget(const TargetInfo &Target);
 
-  /// Set the directory that contains Clang-supplied include
-  /// files, such as our stdarg.h or tgmath.h.
-  void setBuiltinIncludeDir(DirectoryEntryRef Dir) {
-    BuiltinIncludeDir = Dir;
-  }
+  /// Set the directory that contains Clang-supplied include files, such as our
+  /// stdarg.h or tgmath.h.
+  void setBuiltinIncludeDir(DirectoryEntryRef Dir) { BuiltinIncludeDir = Dir; }
 
   /// Get the directory that contains Clang-supplied include files.
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr getBuiltinDir() const {
-    return BuiltinIncludeDir;
-  }
+  OptionalDirectoryEntryRef getBuiltinDir() const { return BuiltinIncludeDir; }
 
   /// Is this a compiler builtin header?
   bool isBuiltinHeader(FileEntryRef File);
