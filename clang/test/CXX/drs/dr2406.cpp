@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -x c++ %s  -verify
 
-// dr2406: yes
+// dr2406: 5
 
 void fallthrough(int n) {
   void g(), h(), i();
