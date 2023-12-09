@@ -209,6 +209,9 @@ C Language Changes
   number of elements in the flexible array member. This information can improve
   the results of the array bound sanitizer and the
   ``__builtin_dynamic_object_size`` builtin.
+- Enums will now be represented in TBAA metadata using their actual underlying
+  integer type. Previously they were treated as chars, which meant they could
+  alias with all other types.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -722,6 +725,12 @@ Bug Fixes in This Version
   Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
+- Fix crash due to incorrectly allowing conversion functions in copy elision.
+  Fixes (`#39319 <https://github.com/llvm/llvm-project/issues/39319>`_) and
+  (`#60182 <https://github.com/llvm/llvm-project/issues/60182>`_) and
+  (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
+  (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
+  (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -950,11 +959,17 @@ Arm and AArch64 Support
 
 - New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
 
-  Support has been added for the following processors (-mcpu identifiers in parenthesis):
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
-  * Arm Cortex-A520 (cortex-a520).
-  * Arm Cortex-A720 (cortex-a720).
-  * Arm Cortex-X4 (cortex-x4).
+  For Arm:
+
+  * Cortex-M52 (cortex-m52).
+
+  For AArch64:
+
+  * Cortex-A520 (cortex-a520).
+  * Cortex-A720 (cortex-a720).
+  * Cortex-X4 (cortex-x4).
 
 Android Support
 ^^^^^^^^^^^^^^^
