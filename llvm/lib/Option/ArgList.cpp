@@ -186,7 +186,7 @@ const char *ArgList::GetOrMakeJoinedArgString(unsigned Index,
                                               StringRef RHS) const {
   StringRef Cur = getArgString(Index);
   if (Cur.size() == LHS.size() + RHS.size() &&
-      Cur.startswith(LHS) && Cur.endswith(RHS))
+      Cur.starts_with(LHS) && Cur.ends_with(RHS))
     return Cur.data();
 
   return MakeArgString(LHS + RHS);

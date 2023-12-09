@@ -479,25 +479,25 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
 
   // Default implementation based on some magic section names.
   if (Name == ".bss" ||
-      Name.startswith(".bss.") ||
-      Name.startswith(".gnu.linkonce.b.") ||
-      Name.startswith(".llvm.linkonce.b.") ||
+      Name.starts_with(".bss.") ||
+      Name.starts_with(".gnu.linkonce.b.") ||
+      Name.starts_with(".llvm.linkonce.b.") ||
       Name == ".sbss" ||
-      Name.startswith(".sbss.") ||
-      Name.startswith(".gnu.linkonce.sb.") ||
-      Name.startswith(".llvm.linkonce.sb."))
+      Name.starts_with(".sbss.") ||
+      Name.starts_with(".gnu.linkonce.sb.") ||
+      Name.starts_with(".llvm.linkonce.sb."))
     return SectionKind::getBSS();
 
   if (Name == ".tdata" ||
-      Name.startswith(".tdata.") ||
-      Name.startswith(".gnu.linkonce.td.") ||
-      Name.startswith(".llvm.linkonce.td."))
+      Name.starts_with(".tdata.") ||
+      Name.starts_with(".gnu.linkonce.td.") ||
+      Name.starts_with(".llvm.linkonce.td."))
     return SectionKind::getThreadData();
 
   if (Name == ".tbss" ||
-      Name.startswith(".tbss.") ||
-      Name.startswith(".gnu.linkonce.tb.") ||
-      Name.startswith(".llvm.linkonce.tb."))
+      Name.starts_with(".tbss.") ||
+      Name.starts_with(".gnu.linkonce.tb.") ||
+      Name.starts_with(".llvm.linkonce.tb."))
     return SectionKind::getThreadBSS();
 
   return K;
@@ -512,7 +512,7 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
   // Use SHT_NOTE for section whose name starts with ".note" to allow
   // emitting ELF notes from C variable declaration.
   // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77609
-  if (Name.startswith(".note"))
+  if (Name.starts_with(".note"))
     return ELF::SHT_NOTE;
 
   if (hasPrefix(Name, ".init_array"))
@@ -752,7 +752,7 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
       getELFSectionNameForGlobal(GO, Kind, Mang, TM, EntrySize, false);
   if (SymbolMergeable &&
       Ctx.isELFImplicitMergeableSectionNamePrefix(SectionName) &&
-      SectionName.startswith(ImplicitSectionNameStem))
+      SectionName.starts_with(ImplicitSectionNameStem))
     return MCContext::GenericSectionID;
 
   // We have seen this section name before, but with different flags or entity
@@ -1036,7 +1036,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   SmallString<128> Name;
   StringRef FunctionSectionName = MBB.getParent()->getSection()->getName();
   if (FunctionSectionName.equals(".text") ||
-      FunctionSectionName.startswith(".text.")) {
+      FunctionSectionName.starts_with(".text.")) {
     // Function is in a regular .text section.
     StringRef FunctionName = MBB.getParent()->getName();
     if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {

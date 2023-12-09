@@ -103,8 +103,8 @@ bool StaticInitGVIterator::isStaticInitGlobal(GlobalValue &GV) {
     // FIXME: These section checks are too strict: We should match first and
     // second word split by comma.
     if (GV.hasSection() &&
-        (GV.getSection().startswith("__DATA,__objc_classlist") ||
-         GV.getSection().startswith("__DATA,__objc_selrefs")))
+        (GV.getSection().starts_with("__DATA,__objc_classlist") ||
+         GV.getSection().starts_with("__DATA,__objc_selrefs")))
       return true;
   }
 
@@ -503,7 +503,7 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   DenseMap<StringRef, SymbolLookupFlags> ToLookUpSymbols;
   for (auto &KV : Symbols) {
     StringRef Deinterned = *KV.first;
-    if (Deinterned.startswith(getImpPrefix()))
+    if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
     if (ToLookUpSymbols.count(Deinterned) &&

@@ -75,7 +75,7 @@ StringRef AArch64::resolveCPUAlias(StringRef Name) {
 }
 
 StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
-  if (ArchExt.startswith("no")) {
+  if (ArchExt.starts_with("no")) {
     StringRef ArchExtBase(ArchExt.substr(2));
     for (const auto &AE : Extensions) {
       if (!AE.NegFeature.empty() && ArchExtBase == AE.Name)
@@ -110,7 +110,7 @@ std::optional<AArch64::ArchInfo> AArch64::parseArch(StringRef Arch) {
 
   StringRef Syn = llvm::ARM::getArchSynonym(Arch);
   for (const auto *A : ArchInfos) {
-    if (A->Name.endswith(Syn))
+    if (A->Name.ends_with(Syn))
       return *A;
   }
   return {};
