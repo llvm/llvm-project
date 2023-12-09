@@ -384,6 +384,7 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
                                   const TargetRegisterClass *NewRC,
                                   LiveIntervals &LIS) const {
   assert (MI->isCopy() && "Only expecting COPY instructions");
+  const MachineRegisterInfo *MRI = &MI->getMF()->getRegInfo();
 
   // Coalesce anything which is not a COPY involving a subreg to/from GR128.
   if (!(NewRC->hasSuperClassEq(&SystemZ::GR128BitRegClass) &&
@@ -400,7 +401,6 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   LiveInterval &IntGR128 = LIS.getInterval(GR128Reg);
   LiveInterval &IntGRNar = LIS.getInterval(GRNarReg);
 
-  // Check that the two virtual registers are local to MBB.
   MachineBasicBlock *MBB = MI->getParent();
   MachineInstr *FirstMI_GR128 =
     LIS.getInstructionFromIndex(IntGR128.beginIndex());
@@ -408,6 +408,15 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
     LIS.getInstructionFromIndex(IntGRNar.beginIndex());
   MachineInstr *LastMI_GR128 = LIS.getInstructionFromIndex(IntGR128.endIndex());
   MachineInstr *LastMI_GRNar = LIS.getInstructionFromIndex(IntGRNar.endIndex());
+
+  // Allow cases (like PAIR128) where there is just one use of the narrow
+  // source reg defined close to MI.
+  if (WideOpNo == 0 && MRI->hasOneUse(GRNarReg) &&
+      FirstMI_GRNar && FirstMI_GRNar->getParent() == MBB &&
+      std::distance(FirstMI_GRNar->getIterator(), MI->getIterator()) < 5)
+    return true;
+
+  // Check that the two virtual registers are local to MBB.
   if ((!FirstMI_GR128 || FirstMI_GR128->getParent() != MBB) ||
       (!FirstMI_GRNar || FirstMI_GRNar->getParent() != MBB) ||
       (!LastMI_GR128 || LastMI_GR128->getParent() != MBB) ||
