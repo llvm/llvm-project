@@ -5642,8 +5642,8 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
 
   // Can we evaluate this function call?
   if (Definition && Body &&
-      (Definition->isConstexpr() || Info.CurrentCall->CanEvalMSConstexpr &&
-                                        Definition->hasAttr<MSConstexprAttr>()))
+      (Definition->isConstexpr() || (Info.CurrentCall->CanEvalMSConstexpr &&
+                                        Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
