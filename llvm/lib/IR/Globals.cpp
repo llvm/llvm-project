@@ -158,13 +158,13 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     // that it will stay the same, e.g., if the files are checked out from
     // version control in different locations.
     if (FileName.empty())
-      GlobalName.append("<unknown>");
+      GlobalName += "<unknown>";
     else
-      GlobalName.append(FileName.str());
+      GlobalName += FileName;
 
-    GlobalName.append({kGlobalIdentifierDelimiter});
+    GlobalName += kGlobalIdentifierDelimiter;
   }
-  GlobalName.append(Name);
+  GlobalName += Name;
   return GlobalName.str().str();
 }
 

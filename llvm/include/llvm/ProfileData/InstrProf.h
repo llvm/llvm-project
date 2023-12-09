@@ -172,7 +172,7 @@ inline StringRef getInstrProfCounterBiasVarName() {
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 
 /// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
-/// used by front-end (Clang, etc) instrumentation.
+/// for front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
 /// used the key for profile lookup. Variable \c InLTO indicates if this
 /// is called in LTO optimization passes.
@@ -198,20 +198,22 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO = false);
 std::pair<StringRef, StringRef> getParsedIRPGOFuncName(StringRef IRPGOFuncName);
 
 /// Return the name of the global variable used to store a function
-/// name in PGO instrumentation. \c FuncName is the name of the function
-/// returned by the \c getIRPGOFuncName call.
+/// name in PGO instrumentation. \c FuncName is the IRPGO function name
+/// (returned by \c getIRPGOFuncName) for LLVM IR instrumentation and PGO
+/// function name (returned by \c getPGOFuncName) for front-end instrumentation.
 std::string getPGOFuncNameVarName(StringRef FuncName,
                                   GlobalValue::LinkageTypes Linkage);
 
 /// Create and return the global variable for function name used in PGO
-/// instrumentation. \c FuncName is the name of the function returned
-/// by \c getIRPGOFuncName call.
+/// instrumentation. \c FuncName is the IRPGO function name (returned by
+/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// (returned by \c getPGOFuncName) for front-end instrumentation.
 GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName);
 
 /// Create and return the global variable for function name used in PGO
-/// instrumentation.  /// \c FuncName is the name of the function
-/// returned by \c getIRPGOFuncName call, \c M is the owning module,
-/// and \c Linkage is the linkage of the instrumented function.
+/// instrumentation. \c FuncName is the IRPGO function name (returned by
+/// \c getIRPGOFuncName) for LLVM IR instrumentation and PGO function name
+/// (returned by \c getPGOFuncName) for front-end instrumentation.
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName);
@@ -419,11 +421,11 @@ uint64_t ComputeHash(StringRef K);
 
 } // end namespace IndexedInstrProf
 
-/// A symbol table used for function PGO name look-up with keys
+/// A symbol table used for function [IR]PGO name look-up with keys
 /// (such as pointers, md5hash values) to the function. A function's
-/// PGO name or name's md5hash are used in retrieving the profile
-/// data of the function. See \c getIRPGOFuncName() method for details
-/// on how PGO name is formed.
+/// [IR]PGO name or name's md5hash are used in retrieving the profile
+/// data of the function. See \c getIRPGOFuncName() and \c getPGOFuncName
+/// methods for details how [IR]PGO name is formed.
 class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
