@@ -105,6 +105,7 @@ struct HomomorphismSimplification : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
+    SmallVector<OpOperand *> algebraicOpOperands;
     if (failed(matchOp(op, algebraicOpOperands))) {
       return failure();
     }
@@ -150,6 +151,7 @@ private:
   rewriteOp(Operation *sourceAlgebraicOp,
             const SmallVector<OpOperand *> &sourceAlgebraicOpOperands,
             PatternRewriter &rewriter) const {
+    static thread_local IRMapping irMapping;
     irMapping.clear();
     for (auto operand : sourceAlgebraicOpOperands) {
       Operation *homomorphismOp = operand->get().getDefiningOp();
@@ -169,6 +171,7 @@ private:
         rewriter.clone(*firstHomomorphismOp, irMapping);
     rewriter.replaceAllUsesWith(getSourceAlgebraicOpResult(sourceAlgebraicOp),
                                 getHomomorphismOpResult(newHomomorphismOp));
+    irMapping.clear();
     return success();
   }
 
@@ -180,9 +183,6 @@ private:
   IsHomomorphismOpFn isHomomorphismOp;
   IsSourceAlgebraicOpFn isSourceAlgebraicOp;
   CreateTargetAlgebraicOpFn createTargetAlgebraicOpFn;
-  // Mutable fields for memory reuse to avoid excessive memory allocation.
-  mutable SmallVector<OpOperand *> algebraicOpOperands;
-  mutable IRMapping irMapping;
 };
 
 } // namespace mlir
