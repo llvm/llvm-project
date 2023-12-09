@@ -684,7 +684,7 @@ public:
   }
 
   /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRefDegradesToFileEntryPtr getASTFile() const {
+  OptionalFileEntryRef getASTFile() const {
     return getTopLevelModule()->ASTFile;
   }
 

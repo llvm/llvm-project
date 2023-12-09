@@ -52,8 +52,8 @@ ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
 
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   if (const Module *Mod = HeaderSearchInfo.getModuleMap().findModule(Name))
-    if (const FileEntry *File = Mod->getASTFile())
-      return lookup(File);
+    if (OptionalFileEntryRef File = Mod->getASTFile())
+      return lookup(*File);
 
   return nullptr;
 }
