@@ -186,6 +186,12 @@ let cppNamespace = "::mlir::cir" in {
     let constBuilderCall = "$0";
   }
 
+  def ASTExprInterface : AttrInterface<"ASTExprInterface"> {}
+
+  def ASTCallExprInterface : AttrInterface<"ASTCallExprInterface",
+      [ASTExprInterface]> {}
+
+
 } // namespace mlir::cir
 
 #endif // MLIR_CIR_INTERFACES_AST_ATTR_INTERFACES
