@@ -6444,16 +6444,18 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
     // Check the number of the Concept template parameters
     size_t conceptParams = 0;
     if (auto lambdaExpr = dyn_cast<LambdaExpr>(EE)) {
-      for (auto P : *lambdaExpr->getTemplateParameterList()) {
-        const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-        if (CD && CD->hasTypeConstraint()) {
-          conceptParams++;
+      if (lambdaExpr->getTemplateParameterList()) {
+        for (auto P : *lambdaExpr->getTemplateParameterList()) {
+          const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+          if (CD && CD->hasTypeConstraint()) {
+            conceptParams++;
+          }
         }
-      }
 
-      if (conceptParams > 0 &&
-          conceptParams == lambdaExpr->getTemplateParameterList()->size()) {
-        return QualType();
+        if (conceptParams > 0 &&
+            conceptParams == lambdaExpr->getTemplateParameterList()->size()) {
+          return QualType();
+        }
       }
     }
   }
