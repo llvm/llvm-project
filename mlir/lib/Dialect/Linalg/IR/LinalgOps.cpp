@@ -1718,19 +1718,7 @@ void mlir::linalg::detail::depthwise_convolution_impl::regionBuilder(
 }
 
 // TODO: Figure out how to move this to interface
-void DepthwiseConv1DOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
-                        getDpsInits());
-}
-void DepthwiseConv2DOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
-                        getDpsInits());
-}
-void DepthwiseConv3DOp::getEffects(
+void DepthwiseConvNDOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),

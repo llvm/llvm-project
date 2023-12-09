@@ -1,9 +1,9 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// CHECK-LABEL: func @gen_depthwise_channel_first_memref
-func.func @gen_depthwise_channel_first_memref(%arg0: memref<64x16x10xf32>, %arg1: memref<16x3xf32>, %arg2: memref<64x16x8xf32>) {
-  // CHECK: depthwise_conv_1d {{.*}}channel_first = true
-    linalg.depthwise_conv_1d {channel_first = true} ins(%arg0, %arg1: memref<64x16x10xf32>, memref<16x3xf32>) outs(%arg2: memref<64x16x8xf32>)
+// CHECK-LABEL: func @gen_depthwise_1D_channel_first_memref
+func.func @gen_depthwise_1D_channel_first_memref(%arg0: memref<64x16x10xf32>, %arg1: memref<16x3xf32>, %arg2: memref<64x16x8xf32>) {
+  // CHECK: depthwise_conv_nd {{.*}}channel_first = true
+    linalg.depthwise_conv_nd {channel_first = true} ins(%arg0, %arg1: memref<64x16x10xf32>, memref<16x3xf32>) outs(%arg2: memref<64x16x8xf32>)
     return
 }
 
@@ -11,17 +11,17 @@ func.func @gen_depthwise_channel_first_memref(%arg0: memref<64x16x10xf32>, %arg1
 
 // CHECK-LABEL: func @gen_depthwise_2D_channel_first_memref
 func.func @gen_depthwise_2D_channel_first_memref(%arg0: memref<64x16x10x10xf32>, %arg1: memref<16x3x3xf32>, %arg2: memref<64x16x8x8xf32>) {
-  // CHECK: depthwise_conv_2d {{.*}}channel_first = true
-    linalg.depthwise_conv_2d {channel_first = true} ins(%arg0, %arg1: memref<64x16x10x10xf32>, memref<16x3x3xf32>) outs(%arg2: memref<64x16x8x8xf32>)
+  // CHECK: depthwise_conv_nd {{.*}}channel_first = true
+    linalg.depthwise_conv_nd {channel_first = true} ins(%arg0, %arg1: memref<64x16x10x10xf32>, memref<16x3x3xf32>) outs(%arg2: memref<64x16x8x8xf32>)
     return
 }
 
 // -----
 
 // CHECK-LABEL: func @gen_depthwise_3D_channel_first_memref
-func.func @gen_depthwise_3D_channel_first_memref(%arg0: memref<64x16x10x10xf32>, %arg1: memref<16x3x3xf32>, %arg2: memref<64x16x8x8xf32>) {
-  // CHECK: depthwise_conv_3d {{.*}}channel_first = true
-    linalg.depthwise_conv_3d {channel_first = true} ins(%arg0, %arg1: memref<64x16x10x10xf32>, memref<16x3x3xf32>) outs(%arg2: memref<64x16x8x8xf32>)
+func.func @gen_depthwise_3D_channel_first_memref(%arg0: memref<64x16x10x10x10xf32>, %arg1: memref<16x3x3x3xf32>, %arg2: memref<64x16x8x8x8xf32>) {
+  // CHECK: depthwise_conv_nd {{.*}}channel_first = true
+    linalg.depthwise_conv_nd {channel_first = true} ins(%arg0, %arg1: memref<64x16x10x10x10xf32>, memref<16x3x3x3xf32>) outs(%arg2: memref<64x16x8x8x8xf32>)
     return
 }
 
@@ -29,8 +29,8 @@ func.func @gen_depthwise_3D_channel_first_memref(%arg0: memref<64x16x10x10xf32>,
 
 // CHECK-LABEL: func @gen_depthwise_channel_last_memref
 func.func @gen_depthwise_channel_last_memref(%arg0: memref<64x26x16xf32>, %arg1: memref<3x16xf32>, %arg2: memref<64x8x16xf32>) {
-  // CHECK: depthwise_conv_1d {{.*}}channel_first = false 
-    linalg.depthwise_conv_1d {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: memref<64x26x16xf32>, memref<3x16xf32>) outs(%arg2: memref<64x8x16xf32>)
+  // CHECK: depthwise_conv_nd {{.*}}channel_first = false 
+    linalg.depthwise_conv_nd {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: memref<64x26x16xf32>, memref<3x16xf32>) outs(%arg2: memref<64x8x16xf32>)
     return
 }
 
@@ -38,8 +38,8 @@ func.func @gen_depthwise_channel_last_memref(%arg0: memref<64x26x16xf32>, %arg1:
 
 // CHECK-LABEL: func @gen_depthwise_channel_first_tensor
 func.func @gen_depthwise_channel_first_tensor(%arg0: tensor<64x16x10xf32>, %arg1: tensor<16x3xf32>, %arg2: tensor<64x16x8xf32>) -> tensor<64x16x8xf32> {
-  // CHECK: depthwise_conv_1d {{.*}}channel_first = true
-    %0 = linalg.depthwise_conv_1d {channel_first = true} ins(%arg0, %arg1: tensor<64x16x10xf32>, tensor<16x3xf32>) outs(%arg2: tensor<64x16x8xf32>) -> tensor<64x16x8xf32> 
+  // CHECK: depthwise_conv_nd {{.*}}channel_first = true
+    %0 = linalg.depthwise_conv_nd {channel_first = true} ins(%arg0, %arg1: tensor<64x16x10xf32>, tensor<16x3xf32>) outs(%arg2: tensor<64x16x8xf32>) -> tensor<64x16x8xf32> 
     return %0 : tensor<64x16x8xf32>
 }
 
@@ -47,8 +47,8 @@ func.func @gen_depthwise_channel_first_tensor(%arg0: tensor<64x16x10xf32>, %arg1
 
 // CHECK-LABEL: func @gen_depthwise_channel_last_tensor
 func.func @gen_depthwise_channel_last_tensor(%arg0: tensor<64x26x16xf32>, %arg1: tensor<3x16xf32>, %arg2: tensor<64x8x16xf32>) -> tensor<64x8x16xf32> {
-  // CHECK: depthwise_conv_1d {{.*}}channel_first = false 
-    %0 = linalg.depthwise_conv_1d {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: tensor<64x26x16xf32>, tensor<3x16xf32>) outs(%arg2: tensor<64x8x16xf32>) -> tensor<64x8x16xf32>
+  // CHECK: depthwise_conv_nd {{.*}}channel_first = false 
+    %0 = linalg.depthwise_conv_nd {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: tensor<64x26x16xf32>, tensor<3x16xf32>) outs(%arg2: tensor<64x8x16xf32>) -> tensor<64x8x16xf32>
     return %0 : tensor<64x8x16xf32>
 }
 

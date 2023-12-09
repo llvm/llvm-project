@@ -844,7 +844,7 @@ func.func @conv3d_no_symbols(%in : memref<?x?x?xf32>, %filter : memref<?x?x?xf32
 
 
 func.func @gen_depthwise_channel_first_memref(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?x?xf32>) {
-    linalg.depthwise_conv_1d {channel_first = true} ins(%arg0, %arg1: memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
+    linalg.depthwise_conv_nd {channel_first = true} ins(%arg0, %arg1: memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
     return
 }
 
@@ -874,7 +874,7 @@ func.func @gen_depthwise_channel_first_memref(%arg0: memref<?x?x?xf32>, %arg1: m
 
 
 func.func @gen_depthwise_channel_last_memref(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?x?xf32>) {
-    linalg.depthwise_conv_1d {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
+    linalg.depthwise_conv_nd {channel_first = false, dilations = dense<2> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>} ins(%arg0, %arg1: memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
     return
 }
 
@@ -903,7 +903,7 @@ func.func @gen_depthwise_channel_last_memref(%arg0: memref<?x?x?xf32>, %arg1: me
 //         COMMON:         store %[[res]], %[[arg2]][%[[n]], %[[ow]], %[[c]]] : memref<?x?x?xf32>
 
 func.func @gen_depthwise_2D_channel_first_memref(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?x?xf32>) {
-    linalg.depthwise_conv_2d {channel_first = true} ins(%arg0, %arg1: memref<?x?x?x?xf32>, memref<?x?x?xf32>) outs(%arg2: memref<?x?x?x?xf32>)
+    linalg.depthwise_conv_nd {channel_first = true} ins(%arg0, %arg1: memref<?x?x?x?xf32>, memref<?x?x?xf32>) outs(%arg2: memref<?x?x?x?xf32>)
     return
 }
 

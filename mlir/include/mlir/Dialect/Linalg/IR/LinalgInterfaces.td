@@ -914,30 +914,6 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
   let verify = [{ return detail::verifyDepthwiseConvolutionInterface($_op); }];
   let methods = [
     InterfaceMethod<[{
-      Returns strides attribute.
-    }],
-    "::mlir::DenseIntElementsAttr", "getStridesAttr", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::depthwise_convolution_impl::getStridesAttr($_op);
-      }]>,
-    InterfaceMethod<[{
-      Returns dilations attribute.
-    }],
-    "::mlir::DenseIntElementsAttr", "getDilationsAttr", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::depthwise_convolution_impl::getDilationsAttr($_op);
-      }]>,
-    InterfaceMethod<[{
-      Returns channel dim attribute.
-    }],
-    "::mlir::BoolAttr", "getChannelFirstAttr", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::depthwise_convolution_impl::getChannelFirstAttr($_op);
-      }]>,
-    InterfaceMethod<[{
       Returns indexing maps for any spatial dimension.
     }],
     "::mlir::ArrayAttr", "getIndexingMaps", (ins),
@@ -954,6 +930,23 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
         return detail::depthwise_convolution_impl::getIteratorTypes($_op);
       }]>
   ];
+
+  let extraClassDeclaration = [{
+    // Returns channel first attribute.
+    bool getChannelFirst() {
+        return (*this)->getAttrOfType<BoolAttr>("channel_first").getValue();
+    }
+  }];
+  let extraSharedClassDeclaration = [{
+    // Returns strides attribute.
+    ::mlir::DenseIntElementsAttr getStridesAttr() {
+        return detail::depthwise_convolution_impl::getStridesAttr($_op);
+    }
+    // Returns dilations attribute.
+    ::mlir::DenseIntElementsAttr getDilationsAttr() {
+        return detail::depthwise_convolution_impl::getDilationsAttr($_op);
+    }
+  }];
 }
 
 #endif // LINALG_IR_LINALGINTERFACES

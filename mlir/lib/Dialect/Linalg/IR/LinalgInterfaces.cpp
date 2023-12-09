@@ -8,13 +8,11 @@
 
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
-#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -643,8 +641,7 @@ enum class MatchConvolutionResult {
 DenseIntElementsAttr
 mlir::linalg::detail::depthwise_convolution_impl::getStridesAttr(
     DepthwiseConvolutionOpInterface op) {
-  auto maybeStridesAttr = op.getStridesAttr();
-  maybeStridesAttr.dump();
+  auto maybeStridesAttr = op->getAttrOfType<DenseIntElementsAttr>("strides");
   if (!maybeStridesAttr) {
     OpBuilder builder(op.getContext());
     int64_t numSpatialDims =
@@ -654,18 +651,24 @@ mlir::linalg::detail::depthwise_convolution_impl::getStridesAttr(
     SmallVector<int64_t> strides(numSpatialDims, 1);
     return DenseIntElementsAttr::get(type, strides);
   }
-  return op.getStridesAttr();
+  return maybeStridesAttr;
 }
 
 DenseIntElementsAttr
 mlir::linalg::detail::depthwise_convolution_impl::getDilationsAttr(
     DepthwiseConvolutionOpInterface op) {
-  return op.getDilationsAttr();
-}
-
-BoolAttr mlir::linalg::detail::depthwise_convolution_impl::getChannelFirstAttr(
-    DepthwiseConvolutionOpInterface op) {
-  return op.getChannelFirstAttr();
+  auto maybeDilationsAttr =
+      op->getAttrOfType<DenseIntElementsAttr>("dilations");
+  if (!maybeDilationsAttr) {
+    OpBuilder builder(op.getContext());
+    int64_t numSpatialDims =
+        op.image().getType().cast<ShapedType>().getRank() - 2;
+    auto type = RankedTensorType::get({static_cast<int64_t>(numSpatialDims)},
+                                      builder.getI64Type());
+    SmallVector<int64_t> strides(numSpatialDims, 1);
+    return DenseIntElementsAttr::get(type, strides);
+  }
+  return maybeDilationsAttr;
 }
 
 ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIteratorTypes(
@@ -701,8 +704,7 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
       llvm::map_range(llvm::seq<int64_t>(numSpatial + 2, 2 * (numSpatial + 1)),
                       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   // Temp subsitute for channel position attr
-  int64_t channelPos =
-      (op.getChannelFirstAttr().getValue()) ? 1 : numSpatial + 1;
+  int64_t channelPos = (op.getChannelFirst()) ? 1 : numSpatial + 1;
 
   // Initialze operand accesses in nw order and insert c according to channel
   // position
@@ -727,15 +729,19 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
   return cached;
 }
 
-LogicalResult mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
+LogicalResult
+mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
   if (failed(verifyConvolutionInterface(op)))
     return failure();
-  if (DepthwiseConvolutionOpInterface conv = dyn_cast<DepthwiseConvolutionOpInterface>(op)) {
+  if (DepthwiseConvolutionOpInterface conv =
+          dyn_cast<DepthwiseConvolutionOpInterface>(op)) {
     const auto imageRank = conv.image().getType().cast<ShapedType>().getRank();
-    const auto kernelRank = conv.filter().getType().cast<ShapedType>().getRank();
+    const auto kernelRank =
+        conv.filter().getType().cast<ShapedType>().getRank();
     const auto initRank = conv.init().getType().cast<ShapedType>().getRank();
     if (imageRank != initRank || imageRank != kernelRank + 1)
-      return op->emitError("Rank relationship must be `in_rank == out_rank == kernel_rank + 1`");
+      return op->emitError(
+          "Rank relationship must be `in_rank == out_rank == kernel_rank + 1`");
     return success();
   }
   return failure();

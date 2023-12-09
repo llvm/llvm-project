@@ -388,26 +388,30 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 // DepthwiseConvNDOp ops.
 //===----------------------------------------------------------------------===//
 
-def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
+def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
   [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
     
   let summary = [{
-    Performs 1-D depthwise convolution with switchable channel position; either first or last.
+    Performs N-D depthwise convolution with switchable channel position; either first or last.
   }];
   let description = [{
-    Domain: N, OW, C, KW
+    Allows any number of spatial dimensions but treats all of them as contiguous.  Throughout, `S`,
+    will represent all spatial dimensions.  Operand layouts are determined by the `channel_first`
+    `bool` attritbute.  When placing the channel dim first or last, the batch dim is excluded.  In
+    any case, the channel and spatial dims are in the same relative order for all operands.
+    
+    Domain: N, S, C, KS
 
-    Layout of operands is determined by the `channel_first` `BoolAttr`:
+    Layouts:
+      `channel_first == true`:
+        Input: `NCS`
+        Kernel: `CS`
+        Output: `NCS`
 
-    `channel_first == true`:
-      Input: `NCW`
-      Kernel: `CW`
-      Output: `NCW`
-
-    `channel_first == false`:
-      Input: `NWC`
-      Kernel: `WC`
-      Output: `NWC`
+      `channel_first == false`:
+        Input: `NSC`
+        Kernel: `SC`
+        Output: `NSC`
 
   }];
 
@@ -415,10 +419,8 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
       Variadic<TensorOrMemref>:$inputs,
       Variadic<TensorOrMemref>:$inits,
       DefaultValuedAttr<BoolAttr, "true">:$channel_first,
-      DefaultValuedAttr<RankedI64ElementsAttr<[1]>,
-        "{ static_cast<int64_t>(1) }">:$strides,
-      DefaultValuedAttr<RankedI64ElementsAttr<[1]>,
-        "{ static_cast<int64_t>(1) }">:$dilations
+      OptionalAttr<I64ElementsAttr>:$strides,
+      OptionalAttr<I64ElementsAttr>:$dilations
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
     let regions = (region AnyRegion:$region);
@@ -442,113 +444,6 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
     }];
 }
 
-def DepthwiseConv2DOp : LinalgStructuredBase_Op<"depthwise_conv_2d",
-  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
-    
-  let summary = [{
-    Performs 2-D depthwise convolution with switchable channel position; either first or last.
-  }];
-  let description = [{
-    Domain: N, OH, OW, C, KH, KW
-
-    Layout of operands is determined by the `channel_first` `BoolAttr`:
-
-    `channel_first == true`:
-      Input: `NCHW`
-      Kernel: `CHW`
-      Output: `NCHW`
-
-    `channel_first == false`:
-      Input: `NHWC`
-      Kernel: `HWC`
-      Output: `NHWC`
-
-  }];
-
-    let arguments = (ins
-      Variadic<TensorOrMemref>:$inputs,
-      Variadic<TensorOrMemref>:$inits,
-      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
-      DefaultValuedAttr<RankedI64ElementsAttr<[2]>,
-        "{ static_cast<int64_t>(1) }">:$strides,
-      DefaultValuedAttr<RankedI64ElementsAttr<[2]>,
-        "{ static_cast<int64_t>(1) }">:$dilations
-    );
-    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
-    let regions = (region AnyRegion:$region);
-
-    // TODO: Figure out how to move this to the interface
-    let extraClassDeclaration = structuredOpsBaseDecls # [{
-      void print(::mlir::OpAsmPrinter &printer) {
-        return detail::depthwise_convolution_impl::print(*this, printer);
-      }
-      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
-                                        ::mlir::OperationState &result) {
-        return detail::depthwise_convolution_impl::parse(parser, result);
-      }
-      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                                mlir::ArrayRef<mlir::NamedAttribute>)>
-      getRegionBuilder() {
-        return detail::depthwise_convolution_impl::regionBuilder;
-      }
-      // Implement functions necessary for DestinationStyleOpInterface.
-      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
-    }];
-}
-
-def DepthwiseConv3DOp : LinalgStructuredBase_Op<"depthwise_conv_3d",
-  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
-    
-  let summary = [{
-    Performs 3-D depthwise convolution with switchable channel position; either first or last.
-  }];
-  let description = [{
-    Domain: N, OD, OH, OW, C, KD, KH, KW
-
-    Layout of operands is determined by the `channel_first` `BoolAttr`:
-
-    `channel_first == true`:
-      Input: `NCDHW`
-      Kernel: `CDHW`
-      Output: `NCDHW`
-
-    `channel_first == false`:
-      Input: `NDHWC`
-      Kernel: `DHWC`
-      Output: `NDHWC`
-
-  }];
-
-    let arguments = (ins
-      Variadic<TensorOrMemref>:$inputs,
-      Variadic<TensorOrMemref>:$inits,
-      DefaultValuedAttr<BoolAttr, "true">:$channel_first,
-      DefaultValuedAttr<RankedI64ElementsAttr<[3]>,
-        "{ static_cast<int64_t>(1) }">:$strides,
-      DefaultValuedAttr<RankedI64ElementsAttr<[3]>,
-        "{ static_cast<int64_t>(1) }">:$dilations
-    );
-    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
-    let regions = (region AnyRegion:$region);
-
-    // TODO: Figure out how to move this to the interface
-    let extraClassDeclaration = structuredOpsBaseDecls # [{
-      void print(::mlir::OpAsmPrinter &printer) {
-        return detail::depthwise_convolution_impl::print(*this, printer);
-      }
-      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
-                                        ::mlir::OperationState &result) {
-        return detail::depthwise_convolution_impl::parse(parser, result);
-      }
-      static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                                mlir::ArrayRef<mlir::NamedAttribute>)>
-      getRegionBuilder() {
-        return detail::depthwise_convolution_impl::regionBuilder;
-      }
-      // Implement functions necessary for DestinationStyleOpInterface.
-      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
-    }];
-}
 
 //===----------------------------------------------------------------------===//
 // Transpose op.

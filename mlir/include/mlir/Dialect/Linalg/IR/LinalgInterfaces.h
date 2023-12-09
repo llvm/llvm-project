@@ -120,7 +120,6 @@ namespace detail {
 namespace depthwise_convolution_impl {
 DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
 DenseIntElementsAttr getDilationsAttr(DepthwiseConvolutionOpInterface op);
-BoolAttr getChannelFirstAttr(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIndexingMaps(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
 void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
