@@ -25,6 +25,7 @@ CASV1_SIMPLE_DATA_REF(DebugAbbrevUnoptRef, mc:debug_abbrev_unopt)
 CASV1_SIMPLE_DATA_REF(DistinctDebugLineRef, mc:debug_line_distinct_data)
 CASV1_SIMPLE_DATA_REF(DIEAbbrevRef, mc:debug_DIE_abbrev)
 CASV1_SIMPLE_DATA_REF(DIEDistinctDataRef, mc:debug_DIE_distinct_data)
+CASV1_SIMPLE_DATA_REF(DIEDataRef, mc:debug_DIE_data)
 CASV1_SIMPLE_DATA_REF(AddendsRef, mc:addends)
 
 #undef CASV1_SIMPLE_DATA_REF

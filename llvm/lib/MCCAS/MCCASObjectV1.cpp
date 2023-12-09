@@ -170,7 +170,6 @@ Error MCSchema::fillCache() {
       PaddingRef::KindString,
       MCAssemblerRef::KindString,
       DebugInfoSectionRef::KindString,
-      DIEDataRef::KindString,
 #define CASV1_SIMPLE_DATA_REF(RefName, IdentifierName) RefName::KindString,
 #define CASV1_SIMPLE_GROUP_REF(RefName, IdentifierName) RefName::KindString,
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
@@ -1893,7 +1892,7 @@ struct DIEDataWriter : public DataWriter {
 
   /// Saves the main data stream and any children to a new DIEDataRef node.
   Expected<DIEDataRef> getCASNode(MCCASBuilder &CASBuilder) {
-    auto Ref = DIEDataRef::create(CASBuilder, Children, Data);
+    auto Ref = DIEDataRef::create(CASBuilder, toStringRef(Data));
     Data.clear();
     return Ref;
   }
@@ -2929,17 +2928,6 @@ DIEDedupeTopLevelRef::create(MCCASBuilder &MB,
   if (!B)
     return B.takeError();
   append_range(B->Refs, Children);
-  return get(B->build());
-}
-
-Expected<DIEDataRef> DIEDataRef::create(MCCASBuilder &MB,
-                                        ArrayRef<cas::ObjectRef> Children,
-                                        ArrayRef<char> Contents) {
-  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
-  if (!B)
-    return B.takeError();
-  append_range(B->Refs, Children);
-  append_range(B->Data, toStringRef(Contents));
   return get(B->build());
 }
 
