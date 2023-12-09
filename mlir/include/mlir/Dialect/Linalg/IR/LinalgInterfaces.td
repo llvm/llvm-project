@@ -911,7 +911,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     ```
   }];
   let cppNamespace = "::mlir::linalg";
-  let verify = [{ return detail::verifyConvolutionInterface($_op); }];
+  let verify = [{ return detail::verifyDepthwiseConvolutionInterface($_op); }];
   let methods = [
     InterfaceMethod<[{
       Returns strides attribute.

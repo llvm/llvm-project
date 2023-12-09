@@ -727,6 +727,20 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
   return cached;
 }
 
+LogicalResult mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
+  if (failed(verifyConvolutionInterface(op)))
+    return failure();
+  if (DepthwiseConvolutionOpInterface conv = dyn_cast<DepthwiseConvolutionOpInterface>(op)) {
+    const auto imageRank = conv.image().getType().cast<ShapedType>().getRank();
+    const auto kernelRank = conv.filter().getType().cast<ShapedType>().getRank();
+    const auto initRank = conv.init().getType().cast<ShapedType>().getRank();
+    if (imageRank != initRank || imageRank != kernelRank + 1)
+      return op->emitError("Rank relationship must be `in_rank == out_rank == kernel_rank + 1`");
+    return success();
+  }
+  return failure();
+}
+
 mlir::linalg::detail::MatchConvolutionResult
 mlir::linalg::detail::isConvolutionInterfaceImpl(
     Operation *op, ConvolutionDimensions *dimensions) {
