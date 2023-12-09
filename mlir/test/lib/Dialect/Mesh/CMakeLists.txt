@@ -8,4 +8,6 @@ add_mlir_library(MLIRMeshTestSimplifications
   MLIRMeshDialect
   MLIRMeshTransforms
   MLIRPass
+  MLIRRewrite
+  MLIRTransformUtils
   )
