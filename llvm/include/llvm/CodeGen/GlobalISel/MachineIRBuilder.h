@@ -1531,7 +1531,8 @@ public:
 
   /// Build and insert G_PREFETCH \p Addr, \p RW, \p Locality, \p CacheType
   MachineInstrBuilder buildPrefetch(const SrcOp &Addr, unsigned RW,
-                                    unsigned Locality, unsigned CacheType);
+                                    unsigned Locality, unsigned CacheType,
+                                    MachineMemOperand &MMO);
 
   /// Build and insert \p Dst = G_FREEZE \p Src
   MachineInstrBuilder buildFreeze(const DstOp &Dst, const SrcOp &Src) {

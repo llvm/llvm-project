@@ -2437,13 +2437,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::prefetch: {
     Value *Addr = CI.getOperand(0);
-    ConstantInt *RW = cast<ConstantInt>(CI.getOperand(1));
-    ConstantInt *Locality = cast<ConstantInt>(CI.getOperand(2));
-    ConstantInt *CacheType = cast<ConstantInt>(CI.getOperand(3));
+    unsigned RW = cast<ConstantInt>(CI.getOperand(1))->getZExtValue();
+    unsigned Locality = cast<ConstantInt>(CI.getOperand(2))->getZExtValue();
+    unsigned CacheType = cast<ConstantInt>(CI.getOperand(3))->getZExtValue();
 
-    MIRBuilder.buildPrefetch(getOrCreateVReg(*Addr), RW->getZExtValue(),
-                             Locality->getZExtValue(),
-                             CacheType->getZExtValue());
+    auto Flags = RW ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    auto &MMO = *MF->getMachineMemOperand(MachinePointerInfo(Addr), Flags,
+                                          LLT(), Align());
+
+    MIRBuilder.buildPrefetch(getOrCreateVReg(*Addr), RW, Locality, CacheType,
+                             MMO);
 
     return true;
   }

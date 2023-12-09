@@ -1054,10 +1054,12 @@ MachineIRBuilder::buildFence(unsigned Ordering, unsigned Scope) {
 MachineInstrBuilder MachineIRBuilder::buildPrefetch(const SrcOp &Addr,
                                                     unsigned RW,
                                                     unsigned Locality,
-                                                    unsigned CacheType) {
+                                                    unsigned CacheType,
+                                                    MachineMemOperand &MMO) {
   auto MIB = buildInstr(TargetOpcode::G_PREFETCH);
   Addr.addSrcToMIB(MIB);
   MIB.addImm(RW).addImm(Locality).addImm(CacheType);
+  MIB.addMemOperand(&MMO);
   return MIB;
 }
 
