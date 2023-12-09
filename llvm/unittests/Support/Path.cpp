@@ -1515,13 +1515,13 @@ TEST(Support, NormalizePath) {
   const char *Path7a = "~/aaa";
   SmallString<64> Path7(Path7a);
   path::native(Path7, path::Style::windows_backslash);
-  EXPECT_TRUE(Path7.endswith("\\aaa"));
-  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_TRUE(Path7.ends_with("\\aaa"));
+  EXPECT_TRUE(Path7.starts_with(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
   Path7 = Path7a;
   path::native(Path7, path::Style::windows_slash);
-  EXPECT_TRUE(Path7.endswith("/aaa"));
-  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_TRUE(Path7.ends_with("/aaa"));
+  EXPECT_TRUE(Path7.starts_with(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
 
   const char *Path8a = "~";
