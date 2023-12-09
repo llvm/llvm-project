@@ -23,10 +23,6 @@
 #include <optional>
 #include <stdlib.h> // for _Exit
 
-#if defined(_WIN32) || defined(__CYGWIN__)
-#include <windows.h>
-#endif
-
 using namespace llvm;
 using namespace sys;
 
@@ -106,6 +102,19 @@ bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
     ::exit(RetCode);
 }
 
+// Include the platform-specific parts of this class.
+#ifdef LLVM_ON_UNIX
+#include "Unix/Process.inc"
+#endif
+#ifdef _WIN32
+#include "Windows/Process.inc"
+#endif
+
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <windows.h>
+#endif
+
 #if defined(_WIN32) || defined(__CYGWIN__)
 // This function retrieves the page size using GetNativeSystemInfo() and is
 // present solely so it can be called once to initialize the self_process member
@@ -119,12 +128,4 @@ static unsigned computePageSize() {
   // but dwAllocationGranularity.
   return static_cast<unsigned>(info.dwPageSize);
 }
-#endif
-
-// Include the platform-specific parts of this class.
-#ifdef LLVM_ON_UNIX
-#include "Unix/Process.inc"
-#endif
-#ifdef _WIN32
-#include "Windows/Process.inc"
 #endif
