@@ -9,9 +9,9 @@
 # Test that all named declarations with external linkage match the
 # exported declarations in their associated module partition.
 # Then it tests the sum of the exported declarations in the module
-# partitions matches the export of the std module.
+# partitions matches the export of the std.compat module.
 
-# Note the test of the std module requires all partitions to be tested
+# Note the test of the std.compat module requires all partitions to be tested
 # first. Since lit tests have no dependencies, this means the test needs
 # to be one monolitic test. Since the test doesn't take very long it's
 # not a huge issue.
@@ -33,5 +33,30 @@ generator = module_test_generator(
 )
 
 
-print("//--- module_std.sh.cpp")
-generator.write_test("std")
+print("//--- module_std_compat.sh.cpp")
+generator.write_test(
+    "std.compat",
+    [
+        "cassert",
+        "cctype",
+        "cerrno",
+        "cfenv",
+        "cfloat",
+        "cinttypes",
+        "climits",
+        "clocale",
+        "cmath",
+        "csetjmp",
+        "csignal",
+        "cstdarg",
+        "cstddef",
+        "cstdint",
+        "cstdio",
+        "cstdlib",
+        "cstring",
+        "ctime",
+        "cuchar",
+        "cwchar",
+        "cwctype",
+    ],
+)
