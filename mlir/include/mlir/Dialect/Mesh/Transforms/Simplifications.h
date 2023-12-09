@@ -28,6 +28,11 @@ namespace mesh {
 // Another example with `min`.
 // `min(all_reduce_min(x), all_reduce_min(y))` will be transformed to
 // `all_reduce_min(min(x, y))`.
+//
+// Works only with algebraic ops that have all their operands relevant
+// to the all-reduce endomorphism.
+// Will not work with some op `f(x, y, z)` where only `x` and `y` form
+// the algebraic structure.
 template <typename AlgebraicOp>
 void populateAllReduceEndomorphismSimplificationPatterns(
     RewritePatternSet &patterns, Partial reduction) {
