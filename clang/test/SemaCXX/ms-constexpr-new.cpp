@@ -4,7 +4,7 @@
 
 [[nodiscard]]
 [[msvc::constexpr]] // unsupported-warning {{unknown attribute 'constexpr' ignored}}
-inline void* __cdecl operator new(decltype(sizeof(void*)), void* p) noexcept { return p; }
+inline void* operator new(decltype(sizeof(void*)), void* p) noexcept { return p; }
 
 namespace std {
   constexpr int* construct_at(int* p, int v) {
