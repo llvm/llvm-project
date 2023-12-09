@@ -26417,16 +26417,6 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "void g() {}",
                CtorDtorCode, Style);
 
-  Style.ReferenceAlignment = FormatStyle::ReferenceAlignmentStyle::RAS_Left;
-  verifyNoChange("struct Foo {\n"
-                 "  [[maybe_unused]]\n"
-                 "  void operator+();\n"
-                 "};\n"
-                 "[[nodiscard]]\n"
-                 "Foo& operator-(Foo&);",
-                 Style);
-  Style.ReferenceAlignment = getLLVMStyle().ReferenceAlignment;
-
   Style.BreakBeforeBraces = FormatStyle::BS_Linux;
   verifyFormat("struct Foo {\n"
                "  [[deprecated]]\n"
@@ -26461,6 +26451,16 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "{\n"
                "}",
                CtorDtorCode, Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
+  Style.ReferenceAlignment = FormatStyle::ReferenceAlignmentStyle::RAS_Left;
+  verifyNoChange("struct Foo {\n"
+                 "  [[maybe_unused]]\n"
+                 "  void operator+();\n"
+                 "};\n"
+                 "[[nodiscard]]\n"
+                 "Foo& operator-(Foo&);",
+                 Style);
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {
