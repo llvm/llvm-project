@@ -1880,18 +1880,12 @@ Error MCCASBuilder::createDebugAbbrevSection() {
 /// Helper class to create DIEDataRefs by keeping track of references to
 /// children blocks.
 struct DIEDataWriter : public DataWriter {
-  /// Add `CASObj` to the list of children of the DIE being created.
-  void addRef(DIEDataRef CASObj) { Children.push_back(CASObj.getRef()); }
 
   /// Saves the main data stream and any children to a new DIEDataRef node.
   Expected<DIEDataRef> getCASNode(MCCASBuilder &CASBuilder) {
     auto Ref = DIEDataRef::create(CASBuilder, toStringRef(Data));
-    Data.clear();
     return Ref;
   }
-
-private:
-  SmallVector<cas::ObjectRef> Children;
 };
 
 /// Helper class to create DIEDistinctDataRefs.
