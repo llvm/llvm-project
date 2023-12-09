@@ -1864,7 +1864,7 @@ void ModuleMapParser::diagnosePrivateModules(SourceLocation ExplicitLoc,
       continue;
 
     SmallString<128> FullName(ActiveModule->getFullModuleName());
-    if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
+    if (!FullName.starts_with(M->Name) && !FullName.ends_with("Private"))
       continue;
     SmallString<128> FixedPrivModDecl;
     SmallString<128> Canonical(M->Name);
