@@ -379,7 +379,7 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 // AST Wrappers
 //===----------------------------------------------------------------------===//
 
-class ASTDecl<string name, string prefix, list<Trait> traits = []>
+class AST<string name, string prefix, list<Trait> traits = []>
   : CIR_Attr<!strconcat("AST", name), !strconcat(prefix, ".ast"), traits> {
   string clang_name = !strconcat("const clang::", name, " *");
 
@@ -391,7 +391,7 @@ class ASTDecl<string name, string prefix, list<Trait> traits = []>
 
     This always implies a non-null AST reference (verified).
   }];
-  let parameters = (ins clang_name:$astDecl);
+  let parameters = (ins clang_name:$ast);
 
   // Printing and parsing available in CIRDialect.cpp
   let hasCustomAssemblyFormat = 1;
@@ -419,33 +419,33 @@ class ASTDecl<string name, string prefix, list<Trait> traits = []>
   }];
 }
 
-def ASTDeclAttr : ASTDecl<"Decl", "decl", [ASTDeclInterface]>;
+def ASTDeclAttr : AST<"Decl", "decl", [ASTDeclInterface]>;
 
-def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl", "function.decl",
+def ASTFunctionDeclAttr : AST<"FunctionDecl", "function.decl",
   [ASTFunctionDeclInterface]>;
 
-def ASTCXXMethodDeclAttr : ASTDecl<"CXXMethodDecl", "cxxmethod.decl",
+def ASTCXXMethodDeclAttr : AST<"CXXMethodDecl", "cxxmethod.decl",
   [ASTCXXMethodDeclInterface]>;
 
-def ASTCXXConstructorDeclAttr : ASTDecl<"CXXConstructorDecl",
+def ASTCXXConstructorDeclAttr : AST<"CXXConstructorDecl",
   "cxxconstructor.decl", [ASTCXXConstructorDeclInterface]>;
 
-def ASTCXXConversionDeclAttr : ASTDecl<"CXXConversionDecl",
+def ASTCXXConversionDeclAttr : AST<"CXXConversionDecl",
   "cxxconversion.decl", [ASTCXXConversionDeclInterface]>;
 
-def ASTCXXDestructorDeclAttr : ASTDecl<"CXXDestructorDecl",
+def ASTCXXDestructorDeclAttr : AST<"CXXDestructorDecl",
   "cxxdestructor.decl", [ASTCXXDestructorDeclInterface]>;
 
-def ASTVarDeclAttr : ASTDecl<"VarDecl", "var.decl",
+def ASTVarDeclAttr : AST<"VarDecl", "var.decl",
   [ASTVarDeclInterface]>;
 
-def ASTTypeDeclAttr: ASTDecl<"TypeDecl", "type.decl",
+def ASTTypeDeclAttr: AST<"TypeDecl", "type.decl",
   [ASTTypeDeclInterface]>;
 
-def ASTTagDeclAttr : ASTDecl<"TagDecl", "tag.decl",
+def ASTTagDeclAttr : AST<"TagDecl", "tag.decl",
   [ASTTagDeclInterface]>;
 
-def ASTRecordDeclAttr : ASTDecl<"RecordDecl", "record.decl",
+def ASTRecordDeclAttr : AST<"RecordDecl", "record.decl",
   [ASTRecordDeclInterface]>;
 
 //===----------------------------------------------------------------------===//
