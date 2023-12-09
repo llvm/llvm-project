@@ -1157,9 +1157,7 @@ struct AnalysisGetter {
     return nullptr;
   }
 
-  void invalidate() {
-    FAM->clear();
-  }
+  void invalidate() { FAM->clear(); }
 
   AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
       : FAM(&FAM), CachedOnly(CachedOnly) {}
@@ -1290,9 +1288,7 @@ struct InformationCache {
     return AssumeOnlyValues.contains(&I);
   }
 
-  void invalidate() {
-    AG.invalidate();
-  }
+  void invalidate() { AG.invalidate(); }
 
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
