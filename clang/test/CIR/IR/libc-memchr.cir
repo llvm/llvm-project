@@ -1,11 +1,11 @@
 // RUN: cir-opt %s
 
 !voidptr = !cir.ptr<!cir.void>
-!u32i = !cir.int<u, 32>
+!s32i = !cir.int<s, 32>
 !u64i = !cir.int<u, 64>
 module {
-  cir.func @f(%src : !voidptr, %pattern : !u32i, %len : !u64i) -> !voidptr {
-    %ptr = cir.libc.memchr(%src, %pattern, %len : !u64i)
+  cir.func @f(%src : !voidptr, %pattern : !s32i, %len : !u64i) -> !voidptr {
+    %ptr = cir.libc.memchr(%src, %pattern, %len)
     cir.return %ptr : !voidptr
   }
 }

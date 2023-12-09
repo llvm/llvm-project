@@ -2208,9 +2208,11 @@ def MemCpyOp : CIR_Op<"libc.memcpy"> {
 //===----------------------------------------------------------------------===//
 
 def MemChrOp : CIR_Op<"libc.memchr"> {
+  // TODO: instead of using UInt64 for len, we could make it constrained on
+  // size_t (64 or 32) and have a builder that does the right job.
   let arguments = (ins Arg<VoidPtr, "", [MemRead]>:$src,
-                       UInt32:$pattern,
-                       CIR_IntType:$len);
+                       SInt32:$pattern,
+                       UInt64:$len);
   let summary = "libc's `memchr`";
   let results = (outs Res<VoidPtr, "">:$result);
 
@@ -2222,16 +2224,13 @@ def MemChrOp : CIR_Op<"libc.memchr"> {
     Examples:
 
     ```mlir
-    %p = cir.libc.memchr(%src : !cir.ptr<!void>, %pattern : !u32i, %len : !u32i) -> !cir.ptr<!void>
+    %p = cir.libc.memchr(%src, %pattern, %len) -> !cir.ptr<!void>
     ```
   }];
 
   let assemblyFormat = [{
     `(`
-      $src
-      `,` $pattern
-      `,` $len `:` type($len)
-    `)` attr-dict
+      $src `,` $pattern `,` $len `)` attr-dict
   }];
   let hasVerifier = 0;
 }
