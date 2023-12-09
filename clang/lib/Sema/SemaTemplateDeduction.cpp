@@ -3222,7 +3222,20 @@ Sema::TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
       *FunctionType = Function->getType();
     return TDK_Success;
   }
+  // if (FunctionTemplate->getTemplateParameterList()) {
+  // Check the number of the Concept template parameters
+  size_t conceptParams = 0;
+  for (auto P : *TemplateParams) {
+    const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+    if (CD && CD->hasTypeConstraint()) {
+      conceptParams++;
+    }
+  }
 
+  if (conceptParams == TemplateParams->size()) {
+    return TDK_Success;
+  }
+  // }
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -3699,23 +3712,6 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (Trap.hasErrorOccurred()) {
     Specialization->setInvalidDecl(true);
     return TDK_SubstitutionFailure;
-  }
-
-  if (FunctionTemplate->getTemplateParameters()) {
-    // Check the number of the Concept template parameters
-    size_t conceptParams = 0;
-    for (auto P : *FunctionTemplate->getTemplateParameters()) {
-      const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-      if (CD && CD->hasTypeConstraint()) {
-        conceptParams++;
-      }
-    }
-
-    if (conceptParams > 0 &&
-        FunctionTemplate->getTemplateParameters()->size() == conceptParams &&
-        Info.getNumExplicitArgs() > 0) {
-      return TDK_SubstitutionFailure;
-    }
   }
 
   // C++2a [temp.deduct]p5
