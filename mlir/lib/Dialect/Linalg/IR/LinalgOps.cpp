@@ -1686,14 +1686,16 @@ void mlir::linalg::detail::depthwise_convolution_impl::getEffects(
 
 ParseResult mlir::linalg::detail::depthwise_convolution_impl::parse(
     OpAsmParser &parser, OperationState &result) {
-  return parseNamedStructuredOp(
+  return ::parseNamedStructuredOp(
       parser, result, 3,
       mlir::linalg::detail::depthwise_convolution_impl::regionBuilder);
 }
 
 void mlir::linalg::detail::depthwise_convolution_impl::print(
     DepthwiseConvolutionOpInterface op, OpAsmPrinter &p) {
-  printNamedStructuredOp(p, op.getOperation(), op.image(), op.filter());
+  printNamedStructuredOp(p, op.getOperation(),
+                         ValueRange{op.image(), op.filter()},
+                         ValueRange{op.init()});
 }
 
 // Build {mul, add} region for convolution
@@ -1721,6 +1723,8 @@ void mlir::linalg::detail::depthwise_convolution_impl::regionBuilder(
 void DepthwiseConvNDOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
+  if (hasTensorSemantics())
+    return;
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
 }
