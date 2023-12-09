@@ -594,7 +594,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         !Style.isJavaScript()) ||
        (Current.is(tok::kw_operator) && Previous.isNot(tok::coloncolon))) &&
       Previous.isNot(tok::kw_template) && CurrentState.BreakBeforeParameter &&
-      (Style.isCpp() && Current.Tok.isNot(tok::kw_operator))) {
+      Current.Tok.isNot(tok::kw_operator)) {
     return true;
   }
 
