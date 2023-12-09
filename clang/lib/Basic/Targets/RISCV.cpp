@@ -131,7 +131,7 @@ static unsigned getVersionValue(unsigned MajorVersion, unsigned MinorVersion) {
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__riscv");
-  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  bool Is64Bit = getTriple().isRISCV64();
   Builder.defineMacro("__riscv_xlen", Is64Bit ? "64" : "32");
   StringRef CodeModel = getTargetOpts().CodeModel;
   unsigned FLen = ISAInfo->getFLen();
@@ -281,7 +281,7 @@ bool RISCVTargetInfo::initFeatureMap(
 
   unsigned XLen = 32;
 
-  if (getTriple().getArch() == llvm::Triple::riscv64) {
+  if (getTriple().isRISCV64()) {
     Features["64bit"] = true;
     XLen = 64;
   } else {
@@ -336,7 +336,7 @@ RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.
 bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
-  bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
+  bool Is64Bit = getTriple().isRISCV64();
   auto Result = llvm::StringSwitch<std::optional<bool>>(Feature)
                     .Case("riscv", true)
                     .Case("riscv32", !Is64Bit)
