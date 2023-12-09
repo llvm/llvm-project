@@ -102,9 +102,10 @@ struct llvm::TimeTraceProfiler {
     llvm::get_thread_name(ThreadName);
   }
 
-  llvm::TimeTraceProfilerEntry* begin(std::string Name, llvm::function_ref<std::string()> Detail) {
-    return &Stack.emplace_back(ClockType::now(), TimePointType(), std::move(Name),
-                       Detail());
+  llvm::TimeTraceProfilerEntry *
+  begin(std::string Name, llvm::function_ref<std::string()> Detail) {
+    return &Stack.emplace_back(ClockType::now(), TimePointType(),
+                               std::move(Name), Detail());
   }
 
   void end() {
@@ -341,14 +342,16 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   return Error::success();
 }
 
-llvm::TimeTraceProfilerEntry* llvm::timeTraceProfilerBegin(StringRef Name, StringRef Detail) {
+llvm::TimeTraceProfilerEntry *llvm::timeTraceProfilerBegin(StringRef Name,
+                                                           StringRef Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    return TimeTraceProfilerInstance->begin(std::string(Name),
-                                             [&]() { return std::string(Detail); });
+    return TimeTraceProfilerInstance->begin(
+        std::string(Name), [&]() { return std::string(Detail); });
 }
 
-llvm::TimeTraceProfilerEntry* llvm::timeTraceProfilerBegin(StringRef Name,
-                                  llvm::function_ref<std::string()> Detail) {
+llvm::TimeTraceProfilerEntry *
+llvm::timeTraceProfilerBegin(StringRef Name,
+                             llvm::function_ref<std::string()> Detail) {
   if (TimeTraceProfilerInstance != nullptr)
     return TimeTraceProfilerInstance->begin(std::string(Name), Detail);
 }
@@ -358,13 +361,16 @@ void llvm::timeTraceProfilerEnd() {
     TimeTraceProfilerInstance->end();
 }
 
-void llvm::timeTraceProfilerEntrySetDetail(llvm::TimeTraceProfilerEntry* Entry, StringRef Detail) {
+void llvm::timeTraceProfilerEntrySetDetail(llvm::TimeTraceProfilerEntry *Entry,
+                                           StringRef Detail) {
   if (Entry != nullptr) {
     Entry->Detail = Detail;
   }
 }
 
-void llvm::timeTraceProfilerEntrySetDetail(llvm::TimeTraceProfilerEntry* Entry, llvm::function_ref<std::string()> Detail) {
+void llvm::timeTraceProfilerEntrySetDetail(
+    llvm::TimeTraceProfilerEntry *Entry,
+    llvm::function_ref<std::string()> Detail) {
   if (Entry != nullptr) {
     Entry->Detail = Detail();
   }
