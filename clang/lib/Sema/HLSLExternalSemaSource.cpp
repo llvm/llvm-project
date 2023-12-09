@@ -508,7 +508,6 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addArraySubscriptOperators()
         .completeDefinition();
   });
-
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
