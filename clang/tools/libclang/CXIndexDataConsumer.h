@@ -461,7 +461,7 @@ private:
   const DeclContext *getEntityContainer(const Decl *D) const;
 
   CXIdxClientFile getIndexFile(OptionalFileEntryRef File);
-  
+
   CXIdxLoc getIndexLoc(SourceLocation Loc) const;
 
   void getEntityInfo(const NamedDecl *D,
