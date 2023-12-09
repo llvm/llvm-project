@@ -211,6 +211,9 @@ public:
       std::set<lldb::LanguageType> &languages_for_types,
       std::set<lldb::LanguageType> &languages_for_expressions);
 
+  /// Set LangOpt overrides LLDB needs.
+  void SetCompilerInvocationLLDBOverrides();
+  
   bool SupportsLanguage(lldb::LanguageType language) override;
 
   SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override {
