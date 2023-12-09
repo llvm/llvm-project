@@ -17,6 +17,7 @@
 #include "ToolChains/Clang.h"
 #include "ToolChains/CrossWindows.h"
 #include "ToolChains/Cuda.h"
+#include "ToolChains/Cygwin.h"
 #include "ToolChains/Darwin.h"
 #include "ToolChains/DragonFly.h"
 #include "ToolChains/FreeBSD.h"
@@ -6268,6 +6269,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
           TC = std::make_unique<toolchains::MachO>(*this, Target, Args);
         else
           TC = std::make_unique<toolchains::Generic_GCC>(*this, Target, Args);
+        break;
+      case llvm::Triple::Cygnus:
+        TC = std::make_unique<toolchains::Cygwin>(*this, Target, Args);
         break;
       case llvm::Triple::GNU:
         TC = std::make_unique<toolchains::MinGW>(*this, Target, Args);
