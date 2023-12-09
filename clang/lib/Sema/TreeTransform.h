@@ -13606,8 +13606,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
     if (conceptParams > 0 &&
         conceptParams == E->getTemplateParameterList()->size()) {
-      getSema().Diag(E->getTemplateParameterList()->getLAngleLoc(),
-                     diag::err_expected_non_concept_template_parameter);
       return ExprError();
     }
   }
