@@ -1673,92 +1673,62 @@ LogicalResult ReduceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// DepthwiseConv1DOp
+// DepthwiseConvNDOp
 //===----------------------------------------------------------------------===//
 
-
-void DepthwiseConv1DOp::build(
-    OpBuilder &builder, OperationState &result, ValueRange inputs,
-    ValueRange inits, bool channel_first,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
-    ArrayRef<NamedAttribute> attributes) {
-  build(builder, result, TypeRange{}, inputs, inits, channel_first);
-  result.addAttribute(getChannelFirstAttrName(result.name),
-                      builder.getBoolAttr(channel_first));
-  result.addAttributes(attributes);
-
-  // Add output types for `RankedTensorType` output arguments.
-  for (Value init : inits) {
-    Type initType = init.getType();
-    if (llvm::isa<RankedTensorType>(initType))
-      result.addTypes(initType);
-  }
-
-  if (bodyBuild)
-    buildGenericRegion(builder, result.location, *result.regions.front(),
-                       inputs, inits, bodyBuild);
+// There must be a way to avoid defining the following 3 functions
+void mlir::linalg::detail::depthwise_convolution_impl::getEffects(
+    DepthwiseConvolutionOpInterface op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, op.result(), op.image(), op.filter());
 }
 
+ParseResult mlir::linalg::detail::depthwise_convolution_impl::parse(
+    OpAsmParser &parser, OperationState &result) {
+  return parseNamedStructuredOp(
+      parser, result, 3,
+      mlir::linalg::detail::depthwise_convolution_impl::regionBuilder);
+}
+
+void mlir::linalg::detail::depthwise_convolution_impl::print(
+    DepthwiseConvolutionOpInterface op, OpAsmPrinter &p) {
+  printNamedStructuredOp(p, op.getOperation(), op.image(), op.filter());
+}
+
+// Build {mul, add} region for convolution
+void mlir::linalg::detail::depthwise_convolution_impl::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "DepthwiseConv1DOp regionBuilder expects 3 (>=0) args");
+  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  SmallVector<Value> yields;
+
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(1));
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
+  Value value4 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  yields.push_back(value4);
+  helper.yieldOutputs(yields);
+}
+
+// TODO: Figure out how to move this to interface
 void DepthwiseConv1DOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
 }
-
-ParseResult DepthwiseConv1DOp::parse(OpAsmParser &parser,
-                                     OperationState &result) {
-  return parseNamedStructuredOp(parser, result, 3,
-                                getRegionBuilder());
-}
-
-void DepthwiseConv1DOp::print(OpAsmPrinter &p) {
-  printNamedStructuredOp(p, getOperation(), getDpsInputs(), getDpsInits());
-}
-
-//===----------------------------------------------------------------------===//
-// DepthwiseConv2DOp
-//===----------------------------------------------------------------------===//
-
-// TODO: refactor into base implementation for all spatial dims
-
-void DepthwiseConv2DOp::build(
-    OpBuilder &builder, OperationState &result, ValueRange inputs,
-    ValueRange inits, bool channel_first,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
-    ArrayRef<NamedAttribute> attributes) {
-  build(builder, result, TypeRange{}, inputs, inits, channel_first);
-  result.addAttribute(getChannelFirstAttrName(result.name),
-                      builder.getBoolAttr(channel_first));
-  result.addAttributes(attributes);
-
-  // Add output types for `RankedTensorType` output arguments.
-  for (Value init : inits) {
-    Type initType = init.getType();
-    if (llvm::isa<RankedTensorType>(initType))
-      result.addTypes(initType);
-  }
-
-  if (bodyBuild)
-    buildGenericRegion(builder, result.location, *result.regions.front(),
-                       inputs, inits, bodyBuild);
-}
-
 void DepthwiseConv2DOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
-}
-
-ParseResult DepthwiseConv2DOp::parse(OpAsmParser &parser,
-                                     OperationState &result) {
-  return parseNamedStructuredOp(parser, result, 3,
-                                getRegionBuilder());
-}
-
-void DepthwiseConv2DOp::print(OpAsmPrinter &p) {
-  printNamedStructuredOp(p, getOperation(), getDpsInputs(), getDpsInits());
 }
 
 //===----------------------------------------------------------------------===//

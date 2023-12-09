@@ -175,6 +175,26 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
         return $_op.getOperation()->getOperand(1);
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/"Return the init operand.",
+      /*retTy=*/"Value",
+      /*methodName=*/"init",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getOperation()->getOperand(2);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the result tensor operand.",
+      /*retTy=*/"Value",
+      /*methodName=*/"result",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getOperation()->getResult(2);
+      }]
+    >,
   ];
 }
 
@@ -898,7 +918,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     "::mlir::DenseIntElementsAttr", "getStridesAttr", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return detail::getStridesAttr($_op);
+        return detail::depthwise_convolution_impl::getStridesAttr($_op);
       }]>,
     InterfaceMethod<[{
       Returns dilations attribute.
@@ -906,7 +926,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     "::mlir::DenseIntElementsAttr", "getDilationsAttr", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return detail::getDilationsAttr($_op);
+        return detail::depthwise_convolution_impl::getDilationsAttr($_op);
       }]>,
     InterfaceMethod<[{
       Returns channel dim attribute.
@@ -914,7 +934,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     "::mlir::BoolAttr", "getChannelFirstAttr", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return detail::getChannelFirstAttr($_op);
+        return detail::depthwise_convolution_impl::getChannelFirstAttr($_op);
       }]>,
     InterfaceMethod<[{
       Returns indexing maps for any spatial dimension.
@@ -922,7 +942,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     "::mlir::ArrayAttr", "getIndexingMaps", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return detail::getIndexingMaps($_op);
+        return detail::depthwise_convolution_impl::getIndexingMaps($_op);
       }]>,
     InterfaceMethod<[{
       Returns indexing maps for any spatial dimension.
@@ -930,7 +950,7 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     "::mlir::ArrayAttr", "getIteratorTypes", (ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return detail::getIteratorTypes($_op);
+        return detail::depthwise_convolution_impl::getIteratorTypes($_op);
       }]>
   ];
 }

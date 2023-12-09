@@ -423,19 +423,19 @@ def DepthwiseConv1DOp : LinalgStructuredBase_Op<"depthwise_conv_1d",
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
     let regions = (region AnyRegion:$region);
 
-    let builders = [
-      OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$inits,
-        "bool":$channel_first,
-        "function_ref<void(OpBuilder &, Location, ValueRange)>",
-        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
-    ];
-    let hasCustomAssemblyFormat = 1;
-
+    // TODO: Figure out how to move this to the interface
     let extraClassDeclaration = structuredOpsBaseDecls # [{
+      void print(::mlir::OpAsmPrinter &printer) {
+        return detail::depthwise_convolution_impl::print(*this, printer);
+      }
+      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                        ::mlir::OperationState &result) {
+        return detail::depthwise_convolution_impl::parse(parser, result);
+      }
       static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
                                 mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-        return detail::regionBuilder;
+        return detail::depthwise_convolution_impl::regionBuilder;
       }
       // Implement functions necessary for DestinationStyleOpInterface.
       MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
@@ -477,19 +477,19 @@ def DepthwiseConv2DOp : LinalgStructuredBase_Op<"depthwise_conv_2d",
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
     let regions = (region AnyRegion:$region);
 
-    let builders = [
-      OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$inits,
-        "bool":$channel_first,
-        "function_ref<void(OpBuilder &, Location, ValueRange)>",
-        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
-    ];
-    let hasCustomAssemblyFormat = 1;
-
+    // TODO: Figure out how to move this to the interface
     let extraClassDeclaration = structuredOpsBaseDecls # [{
+      void print(::mlir::OpAsmPrinter &printer) {
+        return detail::depthwise_convolution_impl::print(*this, printer);
+      }
+      static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                        ::mlir::OperationState &result) {
+        return detail::depthwise_convolution_impl::parse(parser, result);
+      }
       static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
                                 mlir::ArrayRef<mlir::NamedAttribute>)>
       getRegionBuilder() {
-        return detail::regionBuilder;
+        return detail::depthwise_convolution_impl::regionBuilder;
       }
       // Implement functions necessary for DestinationStyleOpInterface.
       MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }

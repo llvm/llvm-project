@@ -116,13 +116,22 @@ bool isaCopyOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
-// Common implementations for DepthwiseConvolutionOpInterface 
+// Common implementations for DepthwiseConvolutionOpInterface
+namespace depthwise_convolution_impl {
 DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
 DenseIntElementsAttr getDilationsAttr(DepthwiseConvolutionOpInterface op);
 BoolAttr getChannelFirstAttr(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIndexingMaps(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
-void regionBuilder(ImplicitLocOpBuilder &b, Block &block,  ArrayRef<NamedAttribute> attrs);
+void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                   ArrayRef<NamedAttribute> attrs);
+void getEffects(
+    DepthwiseConvolutionOpInterface op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects);
+ParseResult parse(OpAsmParser &parser, OperationState &result);
+void print(DepthwiseConvolutionOpInterface op, OpAsmPrinter &p);
+} // namespace depthwise_convolution_impl
 
 /// Returns true if the block contains a contraction of the following form:
 ///
