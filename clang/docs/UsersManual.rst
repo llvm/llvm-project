@@ -3359,8 +3359,8 @@ default for Windows targets.
 
 For compatibility with existing code that compiles with MSVC, clang defines the
 ``_MSC_VER`` and ``_MSC_FULL_VER`` macros. When on Windows, these default to
-either the same value as the currently installed version of cl.exe, or ``1920``
-and ``192000000`` (respectively). The ``-fms-compatibility-version=`` flag
+either the same value as the currently installed version of cl.exe, or ``1933``
+and ``193300000`` (respectively). The ``-fms-compatibility-version=`` flag
 overrides these values.  It accepts a dotted version tuple, such as 19.00.23506.
 Changing the MSVC compatibility version makes clang behave more like that
 version of MSVC. For example, ``-fms-compatibility-version=19`` will enable
