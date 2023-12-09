@@ -1,4 +1,5 @@
-//===--- Cygwin.h - Cygwin ToolChain Implementations --------------*- C++ -*-===//
+//===--- Cygwin.h - Cygwin ToolChain Implementations --------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,7 +59,7 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY Cygwin : public ToolChain {
 public:
   Cygwin(const Driver &D, const llvm::Triple &Triple,
-        const llvm::opt::ArgList &Args);
+         const llvm::opt::ArgList &Args);
 
   static void fixTripleArch(const Driver &D, llvm::Triple &Triple,
                             const llvm::opt::ArgList &Args);
@@ -73,8 +74,8 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
-  llvm::ExceptionHandling GetExceptionModel(
-      const llvm::opt::ArgList &Args) const override;
+  llvm::ExceptionHandling
+  GetExceptionModel(const llvm::opt::ArgList &Args) const override;
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,

@@ -1,4 +1,5 @@
-//===--- Cygwin.cpp - CygwinToolChain Implementation ------------------------===//
+//===--- Cygwin.cpp - CygwinToolChain Implementation
+//------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,10 +29,10 @@ using namespace llvm::opt;
 
 /// Cygwin Tools
 void tools::Cygwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
-                                           const InputInfo &Output,
-                                           const InputInfoList &Inputs,
-                                           const ArgList &Args,
-                                           const char *LinkingOutput) const {
+                                            const InputInfo &Output,
+                                            const InputInfoList &Inputs,
+                                            const ArgList &Args,
+                                            const char *LinkingOutput) const {
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
 
@@ -59,7 +60,7 @@ void tools::Cygwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 void tools::Cygwin::Linker::AddLibGCC(const ArgList &Args,
-                                     ArgStringList &CmdArgs) const {
+                                      ArgStringList &CmdArgs) const {
   // Make use of compiler-rt if --rtlib option is used
   ToolChain::RuntimeLibType RLT = getToolChain().GetRuntimeLibType(Args);
   if (RLT == ToolChain::RLT_Libgcc) {
@@ -83,10 +84,10 @@ void tools::Cygwin::Linker::AddLibGCC(const ArgList &Args,
 }
 
 void tools::Cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
-                                        const InputInfo &Output,
-                                        const InputInfoList &Inputs,
-                                        const ArgList &Args,
-                                        const char *LinkingOutput) const {
+                                         const InputInfo &Output,
+                                         const InputInfoList &Inputs,
+                                         const ArgList &Args,
+                                         const char *LinkingOutput) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
   const SanitizerArgs &Sanitize = TC.getSanitizerArgs(Args);
@@ -127,7 +128,8 @@ void tools::Cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }
 
-  if (!Args.getLastArgValue(options::OPT_fuse_ld_EQ, "link").equals_insensitive("lld")) {
+  if (!Args.getLastArgValue(options::OPT_fuse_ld_EQ, "link")
+           .equals_insensitive("lld")) {
     if (TC.getArch() == llvm::Triple::x86) {
       CmdArgs.push_back("--wrap");
       CmdArgs.push_back("_Znwj");
@@ -435,7 +437,8 @@ static llvm::ErrorOr<std::string> findGcc(const llvm::Triple &LiteralTriple,
   Gccs.emplace_back("cygwin-gcc");
   // Please do not add "gcc" here
   for (StringRef CandidateGcc : Gccs)
-    if (llvm::ErrorOr<std::string> GPPName = llvm::sys::findProgramByName(CandidateGcc))
+    if (llvm::ErrorOr<std::string> GPPName =
+            llvm::sys::findProgramByName(CandidateGcc))
       return GPPName;
   return make_error_code(std::errc::no_such_file_or_directory);
 }
@@ -459,7 +462,7 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
 }
 
 toolchains::Cygwin::Cygwin(const Driver &D, const llvm::Triple &Triple,
-                         const ArgList &Args)
+                           const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
@@ -493,7 +496,8 @@ toolchains::Cygwin::Cygwin(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(
       (Base + SubdirName + llvm::sys::path::get_separator() + "usr/lib").str());
   getFilePaths().push_back(
-      (Base + SubdirName + llvm::sys::path::get_separator() + "usr/lib/w32api").str());
+      (Base + SubdirName + llvm::sys::path::get_separator() + "usr/lib/w32api")
+          .str());
 
   // Only include <base>/lib if we're not cross compiling (not even for
   // windows->windows to a different arch), or if the sysroot has been set
@@ -583,12 +587,12 @@ SanitizerMask toolchains::Cygwin::getSupportedSanitizers() const {
 }
 
 void toolchains::Cygwin::AddCudaIncludeArgs(const ArgList &DriverArgs,
-                                           ArgStringList &CC1Args) const {
+                                            ArgStringList &CC1Args) const {
   CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 void toolchains::Cygwin::AddHIPIncludeArgs(const ArgList &DriverArgs,
-                                          ArgStringList &CC1Args) const {
+                                           ArgStringList &CC1Args) const {
   RocmInstallation.AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
@@ -597,8 +601,8 @@ void toolchains::Cygwin::printVerboseInfo(raw_ostream &OS) const {
   RocmInstallation.print(OS);
 }
 
-void toolchains::Cygwin::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
-                                                  ArgStringList &CC1Args) const {
+void toolchains::Cygwin::AddClangSystemIncludeArgs(
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
@@ -614,9 +618,11 @@ void toolchains::Cygwin::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args,
                    Base + SubdirName + llvm::sys::path::get_separator() +
                        "include");
-  addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/usr/local/include");
+  addSystemInclude(DriverArgs, CC1Args,
+                   getDriver().SysRoot + "/usr/local/include");
   addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/usr/include");
-  addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/usr/include/w32api");
+  addSystemInclude(DriverArgs, CC1Args,
+                   getDriver().SysRoot + "/usr/include/w32api");
 }
 
 void toolchains::Cygwin::addClangTargetOptions(
@@ -723,7 +729,7 @@ static llvm::Triple adjustTriple(const Driver &D, const llvm::Triple &Triple,
 }
 
 void toolchains::Cygwin::fixTripleArch(const Driver &D, llvm::Triple &Triple,
-                                      const ArgList &Args) {
+                                       const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::x86 ||
       Triple.getArch() == llvm::Triple::arm ||
       Triple.getArch() == llvm::Triple::thumb)
