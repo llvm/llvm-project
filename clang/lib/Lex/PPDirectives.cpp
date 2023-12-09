@@ -1934,7 +1934,8 @@ Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
     // Start looking up in the directory *after* the one in which the current
     // file would be found, if any.
     assert(CurPPLexer && "#include_next directive in macro?");
-    LookupFromFile = CurPPLexer->getFileEntry();
+    if (auto FE = CurPPLexer->getFileEntry())
+      LookupFromFile = *FE;
     Lookup = nullptr;
   } else if (!Lookup) {
     // The current file was not found by walking the include path. Either it
