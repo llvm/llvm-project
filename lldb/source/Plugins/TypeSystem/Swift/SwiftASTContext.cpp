@@ -980,7 +980,9 @@ SwiftASTContext::SwiftASTContext(std::string description,
   // Set the clang modules cache path.
   m_compiler_invocation_ap->setClangModuleCachePath(
       GetClangModulesCacheProperty());
+}
 
+void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   swift::IRGenOptions &ir_gen_opts =
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
@@ -998,6 +1000,7 @@ SwiftASTContext::SwiftASTContext(std::string description,
   // for the protocol conforming types.
   lang_opts.AllowModuleWithCompilerErrors = true;
   lang_opts.EnableTargetOSChecking = false;
+  lang_opts.EnableModuleLoadingRemarks = true;
 
   // Bypass deserialization safety to allow deserializing internal details from
   // swiftmodule files.
@@ -1962,6 +1965,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
                         triple);
 
+  swift_ast_sp->SetCompilerInvocationLLDBOverrides();
+
   // Apply the working directory to all relative paths.
   std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
   swift_ast_sp->GetClangImporterOptions().ExtraArgs.clear();
@@ -2469,6 +2474,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   // otherwise no modules will be found.
   swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
                                             framework_search_paths);
+  swift_ast_sp->SetCompilerInvocationLLDBOverrides();
+
   if (!swift_ast_sp->GetClangImporter()) {
     logError("couldn't create a ClangImporter");
     return {};
@@ -2731,6 +2738,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   // otherwise no modules will be found.
   swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
                                             framework_search_paths);
+  swift_ast_sp->SetCompilerInvocationLLDBOverrides();
+
   if (!swift_ast_sp->GetClangImporter()) {
     logError("couldn't create a ClangImporter");
     return {};
