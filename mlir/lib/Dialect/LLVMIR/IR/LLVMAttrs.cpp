@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AttrDetail.h"
+
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
@@ -47,6 +49,7 @@ void LLVMDialect::registerAttributes() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
+
       >();
 }
 
@@ -124,7 +127,7 @@ bool MemoryEffectsAttr::isReadWrite() {
 }
 
 //===----------------------------------------------------------------------===//
-// DIExpression
+// DIExpressionAttr
 //===----------------------------------------------------------------------===//
 
 DIExpressionAttr DIExpressionAttr::get(MLIRContext *context) {
@@ -247,4 +250,343 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
     return {};
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
+}
+
+//===----------------------------------------------------------------------===//
+// DICompositeTypeAttr
+//===----------------------------------------------------------------------===//
+
+DICompositeTypeAttr
+DICompositeTypeAttr::get(MLIRContext *context, unsigned tag, StringAttr name,
+                         DIFileAttr file, uint32_t line, DIScopeAttr scope,
+                         DITypeAttr baseType, DIFlags flags,
+                         uint64_t sizeInBits, uint64_t alignInBits,
+                         ::llvm::ArrayRef<DINodeAttr> elements) {
+  return Base::get(context, tag, name, file, line, scope, baseType, flags,
+                   sizeInBits, alignInBits, elements, StringAttr());
+}
+
+DICompositeTypeAttr DICompositeTypeAttr::get(
+    MLIRContext *context, StringAttr identifier, unsigned tag, StringAttr name,
+    DIFileAttr file, uint32_t line, DIScopeAttr scope, DITypeAttr baseType,
+    DIFlags flags, uint64_t sizeInBits, uint64_t alignInBits,
+    ::llvm::ArrayRef<DINodeAttr> elements) {
+  return Base::get(context, tag, name, file, line, scope, baseType, flags,
+                   sizeInBits, alignInBits, elements, identifier);
+}
+
+unsigned DICompositeTypeAttr::getTag() const { return getImpl()->getTag(); }
+
+StringAttr DICompositeTypeAttr::getName() const { return getImpl()->getName(); }
+
+DIFileAttr DICompositeTypeAttr::getFile() const { return getImpl()->getFile(); }
+
+uint32_t DICompositeTypeAttr::getLine() const { return getImpl()->getLine(); }
+
+DIScopeAttr DICompositeTypeAttr::getScope() const {
+  return getImpl()->getScope();
+}
+
+DITypeAttr DICompositeTypeAttr::getBaseType() const {
+  return getImpl()->getBaseType();
+}
+
+DIFlags DICompositeTypeAttr::getFlags() const { return getImpl()->getFlags(); }
+
+uint64_t DICompositeTypeAttr::getSizeInBits() const {
+  return getImpl()->getSizeInBits();
+}
+
+uint64_t DICompositeTypeAttr::getAlignInBits() const {
+  return getImpl()->getAlignInBits();
+}
+
+::llvm::ArrayRef<DINodeAttr> DICompositeTypeAttr::getElements() const {
+  return getImpl()->getElements();
+}
+
+StringAttr DICompositeTypeAttr::getIdentifier() const {
+  return getImpl()->getIdentifier();
+}
+
+Attribute DICompositeTypeAttr::parse(AsmParser &parser, Type type) {
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse;
+  FailureOr<unsigned> tag;
+  FailureOr<StringAttr> name;
+  FailureOr<DIFileAttr> file;
+  FailureOr<uint32_t> line;
+  FailureOr<DIScopeAttr> scope;
+  FailureOr<DITypeAttr> baseType;
+  FailureOr<DIFlags> flags;
+  FailureOr<uint64_t> sizeInBits;
+  FailureOr<uint64_t> alignInBits;
+  SmallVector<DINodeAttr> elements;
+  StringAttr identifier;
+  const Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
+
+  auto paramParser = [&]() -> LogicalResult {
+    StringRef paramKey;
+    if (parser.parseKeyword(&paramKey)) {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected parameter name.");
+    }
+
+    if (parser.parseEqual()) {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected `=` following parameter name.");
+    }
+
+    if (failed(tag) && paramKey == "tag") {
+      tag = [&]() -> FailureOr<unsigned> {
+        StringRef nameKeyword;
+        if (parser.parseKeyword(&nameKeyword))
+          return failure();
+        if (const unsigned value = llvm::dwarf::getTag(nameKeyword))
+          return value;
+        return parser.emitError(parser.getCurrentLocation())
+               << "invalid debug info debug info tag name: " << nameKeyword;
+      }();
+    } else if (failed(name) && paramKey == "name") {
+      name = FieldParser<StringAttr>::parse(parser);
+      if (failed(name)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'name'");
+      }
+    } else if (failed(file) && paramKey == "file") {
+      file = FieldParser<DIFileAttr>::parse(parser);
+      if (failed(file)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'file'");
+      }
+    } else if (failed(line) && paramKey == "line") {
+      line = FieldParser<uint32_t>::parse(parser);
+      if (failed(line)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'line'");
+      }
+    } else if (failed(scope) && paramKey == "scope") {
+      scope = FieldParser<DIScopeAttr>::parse(parser);
+      if (failed(scope)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'scope'");
+      }
+    } else if (failed(baseType) && paramKey == "baseType") {
+      baseType = FieldParser<DITypeAttr>::parse(parser);
+      if (failed(baseType)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'baseType'");
+      }
+    } else if (failed(flags) && paramKey == "flags") {
+      flags = FieldParser<DIFlags>::parse(parser);
+      if (failed(flags)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'flags'");
+      }
+    } else if (failed(sizeInBits) && paramKey == "sizeInBits") {
+      sizeInBits = FieldParser<uint32_t>::parse(parser);
+      if (failed(sizeInBits)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'sizeInBits'");
+      }
+    } else if (failed(alignInBits) && paramKey == "alignInBits") {
+      alignInBits = FieldParser<uint32_t>::parse(parser);
+      if (failed(alignInBits)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "failed to parse parameter 'alignInBits'");
+      }
+    } else {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unknown parameter '")
+             << paramKey << "'";
+    }
+    return success();
+  };
+
+  // Begin parsing.
+  if (parser.parseLess()) {
+    parser.emitError(parser.getCurrentLocation(), "expected `<`");
+    return {};
+  }
+
+  // First, attempt to parse the identifier attribute.
+  const OptionalParseResult idResult =
+      parser.parseOptionalAttribute(identifier);
+  if (idResult.has_value() && succeeded(*idResult)) {
+    if (succeeded(parser.parseOptionalGreater())) {
+      DICompositeTypeAttr result =
+          getIdentified(parser.getContext(), identifier);
+      // Cyclic parsing should not initiate with only the identifier. Only
+      // nested instances should terminate early.
+      if (succeeded(parser.tryStartCyclicParse(result))) {
+        parser.emitError(parser.getCurrentLocation(),
+                         "Expected identified attribute to contain at least "
+                         "one other parameter");
+        return {};
+      }
+      return result;
+    }
+
+    if (parser.parseComma()) {
+      parser.emitError(parser.getCurrentLocation(), "Expected `,`");
+    }
+  }
+
+  // Parse immutable parameters.
+  if (parser.parseCommaSeparatedList(paramParser)) {
+    return {};
+  }
+
+  if (identifier) {
+    // Create the identified attribute.
+    DICompositeTypeAttr result =
+        get(parser.getContext(), identifier, tag.value_or(0),
+            name.value_or(StringAttr()), file.value_or(DIFileAttr()),
+            line.value_or(0), scope.value_or(DIScopeAttr()),
+            baseType.value_or(DITypeAttr()), flags.value_or(DIFlags::Zero),
+            sizeInBits.value_or(0), alignInBits.value_or(0));
+
+    // Initiate cyclic parsing.
+    if (cyclicParse = parser.tryStartCyclicParse(result); failed(cyclicParse)) {
+      return {};
+    }
+  }
+
+  // Parse the elements now.
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseCommaSeparatedList([&]() -> LogicalResult {
+          Attribute attr;
+          if (parser.parseAttribute(attr)) {
+            return parser.emitError(parser.getCurrentLocation(),
+                                    "expected attribute");
+          }
+          elements.push_back(mlir::cast<DINodeAttr>(attr));
+          return success();
+        })) {
+      return {};
+    }
+
+    if (parser.parseRParen()) {
+      parser.emitError(parser.getCurrentLocation(), "expected `)");
+      return {};
+    }
+  }
+
+  // Expect the attribute to terminate.
+  if (parser.parseGreater()) {
+    parser.emitError(parser.getCurrentLocation(), "expected `>`");
+    return {};
+  }
+
+  if (!identifier)
+    return get(loc.getContext(), tag.value_or(0), name.value_or(StringAttr()),
+               file.value_or(DIFileAttr()), line.value_or(0),
+               scope.value_or(DIScopeAttr()), baseType.value_or(DITypeAttr()),
+               flags.value_or(DIFlags::Zero), sizeInBits.value_or(0),
+               alignInBits.value_or(0), elements);
+
+  // Replace the elements if the attribute is identified.
+  DICompositeTypeAttr result = getIdentified(parser.getContext(), identifier);
+  result.replaceElements(elements);
+  return result;
+}
+
+void DICompositeTypeAttr::print(AsmPrinter &printer) const {
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint;
+  SmallVector<std::function<void()>> valuePrinters;
+  printer << "<";
+  if (getImpl()->isIdentified()) {
+    cyclicPrint = printer.tryStartCyclicPrint(*this);
+    if (failed(cyclicPrint)) {
+      printer << getIdentifier() << ">";
+      return;
+    }
+    valuePrinters.push_back([&]() { printer << getIdentifier(); });
+  }
+
+  if (getTag() > 0) {
+    valuePrinters.push_back(
+        [&]() {
+          printer << "tag = " << llvm::dwarf::TagString(getTag());
+        });
+  }
+
+  if (getName()) {
+    valuePrinters.push_back([&]() {
+
+
+
+      printer << "name = ";
+      printer.printStrippedAttrOrType(getName());
+    });
+  }
+
+  if (getFile()) {
+    valuePrinters.push_back([&]() {
+      printer << "file = ";
+      printer.printStrippedAttrOrType(getFile());
+    });
+  }
+
+  if (getLine() > 0) {
+    valuePrinters.push_back([&]() {
+      printer << "line = ";
+      printer.printStrippedAttrOrType(getLine());
+    });
+  }
+
+  if (getScope()) {
+    valuePrinters.push_back([&]() {
+      printer << "scope = ";
+      printer.printStrippedAttrOrType(getScope());
+    });
+  }
+
+  if (getBaseType()) {
+    valuePrinters.push_back([&]() {
+      printer << "baseType = ";
+      printer.printStrippedAttrOrType(getBaseType());
+    });
+  }
+
+  if (getFlags() != DIFlags::Zero) {
+    valuePrinters.push_back([&]() {
+      printer << "flags = ";
+      printer.printStrippedAttrOrType(getFlags());
+    });
+  }
+
+  if (getSizeInBits() > 0) {
+    valuePrinters.push_back([&]() {
+      printer << "sizeInBits = ";
+      printer.printStrippedAttrOrType(getSizeInBits());
+    });
+  }
+
+  if (getAlignInBits() > 0) {
+    valuePrinters.push_back([&]() {
+      printer << "alignInBits = ";
+      printer.printStrippedAttrOrType(getAlignInBits());
+    });
+  }
+  interleaveComma(valuePrinters, printer,
+                  [&](const std::function<void()> &fn) { fn(); });
+
+  if (!getElements().empty()) {
+    printer << " (";
+    printer.printStrippedAttrOrType(getElements());
+    printer << ")";
+  }
+  printer << ">";
+}
+
+DICompositeTypeAttr DICompositeTypeAttr::getIdentified(MLIRContext *context,
+                                                       StringAttr identifier) {
+  return Base::get(context, 0, StringAttr(), DIFileAttr(), 0, DIScopeAttr(),
+                   DITypeAttr(), DIFlags::Zero, 0, 0, ArrayRef<DINodeAttr>(),
+                   identifier);
+}
+
+void DICompositeTypeAttr::replaceElements(
+    const ArrayRef<DINodeAttr> &elements) {
+  (void)Base::mutate(elements);
 }

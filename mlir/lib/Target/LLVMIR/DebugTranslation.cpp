@@ -118,10 +118,6 @@ static DINodeT *getDistinctOrUnique(bool isDistinct, Ts &&...args) {
 
 llvm::DICompositeType *
 DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
-  SmallVector<llvm::Metadata *> elements;
-  for (auto member : attr.getElements())
-    elements.push_back(translate(member));
-
   // TODO: Use distinct attributes to model this, once they have landed.
   // Depending on the tag, composite types must be distinct.
   bool isDistinct = false;
@@ -133,15 +129,31 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
     isDistinct = true;
   }
 
-  return getDistinctOrUnique<llvm::DICompositeType>(
+  // Create the composite type metadata first with an empty set of elements.
+  llvm::DICompositeType *result = getDistinctOrUnique<llvm::DICompositeType>(
       isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
       translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      llvm::MDNode::get(llvmCtx, elements),
+      llvm::MDNode::get(llvmCtx, {}),
       /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
+
+  // Short-circuit the mapping for this attribute to prevent infinite recursion
+  // if this composite type is encountered while translating the elements.
+  attrToNode[attr] = result;
+
+  // Translate the elements.
+  SmallVector<llvm::Metadata*> elements;
+  for (const DINodeAttr member : attr.getElements())
+    elements.push_back(translate(member));
+
+  // Replace the elements in the resulting metadata.
+  result->replaceElements(llvm::MDTuple::get(llvmCtx, elements));
+
+  // Return the composite type.
+  return result;
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {

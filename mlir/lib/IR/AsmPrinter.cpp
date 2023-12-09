@@ -744,6 +744,7 @@ private:
     printAttribute(attr);
   }
   LogicalResult printAlias(Attribute attr) override {
+
     initializer.visit(attr);
     return success();
   }

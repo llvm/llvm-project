@@ -352,27 +352,6 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
 }
 
 //===----------------------------------------------------------------------===//
-// DICompositeTypeAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
-                                         /*traits=*/[], "DITypeAttr"> {
-  let parameters = (ins
-    LLVM_DITagParameter:$tag,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"DIFileAttr">:$file,
-    OptionalParameter<"uint32_t">:$line,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"DITypeAttr">:$baseType,
-    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    OptionalParameter<"uint64_t">:$sizeInBits,
-    OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements
-  );
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-//===----------------------------------------------------------------------===//
 // DIDerivedTypeAttr
 //===----------------------------------------------------------------------===//
 
@@ -682,6 +661,61 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DICompositeTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
+                                         /*traits=*/[NativeTypeTrait<"IsMutable">], "DITypeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"unsigned">:$tag,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"uint32_t">:$line,
+    OptionalParameter<"DIScopeAttr">:$scope,
+    OptionalParameter<"DITypeAttr">:$baseType,
+    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint64_t">:$alignInBits,
+    OptionalArrayRefParameter<"DINodeAttr">:$elements,
+    OptionalParameter<"StringAttr">:$identifier
+  );
+  let hasCustomAssemblyFormat = 1;
+  let genStorageClass = 0;
+  let storageClass = "DICompositeTypeAttrStorage";
+  let builders = [
+    AttrBuilder<(ins
+        "unsigned":$tag,
+        "StringAttr":$name,
+        "DIFileAttr":$file,
+        "uint32_t":$line,
+        "DIScopeAttr":$scope,
+        "DITypeAttr":$baseType,
+        "DIFlags":$flags,
+        "uint64_t":$sizeInBits,
+        "uint64_t":$alignInBits,
+        "::llvm::ArrayRef<DINodeAttr>":$elements
+    )>,
+    AttrBuilder<(ins
+        "StringAttr":$identifier,
+        "unsigned":$tag,
+        "StringAttr":$name,
+        "DIFileAttr":$file,
+        "uint32_t":$line,
+        "DIScopeAttr":$scope,
+        "DITypeAttr":$baseType,
+        "DIFlags":$flags,
+        "uint64_t":$sizeInBits,
+        "uint64_t":$alignInBits,
+        CArg<"::llvm::ArrayRef<DINodeAttr>", "{}">:$elements
+    )>
+  ];
+  let extraClassDeclaration = [{
+    static DICompositeTypeAttr getIdentified(MLIRContext *context, StringAttr identifier);
+    void replaceElements(const ArrayRef<DINodeAttr>& elements);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
