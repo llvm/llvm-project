@@ -5,11 +5,15 @@
 # RUN: mkdir %t
 # RUN: ln -s llvm-ar %t/llvm-ar-9
 # RUN: ln -s llvm-ar %t/ar.exe
+# RUN: ln -s llvm-ar %t/x86_64-portbld-freebsd13.2-llvm-ar
+# RUN: ln -s llvm-ar %t/x86_64-portbld-freebsd13.2-llvm-ar.exe
 # RUN: ln -s llvm-ar %t/arm-pokymllib32-linux-gnueabi-llvm-ar-9
 
 # RUN: llvm-ar h | FileCheck %s --check-prefix=DEFAULT
 # RUN: %t/llvm-ar-9 h | FileCheck %s --check-prefix=VERSION
 # RUN: %t/ar.exe h | FileCheck %s --check-prefix=SUFFIX
+# RUN: %t/x86_64-portbld-freebsd13.2-llvm-ar h | FileCheck %s --check-prefix=TARGETDOT
+# RUN: %t/x86_64-portbld-freebsd13.2-llvm-ar.exe h | FileCheck %s --check-prefix=TARGETDOT
 ## Ensure that the "lib" substring does not result in misidentification as the
 ## llvm-lib tool.
 # RUN: %t/arm-pokymllib32-linux-gnueabi-llvm-ar-9 h | FileCheck %s --check-prefix=ARM
@@ -17,4 +21,5 @@
 # DEFAULT: USAGE: llvm-ar{{ }}
 # VERSION: USAGE: llvm-ar-9{{ }}
 # SUFFIX: USAGE: ar{{ }}
+# TARGETDOT: USAGE: x86_64-portbld-freebsd13.2-llvm-ar{{ }}
 # ARM: USAGE: arm-pokymllib32-linux-gnueabi-llvm-ar-9{{ }}

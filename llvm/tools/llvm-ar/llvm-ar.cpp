@@ -1508,7 +1508,8 @@ int llvm_ar_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  Stem = sys::path::stem(ToolName);
+  Stem = sys::path::program_name(ToolName);
+
   auto Is = [](StringRef Tool) {
     // We need to recognize the following filenames.
     //

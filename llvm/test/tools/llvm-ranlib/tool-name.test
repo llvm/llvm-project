@@ -5,11 +5,14 @@
 # RUN: mkdir %t
 # RUN: ln -s llvm-ranlib %t/llvm-ranlib-9
 # RUN: ln -s llvm-ranlib %t/ranlib.exe
+# RUN: ln -s llvm-ranlib %t/x86_64-unknown-freebsd13.2-llvm-ranlib
 
 # RUN: llvm-ranlib -h | FileCheck %s --check-prefix=DEFAULT
 # RUN: %t/llvm-ranlib-9 -h | FileCheck %s --check-prefix=VERSION
 # RUN: %t/ranlib.exe -h | FileCheck %s --check-prefix=SUFFIX
+# RUN: %t/x86_64-unknown-freebsd13.2-llvm-ranlib -h | FileCheck %s --check-prefix=TRIPLE
 
 # DEFAULT: USAGE: llvm-ranlib{{ }}
 # VERSION: USAGE: llvm-ranlib-9{{ }}
 # SUFFIX: USAGE: ranlib{{ }}
+# TRIPLE: USAGE: x86_64-unknown-freebsd13.2-llvm-ranlib{{ }}

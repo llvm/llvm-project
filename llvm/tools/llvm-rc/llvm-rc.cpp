@@ -276,7 +276,7 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
 }
 
 static std::pair<bool, std::string> isWindres(llvm::StringRef Argv0) {
-  StringRef ProgName = llvm::sys::path::stem(Argv0);
+  StringRef ProgName = sys::path::program_name(Argv0);
   // x86_64-w64-mingw32-windres -> x86_64-w64-mingw32, windres
   // llvm-rc -> "", llvm-rc
   // aarch64-w64-mingw32-llvm-windres-10.exe -> aarch64-w64-mingw32, llvm-windres

@@ -657,7 +657,7 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
     return 0;
   }
 
-  if (sys::path::stem(argv[0]).contains("readelf"))
+  if (sys::path::filename(argv[0]).contains("readelf"))
     opts::Output = opts::GNU;
   parseOptions(Args);
 

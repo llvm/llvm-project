@@ -754,7 +754,7 @@ int main(int argc, char const *argv[]) {
   ArrayRef<const char *> arg_arr = ArrayRef(argv + 1, argc - 1);
   opt::InputArgList input_args =
       T.ParseArgs(arg_arr, MissingArgIndex, MissingArgCount);
-  llvm::StringRef argv0 = llvm::sys::path::filename(argv[0]);
+  llvm::StringRef argv0 = llvm::sys::path::program_name(argv[0]);
 
   if (input_args.hasArg(OPT_help)) {
     printHelp(T, argv0);
