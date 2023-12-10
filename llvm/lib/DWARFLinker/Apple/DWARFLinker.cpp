@@ -2643,19 +2643,22 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
 void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
   OutDwarfStreamer->emitSectionContents(
-      Dwarf.getDWARFObj().getLocSection().Data, "debug_loc");
+      Dwarf.getDWARFObj().getLocSection().Data, DebugSectionKind::DebugLoc);
   OutDwarfStreamer->emitSectionContents(
-      Dwarf.getDWARFObj().getRangesSection().Data, "debug_ranges");
+      Dwarf.getDWARFObj().getRangesSection().Data,
+      DebugSectionKind::DebugRange);
   OutDwarfStreamer->emitSectionContents(
-      Dwarf.getDWARFObj().getFrameSection().Data, "debug_frame");
+      Dwarf.getDWARFObj().getFrameSection().Data, DebugSectionKind::DebugFrame);
   OutDwarfStreamer->emitSectionContents(Dwarf.getDWARFObj().getArangesSection(),
-                                        "debug_aranges");
+                                        DebugSectionKind::DebugARanges);
   OutDwarfStreamer->emitSectionContents(
-      Dwarf.getDWARFObj().getAddrSection().Data, "debug_addr");
+      Dwarf.getDWARFObj().getAddrSection().Data, DebugSectionKind::DebugAddr);
   OutDwarfStreamer->emitSectionContents(
-      Dwarf.getDWARFObj().getRnglistsSection().Data, "debug_rnglists");
+      Dwarf.getDWARFObj().getRnglistsSection().Data,
+      DebugSectionKind::DebugRngLists);
   OutDwarfStreamer->emitSectionContents(
-      Dwarf.getDWARFObj().getLoclistsSection().Data, "debug_loclists");
+      Dwarf.getDWARFObj().getLoclistsSection().Data,
+      DebugSectionKind::DebugLocLists);
 }
 
 void DWARFLinker::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,

@@ -352,7 +352,7 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
             dwarflinker::dwarflinker_parallel::SectionDescriptorBase>
                 Section) {
           (*Streamer)->emitSectionContents(Section->getContent(),
-                                           Section->getName());
+                                           Section->getKind());
         });
 
   DebugInfoLinker->setEstimatedObjfilesAmount(1);

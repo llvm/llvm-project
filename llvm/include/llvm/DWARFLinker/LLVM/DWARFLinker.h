@@ -89,53 +89,6 @@ namespace llvm {
 namespace dwarflinker {
 namespace dwarflinker_parallel {
 
-/// List of tracked debug tables.
-enum class DebugSectionKind : uint8_t {
-  DebugInfo = 0,
-  DebugLine,
-  DebugFrame,
-  DebugRange,
-  DebugRngLists,
-  DebugLoc,
-  DebugLocLists,
-  DebugARanges,
-  DebugAbbrev,
-  DebugMacinfo,
-  DebugMacro,
-  DebugAddr,
-  DebugStr,
-  DebugLineStr,
-  DebugStrOffsets,
-  DebugPubNames,
-  DebugPubTypes,
-  DebugNames,
-  AppleNames,
-  AppleNamespaces,
-  AppleObjC,
-  AppleTypes,
-  NumberOfEnumEntries // must be last
-};
-
-static constexpr size_t SectionKindsNum =
-    static_cast<size_t>(DebugSectionKind::NumberOfEnumEntries);
-
-static constexpr StringLiteral SectionNames[SectionKindsNum] = {
-    "debug_info",     "debug_line",     "debug_frame",       "debug_ranges",
-    "debug_rnglists", "debug_loc",      "debug_loclists",    "debug_aranges",
-    "debug_abbrev",   "debug_macinfo",  "debug_macro",       "debug_addr",
-    "debug_str",      "debug_line_str", "debug_str_offsets", "debug_pubnames",
-    "debug_pubtypes", "debug_names",    "apple_names",       "apple_namespac",
-    "apple_objc",     "apple_types"};
-
-/// Return the name of the section.
-static constexpr const StringLiteral &
-getSectionName(DebugSectionKind SectionKind) {
-  return SectionNames[static_cast<uint8_t>(SectionKind)];
-}
-
-/// Recognise the table name and match it with the DebugSectionKind.
-std::optional<DebugSectionKind> parseDebugTableName(StringRef Name);
-
 /// This structure keeps data of the concrete section.
 struct SectionDescriptorBase {
   SectionDescriptorBase(DebugSectionKind SectionKind, dwarf::FormParams Format,

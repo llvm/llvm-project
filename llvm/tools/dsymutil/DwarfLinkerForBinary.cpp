@@ -676,7 +676,7 @@ bool DwarfLinkerForBinary::linkImpl(
           [&](std::shared_ptr<dwarflinker_parallel::SectionDescriptorBase>
                   Section) {
             Streamer->emitSectionContents(Section->getContent(),
-                                          Section->getName());
+                                          Section->getKind());
           });
   }
 

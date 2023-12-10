@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMDWARFLinkerBase
+  DWARFLinkerBase.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -8,6 +9,7 @@ add_llvm_component_library(LLVMDWARFLinkerBase
   intrinsics_gen
 
   LINK_COMPONENTS
+  Support
   )
 
 add_subdirectory(Apple)

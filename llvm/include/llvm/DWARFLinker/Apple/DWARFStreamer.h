@@ -85,7 +85,7 @@ public:
                    unsigned DwarfVersion);
 
   /// Emit contents of section SecName From Obj.
-  void emitSectionContents(StringRef SecData, StringRef SecName);
+  void emitSectionContents(StringRef SecData, DebugSectionKind SecKind);
 
   /// Emit the string table described by \p Pool into .debug_str table.
   void emitStrings(const NonRelocatableStringpool &Pool);
@@ -207,7 +207,7 @@ protected:
       WarningHandler(Warning, Context, nullptr);
   }
 
-  MCSection *switchSection(StringRef SecName);
+  MCSection *getMCSection(DebugSectionKind SecKind);
 
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
                           const Offset2UnitMap &UnitMacroMap,

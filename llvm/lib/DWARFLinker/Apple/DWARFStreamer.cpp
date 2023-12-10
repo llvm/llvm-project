@@ -228,49 +228,67 @@ void DwarfStreamer::emitDIE(DIE &Die) {
 }
 
 /// Emit contents of section SecName From Obj.
-void DwarfStreamer::emitSectionContents(StringRef SecData, StringRef SecName) {
+void DwarfStreamer::emitSectionContents(StringRef SecData,
+                                        DebugSectionKind SecKind) {
   if (SecData.empty())
     return;
 
-  if (MCSection *Section = switchSection(SecName)) {
+  if (MCSection *Section = getMCSection(SecKind)) {
     MS->switchSection(Section);
 
     MS->emitBytes(SecData);
   }
 }
 
-MCSection *DwarfStreamer::switchSection(StringRef SecName) {
-  return StringSwitch<MCSection *>(SecName)
-      .Case("debug_info", MC->getObjectFileInfo()->getDwarfInfoSection())
-      .Case("debug_abbrev", MC->getObjectFileInfo()->getDwarfAbbrevSection())
-      .Case("debug_line", MC->getObjectFileInfo()->getDwarfLineSection())
-      .Case("debug_loc", MC->getObjectFileInfo()->getDwarfLocSection())
-      .Case("debug_ranges", MC->getObjectFileInfo()->getDwarfRangesSection())
-      .Case("debug_frame", MC->getObjectFileInfo()->getDwarfFrameSection())
-      .Case("debug_aranges", MC->getObjectFileInfo()->getDwarfARangesSection())
-      .Case("debug_rnglists",
-            MC->getObjectFileInfo()->getDwarfRnglistsSection())
-      .Case("debug_loclists",
-            MC->getObjectFileInfo()->getDwarfLoclistsSection())
-      .Case("debug_macro", MC->getObjectFileInfo()->getDwarfMacroSection())
-      .Case("debug_macinfo", MC->getObjectFileInfo()->getDwarfMacinfoSection())
-      .Case("debug_addr", MC->getObjectFileInfo()->getDwarfAddrSection())
-      .Case("debug_str", MC->getObjectFileInfo()->getDwarfStrSection())
-      .Case("debug_line_str", MC->getObjectFileInfo()->getDwarfLineStrSection())
-      .Case("debug_str_offsets",
-            MC->getObjectFileInfo()->getDwarfStrOffSection())
-      .Case("debug_pubnames",
-            MC->getObjectFileInfo()->getDwarfPubNamesSection())
-      .Case("debug_pubtypes",
-            MC->getObjectFileInfo()->getDwarfPubTypesSection())
-      .Case("debug_names", MC->getObjectFileInfo()->getDwarfDebugNamesSection())
-      .Case("apple_names", MC->getObjectFileInfo()->getDwarfAccelNamesSection())
-      .Case("apple_namespac",
-            MC->getObjectFileInfo()->getDwarfAccelNamespaceSection())
-      .Case("apple_objc", MC->getObjectFileInfo()->getDwarfAccelObjCSection())
-      .Case("apple_types", MC->getObjectFileInfo()->getDwarfAccelTypesSection())
+MCSection *DwarfStreamer::getMCSection(DebugSectionKind SecKind) {
+  switch (SecKind) {
+  case DebugSectionKind::DebugInfo:
+    return MC->getObjectFileInfo()->getDwarfInfoSection();
+  case DebugSectionKind::DebugLine:
+    return MC->getObjectFileInfo()->getDwarfLineSection();
+  case DebugSectionKind::DebugFrame:
+    return MC->getObjectFileInfo()->getDwarfFrameSection();
+  case DebugSectionKind::DebugRange:
+    return MC->getObjectFileInfo()->getDwarfRangesSection();
+  case DebugSectionKind::DebugRngLists:
+    return MC->getObjectFileInfo()->getDwarfRnglistsSection();
+  case DebugSectionKind::DebugLoc:
+    return MC->getObjectFileInfo()->getDwarfLocSection();
+  case DebugSectionKind::DebugLocLists:
+    return MC->getObjectFileInfo()->getDwarfLoclistsSection();
+  case DebugSectionKind::DebugARanges:
+    return MC->getObjectFileInfo()->getDwarfARangesSection();
+  case DebugSectionKind::DebugAbbrev:
+    return MC->getObjectFileInfo()->getDwarfAbbrevSection();
+  case DebugSectionKind::DebugMacinfo:
+    return MC->getObjectFileInfo()->getDwarfMacinfoSection();
+  case DebugSectionKind::DebugMacro:
+    return MC->getObjectFileInfo()->getDwarfMacroSection();
+  case DebugSectionKind::DebugAddr:
+    return MC->getObjectFileInfo()->getDwarfAddrSection();
+  case DebugSectionKind::DebugStr:
+    return MC->getObjectFileInfo()->getDwarfStrSection();
+  case DebugSectionKind::DebugLineStr:
+    return MC->getObjectFileInfo()->getDwarfLineStrSection();
+  case DebugSectionKind::DebugStrOffsets:
+    return MC->getObjectFileInfo()->getDwarfStrOffSection();
+  case DebugSectionKind::DebugPubNames:
+    return MC->getObjectFileInfo()->getDwarfPubNamesSection();
+  case DebugSectionKind::DebugPubTypes:
+    return MC->getObjectFileInfo()->getDwarfPubTypesSection();
+  case DebugSectionKind::DebugNames:
+    return MC->getObjectFileInfo()->getDwarfDebugNamesSection();
+  case DebugSectionKind::AppleNames:
+    return MC->getObjectFileInfo()->getDwarfAccelNamesSection();
+  case DebugSectionKind::AppleNamespaces:
+    return MC->getObjectFileInfo()->getDwarfAccelNamespaceSection();
+  case DebugSectionKind::AppleObjC:
+    return MC->getObjectFileInfo()->getDwarfAccelObjCSection();
+  case DebugSectionKind::AppleTypes:
+    return MC->getObjectFileInfo()->getDwarfAccelTypesSection();
+  }
 
-      .Default(nullptr);
+  return nullptr;
 }
 
 /// Emit the debug_str section stored in \p Pool.
