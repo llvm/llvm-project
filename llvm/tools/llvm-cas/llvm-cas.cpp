@@ -536,7 +536,7 @@ Error checkCASIngestPath(StringRef CASPath, StringRef DataPath) {
     return createFileError(CASPath, EC);
   if (std::error_code EC = sys::fs::real_path(StringRef(DataPath), RealData))
     return createFileError(CASPath, EC);
-  if (RealCAS.startswith(RealData) &&
+  if (RealCAS.starts_with(RealData) &&
       (RealCAS.size() == RealData.size() ||
        sys::path::is_separator(RealCAS[RealData.size()])))
     return createStringError(inconvertibleErrorCode(),

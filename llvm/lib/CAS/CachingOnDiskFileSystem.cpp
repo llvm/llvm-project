@@ -582,7 +582,7 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
   // TrackNonRealPathEntries because we're navigating a real path.
   StringRef ExpectedPrefix =
       StringRef(ExpectedRealPath).drop_back(Remaining.size());
-  if (RealPath.startswith(ExpectedPrefix))
+  if (RealPath.starts_with(ExpectedPrefix))
     State = FileSystemCache::LookupPathState(
         From, RealPath.substr(ExpectedPrefix.size()));
   else
