@@ -16,6 +16,7 @@
 #ifndef MODULE_ANALYSIS
 #define MODULE_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis, ())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #undef MODULE_ANALYSIS
 
@@ -29,6 +30,7 @@ MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass, ())
 #ifndef FUNCTION_ANALYSIS
 #define FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis, ())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
                   (std::move(TM.getTargetIRAnalysis())))
