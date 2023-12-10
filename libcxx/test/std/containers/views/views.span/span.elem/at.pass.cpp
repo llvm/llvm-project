@@ -73,10 +73,11 @@ void test_exceptions() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   // With static extent
   {
-    const std::array arr{1, 2, 3, 4};
+    std::array arr{1, 2, 3, 4};
+    const std::span arrSpan{arr};
 
     try {
-      TEST_IGNORE_NODISCARD arr.at(4);
+      TEST_IGNORE_NODISCARD arrSpan.at(4);
       assert(false);
     } catch (std::out_of_range const&) {
       // pass
@@ -86,10 +87,11 @@ void test_exceptions() {
   }
 
   {
-    const std::array<int, 0> arr{};
+    std::array<int, 0> arr{};
+    const std::span arrSpan{arr};
 
     try {
-      TEST_IGNORE_NODISCARD arr.at(0);
+      TEST_IGNORE_NODISCARD arrSpan.at(0);
       assert(false);
     } catch (std::out_of_range const&) {
       // pass
@@ -101,7 +103,8 @@ void test_exceptions() {
   // With dynamic extent
 
   {
-    const std::vector vec{1, 2, 3, 4};
+    std::vector vec{1, 2, 3, 4};
+    const std::span vecSpan{vec};
 
     try {
       TEST_IGNORE_NODISCARD vec.at(4);
@@ -114,7 +117,8 @@ void test_exceptions() {
   }
 
   {
-    const std::vector<int> vec{};
+    std::vector<int> vec{};
+    const std::span vecSpan{vec};
 
     try {
       TEST_IGNORE_NODISCARD vec.at(0);
