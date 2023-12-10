@@ -509,7 +509,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   std::string CodeModel = getTargetOpts().CodeModel;
   if (CodeModel == "default") {
-    if (getTriple().isWindowsCygwinEnvironment() && getTriple().getArch() == llvm::Triple::x86_64) {
+    if (getTriple().isWindowsCygwinEnvironment() &&
+        getTriple().getArch() == llvm::Triple::x86_64) {
       CodeModel = "medium";
     } else {
       CodeModel = "small";
