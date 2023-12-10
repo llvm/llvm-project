@@ -28,7 +28,6 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string>
-#include <tuple>
 
 using namespace llvm;
 using llvm::unittest::TempDir;
