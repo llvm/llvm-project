@@ -26454,12 +26454,17 @@ TEST_F(FormatTest, BreakAfterAttributes) {
 
   Style.BreakBeforeBraces = FormatStyle::BS_Attach;
   Style.ReferenceAlignment = FormatStyle::ReferenceAlignmentStyle::RAS_Left;
-  verifyNoChange("struct Foo {\n"
+  verifyFormat("struct Foo {\n"
                  "  [[maybe_unused]]\n"
                  "  void operator+();\n"
                  "};\n"
                  "[[nodiscard]]\n"
                  "Foo& operator-(Foo&);",
+
+                 "struct Foo {\n"
+                 "[[maybe_unused]] void operator+();\n"
+                 "};\n"
+                 "[[nodiscard]] Foo &operator-(Foo&);",
                  Style);
 }
 
