@@ -425,6 +425,47 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
     let regions = (region AnyRegion:$region);
 
+    let skipDefaultBuilders = 1;
+    let builders = [
+      OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$inits, "bool":$channel_first,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, inits,
+          attributes, DepthwiseConvNDOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+            "ValueRange":$inits, "bool":$channel_first,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          inputs, inits, attributes, DepthwiseConvNDOp::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addOperands(operands);
+        $_state.addAttributes(attributes);
+        $_state.addTypes(resultTensorTypes);
+        (void)$_state.addRegion();
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$inits, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute("channel_first", channel_first);
+        $_state.addAttribute("strides", strides);
+        $_state.addAttribute("dilations", dilations);
+        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, inits,
+          attributes, DepthwiseConvNDOp::getRegionBuilder());
+      }]>
+    ];
+
     // TODO: Figure out how to move this to the interface
     let extraClassDeclaration = structuredOpsBaseDecls # [{
       void print(::mlir::OpAsmPrinter &printer) {
