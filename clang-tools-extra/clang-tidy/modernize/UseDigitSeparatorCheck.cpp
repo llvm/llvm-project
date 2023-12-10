@@ -49,7 +49,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (MatchedInteger != nullptr) {
     // Get original literal source text
-    const StringRef OriginalLiteralString = Lexer::getSourceText(
+    const llvm::StringRef OriginalLiteralString = Lexer::getSourceText(
         CharSourceRange::getTokenRange(MatchedInteger->getSourceRange()),
         Source, Context.getLangOpts());
 
@@ -108,11 +108,19 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     }
   } else if (MatchedFloat != nullptr) {
     // Get original literal source text
-    const std::string OriginalLiteralString =
+    const llvm::StringRef OriginalLiteralString =
         Lexer::getSourceText(
             CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()),
-            Source, Context.getLangOpts())
-            .str();
+            Source, Context.getLangOpts());
+
+    // Configure formatting
+    std::string Postfix;
+    if (OriginalLiteralString.ends_with("L") ||
+        OriginalLiteralString.ends_with("l") ||
+        OriginalLiteralString.ends_with("F") ||
+        OriginalLiteralString.ends_with("f")) {
+      Postfix = OriginalLiteralString.back();
+    }
 
     // Get formatting literal text
 
@@ -156,7 +164,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
               return S1 + "\'" + S2;
             })
             .erase(0, 1) +
-        '.' + FormatedFractionalSubString;
+        '.' + FormatedFractionalSubString + Postfix;
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
