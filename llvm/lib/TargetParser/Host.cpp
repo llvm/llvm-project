@@ -1131,10 +1131,16 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   case 23:
     CPU = "znver1";
     *Type = X86::AMDFAM17H;
-    if ((Model >= 0x30 && Model <= 0x3f) || Model == 0x71) {
+    if (Model == 0x31 || Model == 0x60 || Model == 0x68 || Model == 0x71 ||
+        (Model >= 0xA0 && Model <= 0XAf)) {
+      // Family 17h model 31h - Zen2 Rome/Castle Peak
+      // Family 17h model 60h - Zen2 Renoir
+      // Family 17h model 68h - Zen2 Lucienne
+      // Family 17h model 71h - Zen2 Matisse
+      // Family 17h models A0h-Afh - Zen2 Mendocino
       CPU = "znver2";
       *Subtype = X86::AMDFAM17H_ZNVER2;
-      break; // 30h-3fh, 71h: Zen2
+      break;
     }
     if (Model <= 0x0f) {
       *Subtype = X86::AMDFAM17H_ZNVER1;
