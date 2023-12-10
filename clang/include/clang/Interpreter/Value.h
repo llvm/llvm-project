@@ -52,7 +52,8 @@ class ASTContext;
 class Interpreter;
 class QualType;
 
-#if defined(_WIN32)
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
+#if defined(_WIN32) && !(defined(__CYGWIN__) || defined(__MINGW32__))
 // REPL_EXTERNAL_VISIBILITY are symbols that we need to be able to locate
 // at runtime. On Windows, this requires them to be exported from any of the
 // modules loaded at runtime. Marking them as dllexport achieves this; both
@@ -63,7 +64,6 @@ class QualType;
 // statically linked into an EXE, it makes sure that they're exported.
 #define REPL_EXTERNAL_VISIBILITY __declspec(dllexport)
 #elif __has_attribute(visibility)
-#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
 #define REPL_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
 #else
 #define REPL_EXTERNAL_VISIBILITY
