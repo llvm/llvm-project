@@ -12,12 +12,14 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 
 using namespace llvm;
 
@@ -31,12 +33,14 @@ struct WebAssemblyStackTagging : public FunctionPass {
   AAResults *AA = nullptr;
   WebAssemblyStackTagging() : FunctionPass(ID) {}
 
-  void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
-                 uint64_t Size);
-  void untagAlloca(AllocaInst *AI, Instruction *InsertBefore, uint64_t Size);
+  void untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
+                    uint64_t Size, Function* StoreTagDecl,
+                    Type* ArgOp0Type);
 
   bool runOnFunction(Function &) override;
+
 private:
+  Function *F = nullptr;
 #if 1
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -53,45 +57,20 @@ static const inline Align kTagGranuleSize = Align(16);
 
 }
 
-void WebAssemblyStackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
-                                    Value *Ptr, uint64_t Size) {
-
-#if 0
-  auto SetTagZeroFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_settag_zero);
-  auto StgpFunc =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::aarch64_stgp);
-
-  InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
-  bool LittleEndian =
-      Triple(AI->getModule()->getTargetTriple()).isLittleEndian();
-  // Current implementation of initializer merging assumes little endianness.
-  if (MergeInit && !F->hasOptNone() && LittleEndian &&
-      Size < ClMergeInitSizeLimit) {
-    LLVM_DEBUG(dbgs() << "collecting initializers for " << *AI
-                      << ", size = " << Size << "\n");
-    InsertBefore = collectInitializers(InsertBefore, Ptr, Size, IB);
-  }
-
-  IRBuilder<> IRB(InsertBefore);
-  IB.generate(IRB);
-#endif
-}
-
 void WebAssemblyStackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
-                                      uint64_t Size) {
-#if 0
+                                      uint64_t Size, Function* StoreTagDecl,
+                                      Type* ArgOp0Type) {
+
   IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(SetTagFunc, {IRB.CreatePointerCast(AI, IRB.getPtrTy()),
-                              ConstantInt::get(IRB.getInt64Ty(), Size)});
-#endif
+  IRB.CreateCall(StoreTagDecl, {AI,
+                              ConstantInt::get(ArgOp0Type, Size)});
 }
 
 bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
   if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
     return false;
 
-  auto F = &Fn;
+  F = &Fn;
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   memtag::StackInfoBuilder SIB(SSI);
   for (Instruction &I : instructions(F))
@@ -127,43 +106,60 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
     LI = DeleteLI.get();
   }
 
+  Function *RandomTagDecl =
+      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_randomtag);
 
-#if 1
-  int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    int Tag = NextTag;
-    NextTag = (NextTag + 1) % 16;
     IRBuilder<> IRB(Info.AI->getNextNode());
+    Instruction *RandomTagCall =
+          IRB.CreateCall(RandomTagDecl, {Info.AI});
 
+
+    if (Info.AI->hasName())
+      RandomTagCall->setName(Info.AI->getName() + ".tag");
+    Info.AI->replaceAllUsesWith(RandomTagCall);
+    RandomTagCall->setOperand(0, Info.AI);
+  
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
+#if 0
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    3) &&
         !SInfo.CallsReturnTwice;
-#if 0
+#else
+      true;
+#endif
     if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
-      tagAlloca(AI, Start->getNextNode(), Start->getArgOperand(1), Size);
-
-      auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
+      Type *ArgOp0Type = Start->getArgOperand(0)->getType();
+      Function *StoreTagDecl =
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag, 
+          ArgOp0Type);
+      auto TagEnd = [&](Instruction *Node) {
+        untagAlloca(AI, Node, Size, StoreTagDecl, ArgOp0Type);
+      };
       if (!DT || !PDT ||
           !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
                                         SInfo.RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
-    } else {
+    }
+#if 0
+    else {
+
+      // To do
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
@@ -178,9 +174,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
         II->eraseFromParent();
     }
 #endif
-//    LLVM_DEBUG(dbgs() << I << "\n");
   }
-#endif
   return true;
 }
 
