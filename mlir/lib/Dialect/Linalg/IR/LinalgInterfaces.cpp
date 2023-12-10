@@ -638,9 +638,8 @@ enum class MatchConvolutionResult {
 };
 } // namespace mlir::linalg::detail
 
-DenseIntElementsAttr
-mlir::linalg::detail::depthwise_convolution_impl::getStridesAttr(
-    DepthwiseConvolutionOpInterface op) {
+DenseIntElementsAttr mlir::linalg::detail::convolution_impl::getStridesAttr(
+    ConvolutionOpInterface op) {
   auto maybeStridesAttr = op->getAttrOfType<DenseIntElementsAttr>("strides");
   if (!maybeStridesAttr) {
     OpBuilder builder(op.getContext());
@@ -654,9 +653,8 @@ mlir::linalg::detail::depthwise_convolution_impl::getStridesAttr(
   return maybeStridesAttr;
 }
 
-DenseIntElementsAttr
-mlir::linalg::detail::depthwise_convolution_impl::getDilationsAttr(
-    DepthwiseConvolutionOpInterface op) {
+DenseIntElementsAttr mlir::linalg::detail::convolution_impl::getDilationsAttr(
+    ConvolutionOpInterface op) {
   auto maybeDilationsAttr =
       op->getAttrOfType<DenseIntElementsAttr>("dilations");
   if (!maybeDilationsAttr) {
@@ -701,9 +699,9 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
                       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   AffineExpr c = getAffineDimExpr(numSpatial + 1, ctx);
   AffineExpr m = getAffineDimExpr(numSpatial + 2, ctx);
-  SmallVector<AffineExpr> ks(
-      llvm::map_range(llvm::seq<int64_t>(numSpatial + 3, 2 * (numSpatial + 1) + 1),
-                      [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
+  SmallVector<AffineExpr> ks(llvm::map_range(
+      llvm::seq<int64_t>(numSpatial + 3, 2 * (numSpatial + 1) + 1),
+      [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   // Temp subsitute for channel position attr
   int64_t channelPos = (op.getChannelFirst()) ? 1 : numSpatial + 1;
 
@@ -719,8 +717,9 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
   }
   SmallVector<AffineExpr> kExprs(ks);
   inExprs.insert(inExprs.begin() + channelPos, c);
-  kExprs.insert(
-      channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, cm.begin(), cm.end());
+  kExprs.insert(channelPos == 0 ? kExprs.begin()
+                                : kExprs.begin() + channelPos - 1,
+                cm.begin(), cm.end());
   outExprs.insert(outExprs.begin() + channelPos, cm.begin(), cm.end());
 
   cached = Builder(ctx).getAffineMapArrayAttr(

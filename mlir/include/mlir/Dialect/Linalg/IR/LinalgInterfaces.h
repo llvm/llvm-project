@@ -28,6 +28,7 @@ namespace mlir {
 namespace linalg {
 class IteratorTypeAttr;
 class LinalgOp;
+class ConvolutionOpInterface;
 class DepthwiseConvolutionOpInterface;
 
 namespace detail {
@@ -116,10 +117,14 @@ bool isaCopyOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
+// Common implementation for ConvolutionOpInterface
+namespace convolution_impl {
+DenseIntElementsAttr getStridesAttr(ConvolutionOpInterface op);
+DenseIntElementsAttr getDilationsAttr(ConvolutionOpInterface op);
+} // namespace convolution_impl
+
 // Common implementations for DepthwiseConvolutionOpInterface
 namespace depthwise_convolution_impl {
-DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
-DenseIntElementsAttr getDilationsAttr(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIndexingMaps(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
 void regionBuilder(ImplicitLocOpBuilder &b, Block &block,

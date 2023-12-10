@@ -198,6 +198,16 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
       }]
     >,
   ];
+  let extraSharedClassDeclaration = [{
+    // Returns strides attribute.
+    ::mlir::DenseIntElementsAttr getStridesAttr() {
+        return detail::convolution_impl::getStridesAttr($_op);
+    }
+    // Returns dilations attribute.
+    ::mlir::DenseIntElementsAttr getDilationsAttr() {
+        return detail::convolution_impl::getDilationsAttr($_op);
+    }
+  }];
 }
 
 
@@ -931,16 +941,6 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
     // Returns channel first attribute.
     bool getChannelFirst() {
         return (*this)->getAttrOfType<BoolAttr>("channel_first").getValue();
-    }
-  }];
-  let extraSharedClassDeclaration = [{
-    // Returns strides attribute.
-    ::mlir::DenseIntElementsAttr getStridesAttr() {
-        return detail::depthwise_convolution_impl::getStridesAttr($_op);
-    }
-    // Returns dilations attribute.
-    ::mlir::DenseIntElementsAttr getDilationsAttr() {
-        return detail::depthwise_convolution_impl::getDilationsAttr($_op);
     }
   }];
 }
