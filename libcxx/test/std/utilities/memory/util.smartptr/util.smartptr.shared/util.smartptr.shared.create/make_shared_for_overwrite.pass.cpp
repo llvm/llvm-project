@@ -56,7 +56,7 @@ static_assert(!HasMakeSharedForOverwrite<Foo[]>);
 static_assert(!HasMakeSharedForOverwrite<int[], std::size_t, int>);
 static_assert(!HasMakeSharedForOverwrite<Foo[], std::size_t, int>);
 
-constexpr char pattern = 0xDE;
+constexpr char pattern = static_cast<char>(0xDE);
 
 void* operator new(std::size_t count) {
   void* ptr = std::malloc(count);
