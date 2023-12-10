@@ -125,12 +125,13 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     // Get integer and fractional parts of float number
     const std::string::size_type DotPosition = FloatString.find('.');
     const std::string IntegerSubString = FloatString.substr(0, DotPosition);
-    std::string FractionalSubString = FloatString.substr(
-        DotPosition + 1, FloatString.size());
+    std::string FractionalSubString =
+        FloatString.substr(DotPosition + 1, FloatString.size());
 
     // Split integer and fractional parts of float number
     std::reverse(FractionalSubString.begin(), FractionalSubString.end());
-    const std::vector<std::string> PartsOfFloat = {IntegerSubString, FractionalSubString};
+    const std::vector<std::string> PartsOfFloat = {IntegerSubString,
+                                                   FractionalSubString};
     const std::vector<std::string> SplittedIntegerSubString =
         splitStringByGroupSize(PartsOfFloat[0], 3);
     const std::vector<std::string> SplittedFractionalSubString =
@@ -139,13 +140,14 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     // Get formatting literal text
     std::string FormatedFractionalSubString =
         std::accumulate(
-            SplittedFractionalSubString.begin(), SplittedFractionalSubString.end(),
-            std::string(""),
+            SplittedFractionalSubString.begin(),
+            SplittedFractionalSubString.end(), std::string(""),
             [](std::basic_string<char> S1, std::basic_string<char> S2) {
               return S1 + "\'" + S2;
             })
             .erase(0, 1);
-    std::reverse(FormatedFractionalSubString.begin(), FormatedFractionalSubString.end());
+    std::reverse(FormatedFractionalSubString.begin(),
+                 FormatedFractionalSubString.end());
     const std::string FormatedLiteralString =
         std::accumulate(
             SplittedIntegerSubString.begin(), SplittedIntegerSubString.end(),
