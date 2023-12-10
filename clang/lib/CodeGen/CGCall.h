@@ -255,7 +255,7 @@ public:
 
 /// CallArgList - Type for representing both the value and type of
 /// arguments in a call.
-class CallArgList : public SmallVector<CallArg, 8> {
+class CallArgList : public SmallVector<CallArg, 2> {
 public:
   CallArgList() = default;
 
