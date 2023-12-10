@@ -139,8 +139,22 @@ static cl::opt<bool>
     ImportAllIndex("import-all-index",
                    cl::desc("Import all external functions in index."));
 
-static cl::opt<std::string> WorkloadDefinitions("thinlto-workload-def",
-                                                cl::Hidden);
+/// Pass a workload description file - an example of workload would be the
+/// functions executed to satisfy a RPC request. A workload is defined by a root
+/// function and the list of functions that are (frequently) needed to satisfy
+/// it. The module that defines the root will have all those functions imported.
+/// The file contains a JSON dictionary. The keys are root functions, the values
+/// are lists of functions to import in the module defining the root. It is
+/// assumed -funique-internal-linkage-names was used, thus ensuring function
+/// names are unique even for local linkage ones.
+static cl::opt<std::string> WorkloadDefinitions(
+    "thinlto-workload-def",
+    cl::desc("Pass a workload definition. This is a file containing a JSON "
+             "dictionary. The keys are root functions, the values are lists of "
+             "functions to import in the module defining the root. It is "
+             "assumed -funique-internal-linkage-names was used, to ensure "
+             "local linkage functions have unique names."),
+    cl::Hidden);
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
@@ -409,8 +423,11 @@ public:
              nullptr);
 };
 
+/// A ModuleImportsManager that operates based on a workload definition (see
+/// -thinlto-workload-def). For modules that do not define workload roots, it
+/// applies the base ModuleImportsManager import policy.
 class WorkloadImportsManager : public ModuleImportsManager {
-  // Keep a module name -> defined value infos association. We use it to
+  // Keep a module name -> value infos to import association. We use it to
   // determine if a module's import list should be done by the base
   // ModuleImportsManager or by us.
   StringMap<DenseSet<ValueInfo>> Workloads;
@@ -441,6 +458,19 @@ class WorkloadImportsManager : public ModuleImportsManager {
       FunctionImporter::ImportFailureReason LastReason =
           FunctionImporter::ImportFailureReason::None;
       for (const auto &Candidate : Candidates) {
+        /// We will prefer importing the prevailing candidate, if not, we'll
+        /// still pick the first available candidate. The reason we want to make
+        /// sure we do import the prevailing candidate is because the goal of
+        /// workload-awareness is to enable optimizations specializing the call
+        /// graph of that workload. Suppose a function is already defined in the
+        /// module, but it's not the prevailing variant. Suppose also we do not
+        /// inline it, but we could specialize it to the workload in other ways.
+        /// However, the linker would drop it in the favor of the prevailing
+        /// copy. Instead, by importing the prevailing variant (assuming also
+        /// the use of `-avail-extern-to-local`), we keep the specialization. We
+        /// could alteranatively make the non-prevailing variant local, but the
+        /// prevailing one is also the one for which we would have previously
+        /// collected profiles, making it preferrable.
         LastReason = Candidate.first;
         if (Candidate.first == FunctionImporter::ImportFailureReason::None) {
           const bool Prevailing = IsPrevailing(VI.getGUID(), Candidate.second);
@@ -470,7 +500,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
       }
       if (!GVS) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
-                          << " because can't select Callee. Guid is: "
+                          << " because can't find eligible Callee. Guid is: "
                           << Function::getGUID(VI.name())
                           << ". The reason was: " << getFailureName(LastReason)
                           << "\n");
@@ -484,9 +514,10 @@ class WorkloadImportsManager : public ModuleImportsManager {
                              "current module\n");
         continue;
       }
-      if (!shouldImport(DefinedGVSummaries, VI.getGUID(), CFS)) {
-        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
-                          << " because we have a local copy.\n");
+      if (moduleAlreadyHasPreferredDef(DefinedGVSummaries, VI.getGUID(), CFS)) {
+        LLVM_DEBUG(
+            dbgs() << "[Workload] Not importing " << VI.name()
+                   << " because we have a copy already in this module.\n");
         continue;
       }
 
@@ -501,24 +532,26 @@ class WorkloadImportsManager : public ModuleImportsManager {
     LLVM_DEBUG(dbgs() << "[Workload] Done\n");
   }
 
-  bool shouldImport(const GVSummaryMapTy &DefinedGVSummaries,
-                    Function::GUID Guid, const GlobalValueSummary *Candidate) {
+  bool moduleAlreadyHasPreferredDef(const GVSummaryMapTy &DefinedGVSummaries,
+                                    Function::GUID Guid,
+                                    const FunctionSummary *Candidate) {
     auto DefinedSummary = DefinedGVSummaries.find(Guid);
     if (DefinedSummary == DefinedGVSummaries.end())
-      return true;
+      return false;
 
     // See shouldImportGlobal for the justificaton of the isInterposableLinkage.
     if (!IsPrevailing(Guid, DefinedSummary->second) &&
         GlobalValue::isInterposableLinkage(DefinedSummary->second->linkage()) &&
         IsPrevailing(Guid, Candidate)) {
       LLVM_DEBUG(dbgs() << "[Workload] " << Guid
-                        << ": local non-prevailing in module. Importing from "
+                        << ": non-prevailing preexisting definition in module. "
+                           "Importing from "
                         << Candidate->modulePath() << "\n");
-      return true;
+      return false;
     }
     LLVM_DEBUG(dbgs() << "[Workload] " << Guid
                       << ": ignored! Target already in destination module.\n");
-    return false;
+    return true;
   }
 
 public:
@@ -528,11 +561,23 @@ public:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
       : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
-    StringMap<ValueInfo> CtxGuidToValueInfo;
+    // Since the workload def uses names, we need a quick lookup
+    // name->ValueInfo.
+    StringMap<ValueInfo> NameToValueInfo;
+    StringSet<> AmbiguousNames;
     for (auto &I : Index) {
-      ValueInfo VI(Index.haveGVs(), &I);
-      CtxGuidToValueInfo[VI.name()] = VI;
+      ValueInfo VI = Index.getValueInfo(I);
+      if (!NameToValueInfo.insert(std::make_pair(VI.name(), VI)).second)
+        AmbiguousNames.insert(VI.name());
     }
+    auto DbgReportIfAmbiguous = [&](StringRef Name) {
+      if (AmbiguousNames.count(Name) > 0)
+        LLVM_DEBUG(
+            dbgs()
+            << "[Workload] Function name " << Name
+            << " present in the workload definition is ambiguous. Consider "
+               "compiling with -funique-internal-linkage-names.");
+    };
     std::error_code EC;
     auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(WorkloadDefinitions);
     if (std::error_code EC = BufferOrErr.getError()) {
@@ -542,6 +587,8 @@ public:
     auto Buffer = std::move(BufferOrErr.get());
     std::map<std::string, std::vector<std::string>> WorkloadDefs;
     json::Path::Root NullRoot;
+    // The JSON is supposed to contain a dictionary matching the type of
+    // WorkloadDefs.
     auto Parsed = json::parse(Buffer->getBuffer());
     if (!Parsed)
       report_fatal_error(Parsed.takeError());
@@ -549,10 +596,11 @@ public:
       report_fatal_error("Invalid thinlto contextual profile format.");
     for (const auto &Workload : WorkloadDefs) {
       const auto &Root = Workload.first;
+      DbgReportIfAmbiguous(Root);
       LLVM_DEBUG(dbgs() << "[Workload] Root: " << Root << "\n");
       const auto &AllCallees = Workload.second;
-      auto RootIt = CtxGuidToValueInfo.find(Root);
-      if (RootIt == CtxGuidToValueInfo.end()) {
+      auto RootIt = NameToValueInfo.find(Root);
+      if (RootIt == NameToValueInfo.end()) {
         LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
                           << " not found in this linkage unit.\n");
         continue;
@@ -571,16 +619,17 @@ public:
       auto &Set = Workloads[RootDefiningModule];
       for (const auto &Callee : AllCallees) {
         LLVM_DEBUG(dbgs() << "[Workload] " << Callee << "\n");
-        auto ElemIt = CtxGuidToValueInfo.find(Callee);
-        if (ElemIt == CtxGuidToValueInfo.end()) {
+        DbgReportIfAmbiguous(Callee);
+        auto ElemIt = NameToValueInfo.find(Callee);
+        if (ElemIt == NameToValueInfo.end()) {
           LLVM_DEBUG(dbgs() << "[Workload] " << Callee << " not found\n");
           continue;
         }
         Set.insert(ElemIt->second);
       }
-      LLVM_DEBUG(dbgs() << "[Workload] Root: " << Root << " we have "
-                        << Set.size() << " distinct callees.\n");
       LLVM_DEBUG( //
+          dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
+                 << " distinct callees.\n";
           for (const auto &VI
                : Set) {
             dbgs() << "[Workload] Root: " << Root
