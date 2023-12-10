@@ -229,6 +229,7 @@ public:
     return StringSwitch<bool>(Name.lower())
         .Case("if", true)
         .Case("call", true)
+        .Case("callx", true)
         .Case("goto", true)
         .Case("gotol", true)
         .Case("*", true)
