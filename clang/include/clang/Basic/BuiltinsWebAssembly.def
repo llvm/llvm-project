@@ -34,6 +34,10 @@ BUILTIN(__builtin_wasm_memory_storetag, "vv*z", "n")
 BUILTIN(__builtin_wasm_memory_storeztag, "vv*z", "n")
 BUILTIN(__builtin_wasm_memory_store1tag, "vv*z", "n")
 BUILTIN(__builtin_wasm_memory_storez1tag, "vv*z", "n")
+BUILTIN(__builtin_wasm_memory_randomstoretag, "v*v*z", "n")
+BUILTIN(__builtin_wasm_memory_randomstoreztag, "v*v*z", "n")
+BUILTIN(__builtin_wasm_memory_randomstore1tag, "v*v*z", "n")
+BUILTIN(__builtin_wasm_memory_randomstorez1tag, "v*v*z", "n")
 
 // Thread-local storage
 TARGET_BUILTIN(__builtin_wasm_tls_size, "z", "nc", "bulk-memory")

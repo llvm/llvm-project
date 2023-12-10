@@ -81,3 +81,43 @@ void test_builtin_wasm_memory_store1tag(void *p, __SIZE_TYPE__ b16) {
 void test_builtin_wasm_memory_storez1tag(void *p, __SIZE_TYPE__ b16) {
   __builtin_wasm_memory_storez1tag(p, b16);
 }
+
+// CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_memory_randomstoretag
+// CHECK-SAME: (ptr noundef [[INDEX:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    {{[^@]+}}call ptr @llvm.wasm.memory.randomstoretag.i64(ptr [[INDEX:%.*]], i64 [[INDEX:%.*]])
+// CHECK-NEXT:    ret ptr
+//
+void* test_builtin_wasm_memory_randomstoretag(void *p, __SIZE_TYPE__ b16) {
+  return __builtin_wasm_memory_randomstoretag(p, b16);
+}
+
+// CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_memory_randomstoreztag
+// CHECK-SAME: (ptr noundef [[INDEX:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    {{[^@]+}}call ptr @llvm.wasm.memory.randomstoreztag.i64(ptr [[INDEX:%.*]], i64 [[INDEX:%.*]])
+// CHECK-NEXT:    ret ptr
+//
+void* test_builtin_wasm_memory_randomstoreztag(void *p, __SIZE_TYPE__ b16) {
+  return __builtin_wasm_memory_randomstoreztag(p, b16);
+}
+
+// CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_memory_randomstore1tag
+// CHECK-SAME: (ptr noundef [[INDEX:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    {{[^@]+}}call ptr @llvm.wasm.memory.randomstore1tag.i64(ptr [[INDEX:%.*]], i64 [[INDEX:%.*]])
+// CHECK-NEXT:    ret ptr
+//
+void* test_builtin_wasm_memory_randomstore1tag(void *p, __SIZE_TYPE__ b16) {
+  return __builtin_wasm_memory_randomstore1tag(p, b16);
+}
+
+// CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_memory_randomstorez1tag
+// CHECK-SAME: (ptr noundef [[INDEX:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    {{[^@]+}}call ptr @llvm.wasm.memory.randomstorez1tag.i64(ptr [[INDEX:%.*]], i64 [[INDEX:%.*]])
+// CHECK-NEXT:    ret ptr
+//
+void* test_builtin_wasm_memory_randomstorez1tag(void *p, __SIZE_TYPE__ b16) {
+  return __builtin_wasm_memory_randomstorez1tag(p, b16);
+}

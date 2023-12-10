@@ -113,3 +113,63 @@ define void @memory_storez1tag(ptr %p0, i64 %b16) {
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
 declare void @llvm.wasm.memory.storez1tag(ptr, i64)
+
+; CHECK-LABEL: memory_randomstoretag:
+; CHECK-NEXT: .functype memory_randomstoretag (i64, i64) -> (i64)
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: local.get	1
+; CHECK-NEXT: memory.randomstoretag	
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: end_function
+define ptr @memory_randomstoretag(ptr %p0, i64 %b16) {
+  call ptr @llvm.wasm.memory.randomstoretag(ptr %p0, i64 %b16)
+  ret ptr
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
+declare ptr @llvm.wasm.memory.randomstoretag(ptr, i64)
+
+; CHECK-LABEL: memory_randomstoreztag:
+; CHECK-NEXT: .functype memory_randomstoreztag (i64, i64) -> (i64)
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: local.get	1
+; CHECK-NEXT: memory.randomstoreztag	
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: end_function
+define ptr @memory_randomstoreztag(ptr %p0, i64 %b16) {
+  call ptr @llvm.wasm.memory.randomstoreztag(ptr %p0, i64 %b16)
+  ret ptr
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
+declare ptr @llvm.wasm.memory.randomstoreztag(ptr, i64)
+
+; CHECK-LABEL: memory_randomstore1tag:
+; CHECK-NEXT: .functype memory_randomstore1tag (i64, i64) -> (i64)
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: local.get	1
+; CHECK-NEXT: memory.randomstore1tag	
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: end_function
+define ptr @memory_randomstore1tag(ptr %p0, i64 %b16) {
+  call ptr @llvm.wasm.memory.randomstore1tag(ptr %p0, i64 %b16)
+  ret ptr
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
+declare ptr @llvm.wasm.memory.randomstore1tag(ptr, i64)
+
+; CHECK-LABEL: memory_randomstorez1tag:
+; CHECK-NEXT: .functype memory_randomstorez1tag (i64, i64) -> (i64)
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: local.get	1
+; CHECK-NEXT: memory.randomstorez1tag	
+; CHECK-NEXT: local.get	0
+; CHECK-NEXT: end_function
+define ptr @memory_randomstorez1tag(ptr %p0, i64 %b16) {
+  call ptr @llvm.wasm.memory.randomstorez1tag(ptr %p0, i64 %b16)
+  ret ptr
+}
+
+; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
+declare ptr @llvm.wasm.memory.randomstorez1tag(ptr, i64)

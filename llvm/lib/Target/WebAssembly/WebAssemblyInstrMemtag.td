@@ -73,6 +73,38 @@ defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins rc:$src, rc:$b16),
                     "memory.storez1tag\t",
                     0xfc27>;
 
+defm MEMORY_RANDOMSTORETAG_A#B: I<(outs rc:$dst), (ins rc:$src, rc:$b16),
+                    (outs), (ins),
+                    [(set rc:$dst,
+                        (int_wasm_memory_randomstoretag rc:$src, rc:$b16))],
+                    "memory.randomstoretag\t$dst, $src, $b16",
+                    "memory.randomstoretag\t",
+                    0xfc28>;
+
+defm MEMORY_RANDOMSTOREZTAG_A#B: I<(outs rc:$dst), (ins rc:$src, rc:$b16),
+                    (outs), (ins),
+                    [(set rc:$dst,
+                        (int_wasm_memory_randomstoreztag rc:$src, rc:$b16))],
+                    "memory.randomstoreztag\t$dst, $src, $b16",
+                    "memory.randomstoreztag\t",
+                    0xfc29>;
+
+defm MEMORY_RANDOMSTORE1TAG_A#B: I<(outs rc:$dst), (ins rc:$src, rc:$b16),
+                    (outs), (ins),
+                    [(set rc:$dst,
+                        (int_wasm_memory_randomstore1tag rc:$src, rc:$b16))],
+                    "memory.randomstore1tag\t$dst, $src, $b16",
+                    "memory.randomstore1tag\t",
+                    0xfc30>;
+
+defm MEMORY_RANDOMSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins rc:$src, rc:$b16),
+                    (outs), (ins),
+                    [(set rc:$dst,
+                        (int_wasm_memory_randomstorez1tag rc:$src, rc:$b16))],
+                    "memory.randomstorez1tag\t$dst, $src, $b16",
+                    "memory.randomstorez1tag\t",
+                    0xfc31>;
+
 }
 
 defm : MemoryTaggingOps<I32, "32">;

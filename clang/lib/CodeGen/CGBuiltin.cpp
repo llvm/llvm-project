@@ -20564,6 +20564,30 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_storez1tag, B16->getType());
     return Builder.CreateCall(Callee, {Ptr, B16});
   }
+  case WebAssembly::BI__builtin_wasm_memory_randomstoretag: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *B16 = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstoretag, B16->getType());
+    return Builder.CreateCall(Callee, {Ptr, B16});
+  }
+  case WebAssembly::BI__builtin_wasm_memory_randomstoreztag: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *B16 = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstoreztag, B16->getType());
+    return Builder.CreateCall(Callee, {Ptr, B16});
+  }
+  case WebAssembly::BI__builtin_wasm_memory_randomstore1tag: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *B16 = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstore1tag, B16->getType());
+    return Builder.CreateCall(Callee, {Ptr, B16});
+  }
+  case WebAssembly::BI__builtin_wasm_memory_randomstorez1tag: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *B16 = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomstorez1tag, B16->getType());
+    return Builder.CreateCall(Callee, {Ptr, B16});
+  }
   default:
     return nullptr;
   }
