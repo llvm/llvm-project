@@ -17,7 +17,6 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
-class GCNTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
