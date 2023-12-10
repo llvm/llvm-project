@@ -92,6 +92,7 @@ public:
 
     // [span.elem], span element access
     constexpr reference operator[](size_type idx) const;
+    constexpr reference at(size_type idx) const; // since C++26
     constexpr reference front() const;
     constexpr reference back() const;
     constexpr pointer data() const noexcept;
@@ -146,6 +147,9 @@ template<class R>
 #include <__utility/forward.h>
 #include <array>        // for array
 #include <cstddef>      // for byte
+#if _LIBCPP_STD_VER >= 26
+#  include <stdexcept>
+#endif
 #include <version>
 
 // standard-mandated includes
@@ -343,6 +347,15 @@ public:
         return __data_[__idx];
     }
 
+#  if _LIBCPP_STD_VER >= 26
+    _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __idx) const {
+      if (__idx >= size()) {
+        __throw_out_of_range();
+      }
+      return *(data() + __idx);
+    }
+#  endif
+
     _LIBCPP_INLINE_VISIBILITY constexpr reference front() const noexcept
     {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T, N>::front() on empty span");
@@ -383,6 +396,10 @@ public:
 
 private:
     pointer    __data_;
+
+#  if _LIBCPP_STD_VER >= 26
+    _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const { std::__throw_out_of_range("span"); }
+#  endif
 };
 
 
@@ -510,6 +527,15 @@ public:
         return __data_[__idx];
     }
 
+#  if _LIBCPP_STD_VER >= 26
+    _LIBCPP_HIDE_FROM_ABI constexpr reference at(size_type __idx) const {
+      if (__idx >= size()) {
+        __throw_out_of_range();
+      }
+      return *(data() + __idx);
+    }
+#  endif
+
     _LIBCPP_INLINE_VISIBILITY constexpr reference front() const noexcept
     {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "span<T>::front() on empty span");
@@ -552,6 +578,10 @@ public:
 private:
     pointer   __data_;
     size_type __size_;
+
+#  if _LIBCPP_STD_VER >= 26
+    _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range() const { std::__throw_out_of_range("span"); }
+#  endif
 };
 
 template <class _Tp, size_t _Extent>
