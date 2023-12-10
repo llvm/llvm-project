@@ -62,4 +62,47 @@ define void @func_set_rounding_downward() {
   ret void
 }
 
+define i64 @get_fpenv_01() nounwind {
+; CHECK-LABEL: get_fpenv_01:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    bl fegetenv
+; CHECK-NEXT:    ldr x0, [sp, #8]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %fpenv = call i64 @llvm.get.fpenv.i64()
+  ret i64 %fpenv
+}
+
+define void @set_fpenv_01(i64 %fpenv) nounwind {
+; CHECK-LABEL: set_fpenv_01:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp x30, x0, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #8
+; CHECK-NEXT:    bl fesetenv
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.set.fpenv.i64(i64 %fpenv)
+  ret void
+}
+
+define void @reset_fpenv_01() nounwind {
+; CHECK-LABEL: reset_fpenv_01:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov x0, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    bl fesetenv
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.reset.fpenv()
+  ret void
+}
+
 declare void @llvm.set.rounding(i32)
+declare i64 @llvm.get.fpenv.i64()
+declare void @llvm.set.fpenv.i64(i64 %fpenv)
+declare void @llvm.reset.fpenv()
