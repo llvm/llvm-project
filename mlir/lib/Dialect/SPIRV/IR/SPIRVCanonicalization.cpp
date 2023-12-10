@@ -808,6 +808,11 @@ OpFoldResult spirv::ShiftRightLogicalOp::fold(
 
 OpFoldResult
 spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
+  // x & x -> x
+  if (getOperand1() == getOperand2()) {
+    return getOperand1();
+  }
+
   APInt rhsMask;
   if (matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask))) {
     // x & 0 -> 0
@@ -842,6 +847,11 @@ spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::BitwiseOrOp::fold(spirv::BitwiseOrOp::FoldAdaptor adaptor) {
+  // x | x -> x
+  if (getOperand1() == getOperand2()) {
+    return getOperand1();
+  }
+
   APInt rhsMask;
   if (matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask))) {
     // x | 0 -> x
