@@ -517,7 +517,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 9784 bytes
+// R00O-NEXT:  }; // Size: 9880 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -1058,7 +1058,7 @@ def DOUBLE : I<(outs GPR32:$dst), (ins GPR32:$src), [(set GPR32:$dst, (add GPR32
 // - Def operand of the instruction corresponding to the root node of the
 //   pattern's destination
 // - one of operands in the pattern itself
-// does not introduce unexpected GIM_CheckIsSameOperand matcher.
+// does not introduce unexpected GIM_CheckIsSameOperand predicate.
 
 // NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
@@ -1198,5 +1198,5 @@ def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
 
 // NOOPT-NEXT:    GIM_Reject,
-// NOOPT-NEXT:  }; // Size: 11160 bytes
+// NOOPT-NEXT:  }; // Size: 11408 bytes
 // NOOPT-NEXT:  return MatchTable0;
