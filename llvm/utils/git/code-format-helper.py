@@ -12,7 +12,6 @@ import argparse
 import os
 import subprocess
 import sys
-from functools import cached_property
 
 import github
 from github import IssueComment, PullRequest
