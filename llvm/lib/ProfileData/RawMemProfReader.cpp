@@ -536,6 +536,9 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
       EntriesToErase.push_back(Entry.getFirst());
   }
 
+  // Free symbolizer memory now that we are done with it.
+  Symbolizer.reset();
+
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
