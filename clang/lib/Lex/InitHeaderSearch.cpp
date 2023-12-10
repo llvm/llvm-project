@@ -77,11 +77,6 @@ public:
     SystemHeaderPrefixes.emplace_back(std::string(Prefix), IsSystemHeader);
   }
 
-  /// Add the necessary paths to support a MinGW libstdc++.
-  void AddMinGWCPlusPlusIncludePaths(StringRef Base,
-                                     StringRef Arch,
-                                     StringRef Version);
-
   /// Add paths that should always be searched.
   void AddDefaultCIncludePaths(const llvm::Triple &triple,
                                const HeaderSearchOptions &HSOpts);
@@ -184,17 +179,6 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   return false;
 }
 
-void InitHeaderSearch::AddMinGWCPlusPlusIncludePaths(StringRef Base,
-                                                     StringRef Arch,
-                                                     StringRef Version) {
-  AddPath(Base + "/" + Arch + "/" + Version + "/include/c++",
-          CXXSystem, false);
-  AddPath(Base + "/" + Arch + "/" + Version + "/include/c++/" + Arch,
-          CXXSystem, false);
-  AddPath(Base + "/" + Arch + "/" + Version + "/include/c++/backward",
-          CXXSystem, false);
-}
-
 void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
                                             const HeaderSearchOptions &HSOpts) {
   if (!ShouldAddDefaultIncludePaths(triple))
@@ -204,8 +188,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
 
   if (HSOpts.UseStandardSystemIncludes) {
     switch (os) {
-    case llvm::Triple::Win32:
-      break;
     default:
       // FIXME: temporary hack: hard-coded paths.
       AddPath("/usr/local/include", System, false);
@@ -236,14 +218,6 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     for (StringRef dir : dirs)
       AddPath(dir, ExternCSystem, false);
     return;
-  }
-
-  switch (os) {
-  case llvm::Triple::Win32:
-    llvm_unreachable("Include management is handled in the driver.");
-    break;
-  default:
-    break;
   }
 
   AddPath("/usr/include", ExternCSystem, false);
@@ -288,8 +262,6 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::Solaris:
   case llvm::Triple::WASI:
   case llvm::Triple::ZOS:
-    return false;
-
   case llvm::Triple::Win32:
     return false;
 
