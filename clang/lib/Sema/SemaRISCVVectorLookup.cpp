@@ -34,12 +34,6 @@ namespace {
 
 // Function definition of a RVV intrinsic.
 struct RVVIntrinsicDef {
-  /// Full function name with suffix, e.g. vadd_vv_i32m1.
-  std::string Name;
-
-  /// Overloaded function name, e.g. vadd.
-  std::string OverloadName;
-
   /// Mapping to which clang built-in function, e.g. __builtin_rvv_vadd.
   std::string BuiltinName;
 
@@ -393,7 +387,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   // Put into IntrinsicList.
   size_t Index = IntrinsicList.size();
-  IntrinsicList.push_back({Name, OverloadedName, BuiltinName, Signature});
+  IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
   Intrinsics.insert({Name, Index});
