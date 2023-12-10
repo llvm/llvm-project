@@ -8728,7 +8728,13 @@ def err_atomic_op_needs_atomic_int : Error<
   "%select{|atomic }0integer (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "memory order argument to atomic operation is invalid">,
-  InGroup<DiagGroup<"atomic-memory-ordering">>;
+  InGroup<AtomicMemoryOrdering>;
+def warn_atomic_op_has_invalid_failure_memory_order : Warning<
+  "failure memory order argument to atomic operation is invalid">,
+  InGroup<AtomicMemoryOrdering>;
+def warn_atomic_op_failure_memory_order_stronger_than_success : Warning<
+  "failure memory order cannot be stronger than success memory order">,
+  InGroup<AtomicMemoryOrdering>;
 def err_atomic_op_has_invalid_synch_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
 def warn_atomic_implicit_seq_cst : Warning<
