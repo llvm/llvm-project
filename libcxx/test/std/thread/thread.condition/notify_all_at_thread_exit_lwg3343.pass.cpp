@@ -18,7 +18,7 @@
 // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.{{.+}}
 
 // MSVC warning C4583: 'X::cv_': destructor is not implicitly called
-// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4583
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4583
 
 // This is a regression test for LWG3343.
 //

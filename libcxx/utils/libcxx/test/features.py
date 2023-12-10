@@ -66,8 +66,8 @@ def _getAndroidDeviceApi(cfg):
 # Lit features are evaluated in order. Some checks may require the compiler detection to have
 # run first in order to work properly.
 DEFAULT_FEATURES = [
-    # any-clang-or-gcc detects compilers that understand -Wno-meow flags, unlike MSVC's compiler driver cl.exe.
-    Feature(name="any-clang-or-gcc", when=_isAnyClangOrGCC),
+    # gcc-style-warnings detects compilers that understand -Wno-meow flags, unlike MSVC's compiler driver cl.exe.
+    Feature(name="gcc-style-warnings", when=_isAnyClangOrGCC),
     Feature(name="apple-clang", when=_isAppleClang),
     Feature(
         name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),

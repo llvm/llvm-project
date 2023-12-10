@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // MSVC warning C4244: 'argument': conversion from 'const _Ty2' to 'T', possible loss of data
-// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4244
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
 
 // <algorithm>
 

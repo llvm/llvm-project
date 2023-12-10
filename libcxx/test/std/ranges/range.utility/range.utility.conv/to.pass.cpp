@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // MSVC warning C4244: 'argument': conversion from '_Ty' to 'int', possible loss of data
-// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4244
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 

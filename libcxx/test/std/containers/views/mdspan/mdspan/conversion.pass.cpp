@@ -8,7 +8,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // MSVC warning C4244: 'initializing': conversion from '_Ty' to '_Ty', possible loss of data
-// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4244
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
 
 // <mdspan>
 

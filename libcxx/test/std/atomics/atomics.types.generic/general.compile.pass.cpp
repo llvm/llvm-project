@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // MSVC warning C4197: 'volatile std::atomic<operator_hijacker>': top-level volatile in cast is ignored
-// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4197
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4197
 
 // UNSUPPORTED: c++03
 

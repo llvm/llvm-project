@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // MSVC warning C4611: interaction between '_setjmp' and C++ object destruction is non-portable
-// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4611
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4611
 
 // test <setjmp.h>
 //
