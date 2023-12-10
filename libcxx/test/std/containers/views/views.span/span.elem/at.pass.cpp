@@ -15,23 +15,34 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <limits>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "test_macros.h"
 
-constexpr void testSpanAt(auto span, int idx, int expectedValue) {
+constexpr void testSpanAt(auto& container, bool hasDynamicExtent, int index, int expectedValue) {
+  std::span anySpan{container};
+
+  if (hasDynamicExtent) {
+    assert(std::dynamic_extent == anySpan.extent);
+  } else {
+    assert(std::dynamic_extent != anySpan.extent);
+  }
+
   // non-const
   {
-    std::same_as<typename decltype(span)::reference> decltype(auto) elem = span.at(idx);
+    std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = anySpan.at(index);
     assert(elem == expectedValue);
   }
 
   // const
   {
-    std::same_as<typename decltype(span)::reference> decltype(auto) elem = std::as_const(span).at(idx);
+    std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = std::as_const(anySpan).at(index);
     assert(elem == expectedValue);
   }
 }
@@ -39,26 +50,22 @@ constexpr void testSpanAt(auto span, int idx, int expectedValue) {
 constexpr bool test() {
   // With static extent
   {
-    std::array arr{0, 1, 2, 3, 4, 5, 9084};
-    std::span arrSpan{arr};
+    std::array arr{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
 
-    assert(std::dynamic_extent != arrSpan.extent);
-
-    testSpanAt(arrSpan, 0, 0);
-    testSpanAt(arrSpan, 1, 1);
-    testSpanAt(arrSpan, 6, 9084);
+    testSpanAt(arr, false, 0, 0);
+    testSpanAt(arr, false, 1, 1);
+    testSpanAt(arr, false, 6, 9084);
+    testSpanAt(arr, false, 7, std::numeric_limits<int>::max());
   }
 
   // With dynamic extent
   {
-    std::vector vec{0, 1, 2, 3, 4, 5, 9084};
-    std::span vecSpan{vec};
+    std::vector vec{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
 
-    assert(std::dynamic_extent == vecSpan.extent);
-
-    testSpanAt(vecSpan, 0, 0);
-    testSpanAt(vecSpan, 1, 1);
-    testSpanAt(vecSpan, 6, 9084);
+    testSpanAt(vec, true, 0, 0);
+    testSpanAt(vec, true, 1, 1);
+    testSpanAt(vec, true, 6, 9084);
+    testSpanAt(vec, true, 7, std::numeric_limits<int>::max());
   }
 
   return true;
@@ -66,16 +73,19 @@ constexpr bool test() {
 
 void test_exceptions() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
+  using namespace std::string_literals;
+
   // With static extent
   {
-    std::array arr{1, 2, 3, 4};
+    std::array arr{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
     const std::span arrSpan{arr};
 
     try {
-      TEST_IGNORE_NODISCARD arrSpan.at(arr.size() + 1);
+      std::ignore = arrSpan.at(arr.size());
       assert(false);
-    } catch (std::out_of_range const&) {
+    } catch (const std::out_of_range& e) {
       // pass
+      assert(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -86,10 +96,11 @@ void test_exceptions() {
     const std::span arrSpan{arr};
 
     try {
-      TEST_IGNORE_NODISCARD arrSpan.at(0);
+      std::ignore = arrSpan.at(0);
       assert(false);
-    } catch (std::out_of_range const&) {
+    } catch (const std::out_of_range& e) {
       // pass
+      assert(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -98,14 +109,15 @@ void test_exceptions() {
   // With dynamic extent
 
   {
-    std::vector vec{1, 2, 3, 4};
+    std::vector vec{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
     const std::span vecSpan{vec};
 
     try {
-      TEST_IGNORE_NODISCARD vecSpan.at(vec.size() + 1);
+      std::ignore = vecSpan.at(vec.size());
       assert(false);
-    } catch (std::out_of_range const&) {
+    } catch (const std::out_of_range& e) {
       // pass
+      assert(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -116,10 +128,11 @@ void test_exceptions() {
     const std::span vecSpan{vec};
 
     try {
-      TEST_IGNORE_NODISCARD vecSpan.at(0);
+      std::ignore = vecSpan.at(0);
       assert(false);
-    } catch (std::out_of_range const&) {
+    } catch (const std::out_of_range& e) {
       // pass
+      assert(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -129,8 +142,9 @@ void test_exceptions() {
 
 int main(int, char**) {
   test();
-  test_exceptions();
   static_assert(test());
+
+  test_exceptions();
 
   return 0;
 }
