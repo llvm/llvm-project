@@ -12,7 +12,6 @@
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Allocatable.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
@@ -410,9 +409,11 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       const Fortran::evaluate::Component *component =
           caller.getCallDescription().proc().GetComponent();
       assert(component && "expect component for type-bound procedure call.");
-      fir::ExtendedValue pass = converter.getSymbolExtendedValue(
-          component->GetFirstSymbol(), &symMap);
-      mlir::Value passObject = fir::getBase(pass);
+
+      fir::ExtendedValue dataRefValue = Fortran::lower::convertDataRefToValue(
+          loc, converter, component->base(), symMap, stmtCtx);
+      mlir::Value passObject = fir::getBase(dataRefValue);
+
       if (fir::isa_ref_type(passObject.getType()))
         passObject = builder.create<fir::LoadOp>(loc, passObject);
       dispatch = builder.create<fir::DispatchOp>(

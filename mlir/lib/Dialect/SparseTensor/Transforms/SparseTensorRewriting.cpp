@@ -1180,8 +1180,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
-    auto enc = stt.getEncoding();
-    if (!stt.hasEncoding() || getCOOStart(enc) == 0)
+    if (!stt.hasEncoding() || stt.getCOOStart() == 0)
       return failure();
 
     // Implement the NewOp as follows:
@@ -1192,6 +1191,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     RankedTensorType cooTp = stt.getCOOType(/*ordered=*/true);
     Value cooTensor = rewriter.create<NewOp>(loc, cooTp, op.getSource());
     Value convert = cooTensor;
+    auto enc = stt.getEncoding();
     if (!stt.isPermutation()) { // demap coo, demap dstTp
       auto coo = getSparseTensorType(cooTensor).getEncoding().withoutDimToLvl();
       convert = rewriter.create<ReinterpretMapOp>(loc, coo, convert);

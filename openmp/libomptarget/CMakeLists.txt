@@ -24,6 +24,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 
+if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
+else()
+  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+endif()
+
 # Message utilities.
 include(LibomptargetUtils)
 
@@ -104,10 +110,6 @@ set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
-# Build target agnostic offloading library.
-set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-add_subdirectory(${LIBOMPTARGET_SRC_DIR})
-
 # Definitions for testing, for reuse when testing libomptarget-nvptx.
 set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
   "Path to folder containing omp.h")
@@ -115,11 +117,17 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+  "Path to folder where intermediate libraries will be output")
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
+
+# Build target agnostic offloading library.
+set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${LIBOMPTARGET_SRC_DIR})
 
 # Add tests.
 add_subdirectory(test)

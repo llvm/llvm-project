@@ -50,6 +50,7 @@ Implemented Papers
 - P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
 - P2467R1 - Support exclusive mode for fstreams
 - P0020R6 - Floating Point Atomic
+- P2905R2 - Runtime format strings
 - P2918R2 - Runtime format strings II
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()

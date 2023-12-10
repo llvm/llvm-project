@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __libcpp_timed_backoff_policy {
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator()(chrono::nanoseconds __elapsed) const
   {
       if(__elapsed > chrono::milliseconds(128))

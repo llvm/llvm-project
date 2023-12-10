@@ -76,7 +76,7 @@ class CheckResult(gdb.Command):
         except RuntimeError as e:
             # At this point, lots of different things could be wrong, so don't try to
             # recover or figure it out. Don't exit either, because then it's
-            # impossible debug the framework itself.
+            # impossible to debug the framework itself.
             print("FAIL: Something is wrong in the test framework.")
             print(str(e))
             test_failures += 1

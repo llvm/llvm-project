@@ -2884,6 +2884,8 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
+def err_ms_constexpr_cannot_be_applied : Error<
+  "attribute 'msvc::constexpr' cannot be applied to the %select{constexpr|consteval|virtual}0 function %1">;
 
 // C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx20 : ExtWarn<
@@ -3148,6 +3150,9 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def warn_attribute_arm_sm_incompat_builtin : Warning<
+  "builtin call has undefined behaviour when called from a %0 function">,
+  InGroup<DiagGroup<"undefined-arm-streaming">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -4930,6 +4935,8 @@ def err_template_param_shadow : Error<
 def ext_template_param_shadow : ExtWarn<
   err_template_param_shadow.Summary>, InGroup<MicrosoftTemplateShadow>;
 def note_template_param_here : Note<"template parameter is declared here">;
+def note_template_param_external : Note<
+  "template parameter from hidden source: %0">;
 def warn_template_export_unsupported : Warning<
   "exported templates are unsupported">;
 def err_template_outside_namespace_or_class_scope : Error<
@@ -5058,6 +5065,8 @@ def err_template_arg_list_different_arity : Error<
   "%select{class template|function template|variable template|alias template|"
   "template template parameter|concept|template}1 %2">;
 def note_template_decl_here : Note<"template is declared here">;
+def note_template_decl_external : Note<
+  "template declaration from hidden source: %0">;
 def err_template_arg_must_be_type : Error<
   "template argument for template type parameter must be a type">;
 def err_template_arg_must_be_type_suggest : Error<
@@ -10057,6 +10066,8 @@ def warn_missing_case : Warning<"%plural{"
   "3:enumeration values %1, %2, and %3 not handled in switch|"
   ":%0 enumeration values not handled in switch: %1, %2, %3...}0">,
   InGroup<Switch>;
+def warn_switch_default : Warning<"'switch' missing 'default' label">,
+  InGroup<SwitchDefault>, DefaultIgnore;
 
 def warn_unannotated_fallthrough : Warning<
   "unannotated fall-through between switch labels">,

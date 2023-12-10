@@ -397,25 +397,25 @@ let Predicates = [HasVendorXSfvcp] in {
   }
 }
 
-let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod" in {
+let Predicates = [HasVendorXSfvqmaccdod] in {
   defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACC;
   defm VQMACC_2x8x2   : VPseudoSiFiveVQMACC;
   defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACC;
   defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACC;
 }
 
-let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq" in {
+let Predicates = [HasVendorXSfvqmaccqoq] in {
   defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACC;
   defm VQMACC_4x8x4   : VPseudoSiFiveVQMACC;
   defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACC;
   defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACC;
 }
 
-let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq" in {
+let Predicates = [HasVendorXSfvfwmaccqqq] in {
   defm VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvfnrclipxfqf" in {
+let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }
