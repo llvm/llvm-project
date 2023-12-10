@@ -676,7 +676,7 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIteratorTypes(
   int64_t numSpatialDims =
       op.image().getType().cast<ShapedType>().getRank() - 2;
   SmallVector<Attribute> iteratorTypes(
-      2 + numSpatialDims, IteratorTypeAttr::get(op.getContext(), par));
+      3 + numSpatialDims, IteratorTypeAttr::get(op.getContext(), par));
   SmallVector<Attribute> reductions(
       numSpatialDims, IteratorTypeAttr::get(op.getContext(), red));
   iteratorTypes.insert(iteratorTypes.end(), reductions.begin(),
@@ -694,14 +694,15 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
 
   MLIRContext *ctx = op.getContext();
   auto numSpatial = op.image().getType().cast<ShapedType>().getRank() - 2;
-  // Domain: (n, w, c, kw)
+  // Domain: (n, w, c, m, kw)
   AffineExpr n = getAffineDimExpr(0, ctx);
   SmallVector<AffineExpr> s(
       llvm::map_range(llvm::seq<int64_t>(1, numSpatial + 1),
                       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   AffineExpr c = getAffineDimExpr(numSpatial + 1, ctx);
+  AffineExpr m = getAffineDimExpr(numSpatial + 2, ctx);
   SmallVector<AffineExpr> ks(
-      llvm::map_range(llvm::seq<int64_t>(numSpatial + 2, 2 * (numSpatial + 1)),
+      llvm::map_range(llvm::seq<int64_t>(numSpatial + 3, 2 * (numSpatial + 1) + 1),
                       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   // Temp subsitute for channel position attr
   int64_t channelPos = (op.getChannelFirst()) ? 1 : numSpatial + 1;
@@ -709,6 +710,7 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
   // Initialze operand accesses in nw order and insert c according to channel
   // position
   SmallVector<AffineExpr> inExprs = {n}, outExprs = {n};
+  SmallVector<AffineExpr> cm = {c, m};
   for (const auto &[sp, ksp, st, di] :
        llvm::zip(s, ks, op.getStridesAttr().getValues<int64_t>(),
                  op.getDilationsAttr().getValues<int64_t>())) {
@@ -718,13 +720,13 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
   SmallVector<AffineExpr> kExprs(ks);
   inExprs.insert(inExprs.begin() + channelPos, c);
   kExprs.insert(
-      channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, c);
-  outExprs.insert(outExprs.begin() + channelPos, c);
+      channelPos == 0 ? kExprs.begin() : kExprs.begin() + channelPos - 1, cm.begin(), cm.end());
+  outExprs.insert(outExprs.begin() + channelPos, cm.begin(), cm.end());
 
   cached = Builder(ctx).getAffineMapArrayAttr(
-      {AffineMap::get(2 + 2 * numSpatial, 0, inExprs, ctx),
-       AffineMap::get(2 + 2 * numSpatial, 0, kExprs, ctx),
-       AffineMap::get(2 + 2 * numSpatial, 0, outExprs, ctx)});
+      {AffineMap::get(3 + 2 * numSpatial, 0, inExprs, ctx),
+       AffineMap::get(3 + 2 * numSpatial, 0, kExprs, ctx),
+       AffineMap::get(3 + 2 * numSpatial, 0, outExprs, ctx)});
   op->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
   return cached;
 }
@@ -735,11 +737,13 @@ mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
     return failure();
   if (DepthwiseConvolutionOpInterface conv =
           dyn_cast<DepthwiseConvolutionOpInterface>(op)) {
-    const auto imageRank = conv.image().getType().cast<ShapedType>().getRank();
+    const auto imageType = conv.image().getType().cast<ShapedType>();
+    const auto imageRank = imageType.getRank();
     const auto kernelRank =
         conv.filter().getType().cast<ShapedType>().getRank();
-    const auto initRank = conv.init().getType().cast<ShapedType>().getRank();
-    if (imageRank != initRank || imageRank != kernelRank + 1)
+    const auto initType = conv.init().getType().cast<ShapedType>();
+    const auto initRank = initType.getRank();
+    if (imageRank != kernelRank || imageRank != initRank - 1)
       return op->emitError(
           "Rank relationship must be `in_rank == out_rank == kernel_rank + 1`");
     return success();
