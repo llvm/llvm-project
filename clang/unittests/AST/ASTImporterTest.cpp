@@ -7250,6 +7250,26 @@ TEST_P(ImportAutoFunctions, ReturnWithAutoTemplateType) {
       Lang_CXX14, /*FindLast=*/true);
 }
 
+TEST_P(ImportAutoFunctions, ReturnWithSubstNonTypeTemplateParmExpr) {
+  const char *Code =
+      R"(
+      template<int>
+      struct array {};
+
+      template <int N>
+      auto foo() { return array<N>(); }
+
+      void bar() { foo<0>(); }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX17);
+
+  auto *FromBar = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("bar")));
+
+  auto *ToBar = Import(FromBar, Lang_CXX17);
+  EXPECT_TRUE(ToBar);
+}
+
 struct ImportSourceLocations : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportSourceLocations, PreserveFileIDTreeStructure) {

@@ -3418,10 +3418,16 @@ static bool isAncestorDeclContextOf(const DeclContext *DC, const Stmt *S) {
   while (!ToProcess.empty()) {
     const Stmt *CurrentS = ToProcess.pop_back_val();
     ToProcess.append(CurrentS->child_begin(), CurrentS->child_end());
-    if (const auto *DeclRef = dyn_cast<DeclRefExpr>(CurrentS))
+    if (const auto *DeclRef = dyn_cast<DeclRefExpr>(CurrentS)) {
       if (const Decl *D = DeclRef->getDecl())
         if (isAncestorDeclContextOf(DC, D))
           return true;
+    } else if (const auto *E =
+                   dyn_cast_or_null<SubstNonTypeTemplateParmExpr>(CurrentS)) {
+      if (const Decl *D = E->getAssociatedDecl())
+        if (isAncestorDeclContextOf(DC, D))
+          return true;
+    }
   }
   return false;
 }
