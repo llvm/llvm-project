@@ -172,9 +172,10 @@ std::vector<llvm::DenseSet<SymbolID>> followSets(const Grammar &G) {
   return FollowSets;
 }
 
+static auto TerminalNames = new std::string[NumTerminals];
+
 static llvm::ArrayRef<std::string> getTerminalNames() {
-  static const auto &TerminalNames = []() {
-    auto TerminalNames = new std::string[NumTerminals];
+  static const auto &TerminalNames1 = []() {
 #define PUNCTUATOR(Tok, Spelling) TerminalNames[tok::Tok] = Spelling;
 #define KEYWORD(Keyword, Condition)                                            \
   TerminalNames[tok::kw_##Keyword] = llvm::StringRef(#Keyword).upper();
@@ -182,7 +183,7 @@ static llvm::ArrayRef<std::string> getTerminalNames() {
 #include "clang/Basic/TokenKinds.def"
     return llvm::ArrayRef(TerminalNames, NumTerminals);
   }();
-  return TerminalNames;
+  return TerminalNames1;
 }
 GrammarTable::GrammarTable() : Terminals(getTerminalNames()) {}
 
