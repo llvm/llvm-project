@@ -108,10 +108,9 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     }
   } else if (MatchedFloat != nullptr) {
     // Get original literal source text
-    const llvm::StringRef OriginalLiteralString =
-        Lexer::getSourceText(
-            CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()),
-            Source, Context.getLangOpts());
+    const llvm::StringRef OriginalLiteralString = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()), Source,
+        Context.getLangOpts());
 
     // Configure formatting
     std::string Postfix;
