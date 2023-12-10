@@ -22,7 +22,7 @@
 
 #include "test_macros.h"
 
-constexpr void testSpan(auto span, int idx, int expectedValue) {
+constexpr void testSpanAt(auto span, int idx, int expectedValue) {
   // non-const
   {
     std::same_as<typename decltype(span)::reference> decltype(auto) elem = span.at(idx);
@@ -38,26 +38,28 @@ constexpr void testSpan(auto span, int idx, int expectedValue) {
 
 constexpr bool test() {
   // With static extent
+  {
+    std::array arr{0, 1, 2, 3, 4, 5, 9084};
+    std::span arrSpan{arr};
 
-  std::array arr{0, 1, 2, 3, 4, 5, 9084};
-  std::span arrSpan{arr};
+    assert(std::dynamic_extent != arrSpan.extent);
 
-  assert(std::dynamic_extent != arrSpan.extent);
-
-  testSpan(arrSpan, 0, 0);
-  testSpan(arrSpan, 1, 1);
-  testSpan(arrSpan, 6, 9084);
+    testSpanAt(arrSpan, 0, 0);
+    testSpanAt(arrSpan, 1, 1);
+    testSpanAt(arrSpan, 6, 9084);
+  }
 
   // With dynamic extent
+  {
+    std::vector vec{0, 1, 2, 3, 4, 5, 9084};
+    std::span vecSpan{vec};
 
-  std::vector vec{0, 1, 2, 3, 4, 5, 9084};
-  std::span vecSpan{vec};
+    assert(std::dynamic_extent == vecSpan.extent);
 
-  assert(std::dynamic_extent == vecSpan.extent);
-
-  testSpan(vecSpan, 0, 0);
-  testSpan(vecSpan, 1, 1);
-  testSpan(vecSpan, 6, 9084);
+    testSpanAt(vecSpan, 0, 0);
+    testSpanAt(vecSpan, 1, 1);
+    testSpanAt(vecSpan, 6, 9084);
+  }
 
   return true;
 }
@@ -122,7 +124,7 @@ void test_exceptions() {
       assert(false);
     }
   }
-#endif
+#endif // TEST_HAS_NO_EXCEPTIONS
 }
 
 int main(int, char**) {
