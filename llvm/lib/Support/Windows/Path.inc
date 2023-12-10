@@ -76,7 +76,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
   // If the path is a long path, mangled into forward slashes, normalize
   // back to backslashes here.
-  if (Path8Str.startswith("//?/"))
+  if (Path8Str.starts_with("//?/"))
     llvm::sys::path::native(Path8Str, path::Style::windows_backslash);
 
   if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
@@ -96,7 +96,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   const char *const LongPathPrefix = "\\\\?\\";
 
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.startswith(LongPathPrefix))
+      Path8Str.starts_with(LongPathPrefix))
     return std::error_code();
 
   if (!IsAbsolute) {
