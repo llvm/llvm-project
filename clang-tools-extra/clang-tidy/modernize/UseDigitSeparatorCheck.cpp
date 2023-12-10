@@ -115,10 +115,14 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
             .str();
 
     // Get formatting literal text
-    std::string::size_type DotPosition = OriginalLiteralString.find('.');
-    std::string FirstSubString = OriginalLiteralString.substr(0, DotPosition);
-    std::string SecondSubString = OriginalLiteralString.substr(
-        DotPosition + 1, OriginalLiteralString.size());
+    const llvm::APFloat FloatValue = MatchedFloat->getValue();
+    llvm::SmallString<128> FloatString;
+    FloatValue.toString(FloatString);
+    const std::string SmallString = FloatString.str().str();
+    std::string::size_type DotPosition = SmallString.find('.');
+    std::string FirstSubString = SmallString.substr(0, DotPosition);
+    std::string SecondSubString = SmallString.substr(
+        DotPosition + 1, SmallString.size());
     std::reverse(SecondSubString.begin(), SecondSubString.end());
 
     std::vector<std::string> SplitedString = {FirstSubString, SecondSubString};
