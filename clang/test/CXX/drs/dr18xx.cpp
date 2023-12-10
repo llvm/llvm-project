@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus < 201103L
-// expected-error@+1 {{variadic macro}}
+#if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
 namespace dr1812 { // dr1812: no
@@ -16,7 +16,7 @@ namespace dr1812 { // dr1812: no
 #if __cplusplus >= 201103L
 template <typename T> struct A {
   using B = typename T::C<int>;
-  // expected-error@-1 {{use 'template' keyword to treat 'C' as a dependent template name}}
+  // since-cxx11-error@-1 {{use 'template' keyword to treat 'C' as a dependent template name}}
 };
 #endif
 } // namespace dr1812
@@ -54,15 +54,20 @@ namespace dr1814 { // dr1814: yes
 namespace dr1815 { // dr1815: no
 #if __cplusplus >= 201402L
   // FIXME: needs codegen test
-  struct A { int &&r = 0; }; // expected-note {{default member init}}
-  A a = {}; // FIXME expected-warning {{not supported}}
+  struct A { int &&r = 0; }; // #dr1815-A 
+  A a = {};
+  // since-cxx14-warning@-1 {{sorry, lifetime extension of temporary created by aggregate initialization using default member initializer is not supported; lifetime of temporary will end at the end of the full-expression}} FIXME
+  //   since-cxx14-note@#dr1815-A {{initializing field 'r' with default member initializer}}
 
-  struct B { int &&r = 0; }; // expected-error {{binds to a temporary}} expected-note {{default member init}}
-  B b; // expected-note {{here}}
+  struct B { int &&r = 0; }; // #dr1815-B
+  // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+  //   since-cxx14-note@#dr1815-B {{initializing field 'r' with default member initializer}}
+  //   since-cxx14-note@#dr1815-b {{in implicit default constructor for 'dr1815::B' first required here}}
+  B b; // #dr1815-b
 #endif
 }
 
-namespace dr1821 { // dr1821: yes
+namespace dr1821 { // dr1821: 2.9
 struct A {
   template <typename> struct B {
     void f();
@@ -80,9 +85,9 @@ struct A {
 
 namespace dr1822 { // dr1822: yes
 #if __cplusplus >= 201103L
-  int a;
+  double a;
   auto x = [] (int a) {
-#pragma clang __debug dump a // CHECK: ParmVarDecl
+    static_assert(__is_same(decltype(a), int), "should be resolved to lambda parameter");
   };
 #endif
 }
@@ -98,16 +103,22 @@ namespace dr1837 { // dr1837: 3.3
   };
 
   class Outer {
-    friend auto Other::q() -> decltype(this->p()) *; // expected-error {{invalid use of 'this'}}
+    friend auto Other::q() -> decltype(this->p()) *;
+    // since-cxx11-error@-1 {{invalid use of 'this' outside of a non-static member function}}
     int g();
     int f() {
       extern void f(decltype(this->g()) *);
       struct Inner {
-        static_assert(Fish<decltype(this->g())>::value, ""); // expected-error {{invalid use of 'this'}}
-        enum { X = Fish<decltype(this->f())>::value }; // expected-error {{invalid use of 'this'}}
-        struct Inner2 : Fish<decltype(this->g())> { }; // expected-error {{invalid use of 'this'}}
-        friend void f(decltype(this->g()) *); // expected-error {{invalid use of 'this'}}
-        friend auto Other::q() -> decltype(this->p()) *; // expected-error {{invalid use of 'this'}}
+        static_assert(Fish<decltype(this->g())>::value, "");
+        // since-cxx11-error@-1 {{invalid use of 'this' outside of a non-static member function}}
+        enum { X = Fish<decltype(this->f())>::value };
+        // since-cxx11-error@-1 {{invalid use of 'this' outside of a non-static member function}}
+        struct Inner2 : Fish<decltype(this->g())> { };
+        // since-cxx11-error@-1 {{invalid use of 'this' outside of a non-static member function}}
+        friend void f(decltype(this->g()) *);
+        // since-cxx11-error@-1 {{invalid use of 'this' outside of a non-static member function}}
+        friend auto Other::q() -> decltype(this->p()) *;
+        // since-cxx11-error@-1 {{invalid use of 'this' outside of a non-static member function}}
       };
       return 0;
     }
@@ -135,19 +146,21 @@ namespace dr1872 { // dr1872: 9
 
   constexpr int x = A<X>().f();
   constexpr int y = A<Y>().f();
-#if __cplusplus <= 201703L
-  // expected-error@-2 {{constant expression}} expected-note@-2 {{call to virtual function}}
-#else
+  // cxx11-17-error@-1 {{constexpr variable 'y' must be initialized by a constant expression}}
+  //   cxx11-17-note@-2 {{cannot evaluate call to virtual function in a constant expression in C++ standards before C++20}}
+#if __cplusplus >= 202002L
   static_assert(y == 0);
 #endif
   // Note, this is invalid even though it would not use virtual dispatch.
   constexpr int y2 = A<Y>().A<Y>::f();
-#if __cplusplus <= 201703L
-  // expected-error@-2 {{constant expression}} expected-note@-2 {{call to virtual function}}
-#else
+  // cxx11-17-error@-1 {{constexpr variable 'y2' must be initialized by a constant expression}}
+  //   cxx11-17-note@-2 {{cannot evaluate call to virtual function in a constant expression in C++ standards before C++20}}
+#if __cplusplus >= 202002L
   static_assert(y == 0);
 #endif
-  constexpr int z = A<Z>().f(); // expected-error {{constant expression}} expected-note {{non-literal type}}
+  constexpr int z = A<Z>().f();
+  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
+  //   since-cxx11-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
 #endif
 }
 
@@ -166,33 +179,38 @@ namespace dr1881 { // dr1881: 7
 void dr1891() { // dr1891: 4
 #if __cplusplus >= 201103L
   int n;
-  auto a = []{}; // expected-note 0-4{{}}
-  auto b = [=]{ return n; }; // expected-note 0-4{{}}
+  auto a = []{}; // #dr1891-a
+  auto b = [=]{ return n; }; // #dr1891-b
   typedef decltype(a) A;
   typedef decltype(b) B;
 
   static_assert(!__has_trivial_constructor(A), "");
-#if __cplusplus > 201703L
-  // expected-error@-2 {{failed}}
-#endif
+  // since-cxx20-error@-1 {{failed}}
   static_assert(!__has_trivial_constructor(B), "");
 
   // C++20 allows default construction for non-capturing lambdas (P0624R2).
   A x;
-#if __cplusplus <= 201703L
-  // expected-error@-2 {{no matching constructor}}
-#endif
-  B y; // expected-error {{no matching constructor}}
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at}}
+  //   cxx11-17-note@#dr1891-a {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1891-a {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
+  B y;
+  // since-cxx11-error@-1 {{no matching constructor for initialization of 'B' (aka '(lambda at}}
+  //   since-cxx11-note@#dr1891-b {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   since-cxx11-note@#dr1891-b {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 
   // C++20 allows assignment for non-capturing lambdas (P0624R2).
   a = a;
+  // cxx11-17-error-re@-1 {{{{object of type '\(lambda at .+\)' cannot be assigned because its copy assignment operator is implicitly deleted}}}}
+  //   cxx11-17-note@#dr1891-a {{lambda expression begins here}}
   a = static_cast<A&&>(a);
-#if __cplusplus <= 201703L
-  // expected-error@-3 {{copy assignment operator is implicitly deleted}}
-  // expected-error@-3 {{copy assignment operator is implicitly deleted}}
-#endif
-  b = b; // expected-error {{copy assignment operator is implicitly deleted}}
-  b = static_cast<B&&>(b); // expected-error {{copy assignment operator is implicitly deleted}}
+  // cxx11-17-error-re@-1 {{{{object of type '\(lambda at .+\)' cannot be assigned because its copy assignment operator is implicitly deleted}}}}
+  //   cxx11-17-note@#dr1891-a {{lambda expression begins here}}
+  b = b;
+  // since-cxx11-error-re@-1 {{{{object of type '\(lambda at .+\)' cannot be assigned because its copy assignment operator is implicitly deleted}}}}
+  //   since-cxx11-note@#dr1891-b {{lambda expression begins here}}
+  b = static_cast<B&&>(b);
+  // since-cxx11-error-re@-1 {{{{object of type '\(lambda at .+\)' cannot be assigned because its copy assignment operator is implicitly deleted}}}}
+  //   since-cxx11-note@#dr1891-b {{lambda expression begins here}}
 #endif
 }
 

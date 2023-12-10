@@ -3399,6 +3399,11 @@ bool RecursiveASTVisitor<Derived>::VisitOMPCompareClause(OMPCompareClause *) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPFailClause(OMPFailClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPSeqCstClause(OMPSeqCstClause *) {
   return true;
 }

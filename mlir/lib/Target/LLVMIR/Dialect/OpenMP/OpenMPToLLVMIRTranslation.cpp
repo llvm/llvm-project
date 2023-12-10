@@ -2177,7 +2177,6 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 
   mlir::omp::VariableCaptureKind capture =
       mlir::omp::VariableCaptureKind::ByRef;
-  llvm::Type *inputType = input->getType();
 
   // Find the associated MapInfoData entry for the current input
   for (size_t i = 0; i < mapData.MapClause.size(); ++i)
@@ -2188,7 +2187,6 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
             mlir::omp::VariableCaptureKind::ByRef);
       }
 
-      inputType = mapData.BaseType[i];
       break;
     }
 
@@ -2288,11 +2286,11 @@ createAlteredByCaptureMap(MapInfoData &mapData,
           auto curInsert = builder.saveIP();
           builder.restoreIP(findAllocaInsertPoint(builder, moduleTranslation));
           auto *memTempAlloc =
-              builder.CreateAlloca(builder.getInt8PtrTy(), nullptr, ".casted");
+              builder.CreateAlloca(builder.getPtrTy(), nullptr, ".casted");
           builder.restoreIP(curInsert);
 
           builder.CreateStore(newV, memTempAlloc);
-          newV = builder.CreateLoad(builder.getInt8PtrTy(), memTempAlloc);
+          newV = builder.CreateLoad(builder.getPtrTy(), memTempAlloc);
         }
 
         mapData.Pointers[i] = newV;

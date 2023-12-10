@@ -628,6 +628,14 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
 
+// APX Features
+constexpr FeatureBitset ImpliedFeaturesEGPR = {};
+constexpr FeatureBitset ImpliedFeaturesPush2Pop2 = {};
+constexpr FeatureBitset ImpliedFeaturesPPX = {};
+constexpr FeatureBitset ImpliedFeaturesNDD = {};
+constexpr FeatureBitset ImpliedFeaturesCCMP = {};
+constexpr FeatureBitset ImpliedFeaturesCF = {};
+
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"

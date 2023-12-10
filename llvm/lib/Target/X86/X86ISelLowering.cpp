@@ -83,13 +83,6 @@ static cl::opt<bool> MulConstantOptimization(
              "SHIFT, LEA, etc."),
     cl::Hidden);
 
-static cl::opt<bool> ExperimentalUnorderedISEL(
-    "x86-experimental-unordered-atomic-isel", cl::init(false),
-    cl::desc("Use LoadSDNode and StoreSDNode instead of "
-             "AtomicSDNode for unordered atomic loads and "
-             "stores respectively."),
-    cl::Hidden);
-
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -1135,6 +1128,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::v8f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v8f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1396,8 +1392,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
     }
 
-    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
-
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
     setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i16, MVT::v8i32);
@@ -1596,8 +1590,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STORE,              VT, Custom);
     }
     setF16Action(MVT::v16f16, Expand);
-    if (Subtarget.hasAVX2())
-      setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FNEG, MVT::v16f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -2054,6 +2049,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+    setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with
@@ -4556,15 +4554,17 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
+  return dyn_cast<ConstantPoolSDNode>(Ptr);
+}
 
-  auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
-
   return CNode->getConstVal();
 }
 
@@ -8727,6 +8727,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // constants. Insertion into a zero vector is handled as a special-case
   // somewhere below here.
   if (NumConstants == NumElems - 1 && NumNonZero != 1 &&
+      FrozenUndefMask.isZero() &&
       (isOperationLegalOrCustom(ISD::INSERT_VECTOR_ELT, VT) ||
        isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT))) {
     // Create an all-constant vector. The variable element in the old
@@ -30591,18 +30592,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   return Loaded;
 }
 
-bool X86TargetLowering::lowerAtomicStoreAsStoreSDNode(const StoreInst &SI) const {
-  if (!SI.isUnordered())
-    return false;
-  return ExperimentalUnorderedISEL;
-}
-bool X86TargetLowering::lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const {
-  if (!LI.isUnordered())
-    return false;
-  return ExperimentalUnorderedISEL;
-}
-
-
 /// Emit a locked operation on a stack location which does not change any
 /// memory location, but does involve a lock prefix.  Location is chosen to be
 /// a) very likely accessed only by a single thread to minimize cache traffic,
@@ -48718,7 +48707,7 @@ static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
   if (useVPTERNLOG(Subtarget, VT)) {
     // Emit a VPTERNLOG node directly - 0xCA is the imm code for A?B:C.
     // VPTERNLOG is only available as vXi32/64-bit types.
-    MVT OpSVT = EltSizeInBits == 32 ? MVT::i32 : MVT::i64;
+    MVT OpSVT = EltSizeInBits <= 32 ? MVT::i32 : MVT::i64;
     MVT OpVT =
         MVT::getVectorVT(OpSVT, VT.getSizeInBits() / OpSVT.getSizeInBits());
     SDValue A = DAG.getBitcast(OpVT, N0.getOperand(1));
@@ -49897,8 +49886,8 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
         if (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-            cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
-            cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
+            cast<MemSDNode>(User)->getBasePtr() == Ptr &&
+            cast<MemSDNode>(User)->getMemoryVT().getSizeInBits() ==
                 MemVT.getSizeInBits()) {
           SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                              RegVT.getSizeInBits());
@@ -49926,7 +49915,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         if (ISD::isNormalLoad(User)) {
           // See if we are loading a constant that matches in the lower
           // bits of a longer constant (but from a different constant pool ptr).
-          SDValue UserPtr = cast<LoadSDNode>(User)->getBasePtr();
+          SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
           const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
           const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
           if (LdC && UserC && UserPtr != Ptr &&
@@ -50484,11 +50473,14 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool F64IsLegal =
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-  if ((VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit()) &&
-      isa<LoadSDNode>(St->getValue()) &&
+
+  if (!F64IsLegal || Subtarget.is64Bit())
+    return SDValue();
+
+  if (VT == MVT::i64 && isa<LoadSDNode>(St->getValue()) &&
       cast<LoadSDNode>(St->getValue())->isSimple() &&
       St->getChain().hasOneUse() && St->isSimple()) {
-    LoadSDNode *Ld = cast<LoadSDNode>(St->getValue().getNode());
+    auto *Ld = cast<LoadSDNode>(St->getValue());
 
     if (!ISD::isNormalLoad(Ld))
       return SDValue();
@@ -50515,7 +50507,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // to get past legalization. The execution dependencies fixup pass will
   // choose the optimal machine instruction for the store if this really is
   // an integer or v2f32 rather than an f64.
-  if (VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit() &&
+  if (VT == MVT::i64 &&
       St->getOperand(1).getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue OldExtract = St->getOperand(1);
     SDValue ExtOp0 = OldExtract.getOperand(0);
@@ -54490,6 +54482,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   SDValue Op0 = Ops[0];
   bool IsSplat = llvm::all_equal(Ops);
   unsigned NumOps = Ops.size();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Repeated subvectors.
   if (IsSplat &&
@@ -54497,25 +54490,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     // If this broadcast is inserted into both halves, use a larger broadcast.
     if (Op0.getOpcode() == X86ISD::VBROADCAST)
       return DAG.getNode(Op0.getOpcode(), DL, VT, Op0.getOperand(0));
-
-    // If this simple subvector or scalar/subvector broadcast_load is inserted
-    // into both halves, use a larger broadcast_load. Update other uses to use
-    // an extracted subvector.
-    if (ISD::isNormalLoad(Op0.getNode()) ||
-        Op0.getOpcode() == X86ISD::VBROADCAST_LOAD ||
-        Op0.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
-      auto *Mem = cast<MemSDNode>(Op0);
-      unsigned Opc = Op0.getOpcode() == X86ISD::VBROADCAST_LOAD
-                         ? X86ISD::VBROADCAST_LOAD
-                         : X86ISD::SUBV_BROADCAST_LOAD;
-      if (SDValue BcastLd =
-              getBROADCAST_LOAD(Opc, DL, VT, Mem->getMemoryVT(), Mem, 0, DAG)) {
-        SDValue BcastSrc =
-            extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits());
-        DAG.ReplaceAllUsesOfValueWith(Op0, BcastSrc);
-        return BcastLd;
-      }
-    }
 
     // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
     if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
@@ -54965,7 +54939,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         if (SelVT.getVectorElementType() == MVT::i1) {
           SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                    NumOps * SelVT.getVectorNumElements());
-          if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+          if (TLI.isTypeLegal(SelVT))
             return DAG.getNode(Op0.getOpcode(), DL, VT,
                                ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
                                ConcatSubOperand(VT, Ops, 1),
@@ -54979,7 +54953,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-        if (DAG.getTargetLoweringInfo().isTypeLegal(SelVT))
+        if (TLI.isTypeLegal(SelVT))
           return DAG.getNode(Op0.getOpcode(), DL, VT,
                              ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
                              ConcatSubOperand(VT, Ops, 1),
@@ -55000,6 +54974,28 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (SDValue Ld =
               EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))
         return Ld;
+    }
+  }
+
+  // If this simple subvector or scalar/subvector broadcast_load is inserted
+  // into both halves, use a larger broadcast_load. Update other uses to use
+  // an extracted subvector.
+  if (IsSplat &&
+      (VT.is256BitVector() || (VT.is512BitVector() && Subtarget.hasAVX512()))) {
+    if (ISD::isNormalLoad(Op0.getNode()) ||
+        Op0.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+        Op0.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
+      auto *Mem = cast<MemSDNode>(Op0);
+      unsigned Opc = Op0.getOpcode() == X86ISD::VBROADCAST_LOAD
+                         ? X86ISD::VBROADCAST_LOAD
+                         : X86ISD::SUBV_BROADCAST_LOAD;
+      if (SDValue BcastLd =
+              getBROADCAST_LOAD(Opc, DL, VT, Mem->getMemoryVT(), Mem, 0, DAG)) {
+        SDValue BcastSrc =
+            extractSubVector(BcastLd, 0, DAG, DL, Op0.getValueSizeInBits());
+        DAG.ReplaceAllUsesOfValueWith(Op0, BcastSrc);
+        return BcastLd;
+      }
     }
   }
 
@@ -56939,13 +56935,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8RegClass);
+          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16RegClass);
+          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32RegClass);
+          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64RegClass);
+          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -56964,14 +56960,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, &X86::GR8RegClass);
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, &X86::GR16RegClass);
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, &X86::GR32RegClass);
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, &X86::GR64RegClass);
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)

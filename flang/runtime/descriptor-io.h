@@ -483,8 +483,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedIntegerIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented INTEGER kind (%d) in descriptor",
-            kind);
+            "not yet implemented: INTEGER(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Real:
@@ -504,7 +503,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedRealIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented REAL kind (%d) in descriptor", kind);
+            "not yet implemented: REAL(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Complex:
@@ -524,8 +523,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedComplexIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented COMPLEX kind (%d) in descriptor",
-            kind);
+            "not yet implemented: COMPLEX(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Character:
@@ -538,8 +536,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedCharacterIO<char32_t, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented CHARACTER kind (%d) in descriptor",
-            kind);
+            "not yet implemented: CHARACTER(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Logical:
@@ -554,8 +551,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedLogicalIO<8, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented LOGICAL kind (%d) in descriptor",
-            kind);
+            "not yet implemented: LOGICAL(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Derived:

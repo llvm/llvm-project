@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -16,7 +16,7 @@
 // path proximate(const path& p, const path& base = current_path())
 // path proximate(const path& p, const path& base, error_code& ec);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <string>
 #include <type_traits>
 #include <cassert>
@@ -25,7 +25,7 @@
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 
 static void test_signature_0() {
   fs::path p("");

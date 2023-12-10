@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <array>
 #include <memory>
 #include <string>
 
@@ -17,7 +16,6 @@
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -34,6 +32,7 @@
 #endif
 #include <sys/mman.h>
 #include <sys/ptrace.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
@@ -45,7 +44,14 @@
 #define GLIBC_INITS_RSEQ
 #endif
 #endif
+
+// Before kernel 4.17, Linux did not support MAP_FIXED_NOREPLACE, so if it is
+// not available, simplfy define it as MAP_FIXED which performs the same
+// function but does not guarantee existing mappings won't get clobbered.
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE MAP_FIXED
 #endif
+#endif // __linux__
 
 namespace llvm {
 namespace exegesis {
@@ -378,8 +384,21 @@ private:
         Twine(strsignal(ChildSignalInfo.si_signo)));
   }
 
+  void disableCoreDumps() const {
+    struct rlimit rlim;
+
+    rlim.rlim_cur = 0;
+    setrlimit(RLIMIT_CORE, &rlim);
+  }
+
   [[noreturn]] void prepareAndRunBenchmark(int Pipe,
                                            const BenchmarkKey &Key) const {
+    // Disable core dumps in the child process as otherwise everytime we
+    // encounter an execution failure like a segmentation fault, we will create
+    // a core dump. We report the information directly rather than require the
+    // user inspect a core dump.
+    disableCoreDumps();
+
     // The following occurs within the benchmarking subprocess
     pid_t ParentPID = getppid();
 
@@ -404,9 +423,17 @@ private:
 #endif // GLIBC_INITS_RSEQ
 
     size_t FunctionDataCopySize = this->Function.FunctionBytes.size();
+    void *MapAddress = NULL;
+    int MapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
+
+    if (Key.SnippetAddress != 0) {
+      MapAddress = reinterpret_cast<void *>(Key.SnippetAddress);
+      MapFlags |= MAP_FIXED_NOREPLACE;
+    }
+
     char *FunctionDataCopy =
-        (char *)mmap(NULL, FunctionDataCopySize, PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+        (char *)mmap(MapAddress, FunctionDataCopySize, PROT_READ | PROT_WRITE,
+                     MapFlags, 0, 0);
     if ((intptr_t)FunctionDataCopy == -1)
       exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
 
@@ -545,7 +572,7 @@ BenchmarkRunner::createFunctionExecutor(
   llvm_unreachable("ExecutionMode is outside expected range");
 }
 
-Expected<Benchmark> BenchmarkRunner::runConfiguration(
+std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     RunnableConfiguration &&RC,
     const std::optional<StringRef> &DumpFile) const {
   Benchmark &InstrBenchmark = RC.InstrBenchmark;
@@ -556,8 +583,7 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
     auto ObjectFilePath =
         writeObjectFile(ObjectFile.getBinary()->getData(), *DumpFile);
     if (Error E = ObjectFilePath.takeError()) {
-      InstrBenchmark.Error = toString(std::move(E));
-      return std::move(InstrBenchmark);
+      return {std::move(E), std::move(InstrBenchmark)};
     }
     outs() << "Check generated assembly with: /usr/bin/objdump -d "
            << *ObjectFilePath << "\n";
@@ -565,20 +591,17 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
 
   if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure) {
     InstrBenchmark.Error = "actual measurements skipped.";
-    return std::move(InstrBenchmark);
+    return {Error::success(), std::move(InstrBenchmark)};
   }
 
   Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>> Executor =
       createFunctionExecutor(std::move(ObjectFile), RC.InstrBenchmark.Key);
   if (!Executor)
-    return Executor.takeError();
+    return {Executor.takeError(), std::move(InstrBenchmark)};
   auto NewMeasurements = runMeasurements(**Executor);
 
   if (Error E = NewMeasurements.takeError()) {
-    if (!E.isA<SnippetCrash>())
-      return std::move(E);
-    InstrBenchmark.Error = toString(std::move(E));
-    return std::move(InstrBenchmark);
+    return {std::move(E), std::move(InstrBenchmark)};
   }
   assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
@@ -591,7 +614,7 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
   }
   InstrBenchmark.Measurements = std::move(*NewMeasurements);
 
-  return std::move(InstrBenchmark);
+  return {Error::success(), std::move(InstrBenchmark)};
 }
 
 Expected<std::string>

@@ -10,7 +10,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 
-#include "named_pair.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
@@ -18,7 +17,10 @@
 namespace LIBC_NAMESPACE {
 
 // Add with carry
-DEFINE_NAMED_PAIR_TEMPLATE(SumCarry, sum, carry);
+template <typename T> struct SumCarry {
+  T sum;
+  T carry;
+};
 
 // This version is always valid for constexpr.
 template <typename T>
@@ -91,7 +93,10 @@ add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
 #endif // LIBC_HAS_BUILTIN(__builtin_addc)
 
 // Subtract with borrow
-DEFINE_NAMED_PAIR_TEMPLATE(DiffBorrow, diff, borrow);
+template <typename T> struct DiffBorrow {
+  T diff;
+  T borrow;
+};
 
 // This version is always valid for constexpr.
 template <typename T>
