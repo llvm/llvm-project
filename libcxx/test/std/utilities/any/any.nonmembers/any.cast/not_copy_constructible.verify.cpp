@@ -26,7 +26,7 @@
 // additional errors while trying to instantiate the rest of any_cast
 // following the static_assert. We ignore unexpected errors in
 // clang-verify to make the test more robust to changes in Clang.
-// ADDITIONAL_COMPILE_FLAGS(verify-support): -Xclang -verify-ignore-unexpected=error
+// ADDITIONAL_COMPILE_FLAGS: -Xclang -verify-ignore-unexpected=error
 
 #include <any>
 

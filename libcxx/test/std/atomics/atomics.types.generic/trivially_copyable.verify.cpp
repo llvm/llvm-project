@@ -15,7 +15,7 @@
 // is not trivially copyable, however Clang will sometimes emit additional
 // errors while trying to instantiate the rest of std::atomic<T>.
 // We silence those to make the test more robust.
-// ADDITIONAL_COMPILE_FLAGS(verify-support): -Xclang -verify-ignore-unexpected=error
+// ADDITIONAL_COMPILE_FLAGS: -Xclang -verify-ignore-unexpected=error
 
 #include <atomic>
 
