@@ -63,7 +63,6 @@ def _getAndroidDeviceApi(cfg):
 DEFAULT_FEATURES = [
     # This detects compilers that understand the -Wno-meow family of flags, unlike MSVC's compiler driver cl.exe.
     Feature(name="any-clang-or-gcc", when=_isAppleClang or _isClang or _isGCC),
-
     Feature(name="apple-clang", when=_isAppleClang),
     Feature(
         name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
