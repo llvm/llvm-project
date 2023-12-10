@@ -142,11 +142,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
-  // If we don't have cmpxchg8b(meaing this is a 386/486), limit atomic size to
-  // 32 bits so the AtomicExpandPass will expand it so we don't need cmpxchg8b.
-  // FIXME: Should we be limiting the atomic size on other configs? Default is
-  // 1024.
-  if (!Subtarget.canUseCMPXCHG8B())
+  if (Subtarget.canUseCMPXCHG16B())
+    setMaxAtomicSizeInBitsSupported(128);
+  else if (Subtarget.canUseCMPXCHG8B())
+    setMaxAtomicSizeInBitsSupported(64);
+  else
     setMaxAtomicSizeInBitsSupported(32);
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
