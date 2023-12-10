@@ -16,6 +16,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
@@ -917,13 +918,27 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
       *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
 
-  // Check the number of the Concept template parameters
-  for (auto P : TemplateAC) {
-    // const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-    if (!P->isValueDependent()) {
-      return false;
+  auto parent = Decl->getParent();
+  while (parent) {
+    if (auto *TD = dyn_cast<TypeDecl>(parent)) {
+      for (auto P : TemplateAC) {
+        if (P->isValueDependent()) {
+          return false;
+        }
+      }
     }
+    parent = parent->getParent();
+    // if (parent->getDeclKind() == Decl::Decla) {
+
+    // }
   }
+  // Check the number of the Concept template parameters
+  // for (auto P : TemplateAC) {
+  //   // const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+  //   if (!P->isValueDependent()) {
+  //     return false;
+  //   }
+  // }
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,
