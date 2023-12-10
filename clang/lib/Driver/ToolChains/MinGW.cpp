@@ -165,6 +165,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("DllMainCRTStartup");
     CmdArgs.push_back("--enable-auto-image-base");
   }
+  CmdArgs.push_back("--dynamicbase");
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
