@@ -70,11 +70,11 @@ namespace {
 //   keyword: `INT` becomes `INT`;
 //   terminal: `IDENTIFIER` becomes `IDENTIFIER`;
 std::string mangleSymbol(SymbolID SID, const Grammar &G) {
-  static char const * TokNames[] = {
-#define TOK(X) #X ,
-#define KEYWORD(Keyword, Condition) #Keyword ,
+  static char const *TokNames[] = {
+#define TOK(X) #X,
+#define KEYWORD(Keyword, Condition) #Keyword,
 #include "clang/Basic/TokenKinds.def"
-      };
+  };
   if (isToken(SID))
     return llvm::StringRef(TokNames[symbolToToken(SID)]).upper();
   std::string Name = G.symbolName(SID).str();
