@@ -80,9 +80,9 @@ template <class InIt, class OutIt>
   requires(std::output_iterator<OutIt, const char&> &&
            (std::same_as<std::iter_value_t<InIt>, char16_t>
 #    ifndef TEST_HAS_NO_WIDE_CHARACTERS
-            || (std::same_as<std::iter_value_t<InIt>, wchar_t> && sizeof(wchar_t) == 2))
+            || (std::same_as<std::iter_value_t<InIt>, wchar_t> && sizeof(wchar_t) == 2)
 #    endif
-               )
+                ))
 OutIt test_transcode(InIt first, InIt last, OutIt out_it) {
   while (first != last) {
     char32_t value = *first++;
@@ -118,11 +118,11 @@ OutIt test_transcode(InIt first, InIt last, OutIt out_it) {
 
 template <class InIt, class OutIt>
   requires(std::output_iterator<OutIt, const char&> &&
-           (std::same_as<std::iter_value_t<InIt>, char32_t> ||
+           (std::same_as<std::iter_value_t<InIt>, char32_t>
 #    ifndef TEST_HAS_NO_WIDE_CHARACTERS
-            (std::same_as<std::iter_value_t<InIt>, wchar_t> && sizeof(wchar_t) == 4))
+            || (std::same_as<std::iter_value_t<InIt>, wchar_t> && sizeof(wchar_t) == 4)
 #    endif
-               )
+                ))
 OutIt test_transcode(InIt first, InIt last, OutIt out_it) {
   while (first != last) {
     char32_t value = *first++;
