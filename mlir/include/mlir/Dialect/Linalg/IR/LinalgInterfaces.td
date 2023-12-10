@@ -182,7 +182,7 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getOperation()->getOperand(2);
+        return $_op.getOperation()->getOperand($_op.getOperation()->getOperands().size() - 1);
       }]
     >,
     InterfaceMethod<
@@ -934,7 +934,12 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
         return detail::depthwise_convolution_impl::getIteratorTypes($_op);
-      }]>
+      }]>,
+    InterfaceMethod<[{
+      Returns whether op is quantized or not.
+    }],
+    "bool", "isQuantized", (ins)
+    >
   ];
 
   let extraClassDeclaration = [{

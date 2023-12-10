@@ -722,10 +722,18 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
                 cm.begin(), cm.end());
   outExprs.insert(outExprs.begin() + channelPos, cm.begin(), cm.end());
 
-  cached = Builder(ctx).getAffineMapArrayAttr(
+  SmallVector<AffineMap> maps(
       {AffineMap::get(3 + 2 * numSpatial, 0, inExprs, ctx),
        AffineMap::get(3 + 2 * numSpatial, 0, kExprs, ctx),
        AffineMap::get(3 + 2 * numSpatial, 0, outExprs, ctx)});
+
+  if (op.isQuantized()) {
+    SmallVector<AffineMap> scalarMaps(
+        2, AffineMap::get(3 + 2 * numSpatial, 0, {}, ctx));
+    maps.insert(maps.end() - 1, scalarMaps.begin(), scalarMaps.end());
+  }
+
+  cached = Builder(ctx).getAffineMapArrayAttr(maps);
   op->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
   return cached;
 }
@@ -736,11 +744,11 @@ mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
     return failure();
   if (DepthwiseConvolutionOpInterface conv =
           dyn_cast<DepthwiseConvolutionOpInterface>(op)) {
-    const auto imageType = conv.image().getType().cast<ShapedType>();
+    const auto imageType = conv.image().getType().dyn_cast<ShapedType>();
     const auto imageRank = imageType.getRank();
     const auto kernelRank =
         conv.filter().getType().cast<ShapedType>().getRank();
-    const auto initType = conv.init().getType().cast<ShapedType>();
+    const auto initType = conv.init().getType().dyn_cast<ShapedType>();
     const auto initRank = initType.getRank();
     if (imageRank != kernelRank || imageRank != initRank - 1)
       return op->emitError(

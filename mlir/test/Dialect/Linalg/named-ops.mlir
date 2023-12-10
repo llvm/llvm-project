@@ -54,6 +54,17 @@ func.func @gen_depthwise_channel_last_tensor(%arg0: tensor<64x26x16xf32>, %arg1:
 
 // -----
 
+// CHECK-LABEL: func @gen_depthwise_1D_channel_first_quantized_memref
+func.func @gen_depthwise_1D_channel_first_quantized_memref(%arg0: memref<64x16x10xi8>, %arg1: memref<16x1x3xi8>, %arg2: memref<64x16x1x8xi64>) {
+  // CHECK: depthwise_conv_nd_q {{.*}}channel_first = true
+    %c0 = arith.constant 0 : i32
+    %c2 = arith.constant 2 : i32
+    linalg.depthwise_conv_nd_q {channel_first = true} ins(%arg0, %arg1, %c0, %c2: memref<64x16x10xi8>, memref<16x1x3xi8>, i32, i32) outs(%arg2: memref<64x16x1x8xi64>)
+    return
+}
+
+// -----
+
 // CHECK-LABEL: func @depthwise_conv_1d_nwc_wcm
 func.func @depthwise_conv_1d_nwc_wcm(%input: tensor<1x12x8xf32>, %filter: tensor<3x8x8xf32>) -> tensor<1x10x8x8xf32> {
   %zero = arith.constant 0.000000e+00 : f32

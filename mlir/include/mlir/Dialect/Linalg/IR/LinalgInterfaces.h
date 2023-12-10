@@ -129,11 +129,13 @@ ArrayAttr getIndexingMaps(DepthwiseConvolutionOpInterface op);
 ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
 void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
                    ArrayRef<NamedAttribute> attrs);
+void quantizedRegionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                   ArrayRef<NamedAttribute> attrs);
 void getEffects(
     DepthwiseConvolutionOpInterface op,
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects);
-ParseResult parse(OpAsmParser &parser, OperationState &result);
+ParseResult parse(OpAsmParser &parser, OperationState &result, bool isQuantized = false);
 void print(DepthwiseConvolutionOpInterface op, OpAsmPrinter &p);
 } // namespace depthwise_convolution_impl
 
