@@ -106,46 +106,41 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
     LI = DeleteLI.get();
   }
 
-  Function *RandomTagDecl =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_randomtag);
-
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Instruction *RandomTagCall =
-          IRB.CreateCall(RandomTagDecl, {Info.AI});
+    IntrinsicInst *Start = Info.LifetimeStart[0];
+    Type *ArgOp0Type = Start->getArgOperand(0)->getType();
 
+    Function *RandomStoreTagDecl =
+      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_randomstoretag, {ArgOp0Type});
+    Function *StoreTagDecl =
+      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag, {ArgOp0Type});
+    Instruction *RandomStoreTagCall =
+      IRB.CreateCall(RandomStoreTagDecl, {Info.AI});
 
     if (Info.AI->hasName())
-      RandomTagCall->setName(Info.AI->getName() + ".tag");
-    Info.AI->replaceAllUsesWith(RandomTagCall);
-    RandomTagCall->setOperand(0, Info.AI);
+      RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
+    Info.AI->replaceAllUsesWith(RandomStoreTagCall);
+    RandomStoreTagCall->setOperand(0, Info.AI);
   
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
-#if 0
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    3) &&
         !SInfo.CallsReturnTwice;
-#else
-      true;
-#endif
     if (StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
-      Type *ArgOp0Type = Start->getArgOperand(0)->getType();
-      Function *StoreTagDecl =
-        Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag, 
-          ArgOp0Type);
       auto TagEnd = [&](Instruction *Node) {
         untagAlloca(AI, Node, Size, StoreTagDecl, ArgOp0Type);
       };
@@ -156,15 +151,13 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
           End->eraseFromParent();
       }
     }
-#if 0
     else {
-
-      // To do
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
-      tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
+      IRBuilder<> IRB(&*IRB.GetInsertPoint());
+      IRB.CreateCall(RandomStoreTagDecl, {AI,
+                                  ConstantInt::get(ArgOp0Type, Size)});
       for (auto *RI : SInfo.RetVec) {
-        untagAlloca(AI, RI, Size);
+        untagAlloca(AI, Node, Size, StoreTagDecl, ArgOp0Type);
       }
       // We may have inserted tag/untag outside of any lifetime interval.
       // Remove all lifetime intrinsics for this alloca.
@@ -173,7 +166,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
       for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
-#endif
   }
   return true;
 }
