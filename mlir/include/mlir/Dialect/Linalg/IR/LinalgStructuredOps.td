@@ -400,18 +400,18 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
     `bool` attritbute.  When placing the channel dim first or last, the batch dim is excluded.  In
     any case, the channel and spatial dims are in the same relative order for all operands.
     
-    Domain: N, S, C, KS
+    Domain: N, S, C, M, KS
 
     Layouts:
       `channel_first == true`:
         Input: `NCS`
-        Kernel: `CS`
-        Output: `NCS`
+        Kernel: `CMS`
+        Output: `NCMS`
 
       `channel_first == false`:
         Input: `NSC`
-        Kernel: `SC`
-        Output: `NSC`
+        Kernel: `SCM`
+        Output: `NSCM`
 
   }];
 

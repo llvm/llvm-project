@@ -902,10 +902,9 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
   LinalgConvolutionOpInterface]> {
   let description = [{
     A depthwise convolution is defined in general terms:
-    1. it is a convolution as defined by `ConvolutionOpInterface`.
-    2. `in_channels = K * out_channels` for some integer `m`.
-    3. The dimension of the filter preceding the channel dim is equal to `K`, the depth multiplier
-    4. `input_rank == kernel_rank == output_rank + 1` (including batch dim in input and output)
+    1. It is a convolution as defined by `ConvolutionOpInterface`.
+    2. The channel and multiplier dimensions are consecutive and always in `CM` order
+    3. `input_rank == kernel_rank == output_rank + 1` (including batch dim in input and output)
   }];
   let cppNamespace = "::mlir::linalg";
   let verify = [{ return detail::verifyDepthwiseConvolutionInterface($_op); }];
