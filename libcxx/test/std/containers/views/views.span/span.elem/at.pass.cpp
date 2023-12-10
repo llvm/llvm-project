@@ -23,8 +23,17 @@
 #include "test_macros.h"
 
 constexpr void testSpan(auto span, int idx, int expectedValue) {
-  std::same_as<typename decltype(span)::reference> decltype(auto) elem = span.at(idx);
-  assert(elem == expectedValue);
+  // non-const
+  {
+    std::same_as<typename decltype(span)::reference> decltype(auto) elem = span.at(idx);
+    assert(elem == expectedValue);
+  }
+
+  // const
+  {
+    std::same_as<typename decltype(span)::reference> decltype(auto) elem = std::as_const(span).at(idx);
+    assert(elem == expectedValue);
+  }
 }
 
 constexpr bool test() {
@@ -39,32 +48,16 @@ constexpr bool test() {
   testSpan(arrSpan, 1, 1);
   testSpan(arrSpan, 6, 9084);
 
-  {
-    std::same_as<typename decltype(arrSpan)::reference> decltype(auto) arrElem = arrSpan.at(1);
-    assert(arrElem == 1);
-  }
-
-  {
-    std::same_as<typename decltype(arrSpan)::reference> decltype(auto) arrElem = std::as_const(arrSpan).at(1);
-    assert(arrElem == 1);
-  }
-
   // With dynamic extent
 
-  std::vector vec{0, 1, 2, 3, 4, 5};
+  std::vector vec{0, 1, 2, 3, 4, 5, 9084};
   std::span vecSpan{vec};
 
   assert(std::dynamic_extent == vecSpan.extent);
 
-  {
-    std::same_as<typename decltype(vecSpan)::reference> decltype(auto) vecElem = vecSpan.at(1);
-    assert(vecElem == 1);
-  }
-
-  {
-    std::same_as<typename decltype(vecSpan)::reference> decltype(auto) vecElem = std::as_const(vecSpan).at(1);
-    assert(vecElem == 1);
-  }
+  testSpan(vecSpan, 0, 0);
+  testSpan(vecSpan, 1, 1);
+  testSpan(vecSpan, 6, 9084);
 
   return true;
 }
@@ -77,7 +70,7 @@ void test_exceptions() {
     const std::span arrSpan{arr};
 
     try {
-      TEST_IGNORE_NODISCARD arrSpan.at(4);
+      TEST_IGNORE_NODISCARD arrSpan.at(arr.size() + 1);
       assert(false);
     } catch (std::out_of_range const&) {
       // pass
@@ -107,7 +100,7 @@ void test_exceptions() {
     const std::span vecSpan{vec};
 
     try {
-      TEST_IGNORE_NODISCARD vec.at(4);
+      TEST_IGNORE_NODISCARD vecSpan.at(vec.size() + 1);
       assert(false);
     } catch (std::out_of_range const&) {
       // pass
@@ -121,7 +114,7 @@ void test_exceptions() {
     const std::span vecSpan{vec};
 
     try {
-      TEST_IGNORE_NODISCARD vec.at(0);
+      TEST_IGNORE_NODISCARD vecSpan.at(0);
       assert(false);
     } catch (std::out_of_range const&) {
       // pass
