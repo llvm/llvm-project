@@ -670,22 +670,19 @@ OpFoldResult
 spirv::LogicalEqualOp::fold(spirv::LogicalEqualOp::FoldAdaptor adaptor) {
   // x == x -> true
   if (getOperand1() == getOperand2()) {
-    auto type = getType();
-    if (isa<IntegerType>(type)) {
-      return BoolAttr::get(getContext(), true);
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType())) {
+      return trueAttr;
     }
-    if (isa<VectorType>(type)) {
-      auto vtType = cast<ShapedType>(type);
-      auto element = BoolAttr::get(getContext(), true);
-      return DenseElementsAttr::get(vtType, element);
+    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+      return SplatElementsAttr::get(vecTy, trueAttr);
     }
   }
 
-  return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
-                                        [](const APInt &a, const APInt &b) {
-                                          APInt zero = APInt::getZero(1);
-                                          return a == b ? (zero + 1) : zero;
-                                        });
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -702,22 +699,19 @@ OpFoldResult spirv::LogicalNotEqualOp::fold(FoldAdaptor adaptor) {
 
   // x == x -> false
   if (getOperand1() == getOperand2()) {
-    auto type = getType();
-    if (isa<IntegerType>(type)) {
-      return BoolAttr::get(getContext(), false);
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType())) {
+      return falseAttr;
     }
-    if (isa<VectorType>(type)) {
-      auto vtType = cast<ShapedType>(type);
-      auto element = BoolAttr::get(getContext(), false);
-      return DenseElementsAttr::get(vtType, element);
+    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+      return SplatElementsAttr::get(vecTy, falseAttr);
     }
   }
 
-  return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
-                                        [](const APInt &a, const APInt &b) {
-                                          APInt zero = APInt::getZero(1);
-                                          return a == b ? zero : (zero + 1);
-                                        });
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -759,22 +753,19 @@ OpFoldResult spirv::LogicalOrOp::fold(FoldAdaptor adaptor) {
 OpFoldResult spirv::IEqualOp::fold(spirv::IEqualOp::FoldAdaptor adaptor) {
   // x == x -> true
   if (getOperand1() == getOperand2()) {
-    auto type = getType();
-    if (isa<IntegerType>(type)) {
-      return BoolAttr::get(getContext(), true);
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType())) {
+      return trueAttr;
     }
-    if (isa<VectorType>(type)) {
-      auto vtType = cast<ShapedType>(type);
-      auto element = BoolAttr::get(getContext(), true);
-      return DenseElementsAttr::get(vtType, element);
+    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+      return SplatElementsAttr::get(vecTy, trueAttr);
     }
   }
 
-  return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(), getType(),
-                                        [](const APInt &a, const APInt &b) {
-                                          APInt zero = APInt::getZero(1);
-                                          return a == b ? (zero + 1) : zero;
-                                        });
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -784,22 +775,19 @@ OpFoldResult spirv::IEqualOp::fold(spirv::IEqualOp::FoldAdaptor adaptor) {
 OpFoldResult spirv::INotEqualOp::fold(spirv::INotEqualOp::FoldAdaptor adaptor) {
   // x == x -> false
   if (getOperand1() == getOperand2()) {
-    auto type = getType();
-    if (isa<IntegerType>(type)) {
-      return BoolAttr::get(getContext(), false);
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType())) {
+      return falseAttr;
     }
-    if (isa<VectorType>(type)) {
-      auto vtType = cast<ShapedType>(type);
-      auto element = BoolAttr::get(getContext(), false);
-      return DenseElementsAttr::get(vtType, element);
+    if (auto vecTy = dyn_cast<VectorType>(getType())) {
+      return SplatElementsAttr::get(vecTy, falseAttr);
     }
   }
 
-  return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(), getType(),
-                                        [](const APInt &a, const APInt &b) {
-                                          APInt zero = APInt::getZero(1);
-                                          return a == b ? zero : (zero + 1);
-                                        });
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
 }
 
 //===----------------------------------------------------------------------===//
