@@ -30,6 +30,7 @@ namespace {
 struct WebAssemblyStackTagging : public FunctionPass {
   static char ID;
   StackSafetyGlobalInfo const *SSI = nullptr;
+  DataLayout const *DL = nullptr;
   AAResults *AA = nullptr;
   WebAssemblyStackTagging() : FunctionPass(ID) {}
 
@@ -71,6 +72,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
     return false;
 
   F = &Fn;
+  DL = &Fn.getParent()->getDataLayout();
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
   memtag::StackInfoBuilder SIB(SSI);
   for (Instruction &I : instructions(F))
@@ -157,7 +159,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
       IRB.CreateCall(RandomStoreTagDecl, {AI,
                                   ConstantInt::get(ArgOp0Type, Size)});
       for (auto *RI : SInfo.RetVec) {
-        untagAlloca(AI, Node, Size, StoreTagDecl, ArgOp0Type);
+        untagAlloca(AI, RI, Size, StoreTagDecl, ArgOp0Type);
       }
       // We may have inserted tag/untag outside of any lifetime interval.
       // Remove all lifetime intrinsics for this alloca.
