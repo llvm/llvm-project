@@ -356,7 +356,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-reductions",
       "indirectbr-expand",
       "generic-to-nvvm",
-      "expandmemcmp",
+      "expand-memcmp",
       "loop-reduce",
       "lower-amx-type",
       "lower-amx-intrinsics",
