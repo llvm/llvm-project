@@ -59,9 +59,7 @@ int main(int, char**)
   {
     meow(0);
   }
-  {
-    ASSERT_SAME_TYPE(decltype(true ? purr() : 0), int);
-  }
+  { ASSERT_SAME_TYPE(decltype(true ? purr() : 0), int); }
 #if TEST_STD_VER > 14
   {
     int i = 0;
