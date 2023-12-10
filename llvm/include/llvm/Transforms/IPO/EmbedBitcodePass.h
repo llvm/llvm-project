@@ -22,7 +22,6 @@
 
 namespace llvm {
 class Module;
-class ModulePass;
 class Pass;
 
 /// Pass embeds a copy of the module optimized with the provided pass pipeline
