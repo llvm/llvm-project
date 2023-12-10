@@ -643,8 +643,6 @@ public:
     Builder.defineMacro("__CYGWIN32__");
     addCygMingDefines(Opts, Builder);
     DefineStd(Builder, "unix", Opts);
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
   }
 };
 
@@ -916,8 +914,6 @@ public:
     Builder.defineMacro("__CYGWIN64__");
     addCygMingDefines(Opts, Builder);
     DefineStd(Builder, "unix", Opts);
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
   }
 };
 

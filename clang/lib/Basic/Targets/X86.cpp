@@ -508,8 +508,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
   std::string CodeModel = getTargetOpts().CodeModel;
-  if (CodeModel == "default")
-    CodeModel = "small";
+  if (CodeModel == "default") {
+    if (getTriple().isWindowsCygwinEnvironment() && getTriple().getArch() == llvm::Triple::x86_64) {
+      CodeModel = "medium";
+    } else {
+      CodeModel = "small";
+    }
+  }
   Builder.defineMacro("__code_model_" + CodeModel + "__");
 
   // Target identification.

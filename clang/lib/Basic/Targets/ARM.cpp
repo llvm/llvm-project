@@ -1402,8 +1402,6 @@ void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__CYGWIN__");
   Builder.defineMacro("__CYGWIN32__");
   DefineStd(Builder, "unix", Opts);
-  if (Opts.CPlusPlus)
-    Builder.defineMacro("_GNU_SOURCE");
 }
 
 DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,
