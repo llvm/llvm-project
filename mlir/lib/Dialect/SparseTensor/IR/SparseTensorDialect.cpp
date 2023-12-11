@@ -855,9 +855,8 @@ SmallVector<unsigned> mlir::sparse_tensor::getBlockSize(AffineMap dimToLvl) {
 bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
   if (!dimToLvl)
     return false;
-  SmallVector<unsigned> isDimSet;
-  isDimSet.resize(dimToLvl.getNumDims());
   std::map<unsigned, int64_t> coeffientMap;
+  bool hasBlock = false;
   for (auto result : dimToLvl.getResults()) {
     if (auto binOp = dyn_cast<AffineBinaryOpExpr>(result)) {
       // Check for "dim op const".
@@ -865,11 +864,8 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
       auto conOp = dyn_cast<AffineConstantExpr>(binOp.getRHS());
       if (!dimOp || !conOp || conOp.getValue() <= 0)
         return false;
-      auto pos = dimOp.getPosition();
-      // Check current dim has not been set before.
-      if (isDimSet[pos] == 1)
-        return false;
       // Inspect "dim / const" or "dim % const".
+      auto pos = dimOp.getPosition();
       if (binOp.getKind() == AffineExprKind::FloorDiv) {
         // Expect only one floordiv for each dimension.
         if (coeffientMap.find(pos) != coeffientMap.end())
@@ -883,20 +879,21 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
         // Expect mod to have the same coefficient as floordiv.
         if (conOp.getValue() != coeffientMap[pos])
           return false;
+        hasBlock = true;
       } else {
         return false;
       }
     } else if (auto dimOp = dyn_cast<AffineDimExpr>(result)) {
       auto pos = dimOp.getPosition();
-      isDimSet[pos] = 1;
-      // Expect dim to be non-blocked (without floordiv/mod pair).
+      // Expect dim to be unset.
       if (coeffientMap.find(pos) != coeffientMap.end())
         return false;
+      coeffientMap[pos] = 0;
     } else {
       return false;
     }
   }
-  return !coeffientMap.empty();
+  return !coeffientMap.empty() && hasBlock;
 }
 
 bool mlir::sparse_tensor::hasAnyNonIdentityOperandsOrResults(Operation *op) {
