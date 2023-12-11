@@ -110,7 +110,7 @@ void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
 }
 
 static CowCompilerInvocation
-makeCommonInvocationForModuleBuild(const CompilerInvocation &CI) {
+makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.resetNonModularOptions();
   CI.clearImplicitModuleBuildOptions();
 
