@@ -918,20 +918,21 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
       *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
 
-  auto parent = Decl->getParent();
-  while (parent) {
-    if (auto *TD = dyn_cast<TypeDecl>(parent)) {
-      for (auto P : TemplateAC) {
-        if (P->isValueDependent()) {
-          return false;
-        }
-      }
-    }
-    parent = parent->getParent();
-    // if (parent->getDeclKind() == Decl::Decla) {
+  // auto parent = Decl->getParent();
+  // while (parent) {
+  //   if (auto *TD = dyn_cast<TypeAliasDecl>(parent)) {
+  //     for (auto P : TemplateAC) {
+  //       if (P->isValueDependent()) {
+  //         return false;
+  //       }
+  //     }
+  //   }
+  //   parent = parent->getParent();
+  //   // if (parent->getDeclKind() == Decl::Decla) {
 
-    // }
-  }
+  //   // }
+  // }
+  
   // Check the number of the Concept template parameters
   // for (auto P : TemplateAC) {
   //   // const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);

@@ -13617,24 +13617,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
                                                         TPL);
 
-  // if (E->getTemplateParameterList()) {
-  //   // Check the number of the Concept template parameters
-  //   size_t conceptParams = 0;
-  //   for (auto P : *E->getTemplateParameterList()) {
-  //     const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-  //     if (CD && CD->hasTypeConstraint()) {
-  //       conceptParams++;
-  //     }
-  //   }
-
-  //   if (conceptParams > 0 &&
-  //       conceptParams == E->getTemplateParameterList()->size()) {
-  //     getSema().Diag(E->getTemplateParameterList()->getLAngleLoc(),
-  //                    diag::err_expected_non_concept_template_parameter);
-  //     return ExprError();
-  //   }
-  // }
-
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since
   // it introduces a mapping of the original to the newly created

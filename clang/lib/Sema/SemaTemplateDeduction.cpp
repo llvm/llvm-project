@@ -3613,6 +3613,13 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
   SFINAETrap Trap(*this);
 
+  auto *Method = dyn_cast<CXXMethodDecl>(FunctionTemplate);
+  for(auto arg: Deduced) {
+    auto ty = arg.getAsType();
+    if ( ty->isBuiltinType() ) {
+        return TDK_SubstitutionFailure;
+    }
+  }
   // Enter a new template instantiation context while we instantiate the
   // actual function declaration.
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
