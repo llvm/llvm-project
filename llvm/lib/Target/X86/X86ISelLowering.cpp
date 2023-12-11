@@ -7040,6 +7040,31 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
                                   IsAfterLegalize);
 }
 
+static Constant *getConstantVector(MVT VT, ArrayRef<APInt> Bits,
+                                   const APInt &Undefs, LLVMContext &C) {
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  Type *Ty = EVT(VT.getScalarType()).getTypeForEVT(C);
+
+  auto getConstantScalar = [&](const APInt &Val) -> Constant * {
+    if (VT.isFloatingPoint()) {
+      if (ScalarSize == 16)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEhalf(), Val));
+      if (ScalarSize == 32)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEsingle(), Val));
+      assert(ScalarSize == 64 && "Unsupported floating point scalar size");
+      return ConstantFP::get(C, APFloat(APFloat::IEEEdouble(), Val));
+    }
+    return Constant::getIntegerValue(Ty, Val);
+  };
+
+  SmallVector<Constant *, 32> ConstantVec;
+  for (unsigned I = 0, E = Bits.size(); I != E; ++I)
+    ConstantVec.push_back(Undefs[I] ? UndefValue::get(Ty)
+                                    : getConstantScalar(Bits[I]));
+
+  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
+}
+
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
                                    unsigned SplatBitSize, LLVMContext &C) {
   unsigned ScalarSize = VT.getScalarSizeInBits();
@@ -54978,6 +55003,32 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     }
   }
 
+  // Attempt to fold target constant loads.
+  if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
+    SmallVector<APInt> EltBits;
+    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
+    for (unsigned I = 0; I != NumOps; ++I) {
+      APInt OpUndefElts;
+      SmallVector<APInt> OpEltBits;
+      if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
+                                         OpEltBits, true, false))
+        break;
+      EltBits.append(OpEltBits);
+      UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
+    }
+    if (EltBits.size() == VT.getVectorNumElements()) {
+      Constant *C = getConstantVector(VT, EltBits, UndefElts, Ctx);
+      MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
+      SDValue CV = DAG.getConstantPool(C, PVT);
+      MachineFunction &MF = DAG.getMachineFunction();
+      MachinePointerInfo MPI = MachinePointerInfo::getConstantPool(MF);
+      SDValue Ld = DAG.getLoad(VT, DL, DAG.getEntryNode(), CV, MPI);
+      SDValue Sub = extractSubVector(Ld, 0, DAG, DL, Op0.getValueSizeInBits());
+      DAG.ReplaceAllUsesOfValueWith(Op0, Sub);
+      return Ld;
+    }
+  }
+
   // If this simple subvector or scalar/subvector broadcast_load is inserted
   // into both halves, use a larger broadcast_load. Update other uses to use
   // an extracted subvector.
@@ -54998,23 +55049,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return BcastLd;
       }
     }
-  }
-
-  // Attempt to fold target constant loads.
-  if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
-    SmallVector<APInt> EltBits;
-    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
-    for (unsigned I = 0; I != NumOps; ++I) {
-      APInt OpUndefElts;
-      SmallVector<APInt> OpEltBits;
-      if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
-                                        OpEltBits, true, false))
-          break;
-      EltBits.append(OpEltBits);
-      UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
-    }
-    if (EltBits.size() == VT.getVectorNumElements())
-      return getConstVector(EltBits, UndefElts, VT, DAG, DL);
   }
 
   // If we're splatting a 128-bit subvector to 512-bits, use SHUF128 directly.
