@@ -554,14 +554,16 @@ void CGDebugInfo::CreateCompileUnit() {
     // If the main file name provided is identical to the input file name, and
     // if the input file is a preprocessed source, use the module name for
     // debug info. The module name comes from the name specified in the first
-    // linemarker if the input is a preprocessed source.
+    // linemarker if the input is a preprocessed source. In this case we don't
+    // know the content to compute a checksum.
     if (MainFile->getName() == MainFileName &&
         FrontendOptions::getInputKindForExtension(
             MainFile->getName().rsplit('.').second)
-            .isPreprocessed())
+            .isPreprocessed()) {
       MainFileName = CGM.getModule().getName().str();
-
-    CSKind = computeChecksum(SM.getMainFileID(), Checksum);
+    } else {
+      CSKind = computeChecksum(SM.getMainFileID(), Checksum);
+    }
   }
 
   llvm::dwarf::SourceLanguage LangTag;
