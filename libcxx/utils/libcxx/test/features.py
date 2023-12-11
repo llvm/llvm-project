@@ -13,9 +13,11 @@ import shutil
 import subprocess
 import sys
 
-_isClang = lambda cfg: "__clang__" in compilerMacros(cfg) and "__apple_build_version__" not in compilerMacros(cfg)
+_isAnyClang = lambda cfg: "__clang__" in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
-_isGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg) and "__clang__" not in compilerMacros(cfg)
+_isAnyGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg)
+_isClang = lambda cfg: _isAnyClang(cfg) and not _isAppleClang(cfg)
+_isGCC = lambda cfg: _isAnyGCC(cfg) and not _isAnyClang(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
