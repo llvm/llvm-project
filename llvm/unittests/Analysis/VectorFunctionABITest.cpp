@@ -18,13 +18,13 @@ namespace {
 /// Perform tests against VFABI Rules. `invokeParser` creates a VFInfo object
 /// and a scalar FunctionType, which are used by tests to check that:
 /// 1. The scalar and vector names are correct.
-/// 2. The parameter number from the parsed mangled name matches the scalar ones
-///    given by the string FunctionType.
+/// 2. The number of parameters from the parsed mangled name matches the number
+///    of arguments in the scalar function passed as FunctionType string.
 /// 3. The number of vector parameters and their types match the values
 ///    specified in the test.
 ///    On masked functions it also checks that the last parameter is a mask (ie,
 ///    GlobalPredicate).
-/// 4. The function is correctly found to have a mask.
+/// 4. The vector function is correctly found to have a mask.
 ///
 class VFABIParserTest : public ::testing::Test {
 private:
@@ -64,10 +64,10 @@ protected:
   ///
   /// \p MangledName string the parser has to demangle.
   ///
-  /// \p ScalarFTyStr FunctionType string to be used to get the signature of
-  /// the scalar function. Used by `tryDemangleForVFABI` to check for the number
-  /// of arguments on scalable vectors, and by `matchParameters` to perform
-  /// some additional checking in the tests in this file.
+  /// \p ScalarFTyStr FunctionType string to get the signature of the scalar
+  /// function, which is used by `tryDemangleForVFABI` to check for the number
+  /// of arguments on scalable vectors, and by `matchParameters` to perform some
+  /// additional checking in the tests in this file.
   bool invokeParser(const StringRef MangledName,
                     const StringRef ScalarFTyStr = "void()") {
     // Reset the VFInfo to be able to call `invokeParser` multiple times in
@@ -81,10 +81,10 @@ protected:
     return OptInfo.has_value();
   }
 
-  /// Returns whether the parsed function contains a mask
+  /// Returns whether the parsed function contains a mask.
   bool isMasked() const { return Info.isMasked(); }
 
-  /// Check the number of vectorized parameters matches the scalar ones. This
+  /// Check if the number of vectorized parameters matches the scalar ones. This
   /// requires a correct scalar FunctionType string to be fed to the
   /// 'invokeParser'. Mask parameters that are only required by the vector
   /// function call are ignored.
