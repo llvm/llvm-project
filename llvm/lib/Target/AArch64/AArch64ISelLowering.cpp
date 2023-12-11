@@ -1651,6 +1651,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 
   IsStrictFPEnabled = true;
+  setMaxAtomicSizeInBitsSupported(128);
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
@@ -24909,14 +24910,20 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
                              : AtomicExpansionKind::LLSC;
 }
 
-// For the real atomic operations, we have ldxr/stxr up to 128 bits,
+// The "default" for integer RMW operations is to expand to an LL/SC loop.
+// However, with the LSE instructions (or outline-atomics mode, which provides
+// library routines in place of the LSE-instructions), we can directly emit many
+// operations instead.
+//
+// Floating-point operations are always emitted to a cmpxchg loop, because they
+// may trigger a trap which aborts an LLSC sequence.
 TargetLowering::AtomicExpansionKind
 AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
+  assert(Size <= 128 && "AtomicExpandPass should've handled larger sizes.");
+
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
-
-  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
-  if (Size > 128) return AtomicExpansionKind::None;
 
   bool CanUseLSE128 = Subtarget->hasLSE128() && Size == 128 &&
                       (AI->getOperation() == AtomicRMWInst::Xchg ||

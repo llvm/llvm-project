@@ -2239,10 +2239,10 @@ gentbl(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = [
-      ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -2343,10 +2343,10 @@ gentbl(
         deps = [
             ":BinaryFormat",
             ":CodeGenTypes",
+            ":Core",
             ":DebugInfoCodeView",
             ":MC",
             ":MCDisassembler",
-            ":Core",
             ":Support",
             ":Target",
             ":config",
@@ -2552,23 +2552,23 @@ cc_library(
         ":AggressiveInstCombine",
         ":Analysis",
         ":CodeGen",
-        ":common_transforms",
-        ":config",
         ":Core",
         ":Coroutines",
         ":HipStdPar",
-        ":InstCombine",
-        ":Instrumentation",
         ":IPO",
         ":IRPrinter",
+        ":InstCombine",
+        ":Instrumentation",
         ":MLPolicies",
         ":ObjCARC",
-        ":pass_registry_def",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
         ":Vectorize",
+        ":common_transforms",
+        ":config",
+        ":pass_registry_def",
     ],
 )
 
@@ -2804,19 +2804,18 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Debugging/*.h",
-    ]),
+    ]) + ["include/llvm-c/LLJITUtils.h"],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
-        ":OrcShared",
-        ":OrcJIT",
         ":JITLink",
+        ":OrcJIT",
+        ":OrcShared",
         ":Support",
         ":TargetParser",
     ],
 )
-
 
 cc_library(
     name = "OrcTargetProcess",
@@ -3119,9 +3118,9 @@ cc_library(
         ":MC",
         ":MCA",
         ":MCDisassembler",
-        ":OrcJIT",
         ":Object",
         ":ObjectYAML",
+        ":OrcJIT",
         ":Support",
         ":Target",
         ":config",
@@ -3251,9 +3250,9 @@ cc_binary(
         ":Interpreter",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcTargetProcess",
-        ":OrcDebugging",
         ":Support",
         ":TargetParser",
         ":config",
@@ -4705,7 +4704,7 @@ cc_binary(
     srcs = glob([
         "tools/llvm-symbolizer/*.cpp",
         "tools/llvm-symbolizer/*.h",
-    ]) + [ "llvm-symbolizer-driver.cpp"],
+    ]) + ["llvm-symbolizer-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4817,7 +4816,6 @@ expand_template(
     },
     template = "cmake/modules/llvm-driver-template.cpp.in",
 )
-
 
 cc_binary(
     name = "sancov",
