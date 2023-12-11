@@ -228,7 +228,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name} ${LIBOMPTARGET_LIBRARY_DIR}/${bclib_name})
 
   # Install bitcode library under the lib destination folder.
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
   set(target_feature "")
   if("${target_triple}" STREQUAL "nvptx64-nvidia-cuda")
@@ -307,4 +307,4 @@ set_target_properties(omptarget.devicertl PROPERTIES
 )
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
-install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
+install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OFFLOAD_INSTALL_LIBDIR})

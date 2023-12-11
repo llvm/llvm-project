@@ -87,4 +87,4 @@ set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       INSTALL_RPATH "$ORIGIN"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
