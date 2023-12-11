@@ -92,7 +92,7 @@ getSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   }
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
-    unsigned short align = 8;
+    unsigned short align = 0;
     for (auto component : recTy.getTypeList()) {
       auto [compSize, compAlign] =
           getSizeAndAlignment(loc, component.second, dl, kindMap);
@@ -481,6 +481,9 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                                ArgClass &Hi) const {
     for (auto component : recTy.getTypeList()) {
       if (byteOffset > 16) {
+        // See 3.2.3 p. 1 and note 15. Note that when the offset is bigger
+        // than 16 bytes here, it is not a single _m256 and or _m512 entity
+        // that could fit in AVX registers.
         Lo = Hi = ArgClass::Memory;
         return byteOffset;
       }
@@ -512,6 +515,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     for (std::uint64_t i = 0; i < arraySize; ++i) {
       byteOffset = llvm::alignTo(byteOffset, eleAlign);
       if (byteOffset > 16) {
+        // See 3.2.3 p. 1 and note 15. Same as in classifyStruct.
         Lo = Hi = ArgClass::Memory;
         return;
       }
@@ -534,7 +538,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     int availSSERegisters = 8;
     for (auto typeAndAttr : previousArguments) {
       const auto &attr = std::get<Attributes>(typeAndAttr);
-      if (attr.isByVal() || attr.isSRet())
+      if (attr.isByVal())
         continue; // Previous argument passed on the stack.
       ArgClass Lo, Hi;
       Lo = Hi = ArgClass::NoClass;
@@ -622,9 +626,11 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                                                mlir::Type ty) const {
     CodeGenSpecifics::Marshalling marshal;
     auto sizeAndAlign = getSizeAndAlignment(loc, ty, getDataLayout(), kindMap);
-    marshal.emplace_back(
-        fir::ReferenceType::get(ty),
-        AT{/*align=*/sizeAndAlign.second, /*byval=*/true, /*sret=*/false});
+    // The stack is always 8 byte aligned (note 14 in 3.2.3).
+    unsigned short align =
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8));
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{align, /*byval=*/true, /*sret=*/false});
     return marshal;
   }
 };
