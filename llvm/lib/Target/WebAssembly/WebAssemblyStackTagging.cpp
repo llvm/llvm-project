@@ -120,19 +120,17 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
     Function *RandomStoreTagDecl =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_randomstoretag, {ArgOp0Type});
     Function *StoreTagDecl =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag);
-    Instruction *RandomStoreTagCall =
+      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag, {ArgOp0Type});
     uint64_t Size =
         cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
-
     Size = alignTo(Size, kTagGranuleSize);
-    IRB.CreateCall(RandomStoreTagDecl, {Info.AI, ConstantInt::get(ArgOp0Type, Size)});
-
+    Instruction *RandomStoreTagCall =
+	    IRB.CreateCall(RandomStoreTagDecl, {Info.AI, ConstantInt::get(ArgOp0Type, Size)});
     if (Info.AI->hasName())
       RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
     Info.AI->replaceAllUsesWith(RandomStoreTagCall);
     RandomStoreTagCall->setOperand(0, Info.AI);
-  
+
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
@@ -143,7 +141,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
                                    3) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
-
       auto TagEnd = [&](Instruction *Node) {
         untagAlloca(AI, Node, Size, StoreTagDecl, ArgOp0Type);
       };
