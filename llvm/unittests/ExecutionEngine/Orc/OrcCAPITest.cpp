@@ -9,6 +9,7 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/LLJIT.h"
+#include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
 #include "gtest/gtest.h"
 
