@@ -5213,12 +5213,10 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vsmul_vx_tum:
   case RISCVVector::BI__builtin_rvv_vsmul_vv_tumu:
   case RISCVVector::BI__builtin_rvv_vsmul_vx_tumu: {
-    bool RequireV = false;
-    for (unsigned ArgNum = 0; ArgNum < TheCall->getNumArgs(); ++ArgNum)
-      RequireV |= TheCall->getArg(ArgNum)->getType()->isRVVType(
-          /* Bitwidth */ 64, /* IsFloat */ false);
+    ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(
+        TheCall->getType()->castAs<BuiltinType>());
 
-    if (RequireV && !TI.hasFeature("v"))
+    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ false << TheCall->getSourceRange() << "v";
