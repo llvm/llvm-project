@@ -253,7 +253,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: %sel:_(s1) = G_OR %c, %t
+    ; CHECK-NEXT: %one:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s1) = G_XOR %c, %one
+    ; CHECK-NEXT: %sel:_(s1) = G_OR [[XOR]], %t
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
