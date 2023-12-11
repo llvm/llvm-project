@@ -80,16 +80,16 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
     return OpenACCClauseKind::Invalid;
 
   return llvm::StringSwitch<OpenACCClauseKind>(
-      Tok.getIdentifierInfo()->getName())
-    .Case("finalize", OpenACCClauseKind::Finalize)
-    .Case("if_present", OpenACCClauseKind::IfPresent)
-    .Case("seq", OpenACCClauseKind::Seq)
-    .Case("independent", OpenACCClauseKind::Independent)
-    .Case("auto", OpenACCClauseKind::Auto)
-    .Case("worker", OpenACCClauseKind::Worker)
-    .Case("vector", OpenACCClauseKind::Vector)
-    .Case("nohost", OpenACCClauseKind::NoHost)
-    .Default(OpenACCClauseKind::Invalid);
+             Tok.getIdentifierInfo()->getName())
+      .Case("finalize", OpenACCClauseKind::Finalize)
+      .Case("if_present", OpenACCClauseKind::IfPresent)
+      .Case("seq", OpenACCClauseKind::Seq)
+      .Case("independent", OpenACCClauseKind::Independent)
+      .Case("auto", OpenACCClauseKind::Auto)
+      .Case("worker", OpenACCClauseKind::Worker)
+      .Case("vector", OpenACCClauseKind::Vector)
+      .Case("nohost", OpenACCClauseKind::NoHost)
+      .Default(OpenACCClauseKind::Invalid);
 }
 
 // Since 'atomic' is effectively a compound directive, this will decode the
@@ -313,7 +313,7 @@ bool ParseOpenACCClause(Parser &P) {
 // have to do this because 'SkipUntil' considers paren balancing, which isn't
 // what we want.
 void SkipUntilEndOfDirective(Parser &P) {
-  while(P.getCurToken().isNot(tok::annot_pragma_openacc_end))
+  while (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
     P.ConsumeAnyToken();
 }
 
@@ -330,7 +330,8 @@ void ParseOpenACCClauseList(Parser &P) {
       P.ConsumeToken();
     FirstClause = false;
 
-    // Recovering from a bad clause is really difficult, so we just give up on error.
+    // Recovering from a bad clause is really difficult, so we just give up on
+    // error.
     if (ParseOpenACCClause(P)) {
       SkipUntilEndOfDirective(P);
       return;
