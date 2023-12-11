@@ -3614,10 +3614,10 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   SFINAETrap Trap(*this);
 
   auto *Method = dyn_cast<CXXMethodDecl>(FunctionTemplate);
-  for(auto arg: Deduced) {
+  for (auto arg : Deduced) {
     auto ty = arg.getAsType();
-    if ( ty->isBuiltinType() ) {
-        return TDK_SubstitutionFailure;
+    if (ty->isBuiltinType()) {
+      return TDK_SubstitutionFailure;
     }
   }
   // Enter a new template instantiation context while we instantiate the
