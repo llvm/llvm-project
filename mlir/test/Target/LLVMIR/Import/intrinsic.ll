@@ -878,14 +878,6 @@ define float @ssa_copy(float %0) {
   ret float %2
 }
 
-; CHECK-LABEL: llvm.func @nvvm
-define void @nvvm() {
-  ; CHECK: %{{.*}} = nvvm.read.ptx.sreg.ntid.x : i32
-  %1 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  ret void
-}
-
-declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare float @llvm.fma.f32(float, float, float)
