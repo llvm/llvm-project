@@ -14,9 +14,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_INSTRPROFILING_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include <cstring>
 
 namespace llvm {
 
