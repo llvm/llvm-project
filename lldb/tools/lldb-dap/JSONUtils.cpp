@@ -804,9 +804,11 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     llvm::raw_string_ostream os(frame_name);
     os << llvm::format_hex(frame.GetPC(), 18);
   }
-  bool is_optimized = frame.GetFunction().GetIsOptimized();
-  if (is_optimized)
+
+  // We only include `[opt]` if a custom frame format is not specified.
+  if (!g_dap.frame_format && frame.GetFunction().GetIsOptimized())
     frame_name += " [opt]";
+
   EmplaceSafeString(object, "name", frame_name);
 
   auto source = CreateSource(frame);
