@@ -2660,6 +2660,35 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
+static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
+  StringRef RangeStr = "";
+  switch (Range) {
+  case LangOptions::ComplexRangeKind::CX_Limited:
+    return "-fcx-limited-range";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Fortran:
+    return "-fcx-fortran-rules";
+    break;
+  default:
+    return RangeStr;
+    break;
+  }
+}
+
+static void EmitComplexRangeDiag(const Driver &D,
+                                 LangOptions::ComplexRangeKind Range1,
+                                 LangOptions::ComplexRangeKind Range2) {
+  if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
+    D.Diag(clang::diag::warn_drv_overriding_option)
+        << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
+}
+
+static std::string RenderComplexRangeOption(std::string Range) {
+  std::string ComplexRangeStr = "-complex-range=";
+  ComplexRangeStr += Range;
+  return ComplexRangeStr;
+}
+
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
@@ -2706,6 +2735,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_Full;
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2717,6 +2747,28 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     bool PreciseFPModel = false;
     switch (optID) {
     default:
+      break;
+    case options::OPT_fcx_limited_range: {
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Limited);
+      Range = LangOptions::ComplexRangeKind::CX_Limited;
+      std::string ComplexRangeStr = RenderComplexRangeOption("limited");
+      if (!ComplexRangeStr.empty())
+        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
+      break;
+    }
+    case options::OPT_fno_cx_limited_range:
+      Range = LangOptions::ComplexRangeKind::CX_Full;
+      break;
+    case options::OPT_fcx_fortran_rules: {
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Fortran);
+      Range = LangOptions::ComplexRangeKind::CX_Fortran;
+      std::string ComplexRangeStr = RenderComplexRangeOption("fortran");
+      if (!ComplexRangeStr.empty())
+        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
+      break;
+    }
+    case options::OPT_fno_cx_fortran_rules:
+      Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math
@@ -2772,7 +2824,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
       break;
-      }
+    }
     }
 
     switch (optID) {
@@ -2971,7 +3023,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (!OFastEnabled)
         continue;
       [[fallthrough]];
-    case options::OPT_ffast_math:
+    case options::OPT_ffast_math: {
       HonorINFs = false;
       HonorNaNs = false;
       MathErrno = false;
@@ -2985,7 +3037,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       // If fast-math is set then set the fp-contract mode to fast.
       FPContract = "fast";
       SeenUnsafeMathModeOption = true;
+      // ffast-math enables fortran rules for complex multiplication and
+      // division.
+      std::string ComplexRangeStr = RenderComplexRangeOption("limited");
+      if (!ComplexRangeStr.empty())
+        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
+    }
     case options::OPT_fno_fast_math:
       HonorINFs = true;
       HonorNaNs = true;
@@ -3139,6 +3197,15 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (Args.hasFlag(options::OPT_fno_strict_float_cast_overflow,
                    options::OPT_fstrict_float_cast_overflow, false))
     CmdArgs.push_back("-fno-strict-float-cast-overflow");
+
+  if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
+    CmdArgs.push_back("-fcx-limited-range");
+  if (const Arg *A = Args.getLastArg(options::OPT_fcx_fortran_rules))
+    CmdArgs.push_back("-fcx-fortran-rules");
+  if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_limited_range))
+    CmdArgs.push_back("-fno-cx-limited-range");
+  if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_fortran_rules))
+    CmdArgs.push_back("-fno-cx-fortran-rules");
 }
 
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,

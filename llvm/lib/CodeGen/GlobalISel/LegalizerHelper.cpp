@@ -3793,6 +3793,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
+  case G_VAARG:
+    return lowerVAArg(MI);
   }
 }
 
@@ -7885,6 +7887,56 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
     return Legalized;
   }
   return UnableToLegalize;
+}
+
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
+  MachineFunction &MF = *MI.getMF();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  Register ListPtr = MI.getOperand(1).getReg();
+  LLT PtrTy = MRI.getType(ListPtr);
+
+  // LstPtr is a pointer to the head of the list. Get the address
+  // of the head of the list.
+  Align PtrAlignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
+  MachineMemOperand *PtrLoadMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
+  auto VAList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
+
+  const Align A(MI.getOperand(2).getImm());
+  LLT PtrTyAsScalarTy = LLT::scalar(PtrTy.getSizeInBits());
+  if (A > TLI.getMinStackArgumentAlignment()) {
+    Register AlignAmt =
+        MIRBuilder.buildConstant(PtrTyAsScalarTy, A.value() - 1).getReg(0);
+    auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, VAList, AlignAmt);
+    auto AndDst = MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(A));
+    VAList = AndDst.getReg(0);
+  }
+
+  // Increment the pointer, VAList, to the next vaarg
+  // The list should be bumped by the size of element in the current head of
+  // list.
+  Register Dst = MI.getOperand(0).getReg();
+  LLT LLTTy = MRI.getType(Dst);
+  Type *Ty = getTypeForLLT(LLTTy, Ctx);
+  auto IncAmt =
+      MIRBuilder.buildConstant(PtrTyAsScalarTy, DL.getTypeAllocSize(Ty));
+  auto Succ = MIRBuilder.buildPtrAdd(PtrTy, VAList, IncAmt);
+
+  // Store the increment VAList to the legalized pointer
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, PtrAlignment);
+  MIRBuilder.buildStore(Succ, ListPtr, *StoreMMO);
+  // Load the actual argument out of the pointer VAList
+  Align EltAlignment = DL.getABITypeAlign(Ty);
+  MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
+  MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
+
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {

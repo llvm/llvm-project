@@ -238,6 +238,8 @@ Non-comprehensive list of changes in this release
   except that it returns the size of a type ignoring tail padding.
 * ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``
   and vector types as return value ``19``, to match GCC 14's behavior.
+* The default value of `_MSC_VER` was raised from 1920 to 1933.
+* Since MSVC 19.33 added undocumented attribute ``[[msvc::constexpr]]``, this release adds the attribute as well.
 
 * Added ``#pragma clang fp reciprocal``.
 
@@ -261,6 +263,16 @@ New Compiler Flags
   potentially-throwing destructor will lead to an error.
 
 * ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
+
+* ``-fcx-limited-range`` enables the naive mathematical formulas for complex
+  division and multiplication with no NaN checking of results. The default is
+  ``-fno-cx-limited-range``, but this option is enabled by ``-ffast-math``.
+
+* ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
+  multiplication and enables application of Smith's algorithm for complex
+  division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
+  (1962). The default is ``-fno-cx-fortran-rules``.
+
 
 Deprecated Compiler Flags
 -------------------------
@@ -511,6 +523,7 @@ Improvements to Clang's diagnostics
        48 | static_assert(1 << 4 == 15);
           |               ~~~~~~~^~~~~
 
+- Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -999,6 +1012,9 @@ Floating Point Support in Clang
   ``__builtin_exp10f128`` builtins.
 - Add ``__builtin_iszero``, ``__builtin_issignaling`` and
   ``__builtin_issubnormal``.
+- Add support for C99's ``#pragma STDC CX_LIMITED_RANGE`` feature.  This
+  enables the naive mathematical formulas for complex multiplication and
+  division, which are faster but do not correctly handle overflow and infinities.
 
 AST Matchers
 ------------

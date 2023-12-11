@@ -15,6 +15,7 @@
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Debug.h"
@@ -119,8 +120,9 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
 class MachOHeaderMaterializationUnit : public MaterializationUnit {
 public:
   MachOHeaderMaterializationUnit(MachOPlatform &MOP,
-                                 const SymbolStringPtr &HeaderStartSymbol)
-      : MaterializationUnit(createHeaderInterface(MOP, HeaderStartSymbol)),
+                                 SymbolStringPtr HeaderStartSymbol)
+      : MaterializationUnit(
+            createHeaderInterface(MOP, std::move(HeaderStartSymbol))),
         MOP(MOP) {}
 
   StringRef getName() const override { return "MachOHeaderMU"; }
@@ -348,10 +350,17 @@ struct ObjCImageInfoFlags {
 namespace llvm {
 namespace orc {
 
+std::unique_ptr<MaterializationUnit>
+MachOPlatform::defaultMachOHeaderBuilder(MachOPlatform &MOP) {
+  return std::make_unique<MachOHeaderMaterializationUnit>(
+      MOP, SymbolStringPtr(MOP.getMachOHeaderStartSymbol()));
+}
+
 Expected<std::unique_ptr<MachOPlatform>>
 MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                       JITDylib &PlatformJD,
                       std::unique_ptr<DefinitionGenerator> OrcRuntime,
+                      MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
   // If the target is not supported then bail out immediately.
@@ -382,8 +391,9 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
 
   // Create the instance.
   Error Err = Error::success();
-  auto P = std::unique_ptr<MachOPlatform>(new MachOPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime), Err));
+  auto P = std::unique_ptr<MachOPlatform>(
+      new MachOPlatform(ES, ObjLinkingLayer, PlatformJD, std::move(OrcRuntime),
+                        std::move(BuildMachOHeaderMU), Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
@@ -392,6 +402,7 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
 Expected<std::unique_ptr<MachOPlatform>>
 MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                       JITDylib &PlatformJD, const char *OrcRuntimePath,
+                      MachOHeaderMUBuilder BuildMachOHeaderMU,
                       std::optional<SymbolAliasMap> RuntimeAliases) {
 
   // Create a generator for the ORC runtime archive.
@@ -402,12 +413,11 @@ MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
 
   return Create(ES, ObjLinkingLayer, PlatformJD,
                 std::move(*OrcRuntimeArchiveGenerator),
-                std::move(RuntimeAliases));
+                std::move(BuildMachOHeaderMU), std::move(RuntimeAliases));
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD) {
-  if (auto Err = JD.define(std::make_unique<MachOHeaderMaterializationUnit>(
-          *this, MachOHeaderStartSymbol)))
+  if (auto Err = JD.define(BuildMachOHeaderMU(*this)))
     return Err;
 
   return ES.lookup({&JD}, MachOHeaderStartSymbol).takeError();
@@ -522,8 +532,10 @@ MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
 MachOPlatform::MachOPlatform(
     ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
     JITDylib &PlatformJD,
-    std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator, Error &Err)
-    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer) {
+    std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
+    MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err)
+    : ES(ES), PlatformJD(PlatformJD), ObjLinkingLayer(ObjLinkingLayer),
+      BuildMachOHeaderMU(std::move(BuildMachOHeaderMU)) {
   ErrorAsOutParameter _(&Err);
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));

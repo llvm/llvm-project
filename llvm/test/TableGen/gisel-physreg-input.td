@@ -27,7 +27,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // GISEL: GIM_Try,
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ADD,
-// GISEL-NEXT: // MIs[0] dst
+// GISEL-NEXT: // MIs[0] DstI[dst]
 // GISEL-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // GISEL-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // GISEL-NEXT: // MIs[0] src0
@@ -41,7 +41,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, MyTarget::SPECIAL, /*AddRegisterRegFlags*/RegState::Define,
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ADD_PHYS,
-// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
@@ -55,7 +55,7 @@ def ADD_PHYS : I<(outs GPR32:$dst), (ins GPR32:$src0),
 // GISEL: GIM_Try,
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_MUL,
-// GISEL-NEXT: // MIs[0] dst
+// GISEL-NEXT: // MIs[0] DstI[dst]
 // GISEL-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // GISEL-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // GISEL-NEXT: // MIs[0] SPECIAL
@@ -69,7 +69,7 @@ def ADD_PHYS : I<(outs GPR32:$dst), (ins GPR32:$src0),
 // GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, MyTarget::SPECIAL, /*AddRegisterRegFlags*/RegState::Define,
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MUL_PHYS,
-// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // SPECIAL
 // GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,

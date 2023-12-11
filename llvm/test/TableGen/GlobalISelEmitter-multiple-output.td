@@ -30,10 +30,10 @@ def : Pat<(loadpost (p0 GPR32:$addr), (i32 GPR32:$off)),
 >;
 
 // CHECK:      GIM_CheckOpcode, /*MI*/0, MyTarget::G_POST_LOAD,
-// CHECK-NEXT: // MIs[0] val
+// CHECK-NEXT: // MIs[0] DstI[val]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT: // MIs[0] ptr_out
+// CHECK-NEXT: // MIs[0] DstI[ptr_out]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_p0s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT: // MIs[0] addr
@@ -64,10 +64,10 @@ def : GINodeEquiv<G_TWO_IN, two_in>;
 def : Pat<(two_in GPR32:$i1, GPR32:$i2), (TWO_INS GPR32:$i2, GPR32:$i1)>;
 
 // CHECK:      GIM_CheckOpcode, /*MI*/0, MyTarget::G_TWO_IN,
-// CHECK-NEXT: // MIs[0] out1
+// CHECK-NEXT: // MIs[0] DstI[out1]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT: // MIs[0] out2
+// CHECK-NEXT: // MIs[0] DstI[out2]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT: // MIs[0] i1
@@ -78,8 +78,8 @@ def : Pat<(two_in GPR32:$i1, GPR32:$i2), (TWO_INS GPR32:$i2, GPR32:$i1)>;
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/3, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT: // (two_in:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$i1, GPR32:{ *:[i32] }:$i2)  =>  (TWO_INS:{ *:[i32] }:{ *:[i32] } GPR32:{ *:[i32] }:$i2, GPR32:{ *:[i32] }:$i1)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::TWO_INS,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // out1
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // out2
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[out1]
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // DstI[out2]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, // i2
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // i1
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,

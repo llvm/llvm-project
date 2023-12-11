@@ -55,15 +55,15 @@ module {
 
   func.func @conv2d_CSR_dense_rotated(%arg0: tensor<8x8xi32, #CSR>,
                                       %arg1: tensor<3x3xi32>) -> tensor<6x6xi32> {
-    %s = tensor.empty() : tensor<6x6xi32>
+    %s = arith.constant dense<0> : tensor<6x6xi32>
     %0 = linalg.generic {indexing_maps = [#map, #map1, #map2],
-    iterator_types = ["parallel", "reduction", "reduction", "parallel"]}
-    ins(%arg0, %arg1 : tensor<8x8xi32, #CSR>, tensor<3x3xi32>)
-    outs(%s : tensor<6x6xi32>) attrs =  {sorted = true} {
-    ^bb0(%in: i32, %in_0: i32, %out: i32):
-      %1 = arith.muli %in, %in_0 : i32
-      %2 = arith.addi %out, %1 : i32
-      linalg.yield %2 : i32
+      iterator_types = ["parallel", "reduction", "reduction", "parallel"]}
+      ins(%arg0, %arg1 : tensor<8x8xi32, #CSR>, tensor<3x3xi32>)
+      outs(%s : tensor<6x6xi32>) attrs =  {sorted = true} {
+      ^bb0(%in: i32, %in_0: i32, %out: i32):
+        %1 = arith.muli %in, %in_0 : i32
+        %2 = arith.addi %out, %1 : i32
+        linalg.yield %2 : i32
     } -> tensor<6x6xi32>
     return %0 : tensor<6x6xi32>
   }

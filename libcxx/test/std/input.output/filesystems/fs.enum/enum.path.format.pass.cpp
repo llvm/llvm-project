@@ -25,9 +25,7 @@ int main(int, char**) {
   typedef fs::path::format E;
   static_assert(std::is_enum<E>::value, "");
 
-  typedef std::underlying_type<E>::type UT;
-
-  LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned char>::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<std::underlying_type<E>::type, unsigned char>::value, ""); // Implementation detail
 
   static_assert(
           E::auto_format   != E::native_format &&

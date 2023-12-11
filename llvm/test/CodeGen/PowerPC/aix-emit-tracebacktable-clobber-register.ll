@@ -104,7 +104,7 @@ entry:
 ; COMMON-NEXT:                                         # -- End function
 ; COMMON:       .toc
 ; COMMON:      L..C2:
-; COMMON-NEXT:  .tc __ehinfo.1[TC],__ehinfo.1
+; COMMON-NEXT:  .tc __ehinfo.1[TE],__ehinfo.1
 
 
 ; OBJ-DIS:      9c: 00 00 00 00  	# Traceback table start
