@@ -749,10 +749,9 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                A->getValue());
     uint8_t ByteVal = Val.get();
     if (ByteVal != Val.get())
-      if (Error E = reportWarning(llvm::createStringError(
-              std::errc::value_too_large,
-              "truncating gap-fill from 0x%x to 0x%x", Val.get(), ByteVal)))
-        return std::move(E);
+      return createStringError(
+          std::errc::value_too_large,
+          "gap-fill value %s is out of range (0 to 0xff)", A->getValue());
     Config.GapFill = ByteVal;
   }
 

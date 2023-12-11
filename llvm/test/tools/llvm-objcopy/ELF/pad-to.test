@@ -66,7 +66,6 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
     Address:         0x0200
-    AddressAlign:    0x0001
     Size:            0x6
     Content:         '112233445566'
   - Name:            .space
@@ -77,18 +76,15 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
     Address:         0x0210
-    AddressAlign:    0x0001
     Content:         '778899aa'
   - Name:            .bss
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
     Address:         0x0220
-    AddressAlign:    0x0001
     Size:            0x0008
   - Name:            .comment
     Type:            SHT_PROGBITS
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
-    AddressAlign:    0x0001
     EntSize:         0x0001
     Content:         ''
 ...

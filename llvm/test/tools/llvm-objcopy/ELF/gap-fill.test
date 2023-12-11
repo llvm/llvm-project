@@ -18,8 +18,8 @@
 # RUN: not llvm-objcopy -O binary --gap-fill=ff %t %t.bin 2>&1 | FileCheck %s --check-prefix=BAD-INPUT4
 # BAD-INPUT4: error: --gap-fill: bad number: ff
 
-# RUN: llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=TRUNCATED-ERR
-# TRUNCATED-ERR: warning: truncating gap-fill from 0x1122 to 0x22
+# RUN: not llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=TRUNCATED-ERR
+# TRUNCATED-ERR: error: gap-fill value 0x1122 is out of range (0 to 0xff)
 
 # RUN: od -v -Ax -t x1 %t-val16 | FileCheck %s --check-prefix=TRUNCATED --match-full-lines
 # TRUNCATED:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 22 a1 b2
@@ -166,9 +166,9 @@ Sections:
 ## In this test, output sections are defined out of order with respect to their
 ## load addresses. Verify that gaps are still correctly filled.
 
-# RUN: yaml2obj --docnum=2 %s -o %t
-# RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck --match-full-lines %s
+# RUN: yaml2obj --docnum=2 %s -o %t.2
+# RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t.2 %t.2.filled
+# RUN: od -v -Ax -t x1 %t.2.filled | FileCheck --match-full-lines %s
 # CHECK: 000000 aa bb cc dd e9 e9 e9 e9 11 22 33 44
 
 --- !ELF
@@ -182,17 +182,14 @@ Sections:
     Type:            SHT_NOBITS
     Flags:           [ SHF_ALLOC, SHF_WRITE ]
     Address:         0x0104
-    AddressAlign:    0x0001
     Size:            4
   - Name:            .section1
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_WRITE ]
     Address:         0x0108
-    AddressAlign:    0x0001
     Content:         '11223344'
   - Name:            .section3
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_WRITE ]
     Address:         0x0100
-    AddressAlign:    0x0001
     Content:         'AABBCCDD'
