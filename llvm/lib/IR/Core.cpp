@@ -3319,6 +3319,52 @@ void LLVMSetArgOperand(LLVMValueRef Funclet, unsigned i, LLVMValueRef value) {
 
 /*--.. Arithmetic ..........................................................--*/
 
+static FastMathFlags mapFromLLVMFastMathFlags(LLVMFastMathFlags FMF) {
+  FastMathFlags NewFMF;
+  // First, check if all bits are set
+  // If not, check each one explicitly
+  if (FMF == static_cast<LLVMFastMathFlags>(LLVMFastMathAll))
+    NewFMF.set();
+  else {
+    NewFMF.setAllowReassoc((FMF & LLVMFastMathAllowReassoc) != 0);
+    NewFMF.setNoNaNs((FMF & LLVMFastMathNoNaNs) != 0);
+    NewFMF.setNoInfs((FMF & LLVMFastMathNoInfs) != 0);
+    NewFMF.setNoSignedZeros((FMF & LLVMFastMathNoSignedZeros) != 0);
+    NewFMF.setAllowReciprocal((FMF & LLVMFastMathAllowReciprocal) != 0);
+    NewFMF.setAllowContract((FMF & LLVMFastMathAllowContract) != 0);
+    NewFMF.setApproxFunc((FMF & LLVMFastMathApproxFunc) != 0);
+  }
+
+  return NewFMF;
+}
+
+static LLVMFastMathFlags mapToLLVMFastMathFlags(FastMathFlags FMF) {
+
+  // First, check if all bits are set
+  // If not, check each one explicitly
+  if (FMF.isFast())
+    return LLVMFastMathAll;
+  else {
+    LLVMFastMathFlags NewFMF = LLVMFastMathNone;
+    if (FMF.allowReassoc())
+      NewFMF |= LLVMFastMathAllowReassoc;
+    if (FMF.noNaNs())
+      NewFMF |= LLVMFastMathNoNaNs;
+    if (FMF.noInfs())
+      NewFMF |= LLVMFastMathNoInfs;
+    if (FMF.noSignedZeros())
+      NewFMF |= LLVMFastMathNoSignedZeros;
+    if (FMF.allowReciprocal())
+      NewFMF |= LLVMFastMathAllowReciprocal;
+    if (FMF.allowContract())
+      NewFMF |= LLVMFastMathAllowContract;
+    if (FMF.approxFunc())
+      NewFMF |= LLVMFastMathApproxFunc;
+
+    return NewFMF;
+  }
+}
+
 LLVMValueRef LLVMBuildAdd(LLVMBuilderRef B, LLVMValueRef LHS, LLVMValueRef RHS,
                           const char *Name) {
   return wrap(unwrap(B)->CreateAdd(unwrap(LHS), unwrap(RHS), Name));
@@ -3516,6 +3562,22 @@ LLVMBool LLVMGetNNeg(LLVMValueRef NonNegInst) {
 void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg) {
   Value *P = unwrap<Value>(NonNegInst);
   cast<Instruction>(P)->setNonNeg(IsNonNeg);
+}
+
+LLVMFastMathFlags LLVMGetFastMathFlags(LLVMValueRef FPMathInst) {
+  Value *P = unwrap<Value>(FPMathInst);
+  FastMathFlags FMF = cast<Instruction>(P)->getFastMathFlags();
+  return mapToLLVMFastMathFlags(FMF);
+}
+
+void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF) {
+  Value *P = unwrap<Value>(FPMathInst);
+  cast<Instruction>(P)->setFastMathFlags(mapFromLLVMFastMathFlags(FMF));
+}
+
+LLVMBool LLVMGetCanUseFastMathFlags(LLVMValueRef V) {
+  Value *Val = unwrap<Value>(V);
+  return isa<FPMathOperator>(Val);
 }
 
 LLVMBool LLVMGetIsDisjoint(LLVMValueRef Inst) {

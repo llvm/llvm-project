@@ -770,7 +770,18 @@ struct FunCloner {
         }
 
         LLVMAddIncoming(Dst, Values.data(), Blocks.data(), IncomingCount);
+        if (LLVMGetCanUseFastMathFlags(Src))
+          LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         return Dst;
+      }
+      case LLVMSelect: {
+        LLVMValueRef If = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Then = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef Else = CloneValue(LLVMGetOperand(Src, 2));
+        Dst = LLVMBuildSelect(Builder, If, Then, Else, Name);
+        if (LLVMGetCanUseFastMathFlags(Src))
+          LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
       }
       case LLVMCall: {
         SmallVector<LLVMValueRef, 8> Args;
@@ -790,6 +801,9 @@ struct FunCloner {
                                               ArgCount, Bundles.data(),
                                               Bundles.size(), Name);
         LLVMSetTailCallKind(Dst, LLVMGetTailCallKind(Src));
+        if (LLVMGetCanUseFastMathFlags(Src))
+          LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+
         CloneAttrs(Src, Dst);
         for (auto Bundle : Bundles)
           LLVMDisposeOperandBundle(Bundle);
@@ -928,6 +942,55 @@ struct FunCloner {
         LLVMBool NNeg = LLVMGetNNeg(Src);
         Dst = LLVMBuildZExt(Builder, Val, DestTy, Name);
         LLVMSetNNeg(Dst, NNeg);
+        break;
+      }
+      case LLVMFAdd: {
+        LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildFAdd(Builder, LHS, RHS, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
+      }
+      case LLVMFSub: {
+        LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildFSub(Builder, LHS, RHS, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
+      }
+      case LLVMFMul: {
+        LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildFMul(Builder, LHS, RHS, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
+      }
+      case LLVMFDiv: {
+        LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildFDiv(Builder, LHS, RHS, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
+      }
+      case LLVMFRem: {
+        LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildFRem(Builder, LHS, RHS, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
+      }
+      case LLVMFNeg: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        Dst = LLVMBuildFNeg(Builder, Val, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
+        break;
+      }
+      case LLVMFCmp: {
+        LLVMRealPredicate Pred = LLVMGetFCmpPredicate(Src);
+        LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildFCmp(Builder, Pred, LHS, RHS, Name);
+        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       default:
