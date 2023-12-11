@@ -401,9 +401,6 @@ Improvements to Clang's diagnostics
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
-- The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
-  enumeration's underlying type into account instead of suggesting a type just
-  based on the format string specifier being used.
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
   (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
