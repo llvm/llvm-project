@@ -2567,6 +2567,9 @@ public:
   Tracker::Result handle(const Expr *E, const ExplodedNode *InputNode,
                          const ExplodedNode *RVNode,
                          TrackingOptions Opts) override {
+    assert(RVNode->getStmtForDiagnostics() == E &&
+           "RVNode must be the ExplodedNode for the tracked expression.");
+
     if (!E->isPRValue() || !RVNode)
       return {};
 
