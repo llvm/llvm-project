@@ -3613,11 +3613,15 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
   SFINAETrap Trap(*this);
 
-  auto *Method = dyn_cast<CXXMethodDecl>(FunctionTemplate);
-  for (auto arg : Deduced) {
-    auto ty = arg.getAsType();
-    if (ty->isBuiltinType()) {
-      return TDK_SubstitutionFailure;
+  auto *Function = FunctionTemplate->getTemplatedDecl();
+  if (auto *Method = dyn_cast<CXXMethodDecl>(Function)) {
+    if (Method->isOverloadedOperator()) {
+      for (auto arg : Deduced) {
+        auto ty = arg.getAsType();
+        if (ty->isIntegerType()) {
+          return TDK_SubstitutionFailure;
+        }
+      }
     }
   }
   // Enter a new template instantiation context while we instantiate the
