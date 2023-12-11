@@ -979,13 +979,14 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   auto buildStaticFuncMap = [&StaticFuncMap,
                              SampleProfileHasFUnique](const StringRef Name) {
-    std::string Prefixes[] = {".cpp:", "cc:", ".c:", ".hpp:", ".h:"};
+    std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
-    for (auto &Prefix : Prefixes) {
-      PrefixPos = Name.find_insensitive(Prefix);
+    for (auto &FilePrefix : FilePrefixes) {
+      std::string NamePrefix = FilePrefix + ';';
+      PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
-      PrefixPos += Prefix.size();
+      PrefixPos += NamePrefix.size();
       break;
     }
 
