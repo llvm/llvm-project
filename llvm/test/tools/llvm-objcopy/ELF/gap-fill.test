@@ -21,18 +21,6 @@
 # RUN: not llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=TRUNCATED-ERR
 # TRUNCATED-ERR: error: gap-fill value 0x1122 is out of range (0 to 0xff)
 
-# RUN: od -v -Ax -t x1 %t-val16 | FileCheck %s --check-prefix=TRUNCATED --match-full-lines
-# TRUNCATED:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 22 a1 b2
-# TRUNCATED-NEXT: 000010 c3 d4 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000020 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000030 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000040 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000050 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000060 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000070 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22 22
-# TRUNCATED-NEXT: 000080 22 22 89 ab cd ef
-# TRUNCATED-NEXT: 000086
-
 ## Test no gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary %t %t-default
 # RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT --match-full-lines
