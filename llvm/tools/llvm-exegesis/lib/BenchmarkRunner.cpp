@@ -147,17 +147,10 @@ private:
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {
-        std::string Msg = "snippet crashed while running";
-#ifdef LLVM_ON_UNIX
         // See "Exit Status for Commands":
         // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
         constexpr const int kSigOffset = 128;
-        if (const char *const SigName = strsignal(CRC.RetCode - kSigOffset)) {
-          Msg += ": ";
-          Msg += SigName;
-        }
-#endif
-        return make_error<SnippetCrash>(std::move(Msg));
+        return make_error<SnippetSignal>(CRC.RetCode - kSigOffset);
       }
     }
 
@@ -366,7 +359,7 @@ private:
         return Error::success();
       }
       // The child exited, but not successfully
-      return make_error<SnippetCrash>(
+      return make_error<Failure>(
           "Child benchmarking process exited with non-zero exit code: " +
           childProcessExitCodeToString(ChildExitCode));
     }
@@ -379,9 +372,11 @@ private:
                                  Twine(strerror(errno)));
     }
 
-    return make_error<SnippetCrash>(
-        "The benchmarking subprocess sent unexpected signal: " +
-        Twine(strsignal(ChildSignalInfo.si_signo)));
+    if (ChildSignalInfo.si_signo == SIGSEGV)
+      return make_error<SnippetSegmentationFault>(
+          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+
+    return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
   }
 
   void disableCoreDumps() const {
