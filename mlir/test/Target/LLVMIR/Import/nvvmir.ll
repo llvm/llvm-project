@@ -68,7 +68,7 @@ define float @nvvm_rcp(float %0) {
   ret float %2
 }
 
-; TODO Below intrinsics not yet supported
+; TODO: Support the intrinsics below once they derive from NVVM_IntrOp rather than from NVVM_Op.
 
 ; define void @llvm_nvvm_barrier0() {
 ;   call void @llvm.nvvm.barrier0()
