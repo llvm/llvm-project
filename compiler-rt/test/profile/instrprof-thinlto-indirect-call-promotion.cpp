@@ -13,6 +13,10 @@
 // - Generate ThinLTO summary file with LLVM bitcodes, and run `function-import` pass.
 // - Run `pgo-icall-prom` pass for the IR module which needs to import callees.
 
+// Use lld as linker for more robust test. We need to REQUIRE LLVMgold.so for
+// LTO if default linker is GNU ld or gold anyway.
+// REQUIRES: lld-available
+
 // Test should fail where linkage-name and mangled-name diverges, see issue https://github.com/llvm/llvm-project/issues/74565).
 // Currently, this name divergence happens on Mach-O object file format, or on
 // many (but not all) 32-bit Windows systems.
@@ -29,12 +33,10 @@
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
-// Use clang*_{pgogen,pgouse} for IR level instrumentation, and use clangxx* for
-// C++.
-//
 // Do setup work for all below tests.
 // Generate raw profiles from real programs and convert it into indexed profiles.
-// RUN: %clangxx_pgogen -O2 lib.cpp main.cpp -o main
+// Use clangxx_pgogen for IR level instrumentation for C++.
+// RUN: %clangxx_pgogen -fuse-ld=lld -O2 lib.cpp main.cpp -o main
 // RUN: env LLVM_PROFILE_FILE=main.profraw %run ./main
 // RUN: llvm-profdata merge main.profraw -o main.profdata
 
