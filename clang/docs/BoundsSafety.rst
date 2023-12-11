@@ -30,7 +30,7 @@ time — and it rejects code if it cannot.
 
 The most important contribution of ``-fbounds-safety`` is how it reduces the
 programmer’s annotation burden by reconciling bounds annotations at ABI
-boundaries with the use of implicit wide pointers (a.k.a. “fat” pointers) that
+boundaries with the use of implicit wide pointers (a.k.a. "fat" pointers) that
 carry bounds information on local variables without the need for annotations. We
 designed this model so that it preserves ABI compatibility with C while
 minimizing adoption effort.
@@ -115,7 +115,7 @@ this programming model.
 
 The requirement to annotate all pointers with explicit bounds information could
 present a significant adoption burden. To tackle this issue, the model
-incorporates the concept of a “wide pointer” (a.k.a. fat pointer) – a larger
+incorporates the concept of a "wide pointer" (a.k.a. fat pointer) – a larger
 pointer that carries bounds information alongside the pointer value. Utilizing
 wide pointers can potentially reduce the adoption burden, as it contains bounds
 information internally and eliminates the need for explicit bounds annotations.
@@ -183,7 +183,7 @@ generates an error suggesting to add ``__counted_by`` to the pointer.
 External bounds annotations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-“External” bounds annotations provide a way to express a relationship between a
+"External" bounds annotations provide a way to express a relationship between a
 pointer variable and another variable (or expression) containing the bounds
 information of the pointer. In the following example, ``__counted_by(count)``
 annotation expresses the bounds of parameter p using another parameter count.
@@ -252,10 +252,10 @@ dereference.
 Internal bounds annotations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A wide pointer (sometimes known as a “fat” pointer) is a pointer that carries
+A wide pointer (sometimes known as a "fat" pointer) is a pointer that carries
 additional bounds information internally (as part of its data). The bounds
 require additional storage space making wide pointers larger than normal
-pointers, hence the name “wide pointer”. The memory layout of a wide pointer is
+pointers, hence the name "wide pointer". The memory layout of a wide pointer is
 equivalent to a struct with the pointer, upper bound, and (optionally) lower
 bound as its fields as shown below.
 
@@ -274,7 +274,7 @@ normal pointers to allow standard pointer operations, such as pointer
 dereference (``*p``), array subscript (``p[i]``), member access (``p->``), and
 pointer arithmetic, with some restrictions on bounds-unsafe uses.
 
-``-fbounds-safety`` has a set of “internal” bounds annotations to turn pointers
+``-fbounds-safety`` has a set of "internal" bounds annotations to turn pointers
 into wide pointers. These are ``__bidi_indexable`` and ``__indexable``. When a
 pointer has either of these annotations, the compiler changes the pointer to the
 corresponding wide pointer. This means these annotations will break the ABI and
@@ -284,7 +284,7 @@ in ABI surfaces.
 * ``__bidi_indexable`` : A pointer with this annotation becomes a wide pointer
   to carry the upper bound and the lower bound, the layout of which is
   equivalent to ``struct { T *ptr; T *upper_bound; T *lower_bound; };``. As the
-  name indicates, pointers with this annotation are “bidirectionally indexable”,
+  name indicates, pointers with this annotation are "bidirectionally indexable",
   meaning that they can be indexed with either a negative or a positive offset
   and the pointers can be incremented or decremented using pointer arithmetic. A
   ``__bidi_indexable`` pointer is allowed to hold an out-of-bounds pointer
@@ -544,7 +544,7 @@ Array references
 ^^^^^^^^^^^^^^^^
 
 In C, similar to arrays on the function prototypes, a reference to array is
-automatically promoted (or “decayed”) to a pointer to its first element (e.g.,
+automatically promoted (or "decayed") to a pointer to its first element (e.g.,
 ``&arr[0]``).
 
 In `-fbounds-safety`, array references are promoted to ``__bidi_indexable``
