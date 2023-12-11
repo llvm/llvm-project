@@ -132,7 +132,7 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
-  Mode = SIModeRegisterDefaults(MF.getFunction());
+  Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
