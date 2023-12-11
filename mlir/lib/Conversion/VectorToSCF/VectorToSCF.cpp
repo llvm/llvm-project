@@ -726,12 +726,14 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       auto targetVectorType = vectorType.cloneWith({}, legalIntTy);
       value = rewriter.create<vector::BitCastOp>(loc, signlessSourceVectorType,
                                                  value);
-      if (width == 1 || intTy.isUnsigned())
-        value = rewriter.create<arith::ExtUIOp>(loc, signlessTargetVectorType,
-                                                value);
-      else
-        value = rewriter.create<arith::ExtSIOp>(loc, signlessTargetVectorType,
-                                                value);
+      if (value.getType() != signlessTargetVectorType) {
+        if (width == 1 || intTy.isUnsigned())
+          value = rewriter.create<arith::ExtUIOp>(loc, signlessTargetVectorType,
+                                                  value);
+        else
+          value = rewriter.create<arith::ExtSIOp>(loc, signlessTargetVectorType,
+                                                  value);
+      }
       value = rewriter.create<vector::BitCastOp>(loc, targetVectorType, value);
       vectorType = targetVectorType;
     }

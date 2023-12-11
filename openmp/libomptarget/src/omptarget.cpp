@@ -225,7 +225,7 @@ static int initLibrary(DeviceTy &Device) {
           AsyncInfoTy AsyncInfo(Device);
           void *DevPtr;
           Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
-                              AsyncInfo);
+                              AsyncInfo, /* Entry */ nullptr, &HDTTMap);
           if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
           CurrDeviceEntryAddr = DevPtr;

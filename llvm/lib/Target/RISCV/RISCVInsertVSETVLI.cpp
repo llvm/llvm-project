@@ -742,9 +742,7 @@ class RISCVInsertVSETVLI : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertVSETVLI() : MachineFunctionPass(ID) {
-    initializeRISCVInsertVSETVLIPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVInsertVSETVLI() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

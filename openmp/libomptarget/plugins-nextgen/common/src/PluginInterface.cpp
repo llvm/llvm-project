@@ -789,8 +789,10 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
                              sizeof(DeviceMemoryPoolTrackingTy),
                              &ImageDeviceMemoryPoolTracking);
       if (auto Err =
-              GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal))
-        return Err;
+              GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal)) {
+        consumeError(std::move(Err));
+        continue;
+      }
       DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
     }
 
@@ -971,10 +973,16 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
   }
 
   // Create the metainfo of the device environment global.
+  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
+  if (!GHandler.isSymbolInImage(*this, Image,
+                                "__omp_rtl_device_memory_pool_tracker")) {
+    DP("Skip the memory pool as there is no tracker symbol in the image.");
+    return Error::success();
+  }
+
   GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
                          sizeof(DeviceMemoryPoolTrackingTy),
                          &DeviceMemoryPoolTracking);
-  GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
   if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
     return Err;
 
@@ -1704,7 +1712,7 @@ int32_t __tgt_rtl_number_of_devices() { return Plugin::get().getNumDevices(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
-  return RequiresFlags;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDeviceId,

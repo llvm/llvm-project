@@ -2552,6 +2552,13 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -2652,8 +2659,9 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes;
-  - The AMDGPU target backend is unable to create machine code that can meet the
-    request.
+
+The AMDGPU target backend will emit a warning whenever it is unable to
+create machine code that meets the request.
   }];
 }
 
@@ -3647,6 +3655,21 @@ an error:
   int S::*i;
   struct S {};
 }];
+}
+
+def MSConstexprDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[msvc::constexpr]]`` attribute can be applied only to a function
+definition or a ``return`` statement. It does not impact function declarations.
+A ``[[msvc::constexpr]]`` function cannot be ``constexpr`` or ``consteval``.
+A ``[[msvc::constexpr]]`` function is treated as if it were a ``constexpr`` function
+when it is evaluated in a constant context of ``[[msvc::constexpr]] return`` statement.
+Otherwise, it is treated as a regular function.
+
+Semantics of this attribute are enabled only under MSVC compatibility
+(``-fms-compatibility-version``) 19.33 and later.
+  }];
 }
 
 def MSNoVTableDocs : Documentation {

@@ -36,6 +36,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -2383,8 +2384,6 @@ public:
   bool isCUDADeviceBuiltinTextureType() const;
 
   bool isRVVType(unsigned ElementCount) const;
-
-  bool isRVVType() const;
 
   bool isRVVType(unsigned Bitwidth, bool IsFloat, bool IsBFloat = false) const;
 
@@ -7284,14 +7283,6 @@ inline bool Type::isOpenCLSpecificType() const {
          isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
 }
 
-inline bool Type::isRVVType() const {
-#define RVV_TYPE(Name, Id, SingletonId) \
-  isSpecificBuiltinType(BuiltinType::Id) ||
-  return
-#include "clang/Basic/RISCVVTypes.def"
-    false; // end of boolean or operation.
-}
-
 inline bool Type::isRVVType(unsigned ElementCount) const {
   bool Ret = false;
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
@@ -7524,7 +7515,7 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
 /// spaces into a diagnostic with <<.
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
                                              LangAS AS) {
-  PD.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
+  PD.AddTaggedVal(llvm::to_underlying(AS),
                   DiagnosticsEngine::ArgumentKind::ak_addrspace);
   return PD;
 }

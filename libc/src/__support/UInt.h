@@ -103,13 +103,20 @@ template <size_t Bits, bool Signed> struct BigInt {
       val[i] = words[i];
   }
 
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
-                                                    sizeof(T) <= 16 &&
-                                                    !cpp::is_same_v<T, bool>>>
-  LIBC_INLINE constexpr explicit operator T() const {
-    if constexpr (sizeof(T) <= 8)
-      return static_cast<T>(val[0]);
+  template <typename T> LIBC_INLINE constexpr explicit operator T() const {
+    return to<T>();
+  }
 
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) <= 8 && !cpp::is_same_v<T, bool>, T>
+  to() const {
+    return static_cast<T>(val[0]);
+  }
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) == 16, T>
+  to() const {
     // T is 128-bit.
     T lo = static_cast<T>(val[0]);
 
@@ -121,7 +128,6 @@ template <size_t Bits, bool Signed> struct BigInt {
         return lo;
       }
     } else {
-      // TODO: silence shift warning
       return static_cast<T>((static_cast<T>(val[1]) << 64) + lo);
     }
   }

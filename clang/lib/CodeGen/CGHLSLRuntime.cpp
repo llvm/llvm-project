@@ -184,7 +184,8 @@ void CGHLSLRuntime::finishCodeGen() {
                                       : llvm::hlsl::ResourceKind::TBuffer;
     std::string TyName =
         Buf.Name.str() + (Buf.IsCBuffer ? ".cb." : ".tb.") + "ty";
-    addBufferResourceAnnotation(GV, TyName, RC, RK, Buf.Binding);
+    addBufferResourceAnnotation(GV, TyName, RC, RK, /*IsROV=*/false,
+                                Buf.Binding);
   }
 }
 
@@ -196,6 +197,7 @@ void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
                                                 llvm::StringRef TyName,
                                                 llvm::hlsl::ResourceClass RC,
                                                 llvm::hlsl::ResourceKind RK,
+                                                bool IsROV,
                                                 BufferResBinding &Binding) {
   llvm::Module &M = CGM.getModule();
 
@@ -219,7 +221,7 @@ void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
          "ResourceMD must have been set by the switch above.");
 
   llvm::hlsl::FrontendResource Res(
-      GV, TyName, RK, Binding.Reg.value_or(UINT_MAX), Binding.Space);
+      GV, TyName, RK, IsROV, Binding.Reg.value_or(UINT_MAX), Binding.Space);
   ResourceMD->addOperand(Res.getMetadata());
 }
 
@@ -236,10 +238,11 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
 
   llvm::hlsl::ResourceClass RC = Attr->getResourceClass();
   llvm::hlsl::ResourceKind RK = Attr->getResourceKind();
+  bool IsROV = Attr->getIsROV();
 
   QualType QT(Ty, 0);
   BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
-  addBufferResourceAnnotation(GV, QT.getAsString(), RC, RK, Binding);
+  addBufferResourceAnnotation(GV, QT.getAsString(), RC, RK, IsROV, Binding);
 }
 
 CGHLSLRuntime::BufferResBinding::BufferResBinding(

@@ -1340,18 +1340,18 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
 }
 
 template <typename T>
-static Value genConstInt32From(OpBuilder &builder, Location loc, T TValue) {
+static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
   return builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                          static_cast<int32_t>(TValue));
+                                          static_cast<int32_t>(tValue));
 }
 
 template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T TValue) {
+static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmFloat32Type = builder.getF32Type();
   return builder.create<LLVM::ConstantOp>(
       loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(TValue)));
+      builder.getF32FloatAttr(static_cast<float>(tValue)));
 }
 
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
@@ -1629,7 +1629,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto stream = adaptor.getAsyncDependencies().front();
   Value bufferSize;
   if (is2To4Sparsity(op.getSpmatA())) {
-    auto prune_flag =
+    auto pruneFlag =
         genConstInt32From(rewriter, loc, get2To4PruneFlag(op.getSpmatA()));
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
@@ -1641,7 +1641,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         .create(loc, rewriter,
                 {bufferSize, modeA, modeB, adaptor.getSpmatA(),
                  adaptor.getDnmatB(), adaptor.getDnmatC(), computeType,
-                 prune_flag, stream})
+                 pruneFlag, stream})
         .getResult();
 
     auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(
