@@ -6354,9 +6354,11 @@ def J : JoinedOrSeparate<["-"], "J">,
   Group<gfortran_Group>,
   Alias<module_dir>;
 
+let Visibility = [FlangOption] in {
 def no_fortran_main : Flag<["-"], "fno-fortran-main">,
   Visibility<[FlangOption]>, Group<f_Group>,
-  HelpText<"Don't link in Fortran main">;
+  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
+} // let Visibility = [ FlangOption ]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options
