@@ -6295,32 +6295,29 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   // Ignore some mnemonics we know aren't predicated forms.
   //
   // FIXME: Would be nice to autogen this.
-  if ((Mnemonic == "movs" && isThumb()) ||
-      Mnemonic == "teq"   || Mnemonic == "vceq"   || Mnemonic == "svc"   ||
-      Mnemonic == "mls"   || Mnemonic == "smmls"  || Mnemonic == "vcls"  ||
-      Mnemonic == "vmls"  || Mnemonic == "vnmls"  || Mnemonic == "vacge" ||
-      Mnemonic == "vcge"  || Mnemonic == "vclt"   || Mnemonic == "vacgt" ||
-      Mnemonic == "vaclt" || Mnemonic == "vacle"  || Mnemonic == "hlt" ||
-      Mnemonic == "vcgt"  || Mnemonic == "vcle"   || Mnemonic == "smlal" ||
-      Mnemonic == "umaal" || Mnemonic == "umlal"  || Mnemonic == "vabal" ||
-      Mnemonic == "vmlal" || Mnemonic == "vpadal" || Mnemonic == "vqdmlal" ||
-      Mnemonic == "fmuls" || Mnemonic == "vmaxnm" || Mnemonic == "vminnm" ||
-      Mnemonic == "vcvta" || Mnemonic == "vcvtn"  || Mnemonic == "vcvtp" ||
-      Mnemonic == "vcvtm" || Mnemonic == "vrinta" || Mnemonic == "vrintn" ||
-      Mnemonic == "vrintp" || Mnemonic == "vrintm" || Mnemonic == "hvc" ||
-      Mnemonic.starts_with("vsel") || Mnemonic == "vins" || Mnemonic == "vmovx" ||
-      Mnemonic == "bxns"  || Mnemonic == "blxns" ||
-      Mnemonic == "vdot"  || Mnemonic == "vmmla" ||
-      Mnemonic == "vudot" || Mnemonic == "vsdot" ||
-      Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
-      Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
-      Mnemonic == "wls"   || Mnemonic == "le"    || Mnemonic == "dls" ||
-      Mnemonic == "csel"  || Mnemonic == "csinc" ||
-      Mnemonic == "csinv" || Mnemonic == "csneg" || Mnemonic == "cinc" ||
-      Mnemonic == "cinv"  || Mnemonic == "cneg"  || Mnemonic == "cset" ||
-      Mnemonic == "csetm" ||
-      Mnemonic == "aut"   || Mnemonic == "pac" || Mnemonic == "pacbti" ||
-      Mnemonic == "bti")
+  if ((Mnemonic == "movs" && isThumb()) || Mnemonic == "teq" ||
+      Mnemonic == "vceq" || Mnemonic == "svc" || Mnemonic == "mls" ||
+      Mnemonic == "smmls" || Mnemonic == "vcls" || Mnemonic == "vmls" ||
+      Mnemonic == "vnmls" || Mnemonic == "vacge" || Mnemonic == "vcge" ||
+      Mnemonic == "vclt" || Mnemonic == "vacgt" || Mnemonic == "vaclt" ||
+      Mnemonic == "vacle" || Mnemonic == "hlt" || Mnemonic == "vcgt" ||
+      Mnemonic == "vcle" || Mnemonic == "smlal" || Mnemonic == "umaal" ||
+      Mnemonic == "umlal" || Mnemonic == "vabal" || Mnemonic == "vmlal" ||
+      Mnemonic == "vpadal" || Mnemonic == "vqdmlal" || Mnemonic == "fmuls" ||
+      Mnemonic == "vmaxnm" || Mnemonic == "vminnm" || Mnemonic == "vcvta" ||
+      Mnemonic == "vcvtn" || Mnemonic == "vcvtp" || Mnemonic == "vcvtm" ||
+      Mnemonic == "vrinta" || Mnemonic == "vrintn" || Mnemonic == "vrintp" ||
+      Mnemonic == "vrintm" || Mnemonic == "hvc" ||
+      Mnemonic.starts_with("vsel") || Mnemonic == "vins" ||
+      Mnemonic == "vmovx" || Mnemonic == "bxns" || Mnemonic == "blxns" ||
+      Mnemonic == "vdot" || Mnemonic == "vmmla" || Mnemonic == "vudot" ||
+      Mnemonic == "vsdot" || Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
+      Mnemonic == "vfmal" || Mnemonic == "vfmsl" || Mnemonic == "wls" ||
+      Mnemonic == "le" || Mnemonic == "dls" || Mnemonic == "csel" ||
+      Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
+      Mnemonic == "cinc" || Mnemonic == "cinv" || Mnemonic == "cneg" ||
+      Mnemonic == "cset" || Mnemonic == "csetm" || Mnemonic == "aut" ||
+      Mnemonic == "pac" || Mnemonic == "pacbti" || Mnemonic == "bti")
     return Mnemonic;
 
   // First, split out any predication code. Ignore mnemonics we know aren't
@@ -6330,15 +6327,12 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic != "umlals" && Mnemonic != "umulls" && Mnemonic != "lsls" &&
       Mnemonic != "sbcs" && Mnemonic != "rscs" &&
       !(hasMVE() &&
-        (Mnemonic == "vmine" ||
-         Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt" ||
-         Mnemonic == "vrshle" || Mnemonic == "vrshlt" ||
-         Mnemonic == "vmvne" || Mnemonic == "vorne" ||
-         Mnemonic == "vnege" || Mnemonic == "vnegt" ||
-         Mnemonic == "vmule" || Mnemonic == "vmult" ||
-         Mnemonic == "vrintne" ||
-         Mnemonic == "vcmult" || Mnemonic == "vcmule" ||
-         Mnemonic == "vpsele" || Mnemonic == "vpselt" ||
+        (Mnemonic == "vmine" || Mnemonic == "vshle" || Mnemonic == "vshlt" ||
+         Mnemonic == "vshllt" || Mnemonic == "vrshle" || Mnemonic == "vrshlt" ||
+         Mnemonic == "vmvne" || Mnemonic == "vorne" || Mnemonic == "vnege" ||
+         Mnemonic == "vnegt" || Mnemonic == "vmule" || Mnemonic == "vmult" ||
+         Mnemonic == "vrintne" || Mnemonic == "vcmult" ||
+         Mnemonic == "vcmule" || Mnemonic == "vpsele" || Mnemonic == "vpselt" ||
          Mnemonic.starts_with("vq")))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
@@ -6350,17 +6344,16 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   // Next, determine if we have a carry setting bit. We explicitly ignore all
   // the instructions we know end in 's'.
   if (Mnemonic.ends_with("s") &&
-      !(Mnemonic == "cps" || Mnemonic == "mls" ||
-        Mnemonic == "mrs" || Mnemonic == "smmls" || Mnemonic == "vabs" ||
-        Mnemonic == "vcls" || Mnemonic == "vmls" || Mnemonic == "vmrs" ||
-        Mnemonic == "vnmls" || Mnemonic == "vqabs" || Mnemonic == "vrecps" ||
-        Mnemonic == "vrsqrts" || Mnemonic == "srs" || Mnemonic == "flds" ||
-        Mnemonic == "fmrs" || Mnemonic == "fsqrts" || Mnemonic == "fsubs" ||
-        Mnemonic == "fsts" || Mnemonic == "fcpys" || Mnemonic == "fdivs" ||
-        Mnemonic == "fmuls" || Mnemonic == "fcmps" || Mnemonic == "fcmpzs" ||
-        Mnemonic == "vfms" || Mnemonic == "vfnms" || Mnemonic == "fconsts" ||
-        Mnemonic == "bxns" || Mnemonic == "blxns" || Mnemonic == "vfmas" ||
-        Mnemonic == "vmlas" ||
+      !(Mnemonic == "cps" || Mnemonic == "mls" || Mnemonic == "mrs" ||
+        Mnemonic == "smmls" || Mnemonic == "vabs" || Mnemonic == "vcls" ||
+        Mnemonic == "vmls" || Mnemonic == "vmrs" || Mnemonic == "vnmls" ||
+        Mnemonic == "vqabs" || Mnemonic == "vrecps" || Mnemonic == "vrsqrts" ||
+        Mnemonic == "srs" || Mnemonic == "flds" || Mnemonic == "fmrs" ||
+        Mnemonic == "fsqrts" || Mnemonic == "fsubs" || Mnemonic == "fsts" ||
+        Mnemonic == "fcpys" || Mnemonic == "fdivs" || Mnemonic == "fmuls" ||
+        Mnemonic == "fcmps" || Mnemonic == "fcmpzs" || Mnemonic == "vfms" ||
+        Mnemonic == "vfnms" || Mnemonic == "fconsts" || Mnemonic == "bxns" ||
+        Mnemonic == "blxns" || Mnemonic == "vfmas" || Mnemonic == "vmlas" ||
         (Mnemonic == "movs" && isThumb()))) {
     Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 1);
     CarrySetting = true;
@@ -6405,8 +6398,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   if (Mnemonic.starts_with("vpst")) {
     ITMask = Mnemonic.slice(4, Mnemonic.size());
     Mnemonic = Mnemonic.slice(0, 4);
-  }
-  else if (Mnemonic.starts_with("vpt")) {
+  } else if (Mnemonic.starts_with("vpt")) {
     ITMask = Mnemonic.slice(3, Mnemonic.size());
     Mnemonic = Mnemonic.slice(0, 3);
   }
@@ -6446,24 +6438,21 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "vminnm" || Mnemonic == "vcvta" || Mnemonic == "vcvtn" ||
       Mnemonic == "vcvtp" || Mnemonic == "vcvtm" || Mnemonic == "vrinta" ||
       Mnemonic == "vrintn" || Mnemonic == "vrintp" || Mnemonic == "vrintm" ||
-      Mnemonic.starts_with("aes") || Mnemonic == "hvc" || Mnemonic == "setpan" ||
-      Mnemonic.starts_with("sha1") || Mnemonic.starts_with("sha256") ||
+      Mnemonic.starts_with("aes") || Mnemonic == "hvc" ||
+      Mnemonic == "setpan" || Mnemonic.starts_with("sha1") ||
+      Mnemonic.starts_with("sha256") ||
       (FullInst.starts_with("vmull") && FullInst.ends_with(".p64")) ||
-      Mnemonic == "vmovx" || Mnemonic == "vins" ||
-      Mnemonic == "vudot" || Mnemonic == "vsdot" ||
-      Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
-      Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
-      Mnemonic == "vfmat" || Mnemonic == "vfmab" ||
-      Mnemonic == "vdot"  || Mnemonic == "vmmla" ||
-      Mnemonic == "sb"    || Mnemonic == "ssbb"  ||
-      Mnemonic == "pssbb" || Mnemonic == "vsmmla" ||
-      Mnemonic == "vummla" || Mnemonic == "vusmmla" ||
-      Mnemonic == "vusdot" || Mnemonic == "vsudot" ||
-      Mnemonic == "bfcsel" || Mnemonic == "wls" ||
-      Mnemonic == "dls" || Mnemonic == "le" || Mnemonic == "csel" ||
-      Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
-      Mnemonic == "cinc" || Mnemonic == "cinv" || Mnemonic == "cneg" ||
-      Mnemonic == "cset" || Mnemonic == "csetm" ||
+      Mnemonic == "vmovx" || Mnemonic == "vins" || Mnemonic == "vudot" ||
+      Mnemonic == "vsdot" || Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
+      Mnemonic == "vfmal" || Mnemonic == "vfmsl" || Mnemonic == "vfmat" ||
+      Mnemonic == "vfmab" || Mnemonic == "vdot" || Mnemonic == "vmmla" ||
+      Mnemonic == "sb" || Mnemonic == "ssbb" || Mnemonic == "pssbb" ||
+      Mnemonic == "vsmmla" || Mnemonic == "vummla" || Mnemonic == "vusmmla" ||
+      Mnemonic == "vusdot" || Mnemonic == "vsudot" || Mnemonic == "bfcsel" ||
+      Mnemonic == "wls" || Mnemonic == "dls" || Mnemonic == "le" ||
+      Mnemonic == "csel" || Mnemonic == "csinc" || Mnemonic == "csinv" ||
+      Mnemonic == "csneg" || Mnemonic == "cinc" || Mnemonic == "cinv" ||
+      Mnemonic == "cneg" || Mnemonic == "cset" || Mnemonic == "csetm" ||
       (hasCDE() && MS.isCDEInstr(Mnemonic) &&
        !MS.isITPredicableCDEInstr(Mnemonic)) ||
       Mnemonic.starts_with("vpt") || Mnemonic.starts_with("vpst") ||
@@ -6484,8 +6473,7 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
         Mnemonic != "dmb" && Mnemonic != "dfb" && Mnemonic != "dsb" &&
         Mnemonic != "isb" && Mnemonic != "pld" && Mnemonic != "pli" &&
         Mnemonic != "pldw" && Mnemonic != "ldc2" && Mnemonic != "ldc2l" &&
-        Mnemonic != "stc2" && Mnemonic != "stc2l" &&
-        Mnemonic != "tsb" &&
+        Mnemonic != "stc2" && Mnemonic != "stc2l" && Mnemonic != "tsb" &&
         !Mnemonic.starts_with("rfe") && !Mnemonic.starts_with("srs");
   } else if (isThumbOne()) {
     if (hasV6MOps())
@@ -7228,7 +7216,8 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // operand if that is the case.
     else if (Mnemonic == "vmov" || Mnemonic.starts_with("vcmp") ||
              (Mnemonic.starts_with("vcvt") && !Mnemonic.starts_with("vcvta") &&
-              !Mnemonic.starts_with("vcvtn") && !Mnemonic.starts_with("vcvtp") &&
+              !Mnemonic.starts_with("vcvtn") &&
+              !Mnemonic.starts_with("vcvtp") &&
               !Mnemonic.starts_with("vcvtm"))) {
       if (!shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
         // We could not split the vector predicate off vcvt because it might
@@ -7241,7 +7230,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
           auto Sz1 = static_cast<ARMOperand &>(*Operands[2]);
           auto Sz2 = static_cast<ARMOperand &>(*Operands[3]);
           if (!(Sz1.isToken() && Sz1.getToken().starts_with(".f") &&
-              Sz2.isToken() && Sz2.getToken().starts_with(".f"))) {
+                Sz2.isToken() && Sz2.getToken().starts_with(".f"))) {
             Operands.erase(Operands.begin());
             SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
             VPTPredicationCode = ARMVCC::Then;

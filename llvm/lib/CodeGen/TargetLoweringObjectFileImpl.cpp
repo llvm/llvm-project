@@ -478,24 +478,19 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
   if (Name.empty() || Name[0] != '.') return K;
 
   // Default implementation based on some magic section names.
-  if (Name == ".bss" ||
-      Name.starts_with(".bss.") ||
+  if (Name == ".bss" || Name.starts_with(".bss.") ||
       Name.starts_with(".gnu.linkonce.b.") ||
-      Name.starts_with(".llvm.linkonce.b.") ||
-      Name == ".sbss" ||
-      Name.starts_with(".sbss.") ||
-      Name.starts_with(".gnu.linkonce.sb.") ||
+      Name.starts_with(".llvm.linkonce.b.") || Name == ".sbss" ||
+      Name.starts_with(".sbss.") || Name.starts_with(".gnu.linkonce.sb.") ||
       Name.starts_with(".llvm.linkonce.sb."))
     return SectionKind::getBSS();
 
-  if (Name == ".tdata" ||
-      Name.starts_with(".tdata.") ||
+  if (Name == ".tdata" || Name.starts_with(".tdata.") ||
       Name.starts_with(".gnu.linkonce.td.") ||
       Name.starts_with(".llvm.linkonce.td."))
     return SectionKind::getThreadData();
 
-  if (Name == ".tbss" ||
-      Name.starts_with(".tbss.") ||
+  if (Name == ".tbss" || Name.starts_with(".tbss.") ||
       Name.starts_with(".gnu.linkonce.tb.") ||
       Name.starts_with(".llvm.linkonce.tb."))
     return SectionKind::getThreadBSS();

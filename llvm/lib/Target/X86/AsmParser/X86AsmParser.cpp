@@ -3334,7 +3334,6 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     }
   }
 
-
   // Determine whether this is an instruction prefix.
   // FIXME:
   // Enhance prefixes integrity robustness. for example, following forms

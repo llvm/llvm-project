@@ -932,8 +932,10 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
     Mnemonic = parseRD(Name, 10, NameLoc, Operands);
   } else if (Name.starts_with("cvt.l.d")) {
     Mnemonic = parseRD(Name, 7, NameLoc, Operands);
-  } else if (Name.starts_with("vcvt.w.d.sx") || Name.starts_with("vcvt.w.d.zx") ||
-             Name.starts_with("vcvt.w.s.sx") || Name.starts_with("vcvt.w.s.zx")) {
+  } else if (Name.starts_with("vcvt.w.d.sx") ||
+             Name.starts_with("vcvt.w.d.zx") ||
+             Name.starts_with("vcvt.w.s.sx") ||
+             Name.starts_with("vcvt.w.s.zx")) {
     Mnemonic = parseRD(Name, 11, NameLoc, Operands);
   } else if (Name.starts_with("vcvt.l.d")) {
     Mnemonic = parseRD(Name, 8, NameLoc, Operands);
@@ -946,8 +948,10 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
              Name.starts_with("vfmk.d.") || Name.starts_with("vfmk.s.")) {
     bool ICC = Name[5] == 'l' || Name[5] == 'w' ? true : false;
     Mnemonic = parseCC(Name, 7, Name.size(), ICC, true, NameLoc, Operands);
-  } else if (Name.starts_with("pvfmk.w.lo.") || Name.starts_with("pvfmk.w.up.") ||
-             Name.starts_with("pvfmk.s.lo.") || Name.starts_with("pvfmk.s.up.")) {
+  } else if (Name.starts_with("pvfmk.w.lo.") ||
+             Name.starts_with("pvfmk.w.up.") ||
+             Name.starts_with("pvfmk.s.lo.") ||
+             Name.starts_with("pvfmk.s.up.")) {
     bool ICC = Name[6] == 'l' || Name[6] == 'w' ? true : false;
     Mnemonic = parseCC(Name, 11, Name.size(), ICC, true, NameLoc, Operands);
   } else {
