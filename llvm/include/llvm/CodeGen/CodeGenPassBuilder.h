@@ -23,6 +23,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -678,14 +679,14 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
-    addPass(DwarfEHPass(getOptLevel()));
+    addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
     addPass(WinEHPreparePass());
-    addPass(DwarfEHPass(getOptLevel()));
+    addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
