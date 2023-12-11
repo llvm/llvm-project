@@ -112,7 +112,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   // accuracy, and the most significant bit is ignored.) = 9 bits. Similarly,
   // it's 6 bits for floats in this case.
   const uint64_t halfway_constant =
-      (uint64_t(1) << (BITS_IN_MANTISSA - FloatProp::MANTISSA_WIDTH - 3)) - 1;
+      (uint64_t(1) << (BITS_IN_MANTISSA - (FloatProp::MANTISSA_WIDTH + 3))) - 1;
   if ((high64(first_approx) & halfway_constant) == halfway_constant &&
       low64(first_approx) + mantissa < mantissa) {
     UInt128 low_bits =
