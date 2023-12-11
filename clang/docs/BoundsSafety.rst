@@ -29,7 +29,7 @@ information so that the accesses can be checked at either run time or compile
 time — and it rejects code if it cannot.
 
 The most important contribution of ``-fbounds-safety`` is how it reduces the
-programmer’s annotation burden by reconciling bounds annotations at ABI
+programmer's annotation burden by reconciling bounds annotations at ABI
 boundaries with the use of implicit wide pointers (a.k.a. "fat" pointers) that
 carry bounds information on local variables without the need for annotations. We
 designed this model so that it preserves ABI compatibility with C while
@@ -50,7 +50,7 @@ adopt, offering these properties that make it widely adoptable in practice:
 * It is a conforming extension to C.
 * Consequently, source code that adopts the extension can continue to be
   compiled by toolchains that do not support the extension (CAVEAT: this still
-  requires inclusion of a header file micro-defining bounds annotations to
+  requires inclusion of a header file macro-defining bounds annotations to
   empty).
 * It has a relatively low adoption cost.
 
@@ -76,7 +76,7 @@ determines its bounds and ensures guaranteed bounds checking. Consider the
 example below where the ``__counted_by(count)`` annotation indicates that
 parameter ``p`` points to a buffer of integers containing ``count`` elements. An
 off-by-one error is present in the loop condition, leading to ``p[i]`` being
-out-of-bounds access during the loop’s final iteration. The compiler inserts a
+out-of-bounds access during the loop's final iteration. The compiler inserts a
 bounds check before ``p`` is dereferenced to ensure that the access remains
 within the specified bounds.
 
@@ -158,9 +158,9 @@ arithmetic on annotated pointers to be a compile time error.
   arithmetic nor being subscripted with a non-zero index. Dereferencing a
   ``__single`` pointer is allowed but it requires a null check. Upper and lower
   bounds checks are not required because the ``__single`` pointer should point
-  to a valid object unless it’s null.
+  to a valid object unless it's null.
 
-We use ``__single`` as the default annotation for ABI-visible pointers. This
+``__single`` is the default annotation for ABI-visible pointers. This
 gives strong security guarantees in that these pointers cannot be incremented or
 decremented unless they have an explicit, overriding bounds annotation that can
 be used to verify the safety of the operation. The compiler issues an error when
@@ -220,7 +220,9 @@ meaning they do not have ABI implications.
   describes a range that starts with the pointer that has this annotation and
   ends with ``P`` which is the argument of the annotation. ``P`` itself may be
   annotated with ``__ended_by(Q)``. In this case, the end of the range extends
-  to the pointer ``Q``.
+  to the pointer ``Q``. This is used for "iterator" support in C where you're
+  iterating from one pointer value to another until a final pointer value is
+  reached (and the final pointer value is not dereferencable).
 
 Accessing a pointer outside the specified bounds causes a run-time trap or a
 compile-time error. Also, the model maintains correctness of bounds annotations
@@ -291,8 +293,8 @@ in ABI surfaces.
   value. While creating an OOB pointer is undefined behavior in C,
   ``-fbounds-safety`` makes it well-defined behavior. That is, pointer
   arithmetic overflow with ``__bidi_indexable`` is defined as equivalent of
-  two’s complement integer computation, and at the LLVM IR level this means
-  ``getelementptr`` won’t get ``inbounds`` keyword. Accessing memory using the
+  two's complement integer computation, and at the LLVM IR level this means
+  ``getelementptr`` won't get ``inbounds`` keyword. Accessing memory using the
   OOB pointer is prevented via a run-time bounds check.
 
 * ``__indexable`` : A pointer with this annotation becomes a wide pointer
@@ -300,10 +302,10 @@ in ABI surfaces.
   equivalent to ``struct { T *ptr; T *upper_bound; };``. Since ``__indexable``
   pointers do not have a separate lower bound, the pointer value itself acts as
   the lower bound. An ``__indexable`` pointer can only be incremented or indexed
-  in the positive direction. Decrementing it with a known negative index
-  triggers a compile-time error. Otherwise, the compiler inserts a run-time
-  check to ensure pointer arithmetic doesn’t make the pointer smaller than the
-  original ``__indexable`` pointer (Note that ``__indexable`` doesn’t have a
+  in the positive direction. Indexing it in the negative direction will trigger
+  a compile-time error. Otherwise, the compiler inserts a run-time
+  check to ensure pointer arithmetic doesn't make the pointer smaller than the
+  original ``__indexable`` pointer (Note that ``__indexable`` doesn't have a
   lower bound so the pointer value is effectively the lower bound). As pointer
   arithmetic overflow will make the pointer smaller than the original pointer,
   it will cause a trap at runtime. Similar to ``__bidi_indexable``, an
@@ -325,8 +327,8 @@ another bounds annotation, a local pointer variable is implicitly
 ``__bidi_indexable``. Since ``__bidi_indexable`` pointers automatically carry
 bounds information and have no restrictions on kinds of pointer operations that
 can be used with these pointers, most code inside a function works as is without
-modification. In the example below, ``int *buf`` doesn’t require manual
-annotation as it’s implicitly ``int *__bidi_indexable buf``, carrying the bounds
+modification. In the example below, ``int *buf`` doesn't require manual
+annotation as it's implicitly ``int *__bidi_indexable buf``, carrying the bounds
 information passed from the return value of malloc, which is necessary to insert
 bounds checking for ``buf[i]``.
 
@@ -345,7 +347,7 @@ Annotations for sentinel-delimited arrays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A C string is an array of characters. The null terminator — the first null
-character (‘\0’) element in the array — marks the end of the string.
+character ('\0') element in the array — marks the end of the string.
 ``-fbounds-safety`` provides ``__null_terminated`` to annotate C strings and the
 generalized form ``__terminated_by(T)`` to annotate pointers and arrays with an
 end marked by a sentinel value. The model prevents dereferencing a
@@ -353,16 +355,16 @@ end marked by a sentinel value. The model prevents dereferencing a
 (i.e., the address of the sentinel value), requires reading the entire array in
 memory and would have some performance costs. To avoid an unintended performance
 hit, the model puts some restrictions on how these pointers can be used.
-``__terminated_by`` pointers cannot be indexed and can only be incremented by
-one at a time. To allow these operations, the pointers must be explicitly
+``__terminated_by`` pointers cannot be indexed and can only be incremented one
+element at a time. To allow these operations, the pointers must be explicitly
 converted to ``__indexable`` pointers using the intrinsic function
 ``__unsafe_terminated_by_to_indexable(P, T)`` (or
 ``__unsafe_null_terminated_to_indexable(P)``) which converts the
 ``__terminated_by`` pointer ``P`` to an ``__indexable`` pointer.
 
-* ``__null_terminated`` : The pointer or array is terminated by NULL or 0.
-  Modifying the terminator or incrementing the pointer beyond it is prevented at
-  run time.
+* ``__null_terminated`` : The pointer or array is terminated by ``NULL`` or
+  ``0``. Modifying the terminator or incrementing the pointer beyond it is
+  prevented at run time.
 
 * ``__terminated_by(T)`` : The pointer or array is terminated by ``T`` which is
   a constant expression. Accessing or incrementing the pointer beyond the
@@ -372,13 +374,13 @@ converted to ``__indexable`` pointers using the intrinsic function
 Annotation for interoperating with bounds-unsafe code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``__unsafe_indexable`` : A pointer with this annotation behaves the same as a
-  plain C pointer. That is, the pointer does not have any bounds information and
-  pointer operations are not checked.
+A pointer with the ``__unsafe_indexable`` annotation behaves the same as a plain
+C pointer. That is, the pointer does not have any bounds information and pointer
+operations are not checked.
 
-* ``__unsafe_indexable`` can be used to mark pointers from system headers or
-  pointers from code that has not adopted -fbounds safety. This enables
-  interoperation between code using ``-fbounds-safety`` and code that does not.
+``__unsafe_indexable`` can be used to mark pointers from system headers or
+pointers from code that has not adopted -fbounds safety. This enables
+interoperation between code using ``-fbounds-safety`` and code that does not.
 
 Default pointer types
 ---------------------
@@ -390,7 +392,6 @@ Requiring ``-fbounds-safety`` adopters to add bounds annotations to all pointers
 in the codebase would be a significant adoption burden. To avoid this and to
 secure all pointers by default, ``-fbounds-safety`` applies default bounds
 annotations to pointer types.
-
 Default annotations apply to pointer types of declarations
 
 ``-fbounds-safety`` applies default bounds annotations to pointer types used in
@@ -399,34 +400,62 @@ the pointer. A pointer type is ABI-visible if changing its size or
 representation affects the ABI. For instance, changing the size of a type used
 in a function parameter will affect the ABI and thus pointers used in function
 parameters are ABI-visible pointers. On the other hand, changing the types of
-local variables won’t have such ABI implications. Hence, ``-fbounds-safety``
+local variables won't have such ABI implications. Hence, ``-fbounds-safety``
 considers the outermost pointer types of local variables as non-ABI visible. The
 rest of the pointers such as nested pointer types, pointer types of global
 variables, struct fields, and function prototypes are considered ABI-visible.
 
 All ABI-visible pointers are treated as ``__single`` by default unless annotated
 otherwise. This default both preserves ABI and makes these pointers safe by
-default. This behavior can be controlled with pragma to set the default
-annotation for ABI-visible pointers to be either ``__single``,
-``__bidi_indexable``, ``__indexable``, or ``__unsafe_indexable``. For instance,
+default. This behavior can be controlled with macros, i.e.,
+``__ptrcheck_abi_assume_*ATTR*()``, to set the default annotation for
+ABI-visible pointers to be either ``__single``, ``__bidi_indexable``,
+``__indexable``, or ``__unsafe_indexable``. For instance,
 ``__ptrcheck_abi_assume_unsafe_indexable()`` will make all ABI-visible pointers
 be ``__unsafe_indexable``. Non-ABI visible pointers — the outermost pointer
 types of local variables — are ``__bidi_indexable`` by default, so that these
 pointers have the bounds information necessary to perform bounds checks without
-the need for a manual annotation. All ``const char`` pointers are
-``__null_terminated`` by default. In system headers, the default pointer
-attribute for ABI-visible pointers is set to ``__unsafe_indexable`` by default.
+the need for a manual annotation. All ``const char`` pointers or any typedefs
+equivalent to ``const char`` pointers are ``__null_terminated`` by default. This
+means that ``char8_t`` is ``unsigned char`` so ``const char8_t *`` won't be
+``__null_terminated`` by default. Similarly, ``const wchar_t *`` won't be
+``__null_terminated`` by default unless the platform defines it as ``typedef
+char wchar_t``. Please note, however, that the programmers can still explicitly
+use ``__null_terminated`` in any other pointers, e.g., ``char8_t
+*__null_terminated``, ``wchar_t *__null_terminated``, ``int
+*__null_terminated``, etc. if they should be treated as ``__null_terminated``.
+The same applies to other annotations.
+In system headers, the default pointer attribute for ABI-visible pointers is set
+to ``__unsafe_indexable`` by default.
+
+The ``__ptrcheck_abi_assume_*ATTR*()`` macros are defined as pragmas in the
+toolchain header (See `Portability with toolchains that do not support the
+extension`_ for more details about the toolchain header):
+
+```C
+#define __ptrcheck_abi_assume_single() \
+  _Pragma("clang abi_ptr_attr set(single)")
+
+#define __ptrcheck_abi_assume_indexable() \
+  _Pragma("clang abi_ptr_attr set(indexable)")
+
+#define __ptrcheck_abi_assume_bidi_indexable() \
+  _Pragma("clang abi_ptr_attr set(bidi_indexable)")
+
+#define __ptrcheck_abi_assume_unsafe_indexable() \
+  _Pragma("clang abi_ptr_attr set(unsafe_indexable)")
+```
 
 ABI implications of default bounds annotations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Although modifying types of a local variable doesn’t impact the ABI, taking the
+Although modifying types of a local variable doesn't impact the ABI, taking the
 address of such a modified type could create a pointer type that has an ABI
 mismatch. Looking at the following example, ``int *local`` is implicitly ``int
 *__bidi_indexable`` and thus the type of ``&local`` is a pointer to ``int
 *__bidi_indexable``. On the other hand, in ``void foo(int **)``, the parameter
 type is a pointer to ``int *__single`` (i.e., ``void foo(int *__single
-*__single)``) (or a pointer to ``int *__unsafe_indexable`` if it’s from a system
+*__single)``) (or a pointer to ``int *__unsafe_indexable`` if it's from a system
 header). The compiler reports an error for casts between pointers whose elements
 have incompatible pointer attributes. This way, ``-fbounds-safety`` prevents
 pointers that are implicitly ``__bidi_indexable`` from silently escaping thereby
@@ -461,7 +490,7 @@ A pointer type used in a C-style cast (e.g., ``(int *)src``) inherits the same
 pointer attribute in the type of src. For instance, if the type of src is ``T
 *__single`` (with ``T`` being an arbitrary C type), ``(int *)src`` will be ``int
 *__single``. The reasoning behind this behavior is so that a C-style cast
-doesn’t introduce any unexpected side effects caused by an implicit cast of
+doesn't introduce any unexpected side effects caused by an implicit cast of
 bounds attribute.
 
 Pointer casts can have explicit bounds annotations. For instance, ``(int
@@ -472,7 +501,7 @@ bounds annotation that can implicitly convert to ``__bidi_indexable``. If
 the first element. However, if src has type ``int *__unsafe_indexable``, the
 explicit cast ``(int *__bidi_indexable)src`` will cause an error because
 ``__unsafe_indexable`` cannot cast to ``__bidi_indexable`` as
-``__unsafe_indexable`` doesn’t have bounds information. `Cast rules`_ describes
+``__unsafe_indexable`` doesn't have bounds information. `Cast rules`_ describes
 in more detail what kinds of casts are allowed between pointers with different
 bounds annotations.
 
@@ -667,7 +696,7 @@ Cast rules
 ``-fbounds-safety`` does not enforce overall type safety and bounds invariants
 can still be violated by incorrect casts in some cases. That said,
 ``-fbounds-safety`` prevents type conversions that change bounds attributes in a
-way to violate the bounds invariant of the destination’s pointer annotation.
+way to violate the bounds invariant of the destination's pointer annotation.
 Type conversions that change bounds attributes may be allowed if it does not
 violate the invariant of the destination or that can be verified at run time.
 Here are some of the important cast rules.
@@ -724,7 +753,7 @@ unsafe library by calling ``get_buf()`` which returns ``void
   type because these don't have bounds information. ``__unsafe_forge_single`` or
   ``__unsafe_forge_bidi_indexable`` must be used to force the conversion.
 
-* Any safe pointer types can cast to ``__unsafe_indexable`` because it doesn’t
+* Any safe pointer types can cast to ``__unsafe_indexable`` because it doesn't
   have any invariant to maintain.
 
 * ``__single`` casts to ``__bidi_indexable`` if the pointee type has a known
@@ -743,7 +772,7 @@ unsafe library by calling ``get_buf()`` which returns ``void
 
 * ``__single`` can cast to ``__single`` including when they have different
   pointee types as long as it is allowed in the underlying C standard.
-  ``-fbounds-safety`` doesn’t guarantee type safety.
+  ``-fbounds-safety`` doesn't guarantee type safety.
 
 * ``__bidi_indexable`` and ``__indexable`` can cast to ``__single``. The
   compiler may insert run-time checks to ensure the pointer has at least a
@@ -787,9 +816,9 @@ unsafe library by calling ``get_buf()`` which returns ``void
 Portability with toolchains that do not support the extension
 -------------------------------------------------------------
 
-The language model is designed so that it doesn’t alter the semantics of the
+The language model is designed so that it doesn't alter the semantics of the
 original C program, other than introducing deterministic traps where otherwise
-the behavior is undefined and/or unsafe. We will provide a toolchain header
+the behavior is undefined and/or unsafe. Clang provides a toolchain header
 (``ptrcheck.h``) that macro-defines the annotations as type attributes when
 ``-fbounds-safety`` is enabled and defines them to empty when the extension is
 disabled. Thus, the code adopting ``-fbounds-safety`` can compile with
