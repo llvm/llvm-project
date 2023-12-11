@@ -118,6 +118,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPInstructionSC:
     switch (cast<VPInstruction>(this)->getOpcode()) {
     case Instruction::ICmp:
+    case Instruction::Select:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
