@@ -35,15 +35,16 @@ class InstrProfilingLoweringPass
     : public PassInfoMixin<InstrProfilingLoweringPass> {
   const InstrProfOptions Options;
   // Is this lowering for the context-sensitive instrumentation.
-  const bool IsCS;
+  const bool IsCS = false;
 
 public:
-  InstrProfilingLoweringPass() : IsCS(false) {}
+  InstrProfilingLoweringPass() = default;
   InstrProfilingLoweringPass(const InstrProfOptions &Options, bool IsCS = false)
       : Options(Options), IsCS(IsCS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
+
 class InstrProfiling final {
 public:
   InstrProfiling(Module &M, const InstrProfOptions &Options,
