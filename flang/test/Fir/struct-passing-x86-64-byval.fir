@@ -75,7 +75,10 @@ func.func @mix_not_enough_int_reg_1(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i
 func.func @mix_not_enough_sse_reg_2(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32, %arg5: f32, %arg6: f32, %arg7: f32, %arg8: !fir.type<mix_in_1_int_reg_1_sse_reg{i:!fir.array<2xi32>,x:!fir.array<2xf32>}>) {
   return
 }
-func.func private @_QPuse_it(!fir.ref<!fir.array<5xi32>>)
+func.func @not_enough_int_reg_3(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, %arg4: i32, %arg6: !fir.type<fits_in_1_int_reg{i:i32,j:i32}>) -> !fir.complex<16> {
+  %0 = fir.zero_bits !fir.complex<16> 
+  return %0 : !fir.complex<16>
+}
 }
 
 // CHECK: define void @takes_toobig(ptr byval(%toobig) align 8 %{{.*}}) {
@@ -101,3 +104,4 @@ func.func private @_QPuse_it(!fir.ref<!fir.array<5xi32>>)
 // CHECK: define void @char_not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%char_fits_in_1_int_reg) align 8 %{{.*}}) {
 // CHECK: define void @mix_not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%mix_in_1_int_reg) align 8 %{{.*}}) {
 // CHECK: define void @mix_not_enough_sse_reg_2(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%mix_in_1_int_reg_1_sse_reg) align 8 %{{.*}}) {
+// CHECK: define void @not_enough_int_reg_3(ptr sret({ fp128, fp128 }) align 16 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 %{{.*}})
