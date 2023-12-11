@@ -178,6 +178,67 @@ void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
   p << stringifyEnum(attr.getValue());
 }
 
+static ParseResult
+parsePrivateEntries(OpAsmParser &parser,
+                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateOperands,
+                SmallVectorImpl<Type> &privateOperandTypes) {
+  OpAsmParser::UnresolvedOperand arg;
+  OpAsmParser::UnresolvedOperand blockArg;
+  Type argType;
+  auto parseEntries = [&]() -> ParseResult {
+    if (parser.parseOperand(arg) || parser.parseArrow() ||
+        parser.parseOperand(blockArg))
+      return failure();
+    privateOperands.push_back(arg);
+    return success();
+  };
+
+  auto parseTypes = [&]() -> ParseResult {
+    if (parser.parseType(argType))
+      return failure();
+    privateOperandTypes.push_back(argType);
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseEntries))
+    return failure();
+
+  if (parser.parseColon())
+    return failure();
+
+  if (parser.parseCommaSeparatedList(parseTypes))
+    return failure();
+
+  return success();
+}
+
+static void printPrivateEntries(OpAsmPrinter &p, Operation *op,
+                            OperandRange privateOperands,
+                            TypeRange privateOperandTypes) {
+  auto &region = op->getRegion(0);
+
+  unsigned argIndex = 0;
+  unsigned offset = 0;
+  if (auto wsLoop = dyn_cast<WsLoopOp>(op))
+    offset = wsLoop.getNumLoops();
+  for (const auto &privOperand : privateOperands) {
+    const auto &blockArg = region.front().getArgument(argIndex+offset);
+    p << privOperand << " -> " << blockArg;
+    argIndex++;
+    if (argIndex < privateOperands.size())
+      p << ", ";
+  }
+  p << " : ";
+
+  argIndex = 0;
+  for (const auto &privOperandType : privateOperandTypes) {
+    p << privOperandType;
+    argIndex++;
+    if (argIndex < privateOperands.size())
+      p << ", ";
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Parser and printer for Linear Clause
 //===----------------------------------------------------------------------===//
@@ -1086,7 +1147,14 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
                       ValueRange steps, TypeRange loopVarTypes,
                       UnitAttr inclusive) {
   auto args = region.front().getArguments();
-  p << " (" << args << ") : " << args[0].getType() << " = (" << lowerBound
+  p << " (";
+  unsigned numLoops = steps.size();
+  for (unsigned i=0; i<numLoops; i++) {
+    if (i != 0)
+      p << ", ";
+    p << args[i];
+  }
+  p << ") : " << args[0].getType() << " = (" << lowerBound
     << ") to (" << upperBound << ") ";
   if (inclusive)
     p << "inclusive ";
@@ -1269,7 +1337,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
                      ValueRange step, ArrayRef<NamedAttribute> attributes) {
   build(builder, state, lowerBound, upperBound, step,
         /*linear_vars=*/ValueRange(),
-        /*linear_step_vars=*/ValueRange(), /*reduction_vars=*/ValueRange(),
+        /*linear_step_vars=*/ValueRange(), /*private_vars=*/ValueRange(),
+	/*reduction_vars=*/ValueRange(),
         /*reductions=*/nullptr, /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*schedule_modifier=*/nullptr,
         /*simd_modifier=*/false, /*nowait=*/false, /*ordered_val=*/nullptr,

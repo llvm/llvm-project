@@ -479,6 +479,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              Variadic<IntLikeType>:$step,
              Variadic<AnyType>:$linear_vars,
              Variadic<I32>:$linear_step_vars,
+             Variadic<OpenMP_PointerLikeType>:$privates,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKindAttr>:$schedule_val,
@@ -517,6 +518,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
           |`nowait` $nowait
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`private` `(` custom<PrivateEntries>($privates, type($privates)) `)`
           |`reduction` `(`
               custom<ReductionVarList>(
                 $reduction_vars, type($reduction_vars), $reductions

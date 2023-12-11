@@ -833,6 +833,24 @@ static void collectReductionInfo(
   }
 }
 
+/// Allocate space for privatized reduction variables.
+void
+allocPrivatizationVars(omp::WsLoopOp loop, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation,
+                   llvm::OpenMPIRBuilder::InsertPointTy &allocaIP) {
+  unsigned offset = loop.getNumLoops();
+  unsigned numArgs = loop.getRegion().front().getNumArguments();
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  builder.restoreIP(allocaIP);
+  for (unsigned i = offset; i < numArgs; ++i) {
+    if (auto op = loop.getPrivates()[i-offset].getDefiningOp<LLVM::AllocaOp>()) {
+      llvm::Value *var = builder.CreateAlloca(moduleTranslation.convertType(op.getResultPtrElementType()));
+      //    moduleTranslation.convertType(loop.getPrivates()[i-offset].getType()));
+      moduleTranslation.mapValue(loop.getRegion().front().getArgument(i), var);
+    }
+  }
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -860,6 +878,8 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   collectReductionDecls(loop, reductionDecls);
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
+
+  allocPrivatizationVars(loop, builder, moduleTranslation, allocaIP);
 
   SmallVector<llvm::Value *> privateReductionVariables;
   DenseMap<Value, llvm::Value *> reductionVariableMap;

@@ -2075,6 +2075,7 @@ createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
 
   mlir::Type tempTy = converter.genType(*sym);
+  llvm::outs() << "Temp type = " << tempTy << "\n";
   mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
       loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
       /*shapeParams*/ mlir::ValueRange{},
@@ -2086,6 +2087,103 @@ createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
   mlir::Operation *storeOp = firOpBuilder.create<fir::StoreOp>(
       loc, cvtVal, converter.getSymbolAddress(*sym));
   return storeOp;
+}
+
+/// Create the body (block) for an OpenMP Loop Operation.
+///
+/// \param [in]    op - the operation the body belongs to.
+/// \param [inout] converter - converter to use for the clauses.
+/// \param [in]    loc - location in source code.
+/// \param [in]    eval - current PFT node/evaluation.
+/// \oaran [in]    clauses - list of clauses to process.
+/// \param [in]    args - block arguments (induction variable[s]) for the
+////                      region.
+/// \param [in]    outerCombined - is this an outer operation - prevents
+///                                privatization.
+template <typename Op>
+static void createBodyOfLoopOp(
+    Op &op, Fortran::lower::AbstractConverter &converter, mlir::Location &loc,
+    Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::OmpClauseList *clauses = nullptr,
+    const llvm::SmallVector<const Fortran::semantics::Symbol *> &args = {},
+    bool outerCombined = false, DataSharingProcessor *dsp = nullptr) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // If an argument for the region is provided then create the block with that
+  // argument. Also update the symbol's address with the mlir argument value.
+  // e.g. For loops the argument is the induction variable. And all further
+  // uses of the induction variable should use this mlir value.
+  mlir::Operation *storeOp = nullptr;
+  assert(args.size() > 0);
+  std::size_t loopVarTypeSize = 0;
+  for (const Fortran::semantics::Symbol *arg : args)
+    loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  llvm::SmallVector<mlir::Type> tiv;
+  llvm::SmallVector<mlir::Location> locs;
+  for (int i = 0; i < (int)args.size(); i++) {
+    tiv.push_back(loopVarType);
+    locs.push_back(loc);
+  }
+  int offset = 0;
+  // The argument is not currently in memory, so make a temporary for the
+  // argument, and store it there, then bind that location to the argument.
+  for (const Fortran::semantics::Symbol *arg : args) {
+    mlir::Type symType = converter.genType(*arg);
+    mlir::Type symRefType = firOpBuilder.getRefType(symType);
+    tiv.push_back(symRefType);
+    locs.push_back(loc);
+    offset++;
+  }
+  firOpBuilder.createBlock(&op.getRegion(), {}, tiv, locs);
+
+  int argIndex = 0;
+  for (const Fortran::semantics::Symbol *arg : args) {
+    mlir::Value addrVal =
+          fir::getBase(op.getRegion().front().getArgument(argIndex+offset));
+    converter.bindSymbol(*arg, addrVal);
+    mlir::Type symType = converter.genType(*arg);
+    mlir::Value indexVal =
+          fir::getBase(op.getRegion().front().getArgument(argIndex));
+    mlir::Value cvtVal = firOpBuilder.createConvert(loc, symType, indexVal);
+    addrVal = converter.getSymbolAddress(*arg);
+    storeOp = firOpBuilder.create<fir::StoreOp>(loc, cvtVal, addrVal);
+    argIndex++;
+  }
+  // Set the insert for the terminator operation to go at the end of the
+  // block - this is either empty or the block with the stores above,
+  // the end of the block works for both.
+  mlir::Block &block = op.getRegion().back();
+  firOpBuilder.setInsertionPointToEnd(&block);
+
+  // If it is an unstructured region and is not the outer region of a combined
+  // construct, create empty blocks for all evaluations.
+  if (eval.lowerAsUnstructured() && !outerCombined)
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
+
+  // Insert the terminator.
+  Fortran::lower::genOpenMPTerminator(firOpBuilder, op.getOperation(), loc);
+  // Reset the insert point to before the terminator.
+  resetBeforeTerminator(firOpBuilder, storeOp, block);
+
+  // Handle privatization. Do not privatize if this is the outer operation.
+  if (clauses && !outerCombined) {
+    constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
+                            std::is_same_v<Op, mlir::omp::SimdLoopOp>;
+    if (!dsp) {
+      DataSharingProcessor proc(converter, *clauses, eval);
+      proc.processStep1();
+      proc.processStep2(op, isLoop);
+    } else {
+      if (isLoop && args.size() > 0)
+        dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
+      dsp->processStep2(op, isLoop);
+    }
+
+    if (storeOp)
+      firOpBuilder.setInsertionPointAfter(storeOp);
+  }
 }
 
 /// Create the body (block) for an OpenMP Operation.
@@ -2914,7 +3012,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
-      linearStepVars, reductionVars;
+      linearStepVars, privateVars, reductionVars;
   mlir::Value scheduleChunkClauseOperand;
   mlir::IntegerAttr orderedClauseOperand;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
@@ -3023,9 +3121,23 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     return;
   }
 
+    // Collect the loops to collapse.
+  Fortran::lower::pft::Evaluation *doConstructEval =
+      &eval.getFirstNestedEvaluation();
+  Fortran::lower::pft::Evaluation *doLoop =
+      &doConstructEval->getFirstNestedEvaluation();
+  auto *doStmt = doLoop->getIf<Fortran::parser::NonLabelDoStmt>();
+  assert(doStmt && "Expected do loop to be in the nested evaluation");
+  const auto &loopControl =
+      std::get<std::optional<Fortran::parser::LoopControl>>(doStmt->t);
+  const Fortran::parser::LoopControl::Bounds *bounds =
+      std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
+  assert(bounds && "Expected bounds for worksharing do loop");
+  privateVars.push_back(converter.getSymbolAddress(*bounds->name.thing.symbol));
+
   auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
       currentLocation, lowerBound, upperBound, step, linearVars, linearStepVars,
-      reductionVars,
+      privateVars, reductionVars,
       reductionDeclSymbols.empty()
           ? nullptr
           : mlir::ArrayAttr::get(firOpBuilder.getContext(),
@@ -3061,7 +3173,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       wsLoopOp.setNowaitAttr(nowaitClauseOperand);
   }
 
-  createBodyOfOp<mlir::omp::WsLoopOp>(wsLoopOp, converter, currentLocation,
+  createBodyOfLoopOp<mlir::omp::WsLoopOp>(wsLoopOp, converter, currentLocation,
                                       eval, &loopOpClauseList, iv,
                                       /*outer=*/false, &dsp);
 }
