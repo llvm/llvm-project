@@ -1492,39 +1492,40 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 ///   vector.shape_cast %mul : vector<1x4xf32> to vector<4xf32>
 /// ```
 /// In addition, the input vector should be the result of an arithmetic
-/// operation, `AritOp`.
+/// operation, `ArithOp`.
 template <typename ArithOp>
 struct ReorderArithAndShapeCast : public OpRewritePattern<vector::ShapeCastOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    if (!llvm::isa_and_present<ArithOp>(
-            shapeCastOp.getSource().getDefiningOp()))
+    auto *arithOp = shapeCastOp.getSource().getDefiningOp();
+    if (!llvm::isa_and_present<ArithOp>(arithOp))
       return failure();
 
-    auto *arithOp = shapeCastOp.getSource().getDefiningOp();
-
     auto sourceVectorType =
-        dyn_cast_or_null<VectorType>(shapeCastOp.getSource().getType());
+        dyn_cast<VectorType>(shapeCastOp.getSource().getType());
     auto resultVectorType =
-        dyn_cast_or_null<VectorType>(shapeCastOp.getResult().getType());
+        dyn_cast<VectorType>(shapeCastOp.getResult().getType());
     if (!sourceVectorType || !resultVectorType)
       return failure();
 
     // Either the leading or the trailing dims of the input should be
     // non-scalable 1.
-    if (((sourceVectorType.getShape().back() != 1) ||
-         (sourceVectorType.getScalableDims().back())) &&
-        ((sourceVectorType.getShape().front() != 1) ||
-         (sourceVectorType.getScalableDims().front())))
+    bool leadDimUnitFixed = ((sourceVectorType.getShape().back() != 1) ||
+                             (sourceVectorType.getScalableDims().back()));
+    bool trailinDimUnitFixed = ((sourceVectorType.getShape().front() != 1) ||
+                                (sourceVectorType.getScalableDims().front()));
+    if (!leadDimUnitFixed && !trailinDimUnitFixed)
       return failure();
 
     // Does this shape_cast fold the input vector?
     if (resultVectorType.getRank() != (sourceVectorType.getRank() - 1))
       return failure();
 
-    // Does this shape_cast fold the _unit_ dim?
+    // Does this shape_cast fold the traling/leading _unit_ dim?
+    // TODO: Even when the trailing/leading unit dims are folded, there might
+    // still be some "inner" unit dims left.
     if (llvm::any_of(resultVectorType.getShape(),
                      [](int64_t dim) { return (dim == 1); }))
       return failure();
@@ -1532,17 +1533,16 @@ struct ReorderArithAndShapeCast : public OpRewritePattern<vector::ShapeCastOp> {
     auto loc = shapeCastOp->getLoc();
 
     // shape_cast(a)
-    auto *lhs = rewriter.create(loc, shapeCastOp->getName().getIdentifier(),
-                                arithOp->getOperands()[0], resultVectorType,
-                                shapeCastOp->getAttrs());
+    auto lhs = rewriter.create<vector::ShapeCastOp>(loc, resultVectorType,
+                                                    arithOp->getOperands()[0],
+                                                    shapeCastOp->getAttrs());
     // shape_cast(b)
-    auto *rhs = rewriter.create(loc, shapeCastOp->getName().getIdentifier(),
-                                arithOp->getOperands()[1], resultVectorType,
-                                shapeCastOp->getAttrs());
+    auto rhs = rewriter.create<vector::ShapeCastOp>(loc, resultVectorType,
+                                                    arithOp->getOperands()[1],
+                                                    shapeCastOp->getAttrs());
 
     // Replace shape_cast(a ArithOp b) with shape_cast(a) ArithOp shape_cast(b)
-    rewriter.replaceOpWithNewOp<ArithOp>(shapeCastOp, lhs->getResult(0),
-                                         rhs->getResult(0));
+    rewriter.replaceOpWithNewOp<ArithOp>(shapeCastOp, lhs, rhs);
 
     return success();
   }
