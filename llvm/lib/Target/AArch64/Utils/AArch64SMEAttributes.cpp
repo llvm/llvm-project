@@ -18,8 +18,10 @@ void SMEAttrs::set(unsigned M, bool Enable) {
   else
     Bitmask &= ~M;
 
+  // Streaming Mode Attrs
   assert(!(hasStreamingInterface() && hasStreamingCompatibleInterface()) &&
          "SM_Enabled and SM_Compatible are mutually exclusive");
+  // ZA Attrs
   assert(!(hasNewZABody() && hasSharedZAInterface()) &&
          "ZA_New and ZA_Shared are mutually exclusive");
   assert(!(hasNewZABody() && preservesZA()) &&
@@ -28,6 +30,11 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "ZA_New and ZA_NoLazySave are mutually exclusive");
   assert(!(hasSharedZAInterface() && (Bitmask & ZA_NoLazySave)) &&
          "ZA_Shared and ZA_NoLazySave are mutually exclusive");
+  // ZT Attrs
+  assert(!(hasNewZTBody() && hasSharedZTInterface()) &&
+         "ZT_New and ZT_Shared are mutually exclusive");
+  assert(!(hasNewZTBody() && preservesZT()) &&
+         "ZT_New and ZT_Preserved are mutually exclusive");
 }
 
 SMEAttrs::SMEAttrs(const CallBase &CB) {
@@ -40,10 +47,10 @@ SMEAttrs::SMEAttrs(const CallBase &CB) {
 SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved |
-                SMEAttrs::ZA_NoLazySave);
+                SMEAttrs::ZA_NoLazySave | SMEAttrs::ZT_Preserved);
   if (FuncName == "__arm_tpidr2_restore")
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
-                SMEAttrs::ZA_NoLazySave);
+                SMEAttrs::ZA_NoLazySave | SMEAttrs::ZT_Shared);
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
@@ -60,6 +67,12 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= ZA_New;
   if (Attrs.hasFnAttr("aarch64_pstate_za_preserved"))
     Bitmask |= ZA_Preserved;
+  if (Attrs.hasFnAttr("aarch64_sme_pstate_zt0_shared"))
+    Bitmask |= ZT_Shared;
+  if (Attrs.hasFnAttr("aarch64_sme_pstate_zt0_new"))
+    Bitmask |= ZT_New;
+  if (Attrs.hasFnAttr("aarch64_sme_pstate_zt0_preserved"))
+    Bitmask |= ZT_Preserved;
 }
 
 std::optional<bool>

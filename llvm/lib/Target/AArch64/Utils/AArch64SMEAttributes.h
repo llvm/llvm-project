@@ -36,7 +36,10 @@ public:
     ZA_New = 1 << 4,        // aarch64_pstate_sm_new
     ZA_Preserved = 1 << 5,  // aarch64_pstate_sm_preserved
     ZA_NoLazySave = 1 << 6, // Used for SME ABI routines to avoid lazy saves
-    All = ZA_Preserved - 1
+    ZT_New = 1 << 7,        // aarch64_sme_pstate_zt0_new
+    ZT_Shared = 1 << 8,     // aarch64_sme_pstate_zt0_shared
+    ZT_Preserved = 1 << 9,  // aarch64_sme_pstate_zt0_preserved
+    All = ZT_Preserved - 1
   };
 
   SMEAttrs(unsigned Mask = Normal) : Bitmask(0) { set(Mask); }
@@ -74,6 +77,14 @@ public:
   requiresSMChange(const SMEAttrs &Callee,
                    bool BodyOverridesInterface = false) const;
 
+  /// \return true if a call from Caller -> Callee requires ZT0 state to be
+  /// preserved.
+  /// ZT0 must be preserved if the caller has ZT state and the callee
+  /// does not preserve ZT.
+  bool requiresPreservingZT(const SMEAttrs &Callee) const {
+    return hasZTState() && !Callee.preservesZT();
+  }
+
   // Interfaces to query PSTATE.ZA
   bool hasNewZABody() const { return Bitmask & ZA_New; }
   bool hasSharedZAInterface() const { return Bitmask & ZA_Shared; }
@@ -82,6 +93,13 @@ public:
   bool hasZAState() const {
     return hasNewZABody() || hasSharedZAInterface();
   }
+
+  // Interfaces to query ZT0 state
+  bool hasNewZTBody() const { return Bitmask & ZT_New; }
+  bool hasSharedZTInterface() const { return Bitmask & ZT_Shared; }
+  bool preservesZT() const { return Bitmask & ZT_Preserved; }
+  bool hasZTState() const { return hasNewZTBody() || hasSharedZTInterface(); }
+
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&
            !(Callee.Bitmask & ZA_NoLazySave);

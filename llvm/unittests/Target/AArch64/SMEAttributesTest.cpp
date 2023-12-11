@@ -50,6 +50,20 @@ TEST(SMEAttributes, Constructors) {
                       ->getFunction("foo"))
                   .preservesZA());
 
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_sme_pstate_zt0_shared\"")
+              ->getFunction("foo"))
+          .hasSharedZTInterface());
+
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_pstate_zt0_new\"")
+                      ->getFunction("foo"))
+                  .hasNewZTBody());
+
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_sme_pstate_zt0_preserved\"")
+              ->getFunction("foo"))
+          .preservesZT());
+
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
                      "SM_Enabled and SM_Compatible are mutually exclusive");
@@ -57,6 +71,11 @@ TEST(SMEAttributes, Constructors) {
                      "ZA_New and ZA_Shared are mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZA_New | SA::ZA_Preserved),
                      "ZA_New and ZA_Preserved are mutually exclusive");
+
+  EXPECT_DEBUG_DEATH(SA(SA::ZT_New | SA::ZT_Shared),
+                     "ZT_New and ZT_Shared are mutually exclusive");
+  EXPECT_DEBUG_DEATH(SA(SA::ZT_New | SA::ZT_Preserved),
+                     "ZT_New and ZT_Preserved are mutually exclusive");
 
   // Test that the set() methods equally check validity.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled).set(SA::SM_Compatible),
@@ -95,6 +114,20 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(SA(SA::Normal).hasNewZABody());
   ASSERT_FALSE(SA(SA::Normal).hasZAState());
   ASSERT_FALSE(SA(SA::Normal).preservesZA());
+
+  // Test ZT0 state interfaces
+  ASSERT_TRUE(SA(SA::ZT_Shared).hasSharedZTInterface());
+  ASSERT_TRUE(SA(SA::ZT_Shared).hasZTState());
+  ASSERT_FALSE(SA(SA::ZT_Shared).preservesZT());
+  ASSERT_TRUE(SA(SA::ZT_Shared | SA::ZT_Preserved).preservesZT());
+
+  ASSERT_TRUE(SA(SA::ZT_New).hasNewZTBody());
+  ASSERT_TRUE(SA(SA::ZT_New).hasZTState());
+  ASSERT_FALSE(SA(SA::ZT_New).preservesZT());
+
+  ASSERT_FALSE(SA(SA::Normal).hasNewZTBody());
+  ASSERT_FALSE(SA(SA::Normal).hasZTState());
+  ASSERT_FALSE(SA(SA::Normal).preservesZT());
 }
 
 TEST(SMEAttributes, Transitions) {

@@ -40,7 +40,8 @@ struct SMEABI : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
 private:
-  bool updateNewZAFunctions(Module *M, Function *F, IRBuilder<> &Builder);
+  bool updateNewZAFunctions(Module *M, Function *F, IRBuilder<> &Builder,
+                            bool ClearZTState);
 };
 } // end anonymous namespace
 
@@ -82,8 +83,8 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
 /// is active and we should call __arm_tpidr2_save to commit the lazy save.
 /// Additionally, PSTATE.ZA should be enabled at the beginning of the function
 /// and disabled before returning.
-bool SMEABI::updateNewZAFunctions(Module *M, Function *F,
-                                  IRBuilder<> &Builder) {
+bool SMEABI::updateNewZAFunctions(Module *M, Function *F, IRBuilder<> &Builder,
+                                  bool ClearZTState) {
   LLVMContext &Context = F->getContext();
   BasicBlock *OrigBB = &F->getEntryBlock();
 
@@ -117,6 +118,14 @@ bool SMEABI::updateNewZAFunctions(Module *M, Function *F,
   Builder.CreateCall(ZeroIntr->getFunctionType(), ZeroIntr,
                      Builder.getInt32(0xff));
 
+  // Clear ZT0 on entry to the function if required, after enabling pstate.za
+  if (ClearZTState) {
+    Function *ClearZT0Intr =
+        Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero_zt);
+    Builder.CreateCall(ClearZT0Intr->getFunctionType(), ClearZT0Intr,
+                       {Builder.getInt32(0)});
+  }
+
   // Before returning, disable pstate.za
   for (BasicBlock &BB : *F) {
     Instruction *T = BB.getTerminator();
@@ -143,7 +152,8 @@ bool SMEABI::runOnFunction(Function &F) {
   bool Changed = false;
   SMEAttrs FnAttrs(F);
   if (FnAttrs.hasNewZABody())
-    Changed |= updateNewZAFunctions(M, &F, Builder);
+    Changed |= updateNewZAFunctions(M, &F, Builder,
+                                    FnAttrs.requiresPreservingZT(SMEAttrs()));
 
   return Changed;
 }
