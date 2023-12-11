@@ -105,41 +105,41 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
     SmallVector<int64_t> newPackInnerDimsPosVec;
     SmallVector<int64_t> newPackInnerTilesVec;
 
-    // Variable for storing translated position after considering original
+    // Variable for storing remapped position after considering original
     // outer_dims_perm and permutation attributes of tensor.pack and
     // linalg.transpose.
-    int64_t translatedPosition;
+    int64_t remappedPosition;
+    int64_t finalOuterDimsSize = transposePerm.size() - packInnerTiles.size();
 
-    // Process transpose operation for non-tiled outer dimensions of the tensor.
-    for (unsigned int i = 0; i < transposePerm.size() - packInnerTiles.size();
-         ++i) {
+    // Process transpose operation for non-tiled outer dimensions
+    for (unsigned int i = 0; i < finalOuterDimsSize; ++i) {
       // If tensor.pack has outer_dims_perm attribute, then consider it during
       // index translation.
-      if (packOuterDimsPerm.size()) {
+      if (!packOuterDimsPerm.empty()) {
         // Note: static_cast is added around transposePerm[i] to suppress the
         // compiler warning of comparison between variables of different types.
         if (static_cast<unsigned long>(transposePerm[i]) <
-            packOuterDimsPerm.size())
-          translatedPosition = packOuterDimsPerm[transposePerm[i]];
-        else
+            packOuterDimsPerm.size()) {
+          remappedPosition = packOuterDimsPerm[transposePerm[i]];
+        } else {
           return rewriter.notifyMatchFailure(
               transposeOp,
               "Cannot fold in tensor.pack if a tile dimension was transposed "
               "with a non-tile dimension in linalg.transpose.");
-      } else
-        translatedPosition = transposePerm[i];
+        }
+      } else {
+        remappedPosition = transposePerm[i];
+      }
 
-      newPackOuterDimsPermVec.push_back(translatedPosition);
+      newPackOuterDimsPermVec.push_back(remappedPosition);
     }
 
-    // Process transpose operation for tiled inner dimensions of the tensor.
-    for (unsigned int i = transposePerm.size() - packInnerTiles.size();
-         i < transposePerm.size(); ++i) {
-      translatedPosition =
-          transposePerm[i] - (transposePerm.size() - packInnerTiles.size());
+    // Process transpose operation for tiled inner dimensions
+    for (unsigned int i = finalOuterDimsSize; i < transposePerm.size(); ++i) {
+      remappedPosition = transposePerm[i] - finalOuterDimsSize;
 
-      newPackInnerTilesVec.push_back(packInnerTiles[translatedPosition]);
-      newPackInnerDimsPosVec.push_back(packInnerDimsPos[translatedPosition]);
+      newPackInnerTilesVec.push_back(packInnerTiles[remappedPosition]);
+      newPackInnerDimsPosVec.push_back(packInnerDimsPos[remappedPosition]);
     }
 
     SmallVector<OpFoldResult> opFoldResultsTiles;
