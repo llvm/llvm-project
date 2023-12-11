@@ -1052,10 +1052,9 @@ define amdgpu_kernel void @add64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_add_co_u32 s0, s6, s0
-; GFX12-NEXT:    s_add_co_ci_u32 s1, s7, s1
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[6:7], s[0:1]
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1161,10 +1160,9 @@ define amdgpu_kernel void @add64_sgpr_vgpr(ptr addrspace(1) %out, i64 %a, ptr ad
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_add_co_u32 s2, s2, s4
-; GFX12-NEXT:    s_add_co_ci_u32 s3, s3, s5
-; GFX12-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[4:5]
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1314,8 +1312,7 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX12-NEXT:  ; %bb.1: ; %else
-; GFX12-NEXT:    s_add_co_u32 s4, s4, s6
-; GFX12-NEXT:    s_add_co_ci_u32 s5, s5, s7
+; GFX12-NEXT:    s_add_nc_u64 s[4:5], s[4:5], s[6:7]
 ; GFX12-NEXT:    s_mov_b32 s6, 0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX12-NEXT:  .LBB9_2: ; %if

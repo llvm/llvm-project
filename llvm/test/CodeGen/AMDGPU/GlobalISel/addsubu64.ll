@@ -26,8 +26,7 @@ define amdgpu_kernel void @s_add_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_add_co_u32 s0, s6, s0
-; GFX12-NEXT:    s_add_co_ci_u32 s1, s7, s1
+; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[6:7], s[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
@@ -79,8 +78,7 @@ define amdgpu_kernel void @s_sub_u64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_sub_co_u32 s0, s6, s0
-; GFX12-NEXT:    s_sub_co_ci_u32 s1, s7, s1
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[6:7], s[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]

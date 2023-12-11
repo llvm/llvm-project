@@ -689,10 +689,9 @@ define amdgpu_kernel void @s_sub_i64(ptr addrspace(1) noalias %out, i64 %a, i64 
 ; GFX12-NEXT:    s_load_b128 s[4:7], s[0:1], 0x2c
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    s_sub_co_u32 s2, s4, s6
-; GFX12-NEXT:    s_sub_co_ci_u32 s3, s5, s7
-; GFX12-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
+; GFX12-NEXT:    s_sub_nc_u64 s[2:3], s[4:5], s[6:7]
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
