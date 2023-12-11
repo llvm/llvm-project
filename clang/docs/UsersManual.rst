@@ -425,6 +425,30 @@ output format of the diagnostics that it generates.
    If this option is not used, all the passes are included in the optimization
    record.
 
+.. option:: -fdiagnostics-show-profile-count
+
+   Enable profile loop count information in diagnostic line.
+
+   This option controls whether Clang prints the profile loop count associated
+   with diagnostics in the presence of profile-guided optimization information.
+   This is currently supported with optimization remarks (see
+   :ref:`Options to Emit Optimization Reports <rpass>`). The profile count information
+   allows users to focus on the hot optimization remarks that are likely to be
+   more relevant for run-time performance. The main difference between profile count
+   the hotness is the profile count is the real profile count from the runtime
+   profile and hotness is a relative number calculated by function entry count and
+   weight.
+
+   For example, in this output, the block containing the callsite of `foo` was
+   executed 3000 times according to the profile data:
+
+   ::
+
+        s.c:38:3: remark: the cost-model indicates that interleaving is not beneficial (ProfileCount: 20) [-Rpass-analysis=loop-vectorize]
+          for(int i = 0;  i < 20; i++){
+          ^
+
+
 .. _opt_fdiagnostics-show-hotness:
 
 .. option:: -f[no-]diagnostics-show-hotness

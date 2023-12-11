@@ -25,12 +25,14 @@ template <typename T>
 static void mapRemarkHeader(yaml::IO &io, T PassName, T RemarkName,
                             std::optional<RemarkLocation> RL, T FunctionName,
                             std::optional<uint64_t> Hotness,
+                            std::optional<uint64_t> ProfileCount,
                             ArrayRef<Argument> Args) {
   io.mapRequired("Pass", PassName);
   io.mapRequired("Name", RemarkName);
   io.mapOptional("DebugLoc", RL);
   io.mapRequired("Function", FunctionName);
   io.mapOptional("Hotness", Hotness);
+  io.mapOptional("ProfileCount", ProfileCount);
   io.mapOptional("Args", Args);
 }
 
@@ -66,10 +68,11 @@ template <> struct MappingTraits<remarks::Remark *> {
       unsigned NameID = StrTab.add(Remark->RemarkName).first;
       unsigned FunctionID = StrTab.add(Remark->FunctionName).first;
       mapRemarkHeader(io, PassID, NameID, Remark->Loc, FunctionID,
-                      Remark->Hotness, Remark->Args);
+                      Remark->Hotness, Remark->ProfileCount, Remark->Args);
     } else {
       mapRemarkHeader(io, Remark->PassName, Remark->RemarkName, Remark->Loc,
-                      Remark->FunctionName, Remark->Hotness, Remark->Args);
+                      Remark->FunctionName, Remark->Hotness,
+                      Remark->ProfileCount, Remark->Args);
     }
   }
 };

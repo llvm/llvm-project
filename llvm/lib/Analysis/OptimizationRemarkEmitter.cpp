@@ -16,6 +16,8 @@
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -76,10 +78,30 @@ void OptimizationRemarkEmitter::computeHotness(
     OptDiag.setHotness(computeHotness(V));
 }
 
+void OptimizationRemarkEmitter::getProfileCount(
+    DiagnosticInfoIROptimization &OptDiag) {
+  const Value *V = OptDiag.getCodeRegion();
+  if (V)
+    OptDiag.setProfileCount(getProfileCount(V));
+}
+
+std::optional<uint64_t>
+OptimizationRemarkEmitter::getProfileCount(const Value *V) {
+  auto *Term = cast<BasicBlock>(V)->getTerminator();
+  auto *ProfileData = Term->getMetadata(LLVMContext::MD_prof_count);
+  // TODO: Add check if the metadata match 'profile_count'
+  if (ProfileData == nullptr)
+    return std::nullopt;
+  ValueAsMetadata *VM =
+      cast<llvm::ValueAsMetadata>(ProfileData->getOperand(1).get());
+  return cast<llvm::ConstantInt>(VM->getValue())->getZExtValue();
+}
+
 void OptimizationRemarkEmitter::emit(
     DiagnosticInfoOptimizationBase &OptDiagBase) {
   auto &OptDiag = cast<DiagnosticInfoIROptimization>(OptDiagBase);
   computeHotness(OptDiag);
+  getProfileCount(OptDiag);
 
   // Only emit it if its hotness meets the threshold.
   if (OptDiag.getHotness().value_or(0) <

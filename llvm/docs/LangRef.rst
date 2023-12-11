@@ -7649,6 +7649,28 @@ allocation itself) to the outermost callsite context required for uniquely
 identifying the described profile behavior (note this may not be the top of
 the profiled call stack).
 
+.. _md_prof_count:
+
+'``prof.count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``prof.count`` metadata is used to record runtime profile data on loop
+executation times. The difference between ``prof`` metadata is this metadata record
+the real execution time in the runtime profile.
+
+Example:
+
+.. code-block:: text
+
+    for.header:
+      ...
+      br i1 %1, label %for.body, label %for.exit, !prof.count !0
+    !0 = !{!"profile_count", !64 100}
+
+Each of the  ``prof.count`` metadata contains two element, the first element is the
+string indicate this metadata is for profile_count, and the second element is the
+executation times current loop runs at the runtime.
+
 .. _md_callsite:
 
 '``callsite``' Metadata

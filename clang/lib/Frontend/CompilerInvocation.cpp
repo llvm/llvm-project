@@ -2091,6 +2091,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   bool UsingProfile =
       UsingSampleProfile || !Opts.ProfileInstrumentUsePath.empty();
 
+  if (Args.hasArg(options::OPT_fdiagnostics_show_profile_count) &&
+      !UsingProfile && IK.getLanguage() != Language::LLVM_IR) {
+    Diags.Report(diag::warn_drv_diagnostics_profile_count_requires_pgo)
+        << "-fdiagnostics-show-profile-count";
+  }
+
   if (Opts.DiagnosticsWithHotness && !UsingProfile &&
       // An IR file will contain PGO as metadata
       IK.getLanguage() != Language::LLVM_IR)

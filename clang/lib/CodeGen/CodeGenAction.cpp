@@ -716,6 +716,10 @@ void BackendConsumer::EmitOptimizationMessage(
   if (D.getHotness())
     MsgStream << " (hotness: " << *D.getHotness() << ")";
 
+  if (D.getProfileCount()) {
+    MsgStream << " (ProfileCount: " << *D.getProfileCount() << ")";
+  }
+
   Diags.Report(Loc, DiagID)
       << AddFlagValue(D.getPassName())
       << MsgStream.str();

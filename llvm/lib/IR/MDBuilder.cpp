@@ -52,6 +52,16 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights) {
   return MDNode::get(Context, Vals);
 }
 
+MDNode *MDBuilder::createProfileCount(uint64_t Count) {
+  Metadata *Vals[2];
+  Vals[0] = createString("profile_count");
+
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Vals[1] = createConstant(ConstantInt::get(Int64Ty, Count));
+
+  return MDNode::get(Context, Vals);
+}
+
 MDNode *MDBuilder::createUnpredictable() {
   return MDNode::get(Context, std::nullopt);
 }

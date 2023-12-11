@@ -67,6 +67,7 @@ LLVMRemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) const {
       GlobalValue::dropLLVMManglingEscape(Diag.getFunction().getName());
   R.Loc = toRemarkLocation(Diag.getLocation());
   R.Hotness = Diag.getHotness();
+  R.ProfileCount = Diag.getProfileCount();
 
   for (const DiagnosticInfoOptimizationBase::Argument &Arg : Diag.getArgs()) {
     R.Args.emplace_back();

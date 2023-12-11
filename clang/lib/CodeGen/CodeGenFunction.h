@@ -1527,6 +1527,7 @@ private:
   llvm::MDNode *createProfileWeights(ArrayRef<uint64_t> Weights) const;
   llvm::MDNode *createProfileWeightsForLoop(const Stmt *Cond,
                                             uint64_t LoopCount) const;
+  llvm::MDNode *createProfileCount(uint64_t Count) const;
 
 public:
   /// Increment the profiler's counter for the given statement by \p StepV.

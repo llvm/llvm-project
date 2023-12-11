@@ -118,6 +118,13 @@ private:
   /// available.
   std::optional<uint64_t> computeHotness(const Value *V);
 
+  /// Compute profile count from IR value (currently assumed to be a block) if
+  /// PGO is available.
+  std::optional<uint64_t> getProfileCount(const Value *V);
+
+  /// Similar but use value from \p OptDiag and update profile count there.
+  void getProfileCount(DiagnosticInfoIROptimization &OptDiag);
+
   /// Similar but use value from \p OptDiag and update hotness there.
   void computeHotness(DiagnosticInfoIROptimization &OptDiag);
 

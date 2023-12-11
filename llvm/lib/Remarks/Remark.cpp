@@ -56,6 +56,8 @@ void Remark::print(raw_ostream &OS) const {
     OS << "Loc: " << Loc.value();
   if (Hotness)
     OS << "Hotness: " << Hotness;
+  if (ProfileCount)
+    OS << "ProfileCount: " << ProfileCount;
   if (!Args.empty()) {
     OS << "Args:\n";
     for (auto Arg : Args)

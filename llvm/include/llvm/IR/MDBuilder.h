@@ -67,6 +67,9 @@ public:
   /// Return metadata specifying that a branch or switch is unpredictable.
   MDNode *createUnpredictable();
 
+  /// Create the `profile_count` metadata at the branch instrucion
+  MDNode *createProfileCount(uint64_t Count);
+
   /// Return metadata containing the entry \p Count for a function, a boolean
   /// \Synthetic indicating whether the counts were synthetized, and the
   /// GUIDs stored in \p Imports that need to be imported for sample PGO, to

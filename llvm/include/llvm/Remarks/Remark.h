@@ -116,6 +116,10 @@ struct Remark {
   /// corresponding code was executed in a profile instrumentation run.
   std::optional<uint64_t> Hotness;
 
+  /// If profile information is available, this is the number of real times the
+  /// corresponding code was executed in a profile instrumentation run.
+  std::optional<uint64_t> ProfileCount;
+
   /// Arguments collected via the streaming interface.
   SmallVector<Argument, 5> Args;
 
