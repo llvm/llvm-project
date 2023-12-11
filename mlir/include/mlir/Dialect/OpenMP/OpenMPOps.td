@@ -1265,7 +1265,7 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
                        Optional<AnyInteger>:$device,
                        Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
                        Variadic<OpenMP_PointerLikeType>:$use_device_addr,
-                       Variadic<AnyType>:$map_operands);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
@@ -1314,7 +1314,7 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<AnyType>:$map_operands);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1360,7 +1360,7 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
                        UnitAttr:$nowait,
-                       Variadic<AnyType>:$map_operands);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1403,7 +1403,7 @@ def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterfa
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
                        UnitAttr:$nowait,
-                       Variadic<AnyType>:$map_operands);
+                       Variadic<OpenMP_PointerLikeType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
 
