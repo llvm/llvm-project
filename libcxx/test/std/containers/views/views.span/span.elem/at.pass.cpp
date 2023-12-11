@@ -25,24 +25,19 @@
 
 #include "test_macros.h"
 
-constexpr void testSpanAt(auto& container, bool hasDynamicExtent, int index, int expectedValue) {
-  std::span anySpan{container};
-
-  if (hasDynamicExtent) {
-    assert(std::dynamic_extent == anySpan.extent);
-  } else {
-    assert(std::dynamic_extent != anySpan.extent);
-  }
-
+template <typename ReferenceT>
+constexpr void testSpanAt(auto&& anySpan, int index, int expectedValue) {
   // non-const
   {
-    std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = anySpan.at(index);
+    // std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = anySpan.at(index);
+    std::same_as<ReferenceT> decltype(auto) elem = anySpan.at(index);
     assert(elem == expectedValue);
   }
 
   // const
   {
-    std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = std::as_const(anySpan).at(index);
+    // std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = std::as_const(anySpan).at(index);
+    std::same_as<ReferenceT> decltype(auto) elem = std::as_const(anySpan).at(index);
     assert(elem == expectedValue);
   }
 }
@@ -50,22 +45,36 @@ constexpr void testSpanAt(auto& container, bool hasDynamicExtent, int index, int
 constexpr bool test() {
   // With static extent
   {
-    std::array arr{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
+    std::array arr{0, 1, 2, 3, 4, 5, 9084};
+    std::span arrSpan{arr};
 
-    testSpanAt(arr, false, 0, 0);
-    testSpanAt(arr, false, 1, 1);
-    testSpanAt(arr, false, 6, 9084);
-    testSpanAt(arr, false, 7, std::numeric_limits<int>::max());
+    assert(std::dynamic_extent != arrSpan.extent);
+
+    using ReferenceT = typename decltype(arrSpan)::reference;
+
+    // testSpanAt(arrSpan, 0, 0);
+    // testSpanAt(arrSpan, 1, 1);
+    // testSpanAt(arrSpan, 6, 9084);
+    testSpanAt<ReferenceT>(arrSpan, 0, 0);
+    testSpanAt<ReferenceT>(arrSpan, 1, 1);
+    testSpanAt<ReferenceT>(arrSpan, 6, 9084);
   }
 
   // With dynamic extent
   {
-    std::vector vec{0, 1, 2, 3, 4, 5, 9084, std::numeric_limits<int>::max()};
+    std::vector vec{0, 1, 2, 3, 4, 5, 9084};
+    std::span vecSpan{vec};
 
-    testSpanAt(vec, true, 0, 0);
-    testSpanAt(vec, true, 1, 1);
-    testSpanAt(vec, true, 6, 9084);
-    testSpanAt(vec, true, 7, std::numeric_limits<int>::max());
+    assert(std::dynamic_extent == vecSpan.extent);
+
+    using ReferenceT = typename decltype(vecSpan)::reference;
+
+    // testSpanAt(vecSpan, 0, 0);
+    // testSpanAt(vecSpan, 1, 1);
+    // testSpanAt(vecSpan, 6, 9084);
+    testSpanAt<ReferenceT>(vecSpan, 0, 0);
+    testSpanAt<ReferenceT>(vecSpan, 1, 1);
+    testSpanAt<ReferenceT>(vecSpan, 6, 9084);
   }
 
   return true;
@@ -86,6 +95,16 @@ void test_exceptions() {
     } catch (const std::out_of_range& e) {
       // pass
       assert(e.what() == "span"s);
+    } catch (...) {
+      assert(false);
+    }
+
+    try {
+      std::ignore = arrSpan.at(arr.size() - 1);
+      // pass
+      assert(arrSpan.at(arr.size() - 1) == std::numeric_limits<int>::max());
+    } catch (const std::out_of_range&) {
+      assert(false);
     } catch (...) {
       assert(false);
     }
@@ -118,6 +137,15 @@ void test_exceptions() {
     } catch (const std::out_of_range& e) {
       // pass
       assert(e.what() == "span"s);
+    } catch (...) {
+      assert(false);
+    }
+
+    try {
+      std::ignore = vecSpan.at(vec.size() - 1);
+      assert(vecSpan.at(vec.size() - 1) == std::numeric_limits<int>::max());
+    } catch (const std::out_of_range& e) {
+      assert(false);
     } catch (...) {
       assert(false);
     }
