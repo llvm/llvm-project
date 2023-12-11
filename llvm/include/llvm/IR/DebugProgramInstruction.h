@@ -113,7 +113,7 @@ public:
   /// Directly construct a new DPValue representing a dbg.value intrinsic
   /// assigning \p Location to the DV / Expr / DI variable.
   DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
-          const DILocation *DI);
+          const DILocation *DI, LocationType Type = LocationType::Value);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the

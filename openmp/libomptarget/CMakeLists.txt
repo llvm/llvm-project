@@ -24,7 +24,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 
-if(LLVM_LIBRARY_OUTPUT_INTDIR)
+if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
   set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
 else()
   set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -73,6 +73,25 @@ else()
 endif()
 if(LIBOMPTARGET_ENABLE_DEBUG)
   add_definitions(-DOMPTARGET_DEBUG)
+endif()
+
+# No exceptions and no RTTI, except if requested.
+set(offload_compile_flags -fno-exceptions)
+if(NOT LLVM_ENABLE_RTTI)
+  set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
+endif()
+
+# If LTO is not explicitly disabled we check if we can enable it and do so.
+set(LIBOMPTARGET_USE_LTO TRUE CACHE BOOL "Use LTO for the offload runtimes if available")
+if (LIBOMPTARGET_USE_LTO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT use_lto OUTPUT output)
+  if(use_lto)
+    set(offload_compile_flags ${offload_compile_flags} -flto)
+    set(offload_link_flags ${offload_link_flags} -flto)
+  else()
+    message(WARNING "LTO is not supported: ${output}")
+  endif()
 endif()
 
 # OMPT support for libomptarget

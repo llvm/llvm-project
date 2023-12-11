@@ -120,8 +120,8 @@ LIBC_INLINE T hypot(T x, T y) {
     return y;
   }
 
-  uint16_t x_exp = x_bits.get_unbiased_exponent();
-  uint16_t y_exp = y_bits.get_unbiased_exponent();
+  uint16_t x_exp = x_bits.get_biased_exponent();
+  uint16_t y_exp = y_bits.get_biased_exponent();
   uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
 
   if ((exp_diff >= MantissaWidth<T>::VALUE + 2) || (x == 0) || (y == 0)) {
@@ -178,7 +178,7 @@ LIBC_INLINE T hypot(T x, T y) {
   // But before that, remember to store the losing bits to sticky.
   // The shift length is for a^2 and b^2, so it's double of the exponent
   // difference between a and b.
-  uint16_t shift_length = 2 * (a_exp - b_exp);
+  uint16_t shift_length = static_cast<uint16_t>(2 * (a_exp - b_exp));
   sticky_bits =
       ((b_mant_sq & ((DUIntType(1) << shift_length) - DUIntType(1))) !=
        DUIntType(0));

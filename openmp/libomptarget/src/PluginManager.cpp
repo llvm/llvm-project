@@ -61,7 +61,7 @@ Error PluginAdaptorTy::init() {
     return createStringError(inconvertibleErrorCode(),                         \
                              "Invalid plugin as necessary interface function " \
                              "(%s) was not found.\n",                          \
-                             NAME);                                            \
+                             std::string(#NAME).c_str());                      \
   }
 
 #include "Shared/PluginAPI.inc"
