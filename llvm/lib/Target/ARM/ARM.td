@@ -1662,7 +1662,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureCRC,
                                                          FeatureDotProd]>;
 
-def : ProcNoItin<"neoverse-n2",                         [ARMv85a,
+def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
                                                          FeatureMatMulInt8]>;
 
