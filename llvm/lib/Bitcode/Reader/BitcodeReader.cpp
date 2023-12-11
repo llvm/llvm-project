@@ -5962,6 +5962,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Align)
         Align = DL.getPrefTypeAlign(Ty);
 
+      if (!Size->getType()->isIntegerTy())
+        return error("alloca element count must have integer type");
+
       AllocaInst *AI = new AllocaInst(Ty, AS, Size, *Align);
       AI->setUsedWithInAlloca(InAlloca);
       AI->setSwiftError(SwiftError);
