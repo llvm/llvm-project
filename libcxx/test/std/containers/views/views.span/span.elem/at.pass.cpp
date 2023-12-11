@@ -29,14 +29,12 @@ template <typename ReferenceT>
 constexpr void testSpanAt(auto&& anySpan, int index, int expectedValue) {
   // non-const
   {
-    // std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = anySpan.at(index);
     std::same_as<ReferenceT> decltype(auto) elem = anySpan.at(index);
     assert(elem == expectedValue);
   }
 
   // const
   {
-    // std::same_as<typename decltype(anySpan)::reference> decltype(auto) elem = std::as_const(anySpan).at(index);
     std::same_as<ReferenceT> decltype(auto) elem = std::as_const(anySpan).at(index);
     assert(elem == expectedValue);
   }
@@ -52,9 +50,6 @@ constexpr bool test() {
 
     using ReferenceT = typename decltype(arrSpan)::reference;
 
-    // testSpanAt(arrSpan, 0, 0);
-    // testSpanAt(arrSpan, 1, 1);
-    // testSpanAt(arrSpan, 6, 9084);
     testSpanAt<ReferenceT>(arrSpan, 0, 0);
     testSpanAt<ReferenceT>(arrSpan, 1, 1);
     testSpanAt<ReferenceT>(arrSpan, 6, 9084);
@@ -69,9 +64,6 @@ constexpr bool test() {
 
     using ReferenceT = typename decltype(vecSpan)::reference;
 
-    // testSpanAt(vecSpan, 0, 0);
-    // testSpanAt(vecSpan, 1, 1);
-    // testSpanAt(vecSpan, 6, 9084);
     testSpanAt<ReferenceT>(vecSpan, 0, 0);
     testSpanAt<ReferenceT>(vecSpan, 1, 1);
     testSpanAt<ReferenceT>(vecSpan, 6, 9084);
