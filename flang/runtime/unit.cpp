@@ -355,6 +355,7 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   }
   positionInRecord += bytes;
   furthestPositionInRecord = furthestAfter;
+  anyWriteSinceLastPositioning_ = true;
   return true;
 }
 
@@ -459,6 +460,11 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
         HitEndOnRead(handler);
       }
     } else {
+      if (anyWriteSinceLastPositioning_ && access == Access::Sequential) {
+        // Most Fortran implementations allow a READ after a WRITE;
+        // the read then just hits an EOF.
+        DoEndfile(handler);
+      }
       recordLength.reset();
       RUNTIME_CHECK(handler, isUnformatted.has_value());
       if (*isUnformatted) {
@@ -619,6 +625,7 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
       }
     }
     BeginRecord();
+    anyWriteSinceLastPositioning_ = false;
   }
 }
 
@@ -671,6 +678,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     SetPosition(0, handler);
     currentRecordNumber = 1;
     leftTabLimit.reset();
+    anyWriteSinceLastPositioning_ = false;
   }
 }
 
@@ -934,6 +942,7 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   TruncateFrame(frameOffsetInFile_, handler);
   BeginRecord();
   impliedEndfile_ = false;
+  anyWriteSinceLastPositioning_ = false;
 }
 
 void ExternalFileUnit::CommitWrites() {
