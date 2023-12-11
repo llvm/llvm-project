@@ -1292,7 +1292,8 @@ struct InformationCache {
     return AssumeOnlyValues.contains(&I);
   }
 
-  /// Invalidates the cached analyses.
+  /// Invalidates the cached analyses. Valid only when using the new pass
+  /// manager.
   void invalidateAnalyses() { AG.invalidateAnalyses(); }
 
   /// Return the analysis result from a pass \p AP for function \p F.
