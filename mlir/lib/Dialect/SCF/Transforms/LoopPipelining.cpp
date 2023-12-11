@@ -370,10 +370,10 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
     Type t = ub.getType();
     Location loc = forOp.getLoc();
     // newUb = ub - maxStage * step
-    Value maxStageByStep = rewriter.create<arith::MulIOp>(
-        loc, step,
-        rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getIntegerAttr(t, maxStage)));
+    Value maxStageValue = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(t, maxStage));
+    Value maxStageByStep =
+        rewriter.create<arith::MulIOp>(loc, step, maxStageValue);
     newUb = rewriter.create<arith::SubIOp>(loc, ub, maxStageByStep);
   }
   auto newForOp =
@@ -409,12 +409,12 @@ LogicalResult LoopPipelinerInternal::createKernel(
     Type t = ub.getType();
     for (unsigned i = 0; i < maxStage; i++) {
       // c = ub - (maxStage - i) * step
-      Value c = rewriter.create<arith::AddIOp>(
+      Value c = rewriter.create<arith::SubIOp>(
           loc, ub,
           rewriter.create<arith::MulIOp>(
               loc, step,
               rewriter.create<arith::ConstantOp>(
-                  loc, rewriter.getIntegerAttr(t, -int64_t(maxStage - i)))));
+                  loc, rewriter.getIntegerAttr(t, int64_t(maxStage - i)))));
 
       Value pred = rewriter.create<arith::CmpIOp>(
           newForOp.getLoc(), arith::CmpIPredicate::slt,
@@ -574,7 +574,7 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter) {
     Value minusOne =
         rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, -1));
     // number of iterations = ((ub - 1) - lb) / step
-    Value totlaNumIteration = rewriter.create<arith::DivUIOp>(
+    Value totalNumIteration = rewriter.create<arith::DivUIOp>(
         loc,
         rewriter.create<arith::SubIOp>(
             loc, rewriter.create<arith::AddIOp>(loc, ub, minusOne), lb),
@@ -586,7 +586,7 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter) {
         loc, lb,
         rewriter.create<arith::MulIOp>(
             loc, step,
-            rewriter.create<arith::AddIOp>(loc, totlaNumIteration, minusI)));
+            rewriter.create<arith::AddIOp>(loc, totalNumIteration, minusI)));
     setValueMapping(forOp.getInductionVar(), newlastIter, maxStage - i);
   }
   // Emit `maxStage - 1` epilogue part that includes operations from stages

@@ -214,10 +214,10 @@ struct TestSCFPipeliningPass
     RewritePatternSet patterns(&getContext());
     mlir::scf::PipeliningOption options;
     options.getScheduleFn = getSchedule;
-    options.supportDynamicLoops = true;
     if (annotatePipeline)
       options.annotateFn = annotate;
     if (noEpiloguePeeling) {
+      options.supportDynamicLoops = true;
       options.peelEpilogue = false;
       options.predicateFn = predicateOp;
     }

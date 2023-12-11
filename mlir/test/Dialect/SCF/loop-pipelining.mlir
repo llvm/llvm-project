@@ -728,8 +728,6 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
 
 // NOEPILOGUE-LABEL: dynamic_loop(
 //  NOEPILOGUE-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>, %[[LB:.+]]: index, %[[UB:.+]]: index, %[[STEP:.+]]: index) {
-//  NOEPILOGUE-DAG: %[[CM2:.+]] = arith.constant -2 : index
-//  NOEPILOGUE-DAG: %[[CM1:.+]] = arith.constant -1 : index
 //  NOEPILOGUE-DAG: %[[C2:.+]] = arith.constant 2 : index
 //  NOEPILOGUE-DAG: %[[CSTF:.+]] = arith.constant 1.000000e+00 : f32
 // Prologue:
@@ -744,11 +742,10 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
 //      NOEPILOGUE: %[[L1:.+]] = scf.if %[[P_I1]] -> (f32) {
 // NOEPILOGUE-NEXT:   memref.load %[[A]][%[[IV1_2]]] : memref<?xf32>
 //  NOEPILOGUE: scf.for %[[IV2:.+]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[V1:.+]] = %[[V0]], %[[L2:.+]] = %[[L1]]) -> (f32, f32) {
-//  NOEPILOGUE-DAG:   %[[S2:.+]] = arith.muli %[[STEP]], %[[CM2]] : index
-//  NOEPILOGUE-DAG:   %[[IT2:.+]] = arith.addi %[[UB]], %[[S2]] : index
+//  NOEPILOGUE-DAG:   %[[S2:.+]] = arith.muli %[[STEP]], %[[C2]] : index
+//  NOEPILOGUE-DAG:   %[[IT2:.+]] = arith.subi %[[UB]], %[[S2]] : index
 //  NOEPILOGUE-DAG:   %[[P_I2:.+]] = arith.cmpi slt, %[[IV2]], %[[IT2]] : index
-//  NOEPILOGUE-DAG:   %[[S3:.+]] = arith.muli %[[STEP]], %[[CM1]] : index
-//  NOEPILOGUE-DAG:   %[[IT3:.+]] = arith.addi %[[UB]], %[[S3]] : index
+//  NOEPILOGUE-DAG:   %[[IT3:.+]] = arith.subi %[[UB]], %[[STEP]] : index
 //  NOEPILOGUE-DAG:   %[[P_I3:.+]] = arith.cmpi slt, %[[IV2]], %[[IT3]] : index
 //      NOEPILOGUE:   memref.store %[[V1]], %[[R]][%[[IV2]]] : memref<?xf32>
 //      NOEPILOGUE:   %[[V2:.+]] = scf.if %[[P_I3]] -> (f32) {
@@ -758,6 +755,12 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
 //      NOEPILOGUE:   %[[L3:.+]] = scf.if %[[P_I2]] -> (f32) {
 //      NOEPILOGUE:     memref.load %[[A]][%[[IV3]]] : memref<?xf32>
 //      NOEPILOGUE:   scf.yield %[[V2]], %[[L3]] : f32, f32
+
+// In case dynamic loop pipelining is off check that the transformation didn't
+// apply.
+// CHECK-LABEL: dynamic_loop(
+//   CHECK-NOT:   memref.load
+//       CHECK:   scf.for
 func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %ub: index, %step: index) {
   %cf = arith.constant 1.0 : f32
   scf.for %i0 = %lb to %ub step %step {
