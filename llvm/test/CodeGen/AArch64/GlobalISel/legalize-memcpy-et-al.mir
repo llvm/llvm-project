@@ -10,17 +10,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_memcpy
     ; CHECK: liveins: $w2, $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
@@ -38,14 +39,15 @@ body:             |
 
     ; CHECK-LABEL: name: test_memcpy_tail
     ; CHECK: liveins: $w2, $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
@@ -63,17 +65,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_memmove
     ; CHECK: liveins: $w2, $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memmove, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: BL &memmove, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
@@ -91,17 +94,18 @@ body:             |
 
     ; CHECK-LABEL: name: test_memset
     ; CHECK: liveins: $w1, $w2, $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $w1 = COPY [[COPY1]](s32)
-    ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $w1 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
@@ -120,18 +124,19 @@ body:             |
 
     ; CHECK-LABEL: name: no_tail_call
     ; CHECK: liveins: $w2, $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[ZEXT]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x1
     %1:_(p0) = COPY $x0
     %2:_(s32) = COPY $w2
@@ -149,17 +154,18 @@ body:             |
     liveins: $w2, $x0, $x1
     ; CHECK-LABEL: name: dont_tc_twice
     ; CHECK: liveins: $w2, $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32)
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
@@ -190,13 +196,14 @@ body:             |
 
     ; CHECK-LABEL: name: tail_with_copy_ret
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[COPY2]](s64)
-    ; CHECK: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -226,17 +233,18 @@ body:             |
 
     ; CHECK-LABEL: name: dont_tc_mismatched_copies
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[COPY2]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x1 = COPY [[COPY]](p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -266,18 +274,19 @@ body:             |
 
     ; CHECK-LABEL: name: dont_tc_extra_copy
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[COPY2]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2
@@ -308,17 +317,18 @@ body:             |
 
     ; CHECK-LABEL: name: dont_tc_mismatched_ret
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[COPY2]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x1 = COPY [[COPY]](p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x1 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x1
     %1:_(p0) = COPY $x0
     %2:_(s64) = COPY $x2
@@ -348,17 +358,18 @@ body:             |
 
     ; CHECK-LABEL: name: dont_tc_ret_void_copy
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: $x1 = COPY [[COPY1]](p0)
-    ; CHECK: $x2 = COPY [[COPY2]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
-    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK: $x0 = COPY [[COPY]](p0)
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
+    ; CHECK-NEXT: $x2 = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2

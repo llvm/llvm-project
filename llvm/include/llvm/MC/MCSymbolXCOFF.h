@@ -17,6 +17,9 @@ namespace llvm {
 class MCSectionXCOFF;
 
 class MCSymbolXCOFF : public MCSymbol {
+
+  enum XCOFFSymbolFlags : uint16_t { SF_EHInfo = 0x0001 };
+
 public:
   MCSymbolXCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
       : MCSymbol(SymbolKindXCOFF, Name, isTemporary) {}
@@ -52,9 +55,12 @@ public:
 
   XCOFF::VisibilityType getVisibilityType() const { return VisibilityType; }
 
-  bool hasRename() const { return !SymbolTableName.empty(); }
+  bool hasRename() const { return HasRename; }
 
-  void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
+  void setSymbolTableName(StringRef STN) {
+    SymbolTableName = STN;
+    HasRename = true;
+  }
 
   StringRef getSymbolTableName() const {
     if (hasRename())
@@ -62,11 +68,16 @@ public:
     return getUnqualifiedName();
   }
 
+  bool isEHInfo() const { return getFlags() & SF_EHInfo; }
+
+  void setEHInfo() const { modifyFlags(SF_EHInfo, SF_EHInfo); }
+
 private:
   std::optional<XCOFF::StorageClass> StorageClass;
   MCSectionXCOFF *RepresentedCsect = nullptr;
   XCOFF::VisibilityType VisibilityType = XCOFF::SYM_V_UNSPECIFIED;
   StringRef SymbolTableName;
+  bool HasRename = false;
 };
 
 } // end namespace llvm

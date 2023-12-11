@@ -1459,6 +1459,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeatureVGPRSingleUseHintInsts,
    FeatureMADIntraFwdBug]>;
 
 //===----------------------------------------------------------------------===//

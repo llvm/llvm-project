@@ -77,8 +77,11 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/TypePromotion.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -406,6 +409,32 @@ public:
     return PreservedAnalyses::all();
   }
   static StringRef name() { return "TriggerCrashPass"; }
+};
+
+// A pass for testing message reporting of -verify-each failures.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class TriggerVerifierErrorPass
+    : public PassInfoMixin<TriggerVerifierErrorPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    // Intentionally break the Module by creating an alias without setting the
+    // aliasee.
+    auto *PtrTy = llvm::PointerType::getUnqual(M.getContext());
+    GlobalAlias::create(PtrTy, PtrTy->getAddressSpace(),
+                        GlobalValue::LinkageTypes::InternalLinkage,
+                        "__bad_alias", nullptr, &M);
+    return PreservedAnalyses::none();
+  }
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    // Intentionally break the Function by inserting a terminator
+    // instruction in the middle of a basic block.
+    BasicBlock &BB = F.getEntryBlock();
+    new UnreachableInst(F.getContext(), BB.getTerminator());
+    return PreservedAnalyses::none();
+  }
+
+  static StringRef name() { return "TriggerVerifierErrorPass"; }
 };
 
 } // namespace
@@ -1090,6 +1119,11 @@ Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
 Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "detailed",
                                "StructuralHashPrinterPass");
+}
+
+Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "demote-catchswitch-only",
+                               "WinEHPreparePass");
 }
 
 } // namespace

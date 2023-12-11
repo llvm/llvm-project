@@ -23,12 +23,16 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -675,22 +679,22 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
-    addPass(DwarfEHPass(getOptLevel()));
+    addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
-    addPass(WinEHPass());
-    addPass(DwarfEHPass(getOptLevel()));
+    addPass(WinEHPreparePass());
+    addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addPass(WinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
-    addPass(WasmEHPass());
+    addPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(WasmEHPreparePass());
     break;
   case ExceptionHandling::None:
     addPass(LowerInvokePass());

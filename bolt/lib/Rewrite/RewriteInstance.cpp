@@ -623,7 +623,9 @@ void RewriteInstance::parseBuildID() {
 
   // Reading notes section (see Portable Formats Specification, Version 1.1,
   // pg 2-5, section "Note Section").
-  DataExtractor DE = DataExtractor(Buf, true, 8);
+  DataExtractor DE =
+      DataExtractor(Buf,
+                    /*IsLittleEndian=*/true, InputFile->getBytesInAddress());
   uint64_t Offset = 0;
   if (!DE.isValidOffset(Offset))
     return;
