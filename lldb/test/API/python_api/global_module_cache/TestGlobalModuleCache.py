@@ -36,6 +36,13 @@ class GlobalModuleCacheTestCase(TestBase):
     # this one won't either.
     @skipIfWindows
     def test_OneTargetOneDebugger(self):
+        self.do_test_one_debugger(True)
+
+    @expectedFailureAll
+    def test_TwoTargetsOneDebugger(self):
+        self.do_test_one_debugger(False)
+        
+    def do_test_one_debugger(self, one_target):
         # Make sure that if we have one target, and we run, then
         # change the binary and rerun, the binary (and any .o files
         # if using dwarf in .o file debugging) get removed from the
@@ -71,9 +78,20 @@ class GlobalModuleCacheTestCase(TestBase):
 
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
         error = lldb.SBError()
-        (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
+        if one_target:
+            (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
+        else:
+            (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+                self, "return counter;", main_filespec
+            )
+
         # In two-print.c counter will be 2:
         self.check_counter_var(thread, 2)
+
+        # If we made two targets, destroy the first one, that should free up the
+        # unreachable Modules:
+        if not one_target:
+            target.Clear()
 
         num_a_dot_out_entries = 1
         # For dSYM's there will be two lines of output, one for the a.out and one
@@ -82,7 +100,7 @@ class GlobalModuleCacheTestCase(TestBase):
             num_a_dot_out_entries += 1
 
         self.check_image_list_result(num_a_dot_out_entries, 1)
-
+        
     def check_image_list_result(self, num_a_dot_out, num_main_dot_o):
         # Now look at the global module list, there should only be one a.out, and if we are
         # doing dwarf in .o file, there should only be one .o file:
