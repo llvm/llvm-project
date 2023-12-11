@@ -55,6 +55,9 @@ target_compile_definitions(omptarget PRIVATE
   DEBUG_PREFIX="omptarget"
 )
 
+target_compile_options(omptarget PUBLIC ${offload_compile_flags})
+target_link_options(omptarget PUBLIC ${offload_link_flags})
+
 macro(check_plugin_target target)
 if (TARGET omptarget.rtl.${target})
 	list(APPEND LIBOMPTARGET_PLUGINS_TO_LOAD ${target})
