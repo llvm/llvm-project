@@ -3613,17 +3613,6 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
   SFINAETrap Trap(*this);
 
-  auto *Function = FunctionTemplate->getTemplatedDecl();
-  if (auto *Method = dyn_cast<CXXMethodDecl>(Function)) {
-    if (Method->isOverloadedOperator()) {
-      for (auto arg : Deduced) {
-        auto ty = arg.getAsType();
-        if (ty->isIntegerType()) {
-          return TDK_SubstitutionFailure;
-        }
-      }
-    }
-  }
   // Enter a new template instantiation context while we instantiate the
   // actual function declaration.
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
@@ -4360,6 +4349,25 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
       return Result;
   }
 
+  const auto *Proto = Function->getType()->castAs<FunctionProtoType>();
+  if (!Proto->isTemplateVariadic()) {
+    size_t params = 0, deducedParams = 0;
+    for (auto P : *TemplateParams) {
+      const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
+      if (CD && CD->hasTypeConstraint()) {
+        params++;
+      }
+    }
+    for (auto P : Deduced) {
+      if (P.isDependent()) {
+        deducedParams++;
+      }
+    }
+
+    if (params > deducedParams) {
+      return TDK_Invalid;
+    }
+  }
   // Capture the context in which the function call is made. This is the context
   // that is needed when the accessibility of template arguments is checked.
   DeclContext *CallingCtx = CurContext;
