@@ -33,7 +33,7 @@ using LoadStorePair = std::pair<Instruction *, Instruction *>;
 /// instrumentation pass.
 class InstrProfilingLoweringPass
     : public PassInfoMixin<InstrProfilingLoweringPass> {
-  const InstrProfOptions Options;
+  const InstrProfOptions Options = {};
   // Is this lowering for the context-sensitive instrumentation.
   const bool IsCS = false;
 
