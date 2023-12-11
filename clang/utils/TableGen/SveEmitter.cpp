@@ -90,6 +90,8 @@ public:
     NumVectors = NumV;
   }
 
+  SVEType &operator=(const SVEType &) = delete;
+
   bool isPointer() const { return Pointer; }
   bool isVoidPointer() const { return Pointer && Void; }
   bool isSigned() const { return Signed; }
