@@ -874,6 +874,7 @@ private:
             __set_long_pointer(__allocation);
             __set_long_size(__size);
         }
+        __annotate_new(__size);
     }
 
     template <class _Iter, class _Sent>
@@ -896,7 +897,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string()
       _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-      : __r_(__value_init_tag(), __default_init_tag()) {}
+      : __r_(__value_init_tag(), __default_init_tag()) {
+            __annotate_new(0);
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const allocator_type& __a)
 #if _LIBCPP_STD_VER <= 14
@@ -904,7 +907,9 @@ public:
 #else
       _NOEXCEPT
 #endif
-      : __r_(__value_init_tag(), __a) {}
+      : __r_(__value_init_tag(), __a) {
+            __annotate_new(0);
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string(const basic_string& __str)
       : __r_(__default_init_tag(), __alloc_traits::select_on_container_copy_construction(__str.__alloc())) {
@@ -941,6 +946,9 @@ public:
       // __str's memory needs to be unpoisoned only in the case where it's a short string.
       : __r_( ( (__str.__is_long() ? 0 : (__str.__annotate_delete(), 0)), std::move(__str.__r_)) ) {
     __str.__r_.first() = __rep();
+    __str.__annotate_new(0);
+    if(!__is_long())
+      __annotate_new(size());
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
@@ -951,11 +959,13 @@ public:
     else {
       if (__libcpp_is_constant_evaluated())
         __r_.first() = __rep();
-      __r_.first() = __str.__r_.first();
-      if (!__str.__is_long()) {
+      if (!__str.__is_long())
         __str.__annotate_delete();
-      }
+      __r_.first() = __str.__r_.first();
       __str.__r_.first() = __rep();
+      __str.__annotate_new(0);
+      if(!__is_long() && this != &__str)
+        __annotate_new(size());
     }
   }
 #endif // _LIBCPP_CXX03_LANG
@@ -1121,7 +1131,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     operator __self_view() const _NOEXCEPT { return __self_view(data(), size()); }
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(const basic_string& __str);
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string& operator=(const basic_string& __str);
 
     template <class _Tp, __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
                                            !__is_same_uncvref<_Tp, basic_string>::value, int> = 0>
@@ -1131,7 +1141,7 @@ public:
     }
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS basic_string&
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     operator=(basic_string&& __str) _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
     __move_assign(__str, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
@@ -2067,7 +2077,7 @@ private:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __move_assign(basic_string& __str, false_type)
         _NOEXCEPT_(__alloc_traits::is_always_equal::value);
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
     void __move_assign(basic_string& __str, true_type)
 #if _LIBCPP_STD_VER >= 17
         _NOEXCEPT;
@@ -2330,6 +2340,7 @@ template <class _InputIterator, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator __first, _Sentinel __last) {
     __r_.first() = __rep();
+    __annotate_new(0);
 
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
@@ -2397,7 +2408,6 @@ void basic_string<_CharT, _Traits, _Allocator>::__init_with_size(
     }
     catch (...)
     {
-        __annotate_delete();
         if (__is_long())
             __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
         throw;
@@ -2654,6 +2664,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
     if (!is_nothrow_move_assignable<allocator_type>::value) {
       __set_short_size(0);
       traits_type::assign(__get_short_pointer()[0], value_type());
+      __annotate_new(0);
     }
 #endif
   }
@@ -2680,7 +2691,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
   // can be safely used on the object after it was moved from):"
   // Quote: "v = std::move(v); // the value of v is unspecified"
   if (!__is_long() && &__str != this)
-    // If it is long string, delete was never called.
+    // If it is long string, delete was never called on original __str's buffer.
     __annotate_new(__get_short_size());
 }
 
@@ -4277,7 +4288,6 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
     _Traits::copy(__ptr, __lhs.data(), __lhs_sz);
     _Traits::copy(__ptr + __lhs_sz, __rhs.data(), __rhs_sz);
     _Traits::assign(__ptr + __lhs_sz + __rhs_sz, 1, _CharT());
-    __r.__annotate_new(__lhs_sz + __rhs_sz);
     return __r;
 }
 
@@ -4292,12 +4302,10 @@ operator+(const _CharT* __lhs , const basic_string<_CharT,_Traits,_Allocator>& _
     _String __r(__uninitialized_size_tag(),
                 __lhs_sz + __rhs_sz,
                 _String::__alloc_traits::select_on_container_copy_construction(__rhs.get_allocator()));
-    __r.__annotate_delete();
     auto __ptr = std::__to_address(__r.__get_pointer());
     _Traits::copy(__ptr, __lhs, __lhs_sz);
     _Traits::copy(__ptr + __lhs_sz, __rhs.data(), __rhs_sz);
     _Traits::assign(__ptr + __lhs_sz + __rhs_sz, 1, _CharT());
-    __r.__annotate_new(__lhs_sz + __rhs_sz);
     return __r;
 }
 
@@ -4311,12 +4319,10 @@ operator+(_CharT __lhs, const basic_string<_CharT,_Traits,_Allocator>& __rhs)
     _String __r(__uninitialized_size_tag(),
                 __rhs_sz + 1,
                 _String::__alloc_traits::select_on_container_copy_construction(__rhs.get_allocator()));
-    __r.__annotate_delete();
     auto __ptr = std::__to_address(__r.__get_pointer());
     _Traits::assign(__ptr, 1, __lhs);
     _Traits::copy(__ptr + 1, __rhs.data(), __rhs_sz);
     _Traits::assign(__ptr + 1 + __rhs_sz, 1, _CharT());
-    __r.__annotate_new(1 + __rhs_sz);
     return __r;
 }
 
@@ -4331,12 +4337,10 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* 
     _String __r(__uninitialized_size_tag(),
                 __lhs_sz + __rhs_sz,
                 _String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
-    __r.__annotate_delete();
     auto __ptr = std::__to_address(__r.__get_pointer());
     _Traits::copy(__ptr, __lhs.data(), __lhs_sz);
     _Traits::copy(__ptr + __lhs_sz, __rhs, __rhs_sz);
     _Traits::assign(__ptr + __lhs_sz + __rhs_sz, 1, _CharT());
-    __r.__annotate_new(__lhs_sz + __rhs_sz);
     return __r;
 }
 
@@ -4350,12 +4354,10 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, _CharT __rhs)
     _String __r(__uninitialized_size_tag(),
                 __lhs_sz + 1,
                 _String::__alloc_traits::select_on_container_copy_construction(__lhs.get_allocator()));
-    __r.__annotate_delete();
     auto __ptr = std::__to_address(__r.__get_pointer());
     _Traits::copy(__ptr, __lhs.data(), __lhs_sz);
     _Traits::assign(__ptr + __lhs_sz, 1, __rhs);
     _Traits::assign(__ptr + 1 + __lhs_sz, 1, _CharT());
-    __r.__annotate_new(__lhs_sz + 1);
     return __r;
 }
 
