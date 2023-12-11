@@ -193,9 +193,9 @@ const MCSymbol *MCAssembler::getAtom(const MCSymbol &S) const {
   return S.getFragment()->getAtom();
 }
 
-bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
-                                const MCFixup &Fixup, const MCFragment *DF,
-                                MCValue &Target, uint64_t &Value,
+bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout, const MCFixup &Fixup,
+                                const MCFragment *DF, MCValue &Target,
+                                const MCSubtargetInfo *STI, uint64_t &Value,
                                 bool &WasForced) const {
   ++stats::evaluateFixup;
 
@@ -227,7 +227,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
 
   if (IsTarget)
     return getBackend().evaluateTargetFixup(*this, Layout, Fixup, DF, Target,
-                                            Value, WasForced);
+                                            STI, Value, WasForced);
 
   unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
   bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
@@ -282,7 +282,8 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   }
 
   // Let the backend force a relocation if needed.
-  if (IsResolved && getBackend().shouldForceRelocation(*this, Fixup, Target)) {
+  if (IsResolved &&
+      getBackend().shouldForceRelocation(*this, Fixup, Target, STI)) {
     IsResolved = false;
     WasForced = true;
   }
@@ -796,13 +797,13 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
 
 std::tuple<MCValue, uint64_t, bool>
 MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
-                         const MCFixup &Fixup) {
+                         const MCFixup &Fixup, const MCSubtargetInfo *STI) {
   // Evaluate the fixup.
   MCValue Target;
   uint64_t FixedValue;
   bool WasForced;
-  bool IsResolved = evaluateFixup(Layout, Fixup, &F, Target, FixedValue,
-                                  WasForced);
+  bool IsResolved =
+      evaluateFixup(Layout, Fixup, &F, Target, STI, FixedValue, WasForced);
   if (!IsResolved) {
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
@@ -936,7 +937,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         bool IsResolved;
         MCValue Target;
         std::tie(Target, FixedValue, IsResolved) =
-            handleFixup(Layout, Frag, Fixup);
+            handleFixup(Layout, Frag, Fixup, STI);
         getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
                                 IsResolved, STI);
       }
@@ -960,7 +961,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   MCValue Target;
   uint64_t Value;
   bool WasForced;
-  bool Resolved = evaluateFixup(Layout, Fixup, DF, Target, Value, WasForced);
+  bool Resolved = evaluateFixup(Layout, Fixup, DF, Target,
+                                DF->getSubtargetInfo(), Value, WasForced);
   if (Target.getSymA() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
       Fixup.getKind() == FK_Data_1)

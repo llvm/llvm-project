@@ -142,54 +142,6 @@ static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName) {
          || FieldName.starts_with("_vptr.");
 }
 
-std::optional<DWARFFormValue>
-DWARFASTParserClang::FindConstantOnVariableDefinition(DWARFDIE die) {
-  assert(die.Tag() == DW_TAG_member || die.Tag() == DW_TAG_variable);
-
-  auto *dwarf = die.GetDWARF();
-  if (!dwarf)
-    return {};
-
-  ConstString name{die.GetName()};
-  if (!name)
-    return {};
-
-  auto *CU = die.GetCU();
-  if (!CU)
-    return {};
-
-  DWARFASTParser *dwarf_ast = dwarf->GetDWARFParser(*CU);
-  auto parent_decl_ctx = dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
-
-  // Make sure we populate the GetDieToVariable cache.
-  VariableList variables;
-  dwarf->FindGlobalVariables(name, parent_decl_ctx, UINT_MAX, variables);
-
-  // The cache contains the variable definition whose DW_AT_specification
-  // points to our declaration DIE. Look up that definition using our
-  // declaration.
-  auto const &die_to_var = dwarf->GetDIEToVariable();
-  auto it = die_to_var.find(die.GetDIE());
-  if (it == die_to_var.end())
-    return {};
-
-  auto var_sp = it->getSecond();
-  assert(var_sp != nullptr);
-
-  if (!var_sp->GetLocationIsConstantValueData())
-    return {};
-
-  auto def = dwarf->GetDIE(var_sp->GetID());
-  auto def_attrs = def.GetAttributes();
-  DWARFFormValue form_value;
-  if (!def_attrs.ExtractFormValueAtIndex(
-          def_attrs.FindAttributeIndex(llvm::dwarf::DW_AT_const_value),
-          form_value))
-    return {};
-
-  return form_value;
-}
-
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
                                                      const DWARFDIE &die,
                                                      Log *log) {
@@ -2916,23 +2868,11 @@ void DWARFASTParserClang::CreateStaticMemberVariable(
 
   bool unused;
   // TODO: Support float/double static members as well.
-  if (!ct.IsIntegerOrEnumerationType(unused))
+  if (!ct.IsIntegerOrEnumerationType(unused) || !attrs.const_value_form)
     return;
 
-  auto maybe_const_form_value = attrs.const_value_form;
-
-  // Newer versions of Clang don't emit the DW_AT_const_value
-  // on the declaration of an inline static data member. Instead
-  // it's attached to the definition DIE. If that's the case,
-  // try and fetch it.
-  if (!maybe_const_form_value) {
-    maybe_const_form_value = FindConstantOnVariableDefinition(die);
-    if (!maybe_const_form_value)
-      return;
-  }
-
   llvm::Expected<llvm::APInt> const_value_or_err =
-      ExtractIntFromFormValue(ct, *maybe_const_form_value);
+      ExtractIntFromFormValue(ct, *attrs.const_value_form);
   if (!const_value_or_err) {
     LLDB_LOG_ERROR(log, const_value_or_err.takeError(),
                    "Failed to add const value to variable {1}: {0}",
