@@ -673,8 +673,8 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
       return;
     if (imm == 0)
       newInsn &= 0xDFFF;
-    uint16_t imm17 = extractBits(imm, 17, 17) << 12;
-    uint16_t imm16_12 = extractBits(imm, 16, 12) << 2;
+    uint16_t imm17 = extractBits(imm, 5, 5) << 12;
+    uint16_t imm16_12 = extractBits(imm, 4, 0) << 2;
     remove = 2;
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_LUI;
     sec.relaxAux->writes.push_back(newInsn | imm17 | imm16_12);

@@ -17,6 +17,8 @@
 # CHECK: 09 65         c.lui   a0, 2
 # CHECK: 13 05 45 00   addi    a0, a0, 4
 # CHECK: 37 05 02 00   lui   a0, 32
+# CHECK: 13 05 45 f8   addi    a0, a0, -124
+# CHECK: 37 05 02 00   lui   a0, 32
 # CHECK: 13 05 45 00   addi    a0, a0, 4
 
 
@@ -25,6 +27,8 @@
 _start:
   lui a0, %hi(foo)
   addi a0, a0, %lo(foo)
+  lui a0, %hi(neg)
+  addi a0, a0, %lo(neg)
   lui a0, %hi(bar)
   addi a0, a0, %lo(bar)
 
@@ -32,6 +36,9 @@ _start:
   .zero 32
 .section .data,"aw"
 foo:
+  .word 0
+.section .out,"aw"
+neg:
   .word 0
 .section .far,"aw"
 bar:
@@ -42,5 +49,6 @@ SECTIONS {
   .text : {*(.text) }
   .sdata 0x1000 : { }
   .data 0x2004 : { }
+  .out 0x1FF84 : { }
   .far 0x20004 : { }
 }
