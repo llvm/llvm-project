@@ -54483,6 +54483,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   bool IsSplat = llvm::all_equal(Ops);
   unsigned NumOps = Ops.size();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
 
   // Repeated subvectors.
   if (IsSplat &&
@@ -54780,7 +54781,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             Subtarget.useAVX512Regs() &&
             Subtarget.getPreferVectorWidth() >= 512 &&
             (SrcVT.getScalarSizeInBits() > 16 || Subtarget.useBWIRegs())) {
-          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(Ctx);
           return DAG.getNode(ISD::TRUNCATE, DL, VT,
                              ConcatSubOperand(NewSrcVT, Ops, 0));
         }
@@ -54937,7 +54938,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           (EltSizeInBits >= 32 || Subtarget.hasBWI())) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         if (SelVT.getVectorElementType() == MVT::i1) {
-          SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+          SelVT = EVT::getVectorVT(Ctx, MVT::i1,
                                    NumOps * SelVT.getVectorNumElements());
           if (TLI.isTypeLegal(SelVT))
             return DAG.getNode(Op0.getOpcode(), DL, VT,
@@ -54952,7 +54953,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
-        SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+        SelVT = SelVT.getDoubleNumVectorElementsVT(Ctx);
         if (TLI.isTypeLegal(SelVT))
           return DAG.getNode(Op0.getOpcode(), DL, VT,
                              ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
@@ -54968,7 +54969,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(Op0))) {
     unsigned Fast;
     const X86TargetLowering *TLI = Subtarget.getTargetLowering();
-    if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+    if (TLI->allowsMemoryAccess(Ctx, DAG.getDataLayout(), VT,
                                 *FirstLd->getMemOperand(), &Fast) &&
         Fast) {
       if (SDValue Ld =
