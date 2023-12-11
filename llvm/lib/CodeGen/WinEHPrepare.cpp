@@ -120,8 +120,8 @@ PreservedAnalyses WinEHPreparePass::run(Function &F,
 }
 
 char WinEHPrepare::ID = 0;
-INITIALIZE_PASS(WinEHPrepare, "winehprepare", "Prepare Windows exceptions",
-                false, false)
+INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions", false,
+                false)
 
 FunctionPass *llvm::createWinEHPass(bool DemoteCatchSwitchPHIOnly) {
   return new WinEHPrepare(DemoteCatchSwitchPHIOnly);
