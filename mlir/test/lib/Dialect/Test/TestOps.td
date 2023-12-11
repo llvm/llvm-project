@@ -2021,6 +2021,20 @@ def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Custom printer/parser
+
+def CustomDimensionListAttrOp : TEST_Op<"custom_dimension_list_attr"> {
+  let description = [{
+    Test printing/parsing of dimension list attribute.
+  }];
+  let arguments = (ins DenseI64ArrayAttr:$dimension_list);
+  let assemblyFormat = [{
+    `dimension_list` `=` custom<DimensionList>($dimension_list)
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Test OpAsmInterface.
 
 def AsmInterfaceOp : TEST_Op<"asm_interface_op"> {

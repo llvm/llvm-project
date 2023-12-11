@@ -58,11 +58,6 @@ static SmallVector<T> &canonicalizeSetAsVector(SmallVector<T> &vec) {
   return vec;
 }
 
-template <typename DimSize>
-static bool isMeshDimensionDynamic(DimSize size) {
-  return size <= DimSize(0);
-}
-
 using MeshAxis = int16_t;
 
 namespace {
@@ -161,9 +156,9 @@ LogicalResult ClusterOp::verify() {
         "rank of dim_sizes is not expected to be larger than rank of cluster");
 
   for (int64_t dimSize : dimSizes) {
-    if (dimSize < 0)
-      return emitOpError(
-          "dimension size of a mesh cluster is expected to be non-negative");
+    if (dimSize < 0 && !ShapedType::isDynamic(dimSize))
+      return emitOpError("dimension size of a mesh cluster is expected to be "
+                         "non-negative or dynamic");
   }
 
   return success();
@@ -316,7 +311,7 @@ static int64_t collectiveDeviceGroupSize(ArrayRef<MeshAxis> meshAxes,
   int64_t res = 1;
 
   for (MeshAxis axis : meshAxes) {
-    if (isMeshDimensionDynamic(meshShape[axis])) {
+    if (ShapedType::isDynamic(meshShape[axis])) {
       return ShapedType::kDynamic;
     }
     assert(size_t(axis) < meshShape.size());

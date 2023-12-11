@@ -1413,7 +1413,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
       // If we have calculated signature, there is no need to store
       // the size or timestamp.
-      Record.push_back(M.Signature ? 0 : M.File->getSize());
+      Record.push_back(M.Signature ? 0 : M.File.getSize());
       Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
 
       llvm::append_range(Record, M.Signature);
@@ -2182,8 +2182,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
                "Writing to AST an overridden file is not supported");
 
         // The source location entry is a file. Emit input file ID.
-        assert(InputFileIDs[Content->OrigEntry] != 0 && "Missed file entry");
-        Record.push_back(InputFileIDs[Content->OrigEntry]);
+        assert(InputFileIDs[*Content->OrigEntry] != 0 && "Missed file entry");
+        Record.push_back(InputFileIDs[*Content->OrigEntry]);
 
         Record.push_back(getAdjustedNumCreatedFIDs(FID));
 
@@ -4695,7 +4695,7 @@ void ASTWriter::collectNonAffectingInputFiles() {
 
     if (!isModuleMap(File.getFileCharacteristic()) ||
         AffectingModuleMaps.empty() ||
-        AffectingModuleMaps.find(Cache->OrigEntry) != AffectingModuleMaps.end())
+        llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
     IsSLocAffecting[I] = false;
