@@ -368,7 +368,7 @@ void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     return;
 
   if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
-      clang::TargetOptions::COV_None)
+      llvm::CodeObjectVersionKind::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
@@ -471,20 +471,25 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   std::string Name;
   switch (Scope) {
   case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
     Name = "singlethread";
     break;
   case SyncScope::HIPWavefront:
   case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
     Name = "wavefront";
     break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
     Name = "workgroup";
     break;
   case SyncScope::HIPAgent:
   case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
     Name = "agent";
     break;
+  case SyncScope::SystemScope:
   case SyncScope::HIPSystem:
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";

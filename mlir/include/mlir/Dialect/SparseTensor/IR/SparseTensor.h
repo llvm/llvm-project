@@ -89,25 +89,6 @@ inline MemRefType getMemRefType(T &&t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
-/// Returns true iff the given sparse tensor encoding attribute has a trailing
-/// COO region starting at the given level.
-bool isCOOType(SparseTensorEncodingAttr enc, Level startLvl, bool isUnique);
-
-/// Returns true iff the given type is a COO type where the last level
-/// is unique.
-bool isUniqueCOOType(Type tp);
-
-/// Returns the starting level for a trailing COO region that spans
-/// at least two levels.  If no such COO region is found, then returns
-/// the level-rank.
-Level getCOOStart(SparseTensorEncodingAttr enc);
-
-/// Helpers to setup a COO type.
-RankedTensorType getCOOFromTypeWithOrdering(RankedTensorType src,
-                                            AffineMap ordering, bool ordered);
-
-RankedTensorType getCOOFromType(RankedTensorType src, bool ordered);
-
 /// Returns true iff MLIR operand has any sparse operand.
 inline bool hasAnySparseOperand(Operation *op) {
   return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
@@ -126,6 +107,10 @@ inline bool hasAnySparseResult(Operation *op) {
 inline bool hasAnySparseOperandOrResult(Operation *op) {
   return hasAnySparseOperand(op) || hasAnySparseResult(op);
 }
+
+/// Returns true iff MLIR operation has any sparse tensor with non-identity
+/// dim2lvl maps.
+bool hasAnyNonIdentityOperandsOrResults(Operation *op);
 
 //
 // Inference.
@@ -159,13 +144,15 @@ bool isBlockSparsity(AffineMap dimToLvl);
 // Reordering.
 //
 
-/// [deprecated] Convenience method to translate the given level to the
-/// corresponding dimension. Requires: `0 <= l < lvlRank`.
-Dimension toOrigDim(SparseTensorEncodingAttr enc, Level l);
+/// Convenience method to translate the given level to the corresponding
+/// dimension.
+/// Requires: `enc` has a permuted dim2lvl map and `0 <= l < lvlRank`.
+Dimension toDim(SparseTensorEncodingAttr enc, Level l);
 
-/// [deprecated] Convenience method to translate the given dimension to
-/// the corresponding level. Requires: `0 <= d < dimRank`.
-Level toStoredDim(SparseTensorEncodingAttr enc, Dimension d);
+/// Convenience method to translate the given dimension to the corresponding
+/// level.
+/// Requires: `enc` has a permuted dim2lvl map and `0 <= d < dimRank`.
+Level toLvl(SparseTensorEncodingAttr enc, Dimension d);
 
 } // namespace sparse_tensor
 } // namespace mlir

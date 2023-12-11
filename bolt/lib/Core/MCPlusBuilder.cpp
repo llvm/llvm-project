@@ -279,6 +279,17 @@ bool MCPlusBuilder::setLabel(MCInst &Inst, MCSymbol *Label) const {
   return true;
 }
 
+std::optional<uint32_t> MCPlusBuilder::getSize(const MCInst &Inst) const {
+  if (std::optional<int64_t> Value =
+          getAnnotationOpValue(Inst, MCAnnotation::kSize))
+    return static_cast<uint32_t>(*Value);
+  return std::nullopt;
+}
+
+void MCPlusBuilder::setSize(MCInst &Inst, uint32_t Size) const {
+  setAnnotationOpValue(Inst, MCAnnotation::kSize, Size);
+}
+
 bool MCPlusBuilder::hasAnnotation(const MCInst &Inst, unsigned Index) const {
   return (bool)getAnnotationOpValue(Inst, Index);
 }

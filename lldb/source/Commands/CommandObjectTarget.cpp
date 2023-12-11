@@ -8,6 +8,7 @@
 
 #include "CommandObjectTarget.h"
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
@@ -436,8 +437,7 @@ protected:
           error = process_sp->LoadCore();
 
           if (error.Fail()) {
-            result.AppendError(
-                error.AsCString("can't find plug-in for core file"));
+            result.AppendError(error.AsCString("unknown core file format"));
             return;
           } else {
             result.AppendMessageWithFormatv(
@@ -447,9 +447,8 @@ protected:
             on_error.release();
           }
         } else {
-          result.AppendErrorWithFormatv(
-              "Unable to find process plug-in for core file '{0}'\n",
-              core_file.GetPath());
+          result.AppendErrorWithFormatv("Unknown core file format '{0}'\n",
+                                        core_file.GetPath());
         }
       } else {
         result.AppendMessageWithFormat(
@@ -1534,7 +1533,7 @@ static void DumpOsoFilesTable(Stream &strm,
 
 static void DumpAddress(ExecutionContextScope *exe_scope,
                         const Address &so_addr, bool verbose, bool all_ranges,
-                        Stream &strm) {
+                        Stream &strm, llvm::StringRef pattern = "") {
   strm.IndentMore();
   strm.Indent("    Address: ");
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleModuleWithFileAddress);
@@ -1544,13 +1543,14 @@ static void DumpAddress(ExecutionContextScope *exe_scope,
   strm.Indent("    Summary: ");
   const uint32_t save_indent = strm.GetIndentLevel();
   strm.SetIndentLevel(save_indent + 13);
-  so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription);
+  so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription,
+               Address::DumpStyleInvalid, UINT32_MAX, false, pattern);
   strm.SetIndentLevel(save_indent);
   // Print out detailed address information when verbose is enabled
   if (verbose) {
     strm.EOL();
     so_addr.Dump(&strm, exe_scope, Address::DumpStyleDetailedSymbolContext,
-                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges);
+                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges, pattern);
   }
   strm.IndentLess();
 }
@@ -1595,6 +1595,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     return 0;
 
   SymbolContext sc;
+  const bool use_color = interpreter.GetDebugger().GetUseColor();
   std::vector<uint32_t> match_indexes;
   ConstString symbol_name(name);
   uint32_t num_matches = 0;
@@ -1620,12 +1621,19 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         if (symbol->ValueIsAddress()) {
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
-              symbol->GetAddressRef(), verbose, all_ranges, strm);
+              symbol->GetAddressRef(), verbose, all_ranges, strm,
+              use_color && name_is_regex ? name : nullptr);
           strm.EOL();
         } else {
           strm.IndentMore();
           strm.Indent("    Name: ");
-          strm.PutCString(symbol->GetDisplayName().GetStringRef());
+          llvm::StringRef ansi_prefix =
+              interpreter.GetDebugger().GetRegexMatchAnsiPrefix();
+          llvm::StringRef ansi_suffix =
+              interpreter.GetDebugger().GetRegexMatchAnsiSuffix();
+          strm.PutCStringColorHighlighted(
+              symbol->GetDisplayName().GetStringRef(),
+              use_color ? name : nullptr, ansi_prefix, ansi_suffix);
           strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());

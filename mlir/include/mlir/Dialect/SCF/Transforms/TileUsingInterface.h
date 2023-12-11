@@ -83,6 +83,12 @@ FailureOr<SCFTilingResult> tileUsingSCFForOp(RewriterBase &rewriter,
                                              TilingInterface op,
                                              const SCFTilingOptions &options);
 
+/// Method to tile an op that implements the `TilingInterface` using
+/// `scf.forall`.
+FailureOr<SCFTilingResult>
+tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
+                     const SCFTilingOptions &options);
+
 /// Options used to control tile + fuse.
 struct SCFTileAndFuseOptions {
   /// The tiling options used to control the tiling of the consumer.
@@ -92,12 +98,6 @@ struct SCFTileAndFuseOptions {
     return *this;
   }
 };
-
-/// Method to tile an op that implements the `TilingInterface` using
-/// `scf.forall`.
-FailureOr<SCFTilingResult>
-tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
-                     const SCFTilingOptions &options);
 
 /// Fuse the producer of the source of `candidateSliceOp` by computing the
 /// required slice of the producer in-place.  Note that the method

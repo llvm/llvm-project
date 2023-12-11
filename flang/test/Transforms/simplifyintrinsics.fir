@@ -2028,7 +2028,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) {
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:               %[[INARR_ITEMVAL:.*]] = fir.load %[[INARR_ITEM]] : !fir.ref<f64>
-// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf olt, %[[INARR_ITEMVAL]], %[[MIN]] : f64
+// CHECK:               %[[NEW_MIN:.*]] = arith.cmpf olt, %[[INARR_ITEMVAL]], %[[MIN]] fastmath<{{.*}}> : f64
 // CHECK:               %[[IF_NEW_MIN:.*]] = fir.if %[[NEW_MIN]] -> (f64) {
 // CHECK:                 %[[ONE:.*]] = arith.constant 1 : i32
 // CHECK:                 %[[OUTARR_IDX:.*]] = arith.constant 0 : index
@@ -2048,7 +2048,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:           %[[FLAG_WAS_SET:.*]] = arith.cmpi eq, %[[FLAG_VAL]], %[[FLAG_CHECK]] : i32
 // CHECK:           fir.if %[[FLAG_WAS_SET]] {
 // CHECK:             %[[TEST_MAX:.*]] = arith.constant 1.7976931348623157E+308 : f64
-// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpf oeq, %[[TEST_MAX]], %[[INIT_RES:.*]] : f64
+// CHECK:             %[[INIT_NOT_CHANGED:.*]] = arith.cmpf oeq, %[[TEST_MAX]], %[[INIT_RES:.*]] fastmath<{{.*}}> : f64
 // CHECK:             fir.if %[[INIT_NOT_CHANGED]] {
 // CHECK:               %[[FLAG_OUTARR_IDX:.*]] = arith.constant 0 : index
 // CHECK:               %[[FLAG_OUTARR_ITEM:.*]] = fir.coordinate_of %[[BOX_OUTARR]], %[[FLAG_OUTARR_IDX]] : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>

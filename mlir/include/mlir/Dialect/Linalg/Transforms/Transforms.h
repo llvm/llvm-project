@@ -493,6 +493,8 @@ LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
+  static llvm::SmallDenseSet<int>
+  getPreservedProducerResults(GenericOp producer, GenericOp consumer);
 };
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
@@ -753,7 +755,8 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
                         ArrayRef<int64_t> inputVectorSizes = {},
                         ArrayRef<bool> inputScalableVecDims = {},
-                        bool vectorizeNDExtract = false);
+                        bool vectorizeNDExtract = false,
+                        bool flatten1DDepthwiseConv = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -1224,6 +1227,13 @@ rewriteInIm2Col(RewriterBase &rewriter,
 /// (C x Kh x Kw, Ho x Wo))
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
+
+/// Convert linalg.conv_2d_nhwc_fhwc(_q) to linalg.conv_2d_nhwc_hwcf(_q) by
+/// materializing transpose.
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcOp op);
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcQOp op);
 
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.

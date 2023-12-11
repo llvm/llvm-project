@@ -132,6 +132,11 @@ public:
 
 } // namespace
 
+bool IsStructOrClassTag(llvm::dwarf::Tag Tag) {
+  return Tag == llvm::dwarf::Tag::DW_TAG_class_type ||
+         Tag == llvm::dwarf::Tag::DW_TAG_structure_type;
+}
+
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
@@ -2947,29 +2952,18 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
   m_index->GetCompleteObjCClass(
       type_name, must_be_implementation, [&](DWARFDIE type_die) {
-        bool try_resolving_type = false;
-
         // Don't try and resolve the DIE we are looking for with the DIE
         // itself!
-        if (type_die != die) {
-          switch (type_die.Tag()) {
-          case DW_TAG_class_type:
-          case DW_TAG_structure_type:
-            try_resolving_type = true;
-            break;
-          default:
-            break;
-          }
-        }
-        if (!try_resolving_type)
+        if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
           return true;
 
         if (must_be_implementation &&
-            type_die.Supports_DW_AT_APPLE_objc_complete_type())
-          try_resolving_type = type_die.GetAttributeValueAsUnsigned(
+            type_die.Supports_DW_AT_APPLE_objc_complete_type()) {
+          const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
-        if (!try_resolving_type)
-          return true;
+          if (!try_resolving_type)
+            return true;
+        }
 
         Type *resolved_type = ResolveType(type_die, false, true);
         if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
@@ -3120,43 +3114,20 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         template_params = dwarf_ast->GetDIEClassTemplateParams(die);
     }
 
-    m_index->GetTypes(GetDWARFDeclContext(die), [&](DWARFDIE type_die) {
+    const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
+    m_index->GetTypes(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
       // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
       if (type_system &&
           !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
         return true;
-      bool try_resolving_type = false;
 
-      // Don't try and resolve the DIE we are looking for with the DIE
-      // itself!
       const dw_tag_t type_tag = type_die.Tag();
-      // Make sure the tags match
-      if (type_tag == tag) {
-        // The tags match, lets try resolving this type
-        try_resolving_type = true;
-      } else {
-        // The tags don't match, but we need to watch our for a forward
-        // declaration for a struct and ("struct foo") ends up being a
-        // class ("class foo { ... };") or vice versa.
-        switch (type_tag) {
-        case DW_TAG_class_type:
-          // We had a "class foo", see if we ended up with a "struct foo
-          // { ... };"
-          try_resolving_type = (tag == DW_TAG_structure_type);
-          break;
-        case DW_TAG_structure_type:
-          // We had a "struct foo", see if we ended up with a "class foo
-          // { ... };"
-          try_resolving_type = (tag == DW_TAG_class_type);
-          break;
-        default:
-          // Tags don't match, don't event try to resolve using this type
-          // whose name matches....
-          break;
-        }
-      }
+      // Resolve the type if both have the same tag or {class, struct} tags.
+      const bool try_resolving_type =
+          type_tag == tag ||
+          (IsStructOrClassTag(type_tag) && IsStructOrClassTag(tag));
 
       if (!try_resolving_type) {
         if (log) {
@@ -3184,7 +3155,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       }
 
       // Make sure the decl contexts match all the way up
-      if (GetDWARFDeclContext(die) != type_dwarf_decl_ctx)
+      if (die_dwarf_decl_ctx != type_dwarf_decl_ctx)
         return true;
 
       Type *resolved_type = ResolveType(type_die, false);
@@ -4339,6 +4310,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     module_spec.GetSymbolFileSpec() =
         FileSpec(m_objfile_sp->GetModule()->GetFileSpec().GetPath() + ".dwp");
 
+    module_spec.GetUUID() = m_objfile_sp->GetUUID();
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =
         PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);

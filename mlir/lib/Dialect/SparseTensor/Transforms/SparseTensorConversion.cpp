@@ -145,8 +145,8 @@ static Value genLvlTypesBuffer(OpBuilder &builder, Location loc,
                                SparseTensorType stt) {
   SmallVector<Value> lvlTypes;
   lvlTypes.reserve(stt.getLvlRank());
-  for (const auto dlt : stt.getEncoding().getLvlTypes())
-    lvlTypes.push_back(constantDimLevelTypeEncoding(builder, loc, dlt));
+  for (const auto lt : stt.getEncoding().getLvlTypes())
+    lvlTypes.push_back(constantLevelTypeEncoding(builder, loc, lt));
   return allocaBuffer(builder, loc, lvlTypes);
 }
 
@@ -199,9 +199,10 @@ public:
     params[kParamDimSizes] = dimSizesBuffer
                                  ? dimSizesBuffer
                                  : allocaBuffer(builder, loc, dimSizesValues);
-    params[kParamLvlSizes] =
-        genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
-                      params[kParamDim2Lvl], params[kParamLvl2Dim]);
+    SmallVector<Value> lvlSizesValues; // unused
+    params[kParamLvlSizes] = genMapBuffers(
+        builder, loc, stt, dimSizesValues, params[kParamDimSizes],
+        lvlSizesValues, params[kParamDim2Lvl], params[kParamLvl2Dim]);
     // Secondary and primary types encoding.
     const auto enc = stt.getEncoding();
     params[kParamPosTp] = constantPosTypeEncoding(builder, loc, enc);
@@ -369,13 +370,13 @@ public:
     if (!stt.hasEncoding())
       return failure();
     // Construct the `reader` opening method calls.
-    SmallVector<Value> dimShapesValues;
+    SmallVector<Value> dimSizesValues;
     Value dimSizesBuffer;
     Value reader = genReader(rewriter, loc, stt, adaptor.getOperands()[0],
-                             dimShapesValues, dimSizesBuffer);
+                             dimSizesValues, dimSizesBuffer);
     // Use the `reader` to parse the file.
     Value tensor = NewCallParams(rewriter, loc)
-                       .genBuffers(stt, dimShapesValues, dimSizesBuffer)
+                       .genBuffers(stt, dimSizesValues, dimSizesBuffer)
                        .genNewCall(Action::kFromReader, reader);
     // Free the memory for `reader`.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
@@ -402,11 +403,11 @@ public:
     // Gather all dimension sizes as SSA values.
     Location loc = op.getLoc();
     const Dimension dimRank = stt.getDimRank();
-    SmallVector<Value> dimSizes;
-    dimSizes.reserve(dimRank);
+    SmallVector<Value> dimSizesValues;
+    dimSizesValues.reserve(dimRank);
     unsigned operandCtr = 0;
     for (Dimension d = 0; d < dimRank; d++) {
-      dimSizes.push_back(
+      dimSizesValues.push_back(
           stt.isDynamicDim(d)
               ? adaptor.getOperands()[operandCtr++]
               : constantIndex(rewriter, loc, op.getStaticSize(d)));
@@ -414,7 +415,7 @@ public:
     // Generate the call to construct empty tensor. The sizes are
     // explicitly defined by the arguments to the alloc operator.
     rewriter.replaceOp(op, NewCallParams(rewriter, loc)
-                               .genBuffers(stt, dimSizes)
+                               .genBuffers(stt, dimSizesValues)
                                .genNewCall(Action::kEmpty));
     return success();
   }
@@ -433,19 +434,19 @@ public:
       return failure();
     // Gather all dimension sizes as SSA values.
     const Dimension dimRank = stt.getDimRank();
-    SmallVector<Value> dimSizes;
-    dimSizes.reserve(dimRank);
+    SmallVector<Value> dimSizesValues;
+    dimSizesValues.reserve(dimRank);
     auto shape = op.getType().getShape();
     unsigned operandCtr = 0;
     for (Dimension d = 0; d < dimRank; d++) {
-      dimSizes.push_back(stt.isDynamicDim(d)
-                             ? adaptor.getOperands()[operandCtr++]
-                             : constantIndex(rewriter, loc, shape[d]));
+      dimSizesValues.push_back(stt.isDynamicDim(d)
+                                   ? adaptor.getOperands()[operandCtr++]
+                                   : constantIndex(rewriter, loc, shape[d]));
     }
     // Generate the call to construct empty tensor. The sizes are
     // explicitly defined by the arguments to the alloc operator.
     rewriter.replaceOp(op, NewCallParams(rewriter, loc)
-                               .genBuffers(stt, dimSizes)
+                               .genBuffers(stt, dimSizesValues)
                                .genNewCall(Action::kEmpty));
     return success();
   }
@@ -467,8 +468,8 @@ public:
     const Value src = adaptor.getInputCoo();
 
     NewCallParams params(rewriter, loc);
-    SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
-    rewriter.replaceOp(op, params.genBuffers(dstTp, dimSizes)
+    SmallVector<Value> dimSizesValues = getDimSizes(rewriter, loc, srcTp, src);
+    rewriter.replaceOp(op, params.genBuffers(dstTp, dimSizesValues)
                                .genNewCall(Action::kSortCOOInPlace, src));
 
     return success();
@@ -706,14 +707,14 @@ public:
     const Location loc = op->getLoc();
     const auto dstTp = getSparseTensorType(op.getResult());
     assert(dstTp.hasStaticDimShape());
-    SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, dstTp);
+    SmallVector<Value> dimSizesValues = getDimSizes(rewriter, loc, dstTp);
     // Use a library method to transfer the external buffers from
     // clients to the internal SparseTensorStorage. Since we cannot
     // assume clients transfer ownership of the buffers, this method
     // will copy all data over into a new SparseTensorStorage.
     Value dst =
         NewCallParams(rewriter, loc)
-            .genBuffers(dstTp.withoutDimToLvl(), dimSizes)
+            .genBuffers(dstTp.withoutDimToLvl(), dimSizesValues)
             .genNewCall(Action::kPack,
                         genLvlPtrsBuffers(rewriter, loc, adaptor.getLevels(),
                                           adaptor.getValues()));

@@ -97,7 +97,7 @@ void symbolic_malloc() {
 
 void symbolic_alloca() {
   int *a = (int *)alloca(12);
-  clang_analyzer_dump(a);             // expected-warning {{Element{HeapSymRegion{conj}}
+  clang_analyzer_dump(a);             // expected-warning {{Element{alloca{}}
   clang_analyzer_dumpExtent(a);       // expected-warning {{12 S64b}}
   clang_analyzer_dumpElementCount(a); // expected-warning {{3 S64b}}
 }

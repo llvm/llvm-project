@@ -34,6 +34,8 @@ using SPSMachOJITDylibDepInfo = SPSTuple<bool, SPSSequence<SPSExecutorAddr>>;
 using SPSMachOJITDylibDepInfoMap =
     SPSSequence<SPSTuple<SPSExecutorAddr, SPSMachOJITDylibDepInfo>>;
 
+class SPSMachOExecutorSymbolFlags;
+
 template <>
 class SPSSerializationTraits<SPSMachOJITDylibDepInfo,
                              MachOPlatform::MachOJITDylibDepInfo> {
@@ -55,11 +57,42 @@ public:
   }
 };
 
+template <>
+class SPSSerializationTraits<SPSMachOExecutorSymbolFlags,
+                             MachOPlatform::MachOExecutorSymbolFlags> {
+private:
+  using UT = std::underlying_type_t<MachOPlatform::MachOExecutorSymbolFlags>;
+
+public:
+  static size_t size(const MachOPlatform::MachOExecutorSymbolFlags &SF) {
+    return sizeof(UT);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const MachOPlatform::MachOExecutorSymbolFlags &SF) {
+    return SPSArgList<UT>::serialize(OB, static_cast<UT>(SF));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB,
+                          MachOPlatform::MachOExecutorSymbolFlags &SF) {
+    UT Tmp;
+    if (!SPSArgList<UT>::deserialize(IB, Tmp))
+      return false;
+    SF = static_cast<MachOPlatform::MachOExecutorSymbolFlags>(Tmp);
+    return true;
+  }
+};
+
 } // namespace shared
 } // namespace orc
 } // namespace llvm
 
 namespace {
+
+using SPSRegisterSymbolsArgs =
+    SPSArgList<SPSExecutorAddr,
+               SPSSequence<SPSTuple<SPSExecutorAddr, SPSExecutorAddr,
+                                    SPSMachOExecutorSymbolFlags>>>;
 
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
@@ -180,21 +213,28 @@ constexpr MachOHeaderMaterializationUnit::HeaderSymbol
 class MachOPlatformCompleteBootstrapMaterializationUnit
     : public MaterializationUnit {
 public:
+  using SymbolTableVector =
+      SmallVector<std::tuple<ExecutorAddr, ExecutorAddr,
+                             MachOPlatform::MachOExecutorSymbolFlags>>;
+
   MachOPlatformCompleteBootstrapMaterializationUnit(
       MachOPlatform &MOP, StringRef PlatformJDName,
-      SymbolStringPtr CompleteBootstrapSymbol, shared::AllocActions DeferredAAs,
+      SymbolStringPtr CompleteBootstrapSymbol, SymbolTableVector SymTab,
+      shared::AllocActions DeferredAAs, ExecutorAddr MachOHeaderAddr,
       ExecutorAddr PlatformBootstrap, ExecutorAddr PlatformShutdown,
       ExecutorAddr RegisterJITDylib, ExecutorAddr DeregisterJITDylib,
-      ExecutorAddr MachOHeaderAddr)
+      ExecutorAddr RegisterObjectSymbolTable,
+      ExecutorAddr DeregisterObjectSymbolTable)
       : MaterializationUnit(
             {{{CompleteBootstrapSymbol, JITSymbolFlags::None}}, nullptr}),
         MOP(MOP), PlatformJDName(PlatformJDName),
         CompleteBootstrapSymbol(std::move(CompleteBootstrapSymbol)),
-        DeferredAAs(std::move(DeferredAAs)),
-        PlatformBootstrap(PlatformBootstrap),
+        SymTab(std::move(SymTab)), DeferredAAs(std::move(DeferredAAs)),
+        MachOHeaderAddr(MachOHeaderAddr), PlatformBootstrap(PlatformBootstrap),
         PlatformShutdown(PlatformShutdown), RegisterJITDylib(RegisterJITDylib),
         DeregisterJITDylib(DeregisterJITDylib),
-        MachOHeaderAddr(MachOHeaderAddr) {}
+        RegisterObjectSymbolTable(RegisterObjectSymbolTable),
+        DeregisterObjectSymbolTable(DeregisterObjectSymbolTable) {}
 
   StringRef getName() const override {
     return "MachOPlatformCompleteBootstrap";
@@ -211,7 +251,7 @@ public:
                         Linkage::Strong, Scope::Hidden, false, true);
 
     // Reserve space for the stolen actions, plus two extras.
-    G->allocActions().reserve(DeferredAAs.size() + 2);
+    G->allocActions().reserve(DeferredAAs.size() + 3);
 
     // 1. Bootstrap the platform support code.
     G->allocActions().push_back(
@@ -227,7 +267,14 @@ public:
          cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddr>>(
              DeregisterJITDylib, MachOHeaderAddr))});
 
-    // 3. Add the deferred actions to the graph.
+    // 3. Register deferred symbols.
+    G->allocActions().push_back(
+        {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+             RegisterObjectSymbolTable, MachOHeaderAddr, SymTab)),
+         cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+             DeregisterObjectSymbolTable, MachOHeaderAddr, SymTab))});
+
+    // 4. Add the deferred actions to the graph.
     std::move(DeferredAAs.begin(), DeferredAAs.end(),
               std::back_inserter(G->allocActions()));
 
@@ -240,12 +287,15 @@ private:
   MachOPlatform &MOP;
   StringRef PlatformJDName;
   SymbolStringPtr CompleteBootstrapSymbol;
+  SymbolTableVector SymTab;
   shared::AllocActions DeferredAAs;
+  ExecutorAddr MachOHeaderAddr;
   ExecutorAddr PlatformBootstrap;
   ExecutorAddr PlatformShutdown;
   ExecutorAddr RegisterJITDylib;
   ExecutorAddr DeregisterJITDylib;
-  ExecutorAddr MachOHeaderAddr;
+  ExecutorAddr RegisterObjectSymbolTable;
+  ExecutorAddr DeregisterObjectSymbolTable;
 };
 
 static StringRef ObjCRuntimeObjectSectionsData[] = {
@@ -446,6 +496,29 @@ bool MachOPlatform::supportedTarget(const Triple &TT) {
   }
 }
 
+jitlink::Edge::Kind MachOPlatform::getPointerEdgeKind(jitlink::LinkGraph &G) {
+  switch (G.getTargetTriple().getArch()) {
+  case Triple::aarch64:
+    return jitlink::aarch64::Pointer64;
+  case Triple::x86_64:
+    return jitlink::x86_64::Pointer64;
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+}
+
+MachOPlatform::MachOExecutorSymbolFlags
+MachOPlatform::flagsForSymbol(jitlink::Symbol &Sym) {
+  MachOPlatform::MachOExecutorSymbolFlags Flags{};
+  if (Sym.getLinkage() == jitlink::Linkage::Weak)
+    Flags |= MachOExecutorSymbolFlags::Weak;
+
+  if (Sym.isCallable())
+    Flags |= MachOExecutorSymbolFlags::Callable;
+
+  return Flags;
+}
+
 MachOPlatform::MachOPlatform(
     ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
     JITDylib &PlatformJD,
@@ -469,11 +542,11 @@ MachOPlatform::MachOPlatform(
   // itself (to build the allocation actions that will call the registration
   // functions). Further complicating the situation (a) the graph containing
   // the registration functions is allowed to depend on other graphs (e.g. the
-  // graph containing the ORC runtime RTTI support) so we need to handle with
-  // an unknown set of dependencies during bootstrap, and (b) these graphs may
+  // graph containing the ORC runtime RTTI support) so we need to handle an
+  // unknown set of dependencies during bootstrap, and (b) these graphs may
   // be linked concurrently if the user has installed a concurrent dispatcher.
   //
-  // We satisfy these constraint by implementing a bootstrap phase during which
+  // We satisfy these constraints by implementing a bootstrap phase during which
   // allocation actions generated by MachOPlatform are appended to a list of
   // deferred allocation actions, rather than to the graphs themselves. At the
   // end of the bootstrap process the deferred actions are attached to a final
@@ -525,6 +598,8 @@ MachOPlatform::MachOPlatform(
                        SymbolLookupSet(
                            {PlatformBootstrap.Name, PlatformShutdown.Name,
                             RegisterJITDylib.Name, DeregisterJITDylib.Name,
+                            RegisterObjectSymbolTable.Name,
+                            DeregisterObjectSymbolTable.Name,
                             RegisterObjectPlatformSections.Name,
                             DeregisterObjectPlatformSections.Name,
                             CreatePThreadKey.Name}))
@@ -543,9 +618,11 @@ MachOPlatform::MachOPlatform(
   if ((Err = PlatformJD.define(
            std::make_unique<MachOPlatformCompleteBootstrapMaterializationUnit>(
                *this, PlatformJD.getName(), BootstrapCompleteSymbol,
-               std::move(BI.DeferredAAs), PlatformBootstrap.Addr,
+               std::move(BI.SymTab), std::move(BI.DeferredAAs),
+               BI.MachOHeaderAddr, PlatformBootstrap.Addr,
                PlatformShutdown.Addr, RegisterJITDylib.Addr,
-               DeregisterJITDylib.Addr, BI.MachOHeaderAddr))))
+               DeregisterJITDylib.Addr, RegisterObjectSymbolTable.Addr,
+               DeregisterObjectSymbolTable.Addr))))
     return;
   if ((Err = ES.lookup(makeJITDylibSearchOrder(
                            &PlatformJD, JITDylibLookupFlags::MatchAllSymbols),
@@ -567,11 +644,11 @@ Error MachOPlatform::associateRuntimeSupportFunctions() {
       ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
           this, &MachOPlatform::rt_pushInitializers);
 
-  using LookupSymbolSPSSig =
-      SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-  WFs[ES.intern("___orc_rt_macho_symbol_lookup_tag")] =
-      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
-                                              &MachOPlatform::rt_lookupSymbol);
+  using PushSymbolsSPSSig =
+      SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
+  WFs[ES.intern("___orc_rt_macho_push_symbols_tag")] =
+      ES.wrapAsyncWithSPS<PushSymbolsSPSSig>(this,
+                                             &MachOPlatform::rt_pushSymbols);
 
   return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
 }
@@ -692,11 +769,9 @@ void MachOPlatform::rt_pushInitializers(PushInitializersSendResultFn SendResult,
   pushInitializersLoop(std::move(SendResult), JD);
 }
 
-void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
-                                    ExecutorAddr Handle, StringRef SymbolName) {
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform::rt_lookupSymbol(\"" << Handle << "\")\n";
-  });
+void MachOPlatform::rt_pushSymbols(
+    PushSymbolsInSendResultFn SendResult, ExecutorAddr Handle,
+    const std::vector<std::pair<StringRef, bool>> &SymbolNames) {
 
   JITDylib *JD = nullptr;
 
@@ -706,39 +781,37 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
     if (I != HeaderAddrToJITDylib.end())
       JD = I->second;
   }
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_pushSymbols(";
+    if (JD)
+      dbgs() << "\"" << JD->getName() << "\", [ ";
+    else
+      dbgs() << "<invalid handle " << Handle << ">, [ ";
+    for (auto &Name : SymbolNames)
+      dbgs() << "\"" << Name.first << "\" ";
+    dbgs() << "])\n";
+  });
 
   if (!JD) {
-    LLVM_DEBUG(dbgs() << "  No JITDylib for handle " << Handle << "\n");
     SendResult(make_error<StringError>("No JITDylib associated with handle " +
                                            formatv("{0:x}", Handle),
                                        inconvertibleErrorCode()));
     return;
   }
 
-  // Use functor class to work around XL build compiler issue on AIX.
-  class RtLookupNotifyComplete {
-  public:
-    RtLookupNotifyComplete(SendSymbolAddressFn &&SendResult)
-        : SendResult(std::move(SendResult)) {}
-    void operator()(Expected<SymbolMap> Result) {
-      if (Result) {
-        assert(Result->size() == 1 && "Unexpected result map count");
-        SendResult(Result->begin()->second.getAddress());
-      } else {
-        SendResult(Result.takeError());
-      }
-    }
+  SymbolLookupSet LS;
+  for (auto &[Name, Required] : SymbolNames)
+    LS.add(ES.intern(Name), Required
+                                ? SymbolLookupFlags::RequiredSymbol
+                                : SymbolLookupFlags::WeaklyReferencedSymbol);
 
-  private:
-    SendSymbolAddressFn SendResult;
-  };
-
-  // FIXME: Proper mangling.
-  auto MangledName = ("_" + SymbolName).str();
   ES.lookup(
       LookupKind::DLSym, {{JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
-      SymbolLookupSet(ES.intern(MangledName)), SymbolState::Ready,
-      RtLookupNotifyComplete(std::move(SendResult)), NoDependenciesToRegister);
+      std::move(LS), SymbolState::Ready,
+      [SendResult = std::move(SendResult)](Expected<SymbolMap> Result) mutable {
+        SendResult(Result.takeError());
+      },
+      NoDependenciesToRegister);
 }
 
 Expected<uint64_t> MachOPlatform::createPThreadKey() {
@@ -808,6 +881,18 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
         return fixTLVSectionsAndEdges(G, JD);
       });
 
+  // Add symbol table prepare and register passes: These will add strings for
+  // all symbols to the c-strings section, and build a symbol table registration
+  // call.
+  auto JITSymTabInfo = std::make_shared<JITSymTabVector>();
+  Config.PostPrunePasses.push_back([this, JITSymTabInfo](LinkGraph &G) {
+    return prepareSymbolTableRegistration(G, *JITSymTabInfo);
+  });
+  Config.PostFixupPasses.push_back([this, &MR, JITSymTabInfo,
+                                    InBootstrapPhase](LinkGraph &G) {
+    return addSymbolTableRegistration(G, MR, *JITSymTabInfo, InBootstrapPhase);
+  });
+
   // Add a pass to register the final addresses of any special sections in the
   // object with the runtime.
   Config.PostAllocationPasses.push_back(
@@ -853,6 +938,9 @@ Error MachOPlatform::MachOPlatformPlugin::
       {*MP.PlatformShutdown.Name, &MP.PlatformShutdown.Addr},
       {*MP.RegisterJITDylib.Name, &MP.RegisterJITDylib.Addr},
       {*MP.DeregisterJITDylib.Name, &MP.DeregisterJITDylib.Addr},
+      {*MP.RegisterObjectSymbolTable.Name, &MP.RegisterObjectSymbolTable.Addr},
+      {*MP.DeregisterObjectSymbolTable.Name,
+       &MP.DeregisterObjectSymbolTable.Addr},
       {*MP.RegisterObjectPlatformSections.Name,
        &MP.RegisterObjectPlatformSections.Addr},
       {*MP.DeregisterObjectPlatformSections.Name,
@@ -1335,15 +1423,6 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                                  UI->CompactUnwindSection);
 
   if (!MachOPlatformSecs.empty() || UnwindInfo) {
-    ExecutorAddr HeaderAddr;
-    {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      auto I = MP.JITDylibToHeaderAddr.find(&JD);
-      assert(I != MP.JITDylibToHeaderAddr.end() &&
-             "Missing header for JITDylib");
-      HeaderAddr = I->second;
-    }
-
     // Dump the scraped inits.
     LLVM_DEBUG({
       dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
@@ -1361,6 +1440,15 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                                              ? G.allocActions()
                                              : MP.Bootstrap.load()->DeferredAAs;
 
+    ExecutorAddr HeaderAddr;
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      auto I = MP.JITDylibToHeaderAddr.find(&JD);
+      assert(I != MP.JITDylibToHeaderAddr.end() &&
+             "No header registered for JD");
+      assert(I->second && "Null header registered for JD");
+      HeaderAddr = I->second;
+    }
     allocActions.push_back(
         {cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
@@ -1459,17 +1547,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     strcpy(SD.Sec.segname, "__DATA");
     SD.Sec.size = 8;
     SD.AddFixups = [&](size_t RecordOffset) {
-      jitlink::Edge::Kind PointerEdge = jitlink::Edge::Invalid;
-      switch (G.getTargetTriple().getArch()) {
-      case Triple::aarch64:
-        PointerEdge = jitlink::aarch64::Pointer64;
-        break;
-      case Triple::x86_64:
-        PointerEdge = jitlink::x86_64::Pointer64;
-        break;
-      default:
-        llvm_unreachable("Unsupported architecture");
-      }
+      auto PointerEdge = getPointerEdgeKind(G);
 
       // Look for an existing __objc_imageinfo symbol.
       jitlink::Symbol *ObjCImageInfoSym = nullptr;
@@ -1595,5 +1673,87 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
   return Error::success();
 }
 
+Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
+    jitlink::LinkGraph &G, JITSymTabVector &JITSymTabInfo) {
+
+  auto *CStringSec = G.findSectionByName(MachOCStringSectionName);
+  if (!CStringSec)
+    CStringSec = &G.createSection(MachOCStringSectionName,
+                                  MemProt::Read | MemProt::Exec);
+
+  // Make a map of existing strings so that we can re-use them:
+  DenseMap<StringRef, jitlink::Symbol *> ExistingStrings;
+  for (auto *Sym : CStringSec->symbols()) {
+
+    // The LinkGraph builder should have created single strings blocks, and all
+    // plugins should have maintained this invariant.
+    auto Content = Sym->getBlock().getContent();
+    ExistingStrings.insert(
+        std::make_pair(StringRef(Content.data(), Content.size()), Sym));
+  }
+
+  // Add all symbol names to the string section, and record the symbols for
+  // those names.
+  {
+    SmallVector<jitlink::Symbol *> SymsToProcess;
+    for (auto *Sym : G.defined_symbols())
+      SymsToProcess.push_back(Sym);
+
+    for (auto *Sym : SymsToProcess) {
+      if (!Sym->hasName())
+        continue;
+
+      auto I = ExistingStrings.find(Sym->getName());
+      if (I == ExistingStrings.end()) {
+        auto &NameBlock = G.createMutableContentBlock(
+            *CStringSec, G.allocateCString(Sym->getName()), orc::ExecutorAddr(),
+            1, 0);
+        auto &SymbolNameSym = G.addAnonymousSymbol(
+            NameBlock, 0, NameBlock.getSize(), false, true);
+        JITSymTabInfo.push_back({Sym, &SymbolNameSym});
+      } else
+        JITSymTabInfo.push_back({Sym, I->second});
+    }
+  }
+
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR,
+    JITSymTabVector &JITSymTabInfo, bool InBootstrapPhase) {
+
+  ExecutorAddr HeaderAddr;
+  {
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+    auto I = MP.JITDylibToHeaderAddr.find(&MR.getTargetJITDylib());
+    assert(I != MP.JITDylibToHeaderAddr.end() && "No header registered for JD");
+    assert(I->second && "Null header registered for JD");
+    HeaderAddr = I->second;
+  }
+
+  SymbolTableVector LocalSymTab;
+  auto &SymTab = LLVM_LIKELY(!InBootstrapPhase) ? LocalSymTab
+                                                : MP.Bootstrap.load()->SymTab;
+  for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
+    SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
+                      flagsForSymbol(*OriginalSymbol)});
+
+  // Bail out if we're in the bootstrap phase -- registration of thees symbols
+  // will be attached to the bootstrap graph.
+  if (LLVM_UNLIKELY(InBootstrapPhase))
+    return Error::success();
+
+  shared::AllocActions &allocActions = LLVM_LIKELY(!InBootstrapPhase)
+                                           ? G.allocActions()
+                                           : MP.Bootstrap.load()->DeferredAAs;
+  allocActions.push_back(
+      {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+           MP.RegisterObjectSymbolTable.Addr, HeaderAddr, SymTab)),
+       cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
+           MP.DeregisterObjectSymbolTable.Addr, HeaderAddr, SymTab))});
+
+  return Error::success();
+}
 } // End namespace orc.
 } // End namespace llvm.

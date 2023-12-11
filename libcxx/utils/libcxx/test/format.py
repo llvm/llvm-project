@@ -6,14 +6,10 @@
 #
 # ===----------------------------------------------------------------------===##
 
-import contextlib
-import io
 import lit
 import lit.formats
 import os
-import pipes
 import re
-import shutil
 
 
 def _getTempPaths(test):
@@ -103,7 +99,7 @@ def parseScript(test, preamble):
         ),
         lit.TestRunner.IntegratedTestKeywordParser(
             "ADDITIONAL_COMPILE_FLAGS:",
-            lit.TestRunner.ParserKind.LIST,
+            lit.TestRunner.ParserKind.SPACE_LIST,
             initial_value=additionalCompileFlags,
         ),
     ]
@@ -114,7 +110,7 @@ def parseScript(test, preamble):
     for feature in test.config.available_features:
         parser = lit.TestRunner.IntegratedTestKeywordParser(
             "ADDITIONAL_COMPILE_FLAGS({}):".format(feature),
-            lit.TestRunner.ParserKind.LIST,
+            lit.TestRunner.ParserKind.SPACE_LIST,
             initial_value=additionalCompileFlags,
         )
         parsers.append(parser)
@@ -220,7 +216,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             all the inputs necessary to run the test, such that e.g. execution
             on a remote host can be done by simply copying %T to the host.
 
-        // ADDITIONAL_COMPILE_FLAGS: flag1, flag2, flag3
+        // ADDITIONAL_COMPILE_FLAGS: flag1 flag2 flag3
 
             This directive will cause the provided flags to be added to the
             %{compile_flags} substitution for the test that contains it. This

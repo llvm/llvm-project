@@ -10,17 +10,17 @@ program test_size
     real, dimension(..) :: assumedRank
     !ERROR: A dim= argument is required for 'size' when the array is assumed-size
     print *, size(arg)
-    !ERROR: missing mandatory 'dim=' argument
+    !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
     print *, ubound(arg)
     !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
     print *, shape(arg)
     !ERROR: The 'harvest=' argument to the intrinsic procedure 'random_number' may not be assumed-size
     call random_number(arg)
-    !ERROR: missing mandatory 'dim=' argument
+    !ERROR: 'array=' argument has unacceptable rank 0
     print *, lbound(scalar)
     !ERROR: 'array=' argument has unacceptable rank 0
     print *, size(scalar)
-    !ERROR: missing mandatory 'dim=' argument
+    !ERROR: 'array=' argument has unacceptable rank 0
     print *, ubound(scalar)
     !ERROR: DIM=0 dimension must be positive
     print *, lbound(arg, 0)
@@ -45,7 +45,7 @@ program test_size
     rank(*)
       !ERROR: A dim= argument is required for 'size' when the array is assumed-size
       print *, size(assumedRank)
-      !ERROR: missing mandatory 'dim=' argument
+      !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
       print *, ubound(assumedRank)
       !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
       print *, shape(assumedRank)

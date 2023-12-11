@@ -1,4 +1,4 @@
-! RUN: %flang -fsyntax-only 2>&1 %s | FileCheck %s
+! RUN: %flang -fsyntax-only -pedantic 2>&1 %s | FileCheck %s
 
 ! Test that a warning is emitted when a named common block appears in
 ! several scopes with a different storage size.

@@ -9,7 +9,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
@@ -50,8 +49,7 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
   }
   // Handle the given inlined terminator by replacing it with a new operation
   // as necessary. Required when the region has only one block.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     auto retValOp = dyn_cast<scf::YieldOp>(op);
     if (!retValOp)
       return;
@@ -1083,139 +1081,12 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
   }
 };
 
-/// Canonicalize the iter_args of an scf::ForOp that involve a
-/// `bufferization.to_tensor` and for which only the last loop iteration is
-/// actually visible outside of the loop. The canonicalization looks for a
-/// pattern such as:
-/// ```
-///    %t0 = ... : tensor_type
-///    %0 = scf.for ... iter_args(%bb0 : %t0) -> (tensor_type) {
-///      ...
-///      // %m is either buffer_cast(%bb00) or defined above the loop
-///      %m... : memref_type
-///      ... // uses of %m with potential inplace updates
-///      %new_tensor = bufferization.to_tensor %m : memref_type
-///      ...
-///      scf.yield %new_tensor : tensor_type
-///    }
-/// ```
-///
-/// `%bb0` may have either 0 or 1 use. If it has 1 use it must be exactly a
-/// `%m = buffer_cast %bb0` op that feeds into the yielded
-/// `bufferization.to_tensor` op.
-///
-/// If no aliasing write to the memref `%m`, from which `%new_tensor`is loaded,
-/// occurs between `bufferization.to_tensor and yield then the value %0
-/// visible outside of the loop is the last `bufferization.to_tensor`
-/// produced in the loop.
-///
-/// For now, we approximate the absence of aliasing by only supporting the case
-/// when the bufferization.to_tensor is the operation immediately preceding
-/// the yield.
-//
-/// The canonicalization rewrites the pattern as:
-/// ```
-///    // %m is either a buffer_cast or defined above
-///    %m... : memref_type
-///    scf.for ... iter_args(%bb0 : %t0) -> (tensor_type) {
-///      ... // uses of %m with potential inplace updates
-///      scf.yield %bb0: tensor_type
-///    }
-///    %0 = bufferization.to_tensor %m : memref_type
-/// ```
-///
-/// A later bbArg canonicalization will further rewrite as:
-/// ```
-///    // %m is either a buffer_cast or defined above
-///    %m... : memref_type
-///    scf.for ... { // no iter_args
-///      ... // uses of %m with potential inplace updates
-///    }
-///    %0 = bufferization.to_tensor %m : memref_type
-/// ```
-struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ForOp forOp,
-                                PatternRewriter &rewriter) const override {
-    assert(std::next(forOp.getRegion().begin()) == forOp.getRegion().end() &&
-           "unexpected multiple blocks");
-
-    Location loc = forOp.getLoc();
-    DenseMap<Value, Value> replacements;
-    for (BlockArgument bbArg : forOp.getRegionIterArgs()) {
-      unsigned idx = bbArg.getArgNumber() - /*numIv=*/1;
-      auto yieldOp =
-          cast<scf::YieldOp>(forOp.getRegion().front().getTerminator());
-      Value yieldVal = yieldOp->getOperand(idx);
-      auto tensorLoadOp = yieldVal.getDefiningOp<bufferization::ToTensorOp>();
-      bool isTensor = llvm::isa<TensorType>(bbArg.getType());
-
-      bufferization::ToMemrefOp tensorToMemref;
-      // Either bbArg has no use or it has a single buffer_cast use.
-      if (bbArg.hasOneUse())
-        tensorToMemref =
-            dyn_cast<bufferization::ToMemrefOp>(*bbArg.getUsers().begin());
-      if (!isTensor || !tensorLoadOp || (!bbArg.use_empty() && !tensorToMemref))
-        continue;
-      // If tensorToMemref is present, it must feed into the `ToTensorOp`.
-      if (tensorToMemref && tensorLoadOp.getMemref() != tensorToMemref)
-        continue;
-      // TODO: Any aliasing write of tensorLoadOp.memref() nested under `forOp`
-      // must be before `ToTensorOp` in the block so that the lastWrite
-      // property is not subject to additional side-effects.
-      // For now, we only support the case when ToTensorOp appears
-      // immediately before the terminator.
-      if (tensorLoadOp->getNextNode() != yieldOp)
-        continue;
-
-      // Clone the optional tensorToMemref before forOp.
-      if (tensorToMemref) {
-        rewriter.setInsertionPoint(forOp);
-        rewriter.replaceOpWithNewOp<bufferization::ToMemrefOp>(
-            tensorToMemref, tensorToMemref.getMemref().getType(),
-            tensorToMemref.getTensor());
-      }
-
-      // Clone the tensorLoad after forOp.
-      rewriter.setInsertionPointAfter(forOp);
-      Value newTensorLoad = rewriter.create<bufferization::ToTensorOp>(
-          loc, tensorLoadOp.getMemref());
-      Value forOpResult = forOp.getResult(bbArg.getArgNumber() - /*iv=*/1);
-      replacements.insert(std::make_pair(forOpResult, newTensorLoad));
-
-      // Make the terminator just yield the bbArg, the old tensorLoadOp + the
-      // old bbArg (that is now directly yielded) will canonicalize away.
-      rewriter.startRootUpdate(yieldOp);
-      yieldOp.setOperand(idx, bbArg);
-      rewriter.finalizeRootUpdate(yieldOp);
-    }
-    if (replacements.empty())
-      return failure();
-
-    // We want to replace a subset of the results of `forOp`. rewriter.replaceOp
-    // replaces the whole op and erase it unconditionally. This is wrong for
-    // `forOp` as it generally contains ops with side effects.
-    // Instead, use `rewriter.replaceOpWithIf`.
-    SmallVector<Value> newResults;
-    newResults.reserve(forOp.getNumResults());
-    for (Value v : forOp.getResults()) {
-      auto it = replacements.find(v);
-      newResults.push_back((it != replacements.end()) ? it->second : v);
-    }
-    unsigned idx = 0;
-    rewriter.replaceOpWithIf(forOp, newResults, [&](OpOperand &op) {
-      return op.get() != newResults[idx++];
-    });
-    return success();
-  }
-};
 } // namespace
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops,
-              LastTensorLoadCanonicalization, ForOpTensorCastFolder>(context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops, ForOpTensorCastFolder>(
+      context);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -3041,6 +2912,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     auto newOp =
         rewriter.create<ParallelOp>(op.getLoc(), newLowerBounds, newUpperBounds,
                                     newSteps, op.getInitVals(), nullptr);
+    // Erase the empty block that was inserted by the builder.
+    rewriter.eraseBlock(newOp.getBody());
     // Clone the loop body and remap the block arguments of the collapsed loops
     // (inlining does not support a cancellable block argument mapping).
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),

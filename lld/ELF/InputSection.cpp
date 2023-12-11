@@ -22,6 +22,7 @@
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -242,7 +243,8 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
 }
 
 // Find a symbol that encloses a given location.
-Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset, uint8_t type) {
+Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset,
+                                              uint8_t type) const {
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
       if (d->section == this && d->value <= offset &&
@@ -252,7 +254,7 @@ Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset, uint8_t type) {
 }
 
 // Returns an object file location string. Used to construct an error message.
-std::string InputSectionBase::getLocation(uint64_t offset) {
+std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
@@ -273,7 +275,8 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
 //   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
 //
 //  Returns an empty string if there's no way to get line info.
-std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
+std::string InputSectionBase::getSrcMsg(const Symbol &sym,
+                                        uint64_t offset) const {
   return file->getSrcMsg(sym, *this, offset);
 }
 
@@ -286,7 +289,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
 // or
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
-std::string InputSectionBase::getObjMsg(uint64_t off) {
+std::string InputSectionBase::getObjMsg(uint64_t off) const {
   std::string filename = std::string(file->getName());
 
   std::string archive;
@@ -872,6 +875,16 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   }
 }
 
+// Overwrite a ULEB128 value and keep the original length.
+static uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
+}
+
 // This function applies relocations to sections without SHF_ALLOC bit.
 // Such sections are never mapped to memory at runtime. Debug sections are
 // an example. Relocations in non-alloc sections are much easier to
@@ -883,6 +896,7 @@ template <class ELFT, class RelTy>
 void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
   const TargetInfo &target = *elf::target;
+  const auto emachine = config->emachine;
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLocOrRanges =
       isDebug && (name == ".debug_loc" || name == ".debug_ranges");
@@ -894,17 +908,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       break;
     }
 
-  for (const RelTy &rel : rels) {
-    RelType type = rel.getType(config->isMips64EL);
-
-    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
-    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed
-    // in 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we
-    // need to keep this bug-compatible code for a while.
-    if (config->emachine == EM_386 && type == R_386_GOTPC)
-      continue;
-
-    uint64_t offset = rel.r_offset;
+  for (size_t i = 0, relsSize = rels.size(); i != relsSize; ++i) {
+    const RelTy &rel = rels[i];
+    const RelType type = rel.getType(config->isMips64EL);
+    const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
     if (!RelTy::IsRela)
@@ -914,6 +921,30 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     RelExpr expr = target.getRelExpr(type, sym, bufLoc);
     if (expr == R_NONE)
       continue;
+    auto *ds = dyn_cast<Defined>(&sym);
+
+    if (emachine == EM_RISCV && type == R_RISCV_SET_ULEB128) {
+      if (++i < relsSize &&
+          rels[i].getType(/*isMips64EL=*/false) == R_RISCV_SUB_ULEB128 &&
+          rels[i].r_offset == offset) {
+        uint64_t val;
+        if (!ds && tombstone) {
+          val = *tombstone;
+        } else {
+          val = sym.getVA(addend) -
+                (getFile<ELFT>()->getRelocTargetSym(rels[i]).getVA(0) +
+                 getAddend<ELFT>(rels[i]));
+        }
+        if (overwriteULEB128(bufLoc, val) >= 0x80)
+          errorOrWarn(getLocation(offset) + ": ULEB128 value " + Twine(val) +
+                      " exceeds available space; references '" +
+                      lld::toString(sym) + "'");
+        continue;
+      }
+      errorOrWarn(getLocation(offset) +
+                  ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128");
+      return;
+    }
 
     if (tombstone ||
         (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
@@ -945,7 +976,6 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       //
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
-      auto *ds = dyn_cast<Defined>(&sym);
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
         const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
@@ -961,25 +991,25 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
       continue;
 
+    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
+    // sections.
+    if (LLVM_LIKELY(expr == R_ABS) || expr == R_DTPREL || expr == R_GOTPLTREL ||
+        expr == R_RISCV_ADD) {
+      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+      continue;
+    }
+
     if (expr == R_SIZE) {
       target.relocateNoSym(bufLoc, type,
                            SignExtend64<bits>(sym.getSize() + addend));
       continue;
     }
 
-    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
-    // sections.
-    if (expr == R_ABS || expr == R_DTPREL || expr == R_GOTPLTREL ||
-        expr == R_RISCV_ADD) {
-      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
-      continue;
-    }
-
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
-    if (expr != R_PC) {
-      error(msg);
+    if (expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC)) {
+      errorOrWarn(msg);
       return;
     }
 
@@ -991,11 +1021,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
     //
-    // RELA -r stopped earlier and does not get the warning. Suppress the
-    // warning for REL -r as well
-    // (https://github.com/ClangBuiltLinux/linux/issues/1937).
-    if (RelTy::IsRela || !config->relocatable)
-      warn(msg);
+    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
+    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
+    // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
+    // keep this bug-compatible code for a while.
+    warn(msg);
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));

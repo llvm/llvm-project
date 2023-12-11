@@ -4506,6 +4506,36 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                  .get();
     break;
 
+  case ICK_Fixed_Point_Conversion:
+    assert((FromType->isFixedPointType() || ToType->isFixedPointType()) &&
+           "Attempting implicit fixed point conversion without a fixed "
+           "point operand");
+    if (FromType->isFloatingType())
+      From = ImpCastExprToType(From, ToType, CK_FloatingToFixedPoint,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (ToType->isFloatingType())
+      From = ImpCastExprToType(From, ToType, CK_FixedPointToFloating,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (FromType->isIntegralType(Context))
+      From = ImpCastExprToType(From, ToType, CK_IntegralToFixedPoint,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (ToType->isIntegralType(Context))
+      From = ImpCastExprToType(From, ToType, CK_FixedPointToIntegral,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else if (ToType->isBooleanType())
+      From = ImpCastExprToType(From, ToType, CK_FixedPointToBoolean,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    else
+      From = ImpCastExprToType(From, ToType, CK_FixedPointCast,
+                               VK_PRValue,
+                               /*BasePath=*/nullptr, CCK).get();
+    break;
+
   case ICK_Compatible_Conversion:
     From = ImpCastExprToType(From, ToType, CK_NoOp, From->getValueKind(),
                              /*BasePath=*/nullptr, CCK).get();

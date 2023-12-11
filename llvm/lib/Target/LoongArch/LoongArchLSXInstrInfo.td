@@ -95,6 +95,29 @@ def vsplati64_imm_eq_63 : PatFrags<(ops), [(build_vector),
          Imm.getBitWidth() == EltTy.getSizeInBits() && Imm == 63;
 }]>;
 
+def vsplatf32_fpimm_eq_1
+  : PatFrags<(ops), [(bitconvert (v4i32 (build_vector))),
+                     (bitconvert (v8i32 (build_vector)))], [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  N = N->getOperand(0).getNode();
+
+  return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == EltTy.getSizeInBits() &&
+         Imm == APFloat(+1.0f).bitcastToAPInt();
+}]>;
+def vsplatf64_fpimm_eq_1
+  : PatFrags<(ops), [(bitconvert (v2i64 (build_vector))),
+                     (bitconvert (v4i64 (build_vector)))], [{
+  APInt Imm;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  N = N->getOperand(0).getNode();
+
+  return selectVSplat(N, Imm, EltTy.getSizeInBits()) &&
+         Imm.getBitWidth() == EltTy.getSizeInBits() &&
+         Imm == APFloat(+1.0).bitcastToAPInt();
+}]>;
+
 def vsplati8imm7   : PatFrag<(ops node:$reg),
                              (and node:$reg, vsplati8_imm_eq_7)>;
 def vsplati16imm15 : PatFrag<(ops node:$reg),
@@ -141,9 +164,13 @@ def lsxsplati16 : PatFrag<(ops node:$e0),
 def lsxsplati32 : PatFrag<(ops node:$e0),
                           (v4i32 (build_vector node:$e0, node:$e0,
                                                node:$e0, node:$e0))>;
-
 def lsxsplati64 : PatFrag<(ops node:$e0),
                           (v2i64 (build_vector node:$e0, node:$e0))>;
+def lsxsplatf32 : PatFrag<(ops node:$e0),
+                          (v4f32 (build_vector node:$e0, node:$e0,
+                                               node:$e0, node:$e0))>;
+def lsxsplatf64 : PatFrag<(ops node:$e0),
+                          (v2f64 (build_vector node:$e0, node:$e0))>;
 
 def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
@@ -1169,6 +1196,13 @@ multiclass PatVr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj)>;
 }
 
+multiclass PatVrF<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v4f32 (OpNode (v4f32 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_S") LSX128:$vj)>;
+  def : Pat<(v2f64 (OpNode (v2f64 LSX128:$vj))),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj)>;
+}
+
 multiclass PatVrVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
             (!cast<LAInst>(Inst#"_B") LSX128:$vj, LSX128:$vk)>;
@@ -1257,9 +1291,64 @@ multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
 }
 
-class PatVrVrB<SDPatternOperator OpNode, LAInst Inst>
-    : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
-          (Inst LSX128:$vj, LSX128:$vk)>;
+multiclass PatCCVrSimm5<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj),
+                          (v16i8 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, simm5:$imm)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj),
+                          (v8i16 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, simm5:$imm)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj),
+                          (v4i32 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, simm5:$imm)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj),
+                          (v2i64 (SplatPat_simm5 simm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, simm5:$imm)>;
+}
+
+multiclass PatCCVrUimm5<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj),
+                          (v16i8 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_BU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj),
+                          (v8i16 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_HU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj),
+                          (v4i32 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_WU") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj),
+                          (v2i64 (SplatPat_uimm5 uimm5:$imm)), CC)),
+            (!cast<LAInst>(Inst#"_DU") LSX128:$vj, uimm5:$imm)>;
+}
+
+multiclass PatCCVrVr<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj), (v16i8 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj), (v8i16 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj), (v4i32 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj), (v2i64 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatCCVrVrU<CondCode CC, string Inst> {
+  def : Pat<(v16i8 (setcc (v16i8 LSX128:$vj), (v16i8 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_BU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v8i16 (setcc (v8i16 LSX128:$vj), (v8i16 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_HU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v4i32 (setcc (v4i32 LSX128:$vj), (v4i32 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_WU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (setcc (v2i64 LSX128:$vj), (v2i64 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_DU") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass PatCCVrVrF<CondCode CC, string Inst> {
+  def : Pat<(v4i32 (setcc (v4f32 LSX128:$vj), (v4f32 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_S") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(v2i64 (setcc (v2f64 LSX128:$vj), (v2f64 LSX128:$vk), CC)),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
+}
 
 let Predicates = [HasExtLSX] in {
 
@@ -1294,6 +1383,10 @@ defm : PatVrUimm5<umin, "VMINI">;
 // VMUL_{B/H/W/D}
 defm : PatVrVr<mul, "VMUL">;
 
+// VMUH_{B/H/W/D}[U]
+defm : PatVrVr<mulhs, "VMUH">;
+defm : PatVrVrU<mulhu, "VMUH">;
+
 // VMADD_{B/H/W/D}
 defm : PatVrVrVr<muladd, "VMADD">;
 // VMSUB_{B/H/W/D}
@@ -1308,13 +1401,20 @@ defm : PatVrVr<srem, "VMOD">;
 defm : PatVrVrU<urem, "VMOD">;
 
 // VAND_V
-def : PatVrVrB<and, VAND_V>;
-// VNOR_V
-def : PatVrVrB<or, VOR_V>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(and (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VAND_V LSX128:$vj, LSX128:$vk)>;
+// VOR_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(or (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VOR_V LSX128:$vj, LSX128:$vk)>;
 // VXOR_V
-def : PatVrVrB<xor, VXOR_V>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(xor (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VXOR_V LSX128:$vj, LSX128:$vk)>;
 // VNOR_V
-def : Pat<(vnot (or (v16i8 LSX128:$vj), (v16i8 LSX128:$vk))),
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(vnot (or (vt LSX128:$vj), (vt LSX128:$vk))),
           (VNOR_V LSX128:$vj, LSX128:$vk)>;
 
 // VANDI_B
@@ -1342,6 +1442,9 @@ defm : PatShiftVrUimm<srl, "VSRLI">;
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrUimm<sra, "VSRAI">;
+
+// VCLZ_{B/H/W/D}
+defm : PatVr<ctlz, "VCLZ">;
 
 // VPCNT_{B/H/W/D}
 defm : PatVr<ctpop, "VPCNT">;
@@ -1452,6 +1555,83 @@ def : Pat<(fma v4f32:$vj, v4f32:$vk, v4f32:$va),
 def : Pat<(fma v2f64:$vj, v2f64:$vk, v2f64:$va),
           (VFMADD_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
 
+// VFMSUB_{S/D}
+def : Pat<(fma v4f32:$vj, v4f32:$vk, (fneg v4f32:$va)),
+          (VFMSUB_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fma v2f64:$vj, v2f64:$vk, (fneg v2f64:$va)),
+          (VFMSUB_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFNMADD_{S/D}
+def : Pat<(fneg (fma v4f32:$vj, v4f32:$vk, v4f32:$va)),
+          (VFNMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fneg (fma v2f64:$vj, v2f64:$vk, v2f64:$va)),
+          (VFNMADD_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+def : Pat<(fma_nsz (fneg v4f32:$vj), v4f32:$vk, (fneg v4f32:$va)),
+          (VFNMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, (fneg v2f64:$va)),
+          (VFNMADD_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFNMSUB_{S/D}
+def : Pat<(fneg (fma v4f32:$vj, v4f32:$vk, (fneg v4f32:$va))),
+          (VFNMSUB_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fneg (fma v2f64:$vj, v2f64:$vk, (fneg v2f64:$va))),
+          (VFNMSUB_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+def : Pat<(fma_nsz (fneg v4f32:$vj), v4f32:$vk, v4f32:$va),
+          (VFNMSUB_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
+def : Pat<(fma_nsz (fneg v2f64:$vj), v2f64:$vk, v2f64:$va),
+          (VFNMSUB_D v2f64:$vj, v2f64:$vk, v2f64:$va)>;
+
+// VFSQRT_{S/D}
+defm : PatVrF<fsqrt, "VFSQRT">;
+
+// VFRECIP_{S/D}
+def : Pat<(fdiv vsplatf32_fpimm_eq_1, v4f32:$vj),
+          (VFRECIP_S v4f32:$vj)>;
+def : Pat<(fdiv vsplatf64_fpimm_eq_1, v2f64:$vj),
+          (VFRECIP_D v2f64:$vj)>;
+
+// VFRSQRT_{S/D}
+def : Pat<(fdiv vsplatf32_fpimm_eq_1, (fsqrt v4f32:$vj)),
+          (VFRSQRT_S v4f32:$vj)>;
+def : Pat<(fdiv vsplatf64_fpimm_eq_1, (fsqrt v2f64:$vj)),
+          (VFRSQRT_D v2f64:$vj)>;
+
+// VSEQ[I]_{B/H/W/D}
+defm : PatCCVrSimm5<SETEQ, "VSEQI">;
+defm : PatCCVrVr<SETEQ, "VSEQ">;
+
+// VSLE[I]_{B/H/W/D}[U]
+defm : PatCCVrSimm5<SETLE, "VSLEI">;
+defm : PatCCVrUimm5<SETULE, "VSLEI">;
+defm : PatCCVrVr<SETLE, "VSLE">;
+defm : PatCCVrVrU<SETULE, "VSLE">;
+
+// VSLT[I]_{B/H/W/D}[U]
+defm : PatCCVrSimm5<SETLT, "VSLTI">;
+defm : PatCCVrUimm5<SETULT, "VSLTI">;
+defm : PatCCVrVr<SETLT, "VSLT">;
+defm : PatCCVrVrU<SETULT, "VSLT">;
+
+// VFCMP.cond.{S/D}
+defm : PatCCVrVrF<SETEQ, "VFCMP_CEQ">;
+defm : PatCCVrVrF<SETOEQ, "VFCMP_CEQ">;
+defm : PatCCVrVrF<SETUEQ, "VFCMP_CUEQ">;
+
+defm : PatCCVrVrF<SETLE, "VFCMP_CLE">;
+defm : PatCCVrVrF<SETOLE, "VFCMP_CLE">;
+defm : PatCCVrVrF<SETULE, "VFCMP_CULE">;
+
+defm : PatCCVrVrF<SETLT, "VFCMP_CLT">;
+defm : PatCCVrVrF<SETOLT, "VFCMP_CLT">;
+defm : PatCCVrVrF<SETULT, "VFCMP_CULT">;
+
+defm : PatCCVrVrF<SETNE, "VFCMP_CNE">;
+defm : PatCCVrVrF<SETONE, "VFCMP_CNE">;
+defm : PatCCVrVrF<SETUNE, "VFCMP_CUNE">;
+
+defm : PatCCVrVrF<SETO, "VFCMP_COR">;
+defm : PatCCVrVrF<SETUO, "VFCMP_CUN">;
+
 // VINSGR2VR_{B/H/W/D}
 def : Pat<(vector_insert v16i8:$vd, GRLenVT:$rj, uimm4:$imm),
           (VINSGR2VR_B v16i8:$vd, GRLenVT:$rj, uimm4:$imm)>;
@@ -1461,6 +1641,11 @@ def : Pat<(vector_insert v4i32:$vd, GRLenVT:$rj, uimm2:$imm),
           (VINSGR2VR_W v4i32:$vd, GRLenVT:$rj, uimm2:$imm)>;
 def : Pat<(vector_insert v2i64:$vd, GRLenVT:$rj, uimm1:$imm),
           (VINSGR2VR_D v2i64:$vd, GRLenVT:$rj, uimm1:$imm)>;
+
+def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, uimm2:$imm),
+          (VINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm2:$imm)>;
+def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, uimm1:$imm),
+          (VINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm1:$imm)>;
 
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),
@@ -1493,6 +1678,12 @@ def : Pat<(loongarch_vreplve v4i32:$vj, GRLenVT:$rk),
 def : Pat<(loongarch_vreplve v2i64:$vj, GRLenVT:$rk),
           (VREPLVE_D v2i64:$vj, GRLenVT:$rk)>;
 
+// VREPLVEI_{W/D}
+def : Pat<(lsxsplatf32 FPR32:$fj),
+          (VREPLVEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
+def : Pat<(lsxsplatf64 FPR64:$fj),
+          (VREPLVEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
+
 // Loads/Stores
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
   defm : LdPat<load, VLD, vt>;
@@ -1500,6 +1691,56 @@ foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
   defm : StPat<store, VST, LSX128, vt>;
   def  : RegRegStPat<store, VSTX, LSX128, vt>;
 }
+
+// Vector extraction with constant index.
+def : Pat<(i64 (vector_extract v16i8:$vj, uimm4:$imm)),
+          (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
+def : Pat<(i64 (vector_extract v8i16:$vj, uimm3:$imm)),
+          (VPICKVE2GR_H v8i16:$vj, uimm3:$imm)>;
+def : Pat<(i64 (vector_extract v4i32:$vj, uimm2:$imm)),
+          (VPICKVE2GR_W v4i32:$vj, uimm2:$imm)>;
+def : Pat<(i64 (vector_extract v2i64:$vj, uimm1:$imm)),
+          (VPICKVE2GR_D v2i64:$vj, uimm1:$imm)>;
+def : Pat<(f32 (vector_extract v4f32:$vj, uimm2:$imm)),
+          (f32 (EXTRACT_SUBREG (VREPLVEI_W v4f32:$vj, uimm2:$imm), sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, uimm1:$imm)),
+          (f64 (EXTRACT_SUBREG (VREPLVEI_D v2f64:$vj, uimm1:$imm), sub_64))>;
+
+// Vector extraction with variable index.
+def : Pat<(i64 (vector_extract v16i8:$vj, i64:$rk)),
+          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_B v16i8:$vj,
+                                                                    i64:$rk),
+                                                         sub_32)),
+                                    GPR), (i64 24))>;
+def : Pat<(i64 (vector_extract v8i16:$vj, i64:$rk)),
+          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_H v8i16:$vj,
+                                                                    i64:$rk),
+                                                         sub_32)),
+                                    GPR), (i64 16))>;
+def : Pat<(i64 (vector_extract v4i32:$vj, i64:$rk)),
+          (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, i64:$rk),
+                                                 sub_32)),
+                            GPR)>;
+def : Pat<(i64 (vector_extract v2i64:$vj, i64:$rk)),
+          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, i64:$rk),
+                                                 sub_64)),
+                            GPR)>;
+def : Pat<(f32 (vector_extract v4f32:$vj, i64:$rk)),
+          (f32 (EXTRACT_SUBREG (VREPLVE_W v4f32:$vj, i64:$rk), sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, i64:$rk)),
+          (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, i64:$rk), sub_64))>;
+
+// vselect
+def : Pat<(v16i8 (vselect LSX128:$vj, LSX128:$vd,
+                          (v16i8 (SplatPat_uimm8 uimm8:$imm)))),
+          (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
+  def  : Pat<(vt (vselect LSX128:$va, LSX128:$vk, LSX128:$vj)),
+             (VBITSEL_V LSX128:$vj, LSX128:$vk, LSX128:$va)>;
+
+// fneg
+def : Pat<(fneg (v4f32 LSX128:$vj)), (VBITREVI_W LSX128:$vj, 31)>;
+def : Pat<(fneg (v2f64 LSX128:$vj)), (VBITREVI_D LSX128:$vj, 63)>;
 
 } // Predicates = [HasExtLSX]
 
@@ -1618,21 +1859,21 @@ foreach Inst = ["VMADDWEV_Q_D", "VMADDWOD_Q_D", "VMADDWEV_Q_DU",
 //     (LAInst vty:$vj)>;
 foreach Inst = ["VEXTH_H_B", "VEXTH_HU_BU",
                 "VMSKLTZ_B", "VMSKGEZ_B", "VMSKNZ_B",
-                "VCLO_B", "VCLZ_B"] in
+                "VCLO_B"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v16i8 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_W_H", "VEXTH_WU_HU", "VMSKLTZ_H",
-                "VCLO_H", "VCLZ_H", "VFCVTL_S_H", "VFCVTH_S_H"] in
+                "VCLO_H", "VFCVTL_S_H", "VFCVTH_S_H"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v8i16 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_D_W", "VEXTH_DU_WU", "VMSKLTZ_W",
-                "VCLO_W", "VCLZ_W", "VFFINT_S_W", "VFFINT_S_WU",
+                "VCLO_W", "VFFINT_S_W", "VFFINT_S_WU",
                 "VFFINTL_D_W", "VFFINTH_D_W"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v4i32 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_Q_D", "VEXTH_QU_DU", "VMSKLTZ_D",
                 "VEXTL_Q_D", "VEXTL_QU_DU",
-                "VCLO_D", "VCLZ_D", "VFFINT_D_L", "VFFINT_D_LU"] in
+                "VCLO_D", "VFFINT_D_L", "VFFINT_D_LU"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2i64 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 

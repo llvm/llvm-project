@@ -195,7 +195,8 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
                                                 upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
     if (getConstantIntValue(step) != static_cast<int64_t>(1))
-      range = builder.create<arith::DivSIOp>(currentLoop.getLoc(), range, step);
+      range =
+          builder.create<arith::CeilDivSIOp>(currentLoop.getLoc(), range, step);
     dims.push_back(range);
 
     lbs.push_back(lowerBound);
@@ -318,7 +319,7 @@ static Value deriveStaticUpperBound(Value upperBound,
 
   if (auto minOp = upperBound.getDefiningOp<AffineMinOp>()) {
     for (const AffineExpr &result : minOp.getMap().getResults()) {
-      if (auto constExpr = result.dyn_cast<AffineConstantExpr>()) {
+      if (auto constExpr = dyn_cast<AffineConstantExpr>(result)) {
         return rewriter.create<arith::ConstantIndexOp>(minOp.getLoc(),
                                                        constExpr.getValue());
       }

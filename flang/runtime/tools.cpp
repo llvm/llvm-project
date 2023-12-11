@@ -109,8 +109,8 @@ RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
 RT_API_ATTRS void CheckIntegerKind(
     Terminator &terminator, int kind, const char *intrinsic) {
   if (kind < 1 || kind > 16 || (kind & (kind - 1)) != 0) {
-    terminator.Crash(
-        "not yet implemented: %s: KIND=%d argument", intrinsic, kind);
+    terminator.Crash("not yet implemented: INTEGER(KIND=%d) in %s intrinsic",
+        intrinsic, kind);
   }
 }
 

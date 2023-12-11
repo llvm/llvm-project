@@ -36,14 +36,15 @@ namespace SendMsg {
 
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
+// clang-format off
 const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{""}},
   {{"MSG_INTERRUPT"},           ID_INTERRUPT},
   {{"MSG_GS"},                  ID_GS_PreGFX11,             isNotGFX11Plus},
   {{"MSG_GS_DONE"},             ID_GS_DONE_PreGFX11,        isNotGFX11Plus},
   {{"MSG_SAVEWAVE"},            ID_SAVEWAVE,                isGFX8_GFX9_GFX10},
-  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9Plus},
-  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9Plus},
+  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9_GFX10_GFX11},
+  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9_GFX10_GFX11},
   {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,         isGFX9_GFX10},
   {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
   {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
@@ -59,7 +60,9 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_RTN_GET_REALTIME"},    ID_RTN_GET_REALTIME,        isGFX11Plus},
   {{"MSG_RTN_SAVE_WAVE"},       ID_RTN_SAVE_WAVE,           isGFX11Plus},
   {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
+  {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
 };
+// clang-format on
 // NOLINTEND
 
 const int MSG_SIZE = static_cast<int>(
@@ -87,41 +90,56 @@ namespace Hwreg {
 
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
+// clang-format off
 const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{""}},
   {{"HW_REG_MODE"},          ID_MODE},
   {{"HW_REG_STATUS"},        ID_STATUS},
-  {{"HW_REG_TRAPSTS"},       ID_TRAPSTS},
+  {{"HW_REG_TRAPSTS"},       ID_TRAPSTS,     isNotGFX12Plus},
   {{"HW_REG_HW_ID"},         ID_HW_ID,       isNotGFX10Plus},
   {{"HW_REG_GPR_ALLOC"},     ID_GPR_ALLOC},
   {{"HW_REG_LDS_ALLOC"},     ID_LDS_ALLOC},
   {{"HW_REG_IB_STS"},        ID_IB_STS},
   {{""}},
   {{""}},
+  {{"HW_REG_PERF_SNAPSHOT_DATA"},  ID_PERF_SNAPSHOT_DATA_gfx12,  isGFX12Plus},
+  {{"HW_REG_PERF_SNAPSHOT_PC_LO"}, ID_PERF_SNAPSHOT_PC_LO_gfx12, isGFX12Plus},
+  {{"HW_REG_PERF_SNAPSHOT_PC_HI"}, ID_PERF_SNAPSHOT_PC_HI_gfx12, isGFX12Plus},
   {{""}},
   {{""}},
-  {{""}},
-  {{""}},
-  {{""}},
-  {{"HW_REG_SH_MEM_BASES"},  ID_MEM_BASES,   isGFX9Plus},
+  {{"HW_REG_SH_MEM_BASES"},  ID_MEM_BASES,   isGFX9_GFX10_GFX11},
   {{"HW_REG_TBA_LO"},        ID_TBA_LO,      isGFX9_GFX10},
   {{"HW_REG_TBA_HI"},        ID_TBA_HI,      isGFX9_GFX10},
   {{"HW_REG_TMA_LO"},        ID_TMA_LO,      isGFX9_GFX10},
   {{"HW_REG_TMA_HI"},        ID_TMA_HI,      isGFX9_GFX10},
-  {{"HW_REG_FLAT_SCR_LO"},   ID_FLAT_SCR_LO, isGFX10Plus},
-  {{"HW_REG_FLAT_SCR_HI"},   ID_FLAT_SCR_HI, isGFX10Plus},
+  {{"HW_REG_FLAT_SCR_LO"},   ID_FLAT_SCR_LO, isGFX10_GFX11},
+  {{"HW_REG_FLAT_SCR_HI"},   ID_FLAT_SCR_HI, isGFX10_GFX11},
   {{"HW_REG_XNACK_MASK"},    ID_XNACK_MASK,  isGFX10Before1030},
   {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
   {{""}},
-  {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA, isGFX11Plus},
+  {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA_gfx11, isGFX11},
   {{""}},
-  {{"HW_REG_SHADER_CYCLES"}, ID_SHADER_CYCLES, isGFX10_BEncoding},
+  {{"HW_REG_SHADER_CYCLES"},    ID_SHADER_CYCLES,    isGFX10_3_GFX11},
+  {{"HW_REG_SHADER_CYCLES_HI"}, ID_SHADER_CYCLES_HI, isGFX12Plus},
+  {{"HW_REG_DVGPR_ALLOC_LO"},   ID_DVGPR_ALLOC_LO,   isGFX12Plus},
+  {{"HW_REG_DVGPR_ALLOC_HI"},   ID_DVGPR_ALLOC_HI,   isGFX12Plus},
 
-  // Register numbers reused in GFX11+
-  {{"HW_REG_PERF_SNAPSHOT_PC_LO"}, ID_PERF_SNAPSHOT_PC_LO, isGFX11Plus},
-  {{"HW_REG_PERF_SNAPSHOT_PC_HI"}, ID_PERF_SNAPSHOT_PC_HI, isGFX11Plus},
+  // Register numbers reused in GFX11
+  {{"HW_REG_PERF_SNAPSHOT_PC_LO"}, ID_PERF_SNAPSHOT_PC_LO_gfx11, isGFX11},
+  {{"HW_REG_PERF_SNAPSHOT_PC_HI"}, ID_PERF_SNAPSHOT_PC_HI_gfx11, isGFX11},
+
+  // Register numbers reused in GFX12+
+  {{"HW_REG_STATE_PRIV"},          ID_STATE_PRIV,          isGFX12Plus},
+  {{"HW_REG_PERF_SNAPSHOT_DATA1"}, ID_PERF_SNAPSHOT_DATA1, isGFX12Plus},
+  {{"HW_REG_PERF_SNAPSHOT_DATA2"}, ID_PERF_SNAPSHOT_DATA2, isGFX12Plus},
+  {{"HW_REG_EXCP_FLAG_PRIV"},      ID_EXCP_FLAG_PRIV,      isGFX12Plus},
+  {{"HW_REG_EXCP_FLAG_USER"},      ID_EXCP_FLAG_USER,      isGFX12Plus},
+  {{"HW_REG_TRAP_CTRL"},           ID_TRAP_CTRL,           isGFX12Plus},
+  {{"HW_REG_SCRATCH_BASE_LO"},     ID_FLAT_SCR_LO,         isGFX12Plus},
+  {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
+  {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
 
   // GFX940 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
@@ -133,6 +151,7 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   // Aliases
   {{"HW_REG_HW_ID"},                  ID_HW_ID1,                 isGFX10},
 };
+// clang-format on
 // NOLINTEND
 
 const int OPR_SIZE = static_cast<int>(

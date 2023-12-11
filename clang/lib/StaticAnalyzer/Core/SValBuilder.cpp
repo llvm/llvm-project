@@ -231,6 +231,14 @@ SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
 }
 
+loc::MemRegionVal SValBuilder::getAllocaRegionVal(const Expr *E,
+                                                  const LocationContext *LCtx,
+                                                  unsigned VisitCount) {
+  const AllocaRegion *R =
+      getRegionManager().getAllocaRegion(E, VisitCount, LCtx);
+  return loc::MemRegionVal(R);
+}
+
 DefinedSVal SValBuilder::getMetadataSymbolVal(const void *symbolTag,
                                               const MemRegion *region,
                                               const Expr *expr, QualType type,

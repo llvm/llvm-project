@@ -309,6 +309,10 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
   //   }
   Value upper = irMap.lookup(forallOp.getUpperBound()[0]);
   scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, row, upper, inc);
+  // The scf.for builder creates an empty block. scf.for does not allow multiple
+  // blocks in its region, so delete the block before `cloneRegionBefore` adds
+  // an additional block.
+  rewriter.eraseBlock(forOp.getBody());
   rewriter.cloneRegionBefore(forallOp.getRegion(), forOp.getRegion(),
                              forOp.getRegion().begin(), irMap);
 
@@ -436,7 +440,7 @@ static bool isAdmissibleBSR(SparseTensorType &aTp) {
     // CuSparse only supports "square" blocks currently.
     SmallVector<unsigned> dims = getBlockSize(aTp.getDimToLvl());
     assert(dims.size() == 2);
-    return dims[0] = dims[1] && dims[0] > 1;
+    return dims[0] == dims[1] && dims[0] > 1;
   }
   return false;
 }

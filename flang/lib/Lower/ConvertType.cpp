@@ -248,8 +248,13 @@ struct TypeBuilderImpl {
     // links, the fir type is built based on the ultimate symbol. This relies
     // on the fact volatile and asynchronous are not reflected in fir types.
     const Fortran::semantics::Symbol &ultimate = symbol.GetUltimate();
-    if (Fortran::semantics::IsProcedurePointer(ultimate))
-      TODO(loc, "procedure pointers");
+
+    if (Fortran::semantics::IsProcedurePointer(ultimate)) {
+      Fortran::evaluate::ProcedureDesignator proc(ultimate);
+      auto procTy{Fortran::lower::translateSignature(proc, converter)};
+      return fir::BoxProcType::get(context, procTy);
+    }
+
     if (const Fortran::semantics::DeclTypeSpec *type = ultimate.GetType()) {
       if (const Fortran::semantics::IntrinsicTypeSpec *tySpec =
               type->AsIntrinsic()) {
