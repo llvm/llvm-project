@@ -6508,7 +6508,7 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       B.buildNot(Inner, Cond);
       // Then an ext to match the destination register.
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
-      B.buildZExtOrTrunc(Ext, Cond);
+      B.buildZExtOrTrunc(Ext, Inner);
       B.buildOr(DstReg, Ext, True, Flags);
     };
     return true;
