@@ -28,22 +28,7 @@
 ---
 name:            f
 alignment:       4
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHCatchret:   false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
-tracksDebugUserValues: false
 registers:
   - { id: 0, class: gpr64, preferred-register: '' }
   - { id: 1, class: gpr64common, preferred-register: '' }
@@ -55,34 +40,6 @@ registers:
 liveins:
   - { reg: '$x0', virtual-reg: '%1' }
   - { reg: '$w1', virtual-reg: '%2' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    1
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 0
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
-fixedStack:      []
-stack:           []
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
-machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0.entry:
