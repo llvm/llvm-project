@@ -131,6 +131,33 @@ protected:
     if (!OptVecFTyPos)
       return false;
 
+    // Ensure that masked Instructions are handled
+    if (isMasked()) {
+      // In case of a masked call, try creating another mock CallInst that is
+      // masked. createFunctionType should be able to handle this.
+      SmallVector<Type *, 8> CallTypesInclMask(CallTypes);
+      SmallVector<Value *, 8> ArgsInclMask(Args);
+      Type *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VF);
+      CallTypesInclMask.push_back(MaskTy);
+      ArgsInclMask.push_back(Constant::getNullValue(MaskTy));
+
+      FunctionCallee FMasked = M->getOrInsertFunction(
+          VectorName + "_Masked",
+          FunctionType::get(RetTy, CallTypesInclMask, false));
+      std::unique_ptr<CallInst> CIMasked(
+          CallInst::Create(FMasked, ArgsInclMask));
+      auto OptVecFTyMaskedPos =
+          VFABI::createFunctionType(Info, CIMasked.get(), M.get());
+      if (!OptVecFTyMaskedPos)
+        return false;
+
+      // Both FunctionTypes should have the same number of parameters.
+      assert(
+          (OptVecFTyPos->first->getNumParams() ==
+           OptVecFTyMaskedPos->first->getNumParams()) &&
+          "createFunctionType should accept masked or non masked Instructions");
+    }
+
     FunctionType *VecFTy = OptVecFTyPos->first;
     // Check that vectorized parameters' size match with VFInfo.
     // Both may include a mask.

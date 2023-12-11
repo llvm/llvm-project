@@ -1507,7 +1507,7 @@ VFABI::createFunctionType(const VFInfo &Info, const Instruction *I,
     VecParams.push_back(U->getType());
   }
 
-  // Append a mask and get its position.
+  // Get mask's position mask and append one if not present in the Instruction.
   int MaskPos = -1;
   if (Info.isMasked()) {
     auto OptMaskPos = Info.getParamIndexForOptionalMask();
@@ -1515,8 +1515,12 @@ VFABI::createFunctionType(const VFInfo &Info, const Instruction *I,
       return std::nullopt;
 
     MaskPos = OptMaskPos.value();
-    VectorType *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VF);
-    VecParams.insert(VecParams.begin() + MaskPos, MaskTy);
+    // append a mask only when it's missing
+    if (VecParams.size() == Info.Shape.Parameters.size() - 1) {
+      VectorType *MaskTy =
+          VectorType::get(Type::getInt1Ty(M->getContext()), VF);
+      VecParams.insert(VecParams.begin() + MaskPos, MaskTy);
+    }
   }
   FunctionType *VecFTy = FunctionType::get(I->getType(), VecParams, false);
   return std::make_pair(VecFTy, MaskPos);
