@@ -1,4 +1,4 @@
-/*===--- llvm-c/LLJITUtils.h - OrcV2 LLJIT Utilities C bindings -*- C++ -*-===*\
+/*===------- llvm-c/LLJITUtils.h - Advanced LLJIT features --------*- C -*-===*\
 |*                                                                            *|
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
 |* Exceptions.                                                                *|
