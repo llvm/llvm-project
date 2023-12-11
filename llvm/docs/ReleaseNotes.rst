@@ -206,6 +206,19 @@ Changes to the C API
   on zext instructions, and ``LLVMGetIsDisjoint`` and ``LLVMSetIsDisjoint``
   for getting/setting the new disjoint flag on or instructions.
 
+* Added the following functions for manipulating operand bundles, as well as
+  building ``call`` and ``invoke`` instructions that use operand bundles:
+
+  * ``LLVMBuildCallWithOperandBundles``
+  * ``LLVMBuildInvokeWithOperandBundles``
+  * ``LLVMCreateOperandBundle``
+  * ``LLVMDisposeOperandBundle``
+  * ``LLVMGetNumOperandBundles``
+  * ``LLVMGetOperandBundleAtIndex``
+  * ``LLVMGetNumOperandBundleArgs``
+  * ``LLVMGetOperandBundleArgAtIndex``
+  * ``LLVMGetOperandBundleTag``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
