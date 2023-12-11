@@ -500,11 +500,6 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     return false;
 
   // Now we know we can fold the instruction in all its users.
-  if (UsedRegA)
-    MRI->clearKillFlags(UsedRegA);
-  if (UsedRegB)
-    MRI->clearKillFlags(UsedRegB);
-
   for (auto &[SinkDst, MaybeAM] : SinkInto) {
     MachineInstr *New = nullptr;
     LLVM_DEBUG(dbgs() << "Sinking copy of"; MI.dump(); dbgs() << "into";
@@ -530,6 +525,14 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
+
+      // The registers of the addressing mode may have their live range extended
+      // and their kill flags may no longer be correct. Conservatively clear the
+      // kill flags.
+      if (Register R = MaybeAM.BaseReg; R.isValid() && R.isVirtual())
+        MRI->clearKillFlags(R);
+      if (Register R = MaybeAM.ScaledReg; R.isValid() && R.isVirtual())
+        MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     // Clear the StoreInstrCache, since we may invalidate it by erasing.
