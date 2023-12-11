@@ -583,9 +583,6 @@ void ASTDeclReader::Visit(Decl *D) {
 }
 
 void ASTDeclReader::VisitDecl(Decl *D) {
-  BitsUnpacker DeclBits(Record.readInt());
-  bool HasStandaloneLexicalDC = DeclBits.getNextBit();
-
   if (D->isTemplateParameter() || D->isTemplateParameterPack() ||
       isa<ParmVarDecl, ObjCTypeParamDecl>(D)) {
     // We don't want to deserialize the DeclContext of a template
@@ -595,8 +592,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     // return type of the function).  Use the translation unit DeclContext as a
     // placeholder.
     GlobalDeclID SemaDCIDForTemplateParmDecl = readDeclID();
-    GlobalDeclID LexicalDCIDForTemplateParmDecl =
-        HasStandaloneLexicalDC ? readDeclID() : 0;
+    GlobalDeclID LexicalDCIDForTemplateParmDecl = readDeclID();
     if (!LexicalDCIDForTemplateParmDecl)
       LexicalDCIDForTemplateParmDecl = SemaDCIDForTemplateParmDecl;
     Reader.addPendingDeclContextInfo(D,
@@ -605,8 +601,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     D->setDeclContext(Reader.getContext().getTranslationUnitDecl());
   } else {
     auto *SemaDC = readDeclAs<DeclContext>();
-    auto *LexicalDC =
-        HasStandaloneLexicalDC ? readDeclAs<DeclContext>() : nullptr;
+    auto *LexicalDC = readDeclAs<DeclContext>();
     if (!LexicalDC)
       LexicalDC = SemaDC;
     // If the context is a class, we might not have actually merged it yet, in
@@ -623,6 +618,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   }
   D->setLocation(ThisDeclLoc);
 
+  BitsUnpacker DeclBits(Record.readInt());
   D->InvalidDecl = DeclBits.getNextBit();
   bool HasAttrs = DeclBits.getNextBit();
   D->setImplicit(DeclBits.getNextBit());
@@ -769,7 +765,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   TD->setCompleteDefinitionRequired(TagDeclBits.getNextBit());
   TD->setBraceRange(readSourceRange());
 
-  switch (TagDeclBits.getNextBits(/*Width=*/2)) {
+  switch (Record.readInt()) {
   case 0:
     break;
   case 1: { // ExtInfo
@@ -1093,8 +1089,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setCachedLinkage((Linkage)FunctionDeclBits.getNextBits(/*Width=*/3));
 
   FD->EndRangeLoc = readSourceLocation();
-  if (FD->isExplicitlyDefaulted())
-    FD->setDefaultLoc(readSourceLocation());
+  FD->setDefaultLoc(readSourceLocation());
 
   FD->ODRHash = Record.readInt();
   FD->setHasODRHash(true);
@@ -1708,7 +1703,7 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   unsigned isObjCMethodParam = ParmVarDeclBits.getNextBit();
   unsigned scopeDepth = ParmVarDeclBits.getNextBits(/*Width=*/7);
   unsigned scopeIndex = ParmVarDeclBits.getNextBits(/*Width=*/8);
-  unsigned declQualifier = ParmVarDeclBits.getNextBits(/*Width=*/7);
+  unsigned declQualifier = Record.readInt();
   if (isObjCMethodParam) {
     assert(scopeDepth == 0);
     PD->setObjCMethodScopeInfo(scopeIndex);
@@ -1721,9 +1716,7 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   PD->ParmVarDeclBits.HasInheritedDefaultArg = ParmVarDeclBits.getNextBit();
   if (ParmVarDeclBits.getNextBit()) // hasUninstantiatedDefaultArg.
     PD->setUninstantiatedDefaultArg(Record.readExpr());
-
-  if (ParmVarDeclBits.getNextBit()) // Valid explicit object parameter
-    PD->ExplicitObjectParameterIntroducerLoc = Record.readSourceLocation();
+  PD->ExplicitObjectParameterIntroducerLoc = Record.readSourceLocation();
 
   // FIXME: If this is a redeclaration of a function from another module, handle
   // inheritance of default arguments.
