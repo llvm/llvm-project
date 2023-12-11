@@ -29,10 +29,9 @@ class SUnit;
 /// Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
-using MacroFusionPredTy = bool (*)(const TargetInstrInfo &TII,
-                                   const TargetSubtargetInfo &STI,
-                                   const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI);
+using MacroFusionPredTy = function_ref<bool(
+    const TargetInstrInfo &TII, const TargetSubtargetInfo &STI,
+    const MachineInstr *FirstMI, const MachineInstr &SecondMI)>;
 
 /// Checks if the number of cluster edges between SU and its predecessors is
 /// less than FuseLimit
