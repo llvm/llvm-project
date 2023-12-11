@@ -118,6 +118,9 @@ public:
   standardRuntimeUtilityAliases();
 
 private:
+  using SymbolTableVector = SmallVector<
+      std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>;
+
   // Data needed for bootstrap only.
   struct BootstrapInfo {
     std::mutex Mutex;
@@ -125,6 +128,7 @@ private:
     size_t ActiveGraphs = 0;
     shared::AllocActions DeferredAAs;
     ExecutorAddr MachOHeaderAddr;
+    SymbolTableVector SymTab;
   };
 
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
@@ -207,12 +211,12 @@ private:
     Error prepareSymbolTableRegistration(jitlink::LinkGraph &G,
                                          JITSymTabVector &JITSymTabInfo);
     Error addSymbolTableRegistration(jitlink::LinkGraph &G,
+                                     MaterializationResponsibility &MR,
                                      JITSymTabVector &JITSymTabInfo,
                                      bool InBootstrapPhase);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
-    ExecutorAddr HeaderAddr;
 
     // FIXME: ObjCImageInfos and HeaderAddrs need to be cleared when
     // JITDylibs are removed.

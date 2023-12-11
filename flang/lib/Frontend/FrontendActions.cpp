@@ -21,6 +21,7 @@
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -53,7 +54,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -65,7 +65,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -137,111 +136,6 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
   // compiler workflows!
   return runPrescan() && runParse() && (runSemanticChecks() || true) &&
          (generateRtTypeTables() || true);
-}
-
-// Get feature string which represents combined explicit target features
-// for AMD GPU and the target features specified by the user
-static std::string
-getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
-                                           const TargetOptions &targetOpts,
-                                           const llvm::Triple triple) {
-  llvm::StringRef cpu = targetOpts.cpu;
-  llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
-  // Get the set of implicit target features
-  llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
-
-  // Add target features specified by the user
-  for (auto &userFeature : targetOpts.featuresAsWritten) {
-    std::string userKeyString = userFeature.substr(1);
-    implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
-  }
-
-  if (!llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap,
-                                           errorMsg)) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Unsupported feature ID: %0");
-    ci.getDiagnostics().Report(diagID) << errorMsg.data();
-    return std::string();
-  }
-
-  llvm::SmallVector<std::string> featuresVec;
-  for (auto &implicitFeatureItem : implicitFeaturesMap) {
-    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
-                           implicitFeatureItem.first().str())
-                              .str());
-  }
-  llvm::sort(featuresVec);
-  return llvm::join(featuresVec, ",");
-}
-
-// Get feature string which represents combined explicit target features
-// for NVPTX and the target features specified by the user/
-// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
-static std::string
-getExplicitAndImplicitNVPTXTargetFeatures(CompilerInstance &ci,
-                                          const TargetOptions &targetOpts,
-                                          const llvm::Triple triple) {
-  llvm::StringRef cpu = targetOpts.cpu;
-  llvm::StringMap<bool> implicitFeaturesMap;
-  std::string errorMsg;
-  bool ptxVer = false;
-
-  // Add target features specified by the user
-  for (auto &userFeature : targetOpts.featuresAsWritten) {
-    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
-    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
-    // Check if the user provided a PTX version
-    if (userKeyString.startswith("ptx"))
-      ptxVer = true;
-  }
-
-  // Set the default PTX version to `ptx61` if none was provided.
-  // TODO: set the default PTX version based on the chip.
-  if (!ptxVer)
-    implicitFeaturesMap["ptx61"] = true;
-
-  // Set the compute capability.
-  implicitFeaturesMap[cpu.str()] = true;
-
-  llvm::SmallVector<std::string> featuresVec;
-  for (auto &implicitFeatureItem : implicitFeaturesMap) {
-    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
-                           implicitFeatureItem.first().str())
-                              .str());
-  }
-  llvm::sort(featuresVec);
-  return llvm::join(featuresVec, ",");
-}
-
-// Produces the string which represents target feature
-static std::string getTargetFeatures(CompilerInstance &ci) {
-  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
-
-  // Clang does not append all target features to the clang -cc1 invocation.
-  // Some target features are parsed implicitly by clang::TargetInfo child
-  // class. Clang::TargetInfo classes are the basic clang classes and
-  // they cannot be reused by Flang.
-  // That's why we need to extract implicit target features and add
-  // them to the target features specified by the user
-  if (triple.isAMDGPU()) {
-    return getExplicitAndImplicitAMDGPUTargetFeatures(ci, targetOpts, triple);
-  } else if (triple.isNVPTX()) {
-    return getExplicitAndImplicitNVPTXTargetFeatures(ci, targetOpts, triple);
-  }
-  return llvm::join(targetOpts.featuresAsWritten.begin(),
-                    targetOpts.featuresAsWritten.end(), ",");
-}
-
-static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
-                              const llvm::DataLayout &dl) {
-  mlir::MLIRContext *context = mlirModule.getContext();
-  mlirModule->setAttr(
-      mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
-      mlir::StringAttr::get(context, dl.getStringRepresentation()));
-  mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
-  mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
 static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
@@ -352,6 +246,8 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::support::loadDialects(*mlirCtx);
   fir::support::registerLLVMTranslation(*mlirCtx);
 
+  const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+
   // If the input is an MLIR file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
     llvm::SourceMgr sourceMgr;
@@ -369,10 +265,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
-    if (!setUpTargetMachine())
-      return false;
-    const llvm::DataLayout &dl = tm->createDataLayout();
-    setMLIRDataLayout(*mlirModule, dl);
+    const llvm::DataLayout &dl = targetMachine.createDataLayout();
+    fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
 
@@ -394,6 +288,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getSemanticsContext().defaultKinds();
   fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
+  const llvm::DataLayout &dl = targetMachine.createDataLayout();
+
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
@@ -401,26 +297,21 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features);
+      ci.getInvocation().getFrontendOpts().features, &dl);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
-
-  if (!setUpTargetMachine())
-    return false;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
     setOffloadModuleInterfaceAttributes(*mlirModule,
                                         ci.getInvocation().getLangOpts());
-    setOffloadModuleInterfaceTargetAttribute(*mlirModule, tm->getTargetCPU(),
-                                             tm->getTargetFeatureString());
+    setOffloadModuleInterfaceTargetAttribute(
+        *mlirModule, targetMachine.getTargetCPU(),
+        targetMachine.getTargetFeatureString());
     setOpenMPVersionAttribute(*mlirModule,
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
-
-  const llvm::DataLayout &dl = tm->createDataLayout();
-  setMLIRDataLayout(*mlirModule, dl);
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
@@ -830,7 +721,7 @@ getVScaleRange(CompilerInstance &ci,
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
 
-  std::string featuresStr = getTargetFeatures(ci);
+  std::string featuresStr = ci.getTargetFeatures();
   if (featuresStr.find("+sve") != std::string::npos)
     return std::pair<unsigned, unsigned>(1, 16);
 
@@ -911,38 +802,6 @@ void CodeGenAction::generateLLVMIR() {
   }
 }
 
-bool CodeGenAction::setUpTargetMachine() {
-  CompilerInstance &ci = this->getInstance();
-
-  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
-  const std::string &theTriple = targetOpts.triple;
-
-  // Create `Target`
-  std::string error;
-  const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(theTriple, error);
-  if (!theTarget) {
-    ci.getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
-        << error;
-    return false;
-  }
-
-  // Create `TargetMachine`
-  const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
-  std::optional<llvm::CodeGenOptLevel> OptLevelOrNone =
-      llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
-  assert(OptLevelOrNone && "Invalid optimization level!");
-  llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
-  std::string featuresStr = getTargetFeatures(ci);
-  tm.reset(theTarget->createTargetMachine(
-      theTriple, /*CPU=*/targetOpts.cpu,
-      /*Features=*/featuresStr, llvm::TargetOptions(),
-      /*Reloc::Model=*/CGOpts.getRelocationModel(),
-      /*CodeModel::Model=*/std::nullopt, OptLevel));
-  assert(tm && "Failed to create TargetMachine");
-  return true;
-}
-
 static std::unique_ptr<llvm::raw_pwrite_stream>
 getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
                 BackendActionTy action) {
@@ -1020,6 +879,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   auto &diags = getInstance().getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
+  llvm::TargetMachine *targetMachine = &getInstance().getTargetMachine();
   // Create the analysis managers.
   llvm::LoopAnalysisManager lam;
   llvm::FunctionAnalysisManager fam;
@@ -1033,7 +893,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
   si.registerCallbacks(pic, &mam);
-  llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
+  llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
   // Attempt to load pass plugins and register their callbacks with PB.
   for (auto &pluginFile : opts.LLVMPassPlugins) {
@@ -1299,9 +1159,8 @@ void CodeGenAction::executeAction() {
   // Set the triple based on the targetmachine (this comes compiler invocation
   // and the command-line target option if specified, or the default if not
   // given on the command-line).
-  if (!setUpTargetMachine())
-    return;
-  const std::string &theTriple = tm->getTargetTriple().str();
+  llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+  const std::string &theTriple = targetMachine.getTargetTriple().str();
 
   if (llvmModule->getTargetTriple() != theTriple) {
     diags.Report(clang::diag::warn_fe_override_module) << theTriple;
@@ -1311,7 +1170,7 @@ void CodeGenAction::executeAction() {
   // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
-  llvmModule->setDataLayout(tm->createDataLayout());
+  llvmModule->setDataLayout(targetMachine.createDataLayout());
 
   // Embed offload objects specified with -fembed-offload-object
   if (!codeGenOpts.OffloadObjects.empty())
@@ -1361,7 +1220,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, *tm, action, *llvmModule, codeGenOpts,
+        diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }
