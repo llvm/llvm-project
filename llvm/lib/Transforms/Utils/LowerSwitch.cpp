@@ -42,7 +42,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <vector>
 
 using namespace llvm;

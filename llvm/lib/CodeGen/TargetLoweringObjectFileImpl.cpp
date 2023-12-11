@@ -1048,7 +1048,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     } else {
       Name += FunctionSectionName;
       if (TM.getUniqueBasicBlockSectionNames()) {
-        if (!Name.endswith("."))
+        if (!Name.ends_with("."))
           Name += ".";
         Name += MBB.getSymbol()->getName();
       } else {
@@ -2310,8 +2310,10 @@ bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
 
 MCSymbol *
 TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(const MachineFunction *MF) {
-  return MF->getMMI().getContext().getOrCreateSymbol(
+  MCSymbol *EHInfoSym = MF->getMMI().getContext().getOrCreateSymbol(
       "__ehinfo." + Twine(MF->getFunctionNumber()));
+  cast<MCSymbolXCOFF>(EHInfoSym)->setEHInfo();
+  return EHInfoSym;
 }
 
 MCSymbol *
@@ -2644,12 +2646,16 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym, const TargetMachine &TM) const {
   // Use TE storage-mapping class when large code model is enabled so that
-  // the chance of needing -bbigtoc is decreased.
+  // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
+  // EH info is never referenced directly using instructions so it can be
+  // allocated with TE storage-mapping class.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties(
-          TM.getCodeModel() == CodeModel::Large ? XCOFF::XMC_TE : XCOFF::XMC_TC,
-          XCOFF::XTY_SD));
+      XCOFF::CsectProperties((TM.getCodeModel() == CodeModel::Large ||
+                              cast<MCSymbolXCOFF>(Sym)->isEHInfo())
+                                 ? XCOFF::XMC_TE
+                                 : XCOFF::XMC_TC,
+                             XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

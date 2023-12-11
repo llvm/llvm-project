@@ -2883,6 +2883,10 @@ private:
       assert(!BundleMember && "Bundle and VL out of sync");
     } else {
       MustGather.insert(VL.begin(), VL.end());
+      // Build a map for gathered scalars to the nodes where they are used.
+      for (Value *V : VL)
+        if (!isConstant(V))
+          ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
     }
 
     if (UserTreeIdx.UserTE)
@@ -3754,7 +3758,40 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
   OrdersType CurrentOrder(NumScalars, NumScalars);
   SmallVector<int> Positions;
   SmallBitVector UsedPositions(NumScalars);
-  const TreeEntry *STE = nullptr;
+  DenseMap<const TreeEntry *, unsigned> UsedEntries;
+  DenseMap<Value *, std::pair<const TreeEntry *, unsigned>> ValueToEntryPos;
+  for (Value *V : TE.Scalars) {
+    if (!isa<LoadInst, ExtractElementInst, ExtractValueInst>(V))
+      continue;
+    const auto *LocalSTE = getTreeEntry(V);
+    if (!LocalSTE)
+      continue;
+    unsigned Lane =
+        std::distance(LocalSTE->Scalars.begin(), find(LocalSTE->Scalars, V));
+    if (Lane >= NumScalars)
+      continue;
+    ++UsedEntries.try_emplace(LocalSTE, 0).first->getSecond();
+    ValueToEntryPos.try_emplace(V, LocalSTE, Lane);
+  }
+  if (UsedEntries.empty())
+    return std::nullopt;
+  const TreeEntry &BestSTE =
+      *std::max_element(UsedEntries.begin(), UsedEntries.end(),
+                        [](const std::pair<const TreeEntry *, unsigned> &P1,
+                           const std::pair<const TreeEntry *, unsigned> &P2) {
+                          return P1.second < P2.second;
+                        })
+           ->first;
+  UsedEntries.erase(&BestSTE);
+  const TreeEntry *SecondBestSTE = nullptr;
+  if (!UsedEntries.empty())
+    SecondBestSTE =
+        std::max_element(UsedEntries.begin(), UsedEntries.end(),
+                         [](const std::pair<const TreeEntry *, unsigned> &P1,
+                            const std::pair<const TreeEntry *, unsigned> &P2) {
+                           return P1.second < P2.second;
+                         })
+            ->first;
   // Try to find all gathered scalars that are gets vectorized in other
   // vectorize node. Here we can have only one single tree vector node to
   // correctly identify order of the gathered scalars.
@@ -3762,53 +3799,46 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
     Value *V = TE.Scalars[I];
     if (!isa<LoadInst, ExtractElementInst, ExtractValueInst>(V))
       continue;
-    if (const auto *LocalSTE = getTreeEntry(V)) {
-      if (!STE)
-        STE = LocalSTE;
-      else if (STE != LocalSTE)
-        // Take the order only from the single vector node.
-        return std::nullopt;
-      unsigned Lane =
-          std::distance(STE->Scalars.begin(), find(STE->Scalars, V));
-      if (Lane >= NumScalars)
-        return std::nullopt;
-      if (CurrentOrder[Lane] != NumScalars) {
-        if (Lane != I)
-          continue;
-        UsedPositions.reset(CurrentOrder[Lane]);
-      }
-      // The partial identity (where only some elements of the gather node are
-      // in the identity order) is good.
-      CurrentOrder[Lane] = I;
-      UsedPositions.set(I);
+    const auto [LocalSTE, Lane] = ValueToEntryPos.lookup(V);
+    if (!LocalSTE || (LocalSTE != &BestSTE && LocalSTE != SecondBestSTE))
+      continue;
+    if (CurrentOrder[Lane] != NumScalars) {
+      if ((CurrentOrder[Lane] >= BestSTE.Scalars.size() ||
+           BestSTE.Scalars[CurrentOrder[Lane]] == V) &&
+          (Lane != I || LocalSTE == SecondBestSTE))
+        continue;
+      UsedPositions.reset(CurrentOrder[Lane]);
     }
+    // The partial identity (where only some elements of the gather node are
+    // in the identity order) is good.
+    CurrentOrder[Lane] = I;
+    UsedPositions.set(I);
   }
   // Need to keep the order if we have a vector entry and at least 2 scalars or
   // the vectorized entry has just 2 scalars.
-  if (STE && (UsedPositions.count() > 1 || STE->Scalars.size() == 2)) {
-    auto &&IsIdentityOrder = [NumScalars](ArrayRef<unsigned> CurrentOrder) {
-      for (unsigned I = 0; I < NumScalars; ++I)
-        if (CurrentOrder[I] != I && CurrentOrder[I] != NumScalars)
-          return false;
-      return true;
-    };
-    if (IsIdentityOrder(CurrentOrder))
-      return OrdersType();
-    auto *It = CurrentOrder.begin();
-    for (unsigned I = 0; I < NumScalars;) {
-      if (UsedPositions.test(I)) {
-        ++I;
-        continue;
-      }
-      if (*It == NumScalars) {
-        *It = I;
-        ++I;
-      }
-      ++It;
+  if (BestSTE.Scalars.size() != 2 && UsedPositions.count() <= 1)
+    return std::nullopt;
+  auto IsIdentityOrder = [&](ArrayRef<unsigned> CurrentOrder) {
+    for (unsigned I = 0; I < NumScalars; ++I)
+      if (CurrentOrder[I] != I && CurrentOrder[I] != NumScalars)
+        return false;
+    return true;
+  };
+  if (IsIdentityOrder(CurrentOrder))
+    return OrdersType();
+  auto *It = CurrentOrder.begin();
+  for (unsigned I = 0; I < NumScalars;) {
+    if (UsedPositions.test(I)) {
+      ++I;
+      continue;
     }
-    return std::move(CurrentOrder);
+    if (*It == NumScalars) {
+      *It = I;
+      ++I;
+    }
+    ++It;
   }
-  return std::nullopt;
+  return std::move(CurrentOrder);
 }
 
 namespace {
@@ -5597,6 +5627,18 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   InstructionsState S = getSameOpcode(VL, *TLI);
 
+  // Don't vectorize ephemeral values.
+  if (!EphValues.empty()) {
+    for (Value *V : VL) {
+      if (EphValues.count(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
+                          << ") is ephemeral.\n");
+        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+        return;
+      }
+    }
+  }
+
   // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
   // a load), in which case peek through to include it in the tree, without
   // ballooning over-budget.
@@ -5734,18 +5776,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // We now know that this is a vector of instructions of the same type from
   // the same block.
-
-  // Don't vectorize ephemeral values.
-  if (!EphValues.empty()) {
-    for (Value *V : VL) {
-      if (EphValues.count(V)) {
-        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
-                          << ") is ephemeral.\n");
-        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
-        return;
-      }
-    }
-  }
 
   // Check if this is a duplicate of another entry.
   if (TreeEntry *E = getTreeEntry(S.OpValue)) {
@@ -8865,16 +8895,6 @@ static T *performExtractsShuffleAction(
 }
 
 InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
-  // Build a map for gathered scalars to the nodes where they are used.
-  ValueToGatherNodes.clear();
-  for (const std::unique_ptr<TreeEntry> &EntryPtr : VectorizableTree) {
-    if (EntryPtr->State != TreeEntry::NeedToGather)
-      continue;
-    for (Value *V : EntryPtr->Scalars)
-      if (!isConstant(V))
-        ValueToGatherNodes.try_emplace(V).first->getSecond().insert(
-            EntryPtr.get());
-  }
   InstructionCost Cost = 0;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
@@ -9384,7 +9404,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           continue;
         // If the user instruction is used for some reason in different
         // vectorized nodes - make it depend on index.
-        if (TEUseEI.UserTE != UseEI.UserTE && TE->Idx < TEPtr->Idx)
+        if (TEUseEI.UserTE != UseEI.UserTE &&
+            TEUseEI.UserTE->Idx < UseEI.UserTE->Idx)
           continue;
       }
 

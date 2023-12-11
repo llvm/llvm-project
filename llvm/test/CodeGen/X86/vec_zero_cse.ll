@@ -16,7 +16,7 @@ define void @test1() {
 ; X86-NEXT:    movl $0, M1+4
 ; X86-NEXT:    movl $0, M1
 ; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movlps %xmm0, M2
+; X86-NEXT:    movsd %xmm0, M2
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:

@@ -389,7 +389,7 @@ public:
     static const mask punct  = _ISpunct;
     static const mask xdigit = _ISxdigit;
     static const mask blank  = _ISblank;
-#if defined(__mips__)
+#if defined(__mips__) || (BYTE_ORDER == BIG_ENDIAN)
     static const mask __regex_word = static_cast<mask>(_ISbit(15));
 #else
     static const mask __regex_word = 0x80;

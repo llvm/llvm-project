@@ -300,8 +300,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     // Canonicalize (X|C1)*MulC -> X*MulC+C1*MulC.
     Value *X;
     Constant *C1;
-    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1)))) ||
-        match(Op0, m_OneUse(m_DisjointOr(m_Value(X), m_ImmConstant(C1))))) {
+    if (match(Op0, m_OneUse(m_AddLike(m_Value(X), m_ImmConstant(C1))))) {
       // C1*MulC simplifies to a tidier constant.
       Value *NewC = Builder.CreateMul(C1, MulC);
       auto *BOp0 = cast<BinaryOperator>(Op0);

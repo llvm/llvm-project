@@ -3437,6 +3437,23 @@ def crnot : OutPatFrag<(ops node:$in),
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
 
+// Pseudo-instructions for alternate assembly syntax (never used by codegen).
+// These are aliases that require C++ handling to convert to the target
+// instruction, while InstAliases can be handled directly by tblgen.
+class PPCAsmPseudo<string asm, dag iops>
+  : Instruction {
+  let Namespace = "PPC";
+  bit PPC64 = 0;  // Default value, override with isPPC64
+
+  let OutOperandList = (outs);
+  let InOperandList = iops;
+  let Pattern = [];
+  let AsmString = asm;
+  let isAsmParserOnly = 1;
+  let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
 include "PPCInstrP10.td"
@@ -4457,23 +4474,6 @@ def ICBIEP  : XForm_1a<31, 991, (outs), (ins (memrr $RA, $RB):$addr), "icbiep $a
 //===----------------------------------------------------------------------===//
 // PowerPC Assembler Instruction Aliases
 //
-
-// Pseudo-instructions for alternate assembly syntax (never used by codegen).
-// These are aliases that require C++ handling to convert to the target
-// instruction, while InstAliases can be handled directly by tblgen.
-class PPCAsmPseudo<string asm, dag iops>
-  : Instruction {
-  let Namespace = "PPC";
-  bit PPC64 = 0;  // Default value, override with isPPC64
-
-  let OutOperandList = (outs);
-  let InOperandList = iops;
-  let Pattern = [];
-  let AsmString = asm;
-  let isAsmParserOnly = 1;
-  let isPseudo = 1;
-  let hasNoSchedulingInfo = 1;
-}
 
 def : InstAlias<"sc", (SC 0)>;
 
