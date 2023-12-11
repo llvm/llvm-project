@@ -123,7 +123,7 @@ public:
   void removeUser(VPUser &User) {
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    auto *I = llvm::find(Users, &User);
+    auto *I = find(Users, &User);
     if (I != Users.end())
       Users.erase(I);
   }
