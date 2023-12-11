@@ -116,7 +116,7 @@ inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
                               uptr *Fractional) {
   constexpr uptr Digits = 100;
   if (Denominator == 0) {
-    *Integral = 0;
+    *Integral = 100;
     *Fractional = 0;
     return;
   }

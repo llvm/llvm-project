@@ -1135,7 +1135,7 @@ private:
     computePercentage(BlockSize * InUseBlocks, InUsePages * PageSize, &Integral,
                       &Fractional);
     Str->append("  %02zu (%6zu): inuse/total blocks: %6zu/%6zu inuse/total "
-                "pages: %6zu/%6zu inuse bytes: %6zuK util: %2zu.%02zu%%\n",
+                "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",
                 ClassId, BlockSize, InUseBlocks, TotalBlocks, InUsePages,
                 AllocatedPagesCount, InUseBytes >> 10, Integral, Fractional);
   }
