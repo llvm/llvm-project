@@ -19,6 +19,7 @@ _isAnyGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg)
 _isClang = lambda cfg: _isAnyClang(cfg) and not _isAppleClang(cfg)
 _isGCC = lambda cfg: _isAnyGCC(cfg) and not _isAnyClang(cfg)
 _isAnyClangOrGCC = lambda cfg: _isAnyClang(cfg) or _isAnyGCC(cfg)
+_isClExe = lambda cfg: not _isAnyClangOrGCC(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
@@ -66,6 +67,7 @@ def _getAndroidDeviceApi(cfg):
 DEFAULT_FEATURES = [
     # gcc-style-warnings detects compilers that understand -Wno-meow flags, unlike MSVC's compiler driver cl.exe.
     Feature(name="gcc-style-warnings", when=_isAnyClangOrGCC),
+    Feature(name="cl-style-warnings", when=_isClExe),
     Feature(name="apple-clang", when=_isAppleClang),
     Feature(
         name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
