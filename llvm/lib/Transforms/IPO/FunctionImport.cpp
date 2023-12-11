@@ -464,11 +464,12 @@ class WorkloadImportsManager : public ModuleImportsManager {
         /// workload-awareness is to enable optimizations specializing the call
         /// graph of that workload. Suppose a function is already defined in the
         /// module, but it's not the prevailing variant. Suppose also we do not
-        /// inline it, but we could specialize it to the workload in other ways.
-        /// However, the linker would drop it in the favor of the prevailing
-        /// copy. Instead, by importing the prevailing variant (assuming also
-        /// the use of `-avail-extern-to-local`), we keep the specialization. We
-        /// could alteranatively make the non-prevailing variant local, but the
+        /// inline it (in fact, if it were interposable, we can't inline it),
+        /// but we could specialize it to the workload in other ways. However,
+        /// the linker would drop it in the favor of the prevailing copy.
+        /// Instead, by importing the prevailing variant (assuming also the use
+        /// of `-avail-extern-to-local`), we keep the specialization. We could
+        /// alteranatively make the non-prevailing variant local, but the
         /// prevailing one is also the one for which we would have previously
         /// collected profiles, making it preferrable.
         LastReason = Candidate.first;
@@ -504,17 +505,17 @@ class WorkloadImportsManager : public ModuleImportsManager {
                           << Function::getGUID(VI.name())
                           << ". The reason was: " << getFailureName(LastReason)
                           << "\n");
+        (void)LastReason; // Only used in LLVM_DEBUG above.
         continue;
       }
-      const auto *CFS = cast<FunctionSummary>(GVS->getBaseObject());
-      auto ExportingModule = CFS->modulePath();
+      auto ExportingModule = GVS->modulePath();
       if (ExportingModule == ModName) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because its defining module is the same as the "
                              "current module\n");
         continue;
       }
-      if (moduleAlreadyHasPreferredDef(DefinedGVSummaries, VI.getGUID(), CFS)) {
+      if (moduleAlreadyHasPreferredDef(DefinedGVSummaries, VI.getGUID(), GVS)) {
         LLVM_DEBUG(
             dbgs() << "[Workload] Not importing " << VI.name()
                    << " because we have a copy already in this module.\n");
@@ -534,7 +535,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
 
   bool moduleAlreadyHasPreferredDef(const GVSummaryMapTy &DefinedGVSummaries,
                                     Function::GUID Guid,
-                                    const FunctionSummary *Candidate) {
+                                    const GlobalValueSummary *Candidate) {
     auto DefinedSummary = DefinedGVSummaries.find(Guid);
     if (DefinedSummary == DefinedGVSummaries.end())
       return false;
@@ -568,15 +569,14 @@ public:
     for (auto &I : Index) {
       ValueInfo VI = Index.getValueInfo(I);
       if (!NameToValueInfo.insert(std::make_pair(VI.name(), VI)).second)
-        AmbiguousNames.insert(VI.name());
+        LLVM_DEBUG(AmbiguousNames.insert(VI.name()));
     }
     auto DbgReportIfAmbiguous = [&](StringRef Name) {
-      if (AmbiguousNames.count(Name) > 0)
-        LLVM_DEBUG(
-            dbgs()
-            << "[Workload] Function name " << Name
-            << " present in the workload definition is ambiguous. Consider "
-               "compiling with -funique-internal-linkage-names.");
+      LLVM_DEBUG(if (AmbiguousNames.count(Name) > 0) {
+        dbgs() << "[Workload] Function name " << Name
+               << " present in the workload definition is ambiguous. Consider "
+                  "compiling with -funique-internal-linkage-names.";
+      });
     };
     std::error_code EC;
     auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(WorkloadDefinitions);
