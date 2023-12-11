@@ -749,9 +749,9 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                A->getValue());
     uint8_t ByteVal = Val.get();
     if (ByteVal != Val.get())
-      return createStringError(
-          std::errc::value_too_large,
-          "gap-fill value %s is out of range (0 to 0xff)", A->getValue());
+      return createStringError(std::errc::value_too_large,
+                               "gap-fill value %s is out of range (0 to 0xff)",
+                               A->getValue());
     Config.GapFill = ByteVal;
   }
 
