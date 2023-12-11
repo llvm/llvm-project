@@ -2565,21 +2565,17 @@ public:
   using ExpressionHandler::ExpressionHandler;
 
   Tracker::Result handle(const Expr *E, const ExplodedNode *InputNode,
-                         const ExplodedNode *ExprNode,
+                         const ExplodedNode *RVNode,
                          TrackingOptions Opts) override {
-    if (!E->isPRValue())
-      return {};
-
-    const ExplodedNode *RVNode = findNodeForExpression(ExprNode, E);
-    if (!RVNode)
+    if (!E->isPRValue() || !RVNode)
       return {};
 
     Tracker::Result CombinedResult;
     Tracker &Parent = getParentTracker();
 
-    const auto track = [&CombinedResult, &Parent, ExprNode,
+    const auto track = [&CombinedResult, &Parent, RVNode,
                         Opts](const Expr *Inner) {
-      CombinedResult.combineWith(Parent.track(Inner, ExprNode, Opts));
+      CombinedResult.combineWith(Parent.track(Inner, RVNode, Opts));
     };
 
     // FIXME: Initializer lists can appear in many different contexts
