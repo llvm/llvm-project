@@ -190,12 +190,13 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   Type *SclTy = OriginalType->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   NumSclBits = std::min<unsigned>(NumSclBits, SplatBitWidth);
+  LLVMContext &Ctx = OriginalType->getContext();
 
   if (NumSclBits == 8) {
     SmallVector<uint8_t> RawBits;
     for (unsigned I = 0; I != SplatBitWidth; I += 8)
       RawBits.push_back(Splat->extractBits(8, I).getZExtValue());
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   if (NumSclBits == 16) {
@@ -204,25 +205,25 @@ static Constant *rebuildSplatableConstant(const Constant *C,
       RawBits.push_back(Splat->extractBits(16, I).getZExtValue());
     if (SclTy->is16bitFPTy())
       return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   if (NumSclBits == 32) {
     SmallVector<uint32_t> RawBits;
     for (unsigned I = 0; I != SplatBitWidth; I += 32)
       RawBits.push_back(Splat->extractBits(32, I).getZExtValue());
-    if (SclTy->isFloatTy())
-      return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    if (SclTy->isFloatingPointTy())
+      return ConstantDataVector::getFP(Type::getFloatTy(Ctx), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   // Fallback to i64 / double.
   SmallVector<uint64_t> RawBits;
   for (unsigned I = 0; I != SplatBitWidth; I += 64)
     RawBits.push_back(Splat->extractBits(64, I).getZExtValue());
-  if (SclTy->isDoubleTy())
-    return ConstantDataVector::getFP(SclTy, RawBits);
-  return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+  if (SclTy->isFloatingPointTy())
+    return ConstantDataVector::getFP(Type::getDoubleTy(Ctx), RawBits);
+  return ConstantDataVector::get(Ctx, RawBits);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
