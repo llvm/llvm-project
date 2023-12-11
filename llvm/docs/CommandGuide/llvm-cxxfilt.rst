@@ -48,6 +48,10 @@ OPTIONS
 
   Print a summary of command line options.
 
+.. option:: --no-params, -p
+
+  Do not demangle function parameters or return types.
+
 .. option:: --no-strip-underscore, -n
 
   Do not strip a leading underscore. This is the default for all platforms

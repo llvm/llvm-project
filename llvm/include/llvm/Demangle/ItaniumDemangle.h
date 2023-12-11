@@ -2793,7 +2793,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseClassEnumType();
   Node *parseQualifiedType();
 
-  Node *parseEncoding();
+  Node *parseEncoding(bool ParseParams = true);
   bool parseCallOffset();
   Node *parseSpecialName();
 
@@ -2910,7 +2910,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseDestructorName();
 
   /// Top-level entry point into the parser.
-  Node *parse();
+  Node *parse(bool ParseParams = true);
 };
 
 const char* parse_discriminator(const char* first, const char* last);
@@ -5404,7 +5404,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
 //            ::= <data name>
 //            ::= <special-name>
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
+Node *AbstractManglingParser<Derived, Alloc>::parseEncoding(bool ParseParams) {
   // The template parameters of an encoding are unrelated to those of the
   // enclosing context.
   SaveTemplateParams SaveTemplateParamsScope(this);
@@ -5429,6 +5429,13 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
 
   if (IsEndOfEncoding())
     return Name;
+
+  // ParseParams may be false in top-level only, when called from parse().
+  if (!ParseParams) {
+    while (consume())
+      ;
+    return Name;
+  }
 
   Node *Attrs = nullptr;
   if (consumeIf("Ua9enable_ifI")) {
@@ -5894,9 +5901,9 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parse() {
+Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
   if (consumeIf("_Z") || consumeIf("__Z")) {
-    Node *Encoding = getDerived().parseEncoding();
+    Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr)
       return nullptr;
     if (look() == '.') {
@@ -5910,7 +5917,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parse() {
   }
 
   if (consumeIf("___Z") || consumeIf("____Z")) {
-    Node *Encoding = getDerived().parseEncoding();
+    Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr || !consumeIf("_block_invoke"))
       return nullptr;
     bool RequireNumber = consumeIf('_');
