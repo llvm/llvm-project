@@ -392,6 +392,8 @@ public:
     IncompleteOnly = 3,
   };
 
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -741,6 +743,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {

@@ -5248,7 +5248,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error(
             "Invalid record: operand number exceeded available operands");
 
-      unsigned PredVal = Record[OpNum];
+      CmpInst::Predicate PredVal = CmpInst::Predicate(Record[OpNum]);
       bool IsFP = LHS->getType()->isFPOrFPVectorTy();
       FastMathFlags FMF;
       if (IsFP && Record.size() > OpNum+1)
@@ -5257,10 +5257,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (OpNum+1 != Record.size())
         return error("Invalid record");
 
-      if (LHS->getType()->isFPOrFPVectorTy())
-        I = new FCmpInst((FCmpInst::Predicate)PredVal, LHS, RHS);
-      else
-        I = new ICmpInst((ICmpInst::Predicate)PredVal, LHS, RHS);
+      if (IsFP) {
+        if (!CmpInst::isFPPredicate(PredVal))
+          return error("Invalid fcmp predicate");
+        I = new FCmpInst(PredVal, LHS, RHS);
+      } else {
+        if (!CmpInst::isIntPredicate(PredVal))
+          return error("Invalid icmp predicate");
+        I = new ICmpInst(PredVal, LHS, RHS);
+      }
 
       ResTypeID = getVirtualTypeID(I->getType()->getScalarType());
       if (LHS->getType()->isVectorTy())
@@ -5363,6 +5368,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       Type *TokenTy = Type::getTokenTy(Context);
       Value *ParentPad = getValue(Record, Idx++, NextValueNo, TokenTy,
                                   getVirtualTypeID(TokenTy), CurBB);
+      if (!ParentPad)
+        return error("Invalid record");
 
       unsigned NumHandlers = Record[Idx++];
 
@@ -5404,6 +5411,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       Type *TokenTy = Type::getTokenTy(Context);
       Value *ParentPad = getValue(Record, Idx++, NextValueNo, TokenTy,
                                   getVirtualTypeID(TokenTy), CurBB);
+      if (!ParentPad)
+        return error("Invald record");
 
       unsigned NumArgOperands = Record[Idx++];
 
@@ -5957,6 +5966,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("alloca of unsized type");
       if (!Align)
         Align = DL.getPrefTypeAlign(Ty);
+
+      if (!Size->getType()->isIntegerTy())
+        return error("alloca element count must have integer type");
 
       AllocaInst *AI = new AllocaInst(Ty, AS, Size, *Align);
       AI->setUsedWithInAlloca(InAlloca);
