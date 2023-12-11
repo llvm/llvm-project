@@ -952,6 +952,35 @@ struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
                 "Number of bits in Int should be a multiple of 64.");
 };
 
+namespace internal {
+template <typename T> struct is_custom_uint : cpp::false_type {};
+template <size_t Bits> struct is_custom_uint<UInt<Bits>> : cpp::true_type {};
+} // namespace internal
+
+// bit_cast to UInt
+template <typename To, typename From,
+          typename = cpp::enable_if_t<internal::is_custom_uint<To>::value>,
+          typename = cpp::enable_if_t<sizeof(To) == sizeof(From)>,
+          typename = cpp::enable_if_t<cpp::is_trivially_copyable<From>::value>>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
+  To out;
+  cpp::memcpy_inline<sizeof(out)>(out.val, &from);
+  return out;
+}
+
+// bit_cast from UInt
+template <
+    typename To, size_t Bits,
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(UInt<Bits>)>,
+    typename = cpp::enable_if_t<cpp::is_trivially_constructible<To>::value>,
+    typename = cpp::enable_if_t<cpp::is_trivially_copyable<To>::value>,
+    typename = cpp::enable_if_t<cpp::is_trivially_copyable<UInt<Bits>>::value>>
+LIBC_INLINE constexpr To bit_cast(const UInt<Bits> &from) {
+  To out;
+  cpp::memcpy_inline<sizeof(out)>(&out, from.val);
+  return out;
+}
+
 } // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT_H
