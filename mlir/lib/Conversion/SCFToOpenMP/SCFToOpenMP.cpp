@@ -342,7 +342,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
   unsigned numThreads;
 
-  ParallelOpLowering(MLIRContext *context, unsigned numThreads)
+  ParallelOpLowering(MLIRContext *context, unsigned numThreads = 0)
       : OpRewritePattern<scf::ParallelOp>(context), numThreads(numThreads) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
@@ -390,14 +390,21 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
           reduceOp, reduceOp.getOperand(), std::get<1>(pair));
     }
 
-    // Create the parallel wrapper.
-    auto ompParallel = rewriter.create<omp::ParallelOp>(loc);
-    if (numThreads > 1) {
-      rewriter.setInsertionPoint(ompParallel);
-      mlir::Value numThreadsVar = rewriter.create<LLVM::ConstantOp>(
+    Value numThreadsVar;
+    if (numThreads > 0) {
+      numThreadsVar = rewriter.create<LLVM::ConstantOp>(
           loc, rewriter.getI32IntegerAttr(numThreads));
-      ompParallel.getNumThreadsVarMutable().assign(numThreadsVar);
     }
+    // Create the parallel wrapper.
+    auto ompParallel = rewriter.create<omp::ParallelOp>(
+        loc,
+        /* if_expr_var = */ Value{},
+        /* num_threads_var = */ numThreadsVar,
+        /* allocate_vars = */ llvm::SmallVector<Value>{},
+        /* allocators_vars = */ llvm::SmallVector<Value>{},
+        /* reduction_vars = */ llvm::SmallVector<Value>{},
+        /* reductions = */ ArrayAttr{},
+        /* proc_bind_val = */ omp::ClauseProcBindKindAttr{});
     {
 
       OpBuilder::InsertionGuard guard(rewriter);
