@@ -9,7 +9,7 @@ try:
     from ....dialects import transform
     from ....dialects.transform import structured
 except ImportError as e:
-    raise RuntimeError("Error loading imports from extension module") from e
+    raise RuntimeError("Error loading imports") from e
 
 
 @dataclass
@@ -41,8 +41,8 @@ class OpHandle(Value):
         | structured.MatchInterfaceEnum
         | Sequence[str | ir.OpView],
     ) -> OpHandle:
-        """Returns a handle to ops that match the given names, types, or interface.
-
+        """
+        Returns a handle to ops that match the given names, types, or interface.
         If only a single type is given, the value wrapped by the resulting
         handle is populated with the respective type.
         """
@@ -90,13 +90,8 @@ def insert_transform_script(
     script: Callable[[ValueT], None],
     dump_script: bool = False,
 ) -> None:
-    """Inserts the transform script of the schedule into the module.
+    """Inserts the transform script of the schedule into the module."""
 
-    Args:
-        module: Existing module into which the script should be inserted.
-        script: The transform script to apply at.
-        dump_script: Whether to dump the script after creation.
-    """
     # Insert the script into the IR
     with module.context, ir.Location.unknown(module.context):
         with ir.InsertionPoint.at_block_begin(module.body):
