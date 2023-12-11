@@ -25,6 +25,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -466,7 +467,7 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
     std::chrono::microseconds UserT = toDuration(Info.ru_utime);
     std::chrono::microseconds KernelT = toDuration(Info.ru_stime);
     uint64_t PeakMemory = 0;
-#ifndef __HAIKU__
+#if !defined(__HAIKU__) && !defined(__MVS__)
     PeakMemory = static_cast<uint64_t>(Info.ru_maxrss);
 #endif
     *ProcStat = ProcessStatistics{UserT + KernelT, UserT, PeakMemory};
