@@ -309,6 +309,7 @@ struct VOPDInfo {
   uint16_t Opcode;
   uint16_t OpX;
   uint16_t OpY;
+  uint16_t Subtarget;
 };
 
 struct VOPTrue16Info {
@@ -443,6 +444,14 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+  if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
+    return SIEncodingFamily::GFX12;
+  if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
+    return SIEncodingFamily::GFX11;
+  llvm_unreachable("Subtarget generation does not support VOPD!");
+}
+
 CanBeVOPD getCanBeVOPD(unsigned Opc) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info)
@@ -536,8 +545,9 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
-int getVOPDFull(unsigned OpX, unsigned OpY) {
-  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(OpX, OpY);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
+  const VOPDInfo *Info =
+      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily);
   return Info ? Info->Opcode : -1;
 }
 
@@ -589,13 +599,15 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
+  const unsigned CompOprNum =
+      SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
   unsigned CompOprIdx;
-  for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
+  for (CompOprIdx = 0; CompOprIdx < CompOprNum; ++CompOprIdx) {
     unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
         ((OpXRegs[CompOprIdx] & BanksMasks) ==
