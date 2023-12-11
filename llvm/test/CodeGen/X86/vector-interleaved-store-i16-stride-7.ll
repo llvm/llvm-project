@@ -2341,8 +2341,7 @@ define void @store_i16_stride7_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm10 = ymm2[u,u,u,u,u,u,u,u,u,u,14,15],zero,zero,ymm2[u,u,u,u,u,u,u,u,u,u,16,17],zero,zero,ymm2[u,u,u,u]
 ; AVX512F-SLOW-NEXT:    vporq %ymm5, %ymm10, %ymm19
 ; AVX512F-SLOW-NEXT:    vpbroadcastd 8(%rax), %ymm5
-; AVX512F-SLOW-NEXT:    vmovdqa {{.*#+}} ymm10 = [65535,65535,0,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535]
-; AVX512F-SLOW-NEXT:    vpandn %ymm5, %ymm10, %ymm5
+; AVX512F-SLOW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm5
 ; AVX512F-SLOW-NEXT:    vpshufb {{.*#+}} ymm10 = ymm13[12,13,u,u,u,u,u,u,u,u],zero,zero,zero,zero,ymm13[14,15,u,u,u,u,u,u,u,u],zero,zero,zero,zero,ymm13[16,17,u,u]
 ; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm10, %zmm5, %zmm5
 ; AVX512F-SLOW-NEXT:    vpshufd {{.*#+}} ymm10 = ymm6[0,1,1,3,4,5,5,7]
