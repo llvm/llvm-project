@@ -12,6 +12,8 @@
 
 #include <ranges>
 
+#include "__iterator/concepts.h"
+#include "__ranges/concepts.h"
 #include "test.h"
 #include "test_iterators.h"
 
@@ -27,11 +29,14 @@ constexpr InputView<cpp17_input_iterator<int*>> make_input_view(int* begin, int*
 using ForwardStrideView      = std::ranges::stride_view<InputView<forward_iterator<int*>>>;
 using BidirStrideView        = std::ranges::stride_view<InputView<bidirectional_iterator<int*>>>;
 using RandomAccessStrideView = std::ranges::stride_view<InputView<random_access_iterator<int*>>>;
+using SizedForwardStrideView = std::ranges::stride_view<InputView<SizedForwardIterator>>;
 
 static_assert(std::ranges::forward_range<ForwardStrideView>);
 static_assert(std::ranges::bidirectional_range<BidirStrideView>);
 static_assert(std::ranges::random_access_range<RandomAccessStrideView>);
-// TODO: check sized_range
+static_assert(std::ranges::forward_range<SizedForwardStrideView>);
+static_assert(std::sized_sentinel_for<std::ranges::iterator_t<SizedForwardStrideView>,
+                                      std::ranges::iterator_t<SizedForwardStrideView>>);
 
 constexpr bool test() {
   constexpr int N = 3;
@@ -85,6 +90,21 @@ constexpr bool test() {
     auto transform_stride_applied_iter  = transform_stride_applied.begin();
     assert(*transform_stride_applied_iter == i2(arr[0]));
   }
+
+  {
+    using View = InputView<SizedForwardIterator>;
+    auto view  = View(SizedForwardIterator(arr), SizedForwardIterator(arr + N));
+    std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
+    auto strided_iter                                                   = strided.begin();
+    auto strided_iter_next                                              = strided_iter;
+
+    strided_iter_next++;
+
+    assert(*strided_iter == arr[0]);
+    assert(*strided_iter_next == arr[1]);
+    assert(strided_iter_next - strided_iter == 1);
+  }
+
   // Check SFINAE friendliness
   {
     struct NotAViewableRange {};
@@ -106,7 +126,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  //static_assert(test());
+  static_assert(test());
 
   return 0;
 }
