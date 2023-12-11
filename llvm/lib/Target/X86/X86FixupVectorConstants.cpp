@@ -285,7 +285,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
   case X86::VMOVUPSYrm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF128, X86::VBROADCASTSDYrm,
+    return ConvertToBroadcast(0, X86::VBROADCASTF128rm, X86::VBROADCASTSDYrm,
                               X86::VBROADCASTSSYrm, 0, 0, 1);
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
@@ -318,7 +318,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
     return ConvertToBroadcast(
-        0, HasAVX2 ? X86::VBROADCASTI128 : X86::VBROADCASTF128,
+        0, HasAVX2 ? X86::VBROADCASTI128rm : X86::VBROADCASTF128rm,
         HasAVX2 ? X86::VPBROADCASTQYrm : X86::VBROADCASTSDYrm,
         HasAVX2 ? X86::VPBROADCASTDYrm : X86::VBROADCASTSSYrm,
         HasAVX2 ? X86::VPBROADCASTWYrm : 0, HasAVX2 ? X86::VPBROADCASTBYrm : 0,
