@@ -43,6 +43,7 @@ class FormatArgs:
     changed_files: List[str] = []
     token: str = None
     verbose: bool = True
+    issue_number: int = 0
 
     def __init__(self, args: argparse.Namespace = None) -> None:
         if not args is None:
@@ -51,6 +52,7 @@ class FormatArgs:
             self.repo = args.repo
             self.token = args.token
             self.changed_files = args.changed_files
+            self.issue_number = args.issue_number
 
 
 class FormatHelper:
