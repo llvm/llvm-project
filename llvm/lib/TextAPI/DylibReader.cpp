@@ -28,13 +28,13 @@ using namespace llvm::object;
 using namespace llvm::MachO;
 using namespace llvm::MachO::DylibReader;
 
-namespace {
 auto TripleCmp = [](const Triple &LHS, const Triple &RHS) {
   return LHS.getTriple() < RHS.getTriple();
 };
 using TripleSet = std::set<Triple, decltype(TripleCmp)>;
 
-TripleSet constructTriples(MachOObjectFile *Obj, const Architecture ArchT) {
+static TripleSet constructTriples(MachOObjectFile *Obj,
+                                  const Architecture ArchT) {
   auto getOSVersionStr = [](uint32_t V) {
     PackedVersion OSVersion(V);
     std::string Vers;
@@ -131,7 +131,7 @@ TripleSet constructTriples(MachOObjectFile *Obj, const Architecture ArchT) {
   return Triples;
 }
 
-Error readMachOHeader(MachOObjectFile *Obj, RecordsSlice &Slice) {
+static Error readMachOHeader(MachOObjectFile *Obj, RecordsSlice &Slice) {
   auto H = Obj->getHeader();
   auto &BA = Slice.getBinaryAttrs();
 
@@ -235,8 +235,8 @@ Error readMachOHeader(MachOObjectFile *Obj, RecordsSlice &Slice) {
   return Error::success();
 }
 
-Error readSymbols(MachOObjectFile *Obj, RecordsSlice &Slice,
-                  const ParseOption &Opt) {
+static Error readSymbols(MachOObjectFile *Obj, RecordsSlice &Slice,
+                         const ParseOption &Opt) {
 
   auto parseExport = [](const auto ExportFlags,
                         auto Addr) -> std::tuple<SymbolFlags, RecordLinkage> {
@@ -320,8 +320,8 @@ Error readSymbols(MachOObjectFile *Obj, RecordsSlice &Slice,
   return Err;
 }
 
-Error load(MachOObjectFile *Obj, RecordsSlice &Slice, const ParseOption &Opt,
-           const Architecture Arch) {
+static Error load(MachOObjectFile *Obj, RecordsSlice &Slice,
+                  const ParseOption &Opt, const Architecture Arch) {
   if (Arch == AK_unknown)
     return make_error<TextAPIError>(TextAPIErrorCode::UnsupportedTarget);
 
@@ -335,7 +335,6 @@ Error load(MachOObjectFile *Obj, RecordsSlice &Slice, const ParseOption &Opt,
 
   return Error::success();
 }
-} // namespace
 
 Expected<Records> DylibReader::readFile(MemoryBufferRef Buffer,
                                         const ParseOption &Opt) {

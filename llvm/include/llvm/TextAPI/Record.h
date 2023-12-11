@@ -103,7 +103,7 @@ public:
 
   bool isFunction() const { return GV == Kind::Function; }
   bool isVariable() const { return GV == Kind::Variable; }
-  void setKind(const Kind V) {
+  void setKind(const Kind &V) {
     if (GV == Kind::Unknown)
       GV = V;
   }
