@@ -1368,7 +1368,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine({ISD::INTRINSIC_VOID, ISD::INTRINSIC_W_CHAIN,
                        ISD::INTRINSIC_WO_CHAIN, ISD::ADD, ISD::SUB, ISD::AND,
-                       ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT});
+                       ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT,
+                       ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM});
   if (Subtarget.is64Bit())
     setTargetDAGCombine(ISD::SRA);
 
@@ -15649,6 +15650,22 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM: {
+    EVT RT = N->getValueType(0);
+    SDValue N0 = N->getOperand(0);
+
+    // Reduction fmax/fmin + separate reduction sum to propagate NaNs
+    unsigned ReducedMinMaxOpc = N->getOpcode() == ISD::VECREDUCE_FMAXIMUM
+                                    ? ISD::VECREDUCE_FMAX
+                                    : ISD::VECREDUCE_FMIN;
+    SDValue MinMax = DAG.getNode(ReducedMinMaxOpc, DL, RT, N0);
+    if (N0->getFlags().hasNoNaNs())
+      return MinMax;
+    SDValue Sum = DAG.getNode(ISD::VECREDUCE_FADD, DL, RT, N0);
+    SDValue SumIsNonNan = DAG.getSetCC(DL, XLenVT, Sum, Sum, ISD::SETOEQ);
+    return DAG.getSelect(DL, RT, SumIsNonNan, MinMax, Sum);
   }
   }
 
