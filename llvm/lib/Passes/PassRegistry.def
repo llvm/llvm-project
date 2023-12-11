@@ -77,7 +77,7 @@ MODULE_PASS("inliner-wrapper-no-mandatory-first",
             ModuleInlinerWrapperPass(getInlineParams(), false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
-MODULE_PASS("instrprof", InstrProfiling())
+MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("internalize", InternalizePass())
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
