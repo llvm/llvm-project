@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
-from typing import Callable, Optional, Sequence, TypeVar
+from typing import Callable, Optional, Sequence
 
 try:
     from .... import ir
