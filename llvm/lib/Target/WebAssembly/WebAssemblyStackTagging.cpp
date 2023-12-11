@@ -117,12 +117,15 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
     IntrinsicInst *Start = Info.LifetimeStart[0];
     Type *ArgOp0Type = Start->getArgOperand(0)->getType();
 
+//    ::llvm::errs()<<"PR120\t"<<*ArgOp0Type<<'\n';
     Function *RandomStoreTagDecl =
       Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_randomstoretag, {ArgOp0Type});
+//    ::llvm::errs()<<"PR123\n";
     Function *StoreTagDecl =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag, {ArgOp0Type});
+      Intrinsic::getDeclaration(F->getParent(), Intrinsic::wasm_memory_storetag);
     Instruction *RandomStoreTagCall =
       IRB.CreateCall(RandomStoreTagDecl, {Info.AI});
+//    ::llvm::errs()<<"RandomStoreTagCall\n";
 
     if (Info.AI->hasName())
       RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
@@ -139,7 +142,6 @@ bool WebAssemblyStackTagging::runOnFunction(Function & Fn) {
                                    3) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
-      IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
