@@ -151,8 +151,7 @@ private:
   rewriteOp(Operation *sourceAlgebraicOp,
             const SmallVector<OpOperand *> &sourceAlgebraicOpOperands,
             PatternRewriter &rewriter) const {
-    static thread_local IRMapping irMapping;
-    irMapping.clear();
+    IRMapping irMapping;
     for (auto operand : sourceAlgebraicOpOperands) {
       Operation *homomorphismOp = operand->get().getDefiningOp();
       irMapping.map(operand->get(),
@@ -171,7 +170,6 @@ private:
         rewriter.clone(*firstHomomorphismOp, irMapping);
     rewriter.replaceAllUsesWith(getSourceAlgebraicOpResult(sourceAlgebraicOp),
                                 getHomomorphismOpResult(newHomomorphismOp));
-    irMapping.clear();
     return success();
   }
 
