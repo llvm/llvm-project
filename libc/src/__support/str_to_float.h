@@ -92,7 +92,7 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
 template <>
 LIBC_INLINE void
 set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
-  result.set_implicit_bit(result.get_unbiased_exponent() != 0);
+  result.set_implicit_bit(result.get_biased_exponent() != 0);
 }
 #endif
 
@@ -643,7 +643,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 
   ExpandedFloat<T> output;
   output.mantissa = result.get_mantissa();
-  output.exponent = result.get_unbiased_exponent();
+  output.exponent = result.get_biased_exponent();
   return output;
 }
 
@@ -1164,7 +1164,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
     }
     seen_digit = parse_result.parsed_len != 0;
     result.set_mantissa(parse_result.value.mantissa);
-    result.set_unbiased_exponent(parse_result.value.exponent);
+    result.set_biased_exponent(parse_result.value.exponent);
     index += parse_result.parsed_len;
     error = parse_result.error;
   } else if (tolower(src[index]) == 'n') { // NaN
