@@ -595,8 +595,8 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
     if (IsAfterEndfile()) {
       // BACKSPACE after explicit ENDFILE
       currentRecordNumber = *endfileRecordNumber;
-    } else if (leftTabLimit) {
-      // BACKSPACE after non-advancing I/O
+    } else if (leftTabLimit && direction_ == Direction::Input) {
+      // BACKSPACE after non-advancing input
       leftTabLimit.reset();
     } else {
       DoImpliedEndfile(handler);
@@ -896,28 +896,29 @@ void ExternalFileUnit::BackspaceVariableFormattedRecord(
 }
 
 void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
-  if (!impliedEndfile_ && direction_ == Direction::Output && IsRecordFile() &&
-      access != Access::Direct && leftTabLimit) {
-    // Complete partial record after non-advancing write before
-    // positioning or closing the unit.  Usually sets impliedEndfile_.
-    AdvanceRecord(handler);
-  }
-  if (impliedEndfile_) {
-    impliedEndfile_ = false;
-    if (access != Access::Direct && IsRecordFile() && mayPosition()) {
+  if (access != Access::Direct) {
+    if (!impliedEndfile_ && leftTabLimit && direction_ == Direction::Output) {
+      // Flush a partial record after non-advancing output
+      impliedEndfile_ = true;
+    }
+    if (impliedEndfile_ && mayPosition()) {
       DoEndfile(handler);
     }
   }
+  impliedEndfile_ = false;
 }
 
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
     furthestPositionInRecord =
         std::max(positionInRecord, furthestPositionInRecord);
-    if (leftTabLimit) {
-      // Last read/write was non-advancing, so AdvanceRecord() was not called.
-      leftTabLimit.reset();
-      ++currentRecordNumber;
+    if (leftTabLimit) { // last I/O was non-advancing
+      if (access == Access::Sequential && direction_ == Direction::Output) {
+        AdvanceRecord(handler);
+      } else { // Access::Stream or input
+        leftTabLimit.reset();
+        ++currentRecordNumber;
+      }
     }
     endfileRecordNumber = currentRecordNumber;
   }
