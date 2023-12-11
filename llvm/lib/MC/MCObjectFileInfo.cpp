@@ -1131,8 +1131,6 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
 }
 
-extern bool YkAllocLLVMBBAddrMapSection;
-
 MCSection *
 MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() != MCContext::IsELF)
@@ -1145,9 +1143,6 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
     GroupName = Group->getName();
     Flags |= ELF::SHF_GROUP;
   }
-
-  if (YkAllocLLVMBBAddrMapSection)
-    Flags |= ELF::SHF_ALLOC;
 
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
