@@ -12,6 +12,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/Utils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -254,9 +255,9 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
       // bypass_l1 only possible with 16 byte transfer.
       Value token = rewriter.create<nvgpu::DeviceAsyncCopyOp>(
           writeOp->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
-          /*dst=*/storeBase, /*dstIndices=*/nvgpu::getIndices(writeOp),
+          /*dst=*/storeBase, /*dstIndices=*/getIndices(writeOp),
           /*src=*/loadBase,
-          /*srcIndices=*/nvgpu::getIndices(readOp),
+          /*srcIndices=*/getIndices(readOp),
           /*dstElements=*/rewriter.getIndexAttr(numElements),
           /*srcElements=*/numReadElements,
           /*bypassL1=*/bypassL1 && sizeInBytes == 16 ? rewriter.getUnitAttr()

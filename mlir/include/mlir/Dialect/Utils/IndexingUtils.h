@@ -14,6 +14,9 @@
 #ifndef MLIR_DIALECT_UTILS_INDEXINGUTILS_H
 #define MLIR_DIALECT_UTILS_INDEXINGUTILS_H
 
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -387,6 +390,15 @@ private:
   IteratorTy beginValue;
   IteratorTy pastEndValue;
 };
+
+//===----------------------------------------------------------------------===//
+// load/store utils.
+//===----------------------------------------------------------------------===//
+/// Get the indices that the given load/store operation is operating on.
+Operation::operand_range getIndices(Operation *op);
+
+/// Set the indices that the given load/store operation is operating on.
+void setIndices(Operation *op, ArrayRef<Value> indices);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_INDEXINGUTILS_H

@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/Transforms/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -351,4 +353,44 @@ mlir::detail::TileOffsetRangeImpl::getDynamicTileOffsets(
       delinearize(linearIndex, sliceStrides), inverseLoopOrder);
   return mlir::computeElementwiseMul(tileCoords,
                                      getAffineConstantExprs(tileShape, ctx));
+}
+
+Operation::operand_range mlir::getIndices(Operation *op) {
+  if (auto ldmatrixOp = dyn_cast<nvgpu::LdMatrixOp>(op))
+    return ldmatrixOp.getIndices();
+  if (auto copyOp = dyn_cast<nvgpu::DeviceAsyncCopyOp>(op))
+    return copyOp.getDstIndices();
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getIndices();
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getIndices();
+  if (auto vectorReadOp = dyn_cast<vector::LoadOp>(op))
+    return vectorReadOp.getIndices();
+  if (auto vectorStoreOp = dyn_cast<vector::StoreOp>(op))
+    return vectorStoreOp.getIndices();
+  if (auto transferReadOp = dyn_cast<vector::TransferReadOp>(op))
+    return transferReadOp.getIndices();
+  if (auto transferWriteOp = dyn_cast<vector::TransferWriteOp>(op))
+    return transferWriteOp.getIndices();
+  llvm_unreachable("unsupported op type");
+}
+
+void mlir::setIndices(Operation *op, ArrayRef<Value> indices) {
+  if (auto ldmatrixOp = dyn_cast<nvgpu::LdMatrixOp>(op))
+    return ldmatrixOp.getIndicesMutable().assign(indices);
+  if (auto copyOp = dyn_cast<nvgpu::DeviceAsyncCopyOp>(op))
+    return copyOp.getDstIndicesMutable().assign(indices);
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getIndicesMutable().assign(indices);
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getIndicesMutable().assign(indices);
+  if (auto vectorReadOp = dyn_cast<vector::LoadOp>(op))
+    return vectorReadOp.getIndicesMutable().assign(indices);
+  if (auto vectorStoreOp = dyn_cast<vector::StoreOp>(op))
+    return vectorStoreOp.getIndicesMutable().assign(indices);
+  if (auto transferReadOp = dyn_cast<vector::TransferReadOp>(op))
+    return transferReadOp.getIndicesMutable().assign(indices);
+  if (auto transferWriteOp = dyn_cast<vector::TransferWriteOp>(op))
+    return transferWriteOp.getIndicesMutable().assign(indices);
+  llvm_unreachable("unsupported op type");
 }

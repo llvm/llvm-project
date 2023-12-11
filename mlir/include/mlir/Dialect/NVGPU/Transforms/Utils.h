@@ -11,12 +11,6 @@
 namespace mlir {
 namespace nvgpu {
 
-/// Get the indices that the given load/store operation is operating on.
-Operation::operand_range getIndices(Operation *op);
-
-/// Set the indices that the given load/store operation is operating on.
-void setIndices(Operation *op, ArrayRef<Value> indices);
-
 /// Get the value that is stored by the given store operation.
 Value getValueStored(Operation *op);
 
