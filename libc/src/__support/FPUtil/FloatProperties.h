@@ -85,7 +85,9 @@ template <typename T, size_t count> static constexpr T mask_trailing_ones() {
   static_assert(cpp::is_unsigned_v<T>);
   constexpr unsigned t_bits = CHAR_BIT * sizeof(T);
   static_assert(count <= t_bits && "Invalid bit index");
-  return count == 0 ? 0 : (T(-1) >> (t_bits - count));
+  // It's important not to initialize T with -1, since T may be BigInt which
+  // will take -1 as a uint64_t and only initialize the low 64 bits.
+  return count == 0 ? 0 : ((~T(0)) >> (t_bits - count));
 }
 
 // Derives more properties from 'FPBaseProperties' above.
@@ -131,7 +133,7 @@ private:
   LIBC_INLINE_VAR static constexpr UIntType FP_MASK =
       mask_trailing_ones<UIntType, TOTAL_BITS>();
   static_assert((SIG_MASK & EXP_MASK & SIGN_MASK_) == 0, "masks disjoint");
-  static_assert((SIG_MASK | EXP_MASK | SIGN_MASK_) == FP_MASK, "masks covers");
+  static_assert((SIG_MASK | EXP_MASK | SIGN_MASK_) == FP_MASK, "masks cover");
 
   LIBC_INLINE static constexpr UIntType bit_at(int position) {
     return UIntType(1) << position;
