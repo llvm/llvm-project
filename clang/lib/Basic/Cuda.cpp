@@ -39,6 +39,8 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(11, 8),
     CUDA_ENTRY(12, 0),
     CUDA_ENTRY(12, 1),
+    CUDA_ENTRY(12, 2),
+    CUDA_ENTRY(12, 3),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -93,6 +95,7 @@ static const CudaArchToStringMap arch_names[] = {
     SM(87),                          // Jetson/Drive AGX Orin
     SM(89),                          // Ada Lovelace
     SM(90),                          // Hopper
+    SM(90a),                         // Hopper
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -209,6 +212,8 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_89:
   case CudaArch::SM_90:
     return CudaVersion::CUDA_118;
+  case CudaArch::SM_90a:
+    return CudaVersion::CUDA_120;
   default:
     llvm_unreachable("invalid enum");
   }
