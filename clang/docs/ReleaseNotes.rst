@@ -513,6 +513,7 @@ Improvements to Clang's diagnostics
        48 | static_assert(1 << 4 == 15);
           |               ~~~~~~~^~~~~
 
+- Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 
 Improvements to Clang's time-trace
 ----------------------------------
