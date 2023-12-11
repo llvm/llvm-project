@@ -9532,9 +9532,9 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
       .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
       .setMIFlags(Flags);
 
-  //   STR XZR, [SP]
-  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(AArch64::STRXui))
-      .addReg(AArch64::XZR)
+  //   LDR XZR, [SP]
+  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(AArch64::LDRXui))
+      .addReg(AArch64::XZR, RegState::Define)
       .addReg(AArch64::SP)
       .addImm(0)
       .setMIFlags(Flags);

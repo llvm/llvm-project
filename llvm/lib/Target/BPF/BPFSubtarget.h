@@ -43,6 +43,8 @@ protected:
   // unused
   bool isDummyMode;
 
+  bool IsLittleEndian;
+
   // whether the cpu supports jmp ext
   bool HasJmpExt;
 
@@ -80,6 +82,8 @@ public:
   bool hasSdivSmod() const { return HasSdivSmod; }
   bool hasGotol() const { return HasGotol; }
   bool hasStoreImm() const { return HasStoreImm; }
+
+  bool isLittleEndian() const { return IsLittleEndian; }
 
   const BPFInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const BPFFrameLowering *getFrameLowering() const override {

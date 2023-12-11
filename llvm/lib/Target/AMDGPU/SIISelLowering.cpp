@@ -9281,13 +9281,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (ST.hasSplitBarriers()) {
       SDValue K =
           DAG.getTargetConstant(AMDGPU::Barrier::WORKGROUP, DL, MVT::i32);
-      SDValue BarSignal = SDValue(
-          DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL, MVT::Other,
-                             K, Op.getOperand(0)),
-          0);
+      SDValue BarSignal =
+          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
+                                     MVT::Other, K, Op.getOperand(0)),
+                  0);
       SDValue BarWait =
-          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_WAIT, DL, MVT::Other,
-                                     K, BarSignal.getValue(0)),
+          SDValue(DAG.getMachineNode(AMDGPU::S_BARRIER_WAIT, DL, MVT::Other, K,
+                                     BarSignal.getValue(0)),
                   0);
       return BarWait;
     }

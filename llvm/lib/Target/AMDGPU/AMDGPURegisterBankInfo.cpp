@@ -5271,14 +5271,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     case Intrinsic::amdgcn_s_barrier_signal_isfirst_var: {
       const unsigned ResultSize = 1;
-      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
+      OpdsMapping[0] =
+          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
     case Intrinsic::amdgcn_s_barrier_leave: {
       const unsigned ResultSize = 1;
-      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
+      OpdsMapping[0] =
+          AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
       break;
     }
     case Intrinsic::amdgcn_s_get_barrier_state: {

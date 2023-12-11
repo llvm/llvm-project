@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GLOBAL-ISEL %s
 
-define amdgpu_kernel void @test1_s_barrier_signal(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -36,17 +36,17 @@ define amdgpu_kernel void @test1_s_barrier_signal(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.signal(i32 -1)
   call void @llvm.amdgcn.s.barrier.wait(i16 -1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_signal(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -80,17 +80,17 @@ define amdgpu_kernel void @test2_s_barrier_signal(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.signal(i32 1)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_signal(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -124,17 +124,17 @@ define amdgpu_kernel void @test3_s_barrier_signal(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.signal(i32 0)
   call void @llvm.amdgcn.s.barrier.wait(i16 0)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_signal_var(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal_var:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -171,13 +171,13 @@ define amdgpu_kernel void @test1_s_barrier_signal_var(i32 addrspace(1)* %out) #0
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.signal.var(i32 1)
   call void @llvm.amdgcn.s.barrier.wait(i16 1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
@@ -209,7 +209,7 @@ define void @test2_s_barrier_signal_var(i32 %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_signal_isfirst(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -252,18 +252,18 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst(i32 addrspace(1)* %a, 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
-  %0 = load i32, i32 addrspace(1)* %a, align 4
-  %b.c = select i1 %isfirst, i32 addrspace(1)* %b, i32 addrspace(1)* %c
-  %1 = load i32, i32 addrspace(1)* %b.c, align 4
+  %0 = load i32, ptr addrspace(1) %a, align 4
+  %b.c = select i1 %isfirst, ptr addrspace(1) %b, ptr addrspace(1) %c
+  %1 = load i32, ptr addrspace(1) %b.c, align 4
   %mul1 = mul nsw i32 %1, %0
-  store i32 %mul1, i32 addrspace(1)* %tmp1
+  store i32 %mul1, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_signal_isfirst(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -306,18 +306,18 @@ define amdgpu_kernel void @test2_s_barrier_signal_isfirst(i32 addrspace(1)* %a, 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 1)
-  %0 = load i32, i32 addrspace(1)* %a, align 4
-  %b.c = select i1 %isfirst, i32 addrspace(1)* %b, i32 addrspace(1)* %c
-  %1 = load i32, i32 addrspace(1)* %b.c, align 4
+  %0 = load i32, ptr addrspace(1) %a, align 4
+  %b.c = select i1 %isfirst, ptr addrspace(1) %b, ptr addrspace(1) %c
+  %1 = load i32, ptr addrspace(1) %b.c, align 4
   %mul1 = mul nsw i32 %1, %0
-  store i32 %mul1, i32 addrspace(1)* %tmp1
+  store i32 %mul1, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_signal_isfirst(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -360,18 +360,18 @@ define amdgpu_kernel void @test3_s_barrier_signal_isfirst(i32 addrspace(1)* %a, 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 1)
-  %0 = load i32, i32 addrspace(1)* %a, align 4
-  %b.c = select i1 %isfirst, i32 addrspace(1)* %b, i32 addrspace(1)* %c
-  %1 = load i32, i32 addrspace(1)* %b.c, align 4
+  %0 = load i32, ptr addrspace(1) %a, align 4
+  %b.c = select i1 %isfirst, ptr addrspace(1) %b, ptr addrspace(1) %c
+  %1 = load i32, ptr addrspace(1) %b.c, align 4
   %mul1 = mul nsw i32 %1, %0
-  store i32 %mul1, i32 addrspace(1)* %tmp1
+  store i32 %mul1, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal_isfirst_var:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -416,18 +416,18 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(i32 addrspace(1)* 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst.var(i32 1)
-  %0 = load i32, i32 addrspace(1)* %a, align 4
-  %b.c = select i1 %isfirst, i32 addrspace(1)* %b, i32 addrspace(1)* %c
-  %1 = load i32, i32 addrspace(1)* %b.c, align 4
+  %0 = load i32, ptr addrspace(1) %a, align 4
+  %b.c = select i1 %isfirst, ptr addrspace(1) %b, ptr addrspace(1) %c
+  %1 = load i32, ptr addrspace(1) %b.c, align 4
   %mul1 = mul nsw i32 %1, %0
-  store i32 %mul1, i32 addrspace(1)* %tmp1
+  store i32 %mul1, ptr addrspace(1) %tmp1
   ret void
 }
 
-define void @test2_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 %arg, i32 addrspace(1)* %out) {
+define void @test2_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, i32 %arg, ptr addrspace(1) %out) {
 ; GCN-LABEL: test2_s_barrier_signal_isfirst_var:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -484,18 +484,18 @@ define void @test2_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrsp
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst.var(i32 %arg)
-  %1 = load i32, i32 addrspace(1)* %a, align 4
-  %b.c = select i1 %isfirst, i32 addrspace(1)* %b, i32 addrspace(1)* %c
-  %2 = load i32, i32 addrspace(1)* %b.c, align 4
+  %1 = load i32, ptr addrspace(1) %a, align 4
+  %b.c = select i1 %isfirst, ptr addrspace(1) %b, ptr addrspace(1) %c
+  %2 = load i32, ptr addrspace(1) %b.c, align 4
   %mul1 = mul nsw i32 %2, %1
-  store i32 %mul1, i32 addrspace(1)* %tmp1
+  store i32 %mul1, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_init(i32 addrspace(1)* %out, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test1_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -530,16 +530,16 @@ define amdgpu_kernel void @test1_s_barrier_init(i32 addrspace(1)* %out, i32 %mbr
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.init(i32 -1, i32 %mbrCnt)
   %tmp2 = mul i32 %tmp, %tmp
   %tmp3 = sub i32 %tmp2, %tmp
-  store i32 %tmp3, i32 addrspace(1)* %tmp1
+  store i32 %tmp3, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_init(i32 addrspace(1)* %out, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test2_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -574,16 +574,16 @@ define amdgpu_kernel void @test2_s_barrier_init(i32 addrspace(1)* %out, i32 %mbr
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.init(i32 1, i32 %mbrCnt)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_init(i32 addrspace(1)* %out, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test3_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -618,16 +618,16 @@ define amdgpu_kernel void @test3_s_barrier_init(i32 addrspace(1)* %out, i32 %mbr
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.init(i32 0, i32 %mbrCnt)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test4_s_barrier_init(i32 addrspace(1)* %out, i32 %bar, i32 %mbrCnt) #0 {
+define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test4_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
@@ -664,12 +664,12 @@ define amdgpu_kernel void @test4_s_barrier_init(i32 addrspace(1)* %out, i32 %bar
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.init(i32 %bar, i32 %mbrCnt)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
@@ -709,7 +709,7 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_join(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -740,16 +740,16 @@ define amdgpu_kernel void @test1_s_barrier_join(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.join(i32 -1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test2_s_barrier_join(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -780,16 +780,16 @@ define amdgpu_kernel void @test2_s_barrier_join(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.join(i32 1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test3_s_barrier_join(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -820,16 +820,16 @@ define amdgpu_kernel void @test3_s_barrier_join(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.join(i32 0)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test4_s_barrier_join_m0(i32 addrspace(1)* %out, i32 %bar) #0 {
+define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %bar) #0 {
 ; GCN-LABEL: test4_s_barrier_join_m0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -864,12 +864,12 @@ define amdgpu_kernel void @test4_s_barrier_join_m0(i32 addrspace(1)* %out, i32 %
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier.join(i32 %bar)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
@@ -901,7 +901,7 @@ define void @test5_s_barrier_join_m0(i32 %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_barrier_leave(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_barrier_leave(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_leave:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
@@ -944,18 +944,18 @@ define amdgpu_kernel void @test1_s_barrier_leave(i32 addrspace(1)* %a, i32 addrs
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %0 = call i1 @llvm.amdgcn.s.barrier.leave()
-  %1 = load i32, i32 addrspace(1)* %a, align 4
-  %b.c = select i1 %0, i32 addrspace(1)* %b, i32 addrspace(1)* %c
-  %2 = load i32, i32 addrspace(1)* %b.c, align 4
+  %1 = load i32, ptr addrspace(1) %a, align 4
+  %b.c = select i1 %0, ptr addrspace(1) %b, ptr addrspace(1) %c
+  %2 = load i32, ptr addrspace(1) %b.c, align 4
   %mul1 = mul nsw i32 %2, %1
-  store i32 %mul1, i32 addrspace(1)* %tmp1
+  store i32 %mul1, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test1_s_wakeup_barrier(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -986,16 +986,16 @@ define amdgpu_kernel void @test1_s_wakeup_barrier(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.wakeup.barrier(i32 -1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test2_s_wakeup_barrier(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -1026,16 +1026,16 @@ define amdgpu_kernel void @test2_s_wakeup_barrier(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.wakeup.barrier(i32 1)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test3_s_wakeup_barrier(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -1066,16 +1066,16 @@ define amdgpu_kernel void @test3_s_wakeup_barrier(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.wakeup.barrier(i32 0)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test4_s_wakeup_barrier_m0(i32 addrspace(1)* %out, i32 %bar) #0 {
+define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 %bar) #0 {
 ; GCN-LABEL: test4_s_wakeup_barrier_m0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -1110,12 +1110,12 @@ define amdgpu_kernel void @test4_s_wakeup_barrier_m0(i32 addrspace(1)* %out, i32
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.wakeup.barrier(i32 %bar)
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 
@@ -1147,7 +1147,7 @@ define void @test5_s_wakeup_barrier_m0(i32 %arg) {
   ret void
 }
 
-define amdgpu_kernel void @test1_s_get_barrier_state(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_get_barrier_state s2, -1
@@ -1176,14 +1176,14 @@ define amdgpu_kernel void @test1_s_get_barrier_state(i32 addrspace(1)* %out) #0 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %state = call i32 @llvm.amdgcn.s.get.barrier.state(i32 -1)
-  store i32 %state, i32 addrspace(1)* %tmp1
+  store i32 %state, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test2_s_get_barrier_state(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_get_barrier_state s2, 1
@@ -1212,14 +1212,14 @@ define amdgpu_kernel void @test2_s_get_barrier_state(i32 addrspace(1)* %out) #0 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %state = call i32 @llvm.amdgcn.s.get.barrier.state(i32 1)
-  store i32 %state, i32 addrspace(1)* %tmp1
+  store i32 %state, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test3_s_get_barrier_state(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_get_barrier_state s2, 0
@@ -1248,14 +1248,14 @@ define amdgpu_kernel void @test3_s_get_barrier_state(i32 addrspace(1)* %out) #0 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %state = call i32 @llvm.amdgcn.s.get.barrier.state(i32 0)
-  store i32 %state, i32 addrspace(1)* %tmp1
+  store i32 %state, ptr addrspace(1) %tmp1
   ret void
 }
 
-define amdgpu_kernel void @test4_s_get_barrier_state_m0(i32 addrspace(1)* %out, i32 %bar) #0 {
+define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i32 %bar) #0 {
 ; GCN-LABEL: test4_s_get_barrier_state_m0:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
@@ -1289,10 +1289,10 @@ define amdgpu_kernel void @test4_s_get_barrier_state_m0(i32 addrspace(1)* %out, 
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   %state = call i32 @llvm.amdgcn.s.get.barrier.state(i32 %bar)
-  store i32 %state, i32 addrspace(1)* %tmp1
+  store i32 %state, ptr addrspace(1) %tmp1
   ret void
 }
 
@@ -1329,7 +1329,7 @@ define i32 @test5_s_get_barrier_state_m0(i32 %arg) {
   ret i32 %state
 }
 
-define amdgpu_kernel void @test_barrier_convert(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test_barrier_convert:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -1363,12 +1363,12 @@ define amdgpu_kernel void @test_barrier_convert(i32 addrspace(1)* %out) #0 {
 ; GLOBAL-ISEL-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
-  store i32 0, i32 addrspace(1)* %tmp1
+  %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp
+  store i32 0, ptr addrspace(1) %tmp1
   call void @llvm.amdgcn.s.barrier()
   %tmp3 = mul i32 %tmp, %tmp
   %tmp4 = sub i32 %tmp3, %tmp
-  store i32 %tmp4, i32 addrspace(1)* %tmp1
+  store i32 %tmp4, ptr addrspace(1) %tmp1
   ret void
 }
 declare void @llvm.amdgcn.s.barrier() #1
