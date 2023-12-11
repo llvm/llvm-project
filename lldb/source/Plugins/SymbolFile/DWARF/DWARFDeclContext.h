@@ -68,6 +68,11 @@ public:
 
   const char *GetQualifiedName() const;
 
+  /// Returns a vector of string, one string per entry in the fully qualified
+  /// name. For example, for the name `A::B::C`, this methods returns `{"A",
+  /// "B", "C"}`
+  llvm::SmallVector<llvm::StringRef> GetQualifiedNameAsVector() const;
+
   // Same as GetQualifiedName, but the life time of the returned string will
   // be that of the LLDB session.
   ConstString GetQualifiedNameAsConstString() const {
