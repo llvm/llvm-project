@@ -8364,7 +8364,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
         S.Context.getTargetInfo().hasFeature("sme") ||
         IsTargetCUDAAndHostARM)) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'neon', 'mve','sve' or 'sme'";
+        << Attr << "'neon', 'mve', 'sve' or 'sme'";
     Attr.setInvalid();
     return;
   }
