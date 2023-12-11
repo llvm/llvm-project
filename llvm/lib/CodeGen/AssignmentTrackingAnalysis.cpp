@@ -2304,7 +2304,6 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
         // If the size is unknown (0) then keep this location def to be safe.
         // Do the same for defs of large variables, which would be expensive
         // to represent with a BitVector.
-        // FIXME: Don't use a BitVector.
         NewDefsReversed.push_back(*RIt);
         continue;
       }
