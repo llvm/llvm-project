@@ -302,7 +302,7 @@ public:
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
 
-  /// Find types using a type matching object that contains all search
+  /// Find types using a type-matching object that contains all search
   /// parameters.
   ///
   /// \see lldb_private::TypeQuery

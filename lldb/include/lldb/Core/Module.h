@@ -415,7 +415,7 @@ public:
   void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                            VariableList &variable_list);
 
-  /// Find types using a type matching object that contains all search
+  /// Find types using a type-matching object that contains all search
   /// parameters.
   ///
   /// \see lldb_private::TypeQuery

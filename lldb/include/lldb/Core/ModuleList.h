@@ -340,7 +340,7 @@ public:
                                        lldb::SymbolType symbol_type,
                                        SymbolContextList &sc_list) const;
 
-  /// Find types using a type matching object that contains all search
+  /// Find types using a type-matching object that contains all search
   /// parameters.
   ///
   /// \param[in] search_first

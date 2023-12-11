@@ -174,7 +174,9 @@ bool TypeResults::AlreadySearched(lldb_private::SymbolFile *sym_file) {
 }
 
 bool TypeResults::InsertUnique(const lldb::TypeSP &type_sp) {
-  return m_type_map.InsertUnique(type_sp);
+  if (type_sp)
+    return m_type_map.InsertUnique(type_sp);
+  return false;
 }
 
 bool TypeResults::Done(const TypeQuery &query) const {

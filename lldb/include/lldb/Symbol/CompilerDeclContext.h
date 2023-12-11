@@ -61,7 +61,7 @@ public:
   ///
   /// \returns A valid vector of CompilerContext entries that describes
   /// this declaration context. The first entry in the vector is the parent of
-  /// the subsequent entry, so the top most entry is the global namespace.
+  /// the subsequent entry, so the topmost entry is the global namespace.
   std::vector<lldb_private::CompilerContext> GetCompilerContext() const;
 
   std::vector<CompilerDecl> FindDeclByName(ConstString name,

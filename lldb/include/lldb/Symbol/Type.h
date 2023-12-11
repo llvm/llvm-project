@@ -68,8 +68,8 @@ bool contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
 
 FLAGS_ENUM(TypeQueryOptions){
     e_none = 0u,
-    /// If set TypeQuery::m_context contains an exact context that must match
-    /// the full context. If not set TypeQuery::m_context can contain a partial
+    /// If set, TypeQuery::m_context contains an exact context that must match
+    /// the full context. If not set, TypeQuery::m_context can contain a partial
     /// type match where the full context isn't fully specified.
     e_exact_match = (1u << 0),
     /// If set, TypeQuery::m_context is a clang module compiler context. If not
@@ -87,17 +87,17 @@ LLDB_MARK_AS_BITMASK_ENUM(TypeQueryOptions)
 /// Using a TypeQuery class for matching types simplifies the internal APIs we
 /// need to implement type lookups in LLDB. Type lookups can fully specify the
 /// exact typename by filling out a complete or partial CompilerContext array.
-/// This allows for powerful searches and also allows the SymbolFile classes to
-/// use the m_context array to lookup types by basename, then eliminate
-/// potential matches without having to resolve types into each TypeSystem. This
-/// makes type lookups vastly more efficient and allows the SymbolFile objects
-/// to stop looking up types when the type matching is complete, like if we are
-/// looking for only a single type in our search.
+/// This technique allows for powerful searches and also allows the SymbolFile
+/// classes to use the m_context array to lookup types by basename, then
+/// eliminate potential matches without having to resolve types into each
+/// TypeSystem. This makes type lookups vastly more efficient and allows the
+/// SymbolFile objects to stop looking up types when the type matching is
+/// complete, like if we are looking for only a single type in our search.
 class TypeQuery {
 public:
   TypeQuery() = delete;
 
-  /// Construct a type match object using a fully or partially qualified name.
+  /// Construct a type match object using a fully- or partially-qualified name.
   ///
   /// The specified \a type_name will be chopped up and the m_context will be
   /// populated by separating the string by looking for "::". We do this because
@@ -128,18 +128,18 @@ public:
   ///     named "foo".
   ///
   /// \param[in] type_name
-  ///   A fully or partially qualified type name. This name will be parsed and
+  ///   A fully- or partially-qualified type name. This name will be parsed and
   ///   broken up and the m_context will be populated with the various parts of
   ///   the name. This typename can be prefixed with "struct ", "class ",
   ///   "union", "enum " or "typedef " before the actual type name to limit the
   ///   results of the types that match. The declaration context can be
-  ///   specified with the "::" string. like "a::b::my_type".
+  ///   specified with the "::" string. For example, "a::b::my_type".
   ///
   /// \param[in] options A set of boolean enumeration flags from the
   ///   TypeQueryOptions enumerations. \see TypeQueryOptions.
   TypeQuery(llvm::StringRef name, TypeQueryOptions options = e_none);
 
-  /// Construct a type match object that matches a type basename that exists
+  /// Construct a type-match object that matches a type basename that exists
   /// in the specified declaration context.
   ///
   /// This allows the m_context to be first populated using a declaration
@@ -149,7 +149,7 @@ public:
   ///
   /// \param[in] decl_ctx
   ///   A declaration context object that comes from a TypeSystem plug-in. This
-  ///   object will be asked to full the array of CompilerContext objects
+  ///   object will be asked to populate the array of CompilerContext objects
   ///   by adding the top most declaration context first into the array and then
   ///   adding any containing declaration contexts.
   ///
@@ -160,7 +160,7 @@ public:
   ///   TypeQueryOptions enumerations. \see TypeQueryOptions.
   TypeQuery(const CompilerDeclContext &decl_ctx, ConstString type_basename,
             TypeQueryOptions options = e_none);
-  /// Construct a type match object using a compiler declaration that specifies
+  /// Construct a type-match object using a compiler declaration that specifies
   /// a typename and a declaration context to use when doing exact type lookups.
   ///
   /// This allows the m_context to be first populated using a type declaration.
@@ -181,7 +181,7 @@ public:
   ///   TypeQueryOptions enumerations. \see TypeQueryOptions.
   TypeQuery(const CompilerDecl &decl, TypeQueryOptions options = e_none);
 
-  /// Construct a type match object using a CompilerContext array.
+  /// Construct a type-match object using a CompilerContext array.
   ///
   /// Clients can manually create compiler contexts and use these to find
   /// matches when searching for types. There are two types of contexts that
@@ -191,7 +191,7 @@ public:
   /// contexts specify contexts more completely to find exact matches within
   /// clang module debug information. They will include the modules that the
   /// type is included in and any functions that the type might be defined in.
-  /// This allows very fine grained type resolution.
+  /// This allows very fine-grained type resolution.
   ///
   /// \param[in] context The compiler context to use when doing the search.
   ///
@@ -200,11 +200,11 @@ public:
   TypeQuery(const llvm::ArrayRef<lldb_private::CompilerContext> &context,
             TypeQueryOptions options = e_none);
 
-  /// Construct a type match object that duplicates all matching criterea,
+  /// Construct a type-match object that duplicates all matching criterea,
   /// but not any searched symbol files or the type map for matches. This allows
   /// the m_context to be modified prior to performing another search.
   TypeQuery(const TypeQuery &rhs) = default;
-  /// Assign a type match object that duplicates all matching criterea,
+  /// Assign a type-match object that duplicates all matching criterea,
   /// but not any searched symbol files or the type map for matches. This allows
   /// the m_context to be modified prior to performing another search.
   TypeQuery &operator=(const TypeQuery &rhs) = default;
@@ -220,7 +220,7 @@ public:
   ///   True if the context matches, false if it doesn't. If e_exact_match
   ///   is set in m_options, then \a context must exactly match \a m_context. If
   ///   e_exact_match is not set, then the bottom m_context.size() objects in
-  ///   the \a context must match. This allows SymbolFile objects the fill in a
+  ///   \a context must match. This allows SymbolFile objects the fill in a
   ///   potential type basename match from the index into \a context, and see if
   ///   it matches prior to having to resolve a lldb_private::Type object for
   ///   the type from the index. This allows type parsing to be as efficient as
@@ -259,7 +259,7 @@ public:
   /// The \a m_context can be used in two ways: normal types searching with
   /// the context containing a stanadard declaration context for a type, or
   /// with the context being more complete for exact matches in clang modules.
-  /// Se this to true if you wish to search for a type in clang module.
+  /// Set this to true if you wish to search for a type in clang module.
   bool GetModuleSearch() const { return (m_options & e_module_search) != 0; }
 
   /// Returns true if the type query is supposed to find only a single matching
@@ -282,14 +282,14 @@ public:
 protected:
   /// A full or partial compiler context array where the parent declaration
   /// contexts appear at the top of the array starting at index zero and the
-  /// last entry is contains the type and name of the type we are looking for.
+  /// last entry contains the type and name of the type we are looking for.
   std::vector<lldb_private::CompilerContext> m_context;
   /// An options bitmask that contains enabled options for the type query.
   /// \see TypeQueryOptions.
   TypeQueryOptions m_options;
-  /// If this has a value, then the language family must match at least one of
-  /// the specified languages. If this has no value, then the language of the
-  /// type doesn't need to match any types that are searched.
+  /// If this variable has a value, then the language family must match at least
+  /// one of the specified languages. If this variable has no value, then the
+  /// language of the type doesn't need to match any types that are searched.
   std::optional<LanguageSet> m_languages;
 };
 
@@ -316,6 +316,10 @@ public:
   /// Check if a SymbolFile object has already been searched by this type match
   /// object.
   ///
+  /// This function will add \a sym_file to the set of SymbolFile objects if it
+  /// isn't already in the set and return \a false. Returns true if \a sym_file
+  /// was already in the set and doesn't need to be searched.
+  ///
   /// Any clients that search for types should first check that the symbol file
   /// has not already been searched. If this function returns true, the type
   /// search function should early return to avoid duplicating type searchihng
@@ -339,7 +343,7 @@ public:
   const TypeMap &GetTypeMap() const { return m_type_map; }
 
 private:
-  /// Matching types get added to this maps as type search continues.
+  /// Matching types get added to this map as type search continues.
   TypeMap m_type_map;
   /// This set is used to track and make sure we only perform lookups in a
   /// symbol file one time.

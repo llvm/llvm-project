@@ -183,8 +183,6 @@ public:
 
   static void DumpDeclContextHiearchy(clang::DeclContext *decl_ctx);
 
-  static bool DeclsAreEquivalent(clang::Decl *lhs_decl, clang::Decl *rhs_decl);
-
   static bool GetCompleteDecl(clang::ASTContext *ast, clang::Decl *decl);
 
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);

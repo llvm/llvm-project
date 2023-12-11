@@ -2461,89 +2461,6 @@ void TypeSystemClang::DumpDeclHiearchy(clang::Decl *decl) {
   }
 }
 
-bool TypeSystemClang::DeclsAreEquivalent(clang::Decl *lhs_decl,
-                                         clang::Decl *rhs_decl) {
-  if (lhs_decl && rhs_decl) {
-    // Make sure the decl kinds match first
-    const clang::Decl::Kind lhs_decl_kind = lhs_decl->getKind();
-    const clang::Decl::Kind rhs_decl_kind = rhs_decl->getKind();
-
-    if (lhs_decl_kind == rhs_decl_kind) {
-      // Now check that the decl contexts kinds are all equivalent before we
-      // have to check any names of the decl contexts...
-      clang::DeclContext *lhs_decl_ctx = lhs_decl->getDeclContext();
-      clang::DeclContext *rhs_decl_ctx = rhs_decl->getDeclContext();
-      if (lhs_decl_ctx && rhs_decl_ctx) {
-        while (true) {
-          if (lhs_decl_ctx && rhs_decl_ctx) {
-            const clang::Decl::Kind lhs_decl_ctx_kind =
-                lhs_decl_ctx->getDeclKind();
-            const clang::Decl::Kind rhs_decl_ctx_kind =
-                rhs_decl_ctx->getDeclKind();
-            if (lhs_decl_ctx_kind == rhs_decl_ctx_kind) {
-              lhs_decl_ctx = lhs_decl_ctx->getParent();
-              rhs_decl_ctx = rhs_decl_ctx->getParent();
-
-              if (lhs_decl_ctx == nullptr && rhs_decl_ctx == nullptr)
-                break;
-            } else
-              return false;
-          } else
-            return false;
-        }
-
-        // Now make sure the name of the decls match
-        clang::NamedDecl *lhs_named_decl =
-            llvm::dyn_cast<clang::NamedDecl>(lhs_decl);
-        clang::NamedDecl *rhs_named_decl =
-            llvm::dyn_cast<clang::NamedDecl>(rhs_decl);
-        if (lhs_named_decl && rhs_named_decl) {
-          clang::DeclarationName lhs_decl_name = lhs_named_decl->getDeclName();
-          clang::DeclarationName rhs_decl_name = rhs_named_decl->getDeclName();
-          if (lhs_decl_name.getNameKind() == rhs_decl_name.getNameKind()) {
-            if (lhs_decl_name.getAsString() != rhs_decl_name.getAsString())
-              return false;
-          } else
-            return false;
-        } else
-          return false;
-
-        // We know that the decl context kinds all match, so now we need to
-        // make sure the names match as well
-        lhs_decl_ctx = lhs_decl->getDeclContext();
-        rhs_decl_ctx = rhs_decl->getDeclContext();
-        while (true) {
-          switch (lhs_decl_ctx->getDeclKind()) {
-          case clang::Decl::TranslationUnit:
-            // We don't care about the translation unit names
-            return true;
-          default: {
-            clang::NamedDecl *lhs_named_decl =
-                llvm::dyn_cast<clang::NamedDecl>(lhs_decl_ctx);
-            clang::NamedDecl *rhs_named_decl =
-                llvm::dyn_cast<clang::NamedDecl>(rhs_decl_ctx);
-            if (lhs_named_decl && rhs_named_decl) {
-              clang::DeclarationName lhs_decl_name =
-                  lhs_named_decl->getDeclName();
-              clang::DeclarationName rhs_decl_name =
-                  rhs_named_decl->getDeclName();
-              if (lhs_decl_name.getNameKind() == rhs_decl_name.getNameKind()) {
-                if (lhs_decl_name.getAsString() != rhs_decl_name.getAsString())
-                  return false;
-              } else
-                return false;
-            } else
-              return false;
-          } break;
-          }
-          lhs_decl_ctx = lhs_decl_ctx->getParent();
-          rhs_decl_ctx = rhs_decl_ctx->getParent();
-        }
-      }
-    }
-  }
-  return false;
-}
 bool TypeSystemClang::GetCompleteDecl(clang::ASTContext *ast,
                                       clang::Decl *decl) {
   if (!decl)
@@ -9071,7 +8988,7 @@ size_t TypeSystemClang::DeclGetFunctionNumArguments(void *opaque_decl) {
 }
 
 static CompilerContextKind GetCompilerKind(clang::Decl::Kind clang_kind,
-                                           clang::DeclContext *decl_ctx) {
+                                           clang::DeclContext const *decl_ctx) {
   switch (clang_kind) {
   case Decl::TranslationUnit:
     return CompilerContextKind::TranslationUnit;

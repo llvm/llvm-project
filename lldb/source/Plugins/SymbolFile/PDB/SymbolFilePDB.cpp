@@ -1446,24 +1446,6 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   symtab.Finalize();
 }
 
-// void SymbolFilePDB::FindTypes(
-//     lldb_private::ConstString name, const CompilerDeclContext
-//     &parent_decl_ctx, uint32_t max_matches,
-//     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-//     lldb_private::TypeMap &types) {
-//   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-//   if (!name)
-//     return;
-//   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-//     return;
-
-//   searched_symbol_files.clear();
-//   searched_symbol_files.insert(this);
-
-//   // There is an assumption 'name' is not a regex
-//   FindTypesByName(name.GetStringRef(), parent_decl_ctx, max_matches, types);
-// }
-
 void SymbolFilePDB::DumpClangAST(Stream &s) {
   auto type_system_or_err =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
