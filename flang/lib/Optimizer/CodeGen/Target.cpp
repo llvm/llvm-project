@@ -59,7 +59,7 @@ static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
   }
 }
 
-/// Return the size of alignment of FIR types.
+/// Return the size and alignment of FIR types.
 /// TODO: consider moving this to a DataLayoutTypeInterface implementation
 /// for FIR types. It should first be ensured that it is OK to open the gate of
 /// target dependent type size inquiries in lowering. It would also not be
@@ -396,7 +396,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
   };
 
   /// Classify an argument type or a field of an aggregate type argument.
-  /// See ystem V ABI version 1.0 section 3.2.3.
+  /// See System V ABI version 1.0 section 3.2.3.
   /// The Lo and Hi class are set to the class of the lower eight eightbytes
   /// and upper eight eightbytes on return.
   /// If this is called for an aggregate field, the caller is responsible to
@@ -458,7 +458,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
           auto *sem = fir::isa_real(vecTy.getEleTy())
                           ? &floatToSemantics(kindMap, vecTy.getEleTy())
                           : nullptr;
-          // Note expecting to hit this todo in standard code (it would
+          // Not expecting to hit this todo in standard code (it would
           // require some vector type extension).
           if (!(sem == &llvm::APFloat::IEEEsingle() && vecTy.getLen() <= 2) &&
               !(sem == &llvm::APFloat::IEEEhalf() && vecTy.getLen() <= 4))
