@@ -52,8 +52,9 @@ public:
   using MachOHeaderMUBuilder =
       unique_function<std::unique_ptr<MaterializationUnit>(MachOPlatform &MOP)>;
 
-  static std::unique_ptr<MaterializationUnit>
-  defaultMachOHeaderBuilder(MachOPlatform &MOP);
+  /// Simple MachO header graph builder.
+  static inline std::unique_ptr<MaterializationUnit>
+  buildSimpleMachOHeaderMU(MachOPlatform &MOP);
 
   /// Try to create a MachOPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
@@ -96,14 +97,14 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
-         MachOHeaderMUBuilder BuildMachOHeaderMU = defaultMachOHeaderBuilder,
+         MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
-         MachOHeaderMUBuilder BuildMachOHeaderMU = defaultMachOHeaderBuilder,
+         MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
@@ -331,6 +332,49 @@ private:
 
   std::atomic<BootstrapInfo *> Bootstrap;
 };
+
+// Generates a MachO header.
+class SimpleMachOHeaderMU : public MaterializationUnit {
+public:
+  SimpleMachOHeaderMU(MachOPlatform &MOP, SymbolStringPtr HeaderStartSymbol);
+  StringRef getName() const override { return "MachOHeaderMU"; }
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override;
+
+protected:
+  virtual jitlink::Block &createHeaderBlock(JITDylib &JD, jitlink::LinkGraph &G,
+                                            jitlink::Section &HeaderSection);
+
+private:
+  struct HeaderSymbol {
+    const char *Name;
+    uint64_t Offset;
+  };
+
+  static constexpr HeaderSymbol AdditionalHeaderSymbols[] = {
+      {"___mh_executable_header", 0}};
+
+  void addMachOHeader(JITDylib &JD, jitlink::LinkGraph &G,
+                      const SymbolStringPtr &InitializerSymbol);
+  static MaterializationUnit::Interface
+  createHeaderInterface(MachOPlatform &MOP,
+                        const SymbolStringPtr &HeaderStartSymbol);
+
+  MachOPlatform &MOP;
+};
+
+/// Simple MachO header graph builder.
+inline std::unique_ptr<MaterializationUnit>
+MachOPlatform::buildSimpleMachOHeaderMU(MachOPlatform &MOP) {
+  return std::make_unique<SimpleMachOHeaderMU>(MOP, MOP.MachOHeaderStartSymbol);
+}
+
+struct MachOHeaderInfo {
+  size_t PageSize = 0;
+  uint32_t CPUType = 0;
+  uint32_t CPUSubType = 0;
+};
+MachOHeaderInfo getMachOHeaderInfoFromTriple(const Triple &TT);
 
 } // end namespace orc
 } // end namespace llvm
