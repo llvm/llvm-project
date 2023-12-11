@@ -1012,6 +1012,30 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
+def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">;
+
+def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are disabled.">;
+
+def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is enabled for complex arithmetic operations.">;
+
+def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+
+def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
+  Visibility<[CC1Option]>,
+  Values<"full,limited,fortran">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran"]>,
+  MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
+
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -6324,8 +6348,6 @@ def staticFlangLibs: Flag<["-"], "static-flang-libs">, Group<flang_rt_Group>,
   HelpText<"Link using static Flang libraries">;
 def noFlangLibs: Flag<["-"], "no-flang-libs">, Group<flang_rt_Group>,
   HelpText<"Do not link against Flang libraries">;
-def no_fortran_main: Flag<["-"], "fno-fortran-main">, Group<gfortran_Group>,
-  HelpText<"Don't link in Fortran main">;
 def Mnomain: Flag<["-"], "Mnomain">, Group<pgi_fortran_Group>,
   HelpText<"Don't link in Fortran main">;
 // end suspicious
@@ -6461,6 +6483,12 @@ def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
   Group<gfortran_Group>,
   Alias<module_dir>;
+
+let Visibility = [FlangOption] in {
+def no_fortran_main : Flag<["-"], "fno-fortran-main">,
+  Visibility<[FlangOption]>, Group<f_Group>,
+  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
+} // let Visibility = [ FlangOption ]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options

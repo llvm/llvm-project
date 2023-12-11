@@ -549,9 +549,14 @@ void ASTStmtWriter::VisitCapturedStmt(CapturedStmt *S) {
 void ASTStmtWriter::VisitExpr(Expr *E) {
   VisitStmt(E);
   Record.AddTypeRef(E->getType());
-  Record.push_back(E->getDependence());
-  Record.push_back(E->getValueKind());
-  Record.push_back(E->getObjectKind());
+
+  BitsPacker ExprBits;
+
+  ExprBits.addBits(E->getDependence(), /*BitsWidth=*/5);
+  ExprBits.addBits(E->getValueKind(), /*BitsWidth=*/2);
+  ExprBits.addBits(E->getObjectKind(), /*BitsWidth=*/3);
+
+  Record.push_back(ExprBits);
 }
 
 void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
@@ -866,14 +871,20 @@ void ASTStmtWriter::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
 
 void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
-  Record.push_back(E->getNumArgs());
-  Record.push_back(E->hasStoredFPFeatures());
+
+  BitsPacker CallExprBits;
+  // 16 bits should be sufficient to store the number args;
+  CallExprBits.addBits(E->getNumArgs(), /*BitsWidth=*/16);
+  CallExprBits.addBit(E->hasStoredFPFeatures());
+  CallExprBits.addBit(static_cast<bool>(E->getADLCallKind()));
+  Record.push_back(CallExprBits);
+
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddStmt(E->getCallee());
   for (CallExpr::arg_iterator Arg = E->arg_begin(), ArgEnd = E->arg_end();
        Arg != ArgEnd; ++Arg)
     Record.AddStmt(*Arg);
-  Record.push_back(static_cast<unsigned>(E->getADLCallKind()));
+
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
   Code = serialization::EXPR_CALL;
@@ -1938,14 +1949,19 @@ ASTStmtWriter::VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E) {
 void ASTStmtWriter::VisitOverloadExpr(OverloadExpr *E) {
   VisitExpr(E);
 
-  Record.push_back(E->getNumDecls());
-  Record.push_back(E->hasTemplateKWAndArgsInfo());
+  BitsPacker OverloadExprBits;
+  // 14 Bits should enough to store the number of decls.
+  OverloadExprBits.addBits(E->getNumDecls(), /*BitWidth=*/14);
+  OverloadExprBits.addBit(E->hasTemplateKWAndArgsInfo());
   if (E->hasTemplateKWAndArgsInfo()) {
     const ASTTemplateKWAndArgsInfo &ArgInfo =
         *E->getTrailingASTTemplateKWAndArgsInfo();
-    Record.push_back(ArgInfo.NumTemplateArgs);
+    // 14 Bits should enough to store the number of template args.
+    OverloadExprBits.addBits(ArgInfo.NumTemplateArgs, /*BitWidth=*/14);
+    Record.push_back(OverloadExprBits);
     AddTemplateKWAndArgsInfo(ArgInfo, E->getTrailingTemplateArgumentLoc());
-  }
+  } else
+    Record.push_back(OverloadExprBits);
 
   for (OverloadExpr::decls_iterator OvI = E->decls_begin(),
                                     OvE = E->decls_end();

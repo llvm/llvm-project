@@ -78,39 +78,39 @@
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
 
 // Test detecting latest /opt/rocm-{release} directory.
-// RUN: rm -rf %T/opt
-// RUN: mkdir -p %T/opt
-// RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.9.0-1234
-// RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.10.0
-// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx1010 --sysroot=%T \
+// RUN: rm -rf %t/opt
+// RUN: mkdir -p %t/opt
+// RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
+// RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.10.0
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx1010 --sysroot=%t \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s
 
-// Test ROCm installation built by SPACK by invoke clang at %T/rocm-spack/llvm-amdgpu-*
+// Test ROCm installation built by SPACK by invoke clang at %t/rocm-spack/llvm-amdgpu-*
 // directory through a soft link.
 
-// RUN: rm -rf %T/rocm-spack
-// RUN: cp -r %S/Inputs/rocm-spack %T
-// RUN: ln -fs %clang %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang
-// RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
-// RUN:   -resource-dir=%T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang \
+// RUN: rm -rf %t/rocm-spack
+// RUN: cp -r %S/Inputs/rocm-spack %t
+// RUN: ln -fs %clang %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang
+// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
+// RUN:   -resource-dir=%t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=SPACK %s
 
 // Test SPACK installation with multiple hip and rocm-device-libs packages of the same
 // ROCm release. --hip-path and --rocm-device-lib-path can be used to specify them.
 
-// RUN: cp -r %T/rocm-spack/hip-* %T/rocm-spack/hip-4.0.0-abcd
-// RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
+// RUN: cp -r %t/rocm-spack/hip-* %t/rocm-spack/hip-4.0.0-abcd
+// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 \
-// RUN:   --hip-path=%T/rocm-spack/hip-4.0.0-abcd \
+// RUN:   --hip-path=%t/rocm-spack/hip-4.0.0-abcd \
 // RUN:    %s 2>&1 | FileCheck -check-prefixes=SPACK-SET %s
 
 // Test invalid SPACK ROCm installation missing hip and rocm-device-libs packages.
 
-// RUN: rm -rf %T/rocm-spack/hip-*
-// RUN: rm -rf %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn
-// RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang --version 2>&1 \
+// RUN: rm -rf %t/rocm-spack/hip-*
+// RUN: rm -rf %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn
+// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang --version 2>&1 \
 // RUN:   | FileCheck -check-prefixes=SPACK-MISS-SILENT %s
 
 // GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
