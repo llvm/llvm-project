@@ -1281,7 +1281,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   // rpaths. This is currently true from this place, but we need to be
   // careful if this function is ever called before user's rpaths are emitted.
   if (Opts & RLO_AddRPath) {
-    assert(DarwinLibName.endswith(".dylib") && "must be a dynamic library");
+    assert(DarwinLibName.ends_with(".dylib") && "must be a dynamic library");
 
     // Add @executable_path to rpath to support having the dylib copied with
     // the executable.
@@ -2916,10 +2916,6 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   // to fix the same problem with C++ headers, and is generally fragile.
   if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
-
-  if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
-                                options::OPT_fno_define_target_os_macros))
-    CC1Args.push_back("-fdefine-target-os-macros");
 }
 
 void Darwin::addClangCC1ASTargetOptions(

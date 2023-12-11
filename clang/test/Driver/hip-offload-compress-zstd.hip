@@ -4,13 +4,13 @@
 
 // Test compress bundled bitcode.
 
-// RUN: rm -rf %T/a.bc
+// RUN: rm -rf %t.bc
 // RUN: %clang -c -v --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
 // RUN:   -fgpu-rdc -nogpuinc -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   --offload-compress --offload-device-only --gpu-bundle-output \
-// RUN:   -o %T/a.bc \
+// RUN:   -o %t.bc \
 // RUN: 2>&1 | FileCheck %s
 
 // CHECK: clang-offload-bundler{{.*}} -type=bc
@@ -23,7 +23,7 @@
 // RUN: %clang --hip-link -### -v --target=x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx1100 --offload-arch=gfx1101 \
 // RUN:   -fgpu-rdc -nogpulib \
-// RUN:   %T/a.bc --offload-device-only \
+// RUN:   %t.bc --offload-device-only \
 // RUN: 2>&1 | FileCheck -check-prefix=UNBUNDLE %s
 
 // UNBUNDLE: clang-offload-bundler{{.*}} "-type=bc"

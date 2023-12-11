@@ -202,10 +202,23 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
     }
   } else if (LocalStubsIter != Stubs.end() &&
              LocalStubsIter->second.count(TgtBB)) {
-    // If we are replacing a local stub (because it is now out of range),
-    // use its target instead of creating a stub to jump to another stub
+    // The TgtBB and TgtSym now are the local out-of-range stub and its label.
+    // So, we are attempting to restore BB to its previous state without using
+    // this stub.
     TgtSym = BC.MIB->getTargetSymbol(*TgtBB->begin());
-    TgtBB = BB.getSuccessor(TgtSym, BI);
+    assert(TgtSym &&
+           "First instruction is expected to contain a target symbol.");
+    BinaryBasicBlock *TgtBBSucc = TgtBB->getSuccessor(TgtSym, BI);
+
+    // TgtBB might have no successor. e.g. a stub for a function call.
+    if (TgtBBSucc) {
+      BB.replaceSuccessor(TgtBB, TgtBBSucc, BI.Count, BI.MispredictedCount);
+      assert(TgtBB->getExecutionCount() >= BI.Count &&
+             "At least equal or greater than the branch count.");
+      TgtBB->setExecutionCount(TgtBB->getExecutionCount() - BI.Count);
+    }
+
+    TgtBB = TgtBBSucc;
   }
 
   BinaryBasicBlock *StubBB = lookupLocalStub(BB, Inst, TgtSym, DotAddress);

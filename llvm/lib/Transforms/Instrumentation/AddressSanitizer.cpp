@@ -2146,9 +2146,7 @@ ModuleAddressSanitizer::CreateMetadataGlobal(Module &M, Constant *Initializer,
   Metadata->setSection(getGlobalMetadataSection());
   // Place metadata in a large section for x86-64 ELF binaries to mitigate
   // relocation pressure.
-  if (TargetTriple.getArch() == Triple::x86_64 &&
-      TargetTriple.getObjectFormat() == Triple::ELF)
-    Metadata->setCodeModel(CodeModel::Large);
+  setGlobalVariableLargeSection(TargetTriple, *Metadata);
   return Metadata;
 }
 

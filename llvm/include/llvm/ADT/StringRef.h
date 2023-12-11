@@ -264,12 +264,6 @@ namespace llvm {
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
     [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use starts_with_insensitive instead",
-        "starts_with_insensitive") bool startswith_insensitive(StringRef Prefix)
-        const {
-      return starts_with_insensitive(Prefix);
-    }
 
     /// Check if this string ends with the given \p Suffix.
     [[nodiscard]] bool ends_with(StringRef Suffix) const {
@@ -283,12 +277,6 @@ namespace llvm {
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
     [[nodiscard]] bool ends_with_insensitive(StringRef Suffix) const;
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use ends_with_insensitive instead",
-        "ends_with_insensitive") bool endswith_insensitive(StringRef Suffix)
-        const {
-      return ends_with_insensitive(Suffix);
-    }
 
     /// @}
     /// @name String Searching

@@ -26,7 +26,7 @@ def : Pat<(test_atomic_op_frag GPR32:$ptr, GPR32:$val) ,
 // CHECK_NOPT-NEXT:      GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK_NOPT-NEXT:      GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ATOMICRMW_XCHG,
 // CHECK_NOPT-NEXT:      GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/4,
-// CHECK_NOPT-NEXT:      // MIs[0] dst
+// CHECK_NOPT-NEXT:      // MIs[0] DstI[dst]
 // CHECK_NOPT-NEXT:      GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK_NOPT-NEXT:      GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK_NOPT-NEXT:      // MIs[0] ptr
