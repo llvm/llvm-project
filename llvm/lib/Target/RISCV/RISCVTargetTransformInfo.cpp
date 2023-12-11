@@ -750,9 +750,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::smin:
   case Intrinsic::smax: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if ((ST->hasVInstructions() && LT.second.isVector()) ||
-        (LT.second.isScalarInteger() && ST->hasStdExtZbb()))
+    if (ST->hasVInstructions() && LT.second.isVector())
       return LT.first * TLI->getLMULCost(LT.second);
+    if (LT.second.isScalarInteger() && ST->hasStdExtZbb())
+      return LT.first;
     break;
   }
   case Intrinsic::sadd_sat:
