@@ -94,8 +94,8 @@ eisel_lemire(ExpandedFloat<T> init_num,
   uint32_t clz = cpp::countl_zero<UIntType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) +
-                  BITS_IN_MANTISSA + FloatProp::EXPONENT_BIAS - clz;
+  int32_t exp2 =
+      exp10_to_exp2(exp10) + BITS_IN_MANTISSA + FloatProp::EXPONENT_BIAS - clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -168,7 +168,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
 
   // The if block is equivalent to (but has fewer branches than):
   //   if exp2 <= 0 || exp2 >= 0x7FF { etc }
-  if (exp2 - 1 >= (1 << FloatProp::EXPONENT_WIDTH) - 2) {
+  if (static_cast<uint32_t>(exp2) - 1 >= (1 << FloatProp::EXPONENT_WIDTH) - 2) {
     return cpp::nullopt;
   }
 
@@ -211,8 +211,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   uint32_t clz = cpp::countl_zero<UIntType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) +
-                  BITS_IN_MANTISSA + FloatProp::EXPONENT_BIAS - clz;
+  int32_t exp2 =
+      exp10_to_exp2(exp10) + BITS_IN_MANTISSA + FloatProp::EXPONENT_BIAS - clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -338,17 +338,16 @@ simple_decimal_conversion(const char *__restrict numStart,
   // If the exponent is too large and can't be represented in this size of
   // float, return inf.
   if (hpd.get_decimal_point() > 0 &&
-      exp10_to_exp2(hpd.get_decimal_point() - 1) >
-          static_cast<int64_t>(FloatProp::EXPONENT_BIAS)) {
-    output.num = {0, FPBits::MAX_EXPONENT};
+      exp10_to_exp2(hpd.get_decimal_point() - 1) > FloatProp::EXPONENT_BIAS) {
+    output.num = {0, fputil::FPBits<T>::MAX_EXPONENT};
     output.error = ERANGE;
     return output;
   }
   // If the exponent is too small even for a subnormal, return 0.
   if (hpd.get_decimal_point() < 0 &&
       exp10_to_exp2(-hpd.get_decimal_point()) >
-          static_cast<int64_t>(FloatProp::EXPONENT_BIAS +
-                               FloatProp::MANTISSA_WIDTH)) {
+          (FloatProp::EXPONENT_BIAS +
+           static_cast<int32_t>(FloatProp::MANTISSA_WIDTH))) {
     output.num = {0, 0};
     output.error = ERANGE;
     return output;
@@ -607,7 +606,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 // log10(2^(exponent bias)).
 // The generic approximation uses the fact that log10(2^x) ~= x/3
 template <typename T> constexpr int32_t get_upper_bound() {
-  return static_cast<int32_t>(fputil::FloatProperties<T>::EXPONENT_BIAS) / 3;
+  return fputil::FloatProperties<T>::EXPONENT_BIAS / 3;
 }
 
 template <> constexpr int32_t get_upper_bound<float>() { return 39; }
@@ -623,9 +622,9 @@ template <> constexpr int32_t get_upper_bound<double>() { return 309; }
 // other out, and subnormal numbers allow for the result to be at the very low
 // end of the final mantissa.
 template <typename T> constexpr int32_t get_lower_bound() {
-  return -(static_cast<int32_t>(fputil::FloatProperties<T>::EXPONENT_BIAS +
-                                fputil::FloatProperties<T>::MANTISSA_WIDTH +
-                                (sizeof(T) * 8)) /
+  return -((fputil::FloatProperties<T>::EXPONENT_BIAS +
+            static_cast<int32_t>(fputil::FloatProperties<T>::MANTISSA_WIDTH +
+                                 (sizeof(T) * 8))) /
            3);
 }
 
