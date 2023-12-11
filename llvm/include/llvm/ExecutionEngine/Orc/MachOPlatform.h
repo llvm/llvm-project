@@ -47,6 +47,14 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
   };
 
+  /// Used by setupJITDylib to create MachO header MaterializationUnits for
+  /// JITDylibs.
+  using MachOHeaderMUBuilder =
+      unique_function<std::unique_ptr<MaterializationUnit>(MachOPlatform &MOP)>;
+
+  static std::unique_ptr<MaterializationUnit>
+  defaultMachOHeaderBuilder(MachOPlatform &MOP);
+
   /// Try to create a MachOPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
   ///
@@ -88,16 +96,22 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         MachOHeaderMUBuilder BuildMachOHeaderMU = defaultMachOHeaderBuilder,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
+         MachOHeaderMUBuilder BuildMachOHeaderMU = defaultMachOHeaderBuilder,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
+
+  NonOwningSymbolStringPtr getMachOHeaderStartSymbol() const {
+    return NonOwningSymbolStringPtr(MachOHeaderStartSymbol);
+  }
 
   Error setupJITDylib(JITDylib &JD) override;
   Error teardownJITDylib(JITDylib &JD) override;
@@ -243,7 +257,7 @@ private:
   MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                 JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
-                Error &Err);
+                MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err);
 
   // Associate MachOPlatform JIT-side runtime support functions with handlers.
   Error associateRuntimeSupportFunctions();
@@ -271,6 +285,7 @@ private:
   ExecutionSession &ES;
   JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
+  MachOHeaderMUBuilder BuildMachOHeaderMU;
 
   SymbolStringPtr MachOHeaderStartSymbol = ES.intern("___dso_handle");
 
