@@ -38,11 +38,6 @@ LLVM_C_EXTERN_C_BEGIN
  */
 
 /**
- * A reference to an orc::LLJIT instance.
- */
-typedef struct LLVMOrcOpaqueLLJIT *LLVMOrcLLJITRef;
-
-/**
  * Install the plugin that submits debug objects to the executor. Executors must
  * expose the llvm_orc_registerJITLoaderGDBWrapper symbol.
  */
