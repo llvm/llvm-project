@@ -2420,7 +2420,8 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
 
   // AIX TLS local-dynamic does not need the external reference for the
   // "_$TLSML" symbol.
-  if (GO->hasName() && GO->getName() == "_$TLSML") {
+  if (GO->getThreadLocalMode() == GlobalVariable::LocalDynamicTLSModel &&
+      GO->hasName() && GO->getName() == "_$TLSML") {
     return getContext().getXCOFFSection(
         Name, SectionKind::getData(),
         XCOFF::CsectProperties(XCOFF::XMC_TC, XCOFF::XTY_SD));
