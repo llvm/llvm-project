@@ -57,10 +57,9 @@ void llvm::findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers,
   if (!MDV)
     return;
 
-  TinyPtrVector<DbgDeclareInst *> Declares;
   for (User *U : MDV->users()) {
     if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
-      Declares.push_back(DDI);
+      DbgUsers.push_back(DDI);
   }
 }
 
