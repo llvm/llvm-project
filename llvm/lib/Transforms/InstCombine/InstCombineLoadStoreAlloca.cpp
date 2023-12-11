@@ -213,6 +213,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
+      New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
 
       replaceAllDbgUsesWith(AI, *New, *New, DT);
       return IC.replaceInstUsesWith(AI, New);
