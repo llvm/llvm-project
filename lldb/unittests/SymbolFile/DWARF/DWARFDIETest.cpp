@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -103,4 +105,111 @@ DWARF:
   // sure the children range is now empty.
   DWARFDIE no_children_die(unit, die_child0);
   EXPECT_TRUE(no_children_die.children().empty());
+}
+
+TEST(DWARFDIETest, DeclContext) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_str:
+    - 'mynamespace'
+    - 'mystruct'
+    - 'mytype'
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x00000003
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x00000004
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001 # compile_unit
+          Values:
+            - Value:           0x000000000000000C
+        - AbbrCode:        0x00000004 # namespace
+          Values:
+            - Value:           0x0000000000000000 # DW_ATE_strp
+        - AbbrCode:        0x00000002 # structure_type
+          Values:
+            - Value:           0x000000000000000c # DW_ATE_strp
+        - AbbrCode:        0x00000003 # base_type
+          Values:
+            - Value:           0x0000000000000015 # DW_ATE_strp
+        - AbbrCode:        0x00000000
+)";
+
+  YAMLModuleTester t(yamldata);
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_TRUE(unit != nullptr);
+  auto &ctx = unit->GetSymbolFileDWARF();
+
+  auto top_level_die = unit->DIE();
+  {
+    ASSERT_TRUE(top_level_die);
+    auto top_level_ctx = ctx.GetDWARFDeclContext(top_level_die);
+    auto top_level_name = llvm::StringRef(top_level_ctx.GetQualifiedName());
+    ASSERT_EQ(top_level_name, "");
+  }
+
+  auto namespace_die = top_level_die.GetFirstChild();
+  {
+    ASSERT_TRUE(namespace_die);
+    auto namespace_ctx = ctx.GetDWARFDeclContext(namespace_die);
+    auto namespace_name = llvm::StringRef(namespace_ctx.GetQualifiedName());
+    ASSERT_EQ(namespace_name, "::mynamespace");
+    auto namespace_names = namespace_ctx.GetQualifiedNameAsVector();
+    ASSERT_EQ(namespace_names.size(), 1u);
+    ASSERT_EQ(namespace_names.front(), "mynamespace");
+  }
+
+  auto struct_die = namespace_die.GetFirstChild();
+  {
+    ASSERT_TRUE(struct_die);
+    auto struct_ctx = ctx.GetDWARFDeclContext(struct_die);
+    auto struct_name = llvm::StringRef(struct_ctx.GetQualifiedName());
+    ASSERT_EQ(struct_name, "mynamespace::mystruct");
+    auto struct_names = struct_ctx.GetQualifiedNameAsVector();
+    ASSERT_EQ(struct_names.size(), 2u);
+    ASSERT_EQ(struct_names[0], "mystruct");
+    ASSERT_EQ(struct_names[1], "mynamespace");
+  }
+  auto simple_type_die = struct_die.GetFirstChild();
+  {
+    ASSERT_TRUE(simple_type_die);
+    auto simple_type_ctx = ctx.GetDWARFDeclContext(simple_type_die);
+    auto simple_type_name = llvm::StringRef(simple_type_ctx.GetQualifiedName());
+    ASSERT_EQ(simple_type_name, "mynamespace::mystruct::mytype");
+    auto simple_type_names = simple_type_ctx.GetQualifiedNameAsVector();
+    ASSERT_EQ(simple_type_names.size(), 3u);
+    ASSERT_EQ(simple_type_names[0], "mytype");
+    ASSERT_EQ(simple_type_names[1], "mystruct");
+    ASSERT_EQ(simple_type_names[2], "mynamespace");
+  }
 }

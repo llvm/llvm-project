@@ -55,6 +55,12 @@ const char *DWARFDeclContext::GetQualifiedName() const {
   return m_qualified_name.c_str();
 }
 
+llvm::SmallVector<llvm::StringRef>
+DWARFDeclContext::GetQualifiedNameAsVector() const {
+  return llvm::to_vector_of<llvm::StringRef>(
+      llvm::map_range(m_entries, GetName));
+}
+
 bool DWARFDeclContext::operator==(const DWARFDeclContext &rhs) const {
   if (m_entries.size() != rhs.m_entries.size())
     return false;
