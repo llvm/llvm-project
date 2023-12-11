@@ -2475,7 +2475,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
         // clang currently cannot process absolute paths in #include lines that
         // don't have a drive.
         if (Component.size() == 1 && IsSep(Component[0])) {
-          // Note: Path always contains at least '<' or '"'.
+          assert(!Path.empty() && "Path always contains at least '<' or quote");
           if (Path.size() == 1) {
             // If the first entry in Components is a directory separator,
             // then the code at the bottom of this loop that keeps the original
