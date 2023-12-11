@@ -649,8 +649,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   -DLLVM_EXTERNAL_BAR_SOURCE_DIR=/src/bar``.
 
 **LLVM_EXTERNALIZE_DEBUGINFO**:BOOL
-  Generate dSYM files and strip executables and libraries (Darwin Only).
-  Defaults to OFF.
+  Generate dSYM files and strip executables and libraries. Defaults to OFF.
+  This option is not available on Windows.
 
 **LLVM_FORCE_USE_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler and standard library versions won't be checked. LLVM
