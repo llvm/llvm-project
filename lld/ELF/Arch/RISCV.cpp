@@ -650,12 +650,8 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
   if (!gp)
     return;
 
-  bool noRelaxation = false;
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
-    noRelaxation = true;
-
-  if (noRelaxation) {
-    if (r.type != R_RISCV_HI20 || !(config->eflags & EF_RISCV_RVC) ||
+  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA())) {
+    if (r.type != R_RISCV_HI20 || !(getEFlags(sec.file) & EF_RISCV_RVC) ||
         !isInt<18>(r.sym->getVA(r.addend)))
       return;
     // We have a HI20 reloc that fits in 18 bits but not in 12 bits
