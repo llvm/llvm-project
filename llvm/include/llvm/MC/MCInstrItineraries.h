@@ -110,8 +110,8 @@ struct InstrItinerary {
 class InstrItineraryData {
 public:
   MCSchedModel SchedModel =
-      MCSchedModel::GetDefaultSchedModel(); ///< Basic machine properties.
-  const InstrStage *Stages = nullptr;       ///< Array of stages selected
+      MCSchedModel::Default;               ///< Basic machine properties.
+  const InstrStage *Stages = nullptr;      ///< Array of stages selected
   const unsigned *OperandCycles = nullptr; ///< Array of operand cycles selected
   const unsigned *Forwardings = nullptr; ///< Array of pipeline forwarding paths
   const InstrItinerary *Itineraries =
@@ -220,7 +220,7 @@ public:
       return std::nullopt;
 
     UseCycle = *DefCycle - *UseCycle + 1;
-    if (UseCycle > 0 &&
+    if (UseCycle > 0u &&
         hasPipelineForwarding(DefClass, DefIdx, UseClass, UseIdx))
       // FIXME: This assumes one cycle benefit for every pipeline forwarding.
       UseCycle = *UseCycle - 1;

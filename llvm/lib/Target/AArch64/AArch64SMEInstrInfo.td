@@ -203,7 +203,9 @@ def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
 def MSRpstatePseudo :
   Pseudo<(outs),
            (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
-    Sched<[WriteSys]>;
+    Sched<[WriteSys]> {
+  let hasPostISelHook = 1;
+}
 
 def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
           (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
@@ -547,11 +549,11 @@ defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, int_aarch64_sme_str_zt>;
 def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
 def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
 
-defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2">;
+defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2", int_aarch64_sme_luti2_lane_zt>;
 defm LUTI2_2ZTZI : sme2_luti2_vector_vg2_index<"luti2">;
 defm LUTI2_4ZTZI : sme2_luti2_vector_vg4_index<"luti2">;
 
-defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4">;
+defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4", int_aarch64_sme_luti4_lane_zt>;
 defm LUTI4_2ZTZI : sme2_luti4_vector_vg2_index<"luti4">;
 defm LUTI4_4ZTZI : sme2_luti4_vector_vg4_index<"luti4">;
 

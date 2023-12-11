@@ -179,7 +179,7 @@ static SmallVector<Value> inferDynamicDimsForConv(
   for (uint32_t i = 0, s = inputSizeDims.size(); i < s; ++i) {
     int64_t inputDim = inputSizeDims[i];
     int64_t kernelDim = kernelSizeDims[i];
-    if (inputTy.isDynamicDim(inputDim)) {
+    if (resultTy.isDynamicDim(inputDim)) {
       auto padTop = padAttr[i * 2];
       auto padBottom = padAttr[i * 2 + 1];
       auto stride = strideAttr[i];
@@ -196,7 +196,7 @@ static SmallVector<Value> inferDynamicDimsForConv(
 
   // Get the batch/channels dimensions.
   for (int i = 0; i < inputRank; i++) {
-    if (inputTy.isDynamicDim(i) && !dynDims[i])
+    if (resultTy.isDynamicDim(i) && !dynDims[i])
       dynDims[i] = rewriter.create<tensor::DimOp>(loc, input, i);
   }
 
@@ -344,15 +344,6 @@ public:
                                                   weightPermValue);
     }
 
-    auto resultZeroAttr = rewriter.getZeroAttr(resultETy);
-    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultETy, filteredDims);
-    Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
-    Value zeroTensor = rewriter
-                           .create<linalg::FillOp>(loc, ValueRange{zero},
-                                                   ValueRange{emptyTensor})
-                           .result();
-
     // Extract the attributes for convolution.
     ArrayRef<int64_t> stride = strideTosaAttr;
     ArrayRef<int64_t> dilation = dilationTosaAttr;
@@ -361,17 +352,11 @@ public:
     auto strideAttr = rewriter.getI64TensorAttr(stride);
     auto dilationAttr = rewriter.getI64TensorAttr(dilation);
 
-    // Create maps for the bias broadcasting
-    SmallVector<AffineMap, 4> indexingMaps;
-    indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
-        {rewriter.getAffineDimExpr(resultTy.getRank() - 1)},
-        rewriter.getContext()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-
     Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultTy.getShape(), resultETy, filteredDims);
+
+    Value broadcastBias =
+        linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
 
     if (isQuantized) {
       auto quantizationInfo = *op.getQuantizationInfo();
@@ -380,38 +365,25 @@ public:
 
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
+
       Value conv =
           rewriter
               .create<LinalgConvQOp>(
                   loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
-                  ValueRange{zeroTensor}, strideAttr, dilationAttr)
+                  ValueRange{broadcastBias}, strideAttr, dilationAttr)
               ->getResult(0);
-      Value result = linalgIntBroadcastExtSIAdd(rewriter, loc, bias, conv,
-                                                biasEmptyTensor, indexingMaps);
-      rewriter.replaceOp(op, result);
+
+      rewriter.replaceOp(op, conv);
       return success();
     }
 
     Value conv = rewriter
                      .create<LinalgConvOp>(
                          loc, resultTy, ValueRange{input, weight},
-                         ValueRange{zeroTensor}, strideAttr, dilationAttr)
+                         ValueRange{broadcastBias}, strideAttr, dilationAttr)
                      ->getResult(0);
 
-    Value result =
-        rewriter
-            .create<linalg::GenericOp>(
-                loc, resultTy, ValueRange({bias, conv}), biasEmptyTensor,
-                indexingMaps, getNParallelLoopsAttrs(resultTy.getRank()),
-                [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                    ValueRange args) {
-                  Value added = nestedBuilder.create<arith::AddFOp>(
-                      loc, args[0], args[1]);
-                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
-                })
-            .getResult(0);
-
-    rewriter.replaceOp(op, result);
+    rewriter.replaceOp(op, conv);
     return success();
   }
 };

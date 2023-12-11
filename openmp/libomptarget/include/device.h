@@ -19,27 +19,24 @@
 #include <cstring>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 
 #include "ExclusiveAccess.h"
+#include "OffloadEntry.h"
 #include "omptarget.h"
 #include "rtl.h"
 
 #include "OpenMP/Mapping.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+
 // Forward declarations.
 struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
-
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 ///
 struct PendingCtorDtorListsTy {
@@ -54,9 +51,7 @@ struct DeviceTy {
   PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
-  bool IsInit;
-  std::once_flag InitFlag;
-  bool HasPendingGlobals;
+  bool HasMappedGlobalData = false;
 
   /// Host data to device map type with a wrapper key indirection that allows
   /// concurrent modification of the entries without invalidating the underlying
@@ -75,12 +70,15 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx;
 
-  DeviceTy(PluginAdaptorTy *RTL);
+  DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
 
   ~DeviceTy();
+
+  /// Try to initialize the device and return any failure.
+  llvm::Error init();
 
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
@@ -148,8 +146,6 @@ struct DeviceTy {
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
-  // calls to RTL
-  int32_t initOnce();
   __tgt_target_table *loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
@@ -173,11 +169,14 @@ struct DeviceTy {
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
-                     HostDataToTargetTy *Entry = nullptr);
+                     HostDataToTargetTy *Entry = nullptr,
+                     DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
-                       HostDataToTargetTy *Entry = nullptr);
+                       HostDataToTargetTy *Entry = nullptr,
+                       DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
@@ -205,9 +204,8 @@ struct DeviceTy {
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print in the \p RTLDEVID
-  /// device RTL to obtain the information of the specific device.
-  bool printDeviceInfo(int32_t RTLDevID);
+  /// Calls the corresponding print device info function in the plugin.
+  bool printDeviceInfo();
 
   /// Event related interfaces.
   /// {
@@ -231,14 +229,18 @@ struct DeviceTy {
   int32_t destroyEvent(void *Event);
   /// }
 
-private:
-  // Call to RTL
-  void init(); // To be called only via DeviceTy::initOnce()
+  /// Register \p Entry as an offload entry that is avalable on this device.
+  void addOffloadEntry(OffloadEntryTy &Entry);
 
+  /// Print all offload entries to stderr.
+  void dumpOffloadEntries();
+
+private:
   /// Deinitialize the device (and plugin).
   void deinit();
-};
 
-extern bool deviceIsReady(int DeviceNum);
+  /// All offload entries available on this device.
+  llvm::DenseMap<llvm::StringRef, OffloadEntryTy *> DeviceOffloadEntries;
+};
 
 #endif

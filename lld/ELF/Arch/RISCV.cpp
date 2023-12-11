@@ -591,7 +591,7 @@ static void initSymbolAnchors() {
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
-  const bool rvc = config->eflags & EF_RISCV_RVC;
+  const bool rvc = getEFlags(sec.file) & EF_RISCV_RVC;
   const Symbol &sym = *r.sym;
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);

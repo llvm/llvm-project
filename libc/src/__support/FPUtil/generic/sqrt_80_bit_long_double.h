@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -22,7 +22,7 @@ namespace x86 {
 
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
-      unsafe_clz(static_cast<uint64_t>(mantissa)) -
+      cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
       (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE));
   exponent -= shift;
   mantissa <<= shift;
@@ -101,7 +101,7 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // We compute one more iteration in order to round correctly.
     bool lsb = static_cast<bool>(y & 1); // Least significant bit
-    bool rb = false;  // Round bit
+    bool rb = false;                     // Round bit
     r <<= 2;
     UIntType tmp = (y << 2) + 1;
     if (r >= tmp) {

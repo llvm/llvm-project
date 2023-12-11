@@ -1193,6 +1193,11 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSV(SDValue Addr) const {
   if (isNoUnsignedWrap(Addr))
     return true;
 
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(*Subtarget))
+    return true;
+
   auto LHS = Addr.getOperand(0);
   auto RHS = Addr.getOperand(1);
   return CurDAG->SignBitIsZero(RHS) && CurDAG->SignBitIsZero(LHS);
@@ -1201,6 +1206,11 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSV(SDValue Addr) const {
 // Check address value in SGPR/VGPR are legal for flat scratch in the form
 // of: SGPR + VGPR + Imm.
 bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSVImm(SDValue Addr) const {
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(*Subtarget))
+    return true;
+
   auto Base = Addr.getOperand(0);
   auto *RHSImm = cast<ConstantSDNode>(Addr.getOperand(1));
   // If the immediate offset is negative and within certain range, the base
@@ -2358,9 +2368,8 @@ static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
   // Note that ballot doesn't use SETEQ condition but its easy to support it
   // here for completeness, so in this case Negate is set true on return.
   auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
-  auto *VCMP_CRHS = dyn_cast<ConstantSDNode>(VCMP.getOperand(1));
-  if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) && VCMP_CRHS &&
-      VCMP_CRHS->isZero()) {
+  if ((VCMP_CC == ISD::SETEQ || VCMP_CC == ISD::SETNE) &&
+      isNullConstant(VCMP.getOperand(1))) {
 
     auto Cond = VCMP.getOperand(0);
     if (ISD::isExtOpcode(Cond->getOpcode())) // Skip extension.
@@ -2394,8 +2403,8 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
       Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
     SDValue VCMP = Cond->getOperand(0);
     auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
-    auto *CRHS = dyn_cast<ConstantSDNode>(Cond->getOperand(1));
-    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero() &&
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+        isNullConstant(Cond->getOperand(1)) &&
         // TODO: make condition below an assert after fixing ballot bitwidth.
         VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...

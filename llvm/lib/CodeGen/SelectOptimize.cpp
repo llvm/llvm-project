@@ -39,7 +39,6 @@
 #include <memory>
 #include <queue>
 #include <stack>
-#include <string>
 
 using namespace llvm;
 

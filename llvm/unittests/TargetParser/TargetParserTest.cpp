@@ -469,13 +469,19 @@ INSTANTIATE_TEST_SUITE_P(
                              ARM::AEK_FP | ARM::AEK_RAS | ARM::AEK_LOB |
                              ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
+        ARMCPUTestParams<uint64_t>("cortex-m52", "armv8.1-m.main",
+                         "fp-armv8-fullfp16-d16",
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD |
+                             ARM::AEK_FP | ARM::AEK_RAS | ARM::AEK_LOB |
+                             ARM::AEK_FP16 | ARM::AEK_PACBTI,
+                         "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE, "iwmmxt"),
         ARMCPUTestParams<uint64_t>("xscale", "xscale", "none", ARM::AEK_NONE, "xscale"),
         ARMCPUTestParams<uint64_t>("swift", "armv7s", "neon-vfpv4",
                                    ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7-S")));
 
-static constexpr unsigned NumARMCPUArchs = 89;
+static constexpr unsigned NumARMCPUArchs = 90;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -1807,8 +1813,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSVE_FP8DOT2, AArch64::AEK_FP8DOT4,
       AArch64::AEK_SSVE_FP8DOT4, AArch64::AEK_LUT,
       AArch64::AEK_SME_LUTv2,    AArch64::AEK_SMEF8F16,
-      AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64,
-      AArch64::AEK_CPA};
+      AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64};
 
   std::vector<StringRef> Features;
 
@@ -1894,7 +1899,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f32"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-fa64"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+cpa"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the

@@ -91,11 +91,11 @@ static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                      const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
   int64_t Offset;
-  if (DAsm->isGFX12Plus()) {  // GFX12 supports 24-bit signed offsets.
+  if (DAsm->isGFX12Plus()) { // GFX12 supports 24-bit signed offsets.
     Offset = SignExtend64<24>(Imm);
-  } else if (DAsm->isVI()) {  // VI supports 20-bit unsigned offsets.
+  } else if (DAsm->isVI()) { // VI supports 20-bit unsigned offsets.
     Offset = Imm & 0xFFFFF;
-  } else {                    // GFX9+ supports 21-bit signed offsets.
+  } else { // GFX9+ supports 21-bit signed offsets.
     Offset = SignExtend64<21>(Imm);
   }
   return addOperand(Inst, MCOperand::createImm(Offset));
@@ -110,7 +110,7 @@ static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
 static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
-  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeSplitBarrier(Val));
 }
 
@@ -680,7 +680,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Res = tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632,
                         MI, DW, Address, CS);
-    if (Res) break;
+    if (Res)
+      break;
 
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;

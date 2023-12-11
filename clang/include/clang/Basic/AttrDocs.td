@@ -2199,6 +2199,43 @@ preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang ``__builtin_preserve_access_index()``.
   }];
 }
+
+def BPFPreserveStaticOffsetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the ``__attribute__((preserve_static_offset))``
+attribute for the BPF target. This attribute may be attached to a
+struct or union declaration. Reading or writing fields of types having
+such annotation is guaranteed to generate LDX/ST/STX instruction with
+offset corresponding to the field.
+
+For example:
+
+.. code-block:: c
+
+  struct foo {
+    int a;
+    int b;
+  };
+
+  struct bar {
+    int a;
+    struct foo b;
+  } __attribute__((preserve_static_offset));
+
+  void buz(struct bar *g) {
+    g->b.a = 42;
+  }
+
+The assignment to ``g``'s field would produce an ST instruction with
+offset 8: ``*(u32)(r1 + 8) = 42;``.
+
+Without this attribute generated instructions might be different,
+depending on optimizations behavior. E.g. the example above could be
+rewritten as ``r1 += 8; *(u32)(r1 + 0) = 42;``.
+  }];
+}
+
 def BTFDeclTagDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2515,6 +2552,13 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
@@ -2615,8 +2659,9 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes;
-  - The AMDGPU target backend is unable to create machine code that can meet the
-    request.
+
+The AMDGPU target backend will emit a warning whenever it is unable to
+create machine code that meets the request.
   }];
 }
 
@@ -3610,6 +3655,21 @@ an error:
   int S::*i;
   struct S {};
 }];
+}
+
+def MSConstexprDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``[[msvc::constexpr]]`` attribute can be applied only to a function
+definition or a ``return`` statement. It does not impact function declarations.
+A ``[[msvc::constexpr]]`` function cannot be ``constexpr`` or ``consteval``.
+A ``[[msvc::constexpr]]`` function is treated as if it were a ``constexpr`` function
+when it is evaluated in a constant context of ``[[msvc::constexpr]] return`` statement.
+Otherwise, it is treated as a regular function.
+
+Semantics of this attribute are enabled only under MSVC compatibility
+(``-fms-compatibility-version``) 19.33 and later.
+  }];
 }
 
 def MSNoVTableDocs : Documentation {
@@ -7547,7 +7607,7 @@ For example,
   Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
 
   // Fine for a coroutine wrapper to return a CRT.
-  Task<int> [[clang::coro_wrapper]] foo() { return increment(1); }
+  [[clang::coro_wrapper]] Task<int> foo() { return increment(1); }
 
   void bar() {
     // Invalid. This intantiates a function which returns a CRT but is not marked as

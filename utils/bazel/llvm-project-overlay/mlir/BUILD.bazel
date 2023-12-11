@@ -941,7 +941,6 @@ cc_library(
     deps = [
         ":CAPIAsync",
         ":CAPIDebug",
-        ":CAPIGPU",
         ":CAPIIR",
         ":CAPIInterfaces",
         ":MLIRBindingsPythonHeadersAndDeps",
@@ -964,7 +963,6 @@ cc_library(
     deps = [
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
-        ":CAPIGPUHeaders",
         ":CAPIIRHeaders",
         ":MLIRBindingsPythonHeaders",
         "//llvm:Support",
@@ -984,7 +982,6 @@ cc_library(
     deps = [
         ":CAPIAsyncObjects",
         ":CAPIDebugObjects",
-        ":CAPIGPUObjects",
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
     ],
@@ -3240,6 +3237,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":MeshIncGen",
         ":Support",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -3397,6 +3395,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":DialectUtils",
+        ":GPUCommonTransforms",
         ":GPUCompilationAttrInterfacesIncGen",
         ":GPUDialect",
         ":IR",
@@ -3995,7 +3994,6 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
-        ":BufferizationDialect",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
         ":DestinationStyleOpInterface",
@@ -5569,6 +5567,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":Transforms",
+        ":VectorToLLVM",
         "//llvm:Support",
     ],
 )
@@ -8382,6 +8381,18 @@ cc_library(
 )
 
 cc_library(
+    name = "SPIRVToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/SPIRV/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/SPIRV/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SPIRVDialect",
+        ":ToLLVMIRTranslation",
+    ],
+)
+
+cc_library(
     name = "GPUToLLVMIRTranslation",
     srcs = [
         "lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp",
@@ -8517,6 +8528,7 @@ cc_library(
         ":OpenMPToLLVMIRTranslation",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
+        ":SPIRVToLLVMIRTranslation",
         ":X86VectorToLLVMIRTranslation",
     ],
 )
