@@ -95,4 +95,3 @@ void global_func() {
 //--- main.cpp
 #include "lib.h"
 int main() { global_func(); }
-
