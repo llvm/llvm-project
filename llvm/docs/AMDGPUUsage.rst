@@ -871,7 +871,7 @@ supported for the ``amdgcn`` target.
   Pointer**. Additionally, it contains an index into the buffer, which
   allows the direct addressing of structured elements.
 
-  The buffer descriptor must be *raw*:
+  The bits in the buffer descriptor must meet the following requirements:
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
 
