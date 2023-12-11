@@ -1,0 +1,66 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5_helper.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.exe > %t.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
+
+# This test checks we correclty re-renerate .debug-str-offsets.
+
+# CHECK: .debug_str_offsets contents
+# CHECK-NEXT: 0x00000000: Contribution size = 52, Format = DWARF32, Version = 5
+# CHECK-NEXT: 0x00000008: 00000016 "clang version 15.0.0"
+# CHECK-NEXT: 0x0000000c: 00000049 "main.cpp"
+# CHECK-NEXT: 0x00000010: 0000008d "/testLocListMultiple"
+# CHECK-NEXT: 0x00000014: 00000000 "_Z3usePiS_"
+# CHECK-NEXT: 0x00000018: 0000007d "use"
+# CHECK-NEXT: 0x0000001c: 00000052 "main"
+# CHECK-NEXT: 0x00000020: 00000057 "int"
+# CHECK-NEXT: 0x00000024: 0000005b "x"
+# CHECK-NEXT: 0x00000028: 0000007b "y"
+# CHECK-NEXT: 0x0000002c: 00000076 "argc"
+# CHECK-NEXT: 0x00000030: 0000005d "argv"
+# CHECK-NEXT: 0x00000034: 00000062 "char"
+# CHECK-NEXT: 0x00000038: Contribution size = 48, Format = DWARF32, Version = 5
+# CHECK-NEXT: 0x00000040: 0000002b "clang version 15.0.0)"
+# CHECK-NEXT: 0x00000044: 00000041 "foo.cpp"
+# CHECK-NEXT: 0x00000048: 0000008d "/testLocListMultiple"
+# CHECK-NEXT: 0x0000004c: 0000000f "fooVar"
+# CHECK-NEXT: 0x00000050: 00000057 "int"
+# CHECK-NEXT: 0x00000054: 00000081 "_Z6useFooPi"
+# CHECK-NEXT: 0x00000058: 00000067 "useFoo"
+# CHECK-NEXT: 0x0000005c: 0000005b "x"
+# CHECK-NEXT: 0x00000060: 0000006e "_Z3fooi"
+# CHECK-NEXT: 0x00000064: 0000000b "foo"
+# CHECK-NEXT: 0x00000068: 00000076 "argc"
+
+# Checking post bolt
+# CHECK: .debug_str_offsets contents
+# CHECK-NEXT: 0x00000000: Contribution size = 52, Format = DWARF32, Version = 5
+# CHECK-NEXT: 0x00000008: 00000016 "clang version 15.0.0"
+# CHECK-NEXT: 0x0000000c: 00000049 "main.cpp"
+# CHECK-NEXT: 0x00000010: 0000008d "/testLocListMultiple"
+# CHECK-NEXT: 0x00000014: 00000000 "_Z3usePiS_"
+# CHECK-NEXT: 0x00000018: 0000007d "use"
+# CHECK-NEXT: 0x0000001c: 00000052 "main"
+# CHECK-NEXT: 0x00000020: 00000057 "int"
+# CHECK-NEXT: 0x00000024: 0000005b "x"
+# CHECK-NEXT: 0x00000028: 0000007b "y"
+# CHECK-NEXT: 0x0000002c: 00000076 "argc"
+# CHECK-NEXT: 0x00000030: 0000005d "argv"
+# CHECK-NEXT: 0x00000034: 00000062 "char"
+# CHECK-NEXT: 0x00000038: Contribution size = 48, Format = DWARF32, Version = 5
+# CHECK-NEXT: 0x00000040: 0000002b "clang version 15.0.0)"
+# CHECK-NEXT: 0x00000044: 00000041 "foo.cpp"
+# CHECK-NEXT: 0x00000048: 0000008d "/testLocListMultiple"
+# CHECK-NEXT: 0x0000004c: 0000000f "fooVar"
+# CHECK-NEXT: 0x00000050: 00000057 "int"
+# CHECK-NEXT: 0x00000054: 00000081 "_Z6useFooPi"
+# CHECK-NEXT: 0x00000058: 00000067 "useFoo"
+# CHECK-NEXT: 0x0000005c: 0000005b "x"
+# CHECK-NEXT: 0x00000060: 0000006e "_Z3fooi"
+# CHECK-NEXT: 0x00000064: 0000000b "foo"
+# CHECK-NEXT: 0x00000068: 00000076 "argc"
