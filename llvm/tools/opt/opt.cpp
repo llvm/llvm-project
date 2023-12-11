@@ -364,7 +364,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "polyhedral-info",
       "print-polyhedral-info",
       "replace-with-veclib",
-      "jmc-instrument",
+      "jmc-instrumenter",
       "dot-regions",
       "dot-regions-only",
       "view-regions",

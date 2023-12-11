@@ -23,6 +23,7 @@ MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #define MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass, ())
+MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass, ())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_ANALYSIS
