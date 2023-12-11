@@ -440,6 +440,14 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
   if (!beganReadingRecord_) {
     beganReadingRecord_ = true;
+    // Don't use IsAtEOF() to check for an EOF condition here, just detect
+    // it from a failed or short read from the file.  IsAtEOF() could be
+    // wrong for formatted input if actual newline characters had been
+    // written in-band by previous WRITEs before a REWIND.  In fact,
+    // now that we know that the unit is being used for input (again),
+    // it's best to reset endfileRecordNumber and ensure IsAtEOF() will
+    // now be true on return only if it gets set by HitEndOnRead().
+    endfileRecordNumber.reset();
     if (access == Access::Direct) {
       CheckDirectAccess(handler);
       auto need{static_cast<std::size_t>(recordOffsetInFrame_ + *openRecl)};
@@ -452,17 +460,13 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
       }
     } else {
       recordLength.reset();
-      if (IsAtEOF()) {
-        handler.SignalEnd();
-      } else {
-        RUNTIME_CHECK(handler, isUnformatted.has_value());
-        if (*isUnformatted) {
-          if (access == Access::Sequential) {
-            BeginSequentialVariableUnformattedInputRecord(handler);
-          }
-        } else { // formatted sequential or stream
-          BeginVariableFormattedInputRecord(handler);
+      RUNTIME_CHECK(handler, isUnformatted.has_value());
+      if (*isUnformatted) {
+        if (access == Access::Sequential) {
+          BeginSequentialVariableUnformattedInputRecord(handler);
         }
+      } else { // formatted sequential or stream
+        BeginVariableFormattedInputRecord(handler);
       }
     }
   }
@@ -727,6 +731,7 @@ void ExternalFileUnit::EndIoStatement() {
 
 void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     IoErrorHandler &handler) {
+  RUNTIME_CHECK(handler, access == Access::Sequential);
   std::int32_t header{0}, footer{0};
   std::size_t need{recordOffsetInFrame_ + sizeof header};
   std::size_t got{ReadFrame(frameOffsetInFile_, need, handler)};
