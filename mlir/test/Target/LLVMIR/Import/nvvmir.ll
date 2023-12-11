@@ -205,7 +205,7 @@ define float @nvvm_rcp(float %0) {
 ; }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.y() #0
