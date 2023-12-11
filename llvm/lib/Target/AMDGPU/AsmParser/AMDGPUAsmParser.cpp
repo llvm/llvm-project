@@ -5176,9 +5176,9 @@ bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
 
   int Simm16Pos = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
                                              AMDGPU::OpName::simm16);
-  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 15) {
+  if ((unsigned)Inst.getOperand(Simm16Pos).getImm() > 255) {
     SMLoc Loc = Operands[1]->getStartLoc();
-    Error(Loc, "s_set_vgpr_msb accepts values in range [0..15]");
+    Error(Loc, "s_set_vgpr_msb accepts values in range [0..255]");
     return false;
   }
 

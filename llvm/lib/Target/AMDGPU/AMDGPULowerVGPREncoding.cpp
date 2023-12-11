@@ -11,10 +11,10 @@
 ///
 /// The pass scans used VGPRs and inserts S_SET_VGPR_MSB instructions to switch
 /// VGPR addressing mode. The mode change is effective until the next change.
-/// This instruction provides a high bit of a VGPR address for four of the
+/// This instruction provides high bits of a VGPR address for four of the
 /// operands: vdst, src0, src1, and src2, or other 4 operands depending on the
-/// instruction encoding. If a bit is set to 1 it adds 256 to the corresponding
-/// operand VGPR number.
+/// instruction encoding. If bits are set they are added as MSB to the
+/// corresponding operand VGPR number.
 ///
 /// There is no need to replace actual register operands because encoding of the
 /// high and low VGPRs is the same. I.e. v0 has the encoding 0x100, so does v256.
@@ -88,10 +88,11 @@ private:
   /// Reset mode to default.
   void resetMode(MachineBasicBlock::instr_iterator I) { setMode(0, I); }
 
-  /// If \p MO is a high VGPR \returns true and a corresponding low VGPR.
-  /// If \p MO is a low VGPR \returns false and that register.
-  /// Otherwise \returns false and NoRegister.
-  std::pair<bool, MCRegister> getLowRegister(const MachineOperand &MO) const;
+  /// If \p MO is a high VGPR \returns offset MSBs and a corresponding low VGPR.
+  /// If \p MO is a low VGPR \returns 0 and that register.
+  /// Otherwise \returns 0 and NoRegister.
+  std::pair<unsigned, MCRegister>
+  getLowRegister(const MachineOperand &MO) const;
 
   /// Handle single \p MI. \return true if changed.
   bool runOnMachineInstr(MachineInstr &MI);
@@ -123,24 +124,24 @@ bool AMDGPULowerVGPREncoding::setMode(unsigned NewMode,
   return true;
 }
 
-std::pair<bool, MCRegister>
+std::pair<unsigned, MCRegister>
 AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
   if (!MO.isReg())
-    return std::pair(false, MCRegister());
+    return std::pair(0, MCRegister());
 
   MCRegister Reg = MO.getReg();
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
   if (!RC || !TRI->isVGPRClass(RC))
-    return std::pair(false, MCRegister());
+    return std::pair(0, MCRegister());
 
   unsigned Idx = TRI->getHWRegIndex(Reg);
   if (Idx <= 255)
-    return std::pair(false, Reg);
+    return std::pair(0, Reg);
 
   unsigned Align = TRI->getRegClassAlignmentNumBits(RC) / 32;
   assert(Align == 1 || Align == 2);
   unsigned RegNum = (Idx & 0xff) >> (Align - 1);
-  return std::pair(true, RC->getRegister(RegNum));
+  return std::pair(Idx >> 8, RC->getRegister(RegNum));
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
@@ -154,18 +155,18 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
     Op = TII->getNamedOperand(MI, Ops[I]);
 
     MCRegister Reg;
-    bool IsHighVGPR;
+    unsigned MSBits;
     if (Op)
-      std::tie(IsHighVGPR, Reg) = getLowRegister(*Op);
+      std::tie(MSBits, Reg) = getLowRegister(*Op);
 
 #if !defined(NDEBUG)
     if (Reg && Ops2) {
       auto Op2 = TII->getNamedOperand(MI, Ops2[I]);
       if (Op2) {
-        bool IsHighVGPR2;
+        unsigned MSBits2;
         MCRegister Reg2;
-        std::tie(IsHighVGPR2, Reg2) = getLowRegister(*Op2);
-        if (Reg2 && IsHighVGPR != IsHighVGPR2)
+        std::tie(MSBits2, Reg2) = getLowRegister(*Op2);
+        if (Reg2 && MSBits != MSBits2)
           llvm_unreachable("Invalid VOPD pair was created");
       }
     }
@@ -174,7 +175,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
     if (!Reg && Ops2) {
       Op = TII->getNamedOperand(MI, Ops2[I]);
       if (Op)
-        std::tie(IsHighVGPR, Reg) = getLowRegister(*Op);
+        std::tie(MSBits, Reg) = getLowRegister(*Op);
     }
 
     // Keep unused bits from the old mask to minimize switches.
@@ -183,11 +184,8 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
     if (!Reg || (!Op->isDef() && Op->isTied()))
       continue;
 
-    if (!IsHighVGPR) {
-      NewMode &= ~(1 << I);
-      continue;
-    }
-    NewMode |= (1 << I);
+    NewMode &= ~(3 << (I * 2));
+    NewMode |= MSBits << (I * 2);
   }
 
   return setMode(NewMode, MI.getIterator());

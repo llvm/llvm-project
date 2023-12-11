@@ -1,10 +1,6 @@
 // RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1210 %s | FileCheck --check-prefix=GFX1210 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
-s_set_vgpr_msb 10
-// GFX1210: [0x0a,0x00,0x86,0xbf]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 s_add_pc_i64 s[2:3]
 // GFX1210: s_add_pc_i64 s[2:3]                     ; encoding: [0x02,0x4b,0x80,0xbe]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
