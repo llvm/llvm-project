@@ -20,12 +20,19 @@ jobs:
     permissions:
       pull-requests: write
     # Only comment on PRs that have been opened for the first time, by someone
-    # new to LLVM or to GitHub as a whole.
+    # new to LLVM or to GitHub as a whole. Ideally we'd look for FIRST_TIMER
+    # or FIRST_TIME_CONTRIBUTOR, but this does not appear to work. Instead check
+    # that we do not have any of the other author associations.
+    # See https://docs.github.com/en/webhooks/webhook-events-and-payloads?actionType=opened#pull_request
+    # for all the possible values.
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       (github.event.action == 'opened') &&
-      (github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
-       github.event.pull_request.author_association == 'FIRST_TIMER')
+      (github.event.pull_request.author_association != 'COLLABORATOR') &&
+      (github.event.pull_request.author_association != 'CONTRIBUTOR') &&
+      (github.event.pull_request.author_association != 'MANNEQUIN') &&
+      (github.event.pull_request.author_association != 'MEMBER') &&
+      (github.event.pull_request.author_association != 'OWNER')
     steps:
       - name: Setup Automation Script
         run: |
@@ -33,6 +40,14 @@ jobs:
           curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
           chmod a+x github-automation.py
           pip install -r requirements.txt
+
+      # Will be removed shortly, just gathering info to report to Github that
+      # this is not working as expected.
+      - name: Dump Author Association
+        env:
+          AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        run: |
+          echo "$AUTHOR_ASSOCIATION"
 
       - name: Greet Author
         run: |
