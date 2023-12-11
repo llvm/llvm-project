@@ -151,6 +151,20 @@ llvm.func @index_to_struct(%arg: i32) {
 
 // -----
 
+// CHECK-LABEL: llvm.func @no_crash_on_negative_gep_index
+llvm.func @no_crash_on_negative_gep_index() {
+  %0 = llvm.mlir.constant(1.000000e+00 : f16) : f16
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32, i32)>
+  %2 = llvm.alloca %1 x !llvm.struct<"foo", (i32, i32, i32)> : (i32) -> !llvm.ptr
+  // CHECK: llvm.getelementptr %[[ALLOCA]][-1] : (!llvm.ptr) -> !llvm.ptr, f32
+  %3 = llvm.getelementptr %2[-1] : (!llvm.ptr) -> !llvm.ptr, f32
+  llvm.store %0, %3 : f16, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @coalesced_store_ints
 // CHECK-SAME: %[[ARG:.*]]: i64
 llvm.func @coalesced_store_ints(%arg: i64) {
