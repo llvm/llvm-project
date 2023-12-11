@@ -71,7 +71,7 @@ template <> struct FPBits<long double> {
     return bits & (FloatProp::MANTISSA_MASK | FloatProp::EXPLICIT_BIT_MASK);
   }
 
-  LIBC_INLINE constexpr void set_unbiased_exponent(UIntType expVal) {
+  LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
     expVal =
         (expVal << (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH)) &
         FloatProp::EXPONENT_MASK;
@@ -79,7 +79,7 @@ template <> struct FPBits<long double> {
     bits |= expVal;
   }
 
-  LIBC_INLINE constexpr uint16_t get_unbiased_exponent() const {
+  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
     return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
                     (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH));
   }
@@ -137,7 +137,7 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE constexpr int get_exponent() const {
-    return int(get_unbiased_exponent()) - EXPONENT_BIAS;
+    return int(get_biased_exponent()) - EXPONENT_BIAS;
   }
 
   // If the number is subnormal, the exponent is treated as if it were the
@@ -147,38 +147,38 @@ template <> struct FPBits<long double> {
   // will give a slightly incorrect result. Additionally, zero has an exponent
   // of zero, and that should actually be treated as zero.
   LIBC_INLINE constexpr int get_explicit_exponent() const {
-    const int unbiased_exp = int(get_unbiased_exponent());
+    const int biased_exp = int(get_biased_exponent());
     if (is_zero()) {
       return 0;
-    } else if (unbiased_exp == 0) {
+    } else if (biased_exp == 0) {
       return 1 - EXPONENT_BIAS;
     } else {
-      return unbiased_exp - EXPONENT_BIAS;
+      return biased_exp - EXPONENT_BIAS;
     }
   }
 
   LIBC_INLINE constexpr bool is_zero() const {
-    return get_unbiased_exponent() == 0 && get_mantissa() == 0 &&
+    return get_biased_exponent() == 0 && get_mantissa() == 0 &&
            get_implicit_bit() == 0;
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
-    return get_unbiased_exponent() == MAX_EXPONENT && get_mantissa() == 0 &&
+    return get_biased_exponent() == MAX_EXPONENT && get_mantissa() == 0 &&
            get_implicit_bit() == 1;
   }
 
   LIBC_INLINE constexpr bool is_nan() const {
-    if (get_unbiased_exponent() == MAX_EXPONENT) {
+    if (get_biased_exponent() == MAX_EXPONENT) {
       return (get_implicit_bit() == 0) || get_mantissa() != 0;
-    } else if (get_unbiased_exponent() != 0) {
+    } else if (get_biased_exponent() != 0) {
       return get_implicit_bit() == 0;
     }
     return false;
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
-    return (get_unbiased_exponent() == MAX_EXPONENT) ||
-           (get_unbiased_exponent() != 0 && get_implicit_bit() == 0);
+    return (get_biased_exponent() == MAX_EXPONENT) ||
+           (get_biased_exponent() != 0 && get_implicit_bit() == 0);
   }
 
   // Methods below this are used by tests.
@@ -189,7 +189,7 @@ template <> struct FPBits<long double> {
 
   LIBC_INLINE static constexpr long double inf(bool sign = false) {
     FPBits<long double> bits(0.0l);
-    bits.set_unbiased_exponent(MAX_EXPONENT);
+    bits.set_biased_exponent(MAX_EXPONENT);
     bits.set_implicit_bit(1);
     if (sign) {
       bits.set_sign(true);
@@ -201,7 +201,7 @@ template <> struct FPBits<long double> {
 
   LIBC_INLINE static constexpr long double build_nan(UIntType v) {
     FPBits<long double> bits(0.0l);
-    bits.set_unbiased_exponent(MAX_EXPONENT);
+    bits.set_biased_exponent(MAX_EXPONENT);
     bits.set_implicit_bit(1);
     bits.set_mantissa(v);
     return bits;
@@ -228,10 +228,10 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE static constexpr FPBits<long double>
-  create_value(bool sign, UIntType unbiased_exp, UIntType mantissa) {
+  create_value(bool sign, UIntType biased_exp, UIntType mantissa) {
     FPBits<long double> result;
     result.set_sign(sign);
-    result.set_unbiased_exponent(unbiased_exp);
+    result.set_biased_exponent(biased_exp);
     result.set_mantissa(mantissa);
     return result;
   }

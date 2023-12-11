@@ -880,7 +880,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
 
   fputil::DoubleDouble x_dd{0.0, 0.0};
 
-  uint16_t x_exp = xbits.get_unbiased_exponent();
+  uint16_t x_exp = xbits.get_biased_exponent();
 
   if (x_exp >= EXPONENT_BIAS) {
     // |x| >= 1
@@ -909,7 +909,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
     }
   } else {
     // |x| < 1
-    if (LIBC_UNLIKELY(xbits.get_unbiased_exponent() <
+    if (LIBC_UNLIKELY(xbits.get_biased_exponent() <
                       EXPONENT_BIAS - MANTISSA_WIDTH - 1)) {
       // Quick return when |x| < 2^-53.
       // Since log(1 + x) = x - x^2/2 + x^3/3 - ...,
