@@ -979,9 +979,9 @@ ListeningSocket::ListeningSocket(ListeningSocket &&LS)
   LS.FD = -1;
 }
 
-Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath) {
+Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
+                                                      int MaxBacklog) {
 
-  int MaxBacklog = 3;
 #ifdef _WIN32
   WSADATA WsaData = {0};
   if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {

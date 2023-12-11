@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Threading.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -645,7 +646,9 @@ class ListeningSocket {
   ListeningSocket(int SocketFD, StringRef SocketPath);
 
 public:
-  static Expected<ListeningSocket> createUnix(StringRef SocketPath);
+  static Expected<ListeningSocket> createUnix(
+      StringRef SocketPath,
+      int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
   Expected<std::unique_ptr<raw_socket_stream>> accept();
   ListeningSocket(ListeningSocket &&LS);
   ~ListeningSocket();
