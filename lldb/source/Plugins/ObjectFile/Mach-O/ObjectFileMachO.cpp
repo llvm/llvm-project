@@ -1208,6 +1208,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeSwiftModules:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
+        case eSectionTypeLLDBTypeSummaries:
           return AddressClass::eDebug;
 
         case eSectionTypeEHFrame:
@@ -1485,6 +1486,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_swift_ast("__swift_ast");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
+  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
 
   if (section_name == g_sect_name_dwarf_debug_abbrev)
     return eSectionTypeDWARFDebugAbbrev;
@@ -1572,6 +1574,9 @@ static lldb::SectionType GetSectionType(uint32_t flags,
       section_name == g_sect_name_objc_const ||
       section_name == g_sect_name_objc_classlist) {
     return eSectionTypeDataPointers;
+  }
+  if (section_name == g_sect_name_lldb_summaries) {
+    return lldb::eSectionTypeLLDBTypeSummaries;
   }
 
   switch (mach_sect_type) {

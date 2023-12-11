@@ -1685,7 +1685,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".text", eSectionTypeCode)
       // Swift support:
       .Case(".swift_ast", eSectionTypeSwiftModules)
-      //
+      .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
       .Default(eSectionTypeOther);
 }
 
