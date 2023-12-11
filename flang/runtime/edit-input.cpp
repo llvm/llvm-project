@@ -916,20 +916,20 @@ static bool EditListDirectedCharacterInput(
 }
 
 template <typename CHAR>
-bool EditCharacterInput(
-    IoStatementState &io, const DataEdit &edit, CHAR *x, std::size_t length) {
+bool EditCharacterInput(IoStatementState &io, const DataEdit &edit, CHAR *x,
+    std::size_t lengthChars) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    return EditListDirectedCharacterInput(io, x, length, edit);
+    return EditListDirectedCharacterInput(io, x, lengthChars, edit);
   case 'A':
   case 'G':
     break;
   case 'B':
-    return EditBOZInput<1>(io, edit, x, length * sizeof *x);
+    return EditBOZInput<1>(io, edit, x, lengthChars * sizeof *x);
   case 'O':
-    return EditBOZInput<3>(io, edit, x, length * sizeof *x);
+    return EditBOZInput<3>(io, edit, x, lengthChars * sizeof *x);
   case 'Z':
-    return EditBOZInput<4>(io, edit, x, length * sizeof *x);
+    return EditBOZInput<4>(io, edit, x, lengthChars * sizeof *x);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a CHARACTER data item",
@@ -937,27 +937,31 @@ bool EditCharacterInput(
     return false;
   }
   const ConnectionState &connection{io.GetConnectionState()};
-  std::size_t remaining{length};
+  std::size_t remainingChars{lengthChars};
+  // Skip leading characters.
+  // Their bytes don't count towards INQUIRE(IOLENGTH=).
+  std::size_t skipChars{0};
   if (edit.width && *edit.width > 0) {
-    remaining = *edit.width;
+    remainingChars = *edit.width;
+    if (remainingChars > lengthChars) {
+      skipChars = remainingChars - lengthChars;
+    }
   }
   // When the field is wider than the variable, we drop the leading
   // characters.  When the variable is wider than the field, there can be
   // trailing padding or an EOR condition.
   const char *input{nullptr};
-  std::size_t ready{0};
-  // Skip leading bytes.
-  // These bytes don't count towards INQUIRE(IOLENGTH=).
-  std::size_t skip{remaining > length ? remaining - length : 0};
+  std::size_t readyBytes{0};
   // Transfer payload bytes; these do count.
-  while (remaining > 0) {
-    if (ready == 0) {
-      ready = io.GetNextInputBytes(input);
-      if (ready == 0 || (ready < remaining && edit.modes.nonAdvancing)) {
-        if (io.CheckForEndOfRecord(ready)) {
-          if (ready == 0) {
+  while (remainingChars > 0) {
+    if (readyBytes == 0) {
+      readyBytes = io.GetNextInputBytes(input);
+      if (readyBytes == 0 ||
+          (readyBytes < remainingChars && edit.modes.nonAdvancing)) {
+        if (io.CheckForEndOfRecord(readyBytes)) {
+          if (readyBytes == 0) {
             // PAD='YES' and no more data
-            std::fill_n(x, length, ' ');
+            std::fill_n(x, lengthChars, ' ');
             return !io.GetIoErrorHandler().InError();
           } else {
             // Do partial read(s) then pad on last iteration
@@ -967,63 +971,64 @@ bool EditCharacterInput(
         }
       }
     }
-    std::size_t chunk;
-    bool skipping{skip > 0};
+    std::size_t chunkBytes;
+    std::size_t chunkChars{1};
+    bool skipping{skipChars > 0};
     if (connection.isUTF8) {
-      chunk = MeasureUTF8Bytes(*input);
+      chunkBytes = MeasureUTF8Bytes(*input);
       if (skipping) {
-        --skip;
+        --skipChars;
       } else if (auto ucs{DecodeUTF8(input)}) {
         *x++ = *ucs;
-        --length;
-      } else if (chunk == 0) {
+        --lengthChars;
+      } else if (chunkBytes == 0) {
         // error recovery: skip bad encoding
-        chunk = 1;
+        chunkBytes = 1;
       }
-      --remaining;
     } else if (connection.internalIoCharKind > 1) {
       // Reading from non-default character internal unit
-      chunk = connection.internalIoCharKind;
+      chunkBytes = connection.internalIoCharKind;
       if (skipping) {
-        --skip;
+        --skipChars;
       } else {
         char32_t buffer{0};
-        std::memcpy(&buffer, input, chunk);
+        std::memcpy(&buffer, input, chunkBytes);
         *x++ = buffer;
-        --length;
+        --lengthChars;
       }
-      --remaining;
     } else if constexpr (sizeof *x > 1) {
       // Read single byte with expansion into multi-byte CHARACTER
-      chunk = 1;
+      chunkBytes = 1;
       if (skipping) {
-        --skip;
+        --skipChars;
       } else {
         *x++ = static_cast<unsigned char>(*input);
-        --length;
+        --lengthChars;
       }
-      --remaining;
     } else { // single bytes -> default CHARACTER
       if (skipping) {
-        chunk = std::min<std::size_t>(skip, ready);
-        skip -= chunk;
+        chunkBytes = std::min<std::size_t>(skipChars, readyBytes);
+        chunkChars = chunkBytes;
+        skipChars -= chunkChars;
       } else {
-        chunk = std::min<std::size_t>(remaining, ready);
-        std::memcpy(x, input, chunk);
-        x += chunk;
-        length -= chunk;
+        chunkBytes = std::min<std::size_t>(remainingChars, readyBytes);
+        chunkBytes = std::min<std::size_t>(lengthChars, chunkBytes);
+        chunkChars = chunkBytes;
+        std::memcpy(x, input, chunkBytes);
+        x += chunkBytes;
+        lengthChars -= chunkChars;
       }
-      remaining -= chunk;
     }
-    input += chunk;
+    input += chunkBytes;
+    remainingChars -= chunkChars;
     if (!skipping) {
-      io.GotChar(chunk);
+      io.GotChar(chunkBytes);
     }
-    io.HandleRelativePosition(chunk);
-    ready -= chunk;
+    io.HandleRelativePosition(chunkBytes);
+    readyBytes -= chunkBytes;
   }
   // Pad the remainder of the input variable, if any.
-  std::fill_n(x, length, ' ');
+  std::fill_n(x, lengthChars, ' ');
   return CheckCompleteListDirectedField(io, edit);
 }
 
