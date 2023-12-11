@@ -204,227 +204,152 @@ define float @nvvm_rcp(float %0) {
 ;   ret void
 ; }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.warpsize() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.laneid() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.clusterid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.clusterid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.clusterid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.clusterid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.clusterid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.clusterid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.nclusterid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.nclusterid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.nclusterid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.nclusterid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.nclusterid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.nclusterid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctaid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.x() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.x()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.y() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.y()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.z() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.z()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank() #0
+declare noundef i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare float @llvm.nvvm.rcp.approx.ftz.f(float) #1
+declare float @llvm.nvvm.rcp.approx.ftz.f(float)
 
-; Function Attrs: convergent nocallback nounwind
-declare void @llvm.nvvm.barrier0() #2
+declare void @llvm.nvvm.barrier0()
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare i32 @llvm.nvvm.shfl.sync.bfly.i32(i32, i32, i32, i32) #3
+declare i32 @llvm.nvvm.shfl.sync.bfly.i32(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare float @llvm.nvvm.shfl.sync.bfly.f32(i32, float, i32, i32) #3
+declare float @llvm.nvvm.shfl.sync.bfly.f32(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare i32 @llvm.nvvm.shfl.sync.up.i32(i32, i32, i32, i32) #3
+declare i32 @llvm.nvvm.shfl.sync.up.i32(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare float @llvm.nvvm.shfl.sync.up.f32(i32, float, i32, i32) #3
+declare float @llvm.nvvm.shfl.sync.up.f32(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare i32 @llvm.nvvm.shfl.sync.down.i32(i32, i32, i32, i32) #3
+declare i32 @llvm.nvvm.shfl.sync.down.i32(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare float @llvm.nvvm.shfl.sync.down.f32(i32, float, i32, i32) #3
+declare float @llvm.nvvm.shfl.sync.down.f32(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare i32 @llvm.nvvm.shfl.sync.idx.i32(i32, i32, i32, i32) #3
+declare i32 @llvm.nvvm.shfl.sync.idx.i32(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare float @llvm.nvvm.shfl.sync.idx.f32(i32, float, i32, i32) #3
+declare float @llvm.nvvm.shfl.sync.idx.f32(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { i32, i1 } @llvm.nvvm.shfl.sync.bfly.i32p(i32, i32, i32, i32) #3
+declare { i32, i1 } @llvm.nvvm.shfl.sync.bfly.i32p(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { float, i1 } @llvm.nvvm.shfl.sync.bfly.f32p(i32, float, i32, i32) #3
+declare { float, i1 } @llvm.nvvm.shfl.sync.bfly.f32p(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { i32, i1 } @llvm.nvvm.shfl.sync.up.i32p(i32, i32, i32, i32) #3
+declare { i32, i1 } @llvm.nvvm.shfl.sync.up.i32p(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { float, i1 } @llvm.nvvm.shfl.sync.up.f32p(i32, float, i32, i32) #3
+declare { float, i1 } @llvm.nvvm.shfl.sync.up.f32p(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { i32, i1 } @llvm.nvvm.shfl.sync.down.i32p(i32, i32, i32, i32) #3
+declare { i32, i1 } @llvm.nvvm.shfl.sync.down.i32p(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { float, i1 } @llvm.nvvm.shfl.sync.down.f32p(i32, float, i32, i32) #3
+declare { float, i1 } @llvm.nvvm.shfl.sync.down.f32p(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { i32, i1 } @llvm.nvvm.shfl.sync.idx.i32p(i32, i32, i32, i32) #3
+declare { i32, i1 } @llvm.nvvm.shfl.sync.idx.i32p(i32, i32, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare { float, i1 } @llvm.nvvm.shfl.sync.idx.f32p(i32, float, i32, i32) #3
+declare { float, i1 } @llvm.nvvm.shfl.sync.idx.f32p(i32, float, i32, i32)
 
-; Function Attrs: convergent nocallback nounwind memory(inaccessiblemem: readwrite)
-declare i32 @llvm.nvvm.vote.ballot.sync(i32, i1) #3
+declare i32 @llvm.nvvm.vote.ballot.sync(i32, i1)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { float, float, float, float, float, float, float, float } @llvm.nvvm.mma.m8n8k4.row.col.f32.f32(<2 x half>, <2 x half>, <2 x half>, <2 x half>, float, float, float, float, float, float, float, float) #4
+declare { float, float, float, float, float, float, float, float } @llvm.nvvm.mma.m8n8k4.row.col.f32.f32(<2 x half>, <2 x half>, <2 x half>, <2 x half>, float, float, float, float, float, float, float, float)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { <2 x half>, <2 x half> } @llvm.nvvm.mma.m16n8k16.row.col.f16.f16(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>) #4
+declare { <2 x half>, <2 x half> } @llvm.nvvm.mma.m16n8k16.row.col.f16.f16(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.f32.f16(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>) #4
+declare { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.f32.f16(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { <2 x half>, <2 x half> } @llvm.nvvm.mma.m16n8k16.row.col.f16.f32(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, float, float, float, float) #4
+declare { <2 x half>, <2 x half> } @llvm.nvvm.mma.m16n8k16.row.col.f16.f32(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, float, float, float, float)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.f32.f32(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, float, float, float, float) #4
+declare { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.f32.f32(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, float, float, float, float)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { i32, i32, i32, i32 } @llvm.nvvm.mma.m16n8k16.row.col.s8(i32, i32, i32, i32, i32, i32, i32) #4
+declare { i32, i32, i32, i32 } @llvm.nvvm.mma.m16n8k16.row.col.s8(i32, i32, i32, i32, i32, i32, i32)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { i32, i32, i32, i32 } @llvm.nvvm.mma.m16n8k16.row.col.satfinite.s8.u8(i32, i32, i32, i32, i32, i32, i32) #4
+declare { i32, i32, i32, i32 } @llvm.nvvm.mma.m16n8k16.row.col.satfinite.s8.u8(i32, i32, i32, i32, i32, i32, i32)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { i32, i32, i32, i32 } @llvm.nvvm.mma.xor.popc.m16n8k128.row.col.b1(i32, i32, i32, i32, i32, i32, i32) #4
+declare { i32, i32, i32, i32 } @llvm.nvvm.mma.xor.popc.m16n8k128.row.col.b1(i32, i32, i32, i32, i32, i32, i32)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { i32, i32, i32, i32 } @llvm.nvvm.mma.m16n8k32.row.col.satfinite.s4(i32, i32, i32, i32, i32, i32, i32) #4
+declare { i32, i32, i32, i32 } @llvm.nvvm.mma.m16n8k32.row.col.satfinite.s4(i32, i32, i32, i32, i32, i32, i32)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { double, double } @llvm.nvvm.mma.m8n8k4.row.col.f64(double, double, double, double) #4
+declare { double, double } @llvm.nvvm.mma.m8n8k4.row.col.f64(double, double, double, double)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { float, float, float, float } @llvm.nvvm.mma.m16n8k4.row.col.tf32(i32, i32, i32, float, float, float, float) #4
+declare { float, float, float, float } @llvm.nvvm.mma.m16n8k4.row.col.tf32(i32, i32, i32, float, float, float, float)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare { <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.nvvm.wmma.m16n16k16.load.a.row.stride.f16.p3(ptr addrspace(3) nocapture readonly, i32) #5
+declare { <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.nvvm.wmma.m16n16k16.load.a.row.stride.f16.p3(ptr addrspace(3) nocapture readonly, i32)
 
-; Function Attrs: nocallback nounwind memory(argmem: write)
-declare void @llvm.nvvm.wmma.m16n16k16.store.d.row.stride.f16.p3(ptr addrspace(3) nocapture writeonly, <2 x half>, <2 x half>, <2 x half>, <2 x half>, i32) #6
+declare void @llvm.nvvm.wmma.m16n16k16.store.d.row.stride.f16.p3(ptr addrspace(3) nocapture writeonly, <2 x half>, <2 x half>, <2 x half>, <2 x half>, i32)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.nvvm.wmma.m16n16k16.mma.row.row.f16.f16(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>) #4
+declare { <2 x half>, <2 x half>, <2 x half>, <2 x half> } @llvm.nvvm.wmma.m16n16k16.mma.row.row.f16.f16(<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare { i32, i32, i32, i32 } @llvm.nvvm.wmma.m16n16k8.load.a.row.stride.tf32.p0(ptr nocapture readonly, i32) #5
+declare { i32, i32, i32, i32 } @llvm.nvvm.wmma.m16n16k8.load.a.row.stride.tf32.p0(ptr nocapture readonly, i32)
 
-; Function Attrs: nocallback nounwind memory(none)
-declare { float, float, float, float, float, float, float, float } @llvm.nvvm.wmma.m16n16k8.mma.row.row.tf32(i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float) #4
+declare { float, float, float, float, float, float, float, float } @llvm.nvvm.wmma.m16n16k8.mma.row.row.tf32(i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float)
 
-; Function Attrs: nocallback nounwind memory(argmem: readwrite)
-declare void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly) #7
+declare void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: readwrite)
-declare void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly) #7
+declare void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: readwrite)
-declare void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly) #7
+declare void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: readwrite)
-declare void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly) #7
+declare void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) noalias writeonly, ptr addrspace(1) noalias readonly)
 
-; Function Attrs: nounwind
-declare void @llvm.nvvm.cp.async.commit.group() #8
+declare void @llvm.nvvm.cp.async.commit.group()
 
-; Function Attrs: nounwind
-declare void @llvm.nvvm.cp.async.wait.group(i32 immarg) #8
+declare void @llvm.nvvm.cp.async.wait.group(i32 immarg)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) nocapture readonly) #5
+declare i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) nocapture readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.b16.p3(ptr addrspace(3) nocapture readonly) #5
+declare { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.b16.p3(ptr addrspace(3) nocapture readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3(ptr addrspace(3) nocapture readonly) #5
+declare { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.b16.p3(ptr addrspace(3) nocapture readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.trans.b16.p3(ptr addrspace(3) nocapture readonly) #5
+declare i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.trans.b16.p3(ptr addrspace(3) nocapture readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.trans.b16.p3(ptr addrspace(3) nocapture readonly) #5
+declare { i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x2.trans.b16.p3(ptr addrspace(3) nocapture readonly)
 
-; Function Attrs: nocallback nounwind memory(argmem: read)
-declare { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.trans.b16.p3(ptr addrspace(3) nocapture readonly) #5
+declare { i32, i32, i32, i32 } @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x4.trans.b16.p3(ptr addrspace(3) nocapture readonly)
