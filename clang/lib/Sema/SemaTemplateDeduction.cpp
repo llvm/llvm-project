@@ -4352,19 +4352,17 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
   const auto *Proto = Function->getType()->castAs<FunctionProtoType>();
   if (!Proto->isTemplateVariadic()) {
     size_t params = 0, deducedParams = 0;
-    for (auto P : *TemplateParams) {
+    for(auto P : *TemplateParams) {
       const TemplateTypeParmDecl *CD = dyn_cast<TemplateTypeParmDecl>(P);
-      if (CD && CD->hasTypeConstraint()) {
+      if(CD && CD->hasTypeConstraint()) {
         params++;
       }
     }
-    for (auto P : Deduced) {
-      if (P.isDependent()) {
-        deducedParams++;
-      }
+    for( auto P : Deduced ) {
+      deducedParams++;
     }
 
-    if (params > deducedParams) {
+    if( params > deducedParams ) {
       return TDK_Invalid;
     }
   }
