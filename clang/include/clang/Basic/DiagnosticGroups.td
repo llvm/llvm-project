@@ -822,7 +822,6 @@ def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
 def AtomicAlignment : DiagGroup<"atomic-alignment">;
 def CustomAtomic : DiagGroup<"custom-atomic-properties">;
-def AtomicMemoryOrdering : DiagGroup<"atomic-memory-ordering">;
 def AtomicProperties : DiagGroup<"atomic-properties",
                                  [ImplicitAtomic, CustomAtomic]>;
 def SyncAlignment : DiagGroup<"sync-alignment">;

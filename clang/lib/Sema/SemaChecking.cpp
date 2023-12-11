@@ -5030,14 +5030,14 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),
                 diag::warn_atomic_op_has_invalid_memory_order)
-           << ArgExpr->getSourceRange();
+           << 0 << ArgExpr->getSourceRange();
   switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
   case llvm::AtomicOrderingCABI::relaxed:
   case llvm::AtomicOrderingCABI::consume:
     if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
       return Diag(ArgExpr->getBeginLoc(),
                   diag::warn_atomic_op_has_invalid_memory_order)
-             << ArgExpr->getSourceRange();
+             << 0 << ArgExpr->getSourceRange();
     break;
   case llvm::AtomicOrderingCABI::acquire:
   case llvm::AtomicOrderingCABI::release:
@@ -8185,10 +8185,12 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if (SubExprs.size() >= 2 && Form != Init) {
     std::optional<llvm::APSInt> Success =
         SubExprs[1]->getIntegerConstantExpr(Context);
-    if (Success && !isValidOrderingForOp(Success->getSExtValue(), Op))
+    if (Success && !isValidOrderingForOp(Success->getSExtValue(), Op)) {
       Diag(SubExprs[1]->getBeginLoc(),
            diag::warn_atomic_op_has_invalid_memory_order)
+          << /*success=*/(Form == C11CmpXchg || Form == GNUCmpXchg)
           << SubExprs[1]->getSourceRange();
+    }
     if (SubExprs.size() >= 5) {
       if (std::optional<llvm::APSInt> Failure =
               SubExprs[3]->getIntegerConstantExpr(Context)) {
@@ -8199,12 +8201,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                  llvm::AtomicOrderingCABI::seq_cst},
                 (llvm::AtomicOrderingCABI)Failure->getSExtValue())) {
           Diag(SubExprs[3]->getBeginLoc(),
-               diag::warn_atomic_op_has_invalid_failure_memory_order)
-              << SubExprs[3]->getSourceRange();
-        } else if (Success && *Success < *Failure) {
-          Diag(SubExprs[3]->getBeginLoc(),
-               diag::warn_atomic_op_failure_memory_order_stronger_than_success)
-              << SubExprs[3]->getSourceRange();
+               diag::warn_atomic_op_has_invalid_memory_order)
+              << /*failure=*/2 << SubExprs[3]->getSourceRange();
         }
       }
     }

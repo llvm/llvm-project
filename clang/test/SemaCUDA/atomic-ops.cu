@@ -73,9 +73,9 @@ __device__ bool test_hip_atomic_cmpxchg_weak(int *ptr, int val, int desired) {
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_WORKGROUP);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_AGENT);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
-  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD); // expected-warning {{failure memory order cannot be stronger than success memory order}}
-  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_CONSUME, __HIP_MEMORY_SCOPE_SINGLETHREAD); // expected-warning {{failure memory order cannot be stronger than success memory order}}
-  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_SINGLETHREAD); // expected-warning {{failure memory order cannot be stronger than success memory order}}
+  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_SEQ_CST, __HIP_MEMORY_SCOPE_SINGLETHREAD);
+  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_CONSUME, __HIP_MEMORY_SCOPE_SINGLETHREAD);
+  flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_ACQUIRE, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_ACQ_REL, __HIP_MEMORY_SCOPE_SINGLETHREAD); // expected-warning {{failure memory order argument to atomic operation is invalid}}
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_RELAXED, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
   flag = __hip_atomic_compare_exchange_weak(ptr, &val, desired, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED, __HIP_MEMORY_SCOPE_SINGLETHREAD);
