@@ -92,7 +92,7 @@ getSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   }
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
-    unsigned short align = 0;
+    unsigned short align = 1;
     for (auto component : recTy.getTypeList()) {
       auto [compSize, compAlign] =
           getSizeAndAlignment(loc, component.second, dl, kindMap);
