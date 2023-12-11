@@ -1365,28 +1365,33 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
     ReproducerCondStack.pop_back();
 }
 
-/// Check if either the first condition of an AND is implied by the second or
-/// vice versa.
-static bool
-checkAndOpImpliedByOther(FactOrCheck &CB, ConstraintInfo &Info,
-                         Module *ReproducerModule,
-                         SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
-                         SmallVectorImpl<StackEntry> &DFSInStack) {
+/// Check if either the first condition of an AND or OR is implied by the
+/// (negated in case of OR) second condition or vice versa.
+static bool checkOrAndOpImpliedByOther(
+    FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
+    SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+    SmallVectorImpl<StackEntry> &DFSInStack) {
 
   CmpInst::Predicate Pred;
   Value *A, *B;
-  Instruction *And = CB.getContextInst();
+  Instruction *JoinOp = CB.getContextInst();
   CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
-  unsigned OtherOpIdx = And->getOperand(0) == CmpToCheck ? 1 : 0;
+  unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
 
   // Don't try to simplify the first condition of a select by the second, as
   // this may make the select more poisonous than the original one.
   // TODO: check if the first operand may be poison.
-  if (OtherOpIdx != 0 && isa<SelectInst>(And))
+  if (OtherOpIdx != 0 && isa<SelectInst>(JoinOp))
     return false;
 
-  if (!match(And->getOperand(OtherOpIdx), m_ICmp(Pred, m_Value(A), m_Value(B))))
+  if (!match(JoinOp->getOperand(OtherOpIdx),
+             m_ICmp(Pred, m_Value(A), m_Value(B))))
     return false;
+
+  // For OR, check if the negated condition implies CmpToCheck.
+  bool IsOr = match(JoinOp, m_LogicalOr());
+  if (IsOr)
+    Pred = CmpInst::getInversePredicate(Pred);
 
   // Optimistically add fact from first condition.
   unsigned OldSize = DFSInStack.size();
@@ -1400,8 +1405,15 @@ checkAndOpImpliedByOther(FactOrCheck &CB, ConstraintInfo &Info,
           checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
                          CmpToCheck->getOperand(1), CmpToCheck, Info, CB.NumIn,
                          CB.NumOut, CB.getContextInst())) {
-    And->setOperand(1 - OtherOpIdx,
-                    ConstantInt::getBool(And->getType(), *ImpliedCondition));
+    if (IsOr && isa<SelectInst>(JoinOp)) {
+      JoinOp->setOperand(
+          OtherOpIdx == 0 ? 2 : 0,
+          ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
+    } else
+      JoinOp->setOperand(
+          1 - OtherOpIdx,
+          ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
+
     Changed = true;
   }
 
@@ -1622,10 +1634,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
             ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
         if (!Simplified &&
-            match(CB.getContextInst(), m_LogicalAnd(m_Value(), m_Value()))) {
+            match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
           Simplified =
-              checkAndOpImpliedByOther(CB, Info, ReproducerModule.get(),
-                                       ReproducerCondStack, DFSInStack);
+              checkOrAndOpImpliedByOther(CB, Info, ReproducerModule.get(),
+                                         ReproducerCondStack, DFSInStack);
         }
         Changed |= Simplified;
       }

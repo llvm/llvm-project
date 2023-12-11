@@ -152,7 +152,7 @@ define i1 @overflow_check_3_or(ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DST_5:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 5
 ; CHECK-NEXT:    [[DST_5_UGE:%.*]] = icmp uge ptr [[DST_5]], [[DST]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[DST_5_UGE]], [[DST_5_UGE]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[DST_5_UGE]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[DST_4:%.*]] = getelementptr i32, ptr [[DST]], i64 4

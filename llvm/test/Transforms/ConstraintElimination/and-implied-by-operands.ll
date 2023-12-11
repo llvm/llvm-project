@@ -398,7 +398,7 @@ define i1 @test_or_used_in_false_branch(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], false
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
@@ -424,7 +424,7 @@ define i1 @test_or_used_in_false_branch2(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    [[AND:%.*]] = or i1 false, [[T_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
