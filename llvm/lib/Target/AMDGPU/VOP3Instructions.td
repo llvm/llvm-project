@@ -686,17 +686,13 @@ class IMAD32_Mul24_Pat<VOP3_Pseudo inst>: GCNPat <
     >;
 
 // exclude pre-GFX9 where it was slow
-let SubtargetPredicate = isGFX9Plus in {
-  let OtherPredicates = [HasNotMADIntraFwdBug] in
-    defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
-  let OtherPredicates = [HasNotMADIntraFwdBug, HasFullRate64Ops] in
-    def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
+let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
+  defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
+  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
 }
-let SubtargetPredicate = isGFX11Only in {
-  let OtherPredicates = [HasNotMADIntraFwdBug] in
-    defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
-  let OtherPredicates = [HasNotMADIntraFwdBug, HasFullRate64Ops] in
-    def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
+let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in {
+  defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
+  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
 }
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
