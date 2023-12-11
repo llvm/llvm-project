@@ -541,9 +541,8 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
-  if (Error E =
-          Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
-                        StringRef(VNamesStart, VNamesEnd - VNamesStart)))
+  if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
+                              StringRef(VNamesStart, VNamesEnd - VNamesStart)))
     return error(std::move(E));
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
     const IntPtrT FPtr = swap(I->FunctionPointer);

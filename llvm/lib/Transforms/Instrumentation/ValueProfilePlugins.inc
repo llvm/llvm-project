@@ -90,7 +90,8 @@ public:
   }
 };
 
-///------------------------ VirtualTableValueProfilingPlugin ------------------------
+///------------------------ VirtualTableValueProfilingPlugin
+///------------------------
 class VTableProfilingPlugin {
   Function &F;
 
@@ -101,8 +102,8 @@ public:
 
   void run(std::vector<CandidateInfo> &Candidates) {
     std::vector<Instruction *> Result = findVTableAddrs(F);
-    for (Instruction* I : Result) {
-      Instruction* InsertPt = I->getNextNonDebugInstruction();
+    for (Instruction *I : Result) {
+      Instruction *InsertPt = I->getNextNonDebugInstruction();
       // When finding an insertion point, keep PHI and EH pad instructions
       // before vp intrinsics. This is similar to
       // `BasicBlock::getFirstInsertionPt`.
@@ -123,7 +124,5 @@ public:
 ///----------------------- Registration of the plugins -------------------------
 /// For now, registering a plugin with the ValueProfileCollector is done by
 /// adding the plugin type to the VP_PLUGIN_LIST macro.
-#define VP_PLUGIN_LIST           \
-    MemIntrinsicPlugin,          \
-    IndirectCallPromotionPlugin, \
-    VTableProfilingPlugin 
+#define VP_PLUGIN_LIST                                                         \
+  MemIntrinsicPlugin, IndirectCallPromotionPlugin, VTableProfilingPlugin
