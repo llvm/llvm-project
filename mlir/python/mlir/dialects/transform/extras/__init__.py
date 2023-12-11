@@ -82,17 +82,35 @@ class OpHandle(Value):
         return handle
 
 
-ValueT = TypeVar("ValueT", bound=Value)
-
-
 def insert_transform_script(
     module: ir.Module,
-    script: Callable[[ValueT], None],
+    script: Callable[[OpHandle], None],
     dump_script: bool = False,
 ) -> None:
-    """Inserts the transform script of the schedule into the module."""
+    """
+    Inserts the transform script of the schedule into the module. The script
+    should accept an instance of OpHandle as argument, which will be called with
+    the block arg of the newly created sequence op.
 
-    # Insert the script into the IR
+    Example:
+    This python code
+    ```
+    module = ir.Module.create()
+    def test_match_ops_single(module: OpHandle):
+        module.match_ops(scf.ForOp)
+    insert_transform_script(module, script)
+    ```
+    generates the following IR:
+    ```
+    module {
+        transform.sequence failures(propagate) {
+        ^bb0(%arg0: !transform.any_op):
+            %0 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.op<"scf.for">
+        }
+    }
+    ```
+    """
+
     with module.context, ir.Location.unknown(module.context):
         with ir.InsertionPoint.at_block_begin(module.body):
             sequence_op = transform.SequenceOp(

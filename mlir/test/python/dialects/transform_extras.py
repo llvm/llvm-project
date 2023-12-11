@@ -1,15 +1,13 @@
 # RUN: %PYTHON %s | FileCheck %s
 
-from typing import Callable, TypeVar
+from typing import Callable
 from mlir import ir
 from mlir.dialects import scf
 from mlir.dialects.transform import structured
-from mlir.dialects.transform.extras import Value, OpHandle, insert_transform_script
-
-ValueT = TypeVar("ValueT", bound=Value)
+from mlir.dialects.transform.extras import OpHandle, insert_transform_script
 
 
-def build_transform_script(script: Callable[[ValueT], None]):
+def build_transform_script(script: Callable[[OpHandle], None]):
     print("\nTEST:", script.__name__)
     with ir.Context(), ir.Location.unknown():
         module = ir.Module.create()
