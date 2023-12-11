@@ -1103,6 +1103,29 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 //                       can use this optional information to present the
 //                       children in a paged UI and fetch them in chunks."
 //     }
+//     "declaration": {
+//       "type": "object | undefined",
+//       "description": "Extension to the protocol that indicates the source
+//                       location where the variable was declared. This value
+//                       might not be present if no declaration is available.",
+//       "properties": {
+//         "path": {
+//           "type": "string | undefined",
+//           "description": "The source file path where the variable was
+//                           declared."
+//         },
+//         "line": {
+//           "type": "number | undefined",
+//           "description": "The 1-indexed source line where the variable was
+//                          declared."
+//         },
+//         "column": {
+//           "type": "number | undefined",
+//           "description": "The 1-indexed source column where the variable was
+//                          declared."
+//         }
+//       }
+//     }
 //   },
 //   "required": [ "name", "value", "variablesReference" ]
 // }
@@ -1167,6 +1190,24 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   const char *evaluateName = evaluateStream.GetData();
   if (evaluateName && evaluateName[0])
     EmplaceSafeString(object, "evaluateName", std::string(evaluateName));
+
+  if (lldb::SBDeclaration decl = v.GetDeclaration(); decl.IsValid()) {
+    llvm::json::Object decl_obj;
+    if (lldb::SBFileSpec file = decl.GetFileSpec(); file.IsValid()) {
+      char path[PATH_MAX] = "";
+      if (file.GetPath(path, sizeof(path)) &&
+          lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
+        decl_obj.try_emplace("path", std::string(path));
+      }
+    }
+
+    if (int line = decl.GetLine())
+      decl_obj.try_emplace("line", line);
+    if (int column = decl.GetColumn())
+      decl_obj.try_emplace("column", column);
+
+    object.try_emplace("declaration", std::move(decl_obj));
+  }
   return llvm::json::Value(std::move(object));
 }
 
