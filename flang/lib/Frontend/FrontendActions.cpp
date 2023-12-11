@@ -58,6 +58,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -166,12 +167,6 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
   const llvm::Triple triple(targetOpts.triple);
   const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
 
-  // TODO: Share address spaces enumeration between Clang and Flang.
-  // Currently this enumeration is defined in Clang specific class
-  // defined in file: clang/lib/Basic/Targets/AMDGPU.h .
-  // and we need to move it to LLVM directory.
-  const int constantAddressSpace = 4;
-
   if (!triple.isAMDGPU()) {
     return;
   }
@@ -202,7 +197,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     originalGVOp.setValueAttr(
         builder.getIntegerAttr(int32Type, oclcABIVERsion));
     originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-    originalGVOp.setAddrSpace(constantAddressSpace);
+    originalGVOp.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
     originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
     return;
   }
@@ -213,7 +208,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
       /* Name */ codeObjectVersionGlobalOpName,
       /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
   covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-  covInfo.setAddrSpace(constantAddressSpace);
+  covInfo.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
   builder.setInsertionPointToStart(mlirModule.getBody());
   builder.insert(covInfo);
@@ -715,8 +710,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
 // TODO: We should get this from TargetInfo. However, that depends on
 // too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
-getVScaleRange(CompilerInstance &ci,
-               const Fortran::frontend::LangOptions &langOpts) {
+getVScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
   if (langOpts.VScaleMin || langOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
@@ -751,13 +746,9 @@ void CodeGenAction::generateLLVMIR() {
   const auto targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
-  // Only get the vscale range if AArch64.
-  if (triple.isAArch64()) {
-    auto langOpts = ci.getInvocation().getLangOpts();
-    if (auto vsr = getVScaleRange(ci, langOpts)) {
-      config.VScaleMin = vsr->first;
-      config.VScaleMax = vsr->second;
-    }
+  if (auto vsr = getVScaleRange(ci)) {
+    config.VScaleMin = vsr->first;
+    config.VScaleMax = vsr->second;
   }
 
   // Create the pass pipeline

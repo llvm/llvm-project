@@ -49,8 +49,8 @@ def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
                              [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                               SDNPMayStore, SDNPMayLoad]>;
-def BPFIsLittleEndian : Predicate<"CurDAG->getDataLayout().isLittleEndian()">;
-def BPFIsBigEndian    : Predicate<"!CurDAG->getDataLayout().isLittleEndian()">;
+def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
+def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
 def BPFNoALU32 : Predicate<"!Subtarget->getHasAlu32()">;
 def BPFHasLdsx : Predicate<"Subtarget->hasLdsx()">;

@@ -7093,35 +7093,35 @@ def VBROADCASTSDYrr  : avx2_broadcast_rr<0x19, "vbroadcastsd", VR256,
 //                  halves of a 256-bit vector.
 //
 let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX2] in
-def VBROADCASTI128 : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
-                           (ins i128mem:$src),
-                           "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,
-                           Sched<[WriteShuffleLd]>, VEX, VEX_L;
+def VBROADCASTI128rm : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
+                             (ins i128mem:$src),
+                             "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,
+                             Sched<[WriteShuffleLd]>, VEX, VEX_L;
 
 let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX],
     ExeDomain = SSEPackedSingle in
-def VBROADCASTF128 : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
-                           (ins f128mem:$src),
-                           "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,
-                           Sched<[SchedWriteFShuffle.XMM.Folded]>, VEX, VEX_L;
+def VBROADCASTF128rm : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
+                             (ins f128mem:$src),
+                             "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,
+                             Sched<[SchedWriteFShuffle.XMM.Folded]>, VEX, VEX_L;
 
 let Predicates = [HasAVX, NoVLX] in {
 def : Pat<(v4f64 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v8f32 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 // NOTE: We're using FP instructions here, but execution domain fixing can
 // convert to integer when profitable.
 def : Pat<(v4i64 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v8i32 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v16i16 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v16f16 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
-          (VBROADCASTF128 addr:$src)>;
+          (VBROADCASTF128rm addr:$src)>;
 }
 
 //===----------------------------------------------------------------------===//

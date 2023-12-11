@@ -1619,7 +1619,11 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
       QualType Type = E->getType();
 
       S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-      return S.noteUndefinedBehavior();
+      if (S.noteUndefinedBehavior()) {
+        S.Stk.push<T>(T(Result));
+        return true;
+      }
+      return false;
     }
 
     S.Stk.push<T>(T(Result));

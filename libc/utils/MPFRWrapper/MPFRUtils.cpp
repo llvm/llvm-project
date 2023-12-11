@@ -458,9 +458,9 @@ public:
     int thisExponent = fputil::FPBits<T>(thisAsT).get_exponent();
     int inputExponent = fputil::FPBits<T>(input).get_exponent();
     // Adjust the exponents for denormal numbers.
-    if (fputil::FPBits<T>(thisAsT).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(thisAsT).get_biased_exponent() == 0)
       ++thisExponent;
-    if (fputil::FPBits<T>(input).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(input).get_biased_exponent() == 0)
       ++inputExponent;
 
     if (thisAsT * input < 0 || thisExponent == inputExponent) {
@@ -483,9 +483,9 @@ public:
     int minExponent = fputil::FPBits<T>(min).get_exponent();
     int maxExponent = fputil::FPBits<T>(max).get_exponent();
     // Adjust the exponents for denormal numbers.
-    if (fputil::FPBits<T>(min).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(min).get_biased_exponent() == 0)
       ++minExponent;
-    if (fputil::FPBits<T>(max).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(max).get_biased_exponent() == 0)
       ++maxExponent;
 
     MPFRNumber minMPFR(min);

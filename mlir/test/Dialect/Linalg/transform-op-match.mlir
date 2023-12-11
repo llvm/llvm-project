@@ -43,6 +43,44 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @by_operand_type() {
+  %c2 = arith.constant 2.0: f32
+  %v = arith.constant 8: i32
+  %r1 = math.fpowi %c2, %v : f32, i32
+  // expected-remark @below {{matched op name}}
+  %r2 = arith.addf %c2, %c2 : f32
+  // expected-remark @below {{matched op name}}
+  %r3 = arith.fptoui %r2 : f32 to i32
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %match_name1 = transform.structured.match
+      ops{["arith.fptoui"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.test_print_remark_at_operand %match_name1, "matched op name" : !transform.any_op
+    transform.test_consume_operand %match_name1 : !transform.any_op
+
+    %match_name2 = transform.structured.match
+      ops{["arith.addf"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.test_print_remark_at_operand %match_name2, "matched op name" : !transform.any_op
+    transform.test_consume_operand %match_name2 : !transform.any_op
+
+    %no_match_name1 = transform.structured.match
+      ops{["arith.fptoui"]} filter_operand_types = [i32] in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.test_print_remark_at_operand %no_match_name1, "should not match" : !transform.any_op
+    transform.test_consume_operand %no_match_name1 : !transform.any_op
+
+    %no_match_name2 = transform.structured.match
+      ops{["math.fpowi"]} filter_operand_types = [f32] in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.test_print_remark_at_operand %no_match_name2, "should not match" : !transform.any_op
+    transform.test_consume_operand %no_match_name2 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @foo(%a: tensor<4x4xf32>, %b: tensor<4x4xf32>, %c: tensor<4x4xf32>) {
   %c0 = arith.constant 0.0 : f32
   // expected-remark @below {{tileable}}

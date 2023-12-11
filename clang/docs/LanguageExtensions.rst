@@ -1483,6 +1483,7 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``using enum``                         __cpp_using_enum                 C++20         C++03
 ``if consteval``                       __cpp_if_consteval               C++23         C++20
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                        C++23         C++11
 -------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C23           C89
@@ -3865,6 +3866,30 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 ``__OPENCL_MEMORY_SCOPE_DEVICE``, ``__OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES``,
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
+
+__scoped_atomic builtins
+------------------------
+
+Clang provides a set of atomics taking a memory scope argument. These atomics
+are identical to the standard GNU / GCC atomic builtins but taking an extra
+memory scope argument. These are designed to be a generic alternative to the
+``__opencl_atomic_*`` builtin functions for targets that support atomic memory
+scopes.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+* ``__MEMORY_SCOPE_SYSTEM``
+* ``__MEMORY_SCOPE_DEVICE``
+* ``__MEMORY_SCOPE_WRKGRP``
+* ``__MEMORY_SCOPE_WVFRNT``
+* ``__MEMORY_SCOPE_SINGLE``
+
+This controls whether or not the atomic operation is ordered with respect to the
+whole system, the current device, an OpenCL workgroup, wavefront, or just a
+single thread. If these are used on a target that does not support atomic
+scopes, then they will behave exactly as the standard GNU atomic builtins.
 
 Low-level ARM exclusive memory builtins
 ---------------------------------------
