@@ -5219,7 +5219,7 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ false << TheCall->getSourceRange() << "v";
+             << /* IsExtension */ true << TheCall->getSourceRange() << "v";
 
     break;
   }
