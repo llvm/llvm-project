@@ -963,7 +963,7 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    SmallVector<DbgDeclareInst *> DDIs;
+    SmallVector<DbgDeclareInst *, 1> DDIs;
     findDbgDeclares(DDIs, V);
     auto *I = llvm::find_if(DDIs, [](DbgDeclareInst *DDI) {
       return DDI->getExpression()->getNumElements() == 0;
@@ -1120,7 +1120,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   assert(PromiseAlloca &&
          "Coroutine with switch ABI should own Promise alloca");
 
-  SmallVector<DbgDeclareInst *> DIs;
+  SmallVector<DbgDeclareInst *, 1> DIs;
   findDbgDeclares(DIs, PromiseAlloca);
   if (DIs.empty())
     return;
@@ -1842,7 +1842,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
 
-        SmallVector<DbgDeclareInst *> DIs;
+        SmallVector<DbgDeclareInst *, 1> DIs;
         findDbgDeclares(DIs, Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
         // be a direct dbg.declare. Walk up the load chain to find one from an
