@@ -199,7 +199,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot dereference an iterator at the end.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot dereference an iterator at the end.");
     return *__current_;
   }
 
