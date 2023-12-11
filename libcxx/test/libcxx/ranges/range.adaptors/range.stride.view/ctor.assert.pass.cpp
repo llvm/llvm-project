@@ -11,7 +11,7 @@
 // UNSUPPORTED: !libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 
-// Call stride_view() ctor empty stride <= 0
+// Call stride_view() ctor with stride <= 0.
 
 #include "check_assertion.h"
 #include <ranges>
