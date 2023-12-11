@@ -677,7 +677,7 @@ body: |
   $ymm0 = VPMOVZXWQZ256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VPMOVZXWQYrr                $xmm0
   $ymm0 = VPMOVZXWQZ256rr                      $xmm0
-  ; CHECK: $ymm0 = VBROADCASTF128              $rip, 1, $noreg, 0, $noreg
+  ; CHECK: $ymm0 = VBROADCASTF128rm            $rip, 1, $noreg, 0, $noreg
   $ymm0 = VBROADCASTF32X4Z256rm                $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VBROADCASTSDYrm             $rip, 1, $noreg, 0, $noreg
   $ymm0 = VBROADCASTF32X2Z256rm                $rip, 1, $noreg, 0, $noreg
@@ -703,7 +703,7 @@ body: |
   $ymm0 = VPBROADCASTWZ256rm                   $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VPBROADCASTWYrr             $xmm0
   $ymm0 = VPBROADCASTWZ256rr                   $xmm0
-  ; CHECK: $ymm0 = VBROADCASTI128              $rip, 1, $noreg, 0, $noreg
+  ; CHECK: $ymm0 = VBROADCASTI128rm            $rip, 1, $noreg, 0, $noreg
   $ymm0 = VBROADCASTI32X4Z256rm                $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VPBROADCASTQYrm             $rip, 1, $noreg, 0, $noreg
   $ymm0 = VBROADCASTI32X2Z256rm                $rip, 1, $noreg, 0, $noreg
