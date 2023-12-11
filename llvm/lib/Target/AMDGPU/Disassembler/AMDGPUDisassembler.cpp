@@ -515,11 +515,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableDPPGFX1296, DecoderTableDPPGFX12_FAKE1696,
                           MI, DecW, Address, CS);
       if (Res) {
-        if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
+        if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P) {
           convertVOP3PDPPInst(MI);
-        else if (AMDGPU::isVOPC64DPP(MI.getOpcode()))
+        } else if (AMDGPU::isVOPC64DPP(MI.getOpcode())) {
           convertVOPCDPPInst(MI); // Special VOP3 case
-        else {
+        } else {
           assert(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3);
           convertVOP3DPPInst(MI); // Regular VOP3 case
         }
