@@ -4541,15 +4541,17 @@ public:
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                          const CallExpr *E, ReturnValueSlot ReturnValue);
 
-  RValue emitRotate(const CallExpr *E, bool IsRotateRight);
+  RValue emitRotate(const CallExpr *E, bool IsRotateRight,
+                    const Expr *const *Args);
 
   /// Emit IR for __builtin_os_log_format.
   RValue emitBuiltinOSLogFormat(const CallExpr &E);
 
   /// Emit IR for __builtin_is_aligned.
-  RValue EmitBuiltinIsAligned(const CallExpr *E);
+  RValue EmitBuiltinIsAligned(const CallExpr *E, const Expr *const *Args);
   /// Emit IR for __builtin_align_up/__builtin_align_down.
-  RValue EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp);
+  RValue EmitBuiltinAlignTo(const CallExpr *E, const Expr *const *Args,
+                            bool AlignUp);
 
   llvm::Function *generateBuiltinOSLogHelperFunction(
       const analyze_os_log::OSLogBufferLayout &Layout,
@@ -4560,6 +4562,7 @@ public:
   /// EmitTargetBuiltinExpr - Emit the given builtin call. Returns 0 if the call
   /// is unhandled by the current target.
   llvm::Value *EmitTargetBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                     const Expr *const *Args,
                                      ReturnValueSlot ReturnValue);
 
   llvm::Value *EmitAArch64CompareBuiltinExpr(llvm::Value *Op, llvm::Type *Ty,
@@ -4567,9 +4570,11 @@ public:
                                              const llvm::CmpInst::Predicate Ip,
                                              const llvm::Twine &Name = "");
   llvm::Value *EmitARMBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                  const Expr *const *Args,
                                   ReturnValueSlot ReturnValue,
                                   llvm::Triple::ArchType Arch);
   llvm::Value *EmitARMMVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                     const Expr *const *Args,
                                      ReturnValueSlot ReturnValue,
                                      llvm::Triple::ArchType Arch);
   llvm::Value *EmitARMCDEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
@@ -4588,7 +4593,8 @@ public:
                                          const CallExpr *E,
                                          SmallVectorImpl<llvm::Value *> &Ops,
                                          Address PtrOp0, Address PtrOp1,
-                                         llvm::Triple::ArchType Arch);
+                                         llvm::Triple::ArchType Arch,
+                                         const Expr *const *Args);
 
   llvm::Function *LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
                                           unsigned Modifier, llvm::Type *ArgTy,
@@ -4640,10 +4646,11 @@ public:
   llvm::Value *EmitSVEScatterStore(const SVETypeFlags &TypeFlags,
                                    llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                    unsigned IntID);
-  llvm::Value *EmitSVEMaskedLoad(const CallExpr *, llvm::Type *ReturnTy,
+  llvm::Value *EmitSVEMaskedLoad(const CallExpr *, const Expr *const *Args,
+                                 llvm::Type *ReturnTy,
                                  SmallVectorImpl<llvm::Value *> &Ops,
                                  unsigned BuiltinID, bool IsZExtReturn);
-  llvm::Value *EmitSVEMaskedStore(const CallExpr *,
+  llvm::Value *EmitSVEMaskedStore(const CallExpr *, const Expr *const *Args,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned BuiltinID);
   llvm::Value *EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
@@ -4664,7 +4671,8 @@ public:
   /// for struct of scalable vectors if a function returns struct.
   llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
 
-  llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                         const Expr *const *Args);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                              llvm::SmallVectorImpl<llvm::Value *> &Ops,
@@ -4680,42 +4688,57 @@ public:
                              unsigned IntID);
 
   void GetAArch64SVEProcessedOperands(unsigned BuiltinID, const CallExpr *E,
+                                      const Expr *const *Args,
                                       SmallVectorImpl<llvm::Value *> &Ops,
                                       SVETypeFlags TypeFlags);
 
-  llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                         const Expr *const *Args);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                      const Expr *const *Args,
                                       llvm::Triple::ArchType Arch);
-  llvm::Value *EmitBPFBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitBPFBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                  const Expr *const *Args);
 
   llvm::Value *BuildVector(ArrayRef<llvm::Value*> Ops);
-  llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                  const Expr *const *Args);
+  llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                  const Expr *const *Args);
+  llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                     const Expr *const *Args);
+  llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                   const Expr *const *Args);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
-                                           const CallExpr *E);
-  llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
-  llvm::Value *EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
-                                          const CallExpr *E);
-  llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+                                           const CallExpr *E,
+                                           const Expr *const *Args);
+  llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                      const Expr *const *Args);
+  llvm::Value *EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                    const Expr *const *Args);
+  llvm::Value *EmitWebAssemblyBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                          const Expr *const *Args);
+  llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                      const Expr *const *Args);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                    const Expr *const *Args,
                                     ReturnValueSlot ReturnValue);
 
-  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuSupports(const CallExpr *E, const Expr *const *Args);
   llvm::Value *EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs);
   llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
-                                      const CallExpr *E);
+                                      const CallExpr *E,
+                                      const Expr *const *Args);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
 
   enum class MSVCIntrin;
-  llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E);
+  llvm::Value *EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID, const CallExpr *E,
+                                   const Expr *const *Args);
 
   llvm::Value *EmitBuiltinAvailable(const VersionTuple &Version);
 
@@ -5339,9 +5362,9 @@ private:
   void AddObjCARCExceptionMetadata(llvm::Instruction *Inst);
 
   llvm::Value *GetValueForARMHint(unsigned BuiltinID);
-  llvm::Value *EmitX86CpuIs(const CallExpr *E);
+  llvm::Value *EmitX86CpuIs(const CallExpr *E, const Expr *const *Args);
   llvm::Value *EmitX86CpuIs(StringRef CPUStr);
-  llvm::Value *EmitX86CpuSupports(const CallExpr *E);
+  llvm::Value *EmitX86CpuSupports(const CallExpr *E, const Expr *const *Args);
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
   llvm::Value *EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask);
   llvm::Value *EmitX86CpuInit();
@@ -5349,7 +5372,8 @@ private:
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *
   FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
-  llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
+  llvm::Value *EmitAArch64CpuSupports(const CallExpr *E,
+                                      const Expr *const *Args);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
 

@@ -36,9 +36,9 @@ typedef __bf16 __bfloat16 __attribute__((deprecated("use __bf16 instead")));
 ///    A bfloat data.
 /// \returns A float data whose sign field and exponent field keep unchanged,
 ///    and fraction field is extended to 23 bits.
-static __inline__ float __DEFAULT_FN_ATTRS _mm_cvtsbh_ss(__bf16 __A) {
-  return __builtin_ia32_cvtsbf162ss_32(__A);
-}
+[[_Clang::__builtin__("__builtin_ia32_cvtsbf162ss_32")]] static __inline__ float
+    __DEFAULT_FN_ATTRS
+    _mm_cvtsbh_ss(__bf16 __A);
 
 /// Convert Two Packed Single Data to One Packed BF16 Data.
 ///

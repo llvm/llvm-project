@@ -3281,15 +3281,15 @@ _mm512_reduce_mul_ph(__m512h __W) {
   return __builtin_ia32_reduce_fmul_ph512(1.0f16, __W);
 }
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS512
-_mm512_reduce_max_ph(__m512h __V) {
-  return __builtin_ia32_reduce_fmax_ph512(__V);
-}
+[[_Clang::__builtin__(
+    "__builtin_ia32_reduce_fmax_ph512")]] static __inline__ _Float16
+    __DEFAULT_FN_ATTRS512
+    _mm512_reduce_max_ph(__m512h __V);
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS512
-_mm512_reduce_min_ph(__m512h __V) {
-  return __builtin_ia32_reduce_fmin_ph512(__V);
-}
+[[_Clang::__builtin__(
+    "__builtin_ia32_reduce_fmin_ph512")]] static __inline__ _Float16
+    __DEFAULT_FN_ATTRS512
+    _mm512_reduce_min_ph(__m512h __V);
 
 static __inline__ __m512h __DEFAULT_FN_ATTRS512
 _mm512_mask_blend_ph(__mmask32 __U, __m512h __A, __m512h __W) {

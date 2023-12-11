@@ -5320,6 +5320,97 @@ static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<TypeNullableAttr>(S, D, AL);
 }
 
+static void handleBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.checkExactlyNumArgs(S, 1))
+    return;
+
+  StringRef BuiltinName;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, BuiltinName))
+    return;
+
+  bool IsInStdNamespace = BuiltinName.consume_front("std::");
+
+  unsigned ID =
+      S.getPreprocessor().getIdentifierTable().get(BuiltinName).getBuiltinID();
+
+  auto& BuiltinInfo = S.Context.BuiltinInfo;
+
+  if (ID == 0 || BuiltinInfo.isInStdNamespace(ID) != IsInStdNamespace) {
+    S.Diag(AL.getLoc(), diag::err_unknown_builtin);
+    return;
+  }
+
+  if (BuiltinInfo.isUnevaluated(ID)) {
+    S.Diag(AL.getLoc(), diag::warn_unsupported_builtin);
+    return;
+  }
+
+  ASTContext::GetBuiltinTypeError Error;
+  QualType Signature = S.Context.GetBuiltinType(ID, Error);
+  if (Error || Signature.isNull()) {
+    S.Diag(AL.getLoc(), diag::warn_unsupported_builtin);
+    return;
+  }
+
+  auto hasCompatibleSignature = [&] {
+    auto isTypeCompatible = [&](QualType LHS, QualType RHS) {
+      if (S.Context.hasSameType(LHS, RHS))
+        return true;
+      if (LHS->isPointerType() && RHS->isPointerType()) {
+        auto LHSPointee = LHS->getPointeeType();
+        auto RHSPointee = RHS->getPointeeType();
+        if (LHSPointee->isVoidType())
+          return RHSPointee.isAtLeastAsQualifiedAs(LHSPointee);
+      }
+      return false;
+    };
+
+    if (!isTypeCompatible(
+            cast<FunctionProtoType>(Signature)->getReturnType(),
+            cast<FunctionProtoType>(D->getFunctionType())->getReturnType()))
+      return false;
+
+    auto LHSParams = cast<FunctionProtoType>(Signature)->getParamTypes();
+    auto RHSParams =
+        cast<FunctionProtoType>(D->getFunctionType())->getParamTypes();
+
+    if (LHSParams.size() != RHSParams.size())
+      return false;
+
+    return llvm::all_of(llvm::zip(LHSParams, RHSParams), [&](auto tuple) {
+      return isTypeCompatible(std::get<0>(tuple), std::get<1>(tuple));
+    });
+  };
+
+  if (const auto* MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (!MD->isStatic()) {
+      S.Diag(AL.getLoc(), diag::warn_unsupported_on_member_function);
+      return;
+    }
+  }
+
+  if (BuiltinInfo.allowTypeMismatch(ID)) {
+    auto ExpectedParamCount =
+        cast<FunctionProtoType>(Signature)->getNumParams();
+    auto ActualParamCount =
+        cast<FunctionProtoType>(D->getFunctionType())->getNumParams();
+    if (ExpectedParamCount != ActualParamCount) {
+      S.Diag(AL.getLoc(), diag::err_unexpected_param_count)
+          << ExpectedParamCount << (ExpectedParamCount == 1)
+          << ActualParamCount;
+      return;
+    }
+  } else if (QualType FuncSig = cast<FunctionDecl>(D)->getType();
+             !S.Context.hasSameFunctionTypeIgnoringExceptionSpec(Signature,
+                                                                 FuncSig) &&
+             !hasCompatibleSignature()) {
+    S.Diag(AL.getLoc(), diag::err_signature_mismatch);
+    S.Diag(AL.getLoc(), diag::note_expected_signature) << Signature;
+  }
+
+  D->addAttr(BuiltinAttr::Create(S.Context, ID));
+}
+
 static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.hasParsedType()) {
     S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
@@ -7106,6 +7197,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_BuiltinAlias:
     handleBuiltinAliasAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Builtin:
+    handleBuiltinAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_PreferredType:

@@ -5502,11 +5502,12 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
 
   // A CXXOperatorCallExpr is created even for explicit object methods, but
   // these should be treated like static function call.
-  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
+  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (const auto *MD =
             dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
         MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
+  }
 
   CGCallee callee = EmitCallee(E->getCallee());
 
@@ -5543,7 +5544,8 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
   if (auto builtinID = FD->getBuiltinID()) {
-    std::string NoBuiltinFD = ("no-builtin-" + FD->getName()).str();
+    std::string NoBuiltinFD =
+        ("no-builtin-" + CGF.getContext().BuiltinInfo.getName(builtinID)).str();
     std::string NoBuiltins = "no-builtins";
 
     StringRef Ident = CGF.CGM.getMangledName(GD);

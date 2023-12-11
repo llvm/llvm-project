@@ -2019,15 +2019,15 @@ _mm256_reduce_mul_ph(__m256h __W) {
   return __builtin_ia32_reduce_fmul_ph256(1.0f16, __W);
 }
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS256
-_mm256_reduce_max_ph(__m256h __V) {
-  return __builtin_ia32_reduce_fmax_ph256(__V);
-}
+[[_Clang::__builtin__(
+    "__builtin_ia32_reduce_fmax_ph256")]] static __inline__ _Float16
+    __DEFAULT_FN_ATTRS256
+    _mm256_reduce_max_ph(__m256h __V);
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS256
-_mm256_reduce_min_ph(__m256h __V) {
-  return __builtin_ia32_reduce_fmin_ph256(__V);
-}
+[[_Clang::__builtin__(
+    "__builtin_ia32_reduce_fmin_ph256")]] static __inline__ _Float16
+    __DEFAULT_FN_ATTRS256
+    _mm256_reduce_min_ph(__m256h __V);
 
 static __inline__ _Float16 __DEFAULT_FN_ATTRS128
 _mm_reduce_add_ph(__m128h __W) {
@@ -2039,15 +2039,15 @@ _mm_reduce_mul_ph(__m128h __W) {
   return __builtin_ia32_reduce_fmul_ph128(1.0f16, __W);
 }
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS128
-_mm_reduce_max_ph(__m128h __V) {
-  return __builtin_ia32_reduce_fmax_ph128(__V);
-}
+[[_Clang::__builtin__(
+    "__builtin_ia32_reduce_fmax_ph128")]] static __inline__ _Float16
+    __DEFAULT_FN_ATTRS128
+    _mm_reduce_max_ph(__m128h __V);
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS128
-_mm_reduce_min_ph(__m128h __V) {
-  return __builtin_ia32_reduce_fmin_ph128(__V);
-}
+[[_Clang::__builtin__(
+    "__builtin_ia32_reduce_fmin_ph128")]] static __inline__ _Float16
+    __DEFAULT_FN_ATTRS128
+    _mm_reduce_min_ph(__m128h __V);
 
 // intrinsics below are alias for f*mul_*ch
 #define _mm_mul_pch(A, B) _mm_fmul_pch(A, B)

@@ -20,41 +20,29 @@
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("avx512dq,no-evex512")))
 
-static __inline __mmask8 __DEFAULT_FN_ATTRS
-_knot_mask8(__mmask8 __M)
-{
-  return __builtin_ia32_knotqi(__M);
-}
+[[_Clang::__builtin__("__builtin_ia32_knotqi")]] static __inline __mmask8
+    __DEFAULT_FN_ATTRS
+    _knot_mask8(__mmask8 __M);
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kand_mask8(__mmask8 __A, __mmask8 __B)
-{
-  return (__mmask8)__builtin_ia32_kandqi((__mmask8)__A, (__mmask8)__B);
-}
+[[_Clang::__builtin__("__builtin_ia32_kandqi")]] static __inline__ __mmask8
+    __DEFAULT_FN_ATTRS
+    _kand_mask8(__mmask8 __A, __mmask8 __B);
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kandn_mask8(__mmask8 __A, __mmask8 __B)
-{
-  return (__mmask8)__builtin_ia32_kandnqi((__mmask8)__A, (__mmask8)__B);
-}
+[[_Clang::__builtin__("__builtin_ia32_kandnqi")]] static __inline__ __mmask8
+    __DEFAULT_FN_ATTRS
+    _kandn_mask8(__mmask8 __A, __mmask8 __B);
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kor_mask8(__mmask8 __A, __mmask8 __B)
-{
-  return (__mmask8)__builtin_ia32_korqi((__mmask8)__A, (__mmask8)__B);
-}
+[[_Clang::__builtin__("__builtin_ia32_korqi")]] static __inline__ __mmask8
+    __DEFAULT_FN_ATTRS
+    _kor_mask8(__mmask8 __A, __mmask8 __B);
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kxnor_mask8(__mmask8 __A, __mmask8 __B)
-{
-  return (__mmask8)__builtin_ia32_kxnorqi((__mmask8)__A, (__mmask8)__B);
-}
+[[_Clang::__builtin__("__builtin_ia32_kxnorqi")]] static __inline__ __mmask8
+    __DEFAULT_FN_ATTRS
+    _kxnor_mask8(__mmask8 __A, __mmask8 __B);
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
-_kxor_mask8(__mmask8 __A, __mmask8 __B)
-{
-  return (__mmask8)__builtin_ia32_kxorqi((__mmask8)__A, (__mmask8)__B);
-}
+[[_Clang::__builtin__("__builtin_ia32_kxorqi")]] static __inline__ __mmask8
+    __DEFAULT_FN_ATTRS
+    _kxor_mask8(__mmask8 __A, __mmask8 __B);
 
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _kortestc_mask8_u8(__mmask8 __A, __mmask8 __B)

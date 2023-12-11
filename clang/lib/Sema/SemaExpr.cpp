@@ -6361,6 +6361,9 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
   if (BuiltinID != Builtin::BImove && BuiltinID != Builtin::BIforward)
     return;
 
+  if (!FD->isInStdNamespace())
+    return;
+
   S.Diag(DRE->getLocation(), diag::warn_unqualified_call_to_std_cast_function)
       << FD->getQualifiedNameAsString()
       << FixItHint::CreateInsertion(DRE->getLocation(), "std::");
