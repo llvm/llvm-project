@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-exceptions
-// UNSUPPORTED: !libcpp-hardening-mode=debug
+// UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
 
 #include "check_assertion.h"
