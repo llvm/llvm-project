@@ -1180,7 +1180,3 @@ void LLVMOrcDisposeLazyCallThroughManager(
     LLVMOrcLazyCallThroughManagerRef LCM) {
   std::unique_ptr<LazyCallThroughManager> TmpLCM(unwrap(LCM));
 }
-
-LLVMErrorRef LLVMOrcLLJITEnableDebugSupport(LLVMOrcLLJITRef J) {
-  return wrap(llvm::orc::enableDebuggerSupport(*unwrap(J)));
-}
