@@ -166,7 +166,10 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_BUILTINS_LIBRARY} ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_LIBRARIES})
+if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
+endif()
 target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
