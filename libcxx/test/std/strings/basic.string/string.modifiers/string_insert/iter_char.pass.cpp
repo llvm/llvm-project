@@ -47,6 +47,23 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(s, s.begin() + 4, 'A', S("a567A1432dcb"));
   test(s, s.begin() + 5, 'B', S("a567AB1432dcb"));
   test(s, s.begin() + 6, 'C', S("a567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin(), 'x', S("xxxxxxxxxxxxxxxxa567ABC1432dcb"));
+  test(s, s.begin() + 1, 'x', S("xxxxxxxxxxxxxxxxxa567ABC1432dcb"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
