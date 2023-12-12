@@ -83,7 +83,7 @@ LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
 
 /// Peel the first iteration out of the scf.for loop. If there is only one
 /// iteration, return the original loop.
-LogicalResult peelFirstIterationForLoop(RewriterBase &rewriter, ForOp forOp,
+LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
                                         scf::ForOp &partialIteration);
 
 /// Tile a parallel loop of the form

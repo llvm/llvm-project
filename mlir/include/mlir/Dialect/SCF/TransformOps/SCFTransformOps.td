@@ -126,8 +126,8 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      contains the remaining iteration, and the new lower bound is the original
      lower bound plus the number of steps.
 
-     For the other case, this operation returns two scf::ForOp Ops, with the first
-     Op satisfying the postcondition: "the loop trip count is divisible by the step".
+     When `peelFront` is not true, this operation returns two scf::ForOp Ops, with the first
+     scf::ForOp satisfying: "the loop trip count is divisible by the step".
      The second loop Op contains the remaining iteration. Note that even though the
      Payload IR modification may be performed in-place, this operation consumes
      the operand handle and produces a new one.

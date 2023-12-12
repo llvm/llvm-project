@@ -191,23 +191,6 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
   });
 }
 
-static void removeAffineOpInsideFirstIteration(RewriterBase &rewriter,
-                                               ForOp partialIteration,
-                                               Value previousUb) {
-  Value partialIv = partialIteration.getInductionVar();
-  Value step = partialIteration.getStep();
-
-  partialIteration.walk([&](Operation *affineOp) {
-    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
-      return WalkResult::advance();
-
-    // Hack to reuse the existing utils when ub - iv >= step.
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, partialIv, previousUb,
-                                     step, /*insideLoop=*/true);
-    return WalkResult::advance();
-  });
-}
-
 LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
                                                       ForOp forOp,
                                                       ForOp &partialIteration) {
@@ -222,7 +205,13 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
   return success();
 }
 
-LogicalResult mlir::scf::peelFirstIterationForLoop(RewriterBase &b, ForOp forOp,
+/// When the `peelFront` option is set as true, the first iteration of the loop
+/// is peeled off. This function rewrites the original scf::ForOp as two
+/// scf::ForOp Ops, the first scf::ForOp corresponds to the first iteration of
+/// the loop which can be canonicalized away in the following optimization. The
+/// second loop Op contains the remaining iteration, and the new lower bound is
+/// the original lower bound plus the number of steps.
+LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
   RewriterBase::InsertionGuard guard(b);
   auto lbInt = getConstantIntValue(forOp.getLowerBound());
@@ -231,29 +220,28 @@ LogicalResult mlir::scf::peelFirstIterationForLoop(RewriterBase &b, ForOp forOp,
 
   // Peeling is not needed if there is one or less iteration.
   if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) / *stepInt <= 1)
-    return success();
+    return failure();
 
-  AffineExpr sym0, sym1, sym2;
-  bindSymbols(b.getContext(), sym0, sym1, sym2);
-  SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
-                              forOp.getStep()};
+  AffineExpr lbSymbol, stepSymbol;
+  bindSymbols(b.getContext(), lbSymbol, stepSymbol);
 
   // New lower bound for main loop: %lb + %step
-  auto ubMap = AffineMap::get(0, 2, {sym0 + sym1});
+  auto ubMap = AffineMap::get(0, 2, {lbSymbol + stepSymbol});
   b.setInsertionPoint(forOp);
   auto loc = forOp.getLoc();
   Value splitBound = b.createOrFold<AffineApplyOp>(
       loc, ubMap, ValueRange{forOp.getLowerBound(), forOp.getStep()});
 
   // Peel the first iteration.
-  b.setInsertionPoint(forOp);
-  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
-  firstIteration.getUpperBoundMutable().assign(splitBound);
+  IRMapping map;
+  map.map(forOp.getUpperBound(), splitBound);
+  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
 
   // Update main loop with new lower bound.
-  forOp.getInitArgsMutable().assign(firstIteration->getResults());
-  b.updateRootInPlace(
-      forOp, [&]() { forOp.getLowerBoundMutable().assign(splitBound); });
+  b.updateRootInPlace(forOp, [&]() {
+    forOp.getInitArgsMutable().assign(firstIteration->getResults());
+    forOp.getLowerBoundMutable().assign(splitBound);
+  });
 
   return success();
 }
@@ -277,13 +265,9 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     // The case for peeling the first iteration of the loop.
     if (peelFront) {
       if (failed(
-              peelFirstIterationForLoop(rewriter, forOp, partialIteration))) {
+              peelForLoopFirstIteration(rewriter, forOp, partialIteration))) {
         return failure();
       }
-      // Remove affine.min op in the first (partial) iteration.
-      removeAffineOpInsideFirstIteration(rewriter, partialIteration,
-                                         forOp.getUpperBound());
-
     } else {
       if (skipPartial) {
         // No peeling of loops inside the partial iteration of another peeled
@@ -311,6 +295,8 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     return success();
   }
 
+  // If set to true, the first iteration of the loop will be peeled. Otherwise,
+  // the unevenly divisible loop will be peeled at the end.
   bool peelFront;
 
   /// If set to true, loops inside partial iterations of another peeled loop

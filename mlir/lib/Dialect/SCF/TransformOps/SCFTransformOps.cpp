@@ -195,7 +195,7 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
   scf::ForOp result;
   if (getPeelFront()) {
     LogicalResult status =
-        scf::peelFirstIterationForLoop(rewriter, target, result);
+        scf::peelForLoopFirstIteration(rewriter, target, result);
     if (failed(status)) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError() << "failed to peel the first iteration";
