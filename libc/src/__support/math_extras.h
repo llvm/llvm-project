@@ -40,20 +40,6 @@ LIBC_INLINE constexpr T mask_leading_ones() {
   return T(~mask); // bitwise NOT performs integer promotion.
 }
 
-// Create a bitmask with the count right-most bits set to 0, and all other bits
-// set to 1.  Only unsigned types are allowed.
-template <typename T, size_t count>
-LIBC_INLINE constexpr T mask_trailing_zeros() {
-  return mask_leading_ones<T, CHAR_BIT * sizeof(T) - count>();
-}
-
-// Create a bitmask with the count left-most bits set to 0, and all other bits
-// set to 1.  Only unsigned types are allowed.
-template <typename T, size_t count>
-LIBC_INLINE constexpr T mask_leading_zeros() {
-  return mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>();
-}
-
 // Add with carry
 template <typename T> struct SumCarry {
   T sum;
