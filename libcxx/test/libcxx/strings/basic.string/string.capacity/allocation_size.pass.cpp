@@ -14,6 +14,7 @@
 #include <cassert>
 #include <cstddef>
 #include <string>
+#include <cstdio>
 
 #include "test_macros.h"
 
@@ -26,7 +27,7 @@ const std::size_t alignment =
     16;
 #endif
 
-int main(int, char**) {
+void test_size_wrt_alignment() {
   std::string input_string;
   input_string.resize(64, 'a');
 
@@ -40,6 +41,25 @@ int main(int, char**) {
   } else {
     assert(test_string.capacity() == expected_align8_size + 8);
   }
+}
+
+void test_resize_from_small_size() {
+  // Test that we don't waste additional bytes when growing from the SSO
+  // to a specific size. The size of the SSO is an implementation detail
+  // and shouldn't be taken into account when deciding on the next size.
+  {
+    const std::size_t sso_capacity = std::string().capacity();
+    const std::string input(sso_capacity, 'a');
+    std::string s;
+    s = input.c_str();
+    std::printf("Have Capacity = %zu and size = %zu\n", s.capacity(), s.size());
+    assert(s.capacity() == input.size());
+  }
+}
+
+int main(int, char**) {
+  test_size_wrt_alignment();
+  test_resize_from_small_size();
 
   return 0;
 }
