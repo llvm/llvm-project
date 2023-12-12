@@ -1,7 +1,8 @@
 ; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPT %s
 ; RUN: llc -O0 < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPTNONE %s
 ; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPT %s
-; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPTNONE %s
+; RUN: llc -O0 < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPTNONE %s
+
 ; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPT %s
 ; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPTNONE %s
 ; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPT %s
