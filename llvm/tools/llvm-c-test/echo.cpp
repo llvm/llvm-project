@@ -770,6 +770,7 @@ struct FunCloner {
         }
 
         LLVMAddIncoming(Dst, Values.data(), Blocks.data(), IncomingCount);
+        // Copy fast math flags here since we return early
         if (LLVMGetCanUseFastMathFlags(Src))
           LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         return Dst;
@@ -779,8 +780,6 @@ struct FunCloner {
         LLVMValueRef Then = CloneValue(LLVMGetOperand(Src, 1));
         LLVMValueRef Else = CloneValue(LLVMGetOperand(Src, 2));
         Dst = LLVMBuildSelect(Builder, If, Then, Else, Name);
-        if (LLVMGetCanUseFastMathFlags(Src))
-          LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMCall: {
@@ -801,9 +800,6 @@ struct FunCloner {
                                               ArgCount, Bundles.data(),
                                               Bundles.size(), Name);
         LLVMSetTailCallKind(Dst, LLVMGetTailCallKind(Src));
-        if (LLVMGetCanUseFastMathFlags(Src))
-          LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
-
         CloneAttrs(Src, Dst);
         for (auto Bundle : Bundles)
           LLVMDisposeOperandBundle(Bundle);
@@ -948,41 +944,35 @@ struct FunCloner {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildFAdd(Builder, LHS, RHS, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMFSub: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildFSub(Builder, LHS, RHS, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMFMul: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildFMul(Builder, LHS, RHS, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMFDiv: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildFDiv(Builder, LHS, RHS, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMFRem: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildFRem(Builder, LHS, RHS, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMFNeg: {
         LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
         Dst = LLVMBuildFNeg(Builder, Val, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       case LLVMFCmp: {
@@ -990,7 +980,6 @@ struct FunCloner {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildFCmp(Builder, Pred, LHS, RHS, Name);
-        LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         break;
       }
       default:
@@ -1001,6 +990,10 @@ struct FunCloner {
       fprintf(stderr, "%d is not a supported opcode\n", Op);
       exit(-1);
     }
+
+    // Copy fast-math flags on instructions that support them
+    if (LLVMGetCanUseFastMathFlags(Src))
+      LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
 
     auto Ctx = LLVMGetModuleContext(M);
     size_t NumMetadataEntries;

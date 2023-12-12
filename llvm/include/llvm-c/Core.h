@@ -492,12 +492,15 @@ enum {
   LLVMFastMathAllowContract = (1 << 5),
   LLVMFastMathApproxFunc = (1 << 6),
   LLVMFastMathNone = 0,
-  LLVMFastMathAll = -1,
+  LLVMFastMathAll = LLVMFastMathAllowReassoc | LLVMFastMathNoNaNs |
+                    LLVMFastMathNoInfs | LLVMFastMathNoSignedZeros |
+                    LLVMFastMathAllowReciprocal | LLVMFastMathAllowContract |
+                    LLVMFastMathApproxFunc,
 };
 
 /**
  * Flags to indicate what fast-math-style optimizations are allowed
- * on operations
+ * on operations.
  *
  * See https://llvm.org/docs/LangRef.html#fast-math-flags
  */
@@ -4097,27 +4100,28 @@ void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg);
 
 /**
  * Get the flags for which fast-math-style optimizations are allowed for this
- * value
+ * value.
  *
- * Only valid on floating point instructions
+ * Only valid on floating point instructions.
  * @see LLVMGetCanUseFastMathFlags
  */
 LLVMFastMathFlags LLVMGetFastMathFlags(LLVMValueRef FPMathInst);
+
 /**
  * Sets the flags for which fast-math-style optimizations are allowed for this
- * value
+ * value.
  *
- * Only valid on floating point instructions
+ * Only valid on floating point instructions.
  * @see LLVMGetCanUseFastMathFlags
  */
 void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF);
 
 /**
- * Check if a given value can potentially have fast math flags
+ * Check if a given value can potentially have fast math flags.
  *
  * Will return true for floating point arithmetic instructions, and for select,
  * phi, and call instructions whose type is a floating point type, or a vector
- * or array thereof See https://llvm.org/docs/LangRef.html#fast-math-flags
+ * or array thereof. See https://llvm.org/docs/LangRef.html#fast-math-flags
  */
 LLVMBool LLVMGetCanUseFastMathFlags(LLVMValueRef Inst);
 

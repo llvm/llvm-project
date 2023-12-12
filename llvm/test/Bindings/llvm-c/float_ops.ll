@@ -4,7 +4,6 @@
 ;
 source_filename = "/test/Bindings/float_ops.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.11.0"
 
 
 define float @float_ops_f32(float %a, float %b) {
@@ -128,6 +127,7 @@ define float @float_ops_fast_f32(float %a, float %b) {
   %11 = frem nnan nsz float %a, %b
   %12 = fdiv nnan nsz arcp float %a, %b
   %13 = fmul nnan nsz ninf contract float %a, %b
+  %14 = fmul nnan nsz ninf arcp contract afn reassoc float %a, %b
 
   ret float %1
 }
@@ -149,6 +149,7 @@ define double @float_ops_fast_f64(double %a, double %b) {
   %11 = frem nnan nsz double %a, %b
   %12 = fdiv nnan nsz arcp double %a, %b
   %13 = fmul nnan nsz ninf contract double %a, %b
+  %14 = fmul nnan nsz ninf arcp contract afn reassoc double %a, %b
 
   ret double %1
 }
