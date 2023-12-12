@@ -93,45 +93,6 @@ public:
   }
 };
 
-TEST(LlvmLibcStrToFloatTest, LeadingZeroes) {
-  uint64_t test_num64 = 1;
-  uint32_t num_of_zeroes = 63;
-  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(0), 64u);
-  for (; num_of_zeroes < 64; test_num64 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
-              num_of_zeroes);
-  }
-
-  test_num64 = 3;
-  num_of_zeroes = 62;
-  for (; num_of_zeroes > 63; test_num64 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
-              num_of_zeroes);
-  }
-
-  EXPECT_EQ(
-      LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(0xffffffffffffffff),
-      0u);
-
-  test_num64 = 1;
-  num_of_zeroes = 63;
-  for (; num_of_zeroes > 63;
-       test_num64 = (test_num64 << 1) + 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
-              num_of_zeroes);
-  }
-
-  uint64_t test_num32 = 1;
-  num_of_zeroes = 31;
-  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(0), 32u);
-  for (; num_of_zeroes < 32; test_num32 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(test_num32),
-              num_of_zeroes);
-  }
-
-  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(0xffffffff), 0u);
-}
-
 TEST_F(LlvmLibcStrToFloatTest, ClingerFastPathFloat64Simple) {
   clinger_fast_path_test<double>(123, 0, 0xEC00000000000, 1029);
   clinger_fast_path_test<double>(1234567890123456, 1, 0x5ee2a2eb5a5c0, 1076);

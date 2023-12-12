@@ -2387,6 +2387,9 @@ struct XArrayCoorOpConversion
     const bool baseIsBoxed = coor.getMemref().getType().isa<fir::BaseBoxType>();
     TypePair baseBoxTyPair =
         baseIsBoxed ? getBoxTypePair(coor.getMemref().getType()) : TypePair{};
+    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
+        mlir::LLVM::IntegerOverflowFlagsAttr::get(
+            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2407,14 +2410,15 @@ struct XArrayCoorOpConversion
         if (normalSlice)
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
-      auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
+      auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb, nsw);
       mlir::Value diff =
-          rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step);
+          rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step, nsw);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
-        auto adj = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, lb);
-        diff = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, adj);
+        auto adj =
+            rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, lb, nsw);
+        diff = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, adj, nsw);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -2422,17 +2426,21 @@ struct XArrayCoorOpConversion
         // Use stride in bytes from the descriptor.
         mlir::Value stride =
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
-        auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, stride);
-        offset = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset);
+        auto sc =
+            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, stride, nsw);
+        offset =
+            rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset, nsw);
       } else {
         // Use stride computed at last iteration.
-        auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, prevExt);
-        offset = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset);
+        auto sc =
+            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, diff, prevExt, nsw);
+        offset =
+            rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset, nsw);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
-        prevExt =
-            rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, prevExt, nextExt);
+        prevExt = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, prevExt,
+                                                     nextExt, nsw);
       }
     }
 
@@ -2491,8 +2499,8 @@ struct XArrayCoorOpConversion
           assert(coor.getLenParams().size() == 1);
           auto length = integerCast(loc, rewriter, idxTy,
                                     operands[coor.lenParamsOffset()]);
-          offset =
-              rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset, length);
+          offset = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, offset,
+                                                      length, nsw);
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
@@ -2665,6 +2673,9 @@ private:
     auto cpnTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
     mlir::Type llvmPtrTy = ::getLlvmPtrType(coor.getContext());
     mlir::Type byteTy = ::getI8Type(coor.getContext());
+    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
+        mlir::LLVM::IntegerOverflowFlagsAttr::get(
+            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
 
     for (unsigned i = 1, last = operands.size(); i < last; ++i) {
       if (auto arrTy = cpnTy.dyn_cast<fir::SequenceType>()) {
@@ -2680,9 +2691,9 @@ private:
              index < lastIndex; ++index) {
           mlir::Value stride = getStrideFromBox(loc, boxTyPair, operands[0],
                                                 index - i, rewriter);
-          auto sc = rewriter.create<mlir::LLVM::MulOp>(loc, idxTy,
-                                                       operands[index], stride);
-          off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off);
+          auto sc = rewriter.create<mlir::LLVM::MulOp>(
+              loc, idxTy, operands[index], stride, nsw);
+          off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off, nsw);
         }
         resultAddr = rewriter.create<mlir::LLVM::GEPOp>(
             loc, llvmPtrTy, byteTy, resultAddr,

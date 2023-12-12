@@ -505,7 +505,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (!SI)
       continue;
     Type *ElTy = SI->getValueOperand()->getType();
-    PointerType *PTy = cast<PointerType>(SI->getOperand(1)->getType());
     if (ElTy->isAggregateType() || ElTy->isVectorTy())
       AggrStores.insert(&I);
   }

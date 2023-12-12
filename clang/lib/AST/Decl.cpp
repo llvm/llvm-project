@@ -4157,6 +4157,7 @@ FunctionDecl::setFunctionTemplateSpecialization(ASTContext &C,
   assert(TSK != TSK_Undeclared &&
          "Must specify the type of function template specialization");
   assert((TemplateOrSpecialization.isNull() ||
+          getFriendObjectKind() != FOK_None ||
           TSK == TSK_ExplicitSpecialization) &&
          "Member specialization must be an explicit specialization");
   FunctionTemplateSpecializationInfo *Info =

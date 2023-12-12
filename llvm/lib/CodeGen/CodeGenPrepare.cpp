@@ -460,6 +460,7 @@ private:
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgValue(Instruction *I);
   bool fixupDPValue(DPValue &I);
+  bool fixupDPValuesOnInst(Instruction &I);
   bool placeDbgValues(Function &F);
   bool placePseudoProbes(Function &F);
   bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
@@ -6986,6 +6987,11 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // Increment the current iterator to skip all the rest of select instructions
   // because they will be either "not lowered" or "all lowered" to branch.
   CurInstIterator = std::next(LastSI->getIterator());
+  // Examine debug-info attached to the consecutive select instructions. They
+  // won't be individually optimised by optimizeInst, so we need to perform
+  // DPValue maintenence here instead.
+  for (SelectInst *SI : ArrayRef(ASI).drop_front())
+    fixupDPValuesOnInst(*SI);
 
   bool VectorCond = !SI->getCondition()->getType()->isIntegerTy(1);
 
@@ -8141,8 +8147,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
 
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
-  for (DPValue &DPV : I->getDbgValueRange())
-    AnyChange |= fixupDPValue(DPV);
+  AnyChange = fixupDPValuesOnInst(*I);
 
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
@@ -8405,6 +8410,13 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
       AnyChange = true;
     }
   }
+  return AnyChange;
+}
+
+bool CodeGenPrepare::fixupDPValuesOnInst(Instruction &I) {
+  bool AnyChange = false;
+  for (DPValue &DPV : I.getDbgValueRange())
+    AnyChange |= fixupDPValue(DPV);
   return AnyChange;
 }
 

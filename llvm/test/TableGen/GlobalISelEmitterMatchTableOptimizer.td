@@ -61,7 +61,7 @@ def LOAD16Imm : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT: // (ld:{ *:[i16] } (add:{ *:[i16] } GPR16:{ *:[i16] }:$src, 10:{ *:[i16] }))<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD16Imm:{ *:[i16] } GPR16:{ *:[i16] }:$src)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::LOAD16Imm,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, 1, GIU_MergeMemOperands_EndOfList,
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,

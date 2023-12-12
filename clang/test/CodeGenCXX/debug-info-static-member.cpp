@@ -1,8 +1,8 @@
-// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,CPP11,NOT-MS %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,NOT-MS %s
 // RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 -std=c++98 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,NOT-MS %s
-// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,CPP11,NOT-MS %s
-// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-5 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF5,CPP11 %s
-// RUN: %clangxx -target x86_64-windows-msvc -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,CPP11 %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,NOT-MS %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-5 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF5 %s
+// RUN: %clangxx -target x86_64-windows-msvc -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4 %s
 // PR14471
 
 // CHECK: @{{.*}}a{{.*}} = dso_local global i32 4, align 4, !dbg [[A:![0-9]+]]
@@ -166,15 +166,3 @@ struct y {
 };
 int y::z;
 }
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_A_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
-// CHECK:      ![[CONST_A_VAR]] = distinct !DIGlobalVariable(name: "const_a"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_A_DECL]])
-
-// CPP11:      !DIGlobalVariableExpression(var: ![[CONST_B_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CPP11:      ![[CONST_B_VAR]] = distinct !DIGlobalVariable(name: "const_b"
-// CPP11-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_B_DECL]])
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_C_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 18, DW_OP_stack_value))
-// CHECK:      ![[CONST_C_VAR]] = distinct !DIGlobalVariable(name: "const_c"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_C_DECL]])

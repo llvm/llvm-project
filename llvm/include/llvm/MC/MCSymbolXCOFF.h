@@ -17,6 +17,9 @@ namespace llvm {
 class MCSectionXCOFF;
 
 class MCSymbolXCOFF : public MCSymbol {
+
+  enum XCOFFSymbolFlags : uint16_t { SF_EHInfo = 0x0001 };
+
 public:
   MCSymbolXCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
       : MCSymbol(SymbolKindXCOFF, Name, isTemporary) {}
@@ -64,6 +67,10 @@ public:
       return SymbolTableName;
     return getUnqualifiedName();
   }
+
+  bool isEHInfo() const { return getFlags() & SF_EHInfo; }
+
+  void setEHInfo() const { modifyFlags(SF_EHInfo, SF_EHInfo); }
 
 private:
   std::optional<XCOFF::StorageClass> StorageClass;

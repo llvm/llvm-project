@@ -7123,7 +7123,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         EVT::getIntegerVT(*Context, 8), MachinePointerInfo(I.getArgOperand(0)),
         /* align */ std::nullopt, Flags);
 
-    // Chain the prefetch in parallell with any pending loads, to stay out of
+    // Chain the prefetch in parallel with any pending loads, to stay out of
     // the way of later optimizations.
     PendingLoads.push_back(Result);
     Result = getRoot();

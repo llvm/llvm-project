@@ -716,9 +716,9 @@ void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
 
 static TargetIDSetting
 getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.endswith("-"))
+  if (FeatureString.ends_with("-"))
     return TargetIDSetting::Off;
-  if (FeatureString.endswith("+"))
+  if (FeatureString.ends_with("+"))
     return TargetIDSetting::On;
 
   llvm_unreachable("Malformed feature string");
@@ -729,9 +729,9 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   TargetID.split(TargetIDSplit, ':');
 
   for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.startswith("xnack"))
+    if (FeatureString.starts_with("xnack"))
       XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.startswith("sramecc"))
+    if (FeatureString.starts_with("sramecc"))
       SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
   }
 }
@@ -1578,7 +1578,7 @@ unsigned getTgtId(const StringRef Name) {
     if (Val.MaxIndex == 0 && Name == Val.Name)
       return Val.Tgt;
 
-    if (Val.MaxIndex > 0 && Name.startswith(Val.Name)) {
+    if (Val.MaxIndex > 0 && Name.starts_with(Val.Name)) {
       StringRef Suffix = Name.drop_front(Val.Name.size());
 
       unsigned Id;

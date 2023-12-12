@@ -2018,3 +2018,20 @@ func.func @invalid_slice_ops(%t: tensor<?xf32>, %t2: tensor<?xf32>) -> tensor<?x
   %1 = tensor.insert_slice %0 into %t2[2][%c][1] : tensor<?xf32> into tensor<?xf32>
   return %1 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @generate_negative_size_verifies(
+//       CHECK:   %[[c:.*]] = arith.constant -8 : index
+//       CHECK:   tensor.generate %[[c]]
+//       CHECK:   : tensor<?x8xi32>
+func.func @generate_negative_size_verifies() -> tensor<?x8xi32> {
+  %cst = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %size = affine.max affine_map<(d0) -> (d0 mod 64 - 8)>(%c0)
+  %tensor = tensor.generate %size {
+  ^bb0(%arg0: index, %arg1: index):
+    tensor.yield %cst : i32
+  } : tensor<?x8xi32>
+  return %tensor : tensor<?x8xi32>
+}

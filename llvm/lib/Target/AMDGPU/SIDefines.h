@@ -413,8 +413,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_DEALLOC_VGPRS_GFX11Plus = 3, // reused in GFX11
 
   ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
-  ID_STALL_WAVE_GEN = 5,     // added in GFX9
-  ID_HALT_WAVES = 6,         // added in GFX9
+  ID_STALL_WAVE_GEN = 5,     // added in GFX9, removed in GFX12
+  ID_HALT_WAVES = 6,         // added in GFX9, removed in GFX12
   ID_ORDERED_PS_DONE = 7,    // added in GFX9, removed in GFX11
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
@@ -428,6 +428,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_REALTIME = 131,
   ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
+  ID_RTN_GET_SE_AID_ID = 134,
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
