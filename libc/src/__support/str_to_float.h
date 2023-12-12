@@ -77,8 +77,6 @@ eisel_lemire(ExpandedFloat<T> init_num,
   UIntType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
-  constexpr uint32_t BITS_IN_MANTISSA = sizeof(mantissa) * 8;
-
   if (sizeof(T) > 8) { // This algorithm cannot handle anything longer than a
                        // double, so we skip straight to the fallback.
     return cpp::nullopt;
@@ -94,8 +92,8 @@ eisel_lemire(ExpandedFloat<T> init_num,
   uint32_t clz = cpp::countl_zero<UIntType>(mantissa);
   mantissa <<= clz;
 
-  int32_t exp2 =
-      exp10_to_exp2(exp10) + BITS_IN_MANTISSA + FloatProp::EXPONENT_BIAS - clz;
+  int32_t exp2 = exp10_to_exp2(exp10) + FloatProp::UINTTYPE_BITS +
+                 FloatProp::EXPONENT_BIAS - clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -112,7 +110,9 @@ eisel_lemire(ExpandedFloat<T> init_num,
   // accuracy, and the most significant bit is ignored.) = 9 bits. Similarly,
   // it's 6 bits for floats in this case.
   const uint64_t halfway_constant =
-      (uint64_t(1) << (BITS_IN_MANTISSA - (FloatProp::MANTISSA_WIDTH + 3))) - 1;
+      (uint64_t(1) << (FloatProp::UINTTYPE_BITS -
+                       (FloatProp::MANTISSA_WIDTH + 3))) -
+      1;
   if ((high64(first_approx) & halfway_constant) == halfway_constant &&
       low64(first_approx) + mantissa < mantissa) {
     UInt128 low_bits =
@@ -131,11 +131,11 @@ eisel_lemire(ExpandedFloat<T> init_num,
   }
 
   // Shifting to 54 bits for doubles and 25 bits for floats
-  UIntType msb =
-      static_cast<UIntType>(high64(final_approx) >> (BITS_IN_MANTISSA - 1));
+  UIntType msb = static_cast<UIntType>(high64(final_approx) >>
+                                       (FloatProp::UINTTYPE_BITS - 1));
   UIntType final_mantissa = static_cast<UIntType>(
       high64(final_approx) >>
-      (msb + BITS_IN_MANTISSA - (FloatProp::MANTISSA_WIDTH + 3)));
+      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::MANTISSA_WIDTH + 3)));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -190,8 +190,6 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   UIntType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
-  constexpr uint32_t BITS_IN_MANTISSA = sizeof(mantissa) * 8;
-
   // Exp10 Range
   // This doesn't reach very far into the range for long doubles, since it's
   // sized for doubles and their 11 exponent bits, and not for long doubles and
@@ -211,8 +209,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   uint32_t clz = cpp::countl_zero<UIntType>(mantissa);
   mantissa <<= clz;
 
-  int32_t exp2 =
-      exp10_to_exp2(exp10) + BITS_IN_MANTISSA + FloatProp::EXPONENT_BIAS - clz;
+  int32_t exp2 = exp10_to_exp2(exp10) + FloatProp::UINTTYPE_BITS +
+                 FloatProp::EXPONENT_BIAS - clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -249,7 +247,9 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // accuracy, and the most significant bit is ignored.) = 61 bits. Similarly,
   // it's 12 bits for 128 bit floats in this case.
   constexpr UInt128 HALFWAY_CONSTANT =
-      (UInt128(1) << (BITS_IN_MANTISSA - (FloatProp::MANTISSA_WIDTH + 3))) - 1;
+      (UInt128(1) << (FloatProp::UINTTYPE_BITS -
+                      (FloatProp::MANTISSA_WIDTH + 3))) -
+      1;
 
   if ((final_approx_upper & HALFWAY_CONSTANT) == HALFWAY_CONSTANT &&
       final_approx_lower + mantissa < mantissa) {
@@ -257,11 +257,11 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Shifting to 65 bits for 80 bit floats and 113 bits for 128 bit floats
-  uint32_t msb =
-      static_cast<uint32_t>(final_approx_upper >> (BITS_IN_MANTISSA - 1));
+  uint32_t msb = static_cast<uint32_t>(final_approx_upper >>
+                                       (FloatProp::UINTTYPE_BITS - 1));
   UIntType final_mantissa =
       final_approx_upper >>
-      (msb + BITS_IN_MANTISSA - (FloatProp::MANTISSA_WIDTH + 3));
+      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::MANTISSA_WIDTH + 3));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -622,9 +622,10 @@ template <> constexpr int32_t get_upper_bound<double>() { return 309; }
 // other out, and subnormal numbers allow for the result to be at the very low
 // end of the final mantissa.
 template <typename T> constexpr int32_t get_lower_bound() {
-  return -((fputil::FloatProperties<T>::EXPONENT_BIAS +
-            static_cast<int32_t>(fputil::FloatProperties<T>::MANTISSA_WIDTH +
-                                 (sizeof(T) * 8))) /
+  using FloatProp = typename fputil::FloatProperties<T>;
+  return -((FloatProp::EXPONENT_BIAS +
+            static_cast<int32_t>(FloatProp::MANTISSA_WIDTH +
+                                 FloatProp::UINTTYPE_BITS)) /
            3);
 }
 
@@ -733,7 +734,6 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 
   // This is the number of leading zeroes a properly normalized float of type T
   // should have.
-  constexpr int32_t NUMBITS = sizeof(UIntType) * 8;
   constexpr int32_t INF_EXP = (1 << FloatProp::EXPONENT_WIDTH) - 1;
 
   // Normalization step 1: Bring the leading bit to the highest bit of UIntType.
@@ -743,8 +743,9 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   // Keep exp2 representing the exponent of the lowest bit of UIntType.
   exp2 -= amount_to_shift_left;
 
-  // biasedExponent represents the biased exponent of the most significant bit.
-  int32_t biased_exponent = exp2 + NUMBITS + FPBits::EXPONENT_BIAS - 1;
+  // biased_exponent represents the biased exponent of the most significant bit.
+  int32_t biased_exponent =
+      exp2 + FloatProp::UINTTYPE_BITS + FPBits::EXPONENT_BIAS - 1;
 
   // Handle numbers that're too large and get squashed to inf
   if (biased_exponent >= INF_EXP) {
@@ -754,14 +755,15 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
     return output;
   }
 
-  uint32_t amount_to_shift_right = NUMBITS - FloatProp::MANTISSA_WIDTH - 1;
+  uint32_t amount_to_shift_right =
+      FloatProp::UINTTYPE_BITS - FloatProp::MANTISSA_WIDTH - 1;
 
   // Handle subnormals.
   if (biased_exponent <= 0) {
     amount_to_shift_right += 1 - biased_exponent;
     biased_exponent = 0;
 
-    if (amount_to_shift_right > NUMBITS) {
+    if (amount_to_shift_right > FloatProp::UINTTYPE_BITS) {
       // Return 0 if the exponent is too small.
       output.num = {0, 0};
       output.error = ERANGE;
@@ -774,7 +776,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   bool round_bit = static_cast<bool>(mantissa & round_bit_mask);
   bool sticky_bit = static_cast<bool>(mantissa & sticky_mask) || truncated;
 
-  if (amount_to_shift_right < NUMBITS) {
+  if (amount_to_shift_right < FloatProp::UINTTYPE_BITS) {
     // Shift the mantissa and clear the implicit bit.
     mantissa >>= amount_to_shift_right;
     mantissa &= FloatProp::MANTISSA_MASK;
