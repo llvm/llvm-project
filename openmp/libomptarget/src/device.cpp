@@ -22,6 +22,7 @@
 #include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
+#include "llvm/Support/Error.h"
 
 #include <cassert>
 #include <climits>
@@ -62,8 +63,8 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(PluginAdaptorTy *RTL)
-    : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
+DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
       PendingCtorsDtors(), PendingGlobalsMtx() {}
 
 DeviceTy::~DeviceTy() {
@@ -528,14 +529,21 @@ int DeviceTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry, int64_t Size) {
   return Ret;
 }
 
-/// Init device, should not be called directly.
-void DeviceTy::init() {
+llvm::Error DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
+  int32_t Ret = 0;
   if (RTL->init_requires)
-    RTL->init_requires(PM->getRequirements());
-  int32_t Ret = RTL->init_device(RTLDeviceID);
+    Ret = RTL->init_requires(PM->getRequirements());
   if (Ret != OFFLOAD_SUCCESS)
-    return;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to initialize requirements for device %d\n", DeviceID);
+
+  Ret = RTL->init_device(RTLDeviceID);
+  if (Ret != OFFLOAD_SUCCESS)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to initialize device %d\n",
+                                   DeviceID);
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -548,27 +556,11 @@ void DeviceTy::init() {
                                   OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
-  IsInit = true;
-}
-
-/// Thread-safe method to initialize the device only once.
-int32_t DeviceTy::initOnce() {
-  std::call_once(InitFlag, &DeviceTy::init, this);
-
-  // At this point, if IsInit is true, then either this thread or some other
-  // thread in the past successfully initialized the device, so we can return
-  // OFFLOAD_SUCCESS. If this thread executed init() via call_once() and it
-  // failed, return OFFLOAD_FAIL. If call_once did not invoke init(), it means
-  // that some other thread already attempted to execute init() and if IsInit
-  // is still false, return OFFLOAD_FAIL.
-  if (IsInit)
-    return OFFLOAD_SUCCESS;
-  return OFFLOAD_FAIL;
+  return llvm::Error::success();
 }
 
 // Load binary to device.
 __tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
-  std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);
   return RTL->load_binary(RTLDeviceID, Img);
 }
 
@@ -609,13 +601,14 @@ static void printCopyInfo(int DeviceId, bool H2D, void *SrcPtrBegin,
 
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                             AsyncInfoTy &AsyncInfo,
-                             HostDataToTargetTy *Entry) {
+                             AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+                             DeviceTy::HDTTMapAccessorTy *HDTTMapPtr) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor(Entry);
+    HDTTMapAccessorTy HDTTMap =
+        HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
     LookupResult LR;
     if (!Entry) {
-      LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+      LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
       Entry = LR.TPR.getEntry();
     }
     printCopyInfo(DeviceID, /* H2D */ true, HstPtrBegin, TgtPtrBegin, Size,
@@ -638,12 +631,14 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
-                               HostDataToTargetTy *Entry) {
+                               HostDataToTargetTy *Entry,
+                               DeviceTy::HDTTMapAccessorTy *HDTTMapPtr) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor(Entry);
+    HDTTMapAccessorTy HDTTMap =
+        HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
     LookupResult LR;
     if (!Entry) {
-      LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+      LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
       Entry = LR.TPR.getEntry();
     }
     printCopyInfo(DeviceID, /* H2D */ false, TgtPtrBegin, HstPtrBegin, Size,
@@ -711,10 +706,10 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 }
 
 // Run region on device
-bool DeviceTy::printDeviceInfo(int32_t RTLDevId) {
+bool DeviceTy::printDeviceInfo() {
   if (!RTL->print_device_info)
     return false;
-  RTL->print_device_info(RTLDevId);
+  RTL->print_device_info(RTLDeviceID);
   return true;
 }
 
@@ -776,39 +771,6 @@ int32_t DeviceTy::destroyEvent(void *Event) {
     return RTL->destroy_event(RTLDeviceID, Event);
 
   return OFFLOAD_SUCCESS;
-}
-
-/// Check whether a device has an associated RTL and initialize it if it's not
-/// already initialized.
-bool deviceIsReady(int DeviceNum) {
-  DP("Checking whether device %d is ready.\n", DeviceNum);
-  // Devices.size() can only change while registering a new
-  // library, so try to acquire the lock of RTLs' mutex.
-  size_t DevicesSize;
-  {
-    std::lock_guard<decltype(PM->RTLsMtx)> LG(PM->RTLsMtx);
-    DevicesSize = PM->Devices.size();
-  }
-  if (DevicesSize <= (size_t)DeviceNum) {
-    DP("Device ID  %d does not have a matching RTL\n", DeviceNum);
-    return false;
-  }
-
-  // Get device info
-  DeviceTy &Device = *PM->Devices[DeviceNum];
-
-  DP("Is the device %d (local ID %d) initialized? %d\n", DeviceNum,
-     Device.RTLDeviceID, Device.IsInit);
-
-  // Init the device if not done before
-  if (!Device.IsInit && Device.initOnce() != OFFLOAD_SUCCESS) {
-    DP("Failed to init device %d\n", DeviceNum);
-    return false;
-  }
-
-  DP("Device %d is ready to use.\n", DeviceNum);
-
-  return true;
 }
 
 void DeviceTy::addOffloadEntry(OffloadEntryTy &Entry) {

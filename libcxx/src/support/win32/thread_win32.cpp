@@ -115,7 +115,7 @@ int __libcpp_condvar_wait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m)
 int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
                                __libcpp_timespec_t *__ts)
 {
-  using namespace _VSTD::chrono;
+  using namespace std::chrono;
 
   auto duration = seconds(__ts->tv_sec) + nanoseconds(__ts->tv_nsec);
   auto abstime =

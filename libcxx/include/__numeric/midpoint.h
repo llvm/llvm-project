@@ -60,7 +60,7 @@ enable_if_t<is_pointer_v<_TPtr>
              && (sizeof(remove_pointer_t<_TPtr>) > 0), _TPtr>
 midpoint(_TPtr __a, _TPtr __b) noexcept
 {
-    return __a + _VSTD::midpoint(ptrdiff_t(0), __b - __a);
+    return __a + std::midpoint(ptrdiff_t(0), __b - __a);
 }
 
 

@@ -2376,11 +2376,11 @@ public:
                                                bool IsZeroCmp) const override {
     return Impl.enableMemCmpExpansion(OptSize, IsZeroCmp);
   }
-  bool enableInterleavedAccessVectorization() override {
-    return Impl.enableInterleavedAccessVectorization();
-  }
   bool enableSelectOptimize() override {
     return Impl.enableSelectOptimize();
+  }
+  bool enableInterleavedAccessVectorization() override {
+    return Impl.enableInterleavedAccessVectorization();
   }
   bool enableMaskedInterleavedAccessVectorization() override {
     return Impl.enableMaskedInterleavedAccessVectorization();

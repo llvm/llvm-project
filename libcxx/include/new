@@ -349,7 +349,7 @@ template <class _Tp>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 constexpr _Tp* launder(_Tp* __p) noexcept
 {
-    return _VSTD::__launder(__p);
+    return std::__launder(__p);
 }
 #endif
 

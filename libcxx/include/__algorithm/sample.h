@@ -47,7 +47,7 @@ _SampleIterator __sample(_PopulationIterator __first,
     if (__r < __sz)
       __output_iter[__r] = *__first;
   }
-  return __output_iter + _VSTD::min(__n, __k);
+  return __output_iter + std::min(__n, __k);
 }
 
 template <class _AlgPolicy,
@@ -60,7 +60,7 @@ _SampleIterator __sample(_PopulationIterator __first,
                          _UniformRandomNumberGenerator& __g,
                          forward_iterator_tag) {
   _Distance __unsampled_sz = _IterOps<_AlgPolicy>::distance(__first, __last);
-  for (__n = _VSTD::min(__n, __unsampled_sz); __n != 0; ++__first) {
+  for (__n = std::min(__n, __unsampled_sz); __n != 0; ++__first) {
     _Distance __r = uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
     if (__r < __n) {
       *__output_iter++ = *__first;

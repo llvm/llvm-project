@@ -36,10 +36,10 @@ struct HWAsanInterceptorContext {
   const char *interceptor_name;
 };
 
-#  define ACCESS_MEMORY_RANGE(offset, size, access)                         \
-    do {                                                                    \
-      __hwasan::CheckAddressSized<ErrorAction::Abort, access>((uptr)offset, \
-                                                              size);        \
+#  define ACCESS_MEMORY_RANGE(offset, size, access)                           \
+    do {                                                                      \
+      __hwasan::CheckAddressSized<ErrorAction::Recover, access>((uptr)offset, \
+                                                                size);        \
     } while (0)
 
 #  define HWASAN_READ_RANGE(offset, size) \
@@ -74,9 +74,8 @@ struct HWAsanInterceptorContext {
 
 #  if HWASAN_WITH_INTERCEPTORS
 
-#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) __hwasan_loadN((uptr)p, (uptr)s)
-#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) \
-      __hwasan_storeN((uptr)p, (uptr)s)
+#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) HWASAN_READ_RANGE(p, s)
+#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) HWASAN_WRITE_RANGE(p, s)
 #    define COMMON_SYSCALL_POST_READ_RANGE(p, s) \
       do {                                       \
         (void)(p);                               \

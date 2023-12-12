@@ -82,7 +82,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx3 = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
   store i32 %0, ptr %arrayidx3, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %arrayidx5 = getelementptr inbounds i32, ptr %y, i64 %1
   %2 = load i32, ptr %arrayidx5, align 4
   %arrayidx8 = getelementptr inbounds i32, ptr %x, i64 %1
@@ -122,7 +122,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx3 = getelementptr inbounds i32, ptr %x, i64 %idxprom
   store i32 %0, ptr %arrayidx3, align 4
-  %add = or i32 %conv23, 1
+  %add = or disjoint i32 %conv23, 1
   %idxprom5 = sext i32 %add to i64
   %arrayidx6 = getelementptr inbounds i32, ptr %y, i64 %idxprom5
   %1 = load i32, ptr %arrayidx6, align 4
@@ -166,7 +166,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx3 = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
   store i32 %0, ptr %arrayidx3, align 4
-  %1 = or i64 %indvars.iv, 1
+  %1 = or disjoint i64 %indvars.iv, 1
   %arrayidx5 = getelementptr inbounds i32, ptr %y, i64 %1
   %2 = load i32, ptr %arrayidx5, align 4
   %arrayidx8 = getelementptr inbounds i32, ptr %x, i64 %1

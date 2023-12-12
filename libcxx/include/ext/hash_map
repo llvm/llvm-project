@@ -356,9 +356,9 @@ public:
     void operator()(pointer __p)
     {
         if (__second_constructed)
-            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__get_value().second));
+            __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().second));
         if (__first_constructed)
-            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__get_value().first));
+            __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().first));
         if (__p)
             __alloc_traits::deallocate(__na_, __p, 1);
     }
@@ -666,9 +666,9 @@ hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(const key_type& __k)
 {
     __node_allocator& __na = __table_.__node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__get_value().first), __k);
+    __node_traits::construct(__na, std::addressof(__h->__get_value().first), __k);
     __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__get_value().second));
+    __node_traits::construct(__na, std::addressof(__h->__get_value().second));
     __h.get_deleter().__second_constructed = true;
     return __h;
 }
@@ -960,9 +960,9 @@ operator==(const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     {
         _EqRng __xeq = __x.equal_range(__i->first);
         _EqRng __yeq = __y.equal_range(__i->first);
-        if (_VSTD::distance(__xeq.first, __xeq.second) !=
-            _VSTD::distance(__yeq.first, __yeq.second) ||
-                  !_VSTD::is_permutation(__xeq.first, __xeq.second, __yeq.first))
+        if (std::distance(__xeq.first, __xeq.second) !=
+            std::distance(__yeq.first, __yeq.second) ||
+                  !std::is_permutation(__xeq.first, __xeq.second, __yeq.first))
             return false;
         __i = __xeq.second;
     }

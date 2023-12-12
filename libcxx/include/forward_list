@@ -649,7 +649,7 @@ private:
     _LIBCPP_HIDE_FROM_ABI
     void __move_assign_alloc(__forward_list_base& __x, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value)
-        {__alloc() = _VSTD::move(__x.__alloc());}
+        {__alloc() = std::move(__x.__alloc());}
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -658,7 +658,7 @@ template <class _Tp, class _Alloc>
 inline
 __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
-    : __before_begin_(_VSTD::move(__x.__before_begin_))
+    : __before_begin_(std::move(__x.__before_begin_))
 {
     __x.__before_begin()->__next_ = nullptr;
 }
@@ -695,9 +695,9 @@ __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
                     __is_nothrow_swappable<__node_allocator>::value)
 #endif
 {
-    _VSTD::__swap_allocator(__alloc(), __x.__alloc(),
+    std::__swap_allocator(__alloc(), __x.__alloc(),
             integral_constant<bool, __node_traits::propagate_on_container_swap::value>());
-    using _VSTD::swap;
+    using std::swap;
     swap(__before_begin()->__next_, __x.__before_begin()->__next_);
 }
 
@@ -798,7 +798,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     forward_list(forward_list&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<base>::value)
-        : base(_VSTD::move(__x)) {}
+        : base(std::move(__x)) {}
     _LIBCPP_HIDE_FROM_ABI forward_list(forward_list&& __x, const __type_identity_t<allocator_type>& __a);
 
     _LIBCPP_HIDE_FROM_ABI forward_list(initializer_list<value_type> __il);
@@ -872,7 +872,7 @@ public:
         {return base::__before_begin()->__next_ == nullptr;}
     _LIBCPP_HIDE_FROM_ABI
     size_type max_size() const _NOEXCEPT {
-        return _VSTD::min<size_type>(
+        return std::min<size_type>(
             __node_traits::max_size(base::__alloc()),
             numeric_limits<difference_type>::max());
     }
@@ -973,7 +973,7 @@ public:
     template <class _Compare>
         _LIBCPP_HIDE_FROM_ABI
         void merge(forward_list&& __x, _Compare __comp)
-        {merge(__x, _VSTD::move(__comp));}
+        {merge(__x, std::move(__comp));}
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     void merge(forward_list& __x) {merge(__x, __less<>());}
@@ -1116,7 +1116,7 @@ template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>&
 forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
 {
-    if (this != _VSTD::addressof(__x))
+    if (this != std::addressof(__x))
     {
         base::__copy_assign_alloc(__x);
         assign(__x.begin(), __x.end());
@@ -1128,7 +1128,7 @@ forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(forward_list&& __x,
                                         const __type_identity_t<allocator_type>& __a)
-    : base(_VSTD::move(__x), __a)
+    : base(std::move(__x), __a)
 {
     if (base::__alloc() != __x.__alloc())
     {
@@ -1212,7 +1212,7 @@ template <class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI
 void forward_list<_Tp, _Alloc>::__assign_with_sentinel(_Iter __f, _Sent __l) {
     iterator __i = before_begin();
-    iterator __j = _VSTD::next(__i);
+    iterator __j = std::next(__i);
     iterator __e = end();
     for (; __j != __e && __f != __l; ++__i, (void) ++__j, ++__f)
         *__j = *__f;
@@ -1227,7 +1227,7 @@ void
 forward_list<_Tp, _Alloc>::assign(size_type __n, const value_type& __v)
 {
     iterator __i = before_begin();
-    iterator __j = _VSTD::next(__i);
+    iterator __j = std::next(__i);
     iterator __e = end();
     for (; __j != __e && __n > 0; --__n, ++__i, ++__j)
         *__j = __v;
@@ -1520,7 +1520,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
                                         forward_list& /*__other*/,
                                         const_iterator __i)
 {
-    const_iterator __lm1 = _VSTD::next(__i);
+    const_iterator __lm1 = std::next(__i);
     if (__p != __i && __p != __lm1)
     {
         __i.__get_begin()->__next_ = __lm1.__get_begin()->__next_;
@@ -1590,7 +1590,7 @@ forward_list<_Tp, _Alloc>::remove(const value_type& __v)
         if (__i.__get_begin()->__next_->__get_value() == __v)
         {
             ++__count_removed;
-            iterator __j = _VSTD::next(__i, 2);
+            iterator __j = std::next(__i, 2);
             for (; __j != __e && *__j == __v; ++__j)
                 ++__count_removed;
             __deleted_nodes.splice_after(__deleted_nodes.before_begin(), *this, __i, __j);
@@ -1618,7 +1618,7 @@ forward_list<_Tp, _Alloc>::remove_if(_Predicate __pred)
         if (__pred(__i.__get_begin()->__next_->__get_value()))
         {
             ++__count_removed;
-            iterator __j = _VSTD::next(__i, 2);
+            iterator __j = std::next(__i, 2);
             for (; __j != __e && __pred(*__j); ++__j)
                 ++__count_removed;
             __deleted_nodes.splice_after(__deleted_nodes.before_begin(), *this, __i, __j);
@@ -1642,7 +1642,7 @@ forward_list<_Tp, _Alloc>::unique(_BinaryPredicate __binary_pred)
     typename forward_list<_Tp, _Alloc>::size_type __count_removed = 0;
     for (iterator __i = begin(), __e = end(); __i != __e;)
     {
-        iterator __j = _VSTD::next(__i);
+        iterator __j = std::next(__i);
         for (; __j != __e && __binary_pred(*__i, *__j); ++__j)
             ++__count_removed;
         if (__i.__get_begin()->__next_ != __j.__get_unsafe_node_pointer())
@@ -1658,7 +1658,7 @@ template <class _Compare>
 void
 forward_list<_Tp, _Alloc>::merge(forward_list& __x, _Compare __comp)
 {
-    if (this != _VSTD::addressof(__x))
+    if (this != std::addressof(__x))
     {
         base::__before_begin()->__next_ = __merge(base::__before_begin()->__next_,
                                                     __x.__before_begin()->__next_,
@@ -1719,7 +1719,7 @@ void
 forward_list<_Tp, _Alloc>::sort(_Compare __comp)
 {
     base::__before_begin()->__next_ = __sort(base::__before_begin()->__next_,
-                                       _VSTD::distance(begin(), end()), __comp);
+                                       std::distance(begin(), end()), __comp);
 }
 
 template <class _Tp, class _Alloc>
@@ -1745,7 +1745,7 @@ forward_list<_Tp, _Alloc>::__sort(__node_pointer __f1, difference_type __sz,
     }
     difference_type __sz1 = __sz / 2;
     difference_type __sz2 = __sz - __sz1;
-    __node_pointer __t = _VSTD::next(iterator(__f1), __sz1 - 1).__get_unsafe_node_pointer();
+    __node_pointer __t = std::next(iterator(__f1), __sz1 - 1).__get_unsafe_node_pointer();
     __node_pointer __f2 = __t->__next_;
     __t->__next_ = nullptr;
     return __merge(__sort(__f1, __sz1, __comp),
@@ -1804,7 +1804,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 bool operator< (const forward_list<_Tp, _Alloc>& __x,
                 const forward_list<_Tp, _Alloc>& __y)
 {
-    return _VSTD::lexicographical_compare(__x.begin(), __x.end(),
+    return std::lexicographical_compare(__x.begin(), __x.end(),
                                          __y.begin(), __y.end());
 }
 
@@ -1864,7 +1864,7 @@ template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI
     typename forward_list<_Tp, _Allocator>::size_type
     erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
-  return _VSTD::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
+  return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
 }
 #endif
 

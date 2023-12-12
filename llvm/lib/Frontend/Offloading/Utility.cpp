@@ -29,7 +29,7 @@ StructType *offloading::getEntryTy(Module &M) {
 
 // TODO: Rework this interface to be more generic.
 void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                                     uint64_t Size, int32_t Flags,
+                                     uint64_t Size, int32_t Flags, int32_t Data,
                                      StringRef SectionName) {
   llvm::Triple Triple(M.getTargetTriple());
 
@@ -51,7 +51,7 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
       ConstantInt::get(SizeTy, Size),
       ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, 0),
+      ConstantInt::get(Int32Ty, Data),
   };
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
 

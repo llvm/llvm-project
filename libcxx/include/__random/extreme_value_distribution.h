@@ -28,6 +28,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS extreme_value_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
@@ -120,7 +123,7 @@ extreme_value_distribution<_RealType>::operator()(_URNG& __g, const param_type& 
 {
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     return __p.a() - __p.b() *
-         _VSTD::log(-_VSTD::log(1-uniform_real_distribution<result_type>()(__g)));
+         std::log(-std::log(1-uniform_real_distribution<result_type>()(__g)));
 }
 
 template <class _CharT, class _Traits, class _RT>

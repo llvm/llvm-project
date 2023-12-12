@@ -42,7 +42,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     reference_wrapper(_Up&& __u) _NOEXCEPT_(noexcept(__fun(std::declval<_Up>()))) {
         type& __f = static_cast<_Up&&>(__u);
-        __f_ = _VSTD::addressof(__f);
+        __f_ = std::addressof(__f);
     }
 
     // access

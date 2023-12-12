@@ -277,7 +277,7 @@ __scan_keyword(_InputIterator& __b, _InputIterator __e,
                bool __case_sensitive = true)
 {
     typedef typename iterator_traits<_InputIterator>::value_type _CharT;
-    size_t __nkw = static_cast<size_t>(_VSTD::distance(__kb, __ke));
+    size_t __nkw = static_cast<size_t>(std::distance(__kb, __ke));
     const unsigned char __doesnt_match = '\0';
     const unsigned char __might_match = '\1';
     const unsigned char __does_match = '\2';
@@ -899,7 +899,7 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.getloc());
     typedef typename numpunct<_CharT>::string_type string_type;
     const string_type __names[2] = {__np.truename(), __np.falsename()};
-    const string_type* __i = _VSTD::__scan_keyword(__b, __e, __names, __names+2,
+    const string_type* __i = std::__scan_keyword(__b, __e, __names, __names+2,
                                                    __ct, __err);
     __v = __i == __names;
     return __b;
@@ -1881,7 +1881,7 @@ time_get<_CharT, _InputIterator>::__get_weekdayname(int& __w,
 {
     // Note:  ignoring case comes from the POSIX strptime spec
     const string_type* __wk = this->__weeks();
-    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __wk, __wk+14, __ct, __err, false) - __wk;
+    ptrdiff_t __i = std::__scan_keyword(__b, __e, __wk, __wk+14, __ct, __err, false) - __wk;
     if (__i < 14)
         __w = __i % 7;
 }
@@ -1895,7 +1895,7 @@ time_get<_CharT, _InputIterator>::__get_monthname(int& __m,
 {
     // Note:  ignoring case comes from the POSIX strptime spec
     const string_type* __month = this->__months();
-    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __month, __month+24, __ct, __err, false) - __month;
+    ptrdiff_t __i = std::__scan_keyword(__b, __e, __month, __month+24, __ct, __err, false) - __month;
     if (__i < 24)
         __m = __i % 12;
 }
@@ -1907,7 +1907,7 @@ time_get<_CharT, _InputIterator>::__get_day(int& __d,
                                             ios_base::iostate& __err,
                                             const ctype<char_type>& __ct) const
 {
-    int __t = _VSTD::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && 1 <= __t && __t <= 31)
         __d = __t;
     else
@@ -2067,7 +2067,7 @@ time_get<_CharT, _InputIterator>::__get_am_pm(int& __h,
         __err |= ios_base::failbit;
         return;
     }
-    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __ap, __ap+2, __ct, __err, false) - __ap;
+    ptrdiff_t __i = std::__scan_keyword(__b, __e, __ap, __ap+2, __ct, __err, false) - __ap;
     if (__i == 0 && __h == 12)
         __h = 0;
     else if (__i == 1 && __h < 12)
@@ -2535,7 +2535,7 @@ time_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base&,
     char_type* __nb = __nar;
     char_type* __ne = __nb + 100;
     __do_put(__nb, __ne, __tm, __fmt, __mod);
-    return _VSTD::copy(__nb, __ne, __s);
+    return std::copy(__nb, __ne, __s);
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<char>;
@@ -3071,7 +3071,7 @@ money_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
         if (__neg)
             *__nc++ = '-';
         for (const char_type* __w = __wb.get(); __w < __wn; ++__w, ++__nc)
-            *__nc = __src[std::find(__atoms, _VSTD::end(__atoms), *__w) - __atoms];
+            *__nc = __src[std::find(__atoms, std::end(__atoms), *__w) - __atoms];
         *__nc = char();
         if (sscanf(__nbuf, "%Lf", &__v) != 1)
             __throw_runtime_error("money_get error");
@@ -3224,7 +3224,7 @@ __money_put<_CharT>::__format(char_type* __mb, char_type*& __mi, char_type*& __m
             break;
         case money_base::symbol:
             if (!__sym.empty() && (__flags & ios_base::showbase))
-                __me = _VSTD::copy(__sym.begin(), __sym.end(), __me);
+                __me = std::copy(__sym.begin(), __sym.end(), __me);
             break;
         case money_base::value:
             {
@@ -3283,7 +3283,7 @@ __money_put<_CharT>::__format(char_type* __mb, char_type*& __mi, char_type*& __m
     }
     // print rest of sign, if any
     if (__sn.size() > 1)
-        __me = _VSTD::copy(__sn.begin()+1, __sn.end(), __me);
+        __me = std::copy(__sn.begin()+1, __sn.end(), __me);
     // set alignment
     if ((__flags & ios_base::adjustfield) == ios_base::left)
         __mi = __me;
@@ -3534,7 +3534,7 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid,
     char* __n = catgets(__cat, __set, __msgid, __ndflt.c_str());
     string_type __w;
     __widen_from_utf8<sizeof(char_type)*__CHAR_BIT__>()(std::back_inserter(__w),
-                                                        __n, __n + _VSTD::strlen(__n));
+                                                        __n, __n + std::strlen(__n));
     return __w;
 #else // !_LIBCPP_HAS_CATOPEN
     (void)__c;
@@ -3688,8 +3688,8 @@ template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline
 wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     wstring_convert(wstring_convert&& __wc)
-        : __byte_err_string_(_VSTD::move(__wc.__byte_err_string_)),
-          __wide_err_string_(_VSTD::move(__wc.__wide_err_string_)),
+        : __byte_err_string_(std::move(__wc.__byte_err_string_)),
+          __wide_err_string_(std::move(__wc.__wide_err_string_)),
           __cvtptr_(__wc.__cvtptr_),
           __cvtstate_(__wc.__cvtstate_), __cvtcount_(__wc.__cvtcount_)
 {
@@ -3981,7 +3981,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     int_type __c = traits_type::eof();
     if (this->gptr() == this->egptr())
     {
-        _VSTD::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
+        std::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
         if (__always_noconv_)
         {
             streamsize __nmemb = static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz);
@@ -3999,11 +3999,11 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
              if (__extbufend_ != __extbufnext_) {
                 _LIBCPP_ASSERT_NON_NULL(__extbufnext_ != nullptr, "underflow moving from nullptr");
                 _LIBCPP_ASSERT_NON_NULL(__extbuf_ != nullptr, "underflow moving into nullptr");
-                _VSTD::memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
+                std::memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
              }
             __extbufnext_ = __extbuf_ + (__extbufend_ - __extbufnext_);
             __extbufend_ = __extbuf_ + (__extbuf_ == __extbuf_min_ ? sizeof(__extbuf_min_) : __ebs_);
-            streamsize __nmemb = _VSTD::min(static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz),
+            streamsize __nmemb = std::min(static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz),
                                  static_cast<streamsize>(__extbufend_ - __extbufnext_));
             codecvt_base::result __r;
             // FIXME: Do we ever need to restore the state here?

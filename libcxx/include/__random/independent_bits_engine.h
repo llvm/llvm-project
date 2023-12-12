@@ -101,7 +101,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     explicit independent_bits_engine(_Engine&& __e)
-        : __e_(_VSTD::move(__e)) {}
+        : __e_(std::move(__e)) {}
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}

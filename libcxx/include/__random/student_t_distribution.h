@@ -29,6 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS student_t_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
@@ -115,7 +118,7 @@ student_t_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
 {
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     gamma_distribution<result_type> __gd(__p.n() * .5, 2);
-    return __nd_(__g) * _VSTD::sqrt(__p.n()/__gd(__g));
+    return __nd_(__g) * std::sqrt(__p.n()/__gd(__g));
 }
 
 template <class _CharT, class _Traits, class _RT>

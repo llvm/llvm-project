@@ -139,9 +139,11 @@ typedef void (*dispatch_mach_handler_function_t)(void *context,
                                                  dispatch_mach_reason reason,
                                                  dispatch_mach_msg_t message,
                                                  mach_error_t error);
+#  if !defined(MISSING_BLOCKS_SUPPORT)
 typedef void (^dispatch_mach_handler_t)(dispatch_mach_reason reason,
                                         dispatch_mach_msg_t message,
                                         mach_error_t error);
+#  endif
 
 // A wrapper for the ObjC blocks used to support libdispatch.
 typedef struct {

@@ -233,7 +233,7 @@ class __shared_ptr_pointer
 public:
     _LIBCPP_HIDE_FROM_ABI
     __shared_ptr_pointer(_Tp __p, _Dp __d, _Alloc __a)
-        :  __data_(__compressed_pair<_Tp, _Dp>(__p, _VSTD::move(__d)), _VSTD::move(__a)) {}
+        :  __data_(__compressed_pair<_Tp, _Dp>(__p, std::move(__d)), std::move(__a)) {}
 
 #ifndef _LIBCPP_HAS_NO_RTTI
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL const void* __get_deleter(const type_info&) const _NOEXCEPT override;
@@ -250,7 +250,7 @@ template <class _Tp, class _Dp, class _Alloc>
 const void*
 __shared_ptr_pointer<_Tp, _Dp, _Alloc>::__get_deleter(const type_info& __t) const _NOEXCEPT
 {
-    return __t == typeid(_Dp) ? _VSTD::addressof(__data_.first().second()) : nullptr;
+    return __t == typeid(_Dp) ? std::addressof(__data_.first().second()) : nullptr;
 }
 
 #endif // _LIBCPP_HAS_NO_RTTI
@@ -288,7 +288,7 @@ struct __shared_ptr_emplace
     template <class... _Args, class _Allocator = _Alloc, __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
     _LIBCPP_HIDE_FROM_ABI
     explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...)
-        : __storage_(_VSTD::move(__a))
+        : __storage_(std::move(__a))
     {
         static_assert(sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
         ::new ((void*)__get_elem()) _Tp;
@@ -297,11 +297,11 @@ struct __shared_ptr_emplace
     template <class... _Args, class _Allocator = _Alloc, __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
     _LIBCPP_HIDE_FROM_ABI
     explicit __shared_ptr_emplace(_Alloc __a, _Args&& ...__args)
-        : __storage_(_VSTD::move(__a))
+        : __storage_(std::move(__a))
     {
         using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
         _TpAlloc __tmp(*__get_alloc());
-        allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), _VSTD::forward<_Args>(__args)...);
+        allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), std::forward<_Args>(__args)...);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -349,7 +349,7 @@ private:
         char __blob_[sizeof(_CompressedPair)];
 
         _LIBCPP_HIDE_FROM_ABI explicit _Storage(_Alloc&& __a) {
-            ::new ((void*)__get_alloc()) _Alloc(_VSTD::move(__a));
+            ::new ((void*)__get_alloc()) _Alloc(std::move(__a));
         }
         _LIBCPP_HIDE_FROM_ABI ~_Storage() {
             __get_alloc()->~_Alloc();
@@ -533,7 +533,7 @@ public:
             typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
             typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
-            __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
+            __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
 #else
             __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
@@ -562,13 +562,13 @@ public:
             typedef __allocator_destructor<_A2> _D2;
             _A2 __a2(__a);
             unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-            ::new ((void*)_VSTD::addressof(*__hold2.get()))
+            ::new ((void*)std::addressof(*__hold2.get()))
 #ifndef _LIBCPP_CXX03_LANG
-                _CntrlBlk(__p, _VSTD::move(__d), __a);
+                _CntrlBlk(__p, std::move(__d), __a);
 #else
                 _CntrlBlk(__p, __d, __a);
 #endif // not _LIBCPP_CXX03_LANG
-            __cntrl_ = _VSTD::addressof(*__hold2.release());
+            __cntrl_ = std::addressof(*__hold2.release());
             __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
@@ -592,7 +592,7 @@ public:
             typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
             typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
-            __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
+            __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
 #else
             __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
@@ -620,13 +620,13 @@ public:
             typedef __allocator_destructor<_A2> _D2;
             _A2 __a2(__a);
             unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-            ::new ((void*)_VSTD::addressof(*__hold2.get()))
+            ::new ((void*)std::addressof(*__hold2.get()))
 #ifndef _LIBCPP_CXX03_LANG
-                _CntrlBlk(__p, _VSTD::move(__d), __a);
+                _CntrlBlk(__p, std::move(__d), __a);
 #else
                 _CntrlBlk(__p, __d, __a);
 #endif // not _LIBCPP_CXX03_LANG
-            __cntrl_ = _VSTD::addressof(*__hold2.release());
+            __cntrl_ = std::addressof(*__hold2.release());
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
@@ -762,7 +762,7 @@ public:
             typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer,
                                         reference_wrapper<__libcpp_remove_reference_t<_Dp> >,
                                         _AllocT> _CntrlBlk;
-            __cntrl_ = new _CntrlBlk(__r.get(), _VSTD::ref(__r.get_deleter()), _AllocT());
+            __cntrl_ = new _CntrlBlk(__r.get(), std::ref(__r.get_deleter()), _AllocT());
             __enable_weak_this(__r.get(), __r.get());
         }
         __r.release();
@@ -793,7 +793,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr<_Tp>& operator=(shared_ptr&& __r) _NOEXCEPT
     {
-        shared_ptr(_VSTD::move(__r)).swap(*this);
+        shared_ptr(std::move(__r)).swap(*this);
         return *this;
     }
 
@@ -801,7 +801,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr<_Tp>& operator=(shared_ptr<_Yp>&& __r)
     {
-        shared_ptr(_VSTD::move(__r)).swap(*this);
+        shared_ptr(std::move(__r)).swap(*this);
         return *this;
     }
 
@@ -813,7 +813,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr<_Tp>& operator=(auto_ptr<_Yp>&& __r)
     {
-        shared_ptr(_VSTD::move(__r)).swap(*this);
+        shared_ptr(std::move(__r)).swap(*this);
         return *this;
     }
 #endif
@@ -825,15 +825,15 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr<_Tp>& operator=(unique_ptr<_Yp, _Dp>&& __r)
     {
-        shared_ptr(_VSTD::move(__r)).swap(*this);
+        shared_ptr(std::move(__r)).swap(*this);
         return *this;
     }
 
     _LIBCPP_HIDE_FROM_ABI
     void swap(shared_ptr& __r) _NOEXCEPT
     {
-        _VSTD::swap(__ptr_, __r.__ptr_);
-        _VSTD::swap(__cntrl_, __r.__cntrl_);
+        std::swap(__ptr_, __r.__ptr_);
+        std::swap(__cntrl_, __r.__cntrl_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -1022,16 +1022,16 @@ shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&& ...__args)
     using _ControlBlock = __shared_ptr_emplace<_Tp, _Alloc>;
     using _ControlBlockAllocator = typename __allocator_traits_rebind<_Alloc, _ControlBlock>::type;
     __allocation_guard<_ControlBlockAllocator> __guard(__a, 1);
-    ::new ((void*)_VSTD::addressof(*__guard.__get())) _ControlBlock(__a, _VSTD::forward<_Args>(__args)...);
+    ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
     auto __control_block = __guard.__release_ptr();
-    return shared_ptr<_Tp>::__create_with_control_block((*__control_block).__get_elem(), _VSTD::addressof(*__control_block));
+    return shared_ptr<_Tp>::__create_with_control_block((*__control_block).__get_elem(), std::addressof(*__control_block));
 }
 
 template<class _Tp, class ..._Args, class = __enable_if_t<!is_array<_Tp>::value> >
 _LIBCPP_HIDE_FROM_ABI
 shared_ptr<_Tp> make_shared(_Args&& ...__args)
 {
-    return _VSTD::allocate_shared<_Tp>(allocator<_Tp>(), _VSTD::forward<_Args>(__args)...);
+    return std::allocate_shared<_Tp>(allocator<_Tp>(), std::forward<_Args>(__args)...);
 }
 
 #if _LIBCPP_STD_VER >= 20
@@ -1789,7 +1789,7 @@ inline
 weak_ptr<_Tp>&
 weak_ptr<_Tp>::operator=(weak_ptr&& __r) _NOEXCEPT
 {
-    weak_ptr(_VSTD::move(__r)).swap(*this);
+    weak_ptr(std::move(__r)).swap(*this);
     return *this;
 }
 
@@ -1799,7 +1799,7 @@ inline
 weak_ptr<_Tp>&
 weak_ptr<_Tp>::operator=(weak_ptr<_Yp>&& __r) _NOEXCEPT
 {
-    weak_ptr(_VSTD::move(__r)).swap(*this);
+    weak_ptr(std::move(__r)).swap(*this);
     return *this;
 }
 
@@ -1818,8 +1818,8 @@ inline
 void
 weak_ptr<_Tp>::swap(weak_ptr& __r) _NOEXCEPT
 {
-    _VSTD::swap(__ptr_, __r.__ptr_);
-    _VSTD::swap(__cntrl_, __r.__cntrl_);
+    std::swap(__ptr_, __r.__ptr_);
+    std::swap(__cntrl_, __r.__cntrl_);
 }
 
 template<class _Tp>
@@ -2060,12 +2060,12 @@ atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, share
     __m.lock();
     if (__p->__owner_equivalent(*__v))
     {
-        _VSTD::swap(__temp, *__p);
+        std::swap(__temp, *__p);
         *__p = __w;
         __m.unlock();
         return true;
     }
-    _VSTD::swap(__temp, *__v);
+    std::swap(__temp, *__v);
     *__v = *__p;
     __m.unlock();
     return false;

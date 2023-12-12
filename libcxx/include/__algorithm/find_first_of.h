@@ -38,7 +38,7 @@ template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredica
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator1
 find_first_of(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
               _ForwardIterator2 __last2, _BinaryPredicate __pred) {
-  return _VSTD::__find_first_of_ce(__first1, __last1, __first2, __last2, __pred);
+  return std::__find_first_of_ce(__first1, __last1, __first2, __last2, __pred);
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2>

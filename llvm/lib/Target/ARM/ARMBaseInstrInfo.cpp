@@ -4836,7 +4836,7 @@ bool ARMBaseInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     unsigned DefClass = DefMI.getDesc().getSchedClass();
     std::optional<unsigned> DefCycle =
         ItinData->getOperandCycle(DefClass, DefIdx);
-    return DefCycle <= 2U;
+    return DefCycle && DefCycle <= 2U;
   }
   return false;
 }

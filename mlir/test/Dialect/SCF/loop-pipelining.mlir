@@ -723,3 +723,50 @@ func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
   memref.store %r, %result[%c1] : memref<?xf32>
   return
 }
+
+// -----
+
+// NOEPILOGUE-LABEL: dynamic_loop(
+//  NOEPILOGUE-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>, %[[LB:.+]]: index, %[[UB:.+]]: index, %[[STEP:.+]]: index) {
+//  NOEPILOGUE-DAG: %[[C2:.+]] = arith.constant 2 : index
+//  NOEPILOGUE-DAG: %[[CSTF:.+]] = arith.constant 1.000000e+00 : f32
+// Prologue:
+//      NOEPILOGUE: %[[P_I0:.+]] = arith.cmpi slt, %[[LB]], %[[UB]] : index
+//      NOEPILOGUE: %[[L0:.+]] = scf.if %[[P_I0]] -> (f32) {
+// NOEPILOGUE-NEXT:   memref.load %[[A]][%[[LB]]] : memref<?xf32>
+//      NOEPILOGUE: %[[IV1:.+]] = arith.addi %[[LB]], %[[STEP]] : index
+//      NOEPILOGUE: %[[P_I1:.+]] = arith.cmpi slt, %[[IV1]], %[[UB]] : index
+//      NOEPILOGUE: %[[IV1_2:.+]] = arith.addi %[[LB]], %[[STEP]] : index
+//      NOEPILOGUE: %[[V0:.+]] = scf.if %[[P_I0]] -> (f32) {
+// NOEPILOGUE-NEXT:   arith.addf %[[L0]], %[[CSTF]] : f32
+//      NOEPILOGUE: %[[L1:.+]] = scf.if %[[P_I1]] -> (f32) {
+// NOEPILOGUE-NEXT:   memref.load %[[A]][%[[IV1_2]]] : memref<?xf32>
+//  NOEPILOGUE: scf.for %[[IV2:.+]] = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[V1:.+]] = %[[V0]], %[[L2:.+]] = %[[L1]]) -> (f32, f32) {
+//  NOEPILOGUE-DAG:   %[[S2:.+]] = arith.muli %[[STEP]], %[[C2]] : index
+//  NOEPILOGUE-DAG:   %[[IT2:.+]] = arith.subi %[[UB]], %[[S2]] : index
+//  NOEPILOGUE-DAG:   %[[P_I2:.+]] = arith.cmpi slt, %[[IV2]], %[[IT2]] : index
+//  NOEPILOGUE-DAG:   %[[IT3:.+]] = arith.subi %[[UB]], %[[STEP]] : index
+//  NOEPILOGUE-DAG:   %[[P_I3:.+]] = arith.cmpi slt, %[[IV2]], %[[IT3]] : index
+//      NOEPILOGUE:   memref.store %[[V1]], %[[R]][%[[IV2]]] : memref<?xf32>
+//      NOEPILOGUE:   %[[V2:.+]] = scf.if %[[P_I3]] -> (f32) {
+//      NOEPILOGUE:     arith.addf %[[L2]], %[[CSTF]] : f32
+//      NOEPILOGUE:   %[[IT4:.+]] = arith.muli %[[STEP]], %[[C2]] : index
+//      NOEPILOGUE:   %[[IV3:.+]] = arith.addi %[[IV2]], %[[IT4]] : index
+//      NOEPILOGUE:   %[[L3:.+]] = scf.if %[[P_I2]] -> (f32) {
+//      NOEPILOGUE:     memref.load %[[A]][%[[IV3]]] : memref<?xf32>
+//      NOEPILOGUE:   scf.yield %[[V2]], %[[L3]] : f32, f32
+
+// In case dynamic loop pipelining is off check that the transformation didn't
+// apply.
+// CHECK-LABEL: dynamic_loop(
+//   CHECK-NOT:   memref.load
+//       CHECK:   scf.for
+func.func @dynamic_loop(%A: memref<?xf32>, %result: memref<?xf32>, %lb: index, %ub: index, %step: index) {
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %lb to %ub step %step {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+  } { __test_pipelining_loop__ }
+  return
+}

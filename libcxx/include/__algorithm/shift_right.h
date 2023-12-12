@@ -40,7 +40,7 @@ shift_right(_ForwardIterator __first, _ForwardIterator __last,
             return __last;
         }
         _ForwardIterator __m = __first + (__d - __n);
-        return _VSTD::move_backward(__first, __m, __last);
+        return std::move_backward(__first, __m, __last);
     } else if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
         _ForwardIterator __m = __last;
         for (; __n > 0; --__n) {
@@ -49,7 +49,7 @@ shift_right(_ForwardIterator __first, _ForwardIterator __last,
             }
             --__m;
         }
-        return _VSTD::move_backward(__first, __m, __last);
+        return std::move_backward(__first, __m, __last);
     } else {
         _ForwardIterator __ret = __first;
         for (; __n > 0; --__n) {
@@ -69,7 +69,7 @@ shift_right(_ForwardIterator __first, _ForwardIterator __last,
         auto __lead = __ret;
         while (__trail != __ret) {
             if (__lead == __last) {
-                _VSTD::move(__first, __trail, __ret);
+                std::move(__first, __trail, __ret);
                 return __ret;
             }
             ++__trail;
@@ -79,8 +79,8 @@ shift_right(_ForwardIterator __first, _ForwardIterator __last,
         _ForwardIterator __mid = __first;
         while (true) {
             if (__lead == __last) {
-                __trail = _VSTD::move(__mid, __ret, __trail);
-                _VSTD::move(__first, __mid, __trail);
+                __trail = std::move(__mid, __ret, __trail);
+                std::move(__first, __mid, __trail);
                 return __ret;
             }
             swap(*__mid, *__trail);

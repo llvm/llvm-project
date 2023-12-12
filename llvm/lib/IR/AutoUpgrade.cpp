@@ -582,7 +582,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 
   if (Name.consume_front("xop.")) {
     Intrinsic::ID ID = Intrinsic::not_intrinsic;
-    if (Name.startswith("vpermil2")) { // Added in 3.9
+    if (Name.starts_with("vpermil2")) { // Added in 3.9
       // Upgrade any XOP PERMIL2 index operand still using a float/double
       // vector.
       auto Idx = F->getFunctionType()->getParamType(2);
@@ -1293,7 +1293,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
 
   auto *ST = dyn_cast<StructType>(F->getReturnType());
-  if (ST && (!ST->isLiteral() || ST->isPacked())) {
+  if (ST && (!ST->isLiteral() || ST->isPacked()) &&
+      F->getIntrinsicID() != Intrinsic::not_intrinsic) {
     // Replace return type with literal non-packed struct. Only do this for
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be

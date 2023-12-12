@@ -31,7 +31,7 @@ __to_underlying(_Tp __val) noexcept {
 template <class _Tp>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr underlying_type_t<_Tp>
 to_underlying(_Tp __val) noexcept {
-  return _VSTD::__to_underlying(__val);
+  return std::__to_underlying(__val);
 }
 #endif
 

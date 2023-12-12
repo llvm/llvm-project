@@ -1322,7 +1322,9 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   }
 }
 
-bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
+bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
+                                                 unsigned AddrSpace,
+                                                 uint64_t FlatVariant) const {
   if (!Subtarget->hasFlatInstOffsets()) {
     // Flat instructions do not have offsets, and only have the register
     // address.
@@ -1330,29 +1332,27 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
   }
 
   return AM.Scale == 0 &&
-         (AM.BaseOffs == 0 ||
-          Subtarget->getInstrInfo()->isLegalFLATOffset(
-              AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS, SIInstrFlags::FLAT));
+         (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                  AM.BaseOffs, AddrSpace, FlatVariant));
 }
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
   if (Subtarget->hasFlatGlobalInsts())
-    return AM.Scale == 0 &&
-           (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
-                                    AM.BaseOffs, AMDGPUAS::GLOBAL_ADDRESS,
-                                    SIInstrFlags::FlatGlobal));
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::GLOBAL_ADDRESS,
+                                     SIInstrFlags::FlatGlobal);
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
-      // Assume the we will use FLAT for all global memory accesses
-      // on VI.
-      // FIXME: This assumption is currently wrong.  On VI we still use
-      // MUBUF instructions for the r + i addressing mode.  As currently
-      // implemented, the MUBUF instructions only work on buffer < 4GB.
-      // It may be possible to support > 4GB buffers with MUBUF instructions,
-      // by setting the stride value in the resource descriptor which would
-      // increase the size limit to (stride * 4GB).  However, this is risky,
-      // because it has never been validated.
-    return isLegalFlatAddressingMode(AM);
+    // Assume the we will use FLAT for all global memory accesses
+    // on VI.
+    // FIXME: This assumption is currently wrong.  On VI we still use
+    // MUBUF instructions for the r + i addressing mode.  As currently
+    // implemented, the MUBUF instructions only work on buffer < 4GB.
+    // It may be possible to support > 4GB buffers with MUBUF instructions,
+    // by setting the stride value in the resource descriptor which would
+    // increase the size limit to (stride * 4GB).  However, this is risky,
+    // because it has never been validated.
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
+                                     SIInstrFlags::FLAT);
   }
 
   return isLegalMUBUFAddressingMode(AM);
@@ -1449,7 +1449,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return isLegalMUBUFAddressingMode(AM);
+    return Subtarget->enableFlatScratch()
+               ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS,
+                                           SIInstrFlags::FlatScratch)
+               : isLegalMUBUFAddressingMode(AM);
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS ||
       (AS == AMDGPUAS::REGION_ADDRESS && Subtarget->hasGDS())) {
@@ -1475,7 +1478,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // computation. We don't have instructions that compute pointers with any
     // addressing modes, so treat them as having no offset like flat
     // instructions.
-    return isLegalFlatAddressingMode(AM);
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
+                                     SIInstrFlags::FLAT);
   }
 
   // Assume a user alias of global for unknown address spaces.
@@ -1787,7 +1791,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   // We may not have the kernarg segment argument if we have no kernel
   // arguments.
   if (!InputPtrReg)
-    return DAG.getConstant(0, SL, PtrVT);
+    return DAG.getConstant(Offset, SL, PtrVT);
 
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
@@ -4551,40 +4555,51 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    // For targets older than GFX12, we emit a sequence of 32-bit operations.
+    // For GFX12, we emit s_add_u64 and s_sub_u64.
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    const SIRegisterInfo *TRI = ST.getRegisterInfo();
-    const TargetRegisterClass *BoolRC = TRI->getBoolRC();
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     const DebugLoc &DL = MI.getDebugLoc();
-
     MachineOperand &Dest = MI.getOperand(0);
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
-
-    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
-    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
-    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
-
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
+    if (Subtarget->hasScalarAddSub64()) {
+      unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
+      BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
+          .addReg(Src0.getReg())
+          .addReg(Src1.getReg());
+    } else {
+      const SIRegisterInfo *TRI = ST.getRegisterInfo();
+      const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 
-    unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
-    unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
-    BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0).add(Src0Sub0).add(Src1Sub0);
-    BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1).add(Src0Sub1).add(Src1Sub1);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-        .addReg(DestSub0)
-        .addImm(AMDGPU::sub0)
-        .addReg(DestSub1)
-        .addImm(AMDGPU::sub1);
+      Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+      MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src0, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+      MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src0, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+      MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src1, BoolRC, AMDGPU::sub0, &AMDGPU::SReg_32RegClass);
+      MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+          MI, MRI, Src1, BoolRC, AMDGPU::sub1, &AMDGPU::SReg_32RegClass);
+
+      unsigned LoOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
+      unsigned HiOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
+      BuildMI(*BB, MI, DL, TII->get(LoOpc), DestSub0)
+          .add(Src0Sub0)
+          .add(Src1Sub0);
+      BuildMI(*BB, MI, DL, TII->get(HiOpc), DestSub1)
+          .add(Src0Sub1)
+          .add(Src1Sub1);
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+          .addReg(DestSub0)
+          .addImm(AMDGPU::sub0)
+          .addReg(DestSub1)
+          .addImm(AMDGPU::sub1);
+    }
     MI.eraseFromParent();
     return BB;
   }
@@ -14457,7 +14472,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::pair(0U, RC);
   }
 
-  if (Constraint.startswith("{") && Constraint.endswith("}")) {
+  if (Constraint.starts_with("{") && Constraint.ends_with("}")) {
     StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
     if (RegName.consume_front("v")) {
       RC = &AMDGPU::VGPR_32RegClass;

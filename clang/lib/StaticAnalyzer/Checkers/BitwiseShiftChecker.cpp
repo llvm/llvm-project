@@ -344,7 +344,7 @@ BitwiseShiftValidator::createBugReport(StringRef ShortMsg, StringRef Msg) const 
 } // anonymous namespace
 
 class BitwiseShiftChecker : public Checker<check::PreStmt<BinaryOperator>> {
-  mutable std::unique_ptr<BugType> BTPtr;
+  BugType BT{this, "Bitwise shift", "Suspicious operation"};
 
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &Ctx) const {
@@ -353,11 +353,7 @@ public:
     if (Op != BO_Shl && Op != BO_Shr)
       return;
 
-    if (!BTPtr)
-      BTPtr = std::make_unique<BugType>(this, "Bitwise shift",
-                                        "Suspicious operation");
-
-    BitwiseShiftValidator(B, Ctx, *BTPtr, Pedantic).run();
+    BitwiseShiftValidator(B, Ctx, BT, Pedantic).run();
   }
 
   bool Pedantic = false;

@@ -619,6 +619,19 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
+void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
+                                               Operation *op) const {
+  auto iface = cast<IntegerOverflowFlagsInterface>(op);
+
+  IntegerOverflowFlags value = {};
+  value = bitEnumSet(value, IntegerOverflowFlags::nsw, inst->hasNoSignedWrap());
+  value =
+      bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
+
+  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
+  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
@@ -1626,6 +1639,8 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_za_new"),
     StringLiteral("vscale_range"),
+    StringLiteral("frame-pointer"),
+    StringLiteral("target-features"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1705,6 +1720,22 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setVscaleRangeAttr(LLVM::VScaleRangeAttr::get(
         context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
         IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
+  }
+
+  // Process frame-pointer attribute.
+  if (func->hasFnAttribute("frame-pointer")) {
+    StringRef stringRefFramePointerKind =
+        func->getFnAttribute("frame-pointer").getValueAsString();
+    funcOp.setFramePointerAttr(LLVM::FramePointerKindAttr::get(
+        funcOp.getContext(), LLVM::framePointerKind::symbolizeFramePointerKind(
+                                 stringRefFramePointerKind)
+                                 .value()));
+  }
+
+  if (llvm::Attribute attr = func->getFnAttribute("target-features");
+      attr.isStringAttribute()) {
+    funcOp.setTargetFeaturesAttr(
+        LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
   }
 }
 

@@ -3833,6 +3833,33 @@ static QualType getFixedSizeElementType(const ASTContext &ctx,
   return eltType;
 }
 
+static bool hasBPFPreserveStaticOffset(const RecordDecl *D) {
+  return D && D->hasAttr<BPFPreserveStaticOffsetAttr>();
+}
+
+static bool hasBPFPreserveStaticOffset(const Expr *E) {
+  if (!E)
+    return false;
+  QualType PointeeType = E->getType()->getPointeeType();
+  if (PointeeType.isNull())
+    return false;
+  if (const auto *BaseDecl = PointeeType->getAsRecordDecl())
+    return hasBPFPreserveStaticOffset(BaseDecl);
+  return false;
+}
+
+// Wraps Addr with a call to llvm.preserve.static.offset intrinsic.
+static Address wrapWithBPFPreserveStaticOffset(CodeGenFunction &CGF,
+                                               Address &Addr) {
+  if (!CGF.getTarget().getTriple().isBPF())
+    return Addr;
+
+  llvm::Function *Fn =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::preserve_static_offset);
+  llvm::CallInst *Call = CGF.Builder.CreateCall(Fn, {Addr.getPointer()});
+  return Address(Call, Addr.getElementType(), Addr.getAlignment());
+}
+
 /// Given an array base, check whether its member access belongs to a record
 /// with preserve_access_index attribute or not.
 static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
@@ -3893,6 +3920,9 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   CharUnits eltSize = CGF.getContext().getTypeSizeInChars(eltType);
   CharUnits eltAlign =
     getArrayElementAlign(addr.getAlignment(), indices.back(), eltSize);
+
+  if (hasBPFPreserveStaticOffset(Base))
+    addr = wrapWithBPFPreserveStaticOffset(CGF, addr);
 
   llvm::Value *eltPtr;
   auto LastIndex = dyn_cast<llvm::ConstantInt>(indices.back());
@@ -4522,6 +4552,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     Address Addr = base.getAddress(*this);
     unsigned Idx = RL.getLLVMFieldNo(field);
     const RecordDecl *rec = field->getParent();
+    if (hasBPFPreserveStaticOffset(rec))
+      Addr = wrapWithBPFPreserveStaticOffset(*this, Addr);
     if (!UseVolatile) {
       if (!IsInPreservedAIRegion &&
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
@@ -4594,6 +4626,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   }
 
   Address addr = base.getAddress(*this);
+  if (hasBPFPreserveStaticOffset(rec))
+    addr = wrapWithBPFPreserveStaticOffset(*this, addr);
   if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         ClassDef->isDynamicClass()) {

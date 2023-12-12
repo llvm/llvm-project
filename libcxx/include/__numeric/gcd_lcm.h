@@ -55,7 +55,7 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDDEN
 _Tp __gcd(_Tp __m, _Tp __n)
 {
     static_assert((!is_signed<_Tp>::value), "");
-    return __n == 0 ? __m : _VSTD::__gcd<_Tp>(__n, __m % __n);
+    return __n == 0 ? __m : std::__gcd<_Tp>(__n, __m % __n);
 }
 
 template<class _Tp, class _Up>
@@ -68,7 +68,7 @@ gcd(_Tp __m, _Up __n)
     static_assert((!is_same<__remove_cv_t<_Up>, bool>::value), "Second argument to gcd cannot be bool" );
     using _Rp = common_type_t<_Tp,_Up>;
     using _Wp = make_unsigned_t<_Rp>;
-    return static_cast<_Rp>(_VSTD::__gcd(
+    return static_cast<_Rp>(std::__gcd(
         static_cast<_Wp>(__ct_abs<_Rp, _Tp>()(__m)),
         static_cast<_Wp>(__ct_abs<_Rp, _Up>()(__n))));
 }
@@ -85,7 +85,7 @@ lcm(_Tp __m, _Up __n)
         return 0;
 
     using _Rp = common_type_t<_Tp,_Up>;
-    _Rp __val1 = __ct_abs<_Rp, _Tp>()(__m) / _VSTD::gcd(__m, __n);
+    _Rp __val1 = __ct_abs<_Rp, _Tp>()(__m) / std::gcd(__m, __n);
     _Rp __val2 = __ct_abs<_Rp, _Up>()(__n);
     _LIBCPP_ASSERT_UNCATEGORIZED((numeric_limits<_Rp>::max() / __val1 > __val2), "Overflow in lcm");
     return __val1 * __val2;

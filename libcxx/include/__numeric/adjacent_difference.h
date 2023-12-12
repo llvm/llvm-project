@@ -36,11 +36,11 @@ adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterat
         {
             typename iterator_traits<_InputIterator>::value_type __val(*__first);
 #if _LIBCPP_STD_VER >= 20
-            *__result = __val - _VSTD::move(__acc);
+            *__result = __val - std::move(__acc);
 #else
             *__result = __val - __acc;
 #endif
-            __acc = _VSTD::move(__val);
+            __acc = std::move(__val);
         }
     }
     return __result;
@@ -60,11 +60,11 @@ adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterat
         {
             typename iterator_traits<_InputIterator>::value_type __val(*__first);
 #if _LIBCPP_STD_VER >= 20
-            *__result = __binary_op(__val, _VSTD::move(__acc));
+            *__result = __binary_op(__val, std::move(__acc));
 #else
             *__result = __binary_op(__val, __acc);
 #endif
-            __acc = _VSTD::move(__val);
+            __acc = std::move(__val);
         }
     }
     return __result;

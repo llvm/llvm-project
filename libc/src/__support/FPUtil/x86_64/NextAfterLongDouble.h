@@ -39,8 +39,8 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
 
   // Convert pseudo subnormal number to normal number.
   if (from_bits.get_implicit_bit() == 1 &&
-      from_bits.get_unbiased_exponent() == 0) {
-    from_bits.set_unbiased_exponent(1);
+      from_bits.get_biased_exponent() == 0) {
+    from_bits.set_biased_exponent(1);
   }
 
   using UIntType = FPBits::UIntType;
@@ -59,7 +59,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() + 1);
         if (from_bits.is_inf())
           raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return from_bits;
@@ -75,7 +75,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         from_bits.set_mantissa(MANTISSA_MASK);
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() - 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() - 1);
         return from_bits;
       } else {
         --int_val;
@@ -94,7 +94,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         from_bits.set_mantissa(MANTISSA_MASK);
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() - 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() - 1);
         return from_bits;
       } else {
         --int_val;
@@ -107,7 +107,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() + 1);
         if (from_bits.is_inf())
           raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return from_bits;

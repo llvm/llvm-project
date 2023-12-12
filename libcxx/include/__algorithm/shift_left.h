@@ -45,7 +45,7 @@ shift_left(_ForwardIterator __first, _ForwardIterator __last,
             ++__m;
         }
     }
-    return _VSTD::move(__m, __last, __first);
+    return std::move(__m, __last, __first);
 }
 
 #endif // _LIBCPP_STD_VER >= 20

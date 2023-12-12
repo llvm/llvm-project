@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_STRING
 #define _LIBCPP_STRING
 
+// clang-format off
+
 /*
     string synopsis
 
@@ -563,6 +565,8 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 }  // std
 
 */
+
+// clang-format on
 
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>

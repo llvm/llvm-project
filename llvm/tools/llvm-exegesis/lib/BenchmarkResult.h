@@ -70,6 +70,9 @@ struct BenchmarkKey {
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;
+  // The address that the snippet should be loaded in at if the execution mode
+  // being used supports it.
+  intptr_t SnippetAddress = 0;
 };
 
 struct BenchmarkMeasure {

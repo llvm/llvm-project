@@ -30,7 +30,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
     prev(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
   _LIBCPP_ASSERT_UNCATEGORIZED(__n <= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
                                "Attempt to prev(it, n) with a positive n on a non-bidirectional iterator");
-  _VSTD::advance(__x, -__n);
+  std::advance(__x, -__n);
   return __x;
 }
 

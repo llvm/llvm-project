@@ -29,6 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS exponential_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
@@ -112,10 +115,10 @@ _RealType
 exponential_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
 {
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
-    return -_VSTD::log
+    return -std::log
                   (
                       result_type(1) -
-                      _VSTD::generate_canonical<result_type,
+                      std::generate_canonical<result_type,
                                        numeric_limits<result_type>::digits>(__g)
                   )
                   / __p.lambda();

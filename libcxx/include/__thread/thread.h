@@ -196,7 +196,7 @@ public:
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    void swap(thread& __t) _NOEXCEPT {_VSTD::swap(__t_, __t.__t_);}
+    void swap(thread& __t) _NOEXCEPT {std::swap(__t_, __t.__t_);}
 
     _LIBCPP_HIDE_FROM_ABI
     bool joinable() const _NOEXCEPT {return !__libcpp_thread_isnull(&__t_);}
@@ -217,7 +217,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 void
 __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>)
 {
-    _VSTD::__invoke(_VSTD::move(_VSTD::get<1>(__t)), _VSTD::move(_VSTD::get<_Indices>(__t))...);
+    std::__invoke(std::move(std::get<1>(__t)), std::move(std::get<_Indices>(__t))...);
 }
 
 template <class _Fp>
@@ -226,9 +226,9 @@ void* __thread_proxy(void* __vp)
 {
     // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
     unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
-    __thread_local_data().set_pointer(_VSTD::get<0>(*__p.get()).release());
+    __thread_local_data().set_pointer(std::get<0>(*__p.get()).release());
     typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 2>::type _Index;
-    _VSTD::__thread_execute(*__p.get(), _Index());
+    std::__thread_execute(*__p.get(), _Index());
     return nullptr;
 }
 
@@ -241,10 +241,10 @@ thread::thread(_Fp&& __f, _Args&&... __args)
     _TSPtr __tsp(new __thread_struct);
     typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
     unique_ptr<_Gp> __p(
-            new _Gp(_VSTD::move(__tsp),
-                    _VSTD::forward<_Fp>(__f),
-                    _VSTD::forward<_Args>(__args)...));
-    int __ec = _VSTD::__libcpp_thread_create(&__t_, &__thread_proxy<_Gp>, __p.get());
+            new _Gp(std::move(__tsp),
+                    std::forward<_Fp>(__f),
+                    std::forward<_Args>(__args)...));
+    int __ec = std::__libcpp_thread_create(&__t_, &__thread_proxy<_Gp>, __p.get());
     if (__ec == 0)
         __p.release();
     else
@@ -279,7 +279,7 @@ thread::thread(_Fp __f)
     typedef __thread_invoke_pair<_Fp> _InvokePair;
     typedef unique_ptr<_InvokePair> _PairPtr;
     _PairPtr __pp(new _InvokePair(__f));
-    int __ec = _VSTD::__libcpp_thread_create(&__t_, &__thread_proxy_cxx03<_InvokePair>, __pp.get());
+    int __ec = std::__libcpp_thread_create(&__t_, &__thread_proxy_cxx03<_InvokePair>, __pp.get());
     if (__ec == 0)
         __pp.release();
     else

@@ -4474,6 +4474,17 @@ LogicalResult AffineVectorStoreOp::verify() {
 // DelinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult AffineDelinearizeIndexOp::inferReturnTypes(
+    MLIRContext *context, std::optional<::mlir::Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
+  AffineDelinearizeIndexOpAdaptor adaptor(operands, attributes, properties,
+                                          regions);
+  inferredReturnTypes.assign(adaptor.getBasis().size(),
+                             IndexType::get(context));
+  return success();
+}
+
 void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
                                      Value linearIndex,
                                      ArrayRef<OpFoldResult> basis) {

@@ -196,11 +196,14 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {
+    if (!Features.CPlusPlus)
+      return getTypeInfo(ETy->getDecl()->getIntegerType());
+
     // In C++ mode, types have linkage, so we can rely on the ODR and
     // on their mangled names, if they're external.
     // TODO: Is there a way to get a program-wide unique name for a
     // decl with local linkage or no linkage?
-    if (!Features.CPlusPlus || !ETy->getDecl()->isExternallyVisible())
+    if (!ETy->getDecl()->isExternallyVisible())
       return getChar();
 
     SmallString<256> OutName;

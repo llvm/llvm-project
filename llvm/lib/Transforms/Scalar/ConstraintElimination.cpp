@@ -26,7 +26,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -36,7 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -433,7 +431,7 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
     return &GEP;
 
   assert(!IsSigned && "The logic below only supports decomposition for "
-                      "unsinged predicates at the moment.");
+                      "unsigned predicates at the moment.");
   const auto &[BasePtr, ConstantOffset, VariableOffsets, AllInbounds] =
       collectOffsets(GEP, DL);
   if (!BasePtr || !AllInbounds)
@@ -544,10 +542,8 @@ static Decomposition decompose(Value *V,
   }
 
   // Decompose or as an add if there are no common bits between the operands.
-  if (match(V, m_Or(m_Value(Op0), m_ConstantInt(CI))) &&
-      haveNoCommonBitsSet(Op0, CI, DL)) {
+  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI))))
     return MergeResults(Op0, CI, IsSigned);
-  }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)

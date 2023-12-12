@@ -162,6 +162,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
 void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
+  populatePatternsForOp<math::AcosOp>(patterns, ctx, "acosf", "acos");
   populatePatternsForOp<math::Atan2Op>(patterns, ctx, "atan2f", "atan2");
   populatePatternsForOp<math::AtanOp>(patterns, ctx, "atanf", "atan");
   populatePatternsForOp<math::CbrtOp>(patterns, ctx, "cbrtf", "cbrt");

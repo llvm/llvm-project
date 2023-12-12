@@ -77,12 +77,8 @@ std::int32_t RTNAME(MapException)(int32_t except) {
 
 // Verify that the size of ieee_modes_type and ieee_status_type objects from
 // intrinsic module file __fortran_ieee_exceptions.f90 are large enough to
-// hold femode_t and fenv_t objects, respectively.
-#ifndef _WIN32
-static_assert(
-    sizeof(femode_t) <= sizeof(int) * _FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT,
-    "increase ieee_modes_type size");
-#endif
+// hold fenv_t object.
+// TODO: consider femode_t object size comparison once its more mature.
 static_assert(
     sizeof(fenv_t) <= sizeof(int) * _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT,
     "increase ieee_status_type size");

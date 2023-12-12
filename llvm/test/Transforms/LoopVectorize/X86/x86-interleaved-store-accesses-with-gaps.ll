@@ -103,7 +103,7 @@ for.body:
   store i16 %0, ptr %arrayidx2, align 2
   %arrayidx4 = getelementptr inbounds i16, ptr %y, i64 %indvars.iv
   %2 = load i16, ptr %arrayidx4, align 2
-  %3 = or i64 %1, 1
+  %3 = or disjoint i64 %1, 1
   %arrayidx7 = getelementptr inbounds i16, ptr %points, i64 %3
   store i16 %2, ptr %arrayidx7, align 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -130,9 +130,9 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[NUMPOINTS:%.*]], 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[CMP15]], label [[VECTOR_PH:%.*]], label [[FOR_END:%.*]]
 ; DISABLED_MASKED_STRIDED:       vector.ph:
-; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[NUMPOINTS]] to i64
+; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[NUMPOINTS]] to i64
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i64 [[WIDE_TRIP_COUNT]], 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 8589934588
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 4294967292
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -233,9 +233,9 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; ENABLED_MASKED_STRIDED-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[NUMPOINTS:%.*]], 0
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[CMP15]], label [[VECTOR_PH:%.*]], label [[FOR_END:%.*]]
 ; ENABLED_MASKED_STRIDED:       vector.ph:
-; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[NUMPOINTS]] to i64
+; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[NUMPOINTS]] to i64
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i64 [[WIDE_TRIP_COUNT]], 3
-; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 8589934588
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 4294967292
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -283,7 +283,7 @@ for.body:
   store i16 %0, ptr %arrayidx2, align 2
   %arrayidx4 = getelementptr inbounds i16, ptr %y, i64 %indvars.iv
   %2 = load i16, ptr %arrayidx4, align 2
-  %3 = or i64 %1, 1
+  %3 = or disjoint i64 %1, 1
   %arrayidx7 = getelementptr inbounds i16, ptr %points, i64 %3
   store i16 %2, ptr %arrayidx7, align 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1

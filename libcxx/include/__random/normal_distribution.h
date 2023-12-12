@@ -28,6 +28,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS normal_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
@@ -152,7 +155,7 @@ normal_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
             __v = __uni(__g);
             __s = __u * __u + __v * __v;
         } while (__s > 1 || __s == 0);
-        result_type __fp = _VSTD::sqrt(-2 * _VSTD::log(__s) / __s);
+        result_type __fp = std::sqrt(-2 * std::log(__s) / __s);
         __v_ = __v * __fp;
         __v_hot_ = true;
         __up = __u * __fp;

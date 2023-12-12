@@ -95,7 +95,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __invoke_of<_Ti&, _Uj...>::type
 __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>)
 {
-    return __ti(_VSTD::forward<_Uj>(_VSTD::get<_Indx>(__uj))...);
+    return __ti(std::forward<_Uj>(std::get<_Indx>(__uj))...);
 }
 
 template <class _Ti, class ..._Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
@@ -104,7 +104,7 @@ typename __invoke_of<_Ti&, _Uj...>::type
 __mu(_Ti& __ti, tuple<_Uj...>& __uj)
 {
     typedef typename __make_tuple_indices<sizeof...(_Uj)>::type __indices;
-    return _VSTD::__mu_expand(__ti, __uj, __indices());
+    return std::__mu_expand(__ti, __uj, __indices());
 }
 
 template <bool IsPh, class _Ti, class _Uj>
@@ -122,7 +122,7 @@ typename __mu_return2<0 < is_placeholder<_Ti>::value, _Ti, _Uj>::type
 __mu(_Ti&, _Uj& __uj)
 {
     const size_t __indx = is_placeholder<_Ti>::value - 1;
-    return _VSTD::forward<typename tuple_element<__indx, _Uj>::type>(_VSTD::get<__indx>(__uj));
+    return std::forward<typename tuple_element<__indx, _Uj>::type>(std::get<__indx>(__uj));
 }
 
 template <class _Ti, class _Uj, __enable_if_t<!is_bind_expression<_Ti>::value &&
@@ -245,7 +245,7 @@ typename __bind_return<_Fp, _BoundArgs, _Args>::type
 __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>,
                 _Args&& __args)
 {
-    return _VSTD::__invoke(__f, _VSTD::__mu(_VSTD::get<_Indx>(__bound_args), __args)...);
+    return std::__invoke(__f, std::__mu(std::get<_Indx>(__bound_args), __args)...);
 }
 
 template<class _Fp, class ..._BoundArgs>
@@ -264,16 +264,16 @@ public:
               __enable_if_t<is_constructible<_Fd, _Gp>::value && !is_same<__libcpp_remove_reference_t<_Gp>, __bind>::value, int> = 0>
       _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       explicit __bind(_Gp&& __f, _BA&& ...__bound_args)
-        : __f_(_VSTD::forward<_Gp>(__f)),
-          __bound_args_(_VSTD::forward<_BA>(__bound_args)...) {}
+        : __f_(std::forward<_Gp>(__f)),
+          __bound_args_(std::forward<_BA>(__bound_args)...) {}
 
     template <class ..._Args>
         _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args)
         {
-            return _VSTD::__apply_functor(__f_, __bound_args_, __indices(),
-                                  tuple<_Args&&...>(_VSTD::forward<_Args>(__args)...));
+            return std::__apply_functor(__f_, __bound_args_, __indices(),
+                                  tuple<_Args&&...>(std::forward<_Args>(__args)...));
         }
 
     template <class ..._Args>
@@ -281,8 +281,8 @@ public:
         typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args) const
         {
-            return _VSTD::__apply_functor(__f_, __bound_args_, __indices(),
-                                   tuple<_Args&&...>(_VSTD::forward<_Args>(__args)...));
+            return std::__apply_functor(__f_, __bound_args_, __indices(),
+                                   tuple<_Args&&...>(std::forward<_Args>(__args)...));
         }
 };
 
@@ -304,8 +304,8 @@ public:
               __enable_if_t<is_constructible<_Fd, _Gp>::value && !is_same<__libcpp_remove_reference_t<_Gp>, __bind_r>::value, int> = 0>
       _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       explicit __bind_r(_Gp&& __f, _BA&& ...__bound_args)
-        : base(_VSTD::forward<_Gp>(__f),
-               _VSTD::forward<_BA>(__bound_args)...) {}
+        : base(std::forward<_Gp>(__f),
+               std::forward<_BA>(__bound_args)...) {}
 
     template <class ..._Args, __enable_if_t<is_convertible<typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type,
                                                            result_type>::value || is_void<_Rp>::value, int> = 0>
@@ -314,7 +314,7 @@ public:
         operator()(_Args&& ...__args)
         {
             typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-            return _Invoker::__call(static_cast<base&>(*this), _VSTD::forward<_Args>(__args)...);
+            return _Invoker::__call(static_cast<base&>(*this), std::forward<_Args>(__args)...);
         }
 
     template <class ..._Args, __enable_if_t<is_convertible<typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type,
@@ -324,7 +324,7 @@ public:
         operator()(_Args&& ...__args) const
         {
             typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-            return _Invoker::__call(static_cast<base const&>(*this), _VSTD::forward<_Args>(__args)...);
+            return _Invoker::__call(static_cast<base const&>(*this), std::forward<_Args>(__args)...);
         }
 };
 
@@ -337,7 +337,7 @@ __bind<_Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args)
 {
     typedef __bind<_Fp, _BoundArgs...> type;
-    return type(_VSTD::forward<_Fp>(__f), _VSTD::forward<_BoundArgs>(__bound_args)...);
+    return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);
 }
 
 template<class _Rp, class _Fp, class ..._BoundArgs>
@@ -346,7 +346,7 @@ __bind_r<_Rp, _Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args)
 {
     typedef __bind_r<_Rp, _Fp, _BoundArgs...> type;
-    return type(_VSTD::forward<_Fp>(__f), _VSTD::forward<_BoundArgs>(__bound_args)...);
+    return type(std::forward<_Fp>(__f), std::forward<_BoundArgs>(__bound_args)...);
 }
 
 #endif // _LIBCPP_CXX03_LANG

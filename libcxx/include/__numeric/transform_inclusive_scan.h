@@ -45,7 +45,7 @@ transform_inclusive_scan(_InputIterator __first, _InputIterator __last,
         typename iterator_traits<_InputIterator>::value_type __init = __u(*__first);
         *__result++ = __init;
         if (++__first != __last)
-            return _VSTD::transform_inclusive_scan(__first, __last, __result, __b, __u, __init);
+            return std::transform_inclusive_scan(__first, __last, __result, __b, __u, __init);
     }
 
     return __result;

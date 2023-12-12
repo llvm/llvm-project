@@ -29,7 +29,7 @@ accumulate(_InputIterator __first, _InputIterator __last, _Tp __init)
 {
     for (; __first != __last; ++__first)
 #if _LIBCPP_STD_VER >= 20
-        __init = _VSTD::move(__init) + *__first;
+        __init = std::move(__init) + *__first;
 #else
         __init = __init + *__first;
 #endif
@@ -43,7 +43,7 @@ accumulate(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOpe
 {
     for (; __first != __last; ++__first)
 #if _LIBCPP_STD_VER >= 20
-        __init = __binary_op(_VSTD::move(__init), *__first);
+        __init = __binary_op(std::move(__init), *__first);
 #else
         __init = __binary_op(__init, *__first);
 #endif

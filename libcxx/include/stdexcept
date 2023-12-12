@@ -79,7 +79,7 @@ class _LIBCPP_EXPORTED_FROM_ABI logic_error
 {
 #ifndef _LIBCPP_ABI_VCRUNTIME
 private:
-    _VSTD::__libcpp_refstring __imp_;
+    std::__libcpp_refstring __imp_;
 public:
     explicit logic_error(const string&);
     explicit logic_error(const char*);
@@ -92,7 +92,7 @@ public:
     const char* what() const _NOEXCEPT override;
 #else
 public:
-    explicit logic_error(const _VSTD::string&); // Symbol uses versioned std::string
+    explicit logic_error(const std::string&); // Symbol uses versioned std::string
     _LIBCPP_HIDE_FROM_ABI explicit logic_error(const char* __s) : exception(__s) {}
 #endif
 };
@@ -102,7 +102,7 @@ class _LIBCPP_EXPORTED_FROM_ABI runtime_error
 {
 #ifndef _LIBCPP_ABI_VCRUNTIME
 private:
-    _VSTD::__libcpp_refstring __imp_;
+    std::__libcpp_refstring __imp_;
 public:
     explicit runtime_error(const string&);
     explicit runtime_error(const char*);
@@ -115,7 +115,7 @@ public:
     const char* what() const _NOEXCEPT override;
 #else
 public:
-   explicit runtime_error(const _VSTD::string&); // Symbol uses versioned std::string
+   explicit runtime_error(const std::string&); // Symbol uses versioned std::string
    _LIBCPP_HIDE_FROM_ABI explicit runtime_error(const char* __s) : exception(__s) {}
 #endif // _LIBCPP_ABI_VCRUNTIME
 };

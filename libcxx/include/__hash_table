@@ -199,11 +199,11 @@ struct __hash_key_value_types {
   }
   _LIBCPP_HIDE_FROM_ABI
   static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return _VSTD::addressof(__n);
+    return std::addressof(__n);
   }
   _LIBCPP_HIDE_FROM_ABI
   static __container_value_type&& __move(__node_value_type& __v) {
-    return _VSTD::move(__v);
+    return std::move(__v);
   }
 };
 
@@ -237,7 +237,7 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
 
   _LIBCPP_HIDE_FROM_ABI
   static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return _VSTD::addressof(__n.__get_value());
+    return std::addressof(__n.__get_value());
   }
   _LIBCPP_HIDE_FROM_ABI
   static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) {
@@ -643,7 +643,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     __bucket_list_deallocator(__bucket_list_deallocator&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-        : __data_(_VSTD::move(__x.__data_))
+        : __data_(std::move(__x.__data_))
     {
         __x.size() = 0;
     }
@@ -889,7 +889,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     size_type max_size() const _NOEXCEPT
     {
-        return _VSTD::min<size_type>(
+        return std::min<size_type>(
             __node_traits::max_size(__node_alloc()),
             numeric_limits<difference_type >::max()
         );
@@ -929,7 +929,7 @@ public:
     template <class _Pp>
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool> __emplace_unique(_Pp&& __x) {
-      return __emplace_unique_extract_key(_VSTD::forward<_Pp>(__x),
+      return __emplace_unique_extract_key(std::forward<_Pp>(__x),
                                           __can_extract_key<_Pp, key_type>());
     }
 
@@ -938,33 +938,33 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool>
     __emplace_unique(_First&& __f, _Second&& __s) {
-        return __emplace_unique_key_args(__f, _VSTD::forward<_First>(__f),
-                                              _VSTD::forward<_Second>(__s));
+        return __emplace_unique_key_args(__f, std::forward<_First>(__f),
+                                              std::forward<_Second>(__s));
     }
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool> __emplace_unique(_Args&&... __args) {
-      return __emplace_unique_impl(_VSTD::forward<_Args>(__args)...);
+      return __emplace_unique_impl(std::forward<_Args>(__args)...);
     }
 
     template <class _Pp>
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool>
     __emplace_unique_extract_key(_Pp&& __x, __extract_key_fail_tag) {
-      return __emplace_unique_impl(_VSTD::forward<_Pp>(__x));
+      return __emplace_unique_impl(std::forward<_Pp>(__x));
     }
     template <class _Pp>
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool>
     __emplace_unique_extract_key(_Pp&& __x, __extract_key_self_tag) {
-      return __emplace_unique_key_args(__x, _VSTD::forward<_Pp>(__x));
+      return __emplace_unique_key_args(__x, std::forward<_Pp>(__x));
     }
     template <class _Pp>
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool>
     __emplace_unique_extract_key(_Pp&& __x, __extract_key_first_tag) {
-      return __emplace_unique_key_args(__x.first, _VSTD::forward<_Pp>(__x));
+      return __emplace_unique_key_args(__x.first, std::forward<_Pp>(__x));
     }
 
     template <class... _Args>
@@ -978,25 +978,25 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool>
     __insert_unique(__container_value_type&& __x) {
-      return __emplace_unique_key_args(_NodeTypes::__get_key(__x), _VSTD::move(__x));
+      return __emplace_unique_key_args(_NodeTypes::__get_key(__x), std::move(__x));
     }
 
     template <class _Pp, class = __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value> >
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool> __insert_unique(_Pp&& __x) {
-      return __emplace_unique(_VSTD::forward<_Pp>(__x));
+      return __emplace_unique(std::forward<_Pp>(__x));
     }
 
     template <class _Pp>
     _LIBCPP_HIDE_FROM_ABI
     iterator __insert_multi(_Pp&& __x) {
-      return __emplace_multi(_VSTD::forward<_Pp>(__x));
+      return __emplace_multi(std::forward<_Pp>(__x));
     }
 
     template <class _Pp>
     _LIBCPP_HIDE_FROM_ABI
     iterator __insert_multi(const_iterator __p, _Pp&& __x) {
-        return __emplace_hint_multi(__p, _VSTD::forward<_Pp>(__x));
+        return __emplace_hint_multi(__p, std::forward<_Pp>(__x));
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -1132,7 +1132,7 @@ public:
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(__mlf > 0,
             "unordered container::max_load_factor(lf) called with lf <= 0");
-        max_load_factor() = _VSTD::max(__mlf, load_factor());
+        max_load_factor() = std::max(__mlf, load_factor());
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -1213,8 +1213,8 @@ private:
             is_nothrow_move_assignable<__node_allocator>::value)
     {
         __bucket_list_.get_deleter().__alloc() =
-                _VSTD::move(__u.__bucket_list_.get_deleter().__alloc());
-        __node_alloc() = _VSTD::move(__u.__node_alloc());
+                std::move(__u.__bucket_list_.get_deleter().__alloc());
+        __node_alloc() = std::move(__u.__node_alloc());
     }
     _LIBCPP_HIDE_FROM_ABI
         void __move_assign_alloc(__hash_table&, false_type) _NOEXCEPT {}
@@ -1302,10 +1302,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u)
             is_nothrow_move_constructible<__node_allocator>::value &&
             is_nothrow_move_constructible<hasher>::value &&
             is_nothrow_move_constructible<key_equal>::value)
-    : __bucket_list_(_VSTD::move(__u.__bucket_list_)),
-      __p1_(_VSTD::move(__u.__p1_)),
-      __p2_(_VSTD::move(__u.__p2_)),
-      __p3_(_VSTD::move(__u.__p3_))
+    : __bucket_list_(std::move(__u.__bucket_list_)),
+      __p1_(std::move(__u.__p1_)),
+      __p2_(std::move(__u.__p2_)),
+      __p3_(std::move(__u.__p3_))
 {
     if (size() > 0)
     {
@@ -1321,8 +1321,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
                                                        const allocator_type& __a)
     : __bucket_list_(nullptr, __bucket_list_deleter(__pointer_allocator(__a), 0)),
       __p1_(__default_init_tag(), __node_allocator(__a)),
-      __p2_(0, _VSTD::move(__u.hash_function())),
-      __p3_(_VSTD::move(__u.__p3_))
+      __p2_(0, std::move(__u.hash_function())),
+      __p3_(std::move(__u.__p3_))
 {
     if (__a == allocator_type(__u.__node_alloc()))
     {
@@ -1373,7 +1373,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>&
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __u)
 {
-    if (this != _VSTD::addressof(__u))
+    if (this != std::addressof(__u))
     {
         __copy_assign_alloc(__u);
         hash_function() = __u.hash_function();
@@ -1429,9 +1429,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
     __u.__bucket_list_.get_deleter().size() = 0;
     __move_assign_alloc(__u);
     size() = __u.size();
-    hash_function() = _VSTD::move(__u.hash_function());
+    hash_function() = std::move(__u.hash_function());
     max_load_factor() = __u.max_load_factor();
-    key_eq() = _VSTD::move(__u.key_eq());
+    key_eq() = std::move(__u.key_eq());
     __p1_.first().__next_ = __u.__p1_.first().__next_;
     if (size() > 0)
     {
@@ -1451,8 +1451,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
         __move_assign(__u, true_type());
     else
     {
-        hash_function() = _VSTD::move(__u.hash_function());
-        key_eq() = _VSTD::move(__u.key_eq());
+        hash_function() = std::move(__u.hash_function());
+        key_eq() = std::move(__u.key_eq());
         max_load_factor() = __u.max_load_factor();
         if (bucket_count() != 0)
         {
@@ -1465,7 +1465,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
                 while (__cache != nullptr && __u.size() != 0)
                 {
                     __cache->__upcast()->__get_value() =
-                        _VSTD::move(__u.remove(__i++)->__get_value());
+                        std::move(__u.remove(__i++)->__get_value());
                     __next_pointer __next = __cache->__next_;
                     __node_insert_multi(__cache->__upcast());
                     __cache = __next;
@@ -1666,7 +1666,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(
     }
     if (size()+1 > __bc * max_load_factor() || __bc == 0)
     {
-        __rehash_unique(_VSTD::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
+        __rehash_unique(std::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
                                      size_type(std::ceil(float(size() + 1) / max_load_factor()))));
     }
     return nullptr;
@@ -1738,7 +1738,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(
     size_type __bc = bucket_count();
     if (size()+1 > __bc * max_load_factor() || __bc == 0)
     {
-        __rehash_multi(_VSTD::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
+        __rehash_multi(std::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
                        size_type(std::ceil(float(size() + 1) / max_load_factor()))));
         __bc = bucket_count();
     }
@@ -1829,7 +1829,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         size_type __bc = bucket_count();
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
-            __rehash_multi(_VSTD::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
+            __rehash_multi(std::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
                            size_type(std::ceil(float(size() + 1) / max_load_factor()))));
             __bc = bucket_count();
         }
@@ -1875,10 +1875,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         }
     }
     {
-        __node_holder __h = __construct_node_hash(__hash, _VSTD::forward<_Args>(__args)...);
+        __node_holder __h = __construct_node_hash(__hash, std::forward<_Args>(__args)...);
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
-            __rehash_unique(_VSTD::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
+            __rehash_unique(std::max<size_type>(2 * __bc + !std::__is_hash_power2(__bc),
                            size_type(std::ceil(float(size() + 1) / max_load_factor()))));
             __bc = bucket_count();
             __chash = std::__constrain_hash(__hash, __bc);
@@ -1915,7 +1915,7 @@ template <class... _Args>
 pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_impl(_Args&&... __args)
 {
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
+    __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
     pair<iterator, bool> __r = __node_insert_unique(__h.get());
     if (__r.second)
         __h.release();
@@ -1927,7 +1927,7 @@ template <class... _Args>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_multi(_Args&&... __args)
 {
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
+    __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
     iterator __r = __node_insert_multi(__h.get());
     __h.release();
     return __r;
@@ -1939,7 +1939,7 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_hint_multi(
         const_iterator __p, _Args&&... __args)
 {
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
+    __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
     iterator __r = __node_insert_multi(__p, __h.get());
     __h.release();
     return __r;
@@ -1958,7 +1958,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(
     pair<iterator, bool> __result = __node_insert_unique(__nh.__ptr_);
     if (__result.second)
         __nh.__release_ptr();
-    return _InsertReturnType{__result.first, __result.second, _VSTD::move(__nh)};
+    return _InsertReturnType{__result.first, __result.second, std::move(__nh)};
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2092,7 +2092,7 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
         __do_rehash<_UniqueKeys>(__n);
     else if (__n < __bc)
     {
-        __n = _VSTD::max<size_type>
+        __n = std::max<size_type>
               (
                   __n,
                   std::__is_hash_power2(__bc) ? std::__next_hash_pow2(size_t(std::ceil(float(size()) / max_load_factor()))) :
@@ -2233,7 +2233,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node(_Args&& ...__args)
     std::__construct_at(std::addressof(*__h), /* next = */nullptr, /* hash = */0);
 
     // Now construct the value_type using the allocator's construct() method.
-    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__get_value()), _VSTD::forward<_Args>(__args)...);
+    __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__get_value()), std::forward<_Args>(__args)...);
     __h.get_deleter().__value_constructed = true;
 
     __h->__hash_ = hash_function()(__h->__get_value());
@@ -2252,8 +2252,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__construct_node_hash(
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
     std::__construct_at(std::addressof(*__h), /* next = */nullptr, /* hash = */__hash);
     __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__get_value()),
-                             _VSTD::forward<_First>(__f),
-                             _VSTD::forward<_Rest>(__rest)...);
+                             std::forward<_First>(__f),
+                             std::forward<_Rest>(__rest)...);
     __h.get_deleter().__value_constructed = true;
     return __h;
 }
@@ -2472,11 +2472,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
     __bucket_list_.reset(__u.__bucket_list_.release());
     __u.__bucket_list_.reset(__npp);
     }
-    _VSTD::swap(__bucket_list_.get_deleter().size(), __u.__bucket_list_.get_deleter().size());
-    _VSTD::__swap_allocator(__bucket_list_.get_deleter().__alloc(),
+    std::swap(__bucket_list_.get_deleter().size(), __u.__bucket_list_.get_deleter().size());
+    std::__swap_allocator(__bucket_list_.get_deleter().__alloc(),
              __u.__bucket_list_.get_deleter().__alloc());
-    _VSTD::__swap_allocator(__node_alloc(), __u.__node_alloc());
-    _VSTD::swap(__p1_.first().__next_, __u.__p1_.first().__next_);
+    std::__swap_allocator(__node_alloc(), __u.__node_alloc());
+    std::swap(__p1_.first().__next_, __u.__p1_.first().__next_);
     __p2_.swap(__u.__p2_);
     __p3_.swap(__u.__p3_);
     if (size() > 0)

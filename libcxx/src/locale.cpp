@@ -171,13 +171,13 @@ locale::__imp::__imp(size_t refs)
       name_("C")
 {
     facets_.clear();
-    install(&make<_VSTD::collate<char> >(1u));
+    install(&make<std::collate<char> >(1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(&make<_VSTD::collate<wchar_t> >(1u));
+    install(&make<std::collate<wchar_t> >(1u));
 #endif
-    install(&make<_VSTD::ctype<char> >(nullptr, false, 1u));
+    install(&make<std::ctype<char> >(nullptr, false, 1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(&make<_VSTD::ctype<wchar_t> >(1u));
+    install(&make<std::ctype<wchar_t> >(1u));
 #endif
     install(&make<codecvt<char, char, mbstate_t> >(1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -225,9 +225,9 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<time_put<wchar_t> >(1u));
 #endif
-    install(&make<_VSTD::messages<char> >(1u));
+    install(&make<std::messages<char> >(1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(&make<_VSTD::messages<wchar_t> >(1u));
+    install(&make<std::messages<wchar_t> >(1u));
 #endif
 }
 
@@ -413,28 +413,28 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
         if (c & locale::collate)
         {
-            install_from<_VSTD::collate<char> >(one);
+            install_from<std::collate<char> >(one);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::collate<wchar_t> >(one);
+            install_from<std::collate<wchar_t> >(one);
 #endif
         }
         if (c & locale::ctype)
         {
-            install_from<_VSTD::ctype<char> >(one);
+            install_from<std::ctype<char> >(one);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::ctype<wchar_t> >(one);
+            install_from<std::ctype<wchar_t> >(one);
 #endif
-            install_from<_VSTD::codecvt<char, char, mbstate_t> >(one);
+            install_from<std::codecvt<char, char, mbstate_t> >(one);
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-            install_from<_VSTD::codecvt<char16_t, char, mbstate_t> >(one);
-            install_from<_VSTD::codecvt<char32_t, char, mbstate_t> >(one);
+            install_from<std::codecvt<char16_t, char, mbstate_t> >(one);
+            install_from<std::codecvt<char32_t, char, mbstate_t> >(one);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-            install_from<_VSTD::codecvt<char16_t, char8_t, mbstate_t> >(one);
-            install_from<_VSTD::codecvt<char32_t, char8_t, mbstate_t> >(one);
+            install_from<std::codecvt<char16_t, char8_t, mbstate_t> >(one);
+            install_from<std::codecvt<char32_t, char8_t, mbstate_t> >(one);
 #endif
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::codecvt<wchar_t, char, mbstate_t> >(one);
+            install_from<std::codecvt<wchar_t, char, mbstate_t> >(one);
 #endif
         }
         if (c & locale::monetary)
@@ -482,9 +482,9 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         }
         if (c & locale::messages)
         {
-            install_from<_VSTD::messages<char> >(one);
+            install_from<std::messages<char> >(one);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::messages<wchar_t> >(one);
+            install_from<std::messages<wchar_t> >(one);
 #endif
         }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -1058,6 +1058,7 @@ extern "C" const int ** __ctype_toupper_loc();
 const ctype<char>::mask*
 ctype<char>::classic_table() noexcept
 {
+  // clang-format off
     static constexpr const ctype<char>::mask builtin_table[table_size] = {
         cntrl,                          cntrl,
         cntrl,                          cntrl,
@@ -1132,6 +1133,7 @@ ctype<char>::classic_table() noexcept
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
+  // clang-format on
     return builtin_table;
 }
 #else

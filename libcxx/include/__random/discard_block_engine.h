@@ -68,7 +68,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     explicit discard_block_engine(_Engine&& __e)
-        : __e_(_VSTD::move(__e)), __n_(0) {}
+        : __e_(std::move(__e)), __n_(0) {}
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}

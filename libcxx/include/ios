@@ -295,8 +295,8 @@ public:
     typedef openmode     open_mode;
     typedef seekdir      seek_dir;
 
-    typedef _VSTD::streamoff streamoff;
-    typedef _VSTD::streampos streampos;
+    typedef std::streamoff streamoff;
+    typedef std::streampos streampos;
 #endif
 
     class _LIBCPP_EXPORTED_FROM_ABI Init;
@@ -839,8 +839,8 @@ void
 basic_ios<_CharT, _Traits>::swap(basic_ios& __rhs) _NOEXCEPT
 {
     ios_base::swap(__rhs);
-    _VSTD::swap(__tie_, __rhs.__tie_);
-    _VSTD::swap(__fill_, __rhs.__fill_);
+    std::swap(__tie_, __rhs.__tie_);
+    std::swap(__fill_, __rhs.__fill_);
 }
 
 template <class _CharT, class _Traits>

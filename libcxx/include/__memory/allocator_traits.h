@@ -293,7 +293,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static void construct(allocator_type& __a, _Tp* __p, _Args&&... __args) {
         _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-        __a.construct(__p, _VSTD::forward<_Args>(__args)...);
+        __a.construct(__p, std::forward<_Args>(__args)...);
         _LIBCPP_SUPPRESS_DEPRECATED_POP
     }
     template <class _Tp, class... _Args, class = void, class =

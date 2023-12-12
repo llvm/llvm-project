@@ -200,7 +200,7 @@ public:
 
   template <bool _Dummy = true, class = _EnableIfDeleterConstructible<_GoodRValRefType<_Dummy> > >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-  unique_ptr(pointer __p, _GoodRValRefType<_Dummy> __d) _NOEXCEPT : __ptr_(__p, _VSTD::move(__d)) {
+  unique_ptr(pointer __p, _GoodRValRefType<_Dummy> __d) _NOEXCEPT : __ptr_(__p, std::move(__d)) {
     static_assert(!is_reference<deleter_type>::value,
                   "rvalue deleter bound to reference");
   }
@@ -211,14 +211,14 @@ public:
   unique_ptr(pointer __p, _BadRValRefType<_Dummy> __d) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) _NOEXCEPT
-      : __ptr_(__u.release(), _VSTD::forward<deleter_type>(__u.get_deleter())) {}
+      : __ptr_(__u.release(), std::forward<deleter_type>(__u.get_deleter())) {}
 
   template <class _Up,
             class _Ep,
             class = _EnableIfMoveConvertible<unique_ptr<_Up, _Ep>, _Up>,
             class = _EnableIfDeleterConvertible<_Ep> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr<_Up, _Ep>&& __u) _NOEXCEPT
-      : __ptr_(__u.release(), _VSTD::forward<_Ep>(__u.get_deleter())) {}
+      : __ptr_(__u.release(), std::forward<_Ep>(__u.get_deleter())) {}
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
   template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value &&
@@ -230,7 +230,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
     reset(__u.release());
-    __ptr_.second() = _VSTD::forward<deleter_type>(__u.get_deleter());
+    __ptr_.second() = std::forward<deleter_type>(__u.get_deleter());
     return *this;
   }
 
@@ -240,7 +240,7 @@ public:
             class = _EnableIfDeleterAssignable<_Ep> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr<_Up, _Ep>&& __u) _NOEXCEPT {
     reset(__u.release());
-    __ptr_.second() = _VSTD::forward<_Ep>(__u.get_deleter());
+    __ptr_.second() = std::forward<_Ep>(__u.get_deleter());
     return *this;
   }
 
@@ -408,14 +408,14 @@ public:
             class       = _EnableIfDeleterConstructible<_GoodRValRefType<_Dummy> >,
             class       = _EnableIfPointerConvertible<_Pp> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(_Pp __p, _GoodRValRefType<_Dummy> __d) _NOEXCEPT
-      : __ptr_(__p, _VSTD::move(__d)) {
+      : __ptr_(__p, std::move(__d)) {
     static_assert(!is_reference<deleter_type>::value,
                   "rvalue deleter bound to reference");
   }
 
   template <bool _Dummy = true, class = _EnableIfDeleterConstructible<_GoodRValRefType<_Dummy> > >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(nullptr_t, _GoodRValRefType<_Dummy> __d) _NOEXCEPT
-      : __ptr_(nullptr, _VSTD::move(__d)) {
+      : __ptr_(nullptr, std::move(__d)) {
     static_assert(!is_reference<deleter_type>::value,
                   "rvalue deleter bound to reference");
   }
@@ -427,11 +427,11 @@ public:
   unique_ptr(_Pp __p, _BadRValRefType<_Dummy> __d) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr&& __u) _NOEXCEPT
-      : __ptr_(__u.release(), _VSTD::forward<deleter_type>(__u.get_deleter())) {}
+      : __ptr_(__u.release(), std::forward<deleter_type>(__u.get_deleter())) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
     reset(__u.release());
-    __ptr_.second() = _VSTD::forward<deleter_type>(__u.get_deleter());
+    __ptr_.second() = std::forward<deleter_type>(__u.get_deleter());
     return *this;
   }
 
@@ -440,7 +440,7 @@ public:
             class = _EnableIfMoveConvertible<unique_ptr<_Up, _Ep>, _Up>,
             class = _EnableIfDeleterConvertible<_Ep> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr(unique_ptr<_Up, _Ep>&& __u) _NOEXCEPT
-      : __ptr_(__u.release(), _VSTD::forward<_Ep>(__u.get_deleter())) {}
+      : __ptr_(__u.release(), std::forward<_Ep>(__u.get_deleter())) {}
 
   template <class _Up,
             class _Ep,
@@ -448,7 +448,7 @@ public:
             class = _EnableIfDeleterAssignable<_Ep> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr<_Up, _Ep>&& __u) _NOEXCEPT {
     reset(__u.release());
-    __ptr_.second() = _VSTD::forward<_Ep>(__u.get_deleter());
+    __ptr_.second() = std::forward<_Ep>(__u.get_deleter());
     return *this;
   }
 
@@ -682,7 +682,7 @@ struct __unique_if<_Tp[_Np]>
 template <class _Tp, class... _Args>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
 make_unique(_Args&&... __args) {
-  return unique_ptr<_Tp>(new _Tp(_VSTD::forward<_Args>(__args)...));
+  return unique_ptr<_Tp>(new _Tp(std::forward<_Args>(__args)...));
 }
 
 template <class _Tp>

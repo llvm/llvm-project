@@ -78,7 +78,7 @@ define i64 @test3_fib(i64 %n) nounwind readnone {
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N_TR]], -1
-; CHECK-NEXT:    [[RECURSE1:%.*]] = tail call i64 @test3_fib(i64 [[TMP0]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[RECURSE1:%.*]] = tail call i64 @test3_fib(i64 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP1]] = add i64 [[N_TR]], -2
 ; CHECK-NEXT:    [[ACCUMULATE]] = add nsw i64 [[ACCUMULATOR_TR]], [[RECURSE1]]
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
@@ -290,3 +290,41 @@ return:
   %retval.0 = phi i32 [ %accumulate1, %if.then2 ], [ %accumulate2, %if.end3 ], [ 0, %entry ]
   ret i32 %retval.0
 }
+
+%struct.ListNode = type { i32, ptr }
+
+; We cannot TRE commutative, non-associative intrinsics
+define i32 @test_non_associative_sadd_sat(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: define i32 @test_non_associative_sadd_sat(
+; CHECK-SAME: ptr [[A:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET6:%.*]], label [[IF_END:%.*]]
+; CHECK:       common.ret6:
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_LISTNODE:%.*]], ptr [[A]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @test_non_associative_sadd_sat(ptr [[TMP1]])
+; CHECK-NEXT:    [[DOTSROA_SPECULATED:%.*]] = tail call i32 @llvm.sadd.sat.i32(i32 [[TMP0]], i32 [[CALL]])
+; CHECK-NEXT:    ret i32 [[DOTSROA_SPECULATED]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret6, label %if.end
+
+common.ret6:                                      ; preds = %entry, %if.end
+  %common.ret6.op = phi i32 [ %.sroa.speculated, %if.end ], [ -1, %entry ]
+  ret i32 %common.ret6.op
+
+if.end:                                           ; preds = %entry
+  %0 = load i32, ptr %a
+  %next = getelementptr inbounds %struct.ListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call i32 @test_non_associative_sadd_sat(ptr %1)
+  %.sroa.speculated = tail call i32 @llvm.sadd.sat.i32(i32 %0, i32 %call)
+  br label %common.ret6
+}
+
+declare i32 @llvm.sadd.sat.i32(i32, i32)

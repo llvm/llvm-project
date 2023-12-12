@@ -1259,7 +1259,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
       (Current.is(tok::r_paren) ||
-       (Current.is(tok::r_brace) &&
+       (Current.is(tok::r_brace) && Current.MatchingParen &&
         Current.MatchingParen->is(BK_BracedInit))) &&
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;

@@ -2570,7 +2570,7 @@ static bool isRegularReg(RegisterKind Kind) {
 
 static const RegInfo* getRegularRegInfo(StringRef Str) {
   for (const RegInfo &Reg : RegularRegisters)
-    if (Str.startswith(Reg.Name))
+    if (Str.starts_with(Reg.Name))
       return &Reg;
   return nullptr;
 }
@@ -3411,12 +3411,16 @@ unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
   case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHLREV_B64_e32_gfx12:
+  case AMDGPU::V_LSHLREV_B64_e64_gfx12:
   case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHRREV_B64_e64_gfx12:
   case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_e64_gfx11:
+  case AMDGPU::V_ASHRREV_I64_e64_gfx12:
   case AMDGPU::V_LSHL_B64_e64:
   case AMDGPU::V_LSHR_B64_e64:
   case AMDGPU::V_ASHR_I64_e64:
@@ -3571,8 +3575,12 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
                : MCRegister::NoRegister;
   };
 
+  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
+  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
+
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-  auto InvalidCompOprIdx = InstInfo.getInvalidCompOperandIndex(getVRegIdx);
+  auto InvalidCompOprIdx =
+      InstInfo.getInvalidCompOperandIndex(getVRegIdx, SkipSrc);
   if (!InvalidCompOprIdx)
     return true;
 
@@ -4199,8 +4207,9 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
     return true;
 
   Error(getSMEMOffsetLoc(Operands),
-        (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset" :
-                               "expected a 21-bit signed offset");
+        isGFX12Plus()          ? "expected a 24-bit signed offset"
+        : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
+                               : "expected a 21-bit signed offset");
 
   return false;
 }
@@ -4478,7 +4487,7 @@ bool AMDGPUAsmParser::validateBLGP(const MCInst &Inst,
   SMLoc BLGPLoc = getBLGPLoc(Operands);
   if (!BLGPLoc.isValid())
     return true;
-  bool IsNeg = StringRef(BLGPLoc.getPointer()).startswith("neg:");
+  bool IsNeg = StringRef(BLGPLoc.getPointer()).starts_with("neg:");
   auto FB = getFeatureBits();
   bool UsesNeg = false;
   if (FB[AMDGPU::FeatureGFX940Insts]) {
@@ -5973,20 +5982,20 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
   setForcedDPP(false);
   setForcedSDWA(false);
 
-  if (Name.endswith("_e64_dpp")) {
+  if (Name.ends_with("_e64_dpp")) {
     setForcedDPP(true);
     setForcedEncodingSize(64);
     return Name.substr(0, Name.size() - 8);
-  } else if (Name.endswith("_e64")) {
+  } else if (Name.ends_with("_e64")) {
     setForcedEncodingSize(64);
     return Name.substr(0, Name.size() - 4);
-  } else if (Name.endswith("_e32")) {
+  } else if (Name.ends_with("_e32")) {
     setForcedEncodingSize(32);
     return Name.substr(0, Name.size() - 4);
-  } else if (Name.endswith("_dpp")) {
+  } else if (Name.ends_with("_dpp")) {
     setForcedDPP(true);
     return Name.substr(0, Name.size() - 4);
-  } else if (Name.endswith("_sdwa")) {
+  } else if (Name.ends_with("_sdwa")) {
     setForcedSDWA(true);
     return Name.substr(0, Name.size() - 5);
   }
@@ -6009,7 +6018,7 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   Operands.push_back(AMDGPUOperand::CreateToken(this, Name, NameLoc));
 
-  bool IsMIMG = Name.startswith("image_");
+  bool IsMIMG = Name.starts_with("image_");
 
   while (!trySkipToken(AsmToken::EndOfStatement)) {
     OperandMode Mode = OperandMode_Default;
@@ -6149,7 +6158,7 @@ unsigned AMDGPUAsmParser::getCPolKind(StringRef Id, StringRef Mnemo,
                                       bool &Disabling) const {
   Disabling = Id.consume_front("no");
 
-  if (isGFX940() && !Mnemo.startswith("s_")) {
+  if (isGFX940() && !Mnemo.starts_with("s_")) {
     return StringSwitch<unsigned>(Id)
         .Case("nt", AMDGPU::CPol::NT)
         .Case("sc0", AMDGPU::CPol::SC0)
@@ -6281,13 +6290,13 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
   else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
            Value == "TH_LOAD_NT_WB") {
     return Error(StringLoc, "invalid th value");
-  } else if (Value.startswith("TH_ATOMIC_")) {
+  } else if (Value.starts_with("TH_ATOMIC_")) {
     Value = Value.drop_front(10);
     TH = AMDGPU::CPol::TH_TYPE_ATOMIC;
-  } else if (Value.startswith("TH_LOAD_")) {
+  } else if (Value.starts_with("TH_LOAD_")) {
     Value = Value.drop_front(8);
     TH = AMDGPU::CPol::TH_TYPE_LOAD;
-  } else if (Value.startswith("TH_STORE_")) {
+  } else if (Value.starts_with("TH_STORE_")) {
     Value = Value.drop_front(9);
     TH = AMDGPU::CPol::TH_TYPE_STORE;
   } else {
@@ -6732,7 +6741,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
 
   bool Failed = true;
-  bool Sat = CntName.endswith("_sat");
+  bool Sat = CntName.ends_with("_sat");
 
   if (CntName == "vmcnt" || CntName == "vmcnt_sat") {
     Failed = encodeCnt(ISA, IntVal, CntVal, Sat, encodeVmcnt, decodeVmcnt);
@@ -7205,7 +7214,7 @@ ParseStatus AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
   if (!parseId(Str))
     return ParseStatus::NoMatch;
 
-  if (!Str.startswith("attr"))
+  if (!Str.starts_with("attr"))
     return Error(S, "invalid interpolation attribute");
 
   StringRef Chan = Str.take_back(2);
@@ -7296,7 +7305,7 @@ bool
 AMDGPUAsmParser::trySkipId(const StringRef Pref, const StringRef Id) {
   if (isToken(AsmToken::Identifier)) {
     StringRef Tok = getTokenStr();
-    if (Tok.startswith(Pref) && Tok.drop_front(Pref.size()) == Id) {
+    if (Tok.starts_with(Pref) && Tok.drop_front(Pref.size()) == Id) {
       lex();
       return true;
     }
@@ -8445,7 +8454,7 @@ bool AMDGPUAsmParser::parseDimId(unsigned &Encoding) {
   Token += Suffix;
 
   StringRef DimId = Token;
-  if (DimId.startswith("SQ_RSRC_IMG_"))
+  if (DimId.starts_with("SQ_RSRC_IMG_"))
     DimId = DimId.drop_front(12);
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByAsmSuffix(DimId);

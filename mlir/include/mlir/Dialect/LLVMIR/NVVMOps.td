@@ -471,6 +471,22 @@ def NVVM_SetMaxRegisterOp : NVVM_PTXBuilder_Op<"setmaxregister"> {
   let hasVerifier = 1;
 }
 
+def NVVM_FenceMbarrierInitOp : NVVM_PTXBuilder_Op<"fence.mbarrier.init"> {
+  let arguments = (ins );
+    let description = [{
+    Fence operation that applies on the prior nvvm.mbarrier.init
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+  
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{        
+    std::string $cppClass::getPtx() {
+      return std::string("fence.mbarrier_init.release.cluster;");
+    }
+  }];
+}
+
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
 def ShflKindUp   : I32EnumAttrCase<"up", 1>;
 def ShflKindDown : I32EnumAttrCase<"down", 2>;

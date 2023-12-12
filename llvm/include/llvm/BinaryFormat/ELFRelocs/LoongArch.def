@@ -109,12 +109,20 @@ ELF_RELOC(R_LARCH_RELAX,            100)
 //
 // Spec addition: https://github.com/loongson/la-abi-specs/pull/1
 // Binutils commit 57a930e3bfe4b2c7fd6463ed39311e1938513138
-ELF_RELOC(R_LARCH_DELETE,      101)
+// Note that the 101 and 104 relocation numbers are defined as R_LARCH_DELETE
+// and R_LARCH_CFA respectively in psABI 2.10. But they are marked as reserved
+// in psABI v2.20 because they were proved not necessary to be exposed outside
+// of the linker.
 ELF_RELOC(R_LARCH_ALIGN,       102)
 ELF_RELOC(R_LARCH_PCREL20_S2,  103)
-ELF_RELOC(R_LARCH_CFA,         104)
 ELF_RELOC(R_LARCH_ADD6,        105)
 ELF_RELOC(R_LARCH_SUB6,        106)
 ELF_RELOC(R_LARCH_ADD_ULEB128, 107)
 ELF_RELOC(R_LARCH_SUB_ULEB128, 108)
 ELF_RELOC(R_LARCH_64_PCREL,    109)
+
+// Relocs added in ELF for the LoongArch™ Architecture v20231102, part of the
+// v2.20 LoongArch ABI specs.
+//
+// Spec addition: https://github.com/loongson/la-abi-specs/pull/4
+ELF_RELOC(R_LARCH_CALL36, 110)

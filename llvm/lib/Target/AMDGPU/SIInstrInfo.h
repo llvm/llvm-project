@@ -134,9 +134,6 @@ private:
   void splitScalar64BitUnaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                unsigned Opcode, bool Swap = false) const;
 
-  void splitScalar64BitAddSub(SIInstrWorklist &Worklist, MachineInstr &Inst,
-                              MachineDominatorTree *MDT = nullptr) const;
-
   void splitScalar64BitBinaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                 unsigned Opcode,
                                 MachineDominatorTree *MDT = nullptr) const;
@@ -234,7 +231,9 @@ public:
       const TargetRegisterInfo *TRI) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
+                           int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
 

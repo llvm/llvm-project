@@ -162,29 +162,29 @@ class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)>
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __alloc_func(_Target&& __f)
-        : __f_(piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__f)),
-               _VSTD::forward_as_tuple())
+        : __f_(piecewise_construct, std::forward_as_tuple(std::move(__f)),
+               std::forward_as_tuple())
     {
     }
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __alloc_func(const _Target& __f, const _Alloc& __a)
-        : __f_(piecewise_construct, _VSTD::forward_as_tuple(__f),
-               _VSTD::forward_as_tuple(__a))
+        : __f_(piecewise_construct, std::forward_as_tuple(__f),
+               std::forward_as_tuple(__a))
     {
     }
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __alloc_func(const _Target& __f, _Alloc&& __a)
-        : __f_(piecewise_construct, _VSTD::forward_as_tuple(__f),
-               _VSTD::forward_as_tuple(_VSTD::move(__a)))
+        : __f_(piecewise_construct, std::forward_as_tuple(__f),
+               std::forward_as_tuple(std::move(__a)))
     {
     }
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __alloc_func(_Target&& __f, _Alloc&& __a)
-        : __f_(piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__f)),
-               _VSTD::forward_as_tuple(_VSTD::move(__a)))
+        : __f_(piecewise_construct, std::forward_as_tuple(std::move(__f)),
+               std::forward_as_tuple(std::move(__a)))
     {
     }
 
@@ -193,7 +193,7 @@ class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)>
     {
         typedef __invoke_void_return_wrapper<_Rp> _Invoker;
         return _Invoker::__call(__f_.first(),
-                                _VSTD::forward<_ArgTypes>(__arg)...);
+                                std::forward<_ArgTypes>(__arg)...);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -231,7 +231,7 @@ public:
   const _Target& __target() const { return __f_; }
 
   _LIBCPP_HIDE_FROM_ABI
-  explicit __default_alloc_func(_Target&& __f) : __f_(_VSTD::move(__f)) {}
+  explicit __default_alloc_func(_Target&& __f) : __f_(std::move(__f)) {}
 
   _LIBCPP_HIDE_FROM_ABI
   explicit __default_alloc_func(const _Target& __f) : __f_(__f) {}
@@ -239,7 +239,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   _Rp operator()(_ArgTypes&&... __arg) {
     typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(__f_, _VSTD::forward<_ArgTypes>(__arg)...);
+    return _Invoker::__call(__f_, std::forward<_ArgTypes>(__arg)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI
@@ -296,7 +296,7 @@ class __func<_Fp, _Alloc, _Rp(_ArgTypes...)>
 public:
     _LIBCPP_HIDE_FROM_ABI
     explicit __func(_Fp&& __f)
-        : __f_(_VSTD::move(__f)) {}
+        : __f_(std::move(__f)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __func(const _Fp& __f, const _Alloc& __a)
@@ -304,11 +304,11 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __func(const _Fp& __f, _Alloc&& __a)
-        : __f_(__f, _VSTD::move(__a)) {}
+        : __f_(__f, std::move(__a)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __func(_Fp&& __f, _Alloc&& __a)
-        : __f_(_VSTD::move(__f), _VSTD::move(__a)) {}
+        : __f_(std::move(__f), std::move(__a)) {}
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __base<_Rp(_ArgTypes...)>* __clone() const;
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __clone(__base<_Rp(_ArgTypes...)>*) const;
@@ -363,7 +363,7 @@ template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
 _Rp
 __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::operator()(_ArgTypes&& ... __arg)
 {
-    return __f_(_VSTD::forward<_ArgTypes>(__arg)...);
+    return __f_(std::forward<_ArgTypes>(__arg)...);
 }
 
 #ifndef _LIBCPP_HAS_NO_RTTI
@@ -373,7 +373,7 @@ const void*
 __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::target(const type_info& __ti) const _NOEXCEPT
 {
     if (__ti == typeid(_Fp))
-        return _VSTD::addressof(__f_.__target());
+        return std::addressof(__f_.__target());
     return nullptr;
 }
 
@@ -424,13 +424,13 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
                 is_nothrow_copy_constructible<_FunAlloc>::value)
             {
                 __f_ =
-                    ::new ((void*)&__buf_) _Fun(_VSTD::move(__f), _Alloc(__af));
+                    ::new ((void*)&__buf_) _Fun(std::move(__f), _Alloc(__af));
             }
             else
             {
                 typedef __allocator_destructor<_FunAlloc> _Dp;
                 unique_ptr<__func, _Dp> __hold(__af.allocate(1), _Dp(__af, 1));
-                ::new ((void*)__hold.get()) _Fun(_VSTD::move(__f), _Alloc(__a));
+                ::new ((void*)__hold.get()) _Fun(std::move(__f), _Alloc(__a));
                 __f_ = __hold.release();
             }
         }
@@ -438,7 +438,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
 
     template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __value_func>::value, int> = 0>
     _LIBCPP_HIDE_FROM_ABI explicit __value_func(_Fp&& __f)
-        : __value_func(_VSTD::forward<_Fp>(__f), allocator<_Fp>()) {}
+        : __value_func(std::forward<_Fp>(__f), allocator<_Fp>()) {}
 
     _LIBCPP_HIDE_FROM_ABI
     __value_func(const __value_func& __f)
@@ -516,7 +516,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
     {
         if (__f_ == nullptr)
             __throw_bad_function_call();
-        return (*__f_)(_VSTD::forward<_ArgTypes>(__args)...);
+        return (*__f_)(std::forward<_ArgTypes>(__args)...);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -556,7 +556,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
             __f_ = __as_base(&__buf_);
         }
         else
-            _VSTD::swap(__f_, __f.__f_);
+            std::swap(__f_, __f.__f_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -722,7 +722,7 @@ struct __policy_invoker<_Rp(_ArgTypes...)>
         _Fun* __f = reinterpret_cast<_Fun*>(__use_small_storage<_Fun>::value
                                                 ? &__buf->__small
                                                 : __buf->__large);
-        return (*__f)(_VSTD::forward<_ArgTypes>(__args)...);
+        return (*__f)(std::forward<_ArgTypes>(__args)...);
     }
 };
 
@@ -767,14 +767,14 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
             if (__use_small_storage<_Fun>())
             {
                 ::new ((void*)&__buf_.__small)
-                    _Fun(_VSTD::move(__f), _Alloc(__af));
+                    _Fun(std::move(__f), _Alloc(__af));
             }
             else
             {
                 typedef __allocator_destructor<_FunAlloc> _Dp;
                 unique_ptr<_Fun, _Dp> __hold(__af.allocate(1), _Dp(__af, 1));
                 ::new ((void*)__hold.get())
-                    _Fun(_VSTD::move(__f), _Alloc(__af));
+                    _Fun(std::move(__f), _Alloc(__af));
                 __buf_.__large = __hold.release();
             }
         }
@@ -789,11 +789,11 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
         __invoker_ = __invoker::template __create<_Fun>();
         __policy_ = __policy::__create<_Fun>();
         if (__use_small_storage<_Fun>()) {
-          ::new ((void*)&__buf_.__small) _Fun(_VSTD::move(__f));
+          ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
         } else {
           __builtin_new_allocator::__holder_t __hold =
               __builtin_new_allocator::__allocate_type<_Fun>(1);
-          __buf_.__large = ::new ((void*)__hold.get()) _Fun(_VSTD::move(__f));
+          __buf_.__large = ::new ((void*)__hold.get()) _Fun(std::move(__f));
           (void)__hold.release();
         }
       }
@@ -853,16 +853,16 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
     _LIBCPP_HIDE_FROM_ABI
     _Rp operator()(_ArgTypes&&... __args) const
     {
-        return __invoker_.__call_(_VSTD::addressof(__buf_),
-                                  _VSTD::forward<_ArgTypes>(__args)...);
+        return __invoker_.__call_(std::addressof(__buf_),
+                                  std::forward<_ArgTypes>(__args)...);
     }
 
     _LIBCPP_HIDE_FROM_ABI
     void swap(__policy_func& __f)
     {
-        _VSTD::swap(__invoker_, __f.__invoker_);
-        _VSTD::swap(__policy_, __f.__policy_);
-        _VSTD::swap(__buf_, __f.__buf_);
+        std::swap(__invoker_, __f.__invoker_);
+        std::swap(__policy_, __f.__policy_);
+        std::swap(__buf_, __f.__buf_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -952,7 +952,7 @@ public:
     }
 
     virtual _Rp operator()(_ArgTypes&& ... __arg) {
-        return _VSTD::__invoke(__f_, _VSTD::forward<_ArgTypes>(__arg)...);
+        return std::__invoke(__f_, std::forward<_ArgTypes>(__arg)...);
     }
 
 #ifndef _LIBCPP_HAS_NO_RTTI
@@ -1048,7 +1048,7 @@ public:
     template<class _Fp, class _Alloc>
       _LIBCPP_HIDE_FROM_ABI
       void assign(_Fp&& __f, const _Alloc& __a)
-        {function(allocator_arg, __a, _VSTD::forward<_Fp>(__f)).swap(*this);}
+        {function(allocator_arg, __a, std::forward<_Fp>(__f)).swap(*this);}
 #endif
 
     // function capacity:
@@ -1098,26 +1098,26 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
 
 template <class _Rp, class... _ArgTypes>
 function<_Rp(_ArgTypes...)>::function(function&& __f) _NOEXCEPT
-    : __f_(_VSTD::move(__f.__f_)) {}
+    : __f_(std::move(__f.__f_)) {}
 
 #if _LIBCPP_STD_VER <= 14
 template<class _Rp, class ..._ArgTypes>
 template <class _Alloc>
 function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
                                       function&& __f)
-    : __f_(_VSTD::move(__f.__f_)) {}
+    : __f_(std::move(__f.__f_)) {}
 #endif
 
 template <class _Rp, class... _ArgTypes>
 template <class _Fp, class>
-function<_Rp(_ArgTypes...)>::function(_Fp __f) : __f_(_VSTD::move(__f)) {}
+function<_Rp(_ArgTypes...)>::function(_Fp __f) : __f_(std::move(__f)) {}
 
 #if _LIBCPP_STD_VER <= 14
 template <class _Rp, class... _ArgTypes>
 template <class _Fp, class _Alloc, class>
 function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a,
                                       _Fp __f)
-    : __f_(_VSTD::move(__f), __a) {}
+    : __f_(std::move(__f), __a) {}
 #endif
 
 template<class _Rp, class ..._ArgTypes>
@@ -1132,7 +1132,7 @@ template<class _Rp, class ..._ArgTypes>
 function<_Rp(_ArgTypes...)>&
 function<_Rp(_ArgTypes...)>::operator=(function&& __f) _NOEXCEPT
 {
-    __f_ = _VSTD::move(__f.__f_);
+    __f_ = std::move(__f.__f_);
     return *this;
 }
 
@@ -1149,7 +1149,7 @@ template <class _Fp, class>
 function<_Rp(_ArgTypes...)>&
 function<_Rp(_ArgTypes...)>::operator=(_Fp&& __f)
 {
-    function(_VSTD::forward<_Fp>(__f)).swap(*this);
+    function(std::forward<_Fp>(__f)).swap(*this);
     return *this;
 }
 
@@ -1167,7 +1167,7 @@ template<class _Rp, class ..._ArgTypes>
 _Rp
 function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __arg) const
 {
-    return __f_(_VSTD::forward<_ArgTypes>(__arg)...);
+    return __f_(std::forward<_ArgTypes>(__arg)...);
 }
 
 #ifndef _LIBCPP_HAS_NO_RTTI

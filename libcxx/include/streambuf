@@ -351,13 +351,13 @@ template <class _CharT, class _Traits>
 void
 basic_streambuf<_CharT, _Traits>::swap(basic_streambuf& __sb)
 {
-    _VSTD::swap(__loc_, __sb.__loc_);
-    _VSTD::swap(__binp_, __sb.__binp_);
-    _VSTD::swap(__ninp_, __sb.__ninp_);
-    _VSTD::swap(__einp_, __sb.__einp_);
-    _VSTD::swap(__bout_, __sb.__bout_);
-    _VSTD::swap(__nout_, __sb.__nout_);
-    _VSTD::swap(__eout_, __sb.__eout_);
+    std::swap(__loc_, __sb.__loc_);
+    std::swap(__binp_, __sb.__binp_);
+    std::swap(__ninp_, __sb.__ninp_);
+    std::swap(__einp_, __sb.__einp_);
+    std::swap(__bout_, __sb.__bout_);
+    std::swap(__nout_, __sb.__nout_);
+    std::swap(__eout_, __sb.__eout_);
 }
 
 template <class _CharT, class _Traits>
@@ -413,8 +413,8 @@ basic_streambuf<_CharT, _Traits>::xsgetn(char_type* __s, streamsize __n)
     {
         if (__ninp_ < __einp_)
         {
-            const streamsize __len = _VSTD::min(static_cast<streamsize>(INT_MAX),
-                                _VSTD::min(__einp_ - __ninp_, __n - __i));
+            const streamsize __len = std::min(static_cast<streamsize>(INT_MAX),
+                                std::min(__einp_ - __ninp_, __n - __i));
             traits_type::copy(__s, __ninp_, __len);
             __s +=  __len;
             __i +=  __len;
@@ -472,7 +472,7 @@ basic_streambuf<_CharT, _Traits>::xsputn(const char_type* __s, streamsize __n)
         }
         else
         {
-            streamsize __chunk_size = _VSTD::min(__eout_ - __nout_, __n - __i);
+            streamsize __chunk_size = std::min(__eout_ - __nout_, __n - __i);
             traits_type::copy(__nout_, __s, __chunk_size);
             __nout_ += __chunk_size;
             __s     += __chunk_size;

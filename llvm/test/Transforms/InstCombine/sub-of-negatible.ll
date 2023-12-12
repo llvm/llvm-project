@@ -889,7 +889,7 @@ define i16 @negation_of_zeroext_of_nonnegative(i8 %x) {
 ; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i8 [[T0]], -1
 ; CHECK-NEXT:    br i1 [[T1]], label [[NONNEG_BB:%.*]], label [[NEG_BB:%.*]]
 ; CHECK:       nonneg_bb:
-; CHECK-NEXT:    [[T2:%.*]] = zext i8 [[T0]] to i16
+; CHECK-NEXT:    [[T2:%.*]] = zext nneg i8 [[T0]] to i16
 ; CHECK-NEXT:    [[T3:%.*]] = sub nsw i16 0, [[T2]]
 ; CHECK-NEXT:    ret i16 [[T3]]
 ; CHECK:       neg_bb:
@@ -913,7 +913,7 @@ define i16 @negation_of_zeroext_of_positive(i8 %x) {
 ; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i8 [[T0]], 0
 ; CHECK-NEXT:    br i1 [[T1]], label [[NONNEG_BB:%.*]], label [[NEG_BB:%.*]]
 ; CHECK:       nonneg_bb:
-; CHECK-NEXT:    [[T2:%.*]] = zext i8 [[T0]] to i16
+; CHECK-NEXT:    [[T2:%.*]] = zext nneg i8 [[T0]] to i16
 ; CHECK-NEXT:    [[T3:%.*]] = sub nsw i16 0, [[T2]]
 ; CHECK-NEXT:    ret i16 [[T3]]
 ; CHECK:       neg_bb:
@@ -985,7 +985,7 @@ define i16 @negation_of_signext_of_nonnegative__wrong_cast(i8 %x) {
 ; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i8 [[T0]], -1
 ; CHECK-NEXT:    br i1 [[T1]], label [[NONNEG_BB:%.*]], label [[NEG_BB:%.*]]
 ; CHECK:       nonneg_bb:
-; CHECK-NEXT:    [[T2:%.*]] = sext i8 [[T0]] to i16
+; CHECK-NEXT:    [[T2:%.*]] = zext nneg i8 [[T0]] to i16
 ; CHECK-NEXT:    [[T3:%.*]] = sub nsw i16 0, [[T2]]
 ; CHECK-NEXT:    ret i16 [[T3]]
 ; CHECK:       neg_bb:
@@ -1064,6 +1064,17 @@ define i8 @negation_of_increment_via_or_common_bits_set(i8 %x, i8 %y) {
 ;
   %t0 = shl i8 %y, 1
   %t1 = or i8 %t0, 3
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+
+define i8 @negation_of_increment_via_or_disjoint(i8 %x, i8 %y) {
+; CHECK-LABEL: @negation_of_increment_via_or_disjoint(
+; CHECK-NEXT:    [[T1_NEG:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t1 = or disjoint i8 %y, 1
   %t2 = sub i8 %x, %t1
   ret i8 %t2
 }

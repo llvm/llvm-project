@@ -253,37 +253,37 @@ operator==(
     if (__x.__c_ != __y.__c_)
         return false;
     if (__x.__i_ == __y.__i_)
-        return _VSTD::equal(__x.__x_, __x.__x_ + _Rp, __y.__x_);
+        return std::equal(__x.__x_, __x.__x_ + _Rp, __y.__x_);
     if (__x.__i_ == 0 || __y.__i_ == 0)
     {
-        size_t __j = _VSTD::min(_Rp - __x.__i_, _Rp - __y.__i_);
-        if (!_VSTD::equal(__x.__x_ + __x.__i_, __x.__x_ + __x.__i_ + __j,
+        size_t __j = std::min(_Rp - __x.__i_, _Rp - __y.__i_);
+        if (!std::equal(__x.__x_ + __x.__i_, __x.__x_ + __x.__i_ + __j,
                          __y.__x_ + __y.__i_))
             return false;
         if (__x.__i_ == 0)
-            return _VSTD::equal(__x.__x_ + __j, __x.__x_ + _Rp, __y.__x_);
-        return _VSTD::equal(__x.__x_, __x.__x_ + (_Rp - __j), __y.__x_ + __j);
+            return std::equal(__x.__x_ + __j, __x.__x_ + _Rp, __y.__x_);
+        return std::equal(__x.__x_, __x.__x_ + (_Rp - __j), __y.__x_ + __j);
     }
     if (__x.__i_ < __y.__i_)
     {
         size_t __j = _Rp - __y.__i_;
-        if (!_VSTD::equal(__x.__x_ + __x.__i_, __x.__x_ + (__x.__i_ + __j),
+        if (!std::equal(__x.__x_ + __x.__i_, __x.__x_ + (__x.__i_ + __j),
                          __y.__x_ + __y.__i_))
             return false;
-        if (!_VSTD::equal(__x.__x_ + (__x.__i_ + __j), __x.__x_ + _Rp,
+        if (!std::equal(__x.__x_ + (__x.__i_ + __j), __x.__x_ + _Rp,
                          __y.__x_))
             return false;
-        return _VSTD::equal(__x.__x_, __x.__x_ + __x.__i_,
+        return std::equal(__x.__x_, __x.__x_ + __x.__i_,
                            __y.__x_ + (_Rp - (__x.__i_ + __j)));
     }
     size_t __j = _Rp - __x.__i_;
-    if (!_VSTD::equal(__y.__x_ + __y.__i_, __y.__x_ + (__y.__i_ + __j),
+    if (!std::equal(__y.__x_ + __y.__i_, __y.__x_ + (__y.__i_ + __j),
                      __x.__x_ + __x.__i_))
         return false;
-    if (!_VSTD::equal(__y.__x_ + (__y.__i_ + __j), __y.__x_ + _Rp,
+    if (!std::equal(__y.__x_ + (__y.__i_ + __j), __y.__x_ + _Rp,
                      __x.__x_))
         return false;
-    return _VSTD::equal(__y.__x_, __y.__x_ + __y.__i_,
+    return std::equal(__y.__x_, __y.__x_ + __y.__i_,
                        __x.__x_ + (_Rp - (__y.__i_ + __j)));
 }
 
