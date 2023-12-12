@@ -33,7 +33,7 @@ COMPILER_RT_VISIBILITY void __llvm_profile_enable_continuous_mode(void) {
   ContinuouslySyncProfile = 1;
 }
 
-void __llvm_profile_disable_continuous_mode(void) {
+COMPILER_RT_VISIBILITY void __llvm_profile_disable_continuous_mode(void) {
   ContinuouslySyncProfile = 0;
 }
 

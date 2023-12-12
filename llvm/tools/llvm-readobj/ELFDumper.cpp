@@ -2581,7 +2581,7 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
   llvm::sort(Libs);
 
   for (StringRef L : Libs)
-    W.startLine() << L << "\n";
+    W.printString(L);
 }
 
 template <class ELFT>

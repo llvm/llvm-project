@@ -673,25 +673,35 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
     // All exhausted at current level.
     if (!isCurrentLoop)
       return;
+    // Generate code for a scalarized reduction or invariant. Note that
+    // because custom reduction lhs may occur several times in the IR,
+    // we have a built-in safety for only initializing and wrapping-up
+    // the scalarized reduction once.
     OpOperand *lhs = op.getDpsInitOperand(0);
     if (lhs == &t) {
       // Start or end a scalarized reduction.
       if (isStart) {
-        Value load = env.isCustomReduc() ? env.getCustomRedId()
-                                         : genTensorLoad(env, builder, exp);
-        env.startReduc(exp, load);
+        if (env.isCustomReduc()) {
+          if (!env.isReduc())
+            env.startReduc(exp, env.getCustomRedId());
+        } else {
+          env.startReduc(exp, genTensorLoad(env, builder, exp));
+        }
         if (env.hasSparseOutput())
           env.setValidLexInsert(constantI1(builder, env.op().getLoc(), false));
       } else {
-        genTensorStore(env, builder, exp, env.endReduc());
-        env.clearValidLexInsert();
+        if (!env.isCustomReduc() || env.isReduc())
+          genTensorStore(env, builder, exp, env.endReduc());
+        if (env.hasSparseOutput())
+          env.clearValidLexInsert();
       }
     } else {
       // Start or end loop invariant hoisting of a tensor load.
-      if (isStart)
+      if (isStart) {
         env.merger().setExprValue(exp, genTensorLoad(env, builder, exp));
-      else
+      } else {
         env.merger().clearExprValue(exp);
+      }
     }
   } else if (env.exp(exp).kind != TensorExp::Kind::kInvariant &&
              env.exp(exp).kind != TensorExp::Kind::kLoopVar &&

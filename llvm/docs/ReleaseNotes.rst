@@ -94,6 +94,13 @@ Changes to the AArch64 Backend
 
 * Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
 
+* Neoverse-N2 was incorrectly marked as an Armv8.5a core. This has been
+  changed to an Armv9.0a core. However, crypto options are not enabled
+  by default for Armv9 cores, so `-mcpu=neoverse-n2+crypto` is now required
+  to enable crypto for this core. As far as the compiler is concerned,
+  Armv9.0a has the same features enabled as Armv8.5a, with the exception
+  of crypto.
+
 Changes to the AMDGPU Backend
 -----------------------------
 

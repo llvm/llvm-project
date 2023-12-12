@@ -710,8 +710,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
 // TODO: We should get this from TargetInfo. However, that depends on
 // too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
-getVScaleRange(CompilerInstance &ci,
-               const Fortran::frontend::LangOptions &langOpts) {
+getVScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
   if (langOpts.VScaleMin || langOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
@@ -746,13 +746,9 @@ void CodeGenAction::generateLLVMIR() {
   const auto targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
-  // Only get the vscale range if AArch64.
-  if (triple.isAArch64()) {
-    auto langOpts = ci.getInvocation().getLangOpts();
-    if (auto vsr = getVScaleRange(ci, langOpts)) {
-      config.VScaleMin = vsr->first;
-      config.VScaleMax = vsr->second;
-    }
+  if (auto vsr = getVScaleRange(ci)) {
+    config.VScaleMin = vsr->first;
+    config.VScaleMax = vsr->second;
   }
 
   // Create the pass pipeline
