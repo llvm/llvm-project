@@ -801,12 +801,15 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 }
 
-static ConstantRange getConstantRangeOrFull(const ValueLatticeElement &Val,
-                                            Type *Ty) {
+static ConstantRange toConstantRange(const ValueLatticeElement &Val,
+                                     Type *Ty, bool UndefAllowed = false) {
   assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
-  if (Val.isConstantRange(/*UndefAllowed*/ false))
+  if (Val.isConstantRange(UndefAllowed))
     return Val.getConstantRange();
-  return ConstantRange::getFull(Ty->getScalarSizeInBits());
+  unsigned BW = Ty->getScalarSizeInBits();
+  if (Val.isUnknown())
+    return ConstantRange::getEmpty(BW);
+  return ConstantRange::getFull(BW);
 }
 
 std::optional<ValueLatticeElement>
@@ -825,10 +828,8 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
   ValueLatticeElement &FalseVal = *OptFalseVal;
 
   if (TrueVal.isConstantRange() || FalseVal.isConstantRange()) {
-    const ConstantRange &TrueCR =
-        getConstantRangeOrFull(TrueVal, SI->getType());
-    const ConstantRange &FalseCR =
-        getConstantRangeOrFull(FalseVal, SI->getType());
+    const ConstantRange &TrueCR = toConstantRange(TrueVal, SI->getType());
+    const ConstantRange &FalseCR = toConstantRange(FalseVal, SI->getType());
     Value *LHS = nullptr;
     Value *RHS = nullptr;
     SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
@@ -899,7 +900,7 @@ LazyValueInfoImpl::getRangeFor(Value *V, Instruction *CxtI, BasicBlock *BB) {
   std::optional<ValueLatticeElement> OptVal = getBlockValue(V, BB, CxtI);
   if (!OptVal)
     return std::nullopt;
-  return getConstantRangeOrFull(*OptVal, V->getType());
+  return toConstantRange(*OptVal, V->getType());
 }
 
 std::optional<ValueLatticeElement>
@@ -1624,19 +1625,10 @@ Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
 ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
                                               bool UndefAllowed) {
   assert(V->getType()->isIntegerTy());
-  unsigned Width = V->getType()->getIntegerBitWidth();
   BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getOrCreateImpl(BB->getModule()).getValueInBlock(V, BB, CxtI);
-  if (Result.isUnknown())
-    return ConstantRange::getEmpty(Width);
-  if (Result.isConstantRange(UndefAllowed))
-    return Result.getConstantRange(UndefAllowed);
-  // We represent ConstantInt constants as constant ranges but other kinds
-  // of integer constants, i.e. ConstantExpr will be tagged as constants
-  assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
-         "ConstantInt value must be represented as constantrange");
-  return ConstantRange::getFull(Width);
+  return toConstantRange(Result, V->getType(), UndefAllowed);
 }
 
 ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
@@ -1709,20 +1701,11 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
                                                     BasicBlock *FromBB,
                                                     BasicBlock *ToBB,
                                                     Instruction *CxtI) {
-  unsigned Width = V->getType()->getIntegerBitWidth();
   Module *M = FromBB->getModule();
   ValueLatticeElement Result =
       getOrCreateImpl(M).getValueOnEdge(V, FromBB, ToBB, CxtI);
-
-  if (Result.isUnknown())
-    return ConstantRange::getEmpty(Width);
-  if (Result.isConstantRange())
-    return Result.getConstantRange();
-  // We represent ConstantInt constants as constant ranges but other kinds
-  // of integer constants, i.e. ConstantExpr will be tagged as constants
-  assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
-         "ConstantInt value must be represented as constantrange");
-  return ConstantRange::getFull(Width);
+  // TODO: Should undef be allowed here?
+  return toConstantRange(Result, V->getType(), /*UndefAllowed*/ true);
 }
 
 static LazyValueInfo::Tristate
