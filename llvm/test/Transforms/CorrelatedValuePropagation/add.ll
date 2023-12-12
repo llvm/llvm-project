@@ -527,6 +527,42 @@ exit:
   ret i32 %acc.curr
 }
 
+; FIXME: This is a miscompile.
+define i32 @test_undef_range(i32 %x) {
+; CHECK-LABEL: define i32 @test_undef_range(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X]], label [[JOIN:%.*]] [
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[PHI]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  switch i32 %x, label %join [
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case1:
+  br label %join
+
+case2:
+  br label %join
+
+join:
+  %phi = phi i32 [ 1, %case1 ], [ 2, %case2 ], [ undef, %entry ]
+  %add = add i32 %phi, 1
+  ret i32 %add
+}
+
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 2147483647}
 ;.
