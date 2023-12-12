@@ -277,7 +277,7 @@ bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die) {
   if (!Die.hasChildren())
     return false;
   if (const char *Name = Die.getName(DINameKind::ShortName))
-    return StringRef(Name).startswith(getInstrProfCountersVarPrefix());
+    return StringRef(Name).starts_with(getInstrProfCountersVarPrefix());
   return false;
 }
 

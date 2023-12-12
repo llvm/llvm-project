@@ -900,7 +900,7 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
       consumeError(NameOrErr.takeError());
       return '?';
     }
-    if ((*NameOrErr).startswith(".debug"))
+    if ((*NameOrErr).starts_with(".debug"))
       return 'N';
     if (!(Flags & ELF::SHF_WRITE))
       return 'n';
@@ -939,7 +939,7 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
     const coff_section *Section = Obj.getCOFFSection(*SecI);
     Characteristics = Section->Characteristics;
     if (Expected<StringRef> NameOrErr = Obj.getSectionName(Section))
-      if (NameOrErr->startswith(".idata"))
+      if (NameOrErr->starts_with(".idata"))
         return 'i';
   }
 
@@ -1738,13 +1738,13 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
     StringRef SymName = cantFail(Sym.getName());
     if (SymName.empty())
       continue;
-    if (SymName.startswith("__sinit") || SymName.startswith("__sterm") ||
+    if (SymName.starts_with("__sinit") || SymName.starts_with("__sterm") ||
         SymName.front() == '.' || SymName.front() == '(')
       continue;
 
     // Check the SymName regex matching with "^__[0-9]+__".
-    if (SymName.size() > 4 && SymName.startswith("__") &&
-        SymName.endswith("__")) {
+    if (SymName.size() > 4 && SymName.starts_with("__") &&
+        SymName.ends_with("__")) {
       if (std::all_of(SymName.begin() + 2, SymName.end() - 2, isDigit))
         continue;
     }
@@ -1752,9 +1752,9 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
     if (SymName == "__rsrc" && NoRsrc)
       continue;
 
-    if (SymName.startswith("__tf1"))
+    if (SymName.starts_with("__tf1"))
       SymName = SymName.substr(6);
-    else if (SymName.startswith("__tf9"))
+    else if (SymName.starts_with("__tf9"))
       SymName = SymName.substr(14);
 
     NMSymbol S = {};
