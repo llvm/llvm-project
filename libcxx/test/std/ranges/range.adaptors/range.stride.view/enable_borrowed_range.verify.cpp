@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// expected-no-diagnostics
 
 // template<class T>
 // inline constexpr bool enable_borrowed_range<stride_view<T>> = false;
@@ -22,7 +23,5 @@ template <>
 inline constexpr bool
     std::ranges::enable_borrowed_range<std::ranges::stride_view<std::views::all_t<std::vector<int>>>> = true;
 
-static_assert(!std::ranges::enable_borrowed_range<
-              std::ranges::stride_view<std::ranges::empty_view<int>>>); // expected-no-diagnostics
-static_assert(std::ranges::enable_borrowed_range<
-              std::ranges::stride_view<std::views::all_t<std::vector<int>>>>); // expected-no-diagnostics
+static_assert(!std::ranges::enable_borrowed_range< std::ranges::stride_view<std::ranges::empty_view<int>>>);
+static_assert(std::ranges::enable_borrowed_range< std::ranges::stride_view<std::views::all_t<std::vector<int>>>>);
