@@ -7040,6 +7040,31 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
                                   IsAfterLegalize);
 }
 
+static Constant *getConstantVector(MVT VT, ArrayRef<APInt> Bits,
+                                   const APInt &Undefs, LLVMContext &C) {
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  Type *Ty = EVT(VT.getScalarType()).getTypeForEVT(C);
+
+  auto getConstantScalar = [&](const APInt &Val) -> Constant * {
+    if (VT.isFloatingPoint()) {
+      if (ScalarSize == 16)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEhalf(), Val));
+      if (ScalarSize == 32)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEsingle(), Val));
+      assert(ScalarSize == 64 && "Unsupported floating point scalar size");
+      return ConstantFP::get(C, APFloat(APFloat::IEEEdouble(), Val));
+    }
+    return Constant::getIntegerValue(Ty, Val);
+  };
+
+  SmallVector<Constant *, 32> ConstantVec;
+  for (unsigned I = 0, E = Bits.size(); I != E; ++I)
+    ConstantVec.push_back(Undefs[I] ? UndefValue::get(Ty)
+                                    : getConstantScalar(Bits[I]));
+
+  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
+}
+
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
                                    unsigned SplatBitSize, LLVMContext &C) {
   unsigned ScalarSize = VT.getScalarSizeInBits();
@@ -54483,6 +54508,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   bool IsSplat = llvm::all_equal(Ops);
   unsigned NumOps = Ops.size();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
 
   // Repeated subvectors.
   if (IsSplat &&
@@ -54780,7 +54806,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             Subtarget.useAVX512Regs() &&
             Subtarget.getPreferVectorWidth() >= 512 &&
             (SrcVT.getScalarSizeInBits() > 16 || Subtarget.useBWIRegs())) {
-          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(Ctx);
           return DAG.getNode(ISD::TRUNCATE, DL, VT,
                              ConcatSubOperand(NewSrcVT, Ops, 0));
         }
@@ -54937,7 +54963,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           (EltSizeInBits >= 32 || Subtarget.hasBWI())) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         if (SelVT.getVectorElementType() == MVT::i1) {
-          SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+          SelVT = EVT::getVectorVT(Ctx, MVT::i1,
                                    NumOps * SelVT.getVectorNumElements());
           if (TLI.isTypeLegal(SelVT))
             return DAG.getNode(Op0.getOpcode(), DL, VT,
@@ -54952,7 +54978,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
-        SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+        SelVT = SelVT.getDoubleNumVectorElementsVT(Ctx);
         if (TLI.isTypeLegal(SelVT))
           return DAG.getNode(Op0.getOpcode(), DL, VT,
                              ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
@@ -54968,12 +54994,38 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(Op0))) {
     unsigned Fast;
     const X86TargetLowering *TLI = Subtarget.getTargetLowering();
-    if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+    if (TLI->allowsMemoryAccess(Ctx, DAG.getDataLayout(), VT,
                                 *FirstLd->getMemOperand(), &Fast) &&
         Fast) {
       if (SDValue Ld =
               EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))
         return Ld;
+    }
+  }
+
+  // Attempt to fold target constant loads.
+  if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
+    SmallVector<APInt> EltBits;
+    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
+    for (unsigned I = 0; I != NumOps; ++I) {
+      APInt OpUndefElts;
+      SmallVector<APInt> OpEltBits;
+      if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
+                                         OpEltBits, true, false))
+        break;
+      EltBits.append(OpEltBits);
+      UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
+    }
+    if (EltBits.size() == VT.getVectorNumElements()) {
+      Constant *C = getConstantVector(VT, EltBits, UndefElts, Ctx);
+      MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
+      SDValue CV = DAG.getConstantPool(C, PVT);
+      MachineFunction &MF = DAG.getMachineFunction();
+      MachinePointerInfo MPI = MachinePointerInfo::getConstantPool(MF);
+      SDValue Ld = DAG.getLoad(VT, DL, DAG.getEntryNode(), CV, MPI);
+      SDValue Sub = extractSubVector(Ld, 0, DAG, DL, Op0.getValueSizeInBits());
+      DAG.ReplaceAllUsesOfValueWith(Op0, Sub);
+      return Ld;
     }
   }
 
@@ -54997,23 +55049,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return BcastLd;
       }
     }
-  }
-
-  // Attempt to fold target constant loads.
-  if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
-    SmallVector<APInt> EltBits;
-    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
-    for (unsigned I = 0; I != NumOps; ++I) {
-      APInt OpUndefElts;
-      SmallVector<APInt> OpEltBits;
-      if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
-                                        OpEltBits, true, false))
-          break;
-      EltBits.append(OpEltBits);
-      UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
-    }
-    if (EltBits.size() == VT.getVectorNumElements())
-      return getConstVector(EltBits, UndefElts, VT, DAG, DL);
   }
 
   // If we're splatting a 128-bit subvector to 512-bits, use SHUF128 directly.

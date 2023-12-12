@@ -120,8 +120,8 @@ LIBC_INLINE T hypot(T x, T y) {
     return y;
   }
 
-  uint16_t x_exp = x_bits.get_unbiased_exponent();
-  uint16_t y_exp = y_bits.get_unbiased_exponent();
+  uint16_t x_exp = x_bits.get_biased_exponent();
+  uint16_t y_exp = y_bits.get_biased_exponent();
   uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
 
   if ((exp_diff >= MantissaWidth<T>::VALUE + 2) || (x == 0) || (y == 0)) {

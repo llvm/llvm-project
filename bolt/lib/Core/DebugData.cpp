@@ -889,8 +889,10 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
   // Handling re-use of str-offsets section.
   if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
     // Writing out the header for each section.
-    support::endian::write(*StrOffsetsStream, CurrentSectionSize + 4,
-                           llvm::endianness::little);
+    support::endian::write(
+        *StrOffsetsStream,
+        static_cast<uint32_t>(IndexToAddressMap.size() * 4 + 4),
+        llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
                            llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),

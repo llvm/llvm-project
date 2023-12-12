@@ -410,8 +410,8 @@ LIBC_INLINE bool is_integer(float x) {
 
 LIBC_INLINE bool larger_exponent(double a, double b) {
   using DoubleBits = typename fputil::FPBits<double>;
-  return DoubleBits(a).get_unbiased_exponent() >=
-         DoubleBits(b).get_unbiased_exponent();
+  return DoubleBits(a).get_biased_exponent() >=
+         DoubleBits(b).get_biased_exponent();
 }
 
 // Calculate 2^(y * log2(x)) in double-double precision.

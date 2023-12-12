@@ -233,8 +233,8 @@ private:
       return FPB(FPB::zero()); // |x|=|y| return 0.0
     }
 
-    int e_x = sx.get_unbiased_exponent();
-    int e_y = sy.get_unbiased_exponent();
+    int e_x = sx.get_biased_exponent();
+    int e_y = sy.get_biased_exponent();
 
     // Most common case where |y| is "very normal" and |x/y| < 2^EXPONENT_WIDTH
     if (LIBC_LIKELY(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&

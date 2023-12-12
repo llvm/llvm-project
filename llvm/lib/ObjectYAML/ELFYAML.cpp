@@ -1291,10 +1291,10 @@ StringRef ScalarTraits<ELFYAML::YAMLIntUInt>::input(StringRef Scalar, void *Ctx,
   StringRef ErrMsg = "invalid number";
   // We do not accept negative hex numbers because their meaning is ambiguous.
   // For example, would -0xfffffffff mean 1 or INT32_MIN?
-  if (Scalar.empty() || Scalar.startswith("-0x"))
+  if (Scalar.empty() || Scalar.starts_with("-0x"))
     return ErrMsg;
 
-  if (Scalar.startswith("-")) {
+  if (Scalar.starts_with("-")) {
     const int64_t MinVal = Is64 ? INT64_MIN : INT32_MIN;
     long long Int;
     if (getAsSignedInteger(Scalar, /*Radix=*/0, Int) || (Int < MinVal))
@@ -1559,7 +1559,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section.
     TypeStr = getStringValue(IO, "Type");
-    if (TypeStr.startswith("SHT_") || isInteger(TypeStr))
+    if (TypeStr.starts_with("SHT_") || isInteger(TypeStr))
       IO.mapRequired("Type", Type);
   }
 

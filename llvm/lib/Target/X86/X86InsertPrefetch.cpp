@@ -135,7 +135,7 @@ bool X86InsertPrefetch::findPrefetchInfo(const FunctionSamples *TopSamples,
       int64_t D = static_cast<int64_t>(S_V.second);
       unsigned IID = 0;
       for (const auto &HintType : HintTypes) {
-        if (Name.startswith(HintType.first)) {
+        if (Name.starts_with(HintType.first)) {
           Name = Name.drop_front(HintType.first.size());
           IID = HintType.second;
           break;

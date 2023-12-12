@@ -3005,6 +3005,74 @@ LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
  */
 
 /**
+ * @defgroup LLVMCCoreOperandBundle Operand Bundles
+ *
+ * Functions in this group operate on LLVMOperandBundleRef instances that
+ * correspond to llvm::OperandBundleDef instances.
+ *
+ * @see llvm::OperandBundleDef
+ *
+ * @{
+ */
+
+/**
+ * Create a new operand bundle.
+ *
+ * Every invocation should be paired with LLVMDisposeOperandBundle() or memory
+ * will be leaked.
+ *
+ * @param Tag Tag name of the operand bundle
+ * @param TagLen Length of Tag
+ * @param Args Memory address of an array of bundle operands
+ * @param NumArgs Length of Args
+ */
+LLVMOperandBundleRef LLVMCreateOperandBundle(const char *Tag, size_t TagLen,
+                                             LLVMValueRef *Args,
+                                             unsigned NumArgs);
+
+/**
+ * Destroy an operand bundle.
+ *
+ * This must be called for every created operand bundle or memory will be
+ * leaked.
+ */
+void LLVMDisposeOperandBundle(LLVMOperandBundleRef Bundle);
+
+/**
+ * Obtain the tag of an operand bundle as a string.
+ *
+ * @param Bundle Operand bundle to obtain tag of.
+ * @param Len Out parameter which holds the length of the returned string.
+ * @return The tag name of Bundle.
+ * @see OperandBundleDef::getTag()
+ */
+const char *LLVMGetOperandBundleTag(LLVMOperandBundleRef Bundle, size_t *Len);
+
+/**
+ * Obtain the number of operands for an operand bundle.
+ *
+ * @param Bundle Operand bundle to obtain operand count of.
+ * @return The number of operands.
+ * @see OperandBundleDef::input_size()
+ */
+unsigned LLVMGetNumOperandBundleArgs(LLVMOperandBundleRef Bundle);
+
+/**
+ * Obtain the operand for an operand bundle at the given index.
+ *
+ * @param Bundle Operand bundle to obtain operand of.
+ * @param Index An operand index, must be less than
+ * LLVMGetNumOperandBundleArgs().
+ * @return The operand.
+ */
+LLVMValueRef LLVMGetOperandBundleArgAtIndex(LLVMOperandBundleRef Bundle,
+                                            unsigned Index);
+
+/**
+ * @}
+ */
+
+/**
  * @defgroup LLVMCCoreValueBasicBlock Basic Block
  *
  * A basic block represents a single entry single exit section of code.
@@ -3452,6 +3520,24 @@ LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef C);
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr);
 
 /**
+ * Obtain the number of operand bundles attached to this instruction.
+ *
+ * This only works on llvm::CallInst and llvm::InvokeInst instructions.
+ *
+ * @see llvm::CallBase::getNumOperandBundles()
+ */
+unsigned LLVMGetNumOperandBundles(LLVMValueRef C);
+
+/**
+ * Obtain the operand bundle attached to this instruction at the given index.
+ * Use LLVMDisposeOperandBundle to free the operand bundle.
+ *
+ * This only works on llvm::CallInst and llvm::InvokeInst instructions.
+ */
+LLVMOperandBundleRef LLVMGetOperandBundleAtIndex(LLVMValueRef C,
+                                                 unsigned Index);
+
+/**
  * Obtain whether a call instruction is a tail call.
  *
  * This only works on llvm::CallInst instructions.
@@ -3815,6 +3901,10 @@ LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
                               const char *Name);
+LLVMValueRef LLVMBuildInvokeWithOperandBundles(
+    LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn, LLVMValueRef *Args,
+    unsigned NumArgs, LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
+    LLVMOperandBundleRef *Bundles, unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildUnreachable(LLVMBuilderRef);
 
 /* Exception Handling */
@@ -4121,6 +4211,11 @@ LLVMValueRef LLVMBuildPhi(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildCall2(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
                             LLVMValueRef *Args, unsigned NumArgs,
                             const char *Name);
+LLVMValueRef
+LLVMBuildCallWithOperandBundles(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
+                                LLVMValueRef *Args, unsigned NumArgs,
+                                LLVMOperandBundleRef *Bundles,
+                                unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildSelect(LLVMBuilderRef, LLVMValueRef If,
                              LLVMValueRef Then, LLVMValueRef Else,
                              const char *Name);
