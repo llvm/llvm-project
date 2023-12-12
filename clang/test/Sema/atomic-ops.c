@@ -18,8 +18,6 @@
 // RUN:   -mabi=quadword-atomics -target-cpu pwr8 -DPPC64_PWR8
 
 // Basic parsing/Sema tests for __c11_atomic_*
-
-#include "clang-c/Index.h"
 #include <stdatomic.h>
 
 struct S { char c[3]; };
@@ -131,7 +129,7 @@ _Static_assert(__atomic_always_lock_free(8, &i64), "");
 void f(_Atomic(int) *i, const _Atomic(int) *ci,
        _Atomic(int*) *p, _Atomic(float) *f, _Atomic(double) *d,
        _Atomic(long double) *ld,
-       int *I, const int *CI,char c[],
+       int *I, const int *CI,
        int **P, float *F, double *D, struct S *s1, struct S *s2) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
   __c11_atomic_init(ci, 5); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
@@ -193,8 +191,10 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   (int)__atomic_exchange(s1, s2, s2, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
   __atomic_exchange(I, I, I, memory_order_seq_cst);
   __atomic_exchange(CI, I, I, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}
-  __atomic_exchange(&c, I, I, memory_order_seq_cst); // expected-error {{incomplete type 'char[]' where a complete type is required}}
   __atomic_exchange(I, I, CI, memory_order_seq_cst); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
+
+  extern char xx[];
+  __atomic_exchange(&xx, I, I, memory_order_seq_cst); // expected-error {{incomplete type 'char[]' where a complete type is required}}
 
   __c11_atomic_fetch_add(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_add(p, 1, memory_order_seq_cst);

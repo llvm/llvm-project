@@ -7886,7 +7886,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       Op != AtomicExpr::AO__opencl_atomic_init)
     ++AdjustedNumArgs;
 
-  // Check if the arguments are CompleteType
+  // Verify if the arguments are of type CompleteType
   if (Op == AtomicExpr::AO__atomic_exchange) {
     for (auto Arg : Args) {
       auto ValType = Arg->getType();
