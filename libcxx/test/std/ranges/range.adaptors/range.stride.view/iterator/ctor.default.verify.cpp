@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// expected-no-diagnostics
 
 // __iterator() requires default_initializable<iterator_t<_Base>> = default;
 
@@ -31,9 +32,9 @@ inline constexpr bool std::ranges::enable_borrowed_range<ViewWithNonDefaultConst
 // constructible, then the stride view's iterator should not be default
 // constructible, either!
 static_assert(!std::is_default_constructible<
-              std::ranges::iterator_t<ViewWithNonDefaultConstructibleIterator>>()); // expected-no-diagnostics
+              std::ranges::iterator_t<ViewWithNonDefaultConstructibleIterator>>());
 // If the type of the iterator of the range being strided is default
 // constructible, then the stride view's iterator should be default
 // constructible, too!
 static_assert(std::is_default_constructible<std::ranges::iterator_t<
-                  std::ranges::stride_view<std::ranges::ref_view<const int[3]>>>>()); // expected-no-diagnostics
+                  std::ranges::stride_view<std::ranges::ref_view<const int[3]>>>>());
