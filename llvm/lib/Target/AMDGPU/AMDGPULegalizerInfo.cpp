@@ -1959,10 +1959,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_READ_REGISTER,
       G_WRITE_REGISTER,
 
-      G_SADDO, G_SSUBO,
+      G_SADDO, G_SSUBO}).lower();
 
-       // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM}).lower();
+  if (ST.hasIEEEMinMax()) {
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .legalFor(FPTypesPK16)
+        .clampMaxNumElements(0, S16, 2)
+        .scalarize(0);
+  } else {
+    // TODO: Implement
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .lower();
+  }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();
