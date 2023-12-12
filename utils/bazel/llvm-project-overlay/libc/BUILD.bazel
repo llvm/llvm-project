@@ -664,6 +664,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_properties_float",
+        ":__support_math_extras",
         ":__support_uint128",
     ],
 )
