@@ -587,7 +587,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     return CurrentIdx - StartIdx + 1;
   }
 
- case Matcher::CheckType:
+  case Matcher::CheckType:
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
       MVT::SimpleValueType VT = cast<CheckTypeMatcher>(N)->getType();
       switch (VT) {
@@ -600,24 +600,24 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
         return 2;
       }
     }
-    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
-       << ", " << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
+    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo() << ", "
+       << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
     return 3;
 
- case Matcher::CheckChildType: {
-   MVT::SimpleValueType VT = cast<CheckChildTypeMatcher>(N)->getType();
-   switch (VT) {
-   case MVT::i32:
-   case MVT::i64:
-     OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-        << "TypeI" << MVT(VT).getScalarSizeInBits() << ",\n";
-     return 1;
-   default:
-     OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
-        << "Type, " << getEnumName(VT) << ",\n";
-     return 2;
-   }
- }
+  case Matcher::CheckChildType: {
+    MVT::SimpleValueType VT = cast<CheckChildTypeMatcher>(N)->getType();
+    switch (VT) {
+    case MVT::i32:
+    case MVT::i64:
+      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+         << "TypeI" << MVT(VT).getSizeInBits() << ",\n";
+      return 1;
+    default:
+      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+         << "Type, " << getEnumName(VT) << ",\n";
+      return 2;
+    }
+  }
 
   case Matcher::CheckInteger: {
     OS << "OPC_CheckInteger, ";
@@ -704,7 +704,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     case MVT::i32:
     case MVT::i64:
       OpBytes = 1;
-      OS << "OPC_EmitInteger" << MVT(VT).getScalarSizeInBits() << ", ";
+      OS << "OPC_EmitInteger" << MVT(VT).getSizeInBits() << ", ";
       break;
     default:
       OpBytes = 2;
@@ -723,7 +723,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     switch (VT) {
     case MVT::i32:
       OpBytes = 1;
-      OS << "OPC_EmitStringInteger" << MVT(VT).getScalarSizeInBits() << ", ";
+      OS << "OPC_EmitStringInteger" << MVT(VT).getSizeInBits() << ", ";
       break;
     default:
       OpBytes = 2;
