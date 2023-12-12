@@ -1446,10 +1446,15 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-/// Reorders:
-///   shape_cast(arithmetic(a + b))
-/// as
-///   arithmetic(shape_cast(a), shape_cast(b)).
+/// Replace:
+///   elementwise(a, b)
+/// with:
+///   sc_a = shape_cast(a)
+///   sc_b = shape_cast(b)
+///   res = elementwise(sc_a, sc_b)
+///   return shape_cast(res)
+/// for which `a` and `b` are vectors of rank > 2 and have unit leading and/or
+/// trailing dimension.
 ///
 /// Ex:
 /// ```
@@ -1464,85 +1469,57 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 ///  %A_row_sc = vector.shape_cast %A_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %mul = arith.mulf %B_row_sc, %A_row_sc : vector<[4]xf32>
 /// ```
-///
-/// While this pattern introduces an extra shape_cast Op (1 shape_cast is
-/// replaced with 2), this brings shape_cast closer to vector.xfer operations.
-/// With patterns like e.g. `FlattenContiguousRowMajorTransferWritePattern`,
-/// the addition shape_cast's are eventually folded away.
-///
-/// Here is another example where this pattern is helpful:
-/// ```
-///  %sc_arg0 = vector.shape_cast %arg0 : vector<8xi32> to vector<1x8xi32>
-///  %sc_arg1 = vector.shape_cast %arg1 : vector<8xi32> to vector<1x8xi32>
-///  %sc_arg2 = vector.shape_cast %arg2 : vector<8xi32> to vector<1x8xi32>
-///  %mul = arith.muli %sc_arg0, %sc_arg1 : vector<1x8xi32>
-///  %add = arith.addi %mul, %sc_arg2 : vector<1x8xi32>
-///  %res = vector.shape_cast %add : vector<1x8xi32> to vector<8xi32>
-/// ```
-///
-/// gets folded as:
-///
-///```
-///    %0 = arith.muli %arg0, %arg1 : vector<8xi32>
-///    %res = arith.addi %0, %arg2 : vector<8xi32>
-/// ```
-/// ATM this pattern is limited to `vector.shape_cast` ops that fold the unit
-/// dim, e.g.:
-/// ```
-///   vector.shape_cast %mul : vector<1x4xf32> to vector<4xf32>
-/// ```
-/// In addition, the input vector should be the result of an arithmetic
-/// operation, `ArithOp`.
-template <typename ArithOp>
-struct ReorderArithAndShapeCast : public OpRewritePattern<vector::ShapeCastOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+struct DropUnitDimFromElementwiseOps final
+    : public OpTraitRewritePattern<OpTrait::Elementwise> {
+  using OpTraitRewritePattern::OpTraitRewritePattern;
+  LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    auto *arithOp = shapeCastOp.getSource().getDefiningOp();
-    if (!llvm::isa_and_present<ArithOp>(arithOp))
+    if (op->getNumResults() != 1)
       return failure();
 
-    auto sourceVectorType =
-        dyn_cast<VectorType>(shapeCastOp.getSource().getType());
-    auto resultVectorType =
-        dyn_cast<VectorType>(shapeCastOp.getResult().getType());
-    if (!sourceVectorType || !resultVectorType)
+    // Check the pre-condiitions. For `Elementwise` Ops all operands
+    // are guaranteed to have identical shapes and it suffices to only check the
+    // first one.
+    auto op1 = op->getOperands()[0];
+    auto sourceVectorType = dyn_cast<VectorType>(op1.getType());
+    if (!sourceVectorType)
       return failure();
 
-    // Either the leading or the trailing dims of the input should be
-    // non-scalable 1.
-    bool leadDimUnitFixed = ((sourceVectorType.getShape().back() != 1) ||
-                             (sourceVectorType.getScalableDims().back()));
-    bool trailinDimUnitFixed = ((sourceVectorType.getShape().front() != 1) ||
-                                (sourceVectorType.getScalableDims().front()));
-    if (!leadDimUnitFixed && !trailinDimUnitFixed)
+    if (sourceVectorType.getRank() < 2)
       return failure();
 
-    // Does this shape_cast fold the input vector?
-    if (resultVectorType.getRank() != (sourceVectorType.getRank() - 1))
+    bool trailingDimUnitFixed = ((sourceVectorType.getShape().back() == 1) &&
+                                 (!sourceVectorType.getScalableDims().back()));
+    bool leadDimUnitFixed = ((sourceVectorType.getShape().front() == 1) &&
+                             (!sourceVectorType.getScalableDims().front()));
+    if (!leadDimUnitFixed && !trailingDimUnitFixed)
       return failure();
 
-    // Does this shape_cast fold the traling/leading _unit_ dim?
-    // TODO: Even when the trailing/leading unit dims are folded, there might
-    // still be some "inner" unit dims left.
-    if (llvm::any_of(resultVectorType.getShape(),
-                     [](int64_t dim) { return (dim == 1); }))
-      return failure();
+    // Drop leading/trailing unit dim by applying vector.shape_cast to all
+    // operands
+    auto elTy = sourceVectorType.getElementType();
+    VectorType newVType =
+        leadDimUnitFixed
+            ? VectorType::get(sourceVectorType.getShape().drop_front(1), elTy,
+                              sourceVectorType.getScalableDims().drop_front(1))
+            : VectorType::get(sourceVectorType.getShape().drop_back(1), elTy,
+                              sourceVectorType.getScalableDims().drop_back(1));
+    SmallVector<Value> newOperands;
+    auto loc = op->getLoc();
+    for (auto operand : op->getOperands()) {
+      auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
+      newOperands.push_back(opSC);
+    }
 
-    auto loc = shapeCastOp->getLoc();
+    // Create an updated elementwise Op without leading/trailing unit dim
+    Operation *elementwiseOp =
+        rewriter.create(op->getLoc(), op->getName().getIdentifier(),
+                        newOperands, newVType, op->getAttrs());
 
-    // shape_cast(a)
-    auto lhs = rewriter.create<vector::ShapeCastOp>(loc, resultVectorType,
-                                                    arithOp->getOperands()[0],
-                                                    shapeCastOp->getAttrs());
-    // shape_cast(b)
-    auto rhs = rewriter.create<vector::ShapeCastOp>(loc, resultVectorType,
-                                                    arithOp->getOperands()[1],
-                                                    shapeCastOp->getAttrs());
-
-    // Replace shape_cast(a ArithOp b) with shape_cast(a) ArithOp shape_cast(b)
-    rewriter.replaceOpWithNewOp<ArithOp>(shapeCastOp, lhs, rhs);
+    // Restore the leading/trailing unit dim by applying vector.shape_cast to
+    // the result
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(op, sourceVectorType,
+                                             elementwiseOp->getResults()[0]);
 
     return success();
   }
@@ -1618,11 +1595,7 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateReorderShapeCastPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
-  patterns.add<ReorderArithAndShapeCast<arith::AddIOp>,
-               ReorderArithAndShapeCast<arith::AddFOp>,
-               ReorderArithAndShapeCast<arith::MulIOp>,
-               ReorderArithAndShapeCast<arith::MulFOp>>(patterns.getContext(),
-                                                        benefit);
+  patterns.add<DropUnitDimFromElementwiseOps>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
