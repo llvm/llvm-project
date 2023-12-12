@@ -34,6 +34,15 @@ constexpr static auto V5 = 1;
 constexpr static const auto V6 = 1;
 constexpr static const int V7 = 1;
 constexpr static int V8 = 1;
+constexpr auto Ulong = 1L;
+constexpr auto CompoundLiteral = (int){13};
+constexpr auto DoubleCast = (double)(1 / 3);
+constexpr auto String = "this is a string";
+constexpr signed auto Long = 1L; // expected-error {{'auto' cannot be signed or unsigned}}
+_Static_assert(_Generic(Ulong, long : 1));
+_Static_assert(_Generic(CompoundLiteral, int : 1));
+_Static_assert(_Generic(DoubleCast, double : 1));
+_Static_assert(_Generic(String, char* : 1));
 
 void f3(constexpr register int P1) { // expected-error {{function parameter cannot be constexpr}}
   constexpr register int V9 = 0;
