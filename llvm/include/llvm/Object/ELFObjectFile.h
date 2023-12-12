@@ -110,9 +110,13 @@ public:
 
   /// Returns a vector of all BB address maps in the object file. When
   // `TextSectionIndex` is specified, only returns the BB address maps
-  // corresponding to the section with that index.
+  // corresponding to the section with that index. When `PGOAnalyses`is
+  // specified, the vector is cleared then filled with extra PGO data.
+  // `PGOAnalyses` will always be the same length as the return value on
+  // success, otherwise it is empty.
   Expected<std::vector<BBAddrMap>>
-  readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt) const;
+  readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt,
+                std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 };
 
 class ELFSectionRef : public SectionRef {
