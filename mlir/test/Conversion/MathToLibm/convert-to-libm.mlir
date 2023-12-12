@@ -24,6 +24,8 @@
 // CHECK-DAG: @truncf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @cos(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @cosf(f32) -> f32 attributes {llvm.readnone}
+// CHECK-DAG: @cosh(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @coshf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @sin(f64) -> f64 attributes {llvm.readnone}
 // CHECK-DAG: @sinf(f32) -> f32 attributes {llvm.readnone}
 // CHECK-DAG: @floor(f64) -> f64 attributes {llvm.readnone}
@@ -123,6 +125,18 @@ func.func @tanh_caller(%float: f32, %double: f64) -> (f32, f64)  {
   %float_result = math.tanh %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @tanh(%[[DOUBLE]]) : (f64) -> f64
   %double_result = math.tanh %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @cosh_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @cosh_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @coshf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.cosh %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @cosh(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.cosh %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
 }
