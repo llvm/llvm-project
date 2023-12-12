@@ -156,6 +156,9 @@ public:
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
     OPC_CheckType,
+    // Space-optimized forms that implicitly encode VT.
+    OPC_CheckTypeI32,
+    OPC_CheckTypeI64,
     OPC_CheckTypeRes,
     OPC_SwitchType,
     OPC_CheckChild0Type,
