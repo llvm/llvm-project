@@ -8,10 +8,24 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <ranges>
-#include <utility>
-#include <vector>
+// sentinel() = default;
 
-using JoinView = decltype(std::views::join(std::declval<std::vector<std::vector<int>>&>()));
-using JoinIter = std::ranges::iterator_t<JoinView>;
-static_assert(std::__is_segmented_iterator<JoinIter>::value);
+#include <cassert>
+#include <ranges>
+
+#include "test_macros.h"
+#include "../types.h"
+
+constexpr bool test() {
+  std::ranges::sentinel_t<std::ranges::join_view<CopyableParent>> sent;
+  (void) sent;
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  return 0;
+}
