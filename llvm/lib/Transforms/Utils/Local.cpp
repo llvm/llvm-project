@@ -1724,9 +1724,11 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                           SI->getIterator());
 }
 
+namespace llvm {
 // RemoveDIs: duplicate the getDebugValueLoc method using DPValues instead of
-// dbg.value intrinsics.
-static DebugLoc getDebugValueLocDPV(DPValue *DPV) {
+// dbg.value intrinsics. In llvm namespace so that it overloads the
+// DbgVariableIntrinsic version.
+static DebugLoc getDebugValueLoc(DPValue *DPV) {
   // Original dbg.declare must have a location.
   const DebugLoc &DeclareLoc = DPV->getDebugLoc();
   MDNode *Scope = DeclareLoc.getScope();
@@ -1734,6 +1736,7 @@ static DebugLoc getDebugValueLocDPV(DPValue *DPV) {
   // Produce an unknown location with the correct scope / inlinedAt fields.
   return DILocation::get(DPV->getContext(), 0, 0, Scope, InlinedAt);
 }
+} // namespace llvm
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
@@ -1770,7 +1773,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, StoreInst *SI,
   auto *DIExpr = DPV->getExpression();
   Value *DV = SI->getValueOperand();
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
+  DebugLoc NewLoc = getDebugValueLoc(DPV);
 
   if (!valueCoversEntireFragment(DV->getType(), DPV)) {
     // FIXME: If storing to a part of the variable described by the dbg.declare,
@@ -1842,7 +1845,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, LoadInst *LI,
     return;
   }
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
+  DebugLoc NewLoc = getDebugValueLoc(DPV);
 
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
@@ -1887,7 +1890,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, PHINode *APN,
   BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
+  DebugLoc NewLoc = getDebugValueLoc(DPV);
 
   // The block may be a catchswitch block, which does not have a valid
   // insertion point.
@@ -1903,17 +1906,24 @@ bool llvm::LowerDbgDeclare(Function &F) {
   bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
   SmallVector<DbgDeclareInst *, 4> Dbgs;
-  for (auto &FI : F)
-    for (Instruction &BI : FI)
-      if (auto DDI = dyn_cast<DbgDeclareInst>(&BI))
+  SmallVector<DPValue *> DPVs;
+  for (auto &FI : F) {
+    for (Instruction &BI : FI) {
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
+      for (DPValue &DPV : BI.getDbgValueRange()) {
+        if (DPV.getType() == DPValue::LocationType::Declare)
+          DPVs.push_back(&DPV);
+      }
+    }
+  }
 
-  if (Dbgs.empty())
+  if (Dbgs.empty() && DPVs.empty())
     return Changed;
 
-  for (auto &I : Dbgs) {
-    DbgDeclareInst *DDI = I;
-    AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DDI->getAddress());
+  auto LowerOne = [&](auto *DDI) {
+    AllocaInst *AI =
+        dyn_cast_or_null<AllocaInst>(DDI->getVariableLocationOp(0));
     // If this is an alloca for a scalar variable, insert a dbg.value
     // at each load and store to the alloca and erase the dbg.declare.
     // The dbg.values allow tracking a variable even if it is not
@@ -1921,7 +1931,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
     if (!AI || isArray(AI) || isStructure(AI))
-      continue;
+      return;
 
     // A volatile load/store means that the alloca can't be elided anyway.
     if (llvm::any_of(AI->users(), [](User *U) -> bool {
@@ -1931,7 +1941,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
             return SI->isVolatile();
           return false;
         }))
-      continue;
+      return;
 
     SmallVector<const Value *, 8> WorkList;
     WorkList.push_back(AI);
@@ -1963,11 +1973,14 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
     DDI->eraseFromParent();
     Changed = true;
-  }
+  };
+
+  for_each(Dbgs, LowerOne);
+  for_each(DPVs, LowerOne);
 
   if (Changed)
-  for (BasicBlock &BB : F)
-    RemoveRedundantDbgInstrs(&BB);
+    for (BasicBlock &BB : F)
+      RemoveRedundantDbgInstrs(&BB);
 
   return Changed;
 }
