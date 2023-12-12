@@ -97,6 +97,15 @@ void IdiomRecognizerPass::raiseStdFind(CallOp call) {
 
   if (opts.emitRemarkFoundCalls())
     emitRemark(call.getLoc()) << "found call to std::find()";
+
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(call.getOperation());
+  auto findOp = builder.create<mlir::cir::StdFindOp>(
+      call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
+      call.getOperand(0), call.getOperand(1), call.getOperand(2));
+
+  call.replaceAllUsesWith(findOp);
+  call.erase();
 }
 
 void IdiomRecognizerPass::recognizeCall(CallOp call) { raiseStdFind(call); }

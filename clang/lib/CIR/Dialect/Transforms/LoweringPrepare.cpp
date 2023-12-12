@@ -68,6 +68,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void lowerGlobalOp(GlobalOp op);
   void lowerGetBitfieldOp(GetBitfieldOp op);
   void lowerSetBitfieldOp(SetBitfieldOp op);
+  void lowerStdFindOp(StdFindOp op);
 
   /// Build the function that initializes the specified global
   FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
@@ -406,6 +407,17 @@ void LoweringPreparePass::lowerSetBitfieldOp(SetBitfieldOp op) {
   op.erase();
 }
 
+void LoweringPreparePass::lowerStdFindOp(StdFindOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+  auto call = builder.create<mlir::cir::CallOp>(
+      op.getLoc(), op.getOriginalFnAttr(), op.getResult().getType(),
+      mlir::ValueRange{op.getOperand(0), op.getOperand(1), op.getOperand(2)});
+
+  op.replaceAllUsesWith(call);
+  op.erase();
+}
+
 void LoweringPreparePass::runOnOp(Operation *op) {
   if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
     lowerGlobalOp(getGlobal);
@@ -413,6 +425,8 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerGetBitfieldOp(getBitfield);
   } else if (auto setBitfield = dyn_cast<SetBitfieldOp>(op)) {
     lowerSetBitfieldOp(setBitfield);
+  } else if (auto stdFind = dyn_cast<StdFindOp>(op)) {
+    lowerStdFindOp(stdFind);
   }
 }
 
@@ -425,17 +439,12 @@ void LoweringPreparePass::runOnOperation() {
 
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
-    if (isa<GlobalOp>(op))
-      opsToTransform.push_back(op);
-    if (isa<GetBitfieldOp>(op))
-      opsToTransform.push_back(op);
-    if (isa<SetBitfieldOp>(op))
+    if (isa<GlobalOp, GetBitfieldOp, SetBitfieldOp, StdFindOp>(op))
       opsToTransform.push_back(op);
   });
 
-  for (auto *o : opsToTransform) {
+  for (auto *o : opsToTransform)
     runOnOp(o);
-  }
 
   buildCXXGlobalInitFunc();
 }
