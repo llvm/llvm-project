@@ -553,10 +553,10 @@ USAGE: usage
 
 OPTIONS:
   -multiline-help-with-long-name
-                  - This a help text that has
-                    multiple lines in it
-                    and a long name
-  -multiline-help - This a help text that has
-                    multiple lines in it
+                  This a help text that has
+                  multiple lines in it
+                  and a long name
+  -multiline-help This a help text that has
+                  multiple lines in it
 )");
 }

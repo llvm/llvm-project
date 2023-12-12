@@ -369,6 +369,7 @@ libc++ Feature Options
   **Default**: ``ON``
 
   Build libc++ with run time type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF.
 
 .. option:: LIBCXX_INCLUDE_TESTS:BOOL
 

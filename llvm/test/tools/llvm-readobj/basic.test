@@ -54,8 +54,8 @@ HELP: OVERVIEW: LLVM Object Reader
 OBJ: llvm-readobj{{.*}} [options] <input object files>
 ELF: llvm-readelf{{.*}} [options] <input object files>
 HELP: OPTIONS:
-HELP: -s   - Alias for --symbols
-HELP: -t   - Alias for --section-details
+HELP: -s   Alias for --symbols
+HELP: -t   Alias for --section-details
 HELP: OPTIONS (ELF specific):
 HELP: --dynamic-table
 HELP: OPTIONS (Mach-O specific):
