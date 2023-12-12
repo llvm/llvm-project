@@ -2773,28 +2773,15 @@ cc_library(
 
 td_library(
     name = "SparseTensorTdFiles",
-    srcs = [
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorBase.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td",
-    ],
+    srcs = glob([
+        "include/mlir/Dialect/SparseTensor/IR/*.td",
+    ]),
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
-)
-
-td_library(
-    name = "SparseTensorInterfacesTdFiles",
-    srcs = [
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-    ],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
 )
 
 gentbl_cc_library(
@@ -2918,7 +2905,37 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-    deps = [":SparseTensorInterfacesTdFiles"],
+    deps = [":SparseTensorTdFiles"],
+)
+
+td_library(
+    name = "SparseTensorTransformOpsTdFiles",
+    srcs = glob([
+        "include/mlir/Dialect/SparseTensor/TransformOps/*.td",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SparseTensorTransformOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.td",
+    deps = [
+        ":SparseTensorTransformOpsTdFiles",
+    ],
 )
 
 # This library is shared by both SparseTensorDialect and
@@ -2932,19 +2949,11 @@ cc_library(
 
 cc_library(
     name = "SparseTensorDialect",
-    srcs = [
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMap.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMap.h",
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMapParser.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMapParser.h",
-        "lib/Dialect/SparseTensor/IR/Detail/LvlTypeParser.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/LvlTypeParser.h",
-        "lib/Dialect/SparseTensor/IR/Detail/TemplateExtras.h",
-        "lib/Dialect/SparseTensor/IR/Detail/Var.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/Var.h",
-        "lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp",
-        "lib/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp",
-    ],
+    srcs = glob([
+        "lib/Dialect/SparseTensor/IR/*.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/*.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/*.h",
+    ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensor.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h",
@@ -2987,40 +2996,14 @@ cc_library(
     ],
 )
 
-td_library(
-    name = "SparseTensorTransformOpsTdFiles",
-    srcs = glob([
-        "include/mlir/Dialect/SparseTensor/TransformOps/*.td",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":TransformDialectTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "SparseTensorTransformOpsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.td",
-    deps = [
-        ":SparseTensorTransformOpsTdFiles",
-    ],
-)
-
 cc_library(
     name = "SparseTensorUtils",
-    srcs = glob(["lib/Dialect/SparseTensor/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/SparseTensor/Utils/*.h"]),
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Utils/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/SparseTensor/Utils/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -3039,6 +3022,8 @@ cc_library(
     srcs = glob([
         "lib/Dialect/SparseTensor/Transforms/*.cpp",
         "lib/Dialect/SparseTensor/Transforms/*.h",
+        "lib/Dialect/SparseTensor/Transforms/Utils/*.cpp",
+        "lib/Dialect/SparseTensor/Transforms/Utils/*.h",
     ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h",
@@ -3081,8 +3066,12 @@ cc_library(
 
 cc_library(
     name = "SparseTensorPipelines",
-    srcs = glob(["lib/Dialect/SparseTensor/Pipelines/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Pipelines/*.cpp",
+    ]),
+    hdrs = [
+        "include/mlir/Dialect/SparseTensor/Pipelines/Passes.h",
+    ],
     includes = ["include"],
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
