@@ -527,7 +527,6 @@ exit:
   ret i32 %acc.curr
 }
 
-; FIXME: This is a miscompile.
 define i32 @test_undef_range(i32 %x) {
 ; CHECK-LABEL: define i32 @test_undef_range(
 ; CHECK-SAME: i32 [[X:%.*]]) {
@@ -542,7 +541,7 @@ define i32 @test_undef_range(i32 %x) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[PHI]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[PHI]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
