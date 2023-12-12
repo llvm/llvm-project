@@ -36,13 +36,22 @@ class GlobalModuleCacheTestCase(TestBase):
     # this one won't either.
     @skipIfWindows
     def test_OneTargetOneDebugger(self):
-        self.do_test_one_debugger(True)
+        self.do_test(True, True)
 
+    # This behaves as implemented but that behavior is not desirable.
+    # This test tests for the desired behavior as an expected fail.
+    @skipIfWindows
     @expectedFailureAll
     def test_TwoTargetsOneDebugger(self):
-        self.do_test_one_debugger(False)
-        
-    def do_test_one_debugger(self, one_target):
+        self.do_test(False, True)
+
+    @skipIfWindows
+    @expectedFailureAll
+    def test_OneTargetTwoDebuggers(self):
+        self.do_test(True, False)
+
+
+    def do_test(self, one_target, one_debugger):
         # Make sure that if we have one target, and we run, then
         # change the binary and rerun, the binary (and any .o files
         # if using dwarf in .o file debugging) get removed from the
@@ -78,12 +87,29 @@ class GlobalModuleCacheTestCase(TestBase):
 
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
         error = lldb.SBError()
-        if one_target:
-            (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
+        if one_debugger:
+            if one_target:
+                (_, process, thread, _) = lldbutil.run_to_breakpoint_do_run(
+                    self, target, bkpt
+                )
+            else:
+                (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+                    self, "return counter;", main_filespec
+                )
         else:
-            (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-                self, "return counter;", main_filespec
-            )
+            if one_target:
+                new_debugger = lldb.SBDebugger().Create()
+                self.old_debugger = self.dbg
+                self.dbg = new_debugger
+                def cleanupDebugger(self):
+                    lldb.SBDebugger.Destroy(self.dbg)
+                    self.dbg = self.old_debugger
+                    self.old_debugger = None
+
+                self.addTearDownHook(cleanupDebugger)
+                (target2, process2, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+                    self, "return counter;", main_filespec
+                )
 
         # In two-print.c counter will be 2:
         self.check_counter_var(thread, 2)
@@ -99,14 +125,31 @@ class GlobalModuleCacheTestCase(TestBase):
         if debug_style == "dsym":
             num_a_dot_out_entries += 1
 
-        self.check_image_list_result(num_a_dot_out_entries, 1)
+        error = self.check_image_list_result(num_a_dot_out_entries, 1)
+        # Even if this fails, MemoryPressureDetected should fix this.
+        lldb.SBDebugger.MemoryPressureDetected()
+        error_after_mpd = self.check_image_list_result(num_a_dot_out_entries, 1)
+        fail_msg = ""
+        if error != "":
+            fail_msg = "Error before MPD: " + error
+            
+        if error_after_mpd != "":
+            fail_msg = fail_msg + "\nError after MPD: " + error_after_mpd
+        if fail_msg != "":
+            self.fail(fail_msg)
         
     def check_image_list_result(self, num_a_dot_out, num_main_dot_o):
-        # Now look at the global module list, there should only be one a.out, and if we are
-        # doing dwarf in .o file, there should only be one .o file:
+        # Check the global module list, there should only be one a.out, and if we are
+        # doing dwarf in .o file, there should only be one .o file.  This returns
+        # an error string on error - rather than asserting, so you can stage this
+        # failing.
         image_cmd_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
         interp.HandleCommand("image list -g", image_cmd_result)
+        if self.TraceOn():
+            print(f"Expected: a.out: {num_a_dot_out} main.o: {num_main_dot_o}")
+            print(image_cmd_result)
+
         image_list_str = image_cmd_result.GetOutput()
         image_list = image_list_str.splitlines()
         found_a_dot_out = 0
@@ -119,10 +162,11 @@ class GlobalModuleCacheTestCase(TestBase):
             if "main.o" in line:
                 found_main_dot_o += 1
 
-        self.assertEqual(
-            num_a_dot_out, found_a_dot_out, "Got the right number of a.out's"
-        )
-        if found_main_dot_o > 0:
-            self.assertEqual(
-                num_main_dot_o, found_main_dot_o, "Got the right number of main.o's"
-            )
+        
+        if num_a_dot_out != found_a_dot_out:
+            return f"Got {found_a_dot_out} number of a.out's, expected {num_a_dot_out}"
+            
+        if found_main_dot_o > 0 and num_main_dot_o != found_main_dot_o:
+            return f"Got {found_main_dot_o} number of main.o's, expected {num_main_dot_o}"
+        
+        return ""
