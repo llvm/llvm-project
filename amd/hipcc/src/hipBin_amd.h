@@ -257,7 +257,7 @@ string HipBinAmd::getCompilerVersion() {
   const string& hipClangPath = getCompilerPath();
   fs::path cmdAmd = hipClangPath;
   cmdAmd /= "clang++";
-  if (canRunCompiler(cmdAmd.string(), out) || canRunCompiler("clang++", out)) {
+  if (canRunCompiler(cmdAmd.string(), out) || canRunCompiler("amdclang++", out)) {
     regex regexp("([0-9.]+)");
     smatch m;
     if (regex_search(out, m, regexp)) {
@@ -343,7 +343,7 @@ bool HipBinAmd::detectPlatform() {
   bool detected = false;
   if (var.hipPlatformEnv_.empty()) {
     if (canRunCompiler(cmdAmd.string(), out) ||
-       (canRunCompiler("clang++", out))) {
+       (canRunCompiler("amdclang++", out))) {
       detected = true;
     }
   } else {
