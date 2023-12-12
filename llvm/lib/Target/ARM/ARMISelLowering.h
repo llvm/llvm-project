@@ -382,7 +382,7 @@ class VectorType;
 
   // Some bits in the FPSCR are not yet defined.  They must be preserved when
   // modifying the contents.
-  const unsigned FPReservedBits = 0x00086060;
+  const unsigned FPReservedBits = 0x00006060;
   } // namespace ARM
 
   /// Define some predicates that are used for node matching.
