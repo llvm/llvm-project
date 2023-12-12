@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
