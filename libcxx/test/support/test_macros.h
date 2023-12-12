@@ -411,24 +411,32 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_CLANG_DIAGNOSTIC_IGNORED(str) _Pragma(TEST_STRINGIZE(clang diagnostic ignored str))
 #  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
 #  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#  define TEST_CLANG_DIAGNOSTIC_ERROR(str) _Pragma(TEST_STRINGIZE(clang diagnostic error str))
+#  define TEST_GCC_DIAGNOSTIC_ERROR(str)
 #elif defined(TEST_COMPILER_GCC)
 #  define TEST_DIAGNOSTIC_PUSH _Pragma("GCC diagnostic push")
 #  define TEST_DIAGNOSTIC_POP _Pragma("GCC diagnostic pop")
 #  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
 #  define TEST_GCC_DIAGNOSTIC_IGNORED(str) _Pragma(TEST_STRINGIZE(GCC diagnostic ignored str))
 #  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#  define TEST_CLANG_DIAGNOSTIC_ERROR(str)
+#  define TEST_GCC_DIAGNOSTIC_ERROR(str) _Pragma(TEST_STRINGIZE(GCC diagnostic error str))
 #elif defined(TEST_COMPILER_MSVC)
 #  define TEST_DIAGNOSTIC_PUSH _Pragma("warning(push)")
 #  define TEST_DIAGNOSTIC_POP _Pragma("warning(pop)")
 #  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
 #  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
 #  define TEST_MSVC_DIAGNOSTIC_IGNORED(num) _Pragma(TEST_STRINGIZE(warning(disable: num)))
+#  define TEST_CLANG_DIAGNOSTIC_ERROR(str)
+#  define TEST_GCC_DIAGNOSTIC_ERROR(str)
 #else
 #  define TEST_DIAGNOSTIC_PUSH
 #  define TEST_DIAGNOSTIC_POP
 #  define TEST_CLANG_DIAGNOSTIC_IGNORED(str)
 #  define TEST_GCC_DIAGNOSTIC_IGNORED(str)
 #  define TEST_MSVC_DIAGNOSTIC_IGNORED(num)
+#  define TEST_CLANG_DIAGNOSTIC_ERROR(str)
+#  define TEST_GCC_DIAGNOSTIC_ERROR(str)
 #endif
 
 #if __has_cpp_attribute(msvc::no_unique_address)
