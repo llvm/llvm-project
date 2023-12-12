@@ -148,7 +148,7 @@ int StringMapImpl::FindKey(StringRef Key, uint32_t FullHashValue) const {
   if (NumBuckets == 0)
     return -1; // Really empty table?
 #ifdef EXPENSIVE_CHECKS
-  assert(FullHashValue == hash(Key);
+  assert(FullHashValue == hash(Key));
 #endif
   if (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
