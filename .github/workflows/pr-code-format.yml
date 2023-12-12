@@ -67,10 +67,14 @@ jobs:
           START_REV: ${{ github.event.pull_request.base.sha }}
           END_REV: ${{ github.event.pull_request.head.sha }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        # TODO(boomanaiden154): Once clang v18 is released, we should be able
+        # to take advantage of the new --diff_from_common_commit option
+        # explicitly in code-format-helper.py and not have to diff starting at
+        # the merge base.
         run: |
           python ./code-format-tools/llvm/utils/git/code-format-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
-            --start-rev $START_REV \
+            --start-rev $(git merge-base $START_REV $END_REV) \
             --end-rev $END_REV \
             --changed-files "$CHANGED_FILES"
