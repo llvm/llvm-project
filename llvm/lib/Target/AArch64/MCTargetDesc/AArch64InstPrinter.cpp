@@ -1740,6 +1740,10 @@ template <unsigned NumLanes, char LaneKind>
 void AArch64InstPrinter::printTypedVectorList(const MCInst *MI, unsigned OpNum,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
+  if (LaneKind == 0) {
+    printVectorList(MI, OpNum, STI, O, "");
+    return;
+  }
   std::string Suffix(".");
   if (NumLanes)
     Suffix += itostr(NumLanes) + LaneKind;

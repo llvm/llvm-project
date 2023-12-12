@@ -91,6 +91,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::canonicalize:
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
     return true;
   default:
     return false;
@@ -122,6 +124,8 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::is_fpclass:
     return OpdIdx == 0;
@@ -1462,15 +1466,14 @@ void VFABI::getVectorVariantNames(
   S.split(ListAttr, ",");
 
   for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
-#ifndef NDEBUG
-    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << S << "'\n");
     std::optional<VFInfo> Info =
-        VFABI::tryDemangleForVFABI(S, *(CI.getModule()));
-    assert(Info && "Invalid name for a VFABI variant.");
-    assert(CI.getModule()->getFunction(Info->VectorName) &&
-           "Vector function is missing.");
-#endif
-    VariantMappings.push_back(std::string(S));
+        VFABI::tryDemangleForVFABI(S, CI.getFunctionType());
+    if (Info && CI.getModule()->getFunction(Info->VectorName)) {
+      LLVM_DEBUG(dbgs() << "VFABI: Adding mapping '" << S << "' for " << CI
+                        << "\n");
+      VariantMappings.push_back(std::string(S));
+    } else
+      LLVM_DEBUG(dbgs() << "VFABI: Invalid mapping '" << S << "'\n");
   }
 }
 

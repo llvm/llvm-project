@@ -4,6 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
@@ -53,7 +54,7 @@ public:
            "cannot construct PyObjectRef with null referrent");
     assert(this->object && "cannot construct PyObjectRef with null object");
   }
-  PyObjectRef(PyObjectRef &&other)
+  PyObjectRef(PyObjectRef &&other) noexcept
       : referrent(other.referrent), object(std::move(other.object)) {
     other.referrent = nullptr;
     assert(!other.object);
@@ -484,7 +485,8 @@ public:
       mlirDialectRegistryDestroy(registry);
   }
   PyDialectRegistry(PyDialectRegistry &) = delete;
-  PyDialectRegistry(PyDialectRegistry &&other) : registry(other.registry) {
+  PyDialectRegistry(PyDialectRegistry &&other) noexcept
+      : registry(other.registry) {
     other.registry = {nullptr};
   }
 
@@ -550,16 +552,19 @@ private:
   pybind11::handle handle;
 };
 
+class PyAsmState;
+
 /// Base class for PyOperation and PyOpView which exposes the primary, user
 /// visible methods for manipulating it.
 class PyOperationBase {
 public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
-  void print(pybind11::object fileObject, bool binary,
-             std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+  void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified);
+             bool assumeVerified, py::object fileObject, bool binary);
+  void print(PyAsmState &state, py::object fileObject, bool binary);
+
   pybind11::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
@@ -761,7 +766,7 @@ private:
 
 /// Wrapper around an MlirAsmState.
 class PyAsmState {
- public:
+public:
   PyAsmState(MlirValue value, bool useLocalScope) {
     flags = mlirOpPrintingFlagsCreate();
     // The OpPrintingFlags are not exposed Python side, create locally and
@@ -780,16 +785,14 @@ class PyAsmState {
     state =
         mlirAsmStateCreateForOperation(operation.getOperation().get(), flags);
   }
-  ~PyAsmState() {
-    mlirOpPrintingFlagsDestroy(flags);
-  }
+  ~PyAsmState() { mlirOpPrintingFlagsDestroy(flags); }
   // Delete copy constructors.
   PyAsmState(PyAsmState &other) = delete;
   PyAsmState(const PyAsmState &other) = delete;
 
   MlirAsmState get() { return state; }
 
- private:
+private:
   MlirAsmState state;
   MlirOpPrintingFlags flags;
 };
@@ -1112,6 +1115,10 @@ public:
 /// bindings so such operation always exists).
 class PyValue {
 public:
+  // The virtual here is "load bearing" in that it enables RTTI
+  // for PyConcreteValue CRTP classes that support maybeDownCast.
+  // See PyValue::maybeDownCast.
+  virtual ~PyValue() = default;
   PyValue(PyOperationRef parentOperation, MlirValue value)
       : parentOperation(std::move(parentOperation)), value(value) {}
   operator MlirValue() const { return value; }
@@ -1123,6 +1130,8 @@ public:
 
   /// Gets a capsule wrapping the void* within the MlirValue.
   pybind11::object getCapsule();
+
+  pybind11::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.

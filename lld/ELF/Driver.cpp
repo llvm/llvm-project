@@ -1095,7 +1095,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
 }
 
 static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
-  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "hfsort");
+  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "cdsort");
   if (s == "hfsort")
     return CGProfileSortKind::Hfsort;
   if (s == "cdsort")
@@ -2296,7 +2296,7 @@ static void findKeepUniqueSections(opt::InputArgList &args) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err;
+        const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(f) + ": could not decode addrsig section: " + err);

@@ -276,7 +276,7 @@ define i64 @PR63321(ptr %ptr, i64 %c) {
 define i64 @and_add_non_bool(ptr %ptr, i64 %c) {
 ; CHECK-LABEL: @and_add_non_bool(
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    [[RHS:%.*]] = zext i8 [[VAL]] to i64
+; CHECK-NEXT:    [[RHS:%.*]] = zext nneg i8 [[VAL]] to i64
 ; CHECK-NEXT:    [[MASK:%.*]] = add nsw i64 [[RHS]], -1
 ; CHECK-NEXT:    [[RES:%.*]] = and i64 [[MASK]], [[C:%.*]]
 ; CHECK-NEXT:    ret i64 [[RES]]

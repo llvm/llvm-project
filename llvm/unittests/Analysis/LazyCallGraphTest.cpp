@@ -2392,7 +2392,7 @@ TEST(LazyCallGraphTest, AddSplitFunction2) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2431,7 +2431,8 @@ TEST(LazyCallGraphTest, AddSplitFunction3) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
@@ -2475,11 +2476,12 @@ TEST(LazyCallGraphTest, AddSplitFunction4) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2525,7 +2527,7 @@ TEST(LazyCallGraphTest, AddSplitFunction5) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2673,7 +2675,7 @@ TEST(LazyCallGraphTest, AddSplitFunction8) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2722,7 +2724,8 @@ TEST(LazyCallGraphTest, AddSplitFunction9) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f2.
-  (void)CastInst::CreatePointerCast(&F2, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F2, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -call-> g.
@@ -2769,7 +2772,7 @@ TEST(LazyCallGraphTest, AddSplitFunctions1) {
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2808,11 +2811,12 @@ TEST(LazyCallGraphTest, AddSplitFunctions2) {
                              F.getAddressSpace(), "g", F.getParent());
   BasicBlock *GBB = BasicBlock::Create(Context, "", G);
   // Create g -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", GBB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    GBB);
   (void)ReturnInst::Create(Context, GBB);
 
   // Create f -ref-> g.
-  (void)CastInst::CreatePointerCast(G, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2857,15 +2861,17 @@ TEST(LazyCallGraphTest, AddSplitFunctions3) {
   BasicBlock *G1BB = BasicBlock::Create(Context, "", G1);
   BasicBlock *G2BB = BasicBlock::Create(Context, "", G2);
   // Create g1 -ref-> g2 and g2 -ref-> g1.
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "", G1BB);
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
+                                    G1BB);
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
+                                    G2BB);
   (void)ReturnInst::Create(Context, G1BB);
   (void)ReturnInst::Create(Context, G2BB);
 
   // Create f -ref-> g1 and f -ref-> g2.
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2911,17 +2917,20 @@ TEST(LazyCallGraphTest, AddSplitFunctions4) {
   BasicBlock *G1BB = BasicBlock::Create(Context, "", G1);
   BasicBlock *G2BB = BasicBlock::Create(Context, "", G2);
   // Create g1 -ref-> g2 and g2 -ref-> g1.
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "", G1BB);
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
+                                    G1BB);
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
+                                    G2BB);
   // Create g2 -ref-> f.
-  (void)CastInst::CreatePointerCast(&F, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(&F, PointerType::getUnqual(Context), "",
+                                    G2BB);
   (void)ReturnInst::Create(Context, G1BB);
   (void)ReturnInst::Create(Context, G2BB);
 
   // Create f -ref-> g1 and f -ref-> g2.
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -2978,17 +2987,20 @@ TEST(LazyCallGraphTest, AddSplitFunctions5) {
   BasicBlock *G1BB = BasicBlock::Create(Context, "", G1);
   BasicBlock *G2BB = BasicBlock::Create(Context, "", G2);
   // Create g1 -ref-> g2 and g2 -ref-> g1.
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "", G1BB);
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
+                                    G1BB);
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
+                                    G2BB);
   // Create g2 -ref-> f2.
-  (void)CastInst::CreatePointerCast(&F2, Type::getInt8PtrTy(Context), "", G2BB);
+  (void)CastInst::CreatePointerCast(&F2, PointerType::getUnqual(Context), "",
+                                    G2BB);
   (void)ReturnInst::Create(Context, G1BB);
   (void)ReturnInst::Create(Context, G2BB);
 
   // Create f -ref-> g1 and f -ref-> g2.
-  (void)CastInst::CreatePointerCast(G1, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G1, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
-  (void)CastInst::CreatePointerCast(G2, Type::getInt8PtrTy(Context), "",
+  (void)CastInst::CreatePointerCast(G2, PointerType::getUnqual(Context), "",
                                     &*F.getEntryBlock().begin());
 
   EXPECT_FALSE(verifyModule(*M, &errs()));

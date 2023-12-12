@@ -2,6 +2,12 @@
 
 LLVM libc clang-tidy checks
 ===========================
+
+
+.. warning::
+  This page is severely out of date. Much of the information it contains may be
+  incorrect. Please only remove this warning once the page has been updated.
+
 These are the clang-tidy checks designed to help enforce implementation
 standards.
 The configuration file is ``src/.clang-tidy``.

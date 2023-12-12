@@ -235,7 +235,7 @@ void DbgAssignIntrinsic::setValue(Value *V) {
 
 int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
                                                StringRef Name) {
-  assert(Name.startswith("llvm."));
+  assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
 
   // Do successive binary searches of the dotted name components. For
   // "llvm.gc.experimental.statepoint.p1i8.p1i32", we will find the range of
@@ -265,7 +265,7 @@ int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
     return -1;
   StringRef NameFound = *LastLow;
   if (Name == NameFound ||
-      (Name.startswith(NameFound) && Name[NameFound.size()] == '.'))
+      (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
     return LastLow - NameTable.begin();
   return -1;
 }
@@ -869,6 +869,10 @@ const Value *GCProjectionInst::getStatepoint() const {
   const Value *Token = getArgOperand(0);
   if (isa<UndefValue>(Token))
     return Token;
+
+  // Treat none token as if it was undef here
+  if (isa<ConstantTokenNone>(Token))
+    return UndefValue::get(Token->getType());
 
   // This takes care both of relocates for call statepoints and relocates
   // on normal path of invoke statepoint.

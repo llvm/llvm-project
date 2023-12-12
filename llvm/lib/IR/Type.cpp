@@ -141,16 +141,9 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
       Ty->getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
 
-  // At this point we have only various mismatches of the first class types
-  // remaining and ptr->ptr. Just select the lossless conversions. Everything
-  // else is not lossless. Conservatively assume we can't losslessly convert
-  // between pointers with different address spaces.
-  if (auto *PTy = dyn_cast<PointerType>(this)) {
-    if (auto *OtherPTy = dyn_cast<PointerType>(Ty))
-      return PTy->getAddressSpace() == OtherPTy->getAddressSpace();
-    return false;
-  }
-  return false;  // Other types have no identity values
+  // Conservatively assume we can't losslessly convert between pointers with
+  // different address spaces.
+  return false;
 }
 
 bool Type::isEmptyTy() const {
@@ -172,17 +165,26 @@ bool Type::isEmptyTy() const {
 
 TypeSize Type::getPrimitiveSizeInBits() const {
   switch (getTypeID()) {
-  case Type::HalfTyID: return TypeSize::Fixed(16);
-  case Type::BFloatTyID: return TypeSize::Fixed(16);
-  case Type::FloatTyID: return TypeSize::Fixed(32);
-  case Type::DoubleTyID: return TypeSize::Fixed(64);
-  case Type::X86_FP80TyID: return TypeSize::Fixed(80);
-  case Type::FP128TyID: return TypeSize::Fixed(128);
-  case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
-  case Type::X86_MMXTyID: return TypeSize::Fixed(64);
-  case Type::X86_AMXTyID: return TypeSize::Fixed(8192);
+  case Type::HalfTyID:
+    return TypeSize::getFixed(16);
+  case Type::BFloatTyID:
+    return TypeSize::getFixed(16);
+  case Type::FloatTyID:
+    return TypeSize::getFixed(32);
+  case Type::DoubleTyID:
+    return TypeSize::getFixed(64);
+  case Type::X86_FP80TyID:
+    return TypeSize::getFixed(80);
+  case Type::FP128TyID:
+    return TypeSize::getFixed(128);
+  case Type::PPC_FP128TyID:
+    return TypeSize::getFixed(128);
+  case Type::X86_MMXTyID:
+    return TypeSize::getFixed(64);
+  case Type::X86_AMXTyID:
+    return TypeSize::getFixed(8192);
   case Type::IntegerTyID:
-    return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
+    return TypeSize::getFixed(cast<IntegerType>(this)->getBitWidth());
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     const VectorType *VTy = cast<VectorType>(this);
@@ -191,7 +193,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     assert(!ETS.isScalable() && "Vector type should have fixed-width elements");
     return {ETS.getFixedValue() * EC.getKnownMinValue(), EC.isScalable()};
   }
-  default: return TypeSize::Fixed(0);
+  default:
+    return TypeSize::getFixed(0);
   }
 }
 
@@ -254,10 +257,6 @@ IntegerType *Type::getInt128Ty(LLVMContext &C) { return &C.pImpl->Int128Ty; }
 
 IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
-}
-
-PointerType *Type::getInt8PtrTy(LLVMContext &C, unsigned AS) {
-  return PointerType::get(C, AS);
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
@@ -835,7 +834,7 @@ struct TargetTypeInfo {
 static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   LLVMContext &C = Ty->getContext();
   StringRef Name = Ty->getName();
-  if (Name.startswith("spirv."))
+  if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal);
 

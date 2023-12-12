@@ -145,13 +145,19 @@ public:
   ///     is dumped if this flag is \b true, otherwise the line info
   ///     of the actual inlined function is dumped.
   ///
+  /// \param[in] pattern
+  ///     An optional regex pattern to match against the stop context
+  ///     description. If specified, parts of the description matching this
+  ///     pattern may be highlighted or processed differently. If this parameter
+  ///     is an empty string or not provided, no highlighting is applied.
+  ///
   /// \return
   ///     \b true if some text was dumped, \b false otherwise.
   bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                        const Address &so_addr, bool show_fullpaths,
                        bool show_module, bool show_inlined_frames,
-                       bool show_function_arguments,
-                       bool show_function_name) const;
+                       bool show_function_arguments, bool show_function_name,
+                       llvm::StringRef pattern = "") const;
 
   /// Get the address range contained within a symbol context.
   ///
@@ -217,8 +223,8 @@ public:
   ///     The symbol that was found, or \b nullptr if none was found.
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level,
-                      Target *target) const;
+  void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
+                      llvm::StringRef pattern = "") const;
 
   uint32_t GetResolvedMask() const;
 

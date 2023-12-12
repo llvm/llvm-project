@@ -62,7 +62,7 @@ body:             |
     $w9 = MOVZWi 1, 0, implicit-def $x9
 
     ; Check that stores are merged across IRG.
-    ; CHECK: STPXi renamable $x9, renamable $x9, renamable $x0, 0
+    ; CHECK: STPXi renamable $x9, killed renamable $x9, renamable $x0, 0
 
     STRXui renamable $x9, renamable $x0, 0 :: (store (s64) into %ir.x)
     dead renamable $x10 = IRG renamable $x8, $xzr

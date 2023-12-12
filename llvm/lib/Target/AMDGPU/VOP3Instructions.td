@@ -515,6 +515,16 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasExtVOP3DPP = 0;
 }
 
+def IsPow2Plus1: PatLeaf<(i32 imm), [{
+  uint32_t V = N->getZExtValue();
+  return isPowerOf2_32(V - 1);
+}]>;
+
+def Log2_32: SDNodeXForm<imm, [{
+  uint32_t V = N->getZExtValue();
+  return CurDAG->getTargetConstant(Log2_32(V - 1), SDLoc(N), MVT::i32);
+}]>;
+
 let SubtargetPredicate = isGFX9Plus in {
 let isCommutable = 1, isReMaterializable = 1 in {
   defm V_ADD3_U32 : VOP3Inst <"v_add3_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
@@ -612,6 +622,10 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
+def : GCNPat<
+ (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
+ (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
+
 let SubtargetPredicate = isGFX940Plus in
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
@@ -664,11 +678,22 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
         >;
 }
 
+// Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
+// We need to separate this because otherwise OtherPredicates would be overriden.
+class IMAD32_Mul24_Pat<VOP3_Pseudo inst>: GCNPat <
+    (i64 (add (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+    (inst $src0, $src1, $src2, 0 /* clamp */)
+    >;
+
 // exclude pre-GFX9 where it was slow
-let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in
+let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
   defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
-let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in
+  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
+}
+let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in {
   defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
+  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
+}
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,

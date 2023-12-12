@@ -18,6 +18,8 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -38,6 +40,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#define DEBUG_TYPE "gpu-to-llvm"
+
 namespace mlir {
 #define GEN_PASS_DEF_GPUTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -48,12 +52,14 @@ using namespace mlir;
 static constexpr const char *kGpuBinaryStorageSuffix = "_gpubin_cst";
 
 namespace {
-
 class GpuToLLVMConversionPass
     : public impl::GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
 public:
   using Base::Base;
-
+  void getDependentDialects(DialectRegistry &registry) const final {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
+  }
   // Run the dialect converter on the module.
   void runOnOperation() override;
 };
@@ -580,14 +586,24 @@ DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SetCsrPointersOp)
 } // namespace
 
 void GpuToLLVMConversionPass::runOnOperation() {
-  LowerToLLVMOptions options(&getContext());
-  options.useBarePtrCallConv = hostBarePtrCallConv;
-
-  LLVMTypeConverter converter(&getContext(), options);
-  RewritePatternSet patterns(&getContext());
-  LLVMConversionTarget target(getContext());
-
+  MLIRContext *context = &getContext();
   SymbolTable symbolTable = SymbolTable(getOperation());
+  LowerToLLVMOptions options(context);
+  options.useBarePtrCallConv = hostBarePtrCallConv;
+  RewritePatternSet patterns(context);
+  ConversionTarget target(*context);
+  target.addLegalDialect<LLVM::LLVMDialect>();
+  LLVMTypeConverter converter(context, options);
+
+  // Populate all patterns from all dialects that implement the
+  // `ConvertToLLVMPatternInterface` interface.
+  for (Dialect *dialect : context->getLoadedDialects()) {
+    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    if (!iface)
+      continue;
+    iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
+  }
+
   // Preserve GPU modules if they have target attributes.
   target.addDynamicallyLegalOp<gpu::GPUModuleOp>(
       [](gpu::GPUModuleOp module) -> bool {
@@ -605,11 +621,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
                 !module.getTargetsAttr().empty());
       });
 
-  mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
-  mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+  // These aren't covered by the ConvertToLLVMPatternInterface right now.
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
-  populateFuncToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation,
@@ -814,7 +828,7 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   if (isShared && allocOp.getAsyncToken())
     return rewriter.notifyMatchFailure(
         allocOp, "Host Shared allocation cannot be done async");
-  else if (!isShared && failed(isAsyncWithOneDependency(rewriter, allocOp)))
+  if (!isShared && failed(isAsyncWithOneDependency(rewriter, allocOp)))
     return failure();
 
   // Get shape of the memref as values: static sizes are constant
@@ -1128,13 +1142,19 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
         loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(),
         rewriter, /*useBarePtrCallConv=*/kernelBarePtrCallConv);
 
+    std::optional<gpu::KernelDim3> clusterSize = std::nullopt;
+    if (launchOp.hasClusterSize()) {
+      clusterSize =
+          gpu::KernelDim3{adaptor.getClusterSizeX(), adaptor.getClusterSizeY(),
+                          adaptor.getClusterSizeZ()};
+    }
     rewriter.create<gpu::LaunchFuncOp>(
         launchOp.getLoc(), launchOp.getKernelAttr(),
         gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                         adaptor.getGridSizeZ()},
         gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                         adaptor.getBlockSizeZ()},
-        adaptor.getDynamicSharedMemorySize(), arguments, stream);
+        adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
     if (launchOp.getAsyncToken())
       rewriter.replaceOp(launchOp, {stream});
     else
@@ -1320,18 +1340,18 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
 }
 
 template <typename T>
-static Value genConstInt32From(OpBuilder &builder, Location loc, T TValue) {
+static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
   return builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                          static_cast<int32_t>(TValue));
+                                          static_cast<int32_t>(tValue));
 }
 
 template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T TValue) {
+static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmFloat32Type = builder.getF32Type();
   return builder.create<LLVM::ConstantOp>(
       loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(TValue)));
+      builder.getF32FloatAttr(static_cast<float>(tValue)));
 }
 
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
@@ -1609,7 +1629,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto stream = adaptor.getAsyncDependencies().front();
   Value bufferSize;
   if (is2To4Sparsity(op.getSpmatA())) {
-    auto prune_flag =
+    auto pruneFlag =
         genConstInt32From(rewriter, loc, get2To4PruneFlag(op.getSpmatA()));
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
@@ -1621,7 +1641,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         .create(loc, rewriter,
                 {bufferSize, modeA, modeB, adaptor.getSpmatA(),
                  adaptor.getDnmatB(), adaptor.getDnmatC(), computeType,
-                 prune_flag, stream})
+                 pruneFlag, stream})
         .getResult();
 
     auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(

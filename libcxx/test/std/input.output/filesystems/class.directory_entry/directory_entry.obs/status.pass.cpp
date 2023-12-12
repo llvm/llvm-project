@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -15,13 +15,13 @@
 // file_status status() const;
 // file_status status(error_code const&) const noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "filesystem_test_helper.h"
-
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 static void test_basic() {
   using namespace fs;

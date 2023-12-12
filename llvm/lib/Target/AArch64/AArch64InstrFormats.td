@@ -818,8 +818,11 @@ def tvecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
 
 def Imm0_0Operand : AsmImmRange<0, 0>;
 def Imm0_1Operand : AsmImmRange<0, 1>;
+def Imm1_1Operand : AsmImmRange<1, 1>;
 def Imm0_3Operand : AsmImmRange<0, 3>;
+def Imm1_3Operand : AsmImmRange<1, 3>;
 def Imm0_7Operand : AsmImmRange<0, 7>;
+def Imm1_7Operand : AsmImmRange<1, 7>;
 def Imm0_15Operand : AsmImmRange<0, 15>;
 def Imm0_31Operand : AsmImmRange<0, 31>;
 def Imm0_63Operand : AsmImmRange<0, 63>;
@@ -1035,11 +1038,32 @@ def timm0_1 : Operand<i64>, TImmLeaf<i64, [{
   let ParserMatchClass = Imm0_1Operand;
 }
 
+// timm32_0_0 predicate - True if the 32-bit immediate is in the range [0,0]
+def timm32_0_0 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) == 0;
+}]> {
+  let ParserMatchClass = Imm0_0Operand;
+}
+
 // timm32_0_1 predicate - True if the 32-bit immediate is in the range [0,1]
 def timm32_0_1 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 2;
 }]> {
   let ParserMatchClass = Imm0_1Operand;
+}
+
+// timm32_1_1 - True if the 32-bit immediate is in the range [1,1]
+def timm32_1_1 : Operand<i32>, TImmLeaf<i32, [{
+    return ((uint32_t)Imm) == 1;
+}]> {
+  let ParserMatchClass = Imm1_1Operand;
+}
+
+// timm32_1_3 predicate - True if the 32-bit immediate is in the range [1,3]
+def timm32_1_3 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) > 0 && ((uint32_t)Imm) < 4;
+}]> {
+  let ParserMatchClass = Imm1_3Operand;
 }
 
 // imm0_15 predicate - True if the immediate is in the range [0,15]
@@ -1075,6 +1099,13 @@ def timm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
+}
+
+// timm32_1_7 predicate - True if the 32-bit immediate is in the range [1,7]
+def timm32_1_7 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) > 0 && ((uint32_t)Imm) < 8;
+}]> {
+  let ParserMatchClass = Imm1_7Operand;
 }
 
 // imm32_0_15 predicate - True if the 32-bit immediate is in the range [0,15]
@@ -1430,6 +1461,8 @@ let OperandNamespace = "AArch64" in {
   let OperandType = "OPERAND_IMPLICIT_IMM_0" in {
     defm VectorIndex0 : VectorIndex<i64, VectorIndex0Operand,
                                 [{ return ((uint64_t)Imm) == 0; }]>;
+    defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
+                                [{ return ((uint32_t)Imm) == 0; }]>;
   }
 }
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
@@ -8119,6 +8152,54 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
                          V128, VecListFour128>;
 }
 
+//----------------------------------------------------------------------------
+// AdvSIMD LUT
+//----------------------------------------------------------------------------
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
+class BaseSIMDTableLookupIndexed<bit Q, bits<5> opc, RegisterOperand vectype,
+                            RegisterOperand listtype, Operand idx_type,
+                            string asm, string kind>
+  : I<(outs vectype:$Rd),
+      (ins listtype:$Rn, vectype:$Rm, idx_type:$idx),
+      asm, "\t$Rd" # kind # ", $Rn, $Rm$idx", "", []>,
+    Sched<[]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31}    = 0;
+  let Inst{30}    = Q;
+  let Inst{29-24} = 0b001110;
+  let Inst{23-22} = opc{4-3};
+  let Inst{21}    = 0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0;
+  let Inst{14-12} = opc{2-0};
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+}
+
+multiclass BaseSIMDTableLookupIndexed2<string asm> {
+  def v16f8 : BaseSIMDTableLookupIndexed<0b1, {0b10,?,?,0b1}, V128, VecListOne16b, VectorIndexS, asm, ".16b"> {
+    bits<2> idx;
+    let Inst{14-13} = idx;
+  }
+  def v8f16 : BaseSIMDTableLookupIndexed<0b1, {0b11,?,?,?}, V128, VecListOne8h, VectorIndexH, asm, ".8h" > {
+    bits<3> idx;
+    let Inst{14-12} = idx;
+  }
+}
+
+multiclass BaseSIMDTableLookupIndexed4<string asm> {
+  def v16f8 : BaseSIMDTableLookupIndexed<0b1, {0b01,?,0b10}, V128, VecListOne16b, VectorIndexD, asm, ".16b"> {
+    bit idx;
+    let Inst{14} = idx;
+  }
+  def v8f16 : BaseSIMDTableLookupIndexed<0b1, {0b01,?,?,0b1}, V128, VecListTwo8h, VectorIndexS, asm, ".8h" > {
+    bits<2> idx;
+    let Inst{14-13} = idx;
+  }
+}
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar DUP

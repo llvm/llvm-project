@@ -280,6 +280,7 @@ private:
       const parser::Name &, const Symbol &, Symbol::Flag);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
+  void AllowOnlyVariable(const parser::AccObject &object);
   void EnsureAllocatableOrPointer(
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
   void AddRoutineInfoToSymbol(
@@ -1117,6 +1118,26 @@ void AccAttributeVisitor::DoNotAllowAssumedSizedArray(
   }
 }
 
+void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
+  common::visit(
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            const auto &name{GetLastName(designator)};
+            if (name.symbol && !semantics::IsVariableName(*name.symbol) &&
+                !semantics::IsNamedConstant(*name.symbol)) {
+              context_.Say(designator.source,
+                  "Only variables are allowed in data clauses on the %s "
+                  "directive"_err_en_US,
+                  parser::ToUpperCaseLetters(
+                      llvm::acc::getOpenACCDirectiveName(GetContext().directive)
+                          .str()));
+            }
+          },
+          [&](const auto &name) {},
+      },
+      object.u);
+}
+
 bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim{std::get<parser::Verbatim>(x.t)};
   PushContext(verbatim.source, llvm::acc::Directive::ACCD_cache);
@@ -1162,13 +1183,23 @@ void AccAttributeVisitor::CheckAssociatedLoopIndex(
   }
 
   const auto getNextDoConstruct =
-      [this](const parser::Block &block) -> const parser::DoConstruct * {
+      [this](const parser::Block &block,
+          std::int64_t &level) -> const parser::DoConstruct * {
     for (const auto &entry : block) {
       if (const auto *doConstruct = GetDoConstructIf(entry)) {
         return doConstruct;
       } else if (parser::Unwrap<parser::CompilerDirective>(entry)) {
         // It is allowed to have a compiler directive associated with the loop.
         continue;
+      } else if (const auto &accLoop{
+                     parser::Unwrap<parser::OpenACCLoopConstruct>(entry)}) {
+        if (level == 0)
+          break;
+        const auto &beginDir{
+            std::get<parser::AccBeginLoopDirective>(accLoop->t)};
+        context_.Say(beginDir.source,
+            "LOOP directive not expected in COLLAPSE loop nest"_err_en_US);
+        level = 0;
       } else {
         break;
       }
@@ -1177,11 +1208,12 @@ void AccAttributeVisitor::CheckAssociatedLoopIndex(
   };
 
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;) {
     // Go through all nested loops to ensure index variable exists.
     GetLoopIndex(*loop);
     const auto &block{std::get<parser::Block>(loop->t)};
-    loop = getNextDoConstruct(block);
+    --level;
+    loop = getNextDoConstruct(block, level);
   }
   CHECK(level == 0);
 }
@@ -1281,6 +1313,7 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
 void AccAttributeVisitor::ResolveAccObjectList(
     const parser::AccObjectList &accObjectList, Symbol::Flag accFlag) {
   for (const auto &accObject : accObjectList.v) {
+    AllowOnlyVariable(accObject);
     ResolveAccObject(accObject, accFlag);
   }
 }
@@ -1521,6 +1554,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
 
 void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     const parser::Name &iv) {
+  // Find the parallel or task generating construct enclosing the
+  // sequential loop.
   auto targetIt{dirContext_.rbegin()};
   for (;; ++targetIt) {
     if (targetIt == dirContext_.rend()) {
@@ -1531,12 +1566,21 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
       break;
     }
   }
+  // If this symbol is already Private or Firstprivate in the enclosing
+  // OpenMP parallel or task then there is nothing to do here.
+  if (auto *symbol{targetIt->scope.FindSymbol(iv.source)}) {
+    if (symbol->owner() == targetIt->scope) {
+      if (symbol->test(Symbol::Flag::OmpPrivate) ||
+          symbol->test(Symbol::Flag::OmpFirstPrivate)) {
+        return;
+      }
+    }
+  }
+  // Otherwise find the symbol and make it Private for the entire enclosing
+  // parallel or task
   if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
     targetIt++;
-    // If this object already had a DSA then it is not predetermined
-    if (!IsObjectWithDSA(*symbol)) {
-      symbol->set(Symbol::Flag::OmpPreDetermined);
-    }
+    symbol->set(Symbol::Flag::OmpPreDetermined);
     iv.symbol = symbol; // adjust the symbol within region
     for (auto it{dirContext_.rbegin()}; it != targetIt; ++it) {
       AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpPrivate, *it);
@@ -1711,6 +1755,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
+      } else if (const auto *enterClause{
+                     std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
+        ResolveOmpObjectList(enterClause->v, Symbol::Flag::OmpDeclareTarget);
       }
     }
   }

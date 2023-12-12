@@ -287,7 +287,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   }
 
   uint8_t Type = MachO::N_OSO;
-  if (Path.endswith(".dylib")) {
+  if (Path.ends_with(".dylib")) {
     // FIXME: find a more resilient way
     Type = MachO::N_LIB;
   }

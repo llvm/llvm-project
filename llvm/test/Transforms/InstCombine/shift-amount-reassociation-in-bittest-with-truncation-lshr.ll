@@ -19,7 +19,7 @@ define i1 @n0(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -16
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg i32 [[T2]] to i64
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[T3_TRUNC]]
@@ -79,7 +79,7 @@ define i1 @n2(i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 131071, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -16
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg i32 [[T2]] to i64
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[T3_TRUNC]]
@@ -137,7 +137,7 @@ define i1 @n4(i32 %x, i32 %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -16
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg i32 [[T2]] to i64
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i64 262143, [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[T3_TRUNC]]
@@ -186,7 +186,7 @@ define <2 x i1> @n6_vec(<2 x i64> %y, <2 x i32> %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 32, i32 32>, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl <2 x i32> <i32 65535, i32 131071>, [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[LEN]], <i32 -16, i32 -16>
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext <2 x i32> [[T2]] to <2 x i64>
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg <2 x i32> [[T2]] to <2 x i64>
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i64> [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc <2 x i64> [[T3]] to <2 x i32>
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T1]], [[T3_TRUNC]]
@@ -227,7 +227,7 @@ define <2 x i1> @n8_vec(<2 x i32> %x, <2 x i32> %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 32, i32 32>, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl <2 x i32> [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[LEN]], <i32 -16, i32 -16>
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext <2 x i32> [[T2]] to <2 x i64>
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg <2 x i32> [[T2]] to <2 x i64>
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i64> <i64 131071, i64 262143>, [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc <2 x i64> [[T3]] to <2 x i32>
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T1]], [[T3_TRUNC]]
@@ -272,7 +272,7 @@ define i1 @t10_almost_highest_bit(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 64, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -2
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg i32 [[T2]] to i64
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[T3_TRUNC]]
@@ -314,7 +314,7 @@ define i1 @t10_shift_by_one(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 64, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -63
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg i32 [[T2]] to i64
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[T3_TRUNC]]
@@ -338,7 +338,7 @@ define <2 x i1> @t11_zero_and_almost_bitwidth(<2 x i32> %x, <2 x i64> %y, <2 x i
 ; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 64, i32 64>, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl <2 x i32> [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[LEN]], <i32 -1, i32 -64>
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext <2 x i32> [[T2]] to <2 x i64>
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg <2 x i32> [[T2]] to <2 x i64>
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i64> [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc <2 x i64> [[T3]] to <2 x i32>
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T1]], [[T3_TRUNC]]
@@ -360,7 +360,7 @@ define <2 x i1> @n12_bad(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 64, i32 64>, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl <2 x i32> [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[LEN]], <i32 -2, i32 -64>
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext <2 x i32> [[T2]] to <2 x i64>
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg <2 x i32> [[T2]] to <2 x i64>
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i64> [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc <2 x i64> [[T3]] to <2 x i32>
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T1]], [[T3_TRUNC]]

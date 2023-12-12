@@ -507,8 +507,10 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<memref::CastOp>(cloneOp, cloneOp.getType(),
-                                                source);
+    if (source.getType() != cloneOp.getType())
+      source = rewriter.create<memref::CastOp>(cloneOp.getLoc(),
+                                               cloneOp.getType(), source);
+    rewriter.replaceOp(cloneOp, source);
     rewriter.eraseOp(redundantDealloc);
     return success();
   }
@@ -585,7 +587,11 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
     assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
     buffer = getDest();
   }
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), buffer);
+  auto srcBuffer = getBuffer(rewriter, getSource(), options);
+  if (failed(srcBuffer))
+    return failure();
+  if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))
+    return failure();
   replaceOpWithBufferizedValues(rewriter, getOperation(),
                                 tensorDest ? ValueRange(buffer) : ValueRange());
   return success();
@@ -682,8 +688,9 @@ LogicalResult MaterializeInDestinationOp::verify() {
 void MaterializeInDestinationOp::build(OpBuilder &builder,
                                        OperationState &state, Value source,
                                        Value dest) {
-  assert(isa<TensorType>(dest.getType()) && "expected tensor type");
-  build(builder, state, /*result=*/dest.getType(), source, dest);
+  auto destTensorType = dyn_cast<TensorType>(dest.getType());
+  build(builder, state, /*result=*/destTensorType ? destTensorType : Type(),
+        source, dest);
 }
 
 bool MaterializeInDestinationOp::isWritable(Value value,

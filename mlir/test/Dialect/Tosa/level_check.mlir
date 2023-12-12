@@ -690,7 +690,7 @@ func.func @test_while_loop(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<i32>)
 
 // CHECK-LABEL: @test_custom
 func.func @test_custom(%arg0: tensor<1x1x1x1x1x1x10xi32>) -> tensor<1x1x1x1x1x1x10xi32> {
-  %0 = "tosa.custom"(%arg0) {identifier="custom_test", config="tosa_mlir_test", implementation_attrs=""} :
+  %0 = "tosa.custom"(%arg0) {operator_name="custom_test", domain_name="tosa_mlir_test", implementation_attrs=""} :
            (tensor<1x1x1x1x1x1x10xi32>) -> (tensor<1x1x1x1x1x1x10xi32>)
   return %0 : tensor<1x1x1x1x1x1x10xi32>
 }

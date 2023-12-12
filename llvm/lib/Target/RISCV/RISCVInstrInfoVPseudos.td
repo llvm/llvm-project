@@ -81,9 +81,9 @@ def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
 def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
                               SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
-// Operand that is allowed to be a register or a 5 bit immediate.
-// This allows us to pick between VSETIVLI and VSETVLI opcodes using the same
-// pseudo instructions.
+// Operand that is allowed to be a register other than X0, a 5 bit unsigned
+// immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
+// VSETVLI opcodes using the same pseudo instructions.
 def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";
@@ -240,6 +240,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // We can't use X0 register becuase the AVL operands use GPRNoX0.
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
+
+def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
@@ -570,16 +572,17 @@ def RISCVVIntrinsicsTable : GenericTable {
 //    unmasked variant.  For all but compares, both the masked and
 //    unmasked variant have a passthru and policy operand.  For compares,
 //    neither has a policy op, and only the masked version has a passthru.
-class RISCVMaskedPseudo<bits<4> MaskIdx> {
+class RISCVMaskedPseudo<bits<4> MaskIdx, bit MaskAffectsRes=false> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
   bits<4> MaskOpIdx = MaskIdx;
+  bit MaskAffectsResult = MaskAffectsRes;
 }
 
 def RISCVMaskedPseudosTable : GenericTable {
   let FilterClass = "RISCVMaskedPseudo";
   let CppTypeName = "RISCVMaskedPseudoInfo";
-  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx"];
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx", "MaskAffectsResult"];
   let PrimaryKey = ["MaskedPseudo"];
   let PrimaryKeyName = "getMaskedPseudoInfo";
 }
@@ -1124,7 +1127,6 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryMask_FRM<VReg RetClass,
@@ -1144,7 +1146,6 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryNoMaskGPROut :
@@ -2092,7 +2093,7 @@ multiclass VPseudoVIOT_M {
                        SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
                                   forceMergeOpRead=true>;
       def "_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
-                                 RISCVMaskedPseudo<MaskIdx=2>,
+                                 RISCVMaskedPseudo<MaskIdx=2, MaskAffectsRes=true>,
                                  SchedUnary<"WriteVMIotV", "ReadVMIotV", mx,
                                             forceMergeOpRead=true>;
     }
@@ -3212,7 +3213,8 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>,
+                                          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
   }
 }
 
@@ -3231,7 +3233,8 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                                      Op2Class, Constraint>;
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
-                                               Op2Class, Constraint>;
+                                               Op2Class, Constraint>,
+          RISCVMaskedPseudo<MaskIdx=3, MaskAffectsRes=true>;
   }
 }
 
@@ -7422,6 +7425,11 @@ foreach fvti = AllFloatVectors in {
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
                (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
+                           (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
+              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
+               (fvti.Vector $rs1), GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
   }
 }
 

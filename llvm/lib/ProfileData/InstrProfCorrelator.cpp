@@ -74,12 +74,15 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind) {
             "using multiple objects is not yet supported");
       Filename = *DsymObjectsOrErr->begin();
     }
-  }
-  auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
-  if (auto Err = BufferOrErr.takeError())
-    return std::move(Err);
+    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    if (auto Err = BufferOrErr.takeError())
+      return std::move(Err);
 
-  return get(std::move(*BufferOrErr), FileKind);
+    return get(std::move(*BufferOrErr), FileKind);
+  }
+  return make_error<InstrProfError>(
+      instrprof_error::unable_to_correlate_profile,
+      "unsupported correlation kind (only DWARF debug info is supported)");
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
@@ -274,7 +277,7 @@ bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die) {
   if (!Die.hasChildren())
     return false;
   if (const char *Name = Die.getName(DINameKind::ShortName))
-    return StringRef(Name).startswith(getInstrProfCountersVarPrefix());
+    return StringRef(Name).starts_with(getInstrProfCountersVarPrefix());
   return false;
 }
 

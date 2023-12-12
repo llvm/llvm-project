@@ -17,7 +17,6 @@ namespace llvm {
 
 class LPMUpdater;
 class Loop;
-class Pass;
 class StringRef;
 class raw_ostream;
 
@@ -78,11 +77,6 @@ public:
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
-
-/// Create the legacy pass object for the simple loop unswitcher.
-///
-/// See the documentaion for `SimpleLoopUnswitchPass` for details.
-Pass *createSimpleLoopUnswitchLegacyPass(bool NonTrivial = false);
 
 } // end namespace llvm
 

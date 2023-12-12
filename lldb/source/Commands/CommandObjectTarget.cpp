@@ -8,10 +8,12 @@
 
 #include "CommandObjectTarget.h"
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
@@ -35,7 +37,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -436,8 +437,7 @@ protected:
           error = process_sp->LoadCore();
 
           if (error.Fail()) {
-            result.AppendError(
-                error.AsCString("can't find plug-in for core file"));
+            result.AppendError(error.AsCString("unknown core file format"));
             return;
           } else {
             result.AppendMessageWithFormatv(
@@ -447,9 +447,8 @@ protected:
             on_error.release();
           }
         } else {
-          result.AppendErrorWithFormatv(
-              "Unable to find process plug-in for core file '{0}'\n",
-              core_file.GetPath());
+          result.AppendErrorWithFormatv("Unknown core file format '{0}'\n",
+                                        core_file.GetPath());
         }
       } else {
         result.AppendMessageWithFormat(
@@ -1452,11 +1451,11 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 }
 
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
-                                     Module *module) {
+                                     Module *module, bool errors_only) {
   if (module) {
     if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
-      if (symbol_file->GetSeparateDebugInfo(d)) {
+      if (symbol_file->GetSeparateDebugInfo(d, errors_only)) {
         list.AddItem(
             std::make_shared<StructuredData::Dictionary>(std::move(d)));
         return true;
@@ -1534,7 +1533,7 @@ static void DumpOsoFilesTable(Stream &strm,
 
 static void DumpAddress(ExecutionContextScope *exe_scope,
                         const Address &so_addr, bool verbose, bool all_ranges,
-                        Stream &strm) {
+                        Stream &strm, llvm::StringRef pattern = "") {
   strm.IndentMore();
   strm.Indent("    Address: ");
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleModuleWithFileAddress);
@@ -1544,13 +1543,14 @@ static void DumpAddress(ExecutionContextScope *exe_scope,
   strm.Indent("    Summary: ");
   const uint32_t save_indent = strm.GetIndentLevel();
   strm.SetIndentLevel(save_indent + 13);
-  so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription);
+  so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription,
+               Address::DumpStyleInvalid, UINT32_MAX, false, pattern);
   strm.SetIndentLevel(save_indent);
   // Print out detailed address information when verbose is enabled
   if (verbose) {
     strm.EOL();
     so_addr.Dump(&strm, exe_scope, Address::DumpStyleDetailedSymbolContext,
-                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges);
+                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges, pattern);
   }
   strm.IndentLess();
 }
@@ -1595,6 +1595,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     return 0;
 
   SymbolContext sc;
+  const bool use_color = interpreter.GetDebugger().GetUseColor();
   std::vector<uint32_t> match_indexes;
   ConstString symbol_name(name);
   uint32_t num_matches = 0;
@@ -1620,12 +1621,19 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         if (symbol->ValueIsAddress()) {
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
-              symbol->GetAddressRef(), verbose, all_ranges, strm);
+              symbol->GetAddressRef(), verbose, all_ranges, strm,
+              use_color && name_is_regex ? name : nullptr);
           strm.EOL();
         } else {
           strm.IndentMore();
           strm.Indent("    Name: ");
-          strm.PutCString(symbol->GetDisplayName().GetStringRef());
+          llvm::StringRef ansi_prefix =
+              interpreter.GetDebugger().GetRegexMatchAnsiPrefix();
+          llvm::StringRef ansi_suffix =
+              interpreter.GetDebugger().GetRegexMatchAnsiSuffix();
+          strm.PutCStringColorHighlighted(
+              symbol->GetDisplayName().GetStringRef(),
+              use_color ? name : nullptr, ansi_prefix, ansi_suffix);
           strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
@@ -2561,7 +2569,10 @@ public:
         m_json.SetCurrentValue(true);
         m_json.SetOptionWasSet();
         break;
-
+      case 'e':
+        m_errors_only.SetCurrentValue(true);
+        m_errors_only.SetOptionWasSet();
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -2570,6 +2581,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json.Clear();
+      m_errors_only.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2577,6 +2589,7 @@ public:
     }
 
     OptionValueBoolean m_json = false;
+    OptionValueBoolean m_errors_only = false;
   };
 
 protected:
@@ -2607,7 +2620,8 @@ protected:
           break;
 
         if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                     module_sp.get()))
+                                     module_sp.get(),
+                                     bool(m_options.m_errors_only)))
           num_dumped++;
       }
     } else {
@@ -2628,7 +2642,7 @@ protected:
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                         module))
+                                         module, bool(m_options.m_errors_only)))
               num_dumped++;
           }
         } else
@@ -2639,11 +2653,13 @@ protected:
 
     if (num_dumped > 0) {
       Stream &strm = result.GetOutputStream();
+      // Display the debug info files in some format.
       if (m_options.m_json) {
+        // JSON format
         separate_debug_info_lists_by_module.Dump(strm,
                                                  /*pretty_print=*/true);
       } else {
-        // List the debug info files in human readable form.
+        // Human-readable table format
         separate_debug_info_lists_by_module.ForEach(
             [&result, &strm](StructuredData::Object *obj) {
               if (!obj) {
@@ -2793,7 +2809,7 @@ protected:
           module_spec.GetSymbolFileSpec() =
               m_symbol_file.GetOptionValue().GetCurrentValue();
         Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
           ModuleSP module_sp(
               target->GetOrCreateModule(module_spec, true /* notify */));
           if (module_sp) {
@@ -4489,7 +4505,7 @@ protected:
   bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                    CommandReturnObject &result, bool &flush) {
     Status error;
-    if (Symbols::DownloadObjectAndSymbolFile(module_spec, error)) {
+    if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
       if (module_spec.GetSymbolFileSpec())
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);

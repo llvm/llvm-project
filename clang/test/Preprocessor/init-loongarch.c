@@ -177,6 +177,11 @@
 // LA32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // LA32: #define __LONG_MAX__ 2147483647L
 // LA32: #define __LONG_WIDTH__ 32
+// LA32: #define __MEMORY_SCOPE_DEVICE 1 
+// LA32: #define __MEMORY_SCOPE_SINGLE 4 
+// LA32: #define __MEMORY_SCOPE_SYSTEM 0 
+// LA32: #define __MEMORY_SCOPE_WRKGRP 2 
+// LA32: #define __MEMORY_SCOPE_WVFRNT 3 
 // LA32: #define __NO_INLINE__ 1
 // LA32: #define __NO_MATH_ERRNO__ 1
 // LA32: #define __OBJC_BOOL_IS_BOOL 0
@@ -494,6 +499,11 @@
 // LA64: #define __LONG_MAX__ 9223372036854775807L
 // LA64: #define __LONG_WIDTH__ 64
 // LA64: #define __LP64__ 1
+// LA64: #define __MEMORY_SCOPE_DEVICE 1 
+// LA64: #define __MEMORY_SCOPE_SINGLE 4 
+// LA64: #define __MEMORY_SCOPE_SYSTEM 0 
+// LA64: #define __MEMORY_SCOPE_WRKGRP 2 
+// LA64: #define __MEMORY_SCOPE_WVFRNT 3 
 // LA64: #define __NO_INLINE__ 1
 // LA64: #define __NO_MATH_ERRNO__ 1
 // LA64: #define __OBJC_BOOL_IS_BOOL 0

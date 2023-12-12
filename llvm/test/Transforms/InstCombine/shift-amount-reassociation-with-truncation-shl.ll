@@ -112,7 +112,7 @@ declare void @use32(i32)
 define i16 @t6_extrause0(i32 %x, i16 %y) {
 ; CHECK-LABEL: @t6_extrause0(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i16 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
+; CHECK-NEXT:    [[T1:%.*]] = zext nneg i16 [[T0]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
 ; CHECK-NEXT:    call void @use16(i16 [[T3]])
@@ -151,7 +151,7 @@ define i16 @t7_extrause1(i32 %x, i16 %y) {
 define i16 @t8_extrause2(i32 %x, i16 %y) {
 ; CHECK-LABEL: @t8_extrause2(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i16 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
+; CHECK-NEXT:    [[T1:%.*]] = zext nneg i16 [[T0]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
 ; CHECK-NEXT:    [[T4:%.*]] = add i16 [[Y]], -24
@@ -180,7 +180,7 @@ define i16 @t8_extrause2(i32 %x, i16 %y) {
 define i16 @n11(i32 %x, i16 %y) {
 ; CHECK-LABEL: @n11(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i16 30, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
+; CHECK-NEXT:    [[T1:%.*]] = zext nneg i16 [[T0]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
 ; CHECK-NEXT:    [[T4:%.*]] = add i16 [[Y]], -31

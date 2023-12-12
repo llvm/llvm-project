@@ -129,14 +129,48 @@ static SmallString<32> buildSuspendPrefixStr(CGCoroData &Coro, AwaitKind Kind) {
   return Prefix;
 }
 
-static bool memberCallExpressionCanThrow(const Expr *E) {
-  if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
-    if (const auto *Proto =
-            CE->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(Proto->getExceptionSpecType()) &&
-          Proto->canThrow() == CT_Cannot)
-        return false;
-  return true;
+// Check if function can throw based on prototype noexcept, also works for
+// destructors which are implicitly noexcept but can be marked noexcept(false).
+static bool FunctionCanThrow(const FunctionDecl *D) {
+  const auto *Proto = D->getType()->getAs<FunctionProtoType>();
+  if (!Proto) {
+    // Function proto is not found, we conservatively assume throwing.
+    return true;
+  }
+  return !isNoexceptExceptionSpec(Proto->getExceptionSpecType()) ||
+         Proto->canThrow() != CT_Cannot;
+}
+
+static bool ResumeStmtCanThrow(const Stmt *S) {
+  if (const auto *CE = dyn_cast<CallExpr>(S)) {
+    const auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      // We don't have direct callee. Conservatively assume throwing.
+      return true;
+
+    if (FunctionCanThrow(Callee))
+      return true;
+
+    // Fall through to visit the children.
+  }
+
+  if (const auto *TE = dyn_cast<CXXBindTemporaryExpr>(S)) {
+    // Special handling of CXXBindTemporaryExpr here as calling of Dtor of the
+    // temporary is not part of `children()` as covered in the fall through.
+    // We need to mark entire statement as throwing if the destructor of the
+    // temporary throws.
+    const auto *Dtor = TE->getTemporary()->getDestructor();
+    if (FunctionCanThrow(Dtor))
+      return true;
+
+    // Fall through to visit the children.
+  }
+
+  for (const auto *child : S->children())
+    if (ResumeStmtCanThrow(child))
+      return true;
+
+  return false;
 }
 
 // Emit suspend expression which roughly looks like:
@@ -233,7 +267,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // is marked as 'noexcept', we avoid generating this additional IR.
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
-      memberCallExpressionCanThrow(S.getResumeExpr())) {
+      ResumeStmtCanThrow(S.getResumeExpr())) {
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
@@ -245,6 +279,15 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
                                          FPOptionsOverride(), Loc, Loc);
     TryStmt = CXXTryStmt::Create(CGF.getContext(), Loc, TryBody, Catch);
     CGF.EnterCXXTryStmt(*TryStmt);
+    CGF.EmitStmt(TryBody);
+    // We don't use EmitCXXTryStmt here. We need to store to ResumeEHVar that
+    // doesn't exist in the body.
+    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
+    CGF.ExitCXXTryStmt(*TryStmt);
+    LValueOrRValue Res;
+    // We are not supposed to obtain the value from init suspend await_resume().
+    Res.RV = RValue::getIgnored();
+    return Res;
   }
 
   LValueOrRValue Res;
@@ -252,11 +295,6 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     Res.LV = CGF.EmitLValue(S.getResumeExpr());
   else
     Res.RV = CGF.EmitAnyExpr(S.getResumeExpr(), aggSlot, ignoreResult);
-
-  if (TryStmt) {
-    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
-    CGF.ExitCXXTryStmt(*TryStmt);
-  }
 
   return Res;
 }
@@ -777,6 +815,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();
+
+  if (CXXRecordDecl *RD = FnRetTy->getAsCXXRecordDecl();
+      RD && RD->hasAttr<CoroOnlyDestroyWhenCompleteAttr>())
+    CurFn->setCoroDestroyOnlyWhenComplete();
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.

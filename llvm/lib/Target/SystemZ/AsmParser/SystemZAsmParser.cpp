@@ -1123,7 +1123,7 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (HaveReg1) {
       if (parseAddressRegister(Reg1))
         return ParseStatus::Failure;
-      Base = Regs[Reg1.Num];
+      Base = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
     }
     // There must be no Reg2.
     if (HaveReg2)
@@ -1137,15 +1137,15 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
       // If the are two registers, the first one is the index and the
       // second is the base.
       if (HaveReg2)
-        Index = Regs[Reg1.Num];
+        Index = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
       else
-        Base = Regs[Reg1.Num];
+        Base = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
     }
     // If we have Reg2, it must be an address register.
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))
         return ParseStatus::Failure;
-      Base = Regs[Reg2.Num];
+      Base = Reg2.Num == 0 ? 0 : Regs[Reg2.Num];
     }
     break;
   case BDLMem:
@@ -1153,7 +1153,7 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))
         return ParseStatus::Failure;
-      Base = Regs[Reg2.Num];
+      Base = Reg2.Num == 0 ? 0 : Regs[Reg2.Num];
     }
     // We cannot support base+index addressing.
     if (HaveReg1 && HaveReg2)
@@ -1171,7 +1171,7 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))
         return ParseStatus::Failure;
-      Base = Regs[Reg2.Num];
+      Base = Reg2.Num == 0 ? 0 : Regs[Reg2.Num];
     }
     break;
   case BDVMem:
@@ -1183,7 +1183,7 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (HaveReg2) {
       if (parseAddressRegister(Reg2))
         return ParseStatus::Failure;
-      Base = Regs[Reg2.Num];
+      Base = Reg2.Num == 0 ? 0 : Regs[Reg2.Num];
     }
     break;
   }
@@ -1203,7 +1203,7 @@ ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
     return ParseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
     return ParseDirectiveMachine(DirectiveID.getLoc());
-  if (IDVal.startswith(".gnu_attribute"))
+  if (IDVal.starts_with(".gnu_attribute"))
     return ParseGNUAttribute(DirectiveID.getLoc());
 
   return ParseStatus::NoMatch;

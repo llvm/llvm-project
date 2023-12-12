@@ -121,18 +121,11 @@ public:
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
-    bool Found = false;
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
-    erase_if(Users, [&User, &Found](VPUser *Other) {
-      if (Found)
-        return false;
-      if (Other == &User) {
-        Found = true;
-        return true;
-      }
-      return false;
-    });
+    auto *I = find(Users, &User);
+    if (I != Users.end())
+      Users.erase(I);
   }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
@@ -162,6 +155,13 @@ public:
   }
 
   void replaceAllUsesWith(VPValue *New);
+
+  /// Go through the uses list for this VPValue and make each use point to \p
+  /// New if the callback ShouldReplace returns true for the given use specified
+  /// by a pair of (VPUser, the use index).
+  void replaceUsesWithIf(
+      VPValue *New,
+      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
@@ -292,6 +292,14 @@ public:
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
   virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
+
+  /// Returns true if the VPUser only uses the first part of operand \p Op.
+  /// Conservatively returns false.
+  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;

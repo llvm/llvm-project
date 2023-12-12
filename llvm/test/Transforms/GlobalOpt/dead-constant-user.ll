@@ -8,7 +8,7 @@ define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret void
 ;
-  %xor4 = xor i32 zext (i1 icmp ne (ptr getelementptr (i8, ptr @g, i64 3), ptr null) to i32), 0
+  %xor4 = xor i1 add (i1 icmp ne (ptr getelementptr (i8, ptr @g, i64 3), ptr null), i1 1), 0
   %t0 = load ptr, ptr getelementptr (i8, ptr @g, i64 3), align 1
   %t1 = load i16, ptr %t0, align 1
   ret void

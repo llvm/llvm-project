@@ -145,8 +145,11 @@ body:             |
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<4 x s32>) = G_XOR %val, [[BUILD_VECTOR]]
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<4 x s32>) = G_ADD %val, [[BUILD_VECTOR]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[XOR]], [[ADD]]
-    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<4 x s32>) = G_CTPOP [[AND]](<4 x s32>)
-    ; CHECK-NEXT: $q0 = COPY [[CTPOP]](<4 x s32>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[AND]](<4 x s32>)
+    ; CHECK-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<16 x s8>)
+    ; CHECK-NEXT: [[INT1:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<8 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[INT1]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     ;
     ; CHECK-CSSC-LABEL: name: v4s32
@@ -158,8 +161,11 @@ body:             |
     ; CHECK-CSSC-NEXT: [[XOR:%[0-9]+]]:_(<4 x s32>) = G_XOR %val, [[BUILD_VECTOR]]
     ; CHECK-CSSC-NEXT: [[ADD:%[0-9]+]]:_(<4 x s32>) = G_ADD %val, [[BUILD_VECTOR]]
     ; CHECK-CSSC-NEXT: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[XOR]], [[ADD]]
-    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<4 x s32>) = G_CTPOP [[AND]](<4 x s32>)
-    ; CHECK-CSSC-NEXT: $q0 = COPY [[CTPOP]](<4 x s32>)
+    ; CHECK-CSSC-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST [[AND]](<4 x s32>)
+    ; CHECK-CSSC-NEXT: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK-CSSC-NEXT: [[INT:%[0-9]+]]:_(<8 x s16>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[CTPOP]](<16 x s8>)
+    ; CHECK-CSSC-NEXT: [[INT1:%[0-9]+]]:_(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlp), [[INT]](<8 x s16>)
+    ; CHECK-CSSC-NEXT: $q0 = COPY [[INT1]](<4 x s32>)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $q0
     %val:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_CTTZ %val(<4 x s32>)

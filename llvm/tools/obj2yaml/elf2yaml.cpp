@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -515,7 +514,7 @@ std::optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
     std::vector<std::unique_ptr<ELFYAML::Chunk>> &Sections) {
   DWARFYAML::Data DWARF;
   for (std::unique_ptr<ELFYAML::Chunk> &C : Sections) {
-    if (!C->Name.startswith(".debug_"))
+    if (!C->Name.starts_with(".debug_"))
       continue;
 
     if (ELFYAML::RawContentSection *RawSec =

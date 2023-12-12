@@ -19,10 +19,8 @@
 #include <__config>
 #include <__threading_support>
 
-#if !defined(_LIBCPP_HAS_NO_THREADS)
-#  if _LIBCPP_ABI_VERSION == 1 || !defined(_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION)
-#    define NEEDS_MUTEX_DESTRUCTOR
-#  endif
+#if _LIBCPP_ABI_VERSION == 1 || !defined(_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION)
+#  define NEEDS_MUTEX_DESTRUCTOR
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -33,7 +31,7 @@ class _LIBCPP_EXPORTED_FROM_ABI mutex
     __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 
 public:
-    _LIBCPP_ALWAYS_INLINE _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI
     constexpr mutex() = default;
     mutex(const mutex&) = delete;
     mutex& operator=(const mutex&) = delete;
@@ -45,6 +43,6 @@ mutex::~mutex() noexcept
 {
     __libcpp_mutex_destroy(&__m_);
 }
+#endif // !NEEDS_MUTEX_DESTRUCTOR
 
-#endif // !_LIBCPP_HAS_NO_THREADS
 _LIBCPP_END_NAMESPACE_STD

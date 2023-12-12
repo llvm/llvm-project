@@ -29,7 +29,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -321,8 +320,8 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          FileSpec &sym_file) {
   sym_file = sym_spec.GetSymbolFileSpec();
   if (FileSystem::Instance().IsDirectory(sym_file)) {
-    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
-                                               sym_spec.GetArchitecturePtr());
+    sym_file = PluginManager::FindSymbolFileInBundle(
+        sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
   }
   return {};
 }
@@ -433,7 +432,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
     // Auto detect arm/thumb if it wasn't explicitly specified
     if (!bp_is_thumb) {
-      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
                       AddressClass::eCodeAlternateISA;

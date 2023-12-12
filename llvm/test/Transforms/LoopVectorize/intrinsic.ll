@@ -1602,7 +1602,7 @@ declare i32 @llvm.lrint.i32.f32(float)
 
 define void @lrint_i32_f32(ptr %x, ptr %y, i64 %n) {
 ; CHECK-LABEL: @lrint_i32_f32(
-; CHECK-NOT: llvm.lrint.v4i32.v4f32
+; CHECK: llvm.lrint.v4i32.v4f32
 ; CHECK: ret void
 ;
 entry:
@@ -1628,7 +1628,7 @@ declare i64 @llvm.llrint.i64.f32(float)
 
 define void @llrint_i64_f32(ptr %x, ptr %y, i64 %n) {
 ; CHECK-LABEL: @llrint_i64_f32(
-; CHECK-NOT: llvm.llrint.v4i32.v4f32
+; CHECK: llvm.llrint.v4i64.v4f32
 ; CHECK: ret void
 ;
 entry:

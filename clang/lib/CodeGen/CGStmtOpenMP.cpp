@@ -485,7 +485,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     if (CapVar && (CapVar->getTLSKind() != clang::VarDecl::TLS_None)) {
       Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
                                       II, ArgType,
-                                      ImplicitParamDecl::ThreadPrivateVar);
+                                      ImplicitParamKind::ThreadPrivateVar);
     } else if (DebugFunctionDecl && (CapVar || I->capturesThis())) {
       Arg = ParmVarDecl::Create(
           Ctx, DebugFunctionDecl,
@@ -494,7 +494,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
           /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr);
     } else {
       Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
-                                      II, ArgType, ImplicitParamDecl::Other);
+                                      II, ArgType, ImplicitParamKind::Other);
     }
     Args.emplace_back(Arg);
     // Do not cast arguments if we emit function with non-original types.
@@ -667,11 +667,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
           I->second.first ? I->second.first->getType() : Arg->getType(),
           AlignmentSource::Decl);
       if (LV.getType()->isAnyComplexType())
-        LV.setAddress(WrapperCGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            LV.getAddress(WrapperCGF),
-            PI->getType()->getPointerTo(
-                LV.getAddress(WrapperCGF).getAddressSpace()),
-            PI->getType()));
+        LV.setAddress(LV.getAddress(WrapperCGF).withElementType(PI->getType()));
       CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc());
     } else {
       auto EI = VLASizes.find(Arg);
@@ -2562,9 +2558,9 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
   (void)CGF.EmitOMPLinearClauseInit(S);
   {
     CodeGenFunction::OMPPrivateScope LoopScope(CGF);
+    CGF.EmitOMPPrivateClause(S, LoopScope);
     CGF.EmitOMPPrivateLoopCounters(S, LoopScope);
     CGF.EmitOMPLinearClause(S, LoopScope);
-    CGF.EmitOMPPrivateClause(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
     CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
         CGF, S, CGF.EmitLValue(S.getIterationVariable()));
@@ -4828,8 +4824,6 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
-      CopyFn = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          CopyFn, CopyFnTy->getPointerTo());
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : LastprivateDstsOrigs) {
@@ -4991,18 +4985,18 @@ createImplicitFirstprivateForType(ASTContext &C, OMPTaskDataTy &Data,
                                   QualType Ty, CapturedDecl *CD,
                                   SourceLocation Loc) {
   auto *OrigVD = ImplicitParamDecl::Create(C, CD, Loc, /*Id=*/nullptr, Ty,
-                                           ImplicitParamDecl::Other);
+                                           ImplicitParamKind::Other);
   auto *OrigRef = DeclRefExpr::Create(
       C, NestedNameSpecifierLoc(), SourceLocation(), OrigVD,
       /*RefersToEnclosingVariableOrCapture=*/false, Loc, Ty, VK_LValue);
   auto *PrivateVD = ImplicitParamDecl::Create(C, CD, Loc, /*Id=*/nullptr, Ty,
-                                              ImplicitParamDecl::Other);
+                                              ImplicitParamKind::Other);
   auto *PrivateRef = DeclRefExpr::Create(
       C, NestedNameSpecifierLoc(), SourceLocation(), PrivateVD,
       /*RefersToEnclosingVariableOrCapture=*/false, Loc, Ty, VK_LValue);
   QualType ElemType = C.getBaseElementType(Ty);
   auto *InitVD = ImplicitParamDecl::Create(C, CD, Loc, /*Id=*/nullptr, ElemType,
-                                           ImplicitParamDecl::Other);
+                                           ImplicitParamKind::Other);
   auto *InitRef = DeclRefExpr::Create(
       C, NestedNameSpecifierLoc(), SourceLocation(), InitVD,
       /*RefersToEnclosingVariableOrCapture=*/false, Loc, ElemType, VK_LValue);
@@ -5115,8 +5109,6 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
       }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
-      CopyFn = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          CopyFn, CopyFnTy->getPointerTo());
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : PrivatePtrs) {
@@ -6214,7 +6206,7 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
                                          X.getAddress(CGF).getElementType());
   }
   llvm::Value *Res =
-      CGF.Builder.CreateAtomicRMW(RMWOp, X.getPointer(CGF), UpdateVal, AO);
+      CGF.Builder.CreateAtomicRMW(RMWOp, X.getAddress(CGF), UpdateVal, AO);
   return std::make_pair(true, RValue::get(Res));
 }
 
@@ -6514,6 +6506,10 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_compare: {
     emitOMPAtomicCompareExpr(CGF, AO, X, V, R, E, D, CE, IsXLHSInRHSPart,
                              IsPostfixUpdate, IsFailOnly, Loc);
+    break;
+  }
+  case OMPC_fail: {
+    //TODO
     break;
   }
   default:

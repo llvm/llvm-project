@@ -24,25 +24,6 @@
 
 using namespace llvm;
 
-namespace {
-
-class Printer : public FunctionPass {
-  static char ID;
-
-  raw_ostream &OS;
-
-public:
-  explicit Printer(raw_ostream &OS) : FunctionPass(ID), OS(OS) {}
-
-  StringRef getPassName() const override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool runOnFunction(Function &F) override;
-  bool doFinalization(Module &M) override;
-};
-
-} // end anonymous namespace
-
 INITIALIZE_PASS(GCModuleInfo, "collector-metadata",
                 "Create Garbage Collector Module Metadata", false, false)
 
@@ -83,58 +64,6 @@ void GCModuleInfo::clear() {
 }
 
 // -----------------------------------------------------------------------------
-
-char Printer::ID = 0;
-
-FunctionPass *llvm::createGCInfoPrinter(raw_ostream &OS) {
-  return new Printer(OS);
-}
-
-StringRef Printer::getPassName() const {
-  return "Print Garbage Collector Information";
-}
-
-void Printer::getAnalysisUsage(AnalysisUsage &AU) const {
-  FunctionPass::getAnalysisUsage(AU);
-  AU.setPreservesAll();
-  AU.addRequired<GCModuleInfo>();
-}
-
-bool Printer::runOnFunction(Function &F) {
-  if (F.hasGC())
-    return false;
-
-  GCFunctionInfo *FD = &getAnalysis<GCModuleInfo>().getFunctionInfo(F);
-
-  OS << "GC roots for " << FD->getFunction().getName() << ":\n";
-  for (GCFunctionInfo::roots_iterator RI = FD->roots_begin(),
-                                      RE = FD->roots_end();
-       RI != RE; ++RI)
-    OS << "\t" << RI->Num << "\t" << RI->StackOffset << "[sp]\n";
-
-  OS << "GC safe points for " << FD->getFunction().getName() << ":\n";
-  for (GCFunctionInfo::iterator PI = FD->begin(), PE = FD->end(); PI != PE;
-       ++PI) {
-
-    OS << "\t" << PI->Label->getName() << ": " << "post-call"
-       << ", live = {";
-
-    ListSeparator LS(",");
-    for (const GCRoot &R : make_range(FD->live_begin(PI), FD->live_end(PI)))
-      OS << LS << " " << R.Num;
-
-    OS << " }\n";
-  }
-
-  return false;
-}
-
-bool Printer::doFinalization(Module &M) {
-  GCModuleInfo *GMI = getAnalysisIfAvailable<GCModuleInfo>();
-  assert(GMI && "Printer didn't require GCModuleInfo?!");
-  GMI->clear();
-  return false;
-}
 
 GCStrategy *GCModuleInfo::getGCStrategy(const StringRef Name) {
   // TODO: Arguably, just doing a linear search would be faster for small N

@@ -240,8 +240,8 @@ body:             |
 # GCN: %1:vreg_64 = IMPLICIT_DEF
 # GCN: %2:sreg_32 = IMPLICIT_DEF
 # GCN: %3:sreg_64 = IMPLICIT_DEF
-# GCN: %5:sreg_64_xexec = V_CMP_EQ_U32_e64 %0, 0, implicit $exec
-# GCN: %6:vreg_64 = V_CNDMASK_B64_PSEUDO 0, %1, %5, implicit $exec
+# GCN: %7:sreg_64_xexec = V_CMP_EQ_U32_e64 %0, 0, implicit $exec
+# GCN: %6:vreg_64 = V_CNDMASK_B64_PSEUDO 0, %1, %7, implicit $exec
 name: s_cselect_b64
 body: |
   bb.0:

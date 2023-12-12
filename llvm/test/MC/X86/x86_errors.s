@@ -190,3 +190,6 @@ vpermil2pd $16, %xmm3, %xmm5, %xmm1, %xmm2
 
 // 32: error: instruction requires: 64-bit mode
 pbndkb
+
+// 32: error: register %r16d is only available in 64-bit mode
+movl %eax, %r16d

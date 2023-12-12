@@ -71,7 +71,7 @@ ExprResult Sema::ParseObjCStringLiteral(SourceLocation *AtLocs,
     QualType StrTy = Context.getConstantArrayType(
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
-    S = StringLiteral::Create(Context, StrBuf, StringLiteral::Ordinary,
+    S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
                               /*Pascal=*/false, StrTy, &StrLocs[0],
                               StrLocs.size());
   }
@@ -321,20 +321,20 @@ ExprResult Sema::BuildObjCNumericLiteral(SourceLocation AtLoc, Expr *Number) {
     // In C, character literals have type 'int'. That's not the type we want
     // to use to determine the Objective-c literal kind.
     switch (Char->getKind()) {
-    case CharacterLiteral::Ascii:
-    case CharacterLiteral::UTF8:
+    case CharacterLiteralKind::Ascii:
+    case CharacterLiteralKind::UTF8:
       NumberType = Context.CharTy;
       break;
 
-    case CharacterLiteral::Wide:
+    case CharacterLiteralKind::Wide:
       NumberType = Context.getWideCharType();
       break;
 
-    case CharacterLiteral::UTF16:
+    case CharacterLiteralKind::UTF16:
       NumberType = Context.Char16Ty;
       break;
 
-    case CharacterLiteral::UTF32:
+    case CharacterLiteralKind::UTF32:
       NumberType = Context.Char32Ty;
       break;
     }
@@ -611,20 +611,20 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       // In C, character literals have type 'int'. That's not the type we want
       // to use to determine the Objective-c literal kind.
       switch (Char->getKind()) {
-      case CharacterLiteral::Ascii:
-      case CharacterLiteral::UTF8:
+      case CharacterLiteralKind::Ascii:
+      case CharacterLiteralKind::UTF8:
         ValueType = Context.CharTy;
         break;
 
-      case CharacterLiteral::Wide:
+      case CharacterLiteralKind::Wide:
         ValueType = Context.getWideCharType();
         break;
 
-      case CharacterLiteral::UTF16:
+      case CharacterLiteralKind::UTF16:
         ValueType = Context.Char16Ty;
         break;
 
-      case CharacterLiteral::UTF32:
+      case CharacterLiteralKind::UTF32:
         ValueType = Context.Char32Ty;
         break;
       }

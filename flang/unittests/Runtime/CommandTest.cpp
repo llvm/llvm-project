@@ -171,7 +171,7 @@ protected:
     std::string spaces(value->ElementBytes(), ' ');
     CheckDescriptorEqStr(value.get(), spaces);
 
-    CheckDescriptorEqInt(length.get(), 0);
+    CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
 
     if (errStr) {
       std::string paddedErrStr(GetPaddedStr(errStr, err->ElementBytes()));
@@ -193,7 +193,7 @@ protected:
     std::string spaces(value->ElementBytes(), ' ');
     CheckDescriptorEqStr(value.get(), spaces);
 
-    CheckDescriptorEqInt(length.get(), 0);
+    CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
 
     if (errStr) {
       std::string paddedErrStr(GetPaddedStr(errStr, err->ElementBytes()));
@@ -294,7 +294,7 @@ TEST_F(SeveralArguments, ArgValueTooShort) {
       RTNAME(GetCommandArgument)(1, tooShort.get(), length.get(), errMsg.get()),
       -1);
 
-  CheckDescriptorEqInt(length.get(), 16);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 16);
   std::string expectedErrMsg{
       GetPaddedStr("Value too short", errMsg->ElementBytes())};
   CheckDescriptorEqStr(errMsg.get(), expectedErrMsg);
@@ -320,7 +320,7 @@ TEST_F(SeveralArguments, CommandErrMsgTooShort) {
 
   std::string spaces(value->ElementBytes(), ' ');
   CheckDescriptorEqStr(value.get(), spaces);
-  CheckDescriptorEqInt(length.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 0);
   CheckDescriptorEqStr(errMsg.get(), "Mis");
 }
 
@@ -351,7 +351,7 @@ TEST_F(OnlyValidArguments, CommandValueTooShort) {
 
   CheckDescriptorEqStr(
       tooShort.get(), "aProgram -f has/a/few/slashes has\\a\\few\\backslashe");
-  CheckDescriptorEqInt(length.get(), 51);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 51);
 
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor()};
   ASSERT_NE(errMsg, nullptr);
@@ -377,7 +377,7 @@ TEST_F(OnlyValidArguments, GetCommandCanTakeNull) {
           value->ElementBytes()));
 
   EXPECT_EQ(0, RTNAME(GetCommand)(nullptr, length.get(), nullptr));
-  CheckDescriptorEqInt(length.get(), 51);
+  CheckDescriptorEqInt<std::int64_t>(length.get(), 51);
 }
 
 TEST_F(OnlyValidArguments, GetCommandShortLength) {
@@ -386,6 +386,11 @@ TEST_F(OnlyValidArguments, GetCommandShortLength) {
 
   EXPECT_EQ(0, RTNAME(GetCommand)(nullptr, length.get(), nullptr));
   CheckDescriptorEqInt<short>(length.get(), 51);
+}
+
+TEST_F(ZeroArguments, GetPID) {
+  // pid should always greater than 0, in both linux and windows
+  EXPECT_GT(RTNAME(GetPID)(), 0);
 }
 
 class EnvironmentVariables : public CommandFixture {

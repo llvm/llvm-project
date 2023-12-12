@@ -9,7 +9,6 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/SubtargetFeature.h"

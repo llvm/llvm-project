@@ -33,7 +33,7 @@ constexpr void test() {
 
   std::array array{0, 1, 2, 3, -1, 0, 1, 2, -2, 3, 4, 5};
   std::array expected{std::array{0, 1, 2, 3}, std::array{-1, 0, 1, 2}, std::array{-2, 3, 4, 5}};
-  Underlying underlying{Iter{array.begin()}, Sent{Iter{array.end()}}};
+  Underlying underlying{Iter{array.data()}, Sent{Iter{array.data() + array.size()}}};
   ChunkByView view{underlying, std::ranges::less_equal{}};
 
   size_t idx = 0;

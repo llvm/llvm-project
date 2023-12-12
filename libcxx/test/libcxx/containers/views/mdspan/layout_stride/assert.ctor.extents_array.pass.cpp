@@ -8,7 +8,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
+// UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
 
 // <mdspan>
@@ -41,7 +41,7 @@ int main(int, char**) {
   // the extents are representable but the product with strides is not, so we can't use it for layout_stride
   TEST_LIBCPP_ASSERT_FAILURE(
       ([=] {
-        std::layout_stride::template mapping<std::extents<char, D, 5>> m(
+        std::layout_stride::mapping<std::extents<char, D, 5>> m(
             std::extents<char, D, 5>(20), std::array<int, 2>{20, 1});
       }()),
       "layout_stride::mapping ctor: required span size is not representable as index_type.");
@@ -50,7 +50,7 @@ int main(int, char**) {
   static_assert(static_cast<unsigned char>(257u) == 1);
   TEST_LIBCPP_ASSERT_FAILURE(
       ([=] {
-        std::layout_stride::template mapping<std::extents<unsigned char, D, 5>> m(
+        std::layout_stride::mapping<std::extents<unsigned char, D, 5>> m(
             std::extents<unsigned char, D, 5>(20), std::array<unsigned, 2>{257, 1});
       }()),
       "layout_stride::mapping ctor: required span size is not representable as index_type.");
@@ -58,14 +58,14 @@ int main(int, char**) {
   // negative strides are not allowed, check with unsigned index_type so we make sure we catch that
   TEST_LIBCPP_ASSERT_FAILURE(
       ([=] {
-        std::layout_stride::template mapping<std::extents<unsigned, D, 5>> m(
+        std::layout_stride::mapping<std::extents<unsigned, D, 5>> m(
             std::extents<unsigned, D, 5>(20), std::array<int, 2>{20, -1});
       }()),
       "layout_stride::mapping ctor: all strides must be greater than 0");
   // zero strides are not allowed, check with unsigned index_type so we make sure we catch that
   TEST_LIBCPP_ASSERT_FAILURE(
       ([=] {
-        std::layout_stride::template mapping<std::extents<unsigned, D, 5>> m(
+        std::layout_stride::mapping<std::extents<unsigned, D, 5>> m(
             std::extents<unsigned, D, 5>(20), std::array<unsigned, 2>{20, 0});
       }()),
       "layout_stride::mapping ctor: all strides must be greater than 0");

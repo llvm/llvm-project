@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -o - %s | FileCheck %s
 
 ! Tests for infinite loop.
 

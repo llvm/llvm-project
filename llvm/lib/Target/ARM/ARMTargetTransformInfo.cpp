@@ -272,8 +272,8 @@ std::optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
                                        : APInt::getHighBitsSet(2, 1));
     SimplifyAndSetOp(&II, 0, OrigDemandedElts & DemandedElts, UndefElts);
     // The other lanes will be defined from the inserted elements.
-    UndefElts &= APInt::getSplat(NumElts, !IsTop ? APInt::getLowBitsSet(2, 1)
-                                                 : APInt::getHighBitsSet(2, 1));
+    UndefElts &= APInt::getSplat(NumElts, IsTop ? APInt::getLowBitsSet(2, 1)
+                                                : APInt::getHighBitsSet(2, 1));
     return std::nullopt;
   };
 
@@ -1984,7 +1984,7 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
     return BaseT::isLoweredToCall(F);
 
   // Assume all Arm-specific intrinsics map to an instruction.
-  if (F->getName().startswith("llvm.arm"))
+  if (F->getName().starts_with("llvm.arm"))
     return false;
 
   switch (F->getIntrinsicID()) {

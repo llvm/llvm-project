@@ -53,6 +53,7 @@
 // CHECK-NEXT: unix.API
 // CHECK-NEXT: unix.cstring.CStringModeling
 // CHECK-NEXT: unix.DynamicMemoryModeling
+// CHECK-NEXT: unix.Errno
 // CHECK-NEXT: unix.Malloc
 // CHECK-NEXT: unix.MallocSizeof
 // CHECK-NEXT: unix.MismatchedDeallocator

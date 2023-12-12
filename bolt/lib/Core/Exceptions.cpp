@@ -108,17 +108,23 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
   DWARFDataExtractor Data(
       StringRef(reinterpret_cast<const char *>(LSDASectionData.data()),
                 LSDASectionData.size()),
-      BC.DwCtx->getDWARFObj().isLittleEndian(), 8);
+      BC.DwCtx->getDWARFObj().isLittleEndian(),
+      BC.DwCtx->getDWARFObj().getAddressSize());
   uint64_t Offset = getLSDAAddress() - LSDASectionAddress;
   assert(Data.isValidOffset(Offset) && "wrong LSDA address");
 
-  uint8_t LPStartEncoding = Data.getU8(&Offset);
-  uint64_t LPStart = 0;
-  // Convert to offset if LPStartEncoding is typed absptr DW_EH_PE_absptr
-  if (std::optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
-          &Offset, LPStartEncoding, Offset + LSDASectionAddress))
-    LPStart = (LPStartEncoding && 0xFF == 0) ? *MaybeLPStart
-                                             : *MaybeLPStart - Address;
+  const uint8_t LPStartEncoding = Data.getU8(&Offset);
+  uint64_t LPStart = Address;
+  if (LPStartEncoding != dwarf::DW_EH_PE_omit) {
+    std::optional<uint64_t> MaybeLPStart = Data.getEncodedPointer(
+        &Offset, LPStartEncoding, Offset + LSDASectionAddress);
+    if (!MaybeLPStart) {
+      errs() << "BOLT-ERROR: unsupported LPStartEncoding: "
+             << (unsigned)LPStartEncoding << '\n';
+      exit(1);
+    }
+    LPStart = *MaybeLPStart;
+  }
 
   const uint8_t TTypeEncoding = Data.getU8(&Offset);
   LSDATypeEncoding = TTypeEncoding;
@@ -175,30 +181,13 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
     uint64_t LandingPad = *Data.getEncodedPointer(
         &CallSitePtr, CallSiteEncoding, CallSitePtr + LSDASectionAddress);
     uint64_t ActionEntry = Data.getULEB128(&CallSitePtr);
-
-    uint64_t LPOffset = LPStart + LandingPad;
-    uint64_t LPAddress = Address + LPOffset;
-
-    // Verify if landing pad code is located outside current function
-    // Support landing pad to builtin_unreachable
-    if (LPAddress < Address || LPAddress > Address + getSize()) {
-      BinaryFunction *Fragment =
-          BC.getBinaryFunctionContainingAddress(LPAddress);
-      assert(Fragment != nullptr &&
-             "BOLT-ERROR: cannot find landing pad fragment");
-      BC.addInterproceduralReference(this, Fragment->getAddress());
-      BC.processInterproceduralReferences();
-      assert(isParentOrChildOf(*Fragment) &&
-             "BOLT-ERROR: cannot have landing pads in different functions");
-      setHasIndirectTargetToSplitFragment(true);
-      BC.addFragmentsToSkip(this);
-      return;
-    }
+    if (LandingPad)
+      LandingPad += LPStart;
 
     if (opts::PrintExceptions) {
       outs() << "Call Site: [0x" << Twine::utohexstr(RangeBase + Start)
              << ", 0x" << Twine::utohexstr(RangeBase + Start + Length)
-             << "); landing pad: 0x" << Twine::utohexstr(LPOffset)
+             << "); landing pad: 0x" << Twine::utohexstr(LandingPad)
              << "; action entry: 0x" << Twine::utohexstr(ActionEntry) << "\n";
       outs() << "  current offset is " << (CallSitePtr - CallSiteTableStart)
              << '\n';
@@ -206,7 +195,24 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
 
     // Create a handler entry if necessary.
     MCSymbol *LPSymbol = nullptr;
-    if (LPOffset) {
+    if (LandingPad) {
+      // Verify if landing pad code is located outside current function
+      // Support landing pad to builtin_unreachable
+      if (LandingPad < Address || LandingPad > Address + getSize()) {
+        BinaryFunction *Fragment =
+            BC.getBinaryFunctionContainingAddress(LandingPad);
+        assert(Fragment != nullptr &&
+               "BOLT-ERROR: cannot find landing pad fragment");
+        BC.addInterproceduralReference(this, Fragment->getAddress());
+        BC.processInterproceduralReferences();
+        assert(isParentOrChildOf(*Fragment) &&
+               "BOLT-ERROR: cannot have landing pads in different functions");
+        setHasIndirectTargetToSplitFragment(true);
+        BC.addFragmentsToSkip(this);
+        return;
+      }
+
+      const uint64_t LPOffset = LandingPad - getAddress();
       if (!getInstructionAtOffset(LPOffset)) {
         if (opts::Verbosity >= 1)
           errs() << "BOLT-WARNING: landing pad " << Twine::utohexstr(LPOffset)
@@ -373,12 +379,12 @@ void BinaryFunction::updateEHRanges() {
     const MCSymbol *StartRange = nullptr;
 
     for (BinaryBasicBlock *const BB : FF) {
-      for (auto II = BB->begin(); II != BB->end(); ++II) {
-        if (!BC.MIB->isCall(*II))
+      for (MCInst &Instr : *BB) {
+        if (!BC.MIB->isCall(Instr))
           continue;
 
         // Instruction can throw an exception that should be handled.
-        const bool Throws = BC.MIB->isInvoke(*II);
+        const bool Throws = BC.MIB->isInvoke(Instr);
 
         // Ignore the call if it's a continuation of a no-throw gap.
         if (!Throws && !StartRange)
@@ -388,7 +394,7 @@ void BinaryFunction::updateEHRanges() {
         const MCSymbol *LP = nullptr;
         uint64_t Action = 0;
         if (const std::optional<MCPlus::MCLandingPad> EHInfo =
-                BC.MIB->getEHInfo(*II))
+                BC.MIB->getEHInfo(Instr))
           std::tie(LP, Action) = *EHInfo;
 
         // No action if the exception handler has not changed.
@@ -397,15 +403,14 @@ void BinaryFunction::updateEHRanges() {
           continue;
 
         // Same symbol is used for the beginning and the end of the range.
-        const MCSymbol *EHSymbol;
-        MCInst EHLabel;
-        {
+        MCSymbol *EHSymbol;
+        if (MCSymbol *InstrLabel = BC.MIB->getLabel(Instr)) {
+          EHSymbol = InstrLabel;
+        } else {
           std::unique_lock<llvm::sys::RWMutex> Lock(BC.CtxMutex);
           EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
-          BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
+          BC.MIB->setLabel(Instr, EHSymbol);
         }
-
-        II = std::next(BB->insertPseudoInstr(II, EHLabel));
 
         // At this point we could be in one of the following states:
         //

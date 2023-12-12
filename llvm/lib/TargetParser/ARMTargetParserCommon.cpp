@@ -44,6 +44,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v9.2a", "v9.2-a")
       .Case("v9.3a", "v9.3-a")
       .Case("v9.4a", "v9.4-a")
+      .Case("v9.5a", "v9.5-a")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
       .Case("v8.1m.main", "v8.1-m.main")
@@ -56,19 +57,19 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   StringRef Error = "";
 
   // Begins with "arm" / "thumb", move past it.
-  if (A.startswith("arm64_32"))
+  if (A.starts_with("arm64_32"))
     offset = 8;
-  else if (A.startswith("arm64e"))
+  else if (A.starts_with("arm64e"))
     offset = 6;
-  else if (A.startswith("arm64"))
+  else if (A.starts_with("arm64"))
     offset = 5;
-  else if (A.startswith("aarch64_32"))
+  else if (A.starts_with("aarch64_32"))
     offset = 10;
-  else if (A.startswith("arm"))
+  else if (A.starts_with("arm"))
     offset = 3;
-  else if (A.startswith("thumb"))
+  else if (A.starts_with("thumb"))
     offset = 5;
-  else if (A.startswith("aarch64")) {
+  else if (A.starts_with("aarch64")) {
     offset = 7;
     // AArch64 uses "_be", not "eb" suffix.
     if (A.contains("eb"))
@@ -81,7 +82,7 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   if (offset != StringRef::npos && A.substr(offset, 2) == "eb")
     offset += 2;
   // Or, if it ends with eb ("armv7eb"), chop it off.
-  else if (A.endswith("eb"))
+  else if (A.ends_with("eb"))
     A = A.substr(0, A.size() - 2);
   // Trim the head
   if (offset != StringRef::npos)
@@ -115,18 +116,18 @@ ARM::ISAKind ARM::parseArchISA(StringRef Arch) {
 }
 
 ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
-  if (Arch.startswith("armeb") || Arch.startswith("thumbeb") ||
-      Arch.startswith("aarch64_be"))
+  if (Arch.starts_with("armeb") || Arch.starts_with("thumbeb") ||
+      Arch.starts_with("aarch64_be"))
     return EndianKind::BIG;
 
-  if (Arch.startswith("arm") || Arch.startswith("thumb")) {
-    if (Arch.endswith("eb"))
+  if (Arch.starts_with("arm") || Arch.starts_with("thumb")) {
+    if (Arch.ends_with("eb"))
       return EndianKind::BIG;
     else
       return EndianKind::LITTLE;
   }
 
-  if (Arch.startswith("aarch64") || Arch.startswith("aarch64_32"))
+  if (Arch.starts_with("aarch64") || Arch.starts_with("aarch64_32"))
     return EndianKind::LITTLE;
 
   return EndianKind::INVALID;

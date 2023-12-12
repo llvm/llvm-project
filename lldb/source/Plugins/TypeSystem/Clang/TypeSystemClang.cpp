@@ -2320,8 +2320,9 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-                          type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
+  type = CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
     AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
@@ -8109,8 +8110,8 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     const char *name, // the full symbol name as seen in the symbol table
                       // (lldb::opaque_compiler_type_t type, "-[NString
                       // stringWithCString:]")
-    const CompilerType &method_clang_type, lldb::AccessType access,
-    bool is_artificial, bool is_variadic, bool is_objc_direct_call) {
+    const CompilerType &method_clang_type, bool is_artificial, bool is_variadic,
+    bool is_objc_direct_call) {
   if (!type || !method_clang_type.IsValid())
     return nullptr;
 

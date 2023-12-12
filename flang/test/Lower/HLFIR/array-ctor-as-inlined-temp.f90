@@ -161,7 +161,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_38:.*]] = arith.constant true
 ! CHECK:           %[[VAL_39:.*]] = hlfir.as_expr %[[VAL_21]]#0 move %[[VAL_38]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:           %[[VAL_40:.*]]:3 = hlfir.associate %[[VAL_39]](%[[VAL_20]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_40:.*]]:3 = hlfir.associate %[[VAL_39]](%[[VAL_20]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_40]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_41]]) fastmath<contract> : (!fir.ref<!fir.array<2xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_40]]#1, %[[VAL_40]]#2 : !fir.ref<!fir.array<?xi32>>, i1
@@ -225,7 +225,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_42:.*]] = arith.constant true
 ! CHECK:           %[[VAL_43:.*]] = hlfir.as_expr %[[VAL_25]]#0 move %[[VAL_42]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:           %[[VAL_44:.*]]:3 = hlfir.associate %[[VAL_43]](%[[VAL_24]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_44:.*]]:3 = hlfir.associate %[[VAL_43]](%[[VAL_24]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_44]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_45]]) fastmath<contract> : (!fir.ref<!fir.array<2xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_44]]#1, %[[VAL_44]]#2 : !fir.ref<!fir.array<?xi32>>, i1
@@ -303,7 +303,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_57:.*]] = arith.constant true
 ! CHECK:           %[[VAL_58:.*]] = hlfir.as_expr %[[VAL_34]]#0 move %[[VAL_57]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:           %[[VAL_59:.*]]:3 = hlfir.associate %[[VAL_58]](%[[VAL_33]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_59:.*]]:3 = hlfir.associate %[[VAL_58]](%[[VAL_33]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_59]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:           fir.call @_QPtakes_int(%[[VAL_60]]) fastmath<contract> : (!fir.ref<!fir.array<2xi32>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_59]]#1, %[[VAL_59]]#2 : !fir.ref<!fir.array<?xi32>>, i1

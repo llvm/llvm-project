@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | tco | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | tco | FileCheck %s
 
 character(LEN=128, KIND=4), PARAMETER :: conarr(3) = &
      [ character(128,4) :: "now is the time", "for all good men to come", &

@@ -47,6 +47,14 @@ Implemented Papers
 - P2443R1 - ``views::chunk_by``
 - P2538R1 - ADL-proof ``std::projected``
 - P2614R2 - Deprecate ``numeric_limits::has_denorm``
+- P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
+- P2467R1 - Support exclusive mode for fstreams
+- P0020R6 - Floating Point Atomic
+- P2905R2 - Runtime format strings
+- P2918R2 - Runtime format strings II
+- P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
+- P2870R3 - Remove basic_string::reserve()
+- P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
 
 
 Improvements and New Features
@@ -55,19 +63,24 @@ Improvements and New Features
 - ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
   can lead up to 350x performance improvements.
 
-- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
-  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
-  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
-  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
-  :ref:`the hardening documentation <using-hardening-modes>` for more details.
+- ``std::for_each`` has been optimized for segmented iterators like ``std::deque::iterator`` in C++23 and
+  later, which can lead up to 40x performance improvements.
 
-- The library now provides a debug mode which is a superset of the safe mode, additionally enabling more expensive
-  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
-  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
-  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
-  Users can control whether the debug mode is enabled on a per translation unit basis using the
-  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See :ref:`the hardening documentation <using-hardening-modes>` for more
-  details.
+- The library now provides several hardening modes under which common cases of library undefined behavior will be turned
+  into a reliable program termination. The ``fast`` hardening mode enables a set of security-critical checks with
+  minimal runtime overhead; the ``extensive`` hardening mode additionally enables relatively cheap checks that catch
+  common logic errors but aren't necessarily security-critical; and the ``debug`` hardening mode enables all available
+  checks, some of which might be very expensive. Vendors can configure which hardening mode is enabled by default with
+  the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control which hardening mode is enabled
+  on a per translation unit basis using the ``_LIBCPP_HARDENING_MODE`` macro. See :ref:`the hardening documentation
+  <using-hardening-modes>` for more details.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT`` macro has been added to make
+  the declarations in ``<codecvt>`` available.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
+  the function ``std::basic_string<...>::reserve()`` available.
+
 
 Deprecations and Removals
 -------------------------
@@ -80,30 +93,33 @@ Deprecations and Removals
 - The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
   ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 
-Upcoming Deprecations and Removals
-----------------------------------
+- `P1957 <https://wg21.link/P1957>` has been implemented in Clang and libc++ removed a code path that led to
+  narrowing conversions in ``std::variant`` behaving in a non-standard way. This may change how some uses of
+  ``std::variant``'s constructor behave in user code. The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT``
+  macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
+  In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
-LLVM 18
-~~~~~~~
-
-- The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
-  Please see the updated documentation about the safe libc++ mode and in particular the ``_LIBCPP_VERBOSE_ABORT``
-  macro for details.
+- The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro is not honored anymore in LLVM 18.
+  Please see the updated documentation about the hardening modes in libc++ and in particular the
+  ``_LIBCPP_VERBOSE_ABORT`` macro for details.
 
 - The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
   ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,
   ``<experimental/string>``, ``<experimental/unordered_map>``, ``<experimental/unordered_set>``,
-  and ``<experimental/vector>`` will be removed in LLVM 18, as all their contents will have been implemented in
-  namespace ``std`` for at least two releases.
+  and ``<experimental/vector>`` have been removed in LLVM 18, as all their contents will have been
+  implemented in namespace ``std`` for at least two releases.
+
+Upcoming Deprecations and Removals
+----------------------------------
 
 LLVM 19
 ~~~~~~~
 
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode will be deprecated and setting
-  it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``safe`` instead. Similarly, the
-  ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the safe mode the LLVM 19
-  release while also issuing a deprecation warning). See :ref:`the hardening documentation <using-hardening-modes>` for
-  more details.
+  it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``extensive`` instead. Similarly,
+  the ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the extensive mode the
+  LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
+  <using-hardening-modes>` for more details.
 
 - The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 19. If you
   are using ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t``
@@ -112,6 +128,9 @@ LLVM 19
   is bound to be incorrect for some types, which could currently cause unexpected behavior while going undetected.
   Note that the ``_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION`` macro can be defined in LLVM 18 to eagerly remove
   the specialization and prepare code bases for the unconditional removal in LLVM 19.
+
+- The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
+  in ``std::variant`` will be removed in LLVM 19.
 
 LLVM 20
 ~~~~~~~
@@ -124,7 +143,7 @@ ABI Affecting Changes
 ---------------------
 
 - The symbol of a non-visible function part of ``std::system_error`` was removed.
-  This is not a breaking change as the private function ``__init`` was never referenced internally outside of the dylib
+  This is not a breaking change as the private function ``__init`` was never referenced internally outside of the dylib.
 
 - This release of libc++ added missing visibility annotations on some types in the library. Users compiling with
   ``-fvisbility=hidden`` may notice that additional type infos from libc++ are being exported from their ABI. This is
@@ -139,7 +158,7 @@ ABI Affecting Changes
   extremely rare. Any error resulting from this change should result in a link-time error.
 
 - Under the unstable ABI, the internal alignment requirements for heap allocations
-  inside ``std::string`` has decreased from 16 to 8 This save memory since string requests fewer additional
+  inside ``std::string`` has decreased from 16 to 8. This saves memory since string requests fewer additional
   bytes than it did previously. However, this also changes the return value of ``std::string::max_size``
   and can cause code compiled against older libc++ versions but linked at runtime to a new version
   to throw a different exception when attempting allocations that are too large

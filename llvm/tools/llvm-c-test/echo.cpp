@@ -548,16 +548,26 @@ struct FunCloner {
         break;
       case LLVMInvoke: {
         SmallVector<LLVMValueRef, 8> Args;
-        int ArgCount = LLVMGetNumArgOperands(Src);
-        for (int i = 0; i < ArgCount; i++)
+        SmallVector<LLVMOperandBundleRef, 8> Bundles;
+        unsigned ArgCount = LLVMGetNumArgOperands(Src);
+        for (unsigned i = 0; i < ArgCount; ++i)
           Args.push_back(CloneValue(LLVMGetOperand(Src, i)));
+        unsigned BundleCount = LLVMGetNumOperandBundles(Src);
+        for (unsigned i = 0; i < BundleCount; ++i) {
+          auto Bundle = LLVMGetOperandBundleAtIndex(Src, i);
+          Bundles.push_back(CloneOB(Bundle));
+          LLVMDisposeOperandBundle(Bundle);
+        }
         LLVMTypeRef FnTy = CloneType(LLVMGetCalledFunctionType(Src));
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
         LLVMBasicBlockRef Then = DeclareBB(LLVMGetNormalDest(Src));
         LLVMBasicBlockRef Unwind = DeclareBB(LLVMGetUnwindDest(Src));
-        Dst = LLVMBuildInvoke2(Builder, FnTy, Fn, Args.data(), ArgCount,
-                               Then, Unwind, Name);
+        Dst = LLVMBuildInvokeWithOperandBundles(
+            Builder, FnTy, Fn, Args.data(), ArgCount, Then, Unwind,
+            Bundles.data(), Bundles.size(), Name);
         CloneAttrs(Src, Dst);
+        for (auto Bundle : Bundles)
+          LLVMDisposeOperandBundle(Bundle);
         break;
       }
       case LLVMUnreachable:
@@ -656,7 +666,9 @@ struct FunCloner {
       case LLVMOr: {
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMBool IsDisjoint = LLVMGetIsDisjoint(Src);
         Dst = LLVMBuildOr(Builder, LHS, RHS, Name);
+        LLVMSetIsDisjoint(Dst, IsDisjoint);
         break;
       }
       case LLVMXor: {
@@ -762,14 +774,25 @@ struct FunCloner {
       }
       case LLVMCall: {
         SmallVector<LLVMValueRef, 8> Args;
-        int ArgCount = LLVMGetNumArgOperands(Src);
-        for (int i = 0; i < ArgCount; i++)
+        SmallVector<LLVMOperandBundleRef, 8> Bundles;
+        unsigned ArgCount = LLVMGetNumArgOperands(Src);
+        for (unsigned i = 0; i < ArgCount; ++i)
           Args.push_back(CloneValue(LLVMGetOperand(Src, i)));
+        unsigned BundleCount = LLVMGetNumOperandBundles(Src);
+        for (unsigned i = 0; i < BundleCount; ++i) {
+          auto Bundle = LLVMGetOperandBundleAtIndex(Src, i);
+          Bundles.push_back(CloneOB(Bundle));
+          LLVMDisposeOperandBundle(Bundle);
+        }
         LLVMTypeRef FnTy = CloneType(LLVMGetCalledFunctionType(Src));
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
-        Dst = LLVMBuildCall2(Builder, FnTy, Fn, Args.data(), ArgCount, Name);
+        Dst = LLVMBuildCallWithOperandBundles(Builder, FnTy, Fn, Args.data(),
+                                              ArgCount, Bundles.data(),
+                                              Bundles.size(), Name);
         LLVMSetTailCallKind(Dst, LLVMGetTailCallKind(Src));
         CloneAttrs(Src, Dst);
+        for (auto Bundle : Bundles)
+          LLVMDisposeOperandBundle(Bundle);
         break;
       }
       case LLVMResume: {
@@ -899,6 +922,14 @@ struct FunCloner {
         Dst = LLVMBuildFence(Builder, Ordering, IsSingleThreaded, Name);
         break;
       }
+      case LLVMZExt: {
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMTypeRef DestTy = CloneType(LLVMTypeOf(Src));
+        LLVMBool NNeg = LLVMGetNNeg(Src);
+        Dst = LLVMBuildZExt(Builder, Val, DestTy, Name);
+        LLVMSetNNeg(Dst, NNeg);
+        break;
+      }
       default:
         break;
     }
@@ -923,6 +954,17 @@ struct FunCloner {
 
     check_value_kind(Dst, LLVMInstructionValueKind);
     return VMap[Src] = Dst;
+  }
+
+  LLVMOperandBundleRef CloneOB(LLVMOperandBundleRef Src) {
+    size_t TagLen;
+    const char *Tag = LLVMGetOperandBundleTag(Src, &TagLen);
+
+    SmallVector<LLVMValueRef, 8> Args;
+    for (unsigned i = 0, n = LLVMGetNumOperandBundleArgs(Src); i != n; ++i)
+      Args.push_back(CloneValue(LLVMGetOperandBundleArgAtIndex(Src, i)));
+
+    return LLVMCreateOperandBundle(Tag, TagLen, Args.data(), Args.size());
   }
 
   LLVMBasicBlockRef DeclareBB(LLVMBasicBlockRef Src) {

@@ -863,7 +863,8 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     outputShape.resize(multiples.size(), ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
-  }
+  } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
+    return failure();
 
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
@@ -875,6 +876,25 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult tosa::TileOp::verify() {
+  ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
+  ShapedType outputType = llvm::cast<ShapedType>(getType());
+  auto multiples = getMultiples();
+
+  if (inputType.hasRank()) {
+    if (static_cast<size_t>(inputType.getRank()) != multiples.size())
+      return emitOpError("expect 'multiples' array to have length ")
+             << inputType.getRank() << " but got " << multiples.size() << ".";
+    if (outputType.hasRank() && inputType.getRank() != outputType.getRank())
+      return emitOpError("expect same input and output tensor rank.");
+  } else if (outputType.hasRank() &&
+             static_cast<size_t>(outputType.getRank()) != multiples.size())
+    return emitOpError("expect 'multiples' array to have length ")
+           << outputType.getRank() << " but got " << multiples.size() << ".";
+
   return success();
 }
 
@@ -963,6 +983,10 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   ShapeAdaptor permsShape(adaptor.getPerms().getType());
 
+  // We cannot infer anything from a rank-0 "permutation" tensor.
+  if (permsShape.hasRank() && permsShape.getRank() == 0)
+    return failure();
+
   // If input rank and permutation length is unknown, the output rank is
   // unknown.
   if (!inputShape.hasRank() || !permsShape.hasRank() ||
@@ -977,15 +1001,7 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     return failure();
   }
 
-  // Without the input dims we cannot determine the output dim sizes but we
-  // can determine the output rank.
   SmallVector<int64_t> outputShape;
-  if (!inputShape.hasRank()) {
-    outputShape.resize(permsShape.getDimSize(0), ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
-    return success();
-  }
-
   // Rank-0 means no permutations matter.
   if (inputShape.getRank() == 0) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));

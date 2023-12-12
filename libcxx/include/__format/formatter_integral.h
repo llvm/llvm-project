@@ -141,7 +141,7 @@ _LIBCPP_HIDE_FROM_ABI auto __format_char(
   }
 
   const auto __c = static_cast<_CharT>(__value);
-  return __formatter::__write(_VSTD::addressof(__c), _VSTD::addressof(__c) + 1, _VSTD::move(__out_it), __specs);
+  return __formatter::__write(std::addressof(__c), std::addressof(__c) + 1, std::move(__out_it), __specs);
 }
 
 //
@@ -153,7 +153,7 @@ template <integral _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, int __base) {
   // TODO FMT Evaluate code overhead due to not calling the internal function
   // directly. (Should be zero overhead.)
-  to_chars_result __r = _VSTD::to_chars(__first, __last, __value, __base);
+  to_chars_result __r = std::to_chars(__first, __last, __value, __base);
   _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
@@ -214,22 +214,22 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
   __padding_size_result __padding = {0, 0};
   if (__specs.__alignment_ == __format_spec::__alignment::__zero_padding) {
     // Write [sign][prefix].
-    __out_it = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
+    __out_it = __formatter::__copy(__begin, __first, std::move(__out_it));
 
     if (__specs.__width_ > __size) {
       // Write zero padding.
       __padding.__before_ = __specs.__width_ - __size;
-      __out_it            = __formatter::__fill(_VSTD::move(__out_it), __specs.__width_ - __size, _CharT('0'));
+      __out_it            = __formatter::__fill(std::move(__out_it), __specs.__width_ - __size, _CharT('0'));
     }
   } else {
     if (__specs.__width_ > __size) {
       // Determine padding and write padding.
       __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
 
-      __out_it = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
+      __out_it = __formatter::__fill(std::move(__out_it), __padding.__before_, __specs.__fill_);
     }
     // Write [sign][prefix].
-    __out_it = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
+    __out_it = __formatter::__copy(__begin, __first, std::move(__out_it));
   }
 
   auto __r = __grouping.rbegin();
@@ -250,10 +250,10 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
   while (true) {
     if (__specs.__std_.__type_ == __format_spec::__type::__hexadecimal_upper_case) {
       __last = __first + *__r;
-      __out_it = __formatter::__transform(__first, __last, _VSTD::move(__out_it), __hex_to_upper);
+      __out_it = __formatter::__transform(__first, __last, std::move(__out_it), __hex_to_upper);
       __first = __last;
     } else {
-      __out_it = __formatter::__copy(__first, *__r, _VSTD::move(__out_it));
+      __out_it = __formatter::__copy(__first, *__r, std::move(__out_it));
       __first += *__r;
     }
 
@@ -264,7 +264,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
     *__out_it++ = __sep;
   }
 
-  return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+  return __formatter::__fill(std::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 
 
@@ -315,12 +315,12 @@ _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
     // The zero padding is done like:
     // - Write [sign][prefix]
     // - Write data right aligned with '0' as fill character.
-    __out_it             = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
+    __out_it             = __formatter::__copy(__begin, __first, std::move(__out_it));
     __specs.__alignment_ = __format_spec::__alignment::__right;
     __specs.__fill_.__data[0] = _CharT('0');
     int32_t __size       = __first - __begin;
 
-    __specs.__width_ -= _VSTD::min(__size, __specs.__width_);
+    __specs.__width_ -= std::min(__size, __specs.__width_);
   }
 
   if (__specs.__std_.__type_ != __format_spec::__type::__hexadecimal_upper_case) [[likely]]

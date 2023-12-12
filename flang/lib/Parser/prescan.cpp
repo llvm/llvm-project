@@ -178,9 +178,11 @@ void Prescanner::Statement() {
   while (NextToken(tokens)) {
   }
   if (continuationLines_ > 255) {
-    Say(GetProvenance(statementStart),
-        "%d continuation lines is more than the Fortran standard allows"_port_en_US,
-        continuationLines_);
+    if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+      Say(GetProvenance(statementStart),
+          "%d continuation lines is more than the Fortran standard allows"_port_en_US,
+          continuationLines_);
+    }
   }
 
   Provenance newlineProvenance{GetCurrentProvenance()};
@@ -334,8 +336,10 @@ void Prescanner::LabelField(TokenSequence &token) {
   token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
-    Say(GetCurrentProvenance(),
-        "Label digit is not in fixed-form label field"_port_en_US);
+    if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+      Say(GetCurrentProvenance(),
+          "Label digit is not in fixed-form label field"_port_en_US);
+    }
   }
 }
 
@@ -666,8 +670,11 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } else if (ch == ';' && InFixedFormSource()) {
       SkipSpaces();
       if (IsDecimalDigit(*at_)) {
-        Say(GetProvenanceRange(at_, at_ + 1),
-            "Label should be in the label field"_port_en_US);
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(at_, at_ + 1),
+              "Label should be in the label field"_port_en_US);
+        }
       }
     }
   }
@@ -699,6 +706,7 @@ void Prescanner::QuotedCharacterLiteral(
   char quote{*at_};
   const char *end{at_ + 1};
   inCharLiteral_ = true;
+  continuationInCharLiteral_ = true;
   const auto emit{[&](char ch) { EmitChar(tokens, ch); }};
   const auto insert{[&](char ch) { EmitInsertedChar(tokens, ch); }};
   bool isEscaped{false};
@@ -742,13 +750,9 @@ void Prescanner::QuotedCharacterLiteral(
         break;
       }
       inCharLiteral_ = true;
-      if (insertASpace_) {
-        Say(GetProvenanceRange(at_, end),
-            "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
-        insertASpace_ = false;
-      }
     }
   }
+  continuationInCharLiteral_ = false;
   inCharLiteral_ = false;
 }
 
@@ -1112,7 +1116,15 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
     } else if (ampersand || IsImplicitContinuation()) {
-      if (p > nextLine_) {
+      if (continuationInCharLiteral_) {
+        // 'a'&            -> 'a''b' == "a'b"
+        //   'b'
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(p, p + 1),
+              "Character literal continuation line should have been preceded by '&'"_port_en_US);
+        }
+      } else if (p > nextLine_) {
         --p;
       } else {
         insertASpace_ = true;

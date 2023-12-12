@@ -789,14 +789,17 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
+  // OpenMP supports NVPTX global constructors and destructors.
+  bool IsOpenMP = M.getModuleFlag("openmp") != nullptr;
+
   if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_ctors")) &&
-      !LowerCtorDtor) {
+      !LowerCtorDtor && !IsOpenMP) {
     report_fatal_error(
         "Module has a nontrivial global ctor, which NVPTX does not support.");
     return true;  // error
   }
   if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_dtors")) &&
-      !LowerCtorDtor) {
+      !LowerCtorDtor && !IsOpenMP) {
     report_fatal_error(
         "Module has a nontrivial global dtor, which NVPTX does not support.");
     return true;  // error
@@ -1013,8 +1016,8 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   }
 
   // Skip LLVM intrinsic global variables
-  if (GVar->getName().startswith("llvm.") ||
-      GVar->getName().startswith("nvvm."))
+  if (GVar->getName().starts_with("llvm.") ||
+      GVar->getName().starts_with("nvvm."))
     return;
 
   const DataLayout &DL = getDataLayout();

@@ -12,7 +12,6 @@
 
 #include "CoverageReport.h"
 #include "RenderingSupport.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
@@ -212,7 +211,7 @@ void CoverageReport::render(const FileCoverageSummary &File,
   sys::path::native(FileName);
 
   // remove_dots will remove trailing slash, so we need to check before it.
-  auto IsDir = FileName.endswith(sys::path::get_separator());
+  auto IsDir = FileName.ends_with(sys::path::get_separator());
   sys::path::remove_dots(FileName, /*remove_dot_dot=*/true);
   if (IsDir)
     FileName += sys::path::get_separator();

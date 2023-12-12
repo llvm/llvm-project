@@ -804,3 +804,223 @@ define <16 x i8> @buildvec_not_vid_v16i8() {
 ; CHECK-NEXT:    ret
   ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 3, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0>
 }
+
+define <8 x i32> @prefix_overwrite(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: prefix_overwrite:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 3
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x i32> %vin, i32 %a, i32 0
+  %v1 = insertelement <8 x i32> %v0, i32 %b, i32 1
+  %v2 = insertelement <8 x i32> %v1, i32 %c, i32 2
+  %v3 = insertelement <8 x i32> %v2, i32 %d, i32 3
+  ret <8 x i32> %v3
+}
+
+define <8 x i32> @suffix_overwrite(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: suffix_overwrite:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 5
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 6
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 7
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x i32> %vin, i32 %a, i32 4
+  %v1 = insertelement <8 x i32> %v0, i32 %b, i32 5
+  %v2 = insertelement <8 x i32> %v1, i32 %c, i32 6
+  %v3 = insertelement <8 x i32> %v2, i32 %d, i32 7
+  ret <8 x i32> %v3
+}
+
+define <4 x i64> @v4xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d) vscale_range(2,2) {
+; RV32-LABEL: v4xi64_exact:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a4
+; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a6
+; RV32-NEXT:    vslide1down.vx v9, v8, a7
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v4xi64_exact:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vslide1down.vx v9, v8, a3
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    ret
+  %v1 = insertelement <4 x i64> poison, i64 %a, i32 0
+  %v2 = insertelement <4 x i64> %v1, i64 %b, i32 1
+  %v3 = insertelement <4 x i64> %v2, i64 %c, i32 2
+  %v4 = insertelement <4 x i64> %v3, i64 %d, i32 3
+  ret <4 x i64> %v4
+}
+
+define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) vscale_range(2,2) {
+; RV32-LABEL: v8xi64_exact:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw t0, 28(sp)
+; RV32-NEXT:    lw t1, 24(sp)
+; RV32-NEXT:    lw t2, 20(sp)
+; RV32-NEXT:    lw t3, 12(sp)
+; RV32-NEXT:    lw t4, 8(sp)
+; RV32-NEXT:    lw t5, 4(sp)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a4
+; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a6
+; RV32-NEXT:    vslide1down.vx v9, v8, a7
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vlse32.v v10, (sp), zero
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vlse32.v v11, (a0), zero
+; RV32-NEXT:    vslide1down.vx v10, v10, t5
+; RV32-NEXT:    vslide1down.vx v10, v10, t4
+; RV32-NEXT:    vslide1down.vx v10, v10, t3
+; RV32-NEXT:    vslide1down.vx v11, v11, t2
+; RV32-NEXT:    vslide1down.vx v11, v11, t1
+; RV32-NEXT:    vslide1down.vx v11, v11, t0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v8xi64_exact:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vslide1down.vx v9, v8, a3
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    vmv.v.x v10, a4
+; RV64-NEXT:    vslide1down.vx v10, v10, a5
+; RV64-NEXT:    vmv.v.x v11, a6
+; RV64-NEXT:    vslide1down.vx v11, v11, a7
+; RV64-NEXT:    ret
+  %v1 = insertelement <8 x i64> poison, i64 %a, i32 0
+  %v2 = insertelement <8 x i64> %v1, i64 %b, i32 1
+  %v3 = insertelement <8 x i64> %v2, i64 %c, i32 2
+  %v4 = insertelement <8 x i64> %v3, i64 %d, i32 3
+  %v5 = insertelement <8 x i64> %v4, i64 %e, i32 4
+  %v6 = insertelement <8 x i64> %v5, i64 %f, i32 5
+  %v7 = insertelement <8 x i64> %v6, i64 %g, i32 6
+  %v8 = insertelement <8 x i64> %v7, i64 %h, i32 7
+  ret <8 x i64> %v8
+}
+
+define <8 x i64> @v8xi64_exact_equal_halves(i64 %a, i64 %b, i64 %c, i64 %d) vscale_range(2,2) {
+; RV32-LABEL: v8xi64_exact_equal_halves:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a4
+; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a6
+; RV32-NEXT:    vslide1down.vx v9, v8, a7
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vmv.v.v v10, v8
+; RV32-NEXT:    vmv.v.v v11, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v8xi64_exact_equal_halves:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vslide1down.vx v9, v8, a3
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    vmv.v.v v10, v8
+; RV64-NEXT:    vmv.v.v v11, v9
+; RV64-NEXT:    ret
+  %v1 = insertelement <8 x i64> poison, i64 %a, i32 0
+  %v2 = insertelement <8 x i64> %v1, i64 %b, i32 1
+  %v3 = insertelement <8 x i64> %v2, i64 %c, i32 2
+  %v4 = insertelement <8 x i64> %v3, i64 %d, i32 3
+  %v5 = insertelement <8 x i64> %v4, i64 %a, i32 4
+  %v6 = insertelement <8 x i64> %v5, i64 %b, i32 5
+  %v7 = insertelement <8 x i64> %v6, i64 %c, i32 6
+  %v8 = insertelement <8 x i64> %v7, i64 %d, i32 7
+  ret <8 x i64> %v8
+}
+
+define <8 x i64> @v8xi64_exact_undef_suffix(i64 %a, i64 %b, i64 %c, i64 %d) vscale_range(2,2) {
+; RV32-LABEL: v8xi64_exact_undef_suffix:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a4
+; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a6
+; RV32-NEXT:    vslide1down.vx v9, v8, a7
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v8xi64_exact_undef_suffix:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vslide1down.vx v9, v8, a3
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    ret
+  %v1 = insertelement <8 x i64> poison, i64 %a, i32 0
+  %v2 = insertelement <8 x i64> %v1, i64 %b, i32 1
+  %v3 = insertelement <8 x i64> %v2, i64 %c, i32 2
+  %v4 = insertelement <8 x i64> %v3, i64 %d, i32 3
+  ret <8 x i64> %v4
+}
+
+define <8 x i64> @v8xi64_exact_undef_prefix(i64 %a, i64 %b, i64 %c, i64 %d) vscale_range(2,2) {
+; RV32-LABEL: v8xi64_exact_undef_prefix:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a4
+; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a6
+; RV32-NEXT:    vslide1down.vx v11, v8, a7
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v10, v8, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v8xi64_exact_undef_prefix:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vslide1down.vx v11, v8, a3
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vslide1down.vx v10, v8, a1
+; RV64-NEXT:    ret
+  %v1 = insertelement <8 x i64> poison, i64 %a, i32 4
+  %v2 = insertelement <8 x i64> %v1, i64 %b, i32 5
+  %v3 = insertelement <8 x i64> %v2, i64 %c, i32 6
+  %v4 = insertelement <8 x i64> %v3, i64 %d, i32 7
+  ret <8 x i64> %v4
+}

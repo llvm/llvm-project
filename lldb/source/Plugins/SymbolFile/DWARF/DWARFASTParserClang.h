@@ -271,6 +271,30 @@ private:
     }
   };
 
+  /// Parsed form of all attributes that are relevant for parsing type members.
+  struct MemberAttributes {
+    explicit MemberAttributes(
+        const lldb_private::plugin::dwarf::DWARFDIE &die,
+        const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
+        lldb::ModuleSP module_sp);
+    const char *name = nullptr;
+    /// Indicates how many bits into the word (according to the host endianness)
+    /// the low-order bit of the field starts. Can be negative.
+    int64_t bit_offset = 0;
+    /// Indicates the size of the field in bits.
+    size_t bit_size = 0;
+    uint64_t data_bit_offset = UINT64_MAX;
+    lldb::AccessType accessibility = lldb::eAccessNone;
+    std::optional<uint64_t> byte_size;
+    std::optional<lldb_private::plugin::dwarf::DWARFFormValue> const_value_form;
+    lldb_private::plugin::dwarf::DWARFFormValue encoding_form;
+    /// Indicates the byte offset of the word from the base address of the
+    /// structure.
+    uint32_t member_byte_offset = UINT32_MAX;
+    bool is_artificial = false;
+    bool is_declaration = false;
+  };
+
   /// Returns 'true' if we should create an unnamed bitfield
   /// and add it to the parser's current AST.
   ///
@@ -313,6 +337,22 @@ private:
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
+  /// If the specified 'die' represents a static data member, creates
+  /// a 'clang::VarDecl' for it and attaches it to specified parent
+  /// 'class_clang_type'.
+  ///
+  /// \param[in] die The member declaration we want to create a
+  ///                clang::VarDecl for.
+  ///
+  /// \param[in] attrs The parsed attributes for the specified 'die'.
+  ///
+  /// \param[in] class_clang_type The parent RecordType of the static
+  ///                             member this function will create.
+  void CreateStaticMemberVariable(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      const MemberAttributes &attrs,
+      const lldb_private::CompilerType &class_clang_type);
+
   bool CompleteRecordType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                           lldb_private::Type *type,
                           lldb_private::CompilerType &clang_type);
@@ -328,7 +368,7 @@ private:
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
                          ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                               ParsedDWARFTypeAttributes &attrs);
+                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP
@@ -405,6 +445,7 @@ struct ParsedDWARFTypeAttributes {
   lldb_private::plugin::dwarf::DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
   std::optional<uint64_t> byte_size;
+  std::optional<uint64_t> alignment;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;
