@@ -3285,6 +3285,29 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
 
+    case OPC_MoveSibling:
+    case OPC_MoveSibling0:
+    case OPC_MoveSibling1:
+    case OPC_MoveSibling2:
+    case OPC_MoveSibling3:
+    case OPC_MoveSibling4:
+    case OPC_MoveSibling5:
+    case OPC_MoveSibling6:
+    case OPC_MoveSibling7: {
+      // Pop the current node off the NodeStack.
+      NodeStack.pop_back();
+      assert(!NodeStack.empty() && "Node stack imbalance!");
+      N = NodeStack.back();
+
+      unsigned SiblingNo = Opcode == OPC_MoveSibling
+                               ? MatcherTable[MatcherIndex++]
+                               : Opcode - OPC_MoveSibling0;
+      if (SiblingNo >= N.getNumOperands())
+        break; // Match fails if out of range sibling #.
+      N = N.getOperand(SiblingNo);
+      NodeStack.push_back(N);
+      continue;
+    }
     case OPC_MoveParent:
       // Pop the current node off the NodeStack.
       NodeStack.pop_back();
