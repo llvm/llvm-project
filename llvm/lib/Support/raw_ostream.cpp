@@ -975,7 +975,7 @@ WSABalancer::~WSABalancer() { WSACleanup(); }
 
 #endif // _WIN32
 
-std::error_code getLastSocketErrorCode() {
+static std::error_code getLastSocketErrorCode() {
 #ifdef _WIN32
   return std::error_code(::WSAGetLastError(), std::system_category());
 #else
@@ -1053,8 +1053,7 @@ ListeningSocket::~ListeningSocket() {
   unlink(SocketPath.c_str());
 }
 
-// Expected?
-Expected<int> GetSocketFD(StringRef SocketPath) {
+static Expected<int> GetSocketFD(StringRef SocketPath) {
 #ifdef _WIN32
   SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (MaybeWinsocket == INVALID_SOCKET) {
