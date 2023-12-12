@@ -1,4 +1,4 @@
-; RUN: llc -march=x86-64 -mattr=cx16 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64 -mattr=cx16 < %s | FileCheck %s
 
 ; Atomics larger than 128-bit are unsupported, and emit libcalls.
 define void @test(ptr %a) nounwind {
