@@ -1,4 +1,4 @@
-//===-- llvm-readtapi.cpp - tapi file reader and manipulator -----*- C++-*-===//
+//===-- llvm-readtapi.cpp - tapi file reader and transformer -----*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -171,9 +171,15 @@ int main(int Argc, char **Argv) {
       Argc, Argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) { reportError(Msg); });
   if (Args.hasArg(OPT_help)) {
     Tbl.printHelp(outs(),
-                  "USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o "
+                  "USAGE: llvm-readtapi <command> [-arch <architecture> "
+                  "<options>]* <inputs> [-o "
                   "<output>]*",
-                  "LLVM TAPI file reader and manipulator");
+                  "LLVM TAPI file reader and transformer");
+    return EXIT_SUCCESS;
+  }
+
+  if (Args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
     return EXIT_SUCCESS;
   }
 
