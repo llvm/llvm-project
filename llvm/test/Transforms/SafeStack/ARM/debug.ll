@@ -1,3 +1,4 @@
+; RUN: opt -safe-stack -safestack-use-pointer-address < %s -S | FileCheck %s
 ; RUN: opt -passes=safe-stack -safestack-use-pointer-address < %s -S | FileCheck %s
 ; RUN: opt --try-experimental-debuginfo-iterators -passes=safe-stack -safestack-use-pointer-address < %s -S | FileCheck %s
 
