@@ -415,9 +415,7 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
     SmallVector<Value> ivs = llvm::to_vector(llvm::drop_end(
         env.emitter().getLoopIVsRange(), env.getCurrentDepth() - numLoops));
     Value chain = env.getInsertionChain();
-    if (!env.getValidLexInsert()) {
-      env.updateInsertionChain(builder.create<InsertOp>(loc, rhs, chain, ivs));
-    } else {
+    if (env.isValidLexInsert()) {
       // Generates runtime check for a valid lex during reduction,
       // to avoid inserting the identity value for empty reductions.
       //   if (validLexInsert) then
@@ -438,6 +436,9 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
       // Value assignment.
       builder.setInsertionPointAfter(ifValidLexInsert);
       env.updateInsertionChain(ifValidLexInsert.getResult(0));
+    } else {
+      // Generates regular insertion chain.
+      env.updateInsertionChain(builder.create<InsertOp>(loc, rhs, chain, ivs));
     }
     return;
   }
@@ -688,12 +689,13 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, ExprId exp,
           env.startReduc(exp, genTensorLoad(env, builder, exp));
         }
         if (env.hasSparseOutput())
-          env.setValidLexInsert(constantI1(builder, env.op().getLoc(), false));
+          env.startValidLexInsert(
+              constantI1(builder, env.op().getLoc(), false));
       } else {
         if (!env.isCustomReduc() || env.isReduc())
           genTensorStore(env, builder, exp, env.endReduc());
         if (env.hasSparseOutput())
-          env.clearValidLexInsert();
+          env.endValidLexInsert();
       }
     } else {
       // Start or end loop invariant hoisting of a tensor load.
@@ -846,9 +848,9 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder,
       if (env.isReduc()) {
         yields.push_back(env.getReduc());
         env.updateReduc(ifOp.getResult(y++));
-        if (env.getValidLexInsert()) {
+        if (env.isValidLexInsert()) {
           yields.push_back(env.getValidLexInsert());
-          env.setValidLexInsert(ifOp.getResult(y++));
+          env.updateValidLexInsert(ifOp.getResult(y++));
         }
       }
       if (env.isExpand()) {
@@ -904,7 +906,7 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId curr,
       });
   if (env.isReduc()) {
     types.push_back(env.getReduc().getType());
-    if (env.getValidLexInsert())
+    if (env.isValidLexInsert())
       types.push_back(env.getValidLexInsert().getType());
   }
   if (env.isExpand())
@@ -924,10 +926,10 @@ static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
   if (env.isReduc()) {
     operands.push_back(env.getReduc());
     env.updateReduc(redInput);
-    if (env.getValidLexInsert()) {
+    if (env.isValidLexInsert()) {
       // Any overlapping indices during a reduction creates a valid lex insert.
       operands.push_back(constantI1(builder, env.op().getLoc(), true));
-      env.setValidLexInsert(validIns);
+      env.updateValidLexInsert(validIns);
     }
   }
   if (env.isExpand()) {
@@ -1174,8 +1176,8 @@ static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
   // Either a for-loop or a while-loop that iterates over a slice.
   if (isSingleCond) {
     // Any iteration creates a valid lex insert.
-    if (env.isReduc() && env.getValidLexInsert())
-      env.setValidLexInsert(constantI1(rewriter, env.op().getLoc(), true));
+    if (env.isReduc() && env.isValidLexInsert())
+      env.updateValidLexInsert(constantI1(rewriter, env.op().getLoc(), true));
   } else if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
     // End a while-loop.
     finalizeWhileOp(env, rewriter, needsUniv);
