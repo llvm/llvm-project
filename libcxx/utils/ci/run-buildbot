@@ -112,6 +112,27 @@ if [ -z "${CMAKE}" ]; then
     fi
 fi
 
+function start_output_group() {
+  end_output_group
+  set +x
+  if [[ -v GITHUB_ACTIONS ]]; then
+    echo "::group::$1"
+    export IN_GROUP=1
+  else
+    echo "--- $1"
+  fi
+  set -x
+}
+
+function end_output_group() {
+  set +x
+  if [[ -v GITHUB_ACTIONS ]] && [[ -v IN_GROUP ]]; then
+    echo "::endgroup::"
+    unset IN_GROUP
+  fi
+  set -x
+}
+
 function clean() {
     rm -rf "${BUILD_DIR}"
 }
@@ -125,7 +146,7 @@ if [ -n "${ENABLE_STD_MODULES}" ]; then
 fi
 
 function generate-cmake-base() {
-    echo "--- Generating CMake"
+    start_output_group "Generating CMake"
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
@@ -139,6 +160,7 @@ function generate-cmake-base() {
           ${ENABLE_STD_MODULES} \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
+    end_output_group
 }
 
 function generate-cmake() {
@@ -164,13 +186,19 @@ function generate-cmake-android() {
 }
 
 function check-runtimes() {
-    echo "+++ Running the libc++ tests"
+    start_output_group "Building libc++ & libc++abi"
+    ${NINJA} -vC "${BUILD_DIR}" cxx cxxabi
+
+    start_output_group "Building libc++ test deps"
+    ${NINJA} -vC "${BUILD_DIR}" cxx-test-depends
+
+    start_output_group "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
-    echo "+++ Running the libc++abi tests"
+    start_output_group "Running the libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
 
-    echo "+++ Running the libunwind tests"
+    start_output_group "Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}" check-unwind
 
     # TODO: On macOS 13.5, the linker seems to have an issue where it will pick up
@@ -183,23 +211,25 @@ function check-runtimes() {
     #       It should be possible to move this installation step back to the top once
     #       that issue has been resolved, but in the meantime it doesn't really hurt to
     #       have it here.
-    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
+    start_output_group "Installing libc++, libc++abi and libunwind to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
+
+    end_output_group
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
 #       this to the Lit test suite instead of being a separate CMake target.
 function check-abi-list() {
-    echo "+++ Running the libc++ ABI list test"
+    start_output_group "Running the libc++ ABI list test"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx-abilist || (
-        echo "+++ Generating the libc++ ABI list after failed check"
+        echo "::error::Generating the libc++ ABI list after failed check"
         ${NINJA} -vC "${BUILD_DIR}" generate-cxx-abilist
         false
     )
 }
 
 function check-cxx-benchmarks() {
-    echo "--- Running the benchmarks"
+    start_output_group "Running the benchmarks"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
 }
 
@@ -341,7 +371,7 @@ generic-ubsan)
 bootstrapping-build)
     clean
 
-    echo "--- Generating CMake"
+    start_output_group "Generating CMake"
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
@@ -357,13 +387,15 @@ bootstrapping-build)
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
-    echo "+++ Running the libc++ and libc++abi tests"
+    start_output_group "Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
-    echo "--- Installing libc++ and libc++abi to a fake location"
+    start_output_group "Installing libc++ and libc++abi to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-runtimes
 
     ccache -s
+
+    end_output_group
 ;;
 generic-static)
     clean
@@ -500,11 +532,12 @@ apple-system-backdeployment-hardened-*)
     clean
 
     if [[ "${OSX_ROOTS}" == "" ]]; then
-        echo "--- Downloading previous macOS dylibs"
+        start_output_group "Downloading previous macOS dylibs"
         PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
         OSX_ROOTS="${BUILD_DIR}/macos-roots"
         mkdir -p "${OSX_ROOTS}"
         curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
+        end_output_group
     fi
 
     DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-hardened-}"
@@ -538,11 +571,12 @@ apple-system-backdeployment-*)
     clean
 
     if [[ "${OSX_ROOTS}" == "" ]]; then
-        echo "--- Downloading previous macOS dylibs"
+        start_output_group "Downloading previous macOS dylibs"
         PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
         OSX_ROOTS="${BUILD_DIR}/macos-roots"
         mkdir -p "${OSX_ROOTS}"
         curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
+        end_output_group
     fi
 
     DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-}"
@@ -621,7 +655,7 @@ armv7m-picolibc)
         --install-dir "${INSTALL_DIR}" \
         --target armv7m-none-eabi
 
-    echo "--- Generating CMake"
+    start_output_group "Generating CMake"
     flags="--sysroot=${INSTALL_DIR}"
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/compiler-rt" \
