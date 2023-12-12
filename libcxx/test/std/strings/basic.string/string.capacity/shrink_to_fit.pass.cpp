@@ -36,6 +36,10 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   s.erase(5);
   test(s);
 
+  s.assign(50, 'a');
+  s.erase(5);
+  test(s);
+
   s.assign(100, 'a');
   s.erase(50);
   test(s);
