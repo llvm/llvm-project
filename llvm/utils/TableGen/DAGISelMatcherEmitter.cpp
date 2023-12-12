@@ -767,14 +767,20 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     const auto *C2RMatcher = cast<EmitCopyToRegMatcher>(N);
     int Bytes = 3;
     const CodeGenRegister *Reg = C2RMatcher->getDestPhysReg();
+    unsigned Slot = C2RMatcher->getSrcSlot();
     if (Reg->EnumValue > 255) {
       assert(isUInt<16>(Reg->EnumValue) && "not handled");
-      OS << "OPC_EmitCopyToReg2, " << C2RMatcher->getSrcSlot() << ", "
+      OS << "OPC_EmitCopyToRegTwoByte, " << Slot << ", "
          << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
       ++Bytes;
     } else {
-      OS << "OPC_EmitCopyToReg, " << C2RMatcher->getSrcSlot() << ", "
-         << getQualifiedName(Reg->TheDef) << ",\n";
+      if (Slot < 8) {
+        OS << "OPC_EmitCopyToReg" << Slot << ", "
+           << getQualifiedName(Reg->TheDef) << ",\n";
+        --Bytes;
+      } else
+        OS << "OPC_EmitCopyToReg, " << Slot << ", "
+           << getQualifiedName(Reg->TheDef) << ",\n";
     }
 
     return Bytes;
