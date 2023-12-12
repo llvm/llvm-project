@@ -460,7 +460,7 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 
 /// Distribute transfer_write ops based on the affine map returned by
 /// `distributionMapFn`. Writes of size more than `maxNumElementToExtract`
-/// will not be distributed.
+/// will not be distributed (it should be less than the warp size).
 ///
 /// Example:
 /// ```
