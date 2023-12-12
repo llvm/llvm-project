@@ -21,6 +21,7 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
+#include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__system_error/errc.h>
 #include <__type_traits/make_unsigned.h>
@@ -52,6 +53,7 @@ namespace __formatter {
 //
 
 template <contiguous_iterator _Iterator>
+  requires same_as<char, iter_value_t<_Iterator>>
 _LIBCPP_HIDE_FROM_ABI inline _Iterator __insert_sign(_Iterator __buf, bool __negative, __format_spec::__sign __sign) {
   if (__negative)
     *__buf++ = '-';
@@ -153,6 +155,7 @@ _LIBCPP_HIDE_FROM_ABI auto __format_char(
 
 /** Wrapper around @ref to_chars, returning the output iterator. */
 template <contiguous_iterator _Iterator, integral _Tp>
+  requires same_as<char, iter_value_t<_Iterator>>
 _LIBCPP_HIDE_FROM_ABI _Iterator __to_buffer(_Iterator __first, _Iterator __last, _Tp __value, int __base) {
   // TODO FMT Evaluate code overhead due to not calling the internal function
   // directly. (Should be zero overhead.)
@@ -208,6 +211,7 @@ consteval size_t __buffer_size() noexcept
 }
 
 template <class _OutIt, contiguous_iterator _Iterator, class _CharT>
+  requires same_as<char, iter_value_t<_Iterator>>
 _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, _Iterator __begin, _Iterator __first,
                                                               _Iterator __last, string&& __grouping, _CharT __sep,
                                                               __format_spec::__parsed_specifications<_CharT> __specs) {
@@ -274,6 +278,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, _
 
 
 template <unsigned_integral _Tp, contiguous_iterator _Iterator, class _CharT, class _FormatContext>
+  requires same_as<char, iter_value_t<_Iterator>>
 _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
     _Tp __value,
     _FormatContext& __ctx,
