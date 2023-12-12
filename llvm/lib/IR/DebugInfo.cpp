@@ -44,25 +44,23 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
-TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
+void llvm::findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers,
+                           Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
   if (!V->isUsedByMetadata())
-    return {};
+    return;
   auto *L = LocalAsMetadata::getIfExists(V);
   if (!L)
-    return {};
+    return;
   auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
   if (!MDV)
-    return {};
+    return;
 
-  TinyPtrVector<DbgDeclareInst *> Declares;
   for (User *U : MDV->users()) {
     if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
-      Declares.push_back(DDI);
+      DbgUsers.push_back(DDI);
   }
-
-  return Declares;
 }
 
 template <typename IntrinsicT>
