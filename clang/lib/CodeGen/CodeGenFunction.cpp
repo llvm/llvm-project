@@ -892,10 +892,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
-  if (FD->hasAttr<NakedAttr>()) {
-    Fn->addFnAttr(llvm::Attribute::NoProfile);
-  }
-
   unsigned Count, Offset;
   if (const auto *Attr =
           D ? D->getAttr<PatchableFunctionEntryAttr>() : nullptr) {
