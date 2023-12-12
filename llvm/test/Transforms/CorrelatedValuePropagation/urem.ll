@@ -394,7 +394,6 @@ else:
   ret void
 }
 
-; FIXME: This is a miscompile.
 define i8 @urem_undef_range_op1(i8 %x) {
 ; CHECK-LABEL: @urem_undef_range_op1(
 ; CHECK-NEXT:  entry:
@@ -408,7 +407,8 @@ define i8 @urem_undef_range_op1(i8 %x) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i8 [[PHI]]
+; CHECK-NEXT:    [[RES:%.*]] = urem i8 [[PHI]], 3
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
 entry:
   switch i8 %x, label %join [
