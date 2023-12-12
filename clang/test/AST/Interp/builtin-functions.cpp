@@ -339,3 +339,17 @@ namespace expect {
   static_assert(__builtin_expect(a(),1) == 12, "");
   static_assert(__builtin_expect_with_probability(a(), 1, 1.0) == 12, "");
 }
+
+namespace rotateleft {
+  char rotateleft1[__builtin_rotateleft8(0x01, 5) == 0x20 ? 1 : -1];
+  char rotateleft2[__builtin_rotateleft16(0x3210, 11) == 0x8190 ? 1 : -1];
+  char rotateleft3[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
+  char rotateleft4[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
+}
+
+namespace rotateright {
+  char rotateright1[__builtin_rotateright8(0x01, 5) == 0x08 ? 1 : -1];
+  char rotateright2[__builtin_rotateright16(0x3210, 11) == 0x4206 ? 1 : -1];
+  char rotateright3[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
+  char rotateright4[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
+}
