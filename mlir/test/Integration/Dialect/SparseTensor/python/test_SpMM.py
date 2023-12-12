@@ -16,7 +16,7 @@ from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 @dsl.linalg_structured_op
@@ -96,7 +96,6 @@ def build_compile_and_run_SpMM(attr: st.EncodingAttr, compiler):
 
     # Invoke the kernel and get numpy output.
     # Built-in bufferization uses in-out buffers.
-    # TODO: replace with inplace comprehensive bufferization.
     engine.invoke("main", mem_out, mem_a, mem_b, mem_c)
 
     # Sanity check on computed result.
@@ -116,28 +115,29 @@ def main():
 
     # CHECK-LABEL: TEST: testSpMM
     print("\nTEST: testSpMM")
+    count = 0
     with ir.Context() as ctx, ir.Location.unknown():
-        count = 0
         # Loop over various ways to compile and annotate the SpMM kernel with
         # a *single* sparse tensor. Note that we deliberate do not exhaustively
         # search the full state space to reduce runtime of the test. It is
         # straightforward to adapt the code below to explore more combinations.
-
+        # For these simple orderings, dim2lvl and lvl2dim are the same.
         vl = 1
         e = False
         opt = f"parallelization-strategy=none"
         levels = [
-            [st.DimLevelType.dense, st.DimLevelType.dense],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.dense],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [st.LevelType.compressed_nu, st.LevelType.singleton],
+            [st.LevelType.dense, st.LevelType.dense],
+            [st.LevelType.dense, st.LevelType.compressed],
+            [st.LevelType.compressed, st.LevelType.dense],
+            [st.LevelType.compressed, st.LevelType.compressed],
         ]
         orderings = [
             ir.AffineMap.get_permutation([0, 1]),
             ir.AffineMap.get_permutation([1, 0]),
         ]
         bitwidths = [0]
-        compiler = sparse_compiler.SparseCompiler(
+        compiler = sparsifier.Sparsifier(
             options=opt, opt_level=0, shared_libs=[support_lib]
         )
         for level in levels:
@@ -145,11 +145,11 @@ def main():
                 for pwidth in bitwidths:
                     for iwidth in bitwidths:
                         attr = st.EncodingAttr.get(
-                            level, ordering, None, pwidth, iwidth
+                            level, ordering, ordering, pwidth, iwidth
                         )
                         build_compile_and_run_SpMM(attr, compiler)
                         count = count + 1
-        # CHECK: Passed 8 tests
+        # CHECK: Passed 10 tests
         print("Passed ", count, "tests")
 
 

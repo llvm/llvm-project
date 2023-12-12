@@ -53,7 +53,7 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
-      HasFloat128 = true;
+      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
@@ -264,6 +264,10 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__builtin_minfe", "__builtin_ppc_minfe");
   Builder.defineMacro("__builtin_minfl", "__builtin_ppc_minfl");
   Builder.defineMacro("__builtin_minfs", "__builtin_ppc_minfs");
+  Builder.defineMacro("__builtin_mffs", "__builtin_ppc_mffs");
+  Builder.defineMacro("__builtin_mffsl", "__builtin_ppc_mffsl");
+  Builder.defineMacro("__builtin_mtfsf", "__builtin_ppc_mtfsf");
+  Builder.defineMacro("__builtin_set_fpscr_rn", "__builtin_ppc_set_fpscr_rn");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific

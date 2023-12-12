@@ -15,8 +15,6 @@
 // the macros itself.
 #include <linux/prctl.h>
 
-// TODO: Define the prctl macros.
-
 %%public_api()
 
 #endif // LLVM_LIBC_SYS_PRCTL_H

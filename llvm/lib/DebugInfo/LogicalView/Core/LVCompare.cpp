@@ -206,11 +206,10 @@ Error LVCompare::execute(LVReader *ReferenceReader, LVReader *TargetReader) {
               updateExpected(Reference);
             Reference->setIsInCompare();
             LVElement *CurrentTarget = nullptr;
-            if (std::any_of(Targets.begin(), Targets.end(),
-                            [&](auto Target) -> bool {
-                              CurrentTarget = Target;
-                              return Reference->equals(Target);
-                            })) {
+            if (llvm::any_of(Targets, [&](auto Target) -> bool {
+                  CurrentTarget = Target;
+                  return Reference->equals(Target);
+                })) {
               if (Pass == LVComparePass::Missing && Reference->getIsScope()) {
                 // If the elements being compared are scopes and are a match,
                 // they are recorded, to be used when creating the augmented

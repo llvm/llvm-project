@@ -114,11 +114,10 @@ public:
     // guaranteed true/false here is valuable and hard to determine by hand.
     if (auto *B = llvm::dyn_cast<BoolValue>(&V)) {
       JOS.attribute("formula", llvm::to_string(B->formula()));
-      JOS.attribute(
-          "truth", Env.flowConditionImplies(B->formula()) ? "true"
-                   : Env.flowConditionImplies(Env.arena().makeNot(B->formula()))
-                       ? "false"
-                       : "unknown");
+      JOS.attribute("truth", Env.proves(B->formula()) ? "true"
+                             : Env.proves(Env.arena().makeNot(B->formula()))
+                                 ? "false"
+                                 : "unknown");
     }
   }
   void dump(const StorageLocation &L) {
@@ -137,6 +136,10 @@ public:
             if (Value *Val = Env.getValue(*Child.second))
               dump(*Val);
         });
+
+      for (const auto &SyntheticField : RLoc->synthetic_fields())
+        JOS.attributeObject(("sf:" + SyntheticField.first()).str(),
+                            [&] { dump(*SyntheticField.second); });
     }
   }
 
@@ -348,9 +351,10 @@ private:
     if (Invalid)
       return;
 
-    static constexpr unsigned Missing = -1;
     // TokenInfo stores the BB and set of elements that a token is part of.
     struct TokenInfo {
+      enum : unsigned { Missing = static_cast<unsigned>(-1) };
+
       // The basic block this is part of.
       // This is the BB of the stmt with the smallest containing range.
       unsigned BB = Missing;

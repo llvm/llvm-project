@@ -638,11 +638,11 @@ template <class C> constexpr auto begin(C& c) -> decltype(c.begin());           
 template <class C> constexpr auto begin(const C& c) -> decltype(c.begin());             // constexpr since C++17
 template <class C> constexpr auto end(C& c) -> decltype(c.end());                       // constexpr since C++17
 template <class C> constexpr auto end(const C& c) -> decltype(c.end());                 // constexpr since C++17
-template <class T, size_t N> constexpr T* begin(T (&array)[N]) noexcept;                // constexpr since C++14
-template <class T, size_t N> constexpr T* end(T (&array)[N]) noexcept;                  // constexpr since C++14
+template <class T, size_t N> constexpr T* begin(T (&array)[N]) noexcept;
+template <class T, size_t N> constexpr T* end(T (&array)[N]) noexcept;
 
-template <class C> constexpr auto cbegin(const C& c) -> decltype(std::begin(c));        // C++14
-template <class C> constexpr auto cend(const C& c) -> decltype(std::end(c));            // C++14
+template <class C> constexpr auto cbegin(const C& c) noexcept(see-below) -> decltype(std::begin(c)); // C++14
+template <class C> constexpr auto cend(const C& c) noexcept(see-below) -> decltype(std::end(c));     // C++14
 template <class C> constexpr auto rbegin(C& c) -> decltype(c.rbegin());                 // C++14, constexpr since C++17
 template <class C> constexpr auto rbegin(const C& c) -> decltype(c.rbegin());           // C++14, constexpr since C++17
 template <class C> constexpr auto rend(C& c) -> decltype(c.rend());                     // C++14, constexpr since C++17
@@ -716,8 +716,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
-#include <cstddef>
-#include <initializer_list>
 #include <version>
 
 // standard-mandated includes

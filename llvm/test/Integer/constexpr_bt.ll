@@ -21,7 +21,6 @@
 @t5 = global i33** @t3                           ;; Reference to a previous cast
 @t6 = global i33*** @t4
 @t7 = global float* inttoptr (i32 12345678 to float*) ;; Cast ordinary value to ptr
-@t9 = global i33 fptosi (float sitofp (i33 8 to float) to i33) ;; Nested cast expression
 
 
 @2 = global i32* bitcast (float* @4 to i32*)   ;; Forward numeric reference
@@ -44,7 +43,7 @@
 @char8a = global i33* bitcast (i8* getelementptr([11x i8], [11x i8]* @somestr, i64 0, i64 8) to i33*)
 
 ;; getelementptr containing casts
-@char8b = global i8* getelementptr([11x i8], [11x i8]* @somestr, i64 sext (i8 0 to i64), i64 sext (i8 8 to i64))
+@char8b = global i8* getelementptr([11x i8], [11x i8]* @somestr, i64 trunc (i128 0 to i64), i64 trunc (i128 8 to i64))
 
 ;;-------------------------------------------------------
 ;; TODO: Test constant getelementpr expressions for structures

@@ -85,7 +85,7 @@ struct MultiClass {
   void dump() const;
 
   MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records)
-      : Rec(Name, Loc, Records) {}
+      : Rec(Name, Loc, Records, Record::RK_MultiClass) {}
 };
 
 class TGVarScope {
@@ -293,8 +293,7 @@ private:  // Parser methods.
   void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
                       Record *CurRec, RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<llvm::ArgumentInit *> &Result,
-                                 Record *CurRec, Record *ArgsRec,
-                                 bool IsDefm = false);
+                                 Record *CurRec, Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
       Record *CurRec);

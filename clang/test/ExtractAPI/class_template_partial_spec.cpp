@@ -114,8 +114,8 @@ template<typename Z> class Foo<Z, int> {};
       },
       "location": {
         "position": {
-          "character": 40,
-          "line": 1
+          "character": 39,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -224,8 +224,8 @@ template<typename Z> class Foo<Z, int> {};
       },
       "location": {
         "position": {
-          "character": 28,
-          "line": 3
+          "character": 27,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

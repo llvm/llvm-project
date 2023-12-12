@@ -29,11 +29,11 @@ def SDT_RISCVFCVT_X
 def SDT_RISCVFROUND
     : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                            SDTCisVT<3, XLenVT>]>;
-def SDT_RISCVFPCLASS
+def SDT_RISCVFCLASS
     : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
 
-def riscv_fpclass
-    : SDNode<"RISCVISD::FPCLASS", SDT_RISCVFPCLASS>;
+def riscv_fclass
+    : SDNode<"RISCVISD::FCLASS", SDT_RISCVFCLASS>;
 
 def riscv_fround
     : SDNode<"RISCVISD::FROUND", SDT_RISCVFROUND>;
@@ -302,7 +302,7 @@ def FSW : FPStore_r<0b010, "fsw", FPR32, WriteFST32>;
 } // Predicates = [HasStdExtF]
 
 foreach Ext = FExts in {
-  let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32] in {
+  let SchedRW = [WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32Addend] in {
     defm FMADD_S  : FPFMA_rrr_frm_m<OPC_MADD,  0b00, "fmadd.s",  Ext>;
     defm FMSUB_S  : FPFMA_rrr_frm_m<OPC_MSUB,  0b00, "fmsub.s",  Ext>;
     defm FNMSUB_S : FPFMA_rrr_frm_m<OPC_NMSUB, 0b00, "fnmsub.s", Ext>;
@@ -527,7 +527,7 @@ def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, FRM_DYN)>;
 def : Pat<(fneg FPR32:$rs1), (FSGNJN_S $rs1, $rs1)>;
 def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
 
-def : Pat<(riscv_fpclass FPR32:$rs1), (FCLASS_S $rs1)>;
+def : Pat<(riscv_fclass FPR32:$rs1), (FCLASS_S $rs1)>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
@@ -536,7 +536,7 @@ def : Pat<(any_fsqrt FPR32INX:$rs1), (FSQRT_S_INX FPR32INX:$rs1, FRM_DYN)>;
 def : Pat<(fneg FPR32INX:$rs1), (FSGNJN_S_INX $rs1, $rs1)>;
 def : Pat<(fabs FPR32INX:$rs1), (FSGNJX_S_INX $rs1, $rs1)>;
 
-def : Pat<(riscv_fpclass FPR32INX:$rs1), (FCLASS_S_INX $rs1)>;
+def : Pat<(riscv_fclass FPR32INX:$rs1), (FCLASS_S_INX $rs1)>;
 } // Predicates = [HasStdExtZfinx]
 
 foreach Ext = FExts in
@@ -680,19 +680,19 @@ def : Pat<(store (f32 FPR32INX:$rs2), (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm
           (SW (COPY_TO_REGCLASS FPR32INX:$rs2, GPR), GPR:$rs1, simm12:$imm12)>;
 } // Predicates = [HasStdExtZfinx]
 
-let Predicates = [HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtF] in {
 // Moves (no conversion)
 def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;
 def : Pat<(i32 (bitconvert FPR32:$rs1)), (FMV_X_W FPR32:$rs1)>;
-} // Predicates = [HasStdExtF, IsRV32]
+} // Predicates = [HasStdExtF]
 
-let Predicates = [HasStdExtZfinx, IsRV32] in {
+let Predicates = [HasStdExtZfinx] in {
 // Moves (no conversion)
 def : Pat<(f32 (bitconvert (i32 GPR:$rs1))), (COPY_TO_REGCLASS GPR:$rs1, GPRF32)>;
 def : Pat<(i32 (bitconvert FPR32INX:$rs1)), (COPY_TO_REGCLASS FPR32INX:$rs1, GPR)>;
-} // Predicates = [HasStdExtZfinx, IsRV32]
+} // Predicates = [HasStdExtZfinx]
 
-let Predicates = [HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtF] in {
 // float->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RTZ)>;
 def : Pat<(i32 (any_fp_to_uint FPR32:$rs1)), (FCVT_WU_S $rs1, FRM_RTZ)>;
@@ -710,9 +710,9 @@ def : Pat<(i32 (any_lround FPR32:$rs1)), (FCVT_W_S $rs1, FRM_RMM)>;
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU $rs1, FRM_DYN)>;
-} // Predicates = [HasStdExtF, IsRV32]
+} // Predicates = [HasStdExtF]
 
-let Predicates = [HasStdExtZfinx, IsRV32] in {
+let Predicates = [HasStdExtZfinx] in {
 // float->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR32INX:$rs1)), (FCVT_W_S_INX $rs1, FRM_RTZ)>;
 def : Pat<(i32 (any_fp_to_uint FPR32INX:$rs1)), (FCVT_WU_S_INX $rs1, FRM_RTZ)>;
@@ -730,7 +730,7 @@ def : Pat<(i32 (any_lround FPR32INX:$rs1)), (FCVT_W_S_INX $rs1, FRM_RMM)>;
 // [u]int->float. Match GCC and default to using dynamic rounding mode.
 def : Pat<(any_sint_to_fp (i32 GPR:$rs1)), (FCVT_S_W_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i32 GPR:$rs1)), (FCVT_S_WU_INX $rs1, FRM_DYN)>;
-} // Predicates = [HasStdExtZfinx, IsRV32]
+} // Predicates = [HasStdExtZfinx]
 
 let Predicates = [HasStdExtF, IsRV64] in {
 // Moves (no conversion)

@@ -53,7 +53,7 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
   if (const auto Dep = TheType.getAs<DependentNameTypeLoc>()) {
     const IdentifierInfo *Identifier = Dep.getTypePtr()->getIdentifier();
     if (!Identifier || Identifier->getName() != "type" ||
-        Dep.getTypePtr()->getKeyword() != ETK_Typename) {
+        Dep.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::Typename) {
       return std::nullopt;
     }
     TheType = Dep.getQualifierLoc().getTypeLoc();
@@ -105,7 +105,7 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
     if (const auto *AliasedType =
             dyn_cast<DependentNameType>(Specialization->getAliasedType())) {
       if (AliasedType->getIdentifier()->getName() != "type" ||
-          AliasedType->getKeyword() != ETK_Typename) {
+          AliasedType->getKeyword() != ElaboratedTypeKeyword::Typename) {
         return std::nullopt;
       }
     } else {

@@ -8,21 +8,20 @@ define dso_local double @test(ptr %Arr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[ARR:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast <2 x double> @__sind2(<2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4]] = fadd fast <2 x double> [[TMP3]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[ARR:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast <2 x double> @__sind2(<2 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP3]] = fadd fast <2 x double> [[TMP2]], [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP4]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[DOTLCSSA]])
-; CHECK-NEXT:    ret double [[TMP6]]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP3]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[DOTLCSSA]])
+; CHECK-NEXT:    ret double [[TMP5]]
 ;
 entry:
   br label %for.cond

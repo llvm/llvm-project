@@ -564,11 +564,14 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(nuw);
   KEYWORD(nsw);
   KEYWORD(exact);
+  KEYWORD(disjoint);
   KEYWORD(inbounds);
+  KEYWORD(nneg);
   KEYWORD(inrange);
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(partition);
+  KEYWORD(code_model);
   KEYWORD(alias);
   KEYWORD(ifunc);
   KEYWORD(module);
@@ -609,7 +612,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(x86_64_sysvcc);
   KEYWORD(win64cc);
   KEYWORD(x86_regcallcc);
-  KEYWORD(webkit_jscc);
   KEYWORD(swiftcc);
   KEYWORD(swifttailcc);
   KEYWORD(anyregcc);
@@ -633,6 +635,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gfx);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
+  KEYWORD(graalcc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -695,6 +698,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
 
+  KEYWORD(splat);
   KEYWORD(vscale);
   KEYWORD(x);
   KEYWORD(blockaddress);

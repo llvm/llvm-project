@@ -52,6 +52,7 @@ extern "C" void printI64(int64_t i) { fprintf(stdout, "%" PRId64, i); }
 extern "C" void printU64(uint64_t u) { fprintf(stdout, "%" PRIu64, u); }
 extern "C" void printF32(float f) { fprintf(stdout, "%g", f); }
 extern "C" void printF64(double d) { fprintf(stdout, "%lg", d); }
+extern "C" void printString(char const *s) { fputs(s, stdout); }
 extern "C" void printOpen() { fputs("( ", stdout); }
 extern "C" void printClose() { fputs(" )", stdout); }
 extern "C" void printComma() { fputs(", ", stdout); }

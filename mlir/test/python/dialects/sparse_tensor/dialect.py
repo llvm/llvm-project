@@ -28,11 +28,11 @@ def testEncodingAttr1D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [<DimLevelType.compressed: 8>]
+        # CHECK: lvl_types: [<LevelType.compressed: 8>]
         print(f"lvl_types: {casted.lvl_types}")
-        # CHECK: dim_to_lvl: None
+        # CHECK: dim_to_lvl: (d0) -> (d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")
-        # CHECK: lvl_to_dim: None
+        # CHECK: lvl_to_dim: (d0) -> (d0)
         print(f"lvl_to_dim: {casted.lvl_to_dim}")
         # CHECK: pos_width: 16
         print(f"pos_width: {casted.pos_width}")
@@ -70,7 +70,7 @@ def testEncodingAttr2D():
         # CHECK: equal: True
         print(f"equal: {casted == parsed}")
 
-        # CHECK: lvl_types: [<DimLevelType.dense: 4>, <DimLevelType.compressed: 8>]
+        # CHECK: lvl_types: [<LevelType.dense: 4>, <LevelType.compressed: 8>]
         print(f"lvl_types: {casted.lvl_types}")
         # CHECK: dim_to_lvl: (d0, d1) -> (d1, d0)
         print(f"dim_to_lvl: {casted.dim_to_lvl}")

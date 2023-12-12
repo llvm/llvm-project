@@ -48,16 +48,6 @@ def PLEA64r   : PseudoI<(outs GR64:$dst), (ins anymem:$src), []>;
 //  Fixed-Register Multiplication and Division Instructions.
 //
 
-// SchedModel info for instruction that loads one value and gets the second
-// (and possibly third) value from a register.
-// This is used for instructions that put the memory operands before other
-// uses.
-class SchedLoadReg<X86FoldableSchedWrite Sched> : Sched<[Sched.Folded,
-  // Memory operand.
-  ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-  // Register reads (implicit or explicit).
-  Sched.ReadAfterFold, Sched.ReadAfterFold]>;
-
 // BinOpRR - Binary instructions with inputs "reg, reg".
 class BinOpRR<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
               dag outlist, X86FoldableSchedWrite sched, list<dag> pattern>
@@ -506,34 +496,23 @@ class IMulOpRMI<bits<8> opcode, string mnemonic, X86TypeInfo info,
   let ImmT = info.ImmEncoding;
 }
 
-def X86add_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                               (X86add_flag node:$lhs, node:$rhs), [{
-  return hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
-
-def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
-                               (X86sub_flag node:$lhs, node:$rhs), [{
-  // Only use DEC if the result is used.
-  return !SDValue(N, 0).use_empty() && hasNoCarryFlagUses(SDValue(N, 1));
-}]>;
-
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-let CodeSize = 1, hasSideEffects = 0 in {
+let hasSideEffects = 0 in {
 def INC16r_alt : INCDECR_ALT<0x40, "inc", Xi16>;
 def INC32r_alt : INCDECR_ALT<0x40, "inc", Xi32>;
-} // CodeSize = 1, hasSideEffects = 0
+} // hasSideEffects = 0
 
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
+let isConvertibleToThreeAddress = 1 in { // Can xform into LEA.
 def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
 def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>;
 def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>;
 def INC64r : INCDECR<MRM0r, "inc", Xi64, X86add_flag_nocf>;
-} // isConvertibleToThreeAddress = 1, CodeSize = 2
+} // isConvertibleToThreeAddress = 1
 } // Constraints = "$src1 = $dst", SchedRW
 
-let CodeSize = 2, SchedRW = [WriteALURMW] in {
+let SchedRW = [WriteALURMW] in {
 let Predicates = [UseIncDec] in {
   def INC8m  : INCDECM<MRM0m, "inc", Xi8, 1>;
   def INC16m : INCDECM<MRM0m, "inc", Xi16, 1>;
@@ -542,24 +521,24 @@ let Predicates = [UseIncDec] in {
 let Predicates = [UseIncDec, In64BitMode] in {
   def INC64m : INCDECM<MRM0m, "inc", Xi64, 1>;
 } // Predicates
-} // CodeSize = 2, SchedRW
+} // SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-let CodeSize = 1, hasSideEffects = 0 in {
+let hasSideEffects = 0 in {
 def DEC16r_alt : INCDECR_ALT<0x48, "dec", Xi16>;
 def DEC32r_alt : INCDECR_ALT<0x48, "dec", Xi32>;
-} // CodeSize = 1, hasSideEffects = 0
+} // hasSideEffects = 0
 
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
+let isConvertibleToThreeAddress = 1 in { // Can xform into LEA.
 def DEC8r  : INCDECR<MRM1r, "dec", Xi8, X86sub_flag_nocf>;
 def DEC16r : INCDECR<MRM1r, "dec", Xi16, X86sub_flag_nocf>;
 def DEC32r : INCDECR<MRM1r, "dec", Xi32, X86sub_flag_nocf>;
 def DEC64r : INCDECR<MRM1r, "dec", Xi64, X86sub_flag_nocf>;
-} // isConvertibleToThreeAddress = 1, CodeSize = 2
+} // isConvertibleToThreeAddress = 1
 } // Constraints = "$src1 = $dst", SchedRW
 
-let CodeSize = 2, SchedRW = [WriteALURMW] in {
+let SchedRW = [WriteALURMW] in {
 let Predicates = [UseIncDec] in {
   def DEC8m  : INCDECM<MRM1m, "dec", Xi8, -1>;
   def DEC16m : INCDECM<MRM1m, "dec", Xi16, -1>;
@@ -568,7 +547,7 @@ let Predicates = [UseIncDec] in {
 let Predicates = [UseIncDec, In64BitMode] in {
   def DEC64m : INCDECM<MRM1m, "dec", Xi64, -1>;
 } // Predicates
-} // CodeSize = 2, SchedRW
+} // SchedRW
 } // Defs = [EFLAGS]
 
 // Extra precision multiplication
@@ -764,7 +743,6 @@ def IDIV64m: MulOpM<0xF7, MRM7m, "idiv", Xi64, WriteIDiv64, []>,
 //
 
 // unary instructions
-let CodeSize = 2 in {
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 def NEG8r  : NegOpR<0xF6, "neg", Xi8>;
@@ -798,7 +776,6 @@ def NOT16m : NotOpM<0xF7, "not", Xi16>;
 def NOT32m : NotOpM<0xF7, "not", Xi32>;
 def NOT64m : NotOpM<0xF7, "not", Xi64>, Requires<[In64BitMode]>;
 } // SchedRW
-} // CodeSize
 
 /// ArithBinOp_RF - This is an arithmetic binary operator where the pattern is
 /// defined with "(set GPR:$dst, EFLAGS, (...".
@@ -1223,9 +1200,6 @@ def : Pat<(store (X86adc_flag i64relocImmSExt32_su:$src, (load addr:$dst), EFLAG
 // generate a result.  From an encoding perspective, they are very different:
 // they don't have all the usual imm8 and REV forms, and are encoded into a
 // different space.
-def X86testpat : PatFrag<(ops node:$lhs, node:$rhs),
-                         (X86cmp (and_su node:$lhs, node:$rhs), 0)>;
-
 let isCompare = 1 in {
   let Defs = [EFLAGS] in {
     let isCommutable = 1 in {
@@ -1291,21 +1265,34 @@ def : Pat<(X86testpat (loadi64 addr:$src1), i64relocImmSExt32_su:$src2),
 //
 multiclass bmi_andn<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
                     PatFrag ld_frag, X86FoldableSchedWrite sched> {
+let Predicates = [HasBMI, NoEGPR] in {
   def rr : I<0xF2, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
-            !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-            [(set RC:$dst, EFLAGS, (X86and_flag (not RC:$src1), RC:$src2))]>,
-            Sched<[sched]>;
+             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             [(set RC:$dst, EFLAGS, (X86and_flag (not RC:$src1), RC:$src2))]>,
+           VEX_4V, Sched<[sched]>;
   def rm : I<0xF2, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
-            !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-            [(set RC:$dst, EFLAGS,
-             (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
-           Sched<[sched.Folded, sched.ReadAfterFold]>;
+             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+             [(set RC:$dst, EFLAGS,
+              (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
+           VEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
+}
+let Predicates = [HasBMI, HasEGPR, In64BitMode] in {
+  def rr_EVEX : I<0xF2, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
+                  !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  [(set RC:$dst, EFLAGS, (X86and_flag (not RC:$src1), RC:$src2))]>,
+                EVEX_4V, Sched<[sched]>;
+  def rm_EVEX : I<0xF2, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
+                  !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                  [(set RC:$dst, EFLAGS,
+                   (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
+                EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
+}
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
-let Predicates = [HasBMI], Defs = [EFLAGS], AddedComplexity = -6 in {
-  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8PS, VEX_4V;
-  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8PS, VEX_4V, REX_W;
+let Defs = [EFLAGS], AddedComplexity = -6 in {
+  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8PS;
+  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8PS, REX_W;
 }
 
 let Predicates = [HasBMI], AddedComplexity = -6 in {
@@ -1325,6 +1312,7 @@ let Predicates = [HasBMI], AddedComplexity = -6 in {
 multiclass bmi_mulx<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
                     X86FoldableSchedWrite sched> {
 let hasSideEffects = 0 in {
+let Predicates = [HasBMI2, NoEGPR] in {
   def rr : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
              !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
              []>, T8XD, VEX_4V, Sched<[WriteIMulH, sched]>;
@@ -1348,14 +1336,26 @@ let hasSideEffects = 0 in {
   def Hrm : PseudoI<(outs RC:$dst), (ins x86memop:$src),
                     []>, Sched<[sched.Folded]>;
 }
+let Predicates = [HasBMI2, HasEGPR, In64BitMode] in
+  def rr#_EVEX : I<0xF6, MRMSrcReg, (outs RC:$dst1, RC:$dst2), (ins RC:$src),
+                   !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
+                   []>, T8XD, EVEX_4V, Sched<[WriteIMulH, sched]>;
+let Predicates = [HasBMI2, HasEGPR, In64BitMode], mayLoad = 1 in
+  def rm#_EVEX : I<0xF6, MRMSrcMem, (outs RC:$dst1, RC:$dst2), (ins x86memop:$src),
+                   !strconcat(mnemonic, "\t{$src, $dst2, $dst1|$dst1, $dst2, $src}"),
+                   []>, T8XD, EVEX_4V,
+                 Sched<[WriteIMulHLd, sched.Folded,
+                        // Memory operand.
+                        ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+                        // Implicit read of EDX/RDX
+                        sched.ReadAfterFold]>;
+}
 }
 
-let Predicates = [HasBMI2] in {
-  let Uses = [EDX] in
-    defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteMULX32>;
-  let Uses = [RDX] in
-    defm MULX64 : bmi_mulx<"mulx{q}", GR64, i64mem, WriteMULX64>, REX_W;
-}
+let Uses = [EDX] in
+  defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteMULX32>;
+let Uses = [RDX] in
+  defm MULX64 : bmi_mulx<"mulx{q}", GR64, i64mem, WriteMULX64>, REX_W;
 
 //===----------------------------------------------------------------------===//
 // ADCX and ADOX Instructions

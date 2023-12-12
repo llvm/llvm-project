@@ -6,7 +6,7 @@
 @yydebug = dso_local global i32 0, align 4
 
 define void @func_large() !prof !0 {
-; A largee CFG instance where chain splitting helps to
+; A large CFG instance where chain splitting helps to
 ; compute a better basic block ordering. The test verifies that with chain
 ; splitting, the resulting layout is improved (e.g., the score is increased).
 ;
@@ -68,8 +68,8 @@ define void @func_large() !prof !0 {
 ; increased by ~17%
 ;
 ; CHECK-LABEL: Applying ext-tsp layout
-; CHECK:   original  layout score: 9171074274.27
-; CHECK:   optimized layout score: 10844307310.87
+; CHECK:   original  layout score: 23587612604815436.00
+; CHECK:   optimized layout score: 27891096739311172.00
 ; CHECK: b0
 ; CHECK: b2
 ; CHECK: b3
@@ -84,8 +84,8 @@ define void @func_large() !prof !0 {
 ; An expected output with chain-split-threshold=1 (disabling split point enumeration)
 ;
 ; CHECK2-LABEL: Applying ext-tsp layout
-; CHECK2:   original  layout score: 9171074274.27
-; CHECK2:   optimized layout score: 10844307310.87
+; CHECK2:   original  layout score: 23587612604815436.00
+; CHECK2:   optimized layout score: 27891096739311172.00
 ; CHECK2: b0
 ; CHECK2: b2
 ; CHECK2: b3

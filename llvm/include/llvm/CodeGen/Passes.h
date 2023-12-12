@@ -65,6 +65,8 @@ namespace llvm {
   /// basic blocks and is enabled with -fbasic-block-sections.
   MachineFunctionPass *createBasicBlockSectionsPass();
 
+  MachineFunctionPass *createBasicBlockPathCloningPass();
+
   /// createMachineFunctionSplitterPass - This pass splits machine functions
   /// using profile information.
   MachineFunctionPass *createMachineFunctionSplitterPass();

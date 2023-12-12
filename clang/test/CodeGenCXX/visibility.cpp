@@ -206,6 +206,9 @@ namespace test27 {
 // CHECK: @_ZGVZN6test681fC1EvE4test = linkonce_odr global
 // CHECK-HIDDEN: @_ZGVZN6test681fC1EvE4test = linkonce_odr hidden global
 
+// CHECK-HIDDEN: @_ZTVN6test701DE = linkonce_odr hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZTIN6test701DE] }, align 8
+// CHECK-HIDDEN: @_ZTTN6test701DE = linkonce_odr hidden unnamed_addr constant [1 x ptr] [ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN6test701DE, i32 0, inrange i32 0, i32 3)], align 8
+
 // CHECK: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr global
 // CHECK-HIDDEN: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr hidden global
 
@@ -1007,8 +1010,8 @@ namespace test51 {
   // a default symbol.
 
   struct HIDDEN foo {};
-  DEFAULT foo da, db, dc, dd;
-  HIDDEN foo ha, hb, hc, hd;
+  DEFAULT foo da, db, dc, dd, de, df;
+  HIDDEN foo ha, hb, hc, hd, he, hf;
   template<foo *z>
   void DEFAULT zed() {
   }
@@ -1036,14 +1039,26 @@ namespace test51 {
   // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
   // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
 
+#pragma GCC visibility push(hidden)
+  template void zed<&dd>();
+  template void zed<&hd>();
+  template void DEFAULT zed<&he>();
+#pragma GCC visibility pop
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
+
   void use() {
-    zed<&dd>();
-    zed<&hd>();
+    zed<&df>();
+    zed<&hf>();
   }
-  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
-  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
 }
 
 namespace test52 {
@@ -1410,6 +1425,12 @@ namespace test70 {
     ~B();
   };
   B::~B() {}
+
+  // Make sure both the vtable and VTT declarations are marked "hidden"
+  // when "-fvisibilty=hidden" is in use.
+  class C {};
+  class D : virtual C {};
+  D d;
   // Check lines at top of file.
 }
 

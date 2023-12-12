@@ -12,6 +12,7 @@
 # In peephole optimization the modified COPY instruction should not cause
 # compiler failure.
 name: c
+tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32_abcd }
   - { id: 1, class: gr32_abcd }

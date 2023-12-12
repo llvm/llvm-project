@@ -33,6 +33,10 @@ COMPILER_RT_VISIBILITY void __llvm_profile_enable_continuous_mode(void) {
   ContinuouslySyncProfile = 1;
 }
 
+COMPILER_RT_VISIBILITY void __llvm_profile_disable_continuous_mode(void) {
+  ContinuouslySyncProfile = 0;
+}
+
 COMPILER_RT_VISIBILITY void __llvm_profile_set_page_size(unsigned PS) {
   PageSize = PS;
 }
@@ -43,11 +47,14 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
   const char *CountersBegin = __llvm_profile_begin_counters();
   const char *CountersEnd = __llvm_profile_end_counters();
+  const char *BitmapBegin = __llvm_profile_begin_bitmap();
+  const char *BitmapEnd = __llvm_profile_end_bitmap();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
 
   return __llvm_profile_get_size_for_buffer_internal(
-      DataBegin, DataEnd, CountersBegin, CountersEnd, NamesBegin, NamesEnd);
+      DataBegin, DataEnd, CountersBegin, CountersEnd, BitmapBegin, BitmapEnd,
+      NamesBegin, NamesEnd);
 }
 
 COMPILER_RT_VISIBILITY
@@ -83,6 +90,17 @@ uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End) {
          __llvm_profile_counter_entry_size();
 }
 
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_num_bitmap_bytes(const char *Begin,
+                                             const char *End) {
+  return (End - Begin);
+}
+
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End) {
+  return End - Begin;
+}
+
 /// Calculate the number of padding bytes needed to add to \p Offset in order
 /// for (\p Offset + Padding) to be page-aligned.
 static uint64_t calculateBytesNeededToPageAlign(uint64_t Offset) {
@@ -102,13 +120,16 @@ static int needsCounterPadding(void) {
 
 COMPILER_RT_VISIBILITY
 void __llvm_profile_get_padding_sizes_for_counters(
-    uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
-    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
+    uint64_t DataSize, uint64_t CountersSize, uint64_t NumBitmapBytes,
+    uint64_t NamesSize, uint64_t *PaddingBytesBeforeCounters,
+    uint64_t *PaddingBytesAfterCounters, uint64_t *PaddingBytesAfterBitmapBytes,
     uint64_t *PaddingBytesAfterNames) {
   if (!needsCounterPadding()) {
     *PaddingBytesBeforeCounters = 0;
     *PaddingBytesAfterCounters =
         __llvm_profile_get_num_padding_bytes(CountersSize);
+    *PaddingBytesAfterBitmapBytes =
+        __llvm_profile_get_num_padding_bytes(NumBitmapBytes);
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);
     return;
   }
@@ -118,31 +139,37 @@ void __llvm_profile_get_padding_sizes_for_counters(
   *PaddingBytesBeforeCounters =
       calculateBytesNeededToPageAlign(sizeof(__llvm_profile_header) + DataSize);
   *PaddingBytesAfterCounters = calculateBytesNeededToPageAlign(CountersSize);
+  *PaddingBytesAfterBitmapBytes =
+      calculateBytesNeededToPageAlign(NumBitmapBytes);
   *PaddingBytesAfterNames = calculateBytesNeededToPageAlign(NamesSize);
 }
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
-    const char *CountersBegin, const char *CountersEnd, const char *NamesBegin,
-    const char *NamesEnd) {
+    const char *CountersBegin, const char *CountersEnd, const char *BitmapBegin,
+    const char *BitmapEnd, const char *NamesBegin, const char *NamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   uint64_t CountersSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
+  const uint64_t NumBitmapBytes =
+      __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
 
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames;
+      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
-      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+      DataSize, CountersSize, NumBitmapBytes, NamesSize,
+      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames);
 
   return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
          DataSize + PaddingBytesBeforeCounters + CountersSize +
-         PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames;
+         PaddingBytesAfterCounters + NumBitmapBytes +
+         PaddingBytesAfterBitmapBytes + NamesSize + PaddingBytesAfterNames;
 }
 
 COMPILER_RT_VISIBILITY
@@ -160,9 +187,11 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
     char *Buffer, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd) {
+    const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    const char *NamesBegin, const char *NamesEnd) {
   ProfDataWriter BufferWriter;
   initBufferWriter(&BufferWriter, Buffer);
   return lprofWriteDataImpl(&BufferWriter, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, 0, NamesBegin, NamesEnd, 0);
+                            CountersEnd, BitmapBegin, BitmapEnd, 0, NamesBegin,
+                            NamesEnd, 0);
 }

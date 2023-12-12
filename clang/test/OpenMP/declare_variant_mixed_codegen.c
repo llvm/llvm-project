@@ -44,7 +44,7 @@ void foo() {
 // HOST: call i32 @hst(double noundef -3.000000e+00)
 // HOST: call i32 @dev(double noundef -4.000000e+00)
 
-// GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l36()
+// GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l36(ptr {{[^,]+}})
 // GPU: call i32 @dev(double noundef -3.000000e+00)
 // GPU: call i32 @dev(double noundef -4.000000e+00)
 

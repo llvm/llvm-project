@@ -373,6 +373,7 @@ enum StabType {
   N_SSYM = 0x60u,
   N_SO = 0x64u,
   N_OSO = 0x66u,
+  N_LIB = 0x68u,
   N_LSYM = 0x80u,
   N_BINCL = 0x82u,
   N_SOL = 0x84u,

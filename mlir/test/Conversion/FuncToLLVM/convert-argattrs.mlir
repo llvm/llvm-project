@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm %s | FileCheck %s
 
 // CHECK-LABEL: func @check_attributes
 // CHECK-SAME: {dialect.a = true, dialect.b = 4 : i64}

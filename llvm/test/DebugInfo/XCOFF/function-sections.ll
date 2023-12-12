@@ -37,8 +37,9 @@ entry:
 !13 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 6, type: !9, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !14 = !DILocation(line: 8, column: 3, scope: !13)
 
-; CHECK:               .csect [PR],5
-; CHECK-NEXT:          .file   "1.c"
+; CHECK:               .file   "1.c"
+; CHECK-NEXT:          .csect ..text..[PR],5
+; CHECK-NEXT:          .rename ..text..[PR],""
 ; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:          .globl  foo[DS]                         # -- Begin function foo
 ; CHECK-NEXT:          .globl  .foo[PR]

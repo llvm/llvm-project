@@ -40,7 +40,7 @@ T tmain(T argc, T *argv) {
   {always++;i++;}
 #pragma omp target map(close,alloc: i)
   foo();
-#pragma omp target map(close from: i)
+#pragma omp target map(close, from: i)
   foo();
 #pragma omp target map(close)
   {close++;}
@@ -393,7 +393,7 @@ T tmain(T argc, T *argv) {
   foo();
 #pragma omp target map(always,alloc: i)
   foo();
-#pragma omp target map(always from: i)
+#pragma omp target map(always, from: i)
   foo();
 #pragma omp target map(always)
   {always++;}
@@ -401,7 +401,7 @@ T tmain(T argc, T *argv) {
   {always++;i++;}
 #pragma omp target map(close,alloc: i)
   foo();
-#pragma omp target map(close from: i)
+#pragma omp target map(close, from: i)
   foo();
 #pragma omp target map(close)
   {close++;}
@@ -857,7 +857,7 @@ int main (int argc, char **argv) {
   foo();
 // OMP5-NEXT: foo();
 
-#pragma omp target map(always from: i)
+#pragma omp target map(always, from: i)
 // OMP5-NEXT: #pragma omp target map(always,from: i)
   foo();
 // OMP5-NEXT: foo();
@@ -882,7 +882,7 @@ int main (int argc, char **argv) {
   foo();
 // OMP5-NEXT: foo();
 
-#pragma omp target map(close from: i)
+#pragma omp target map(close, from: i)
 // OMP5-NEXT: #pragma omp target map(close,from: i)
   foo();
 // OMP5-NEXT: foo();
@@ -1110,6 +1110,8 @@ T tmain(T argc, T *argv) {
   foo();
   #pragma omp target thread_limit(C)
   foo();
+  #pragma omp target defaultmap(present)
+  foo();
 
   return 0;
 }
@@ -1122,6 +1124,8 @@ T tmain(T argc, T *argv) {
 // OMP51-NEXT: #pragma omp target defaultmap(present: pointer)
 // OMP51-NEXT: foo()
 // OMP51-NEXT: #pragma omp target thread_limit(C)
+// OMP51-NEXT: foo()
+// OMP51-NEXT: #pragma omp target defaultmap(present)
 // OMP51-NEXT: foo()
 
 // OMP51-LABEL: int main(int argc, char **argv) {

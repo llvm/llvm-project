@@ -36,6 +36,7 @@
 #include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFormat.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBInstructionList.h"
@@ -188,6 +189,9 @@ struct DAP {
   ReplModeRequestHandler repl_mode_request_handler;
   ReplMode repl_mode;
   bool auto_repl_mode_collision_warning;
+  std::string command_escape_prefix = "`";
+  lldb::SBFormat frame_format;
+  lldb::SBFormat thread_format;
 
   DAP();
   ~DAP();
@@ -303,6 +307,10 @@ struct DAP {
   ///
   /// \return Error if waiting for the process fails, no error if succeeds.
   lldb::SBError WaitForProcessToStop(uint32_t seconds);
+
+  void SetFrameFormat(llvm::StringRef format);
+
+  void SetThreadFormat(llvm::StringRef format);
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the

@@ -100,7 +100,6 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
-  TYPE(LambdaArrow)                                                            \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
@@ -690,7 +689,11 @@ public:
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
-                    TT_LambdaArrow, TT_LeadingJavaAnnotation);
+                    TT_LeadingJavaAnnotation);
+  }
+
+  bool isPointerOrReference() const {
+    return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
   bool isUnaryOperator() const {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -22,13 +22,11 @@
 // void permissions(const path& p, perms prms, std::error_code& ec) noexcept;
 // void permissions(const path& p, perms prms, perm_options opts, std::error_code);
 
-
-
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 using PR = fs::perms;
@@ -42,7 +40,7 @@ static void test_signatures()
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr));
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts));
     ASSERT_NOEXCEPT(fs::permissions(p, pr, ec));
-    LIBCPP_ONLY(ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec)));
+    LIBCPP_ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec));
 }
 
 static void test_error_reporting()

@@ -50,7 +50,7 @@ static inline int src_rep_t_clz_impl(src_rep_t a) {
 #define src_rep_t_clz src_rep_t_clz_impl
 
 #elif defined SRC_80
-typedef long double src_t;
+typedef xf_float src_t;
 typedef __uint128_t src_rep_t;
 #define SRC_REP_C (__uint128_t)
 // sign bit, exponent and significand occupy the lower 80 bits.
@@ -75,7 +75,11 @@ static const int srcSigFracBits = 10;
 // srcBits - srcSigFracBits - 1
 static const int srcExpBits = 5;
 
-#define src_rep_t_clz __builtin_clz
+static inline int src_rep_t_clz_impl(src_rep_t a) {
+  return __builtin_clz(a) - 16;
+}
+
+#define src_rep_t_clz src_rep_t_clz_impl
 
 #else
 #error Source should be half, single, or double precision!
@@ -102,13 +106,7 @@ static const int dstSigFracBits = 52;
 static const int dstExpBits = 11;
 
 #elif defined DST_QUAD
-// TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
-#if __LDBL_MANT_DIG__ == 113
-typedef long double dst_t;
-#elif defined(__x86_64__) &&                                                   \
-    (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
-typedef __float128 dst_t;
-#endif
+typedef tf_float dst_t;
 typedef __uint128_t dst_rep_t;
 #define DST_REP_C (__uint128_t)
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
@@ -144,7 +142,7 @@ static inline src_rep_t extract_sig_frac_from_src(src_rep_t x) {
 
 #ifdef src_rep_t_clz
 static inline int clz_in_sig_frac(src_rep_t sigFrac) {
-      const int skip = (sizeof(dst_t) * CHAR_BIT - srcBits) + 1 + srcExpBits;
+      const int skip = 1 + srcExpBits;
       return src_rep_t_clz(sigFrac) - skip;
 }
 #endif

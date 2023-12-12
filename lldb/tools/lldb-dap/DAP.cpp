@@ -57,7 +57,7 @@ DAP::DAP()
   int result = _setmode(fileno(stdout), _O_BINARY);
   assert(result);
   result = _setmode(fileno(stdin), _O_BINARY);
-  (void)result;
+  UNUSED_IF_ASSERT_DISABLED(result);
   assert(result);
 #endif
   if (log_file_path)
@@ -382,9 +382,10 @@ llvm::json::Value DAP::CreateTopLevelScopes() {
 
 ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
                                                std::string &text) {
-  // Include ` as an escape hatch.
-  if (!text.empty() && text[0] == '`') {
-    text = text.substr(1);
+  // Include the escape hatch prefix.
+  if (!text.empty() &&
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
+    text = text.substr(g_dap.command_escape_prefix.size());
     return ExpressionContext::Command;
   }
 
@@ -416,7 +417,9 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
         if (!auto_repl_mode_collision_warning) {
           llvm::errs() << "Variable expression '" << text
                        << "' is hiding an lldb command, prefix an expression "
-                          "with ` to ensure it runs as a lldb command.\n";
+                          "with '"
+                       << g_dap.command_escape_prefix
+                       << "' to ensure it runs as a lldb command.\n";
           auto_repl_mode_collision_warning = true;
         }
         return ExpressionContext::Variable;
@@ -819,6 +822,36 @@ bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
   result.Printf("lldb-dap repl-mode %s set.\n", new_mode.data());
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
   return true;
+}
+
+void DAP::SetFrameFormat(llvm::StringRef format) {
+  if (format.empty())
+    return;
+  lldb::SBError error;
+  g_dap.frame_format = lldb::SBFormat(format.str().c_str(), error);
+  if (error.Fail()) {
+    g_dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv(
+            "The provided frame format '{0}' couldn't be parsed: {1}\n", format,
+            error.GetCString())
+            .str());
+  }
+}
+
+void DAP::SetThreadFormat(llvm::StringRef format) {
+  if (format.empty())
+    return;
+  lldb::SBError error;
+  g_dap.thread_format = lldb::SBFormat(format.str().c_str(), error);
+  if (error.Fail()) {
+    g_dap.SendOutput(
+        OutputType::Console,
+        llvm::formatv(
+            "The provided thread format '{0}' couldn't be parsed: {1}\n",
+            format, error.GetCString())
+            .str());
+  }
 }
 
 } // namespace lldb_dap

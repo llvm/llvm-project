@@ -64,16 +64,19 @@ class Value;
 //
 // If asked to represent a pathologically large value, this will degrade to
 // std::nullopt.
+// Store Scalable information in bit 62 of Value. Scalable information is
+// required to do Alias Analysis on Scalable quantities
 class LocationSize {
   enum : uint64_t {
     BeforeOrAfterPointer = ~uint64_t(0),
-    AfterPointer = BeforeOrAfterPointer - 1,
+    ScalableBit = uint64_t(1) << 62,
+    AfterPointer = (BeforeOrAfterPointer - 1) & ~ScalableBit,
     MapEmpty = BeforeOrAfterPointer - 2,
     MapTombstone = BeforeOrAfterPointer - 3,
     ImpreciseBit = uint64_t(1) << 63,
 
     // The maximum value we can represent without falling back to 'unknown'.
-    MaxValue = (MapTombstone - 1) & ~ImpreciseBit,
+    MaxValue = (MapTombstone - 1) & ~(ImpreciseBit | ScalableBit),
   };
 
   uint64_t Value;
@@ -82,12 +85,16 @@ class LocationSize {
   // public LocationSize ctor goes away.
   enum DirectConstruction { Direct };
 
-  constexpr LocationSize(uint64_t Raw, DirectConstruction): Value(Raw) {}
+  constexpr LocationSize(uint64_t Raw, DirectConstruction) : Value(Raw) {}
+  constexpr LocationSize(uint64_t Raw, bool Scalable)
+      : Value(Raw > MaxValue ? AfterPointer
+                             : Raw | (Scalable ? ScalableBit : uint64_t(0))) {}
 
   static_assert(AfterPointer & ImpreciseBit,
                 "AfterPointer is imprecise by definition.");
   static_assert(BeforeOrAfterPointer & ImpreciseBit,
                 "BeforeOrAfterPointer is imprecise by definition.");
+  static_assert(~(MaxValue & ScalableBit), "Max value don't have bit 62 set");
 
 public:
   // FIXME: Migrate all users to construct via either `precise` or `upperBound`,
@@ -98,12 +105,12 @@ public:
   // this assumes the provided value is precise.
   constexpr LocationSize(uint64_t Raw)
       : Value(Raw > MaxValue ? AfterPointer : Raw) {}
-
-  static LocationSize precise(uint64_t Value) { return LocationSize(Value); }
+  // Create non-scalable LocationSize
+  static LocationSize precise(uint64_t Value) {
+    return LocationSize(Value, false /*Scalable*/);
+  }
   static LocationSize precise(TypeSize Value) {
-    if (Value.isScalable())
-      return afterPointer();
-    return precise(Value.getFixedValue());
+    return LocationSize(Value.getKnownMinValue(), Value.isScalable());
   }
 
   static LocationSize upperBound(uint64_t Value) {
@@ -150,6 +157,8 @@ public:
       return beforeOrAfterPointer();
     if (Value == AfterPointer || Other.Value == AfterPointer)
       return afterPointer();
+    if (isScalable() || Other.isScalable())
+      return afterPointer();
 
     return upperBound(std::max(getValue(), Other.getValue()));
   }
@@ -157,19 +166,23 @@ public:
   bool hasValue() const {
     return Value != AfterPointer && Value != BeforeOrAfterPointer;
   }
-  uint64_t getValue() const {
+  bool isScalable() const { return (Value & ScalableBit); }
+
+  TypeSize getValue() const {
     assert(hasValue() && "Getting value from an unknown LocationSize!");
-    return Value & ~ImpreciseBit;
+    assert((Value & ~(ImpreciseBit | ScalableBit)) < MaxValue &&
+           "Scalable bit of value should be masked");
+    return {Value & ~(ImpreciseBit | ScalableBit), isScalable()};
   }
 
   // Returns whether or not this value is precise. Note that if a value is
   // precise, it's guaranteed to not be unknown.
-  bool isPrecise() const {
-    return (Value & ImpreciseBit) == 0;
-  }
+  bool isPrecise() const { return (Value & ImpreciseBit) == 0; }
 
   // Convenience method to check if this LocationSize's value is 0.
-  bool isZero() const { return hasValue() && getValue() == 0; }
+  bool isZero() const {
+    return hasValue() && getValue().getKnownMinValue() == 0;
+  }
 
   /// Whether accesses before the base pointer are possible.
   bool mayBeBeforePointer() const { return Value == BeforeOrAfterPointer; }
@@ -178,9 +191,7 @@ public:
     return Value == Other.Value;
   }
 
-  bool operator!=(const LocationSize &Other) const {
-    return !(*this == Other);
-  }
+  bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
@@ -317,9 +328,7 @@ public:
 
 // Specialize DenseMapInfo.
 template <> struct DenseMapInfo<LocationSize> {
-  static inline LocationSize getEmptyKey() {
-    return LocationSize::mapEmpty();
-  }
+  static inline LocationSize getEmptyKey() { return LocationSize::mapEmpty(); }
   static inline LocationSize getTombstoneKey() {
     return LocationSize::mapTombstone();
   }
@@ -349,6 +358,6 @@ template <> struct DenseMapInfo<MemoryLocation> {
     return LHS == RHS;
   }
 };
-}
+} // namespace llvm
 
 #endif

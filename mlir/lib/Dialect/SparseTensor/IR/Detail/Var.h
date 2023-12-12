@@ -13,42 +13,13 @@
 
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/EnumeratedArray.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
 namespace sparse_tensor {
 namespace ir_detail {
-
-// Throughout this namespace we use the name `isWF` (is "well-formed")
-// for predicates that detect intrinsic structural integrity criteria,
-// and hence which should always be assertively true.  Whereas we reserve
-// the name `isValid` for predicates that detect extrinsic semantic
-// integrity criteria, and hence which may legitimately return false even
-// in well-formed programs.  Moreover, "validity" is often a relational
-// or contextual property, and therefore the same term may be considered
-// valid in one context yet invalid in another.
-//
-// As an example of why we make this distinction, consider `Var`.
-// A variable is well-formed if its kind and identifier are both well-formed;
-// this can be checked locally, and the resulting truth-value holds globally.
-// Whereas, a variable is valid with respect to a particular `Ranks` only if
-// it is within bounds; and a variable is valid with respect to a particular
-// `DimLvlMap` only if the variable is bound and all uses of the variable
-// are within the scope of that binding.
-
-// Throughout this namespace we use `enum class` types to form "newtypes".
-// The enum-based implementation of newtypes only serves to block implicit
-// conversions; it cannot enforce any wellformedness constraints, since
-// `enum class` permits using direct-list-initialization to construct
-// arbitrary values[1].  Consequently, we use the syntax "`E{u}`" whenever
-// we intend that ctor to be a noop (i.e., `std::is_same_v<decltype(u),
-// std::underlying_type_t<E>>`), since the compiler will ensure that that's
-// the case.  Whereas we only use the "`static_cast<E>(u)`" syntax when we
-// specifically intend to introduce conversions.
-//
-// [1]:
-// <https://en.cppreference.com/w/cpp/language/enum#enum_relaxed_init_cpp17>
 
 //===----------------------------------------------------------------------===//
 /// The three kinds of variables that `Var` can be.
@@ -61,17 +32,9 @@ namespace ir_detail {
 enum class VarKind { Symbol = 1, Dimension = 0, Level = 2 };
 
 [[nodiscard]] constexpr bool isWF(VarKind vk) {
-  const auto vk_ = to_underlying(vk);
+  const auto vk_ = llvm::to_underlying(vk);
   return 0 <= vk_ && vk_ <= 2;
 }
-
-/// Swaps `Dimension` and `Level`, but leaves `Symbol` the same.
-constexpr VarKind flipVarKind(VarKind vk) {
-  return VarKind{2 - to_underlying(vk)};
-}
-static_assert(flipVarKind(VarKind::Symbol) == VarKind::Symbol &&
-              flipVarKind(VarKind::Dimension) == VarKind::Level &&
-              flipVarKind(VarKind::Level) == VarKind::Dimension);
 
 /// Gets the ASCII character used as the prefix when printing `Var`.
 constexpr char toChar(VarKind vk) {
@@ -79,7 +42,7 @@ constexpr char toChar(VarKind vk) {
   // in the range [-44..126] (where that lower bound is under worst-case
   // rearranging of the expression); and `int_fast8_t` is the fastest type
   // which can support that range without over-/underflow.
-  const auto vk_ = static_cast<int_fast8_t>(to_underlying(vk));
+  const auto vk_ = static_cast<int_fast8_t>(llvm::to_underlying(vk));
   return static_cast<char>(100 + vk_ * (26 - vk_ * 11));
 }
 static_assert(toChar(VarKind::Symbol) == 's' &&
@@ -93,37 +56,9 @@ using VarKindArray = llvm::EnumeratedArray<T, VarKind, VarKind::Level>;
 
 //===----------------------------------------------------------------------===//
 /// A concrete variable, to be used in our variant of `AffineExpr`.
+/// Client-facing class for `VarKind` + `Var::Num` pairs, with RTTI
+/// support for subclasses with a fixed `VarKind`.
 class Var {
-  // Design Note: This class makes several distinctions which may at first
-  // seem unnecessary but are in fact needed for implementation reasons.
-  // These distinctions are summarized as follows:
-  //
-  // * `Var`
-  //   Client-facing class for `VarKind` + `Var::Num` pairs, with RTTI
-  //   support for subclasses with a fixed `VarKind`.
-  // * `Var::Num`
-  //   Client-facing typedef for the type of variable numbers; defined
-  //   so that client code can use it to disambiguate/document when things
-  //   are intended to be variable numbers, as opposed to some other thing
-  //   which happens to be represented as `unsigned`.
-  // * `Var::Storage`
-  //   Private typedef for the storage of `Var::Impl`; defined only because
-  //   it's also needed for defining `kMaxNum`.  Note that this type must be
-  //   kept distinct from `Var::Num`: not only can they be different C++ types
-  //   (even though they currently happen to be the same), but also because
-  //   they use different bitwise representations.
-  // * `Var::Impl`
-  //   The underlying implementation of `Var`; needed by RTTI to serve as
-  //   an intermediary between `Var` and `Var::Storage`.  That is, we want
-  //   the RTTI methods to select the `U(Var::Impl)` ctor, without any
-  //   possibility of confusing that with the `U(Var::Num)` ctor nor with
-  //   the copy-ctor.  (Although the `U(Var::Impl)` ctor is effectively
-  //   identical to the copy-ctor, it doesn't have the type that C++ expects
-  //   for a copy-ctor.)
-  //
-  // TODO: See if it'd be cleaner to use "llvm/ADT/Bitfields.h" in lieu
-  // of doing our own bitbashing (though that seems to only be used by LLVM
-  // for defining machine/assembly ops, and not anywhere else in LLVM/MLIR).
 public:
   /// Typedef for the type of variable numbers.
   using Num = unsigned;
@@ -158,7 +93,7 @@ protected:
   public:
     constexpr Impl(VarKind vk, Num n)
         : data((static_cast<Storage>(n) << 2) |
-               static_cast<Storage>(to_underlying(vk))) {
+               static_cast<Storage>(llvm::to_underlying(vk))) {
       assert(isWF(vk) && "unknown VarKind");
       assert(isWF_Num(n) && "Var::Num is too large");
     }
@@ -179,7 +114,6 @@ protected:
 public:
   constexpr Var(VarKind vk, Num n) : impl(Impl(vk, n)) {}
   Var(AffineSymbolExpr sym) : Var(VarKind::Symbol, sym.getPosition()) {}
-  // TODO(wrengr): Should make the first argument an `ExprKind` instead...?
   Var(VarKind vk, AffineDimExpr var) : Var(vk, var.getPosition()) {
     assert(vk != VarKind::Symbol);
   }
@@ -248,11 +182,6 @@ constexpr bool Var::isa() const {
     return getKind() == VarKind::Dimension;
   if constexpr (std::is_same_v<U, LvlVar>)
     return getKind() == VarKind::Level;
-  // NOTE: The `AffineExpr::isa` implementation doesn't have a fallthrough
-  // case returning `false`; wrengr guesses that's so things will fail
-  // to compile whenever `!std::is_base_of<Var, U>`.  Though it's unclear
-  // why they implemented it that way rather than using SFINAE for that,
-  // especially since it would give better error messages.
 }
 
 template <typename U>
@@ -279,7 +208,7 @@ class Ranks final {
 
   static constexpr unsigned to_index(VarKind vk) {
     assert(isWF(vk) && "unknown VarKind");
-    return static_cast<unsigned>(to_underlying(vk));
+    return static_cast<unsigned>(llvm::to_underlying(vk));
   }
 
 public:
@@ -310,19 +239,7 @@ static_assert(IsZeroCostAbstraction<Ranks>);
 
 //===----------------------------------------------------------------------===//
 /// Efficient representation of a set of `Var`.
-///
-/// NOTE: For the `contains`/`occursIn` methods: if variables occurring in
-/// the method parameter are OOB for the `VarSet`, then these methods will
-/// always return false.  However, for the `add` methods: OOB parameters
-/// cause undefined behavior.  Currently the `add` methods will raise an
-/// assertion error; though we may change that behavior in the future
-/// (e.g., to resize the underlying bitvectors).
 class VarSet final {
-  // If we're willing to give up the possibility of resizing the
-  // individual bitvectors, then we could flatten this into a single
-  // bitvector (akin to how `mlir::presburger::PresburgerSpace` does it);
-  // however, doing so would greatly complicate the implementation of the
-  // `occursIn(VarSet)` method.
   VarKindArray<llvm::SmallBitVector> impl;
 
 public:
@@ -335,11 +252,13 @@ public:
   Ranks getRanks() const {
     return Ranks(getSymRank(), getDimRank(), getLvlRank());
   }
-
+  /// For the `contains` method: if variables occurring in
+  /// the method parameter are OOB for the `VarSet`, then these methods will
+  /// always return false.
   bool contains(Var var) const;
-  bool occursIn(VarSet const &vars) const;
-  bool occursIn(DimLvlExpr expr) const;
 
+  /// For the `add` methods: OOB parameters cause undefined behavior.
+  /// Currently the `add` methods will raise an assertion error.
   void add(Var var);
   void add(VarSet const &vars);
   void add(DimLvlExpr expr);
@@ -390,14 +309,7 @@ public:
     assert(hasNum());
     return Var(kind, *num);
   }
-  constexpr std::optional<Var> tryGetVar() const {
-    return num ? std::make_optional(Var(kind, *num)) : std::nullopt;
-  }
 };
-// We don't actually require this, since `VarInfo` is a proper struct
-// rather than a newtype.  But it passes, so for now we'll keep it around.
-// TODO: Uncomment the static assert, it fails the build with gcc7 right now.
-// static_assert(IsZeroCostAbstraction<VarInfo>);
 
 //===----------------------------------------------------------------------===//
 enum class Policy { MustNot, May, Must };
@@ -423,12 +335,9 @@ public:
   /// object is mutated during the lifetime of the pointer.  Therefore,
   /// client code should not store the reference nor otherwise allow it
   /// to live too long.
-  //
-  // FUTURE_CL(wrengr): Consider trying to define/use a nested class
-  // `struct{VarEnv*; VarInfo::ID}` akin to `BitVector::reference`.
   VarInfo const &access(VarInfo::ID id) const {
     // `SmallVector::operator[]` already asserts the index is in-bounds.
-    return vars[to_underlying(id)];
+    return vars[llvm::to_underlying(id)];
   }
   VarInfo const *access(std::optional<VarInfo::ID> oid) const {
     return oid ? &access(*oid) : nullptr;
@@ -443,29 +352,24 @@ private:
   }
 
 public:
-  /// Attempts to look up the variable with the given name.
+  /// Looks up the variable with the given name.
   std::optional<VarInfo::ID> lookup(StringRef name) const;
 
-  /// Attempts to create a new currently-unbound variable.  When a variable
+  /// Creates a new currently-unbound variable.  When a variable
   /// of that name already exists: if `verifyUsage` is true, then will assert
   /// that the variable has the same kind and a consistent location; otherwise,
   /// when `verifyUsage` is false, this is a noop.  Returns the identifier
-  /// for the variable with the given name (i.e., either the newly created
-  /// variable, or the pre-existing variable), and a bool indicating whether
+  /// for the variable with the given name, and a bool indicating whether
   /// a new variable was created.
   std::optional<std::pair<VarInfo::ID, bool>>
   create(StringRef name, llvm::SMLoc loc, VarKind vk, bool verifyUsage = false);
 
-  /// Attempts to lookup or create a variable according to the given
+  /// Looks up or creates a variable according to the given
   /// `Policy`.  Returns nullopt in one of two circumstances:
   /// (1) the policy says we `Must` create, yet the variable already exists;
   /// (2) the policy says we `MustNot` create, yet no such variable exists.
   /// Otherwise, if the variable already exists then it is validated against
   /// the given kind and location to ensure consistency.
-  //
-  // TODO(wrengr): Define an enum of error codes, to avoid `nullopt`-blindness
-  // TODO(wrengr): Prolly want to rename this to `create` and move the
-  // current method of that name to being a private `createImpl`.
   std::optional<std::pair<VarInfo::ID, bool>>
   lookupOrCreate(Policy creationPolicy, StringRef name, llvm::SMLoc loc,
                  VarKind vk);
@@ -488,12 +392,6 @@ public:
   /// Gets the `Var` identified by the `VarInfo::ID`, raising an assertion
   /// failure if the variable is not bound.
   Var getVar(VarInfo::ID id) const { return access(id).getVar(); }
-
-  /// Gets the `Var` identified by the `VarInfo::ID`, returning nullopt
-  /// if the variable is not bound.
-  std::optional<Var> tryGetVar(VarInfo::ID id) const {
-    return access(id).tryGetVar();
-  }
 };
 
 //===----------------------------------------------------------------------===//

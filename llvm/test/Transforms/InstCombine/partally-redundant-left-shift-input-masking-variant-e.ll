@@ -98,7 +98,7 @@ define <8 x i32> @t1_vec_nonsplat(<8 x i32> %x, <8 x i32> %nbits) {
 define i32 @n3_extrause(i32 %x, i32 %nbits) {
 ; CHECK-LABEL: @n3_extrause(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[NBITS]], -1
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])

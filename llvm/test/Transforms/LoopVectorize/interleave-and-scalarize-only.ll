@@ -5,6 +5,7 @@
 
 ; DBG-LABEL: 'test_scalarize_call'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
@@ -23,7 +24,7 @@
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
 ; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
 ; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
-; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
@@ -67,7 +68,8 @@ declare i32 @llvm.smin.i32(i32, i32)
 
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'
 
-; DBG:       Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; DBG:       Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; DBG-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT:  Live-in ir<1000> = original trip-count
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
@@ -100,7 +102,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   Successor(s): cond.false.1
 ; DBG-EMPTY:
 ; DBG-NEXT:   cond.false.1:
-; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[CAN_IV_INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
@@ -173,6 +175,7 @@ exit:
 
 ; DBG-LABEL: 'first_order_recurrence_using_induction'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
+; DBG-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
@@ -191,7 +194,7 @@ exit:
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
-; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VTC]]>
 ; DBG-NEXT:   No successors
 ; DBG-NEXT: }
@@ -266,4 +269,44 @@ exit:
   %add.lcssa = phi i32 [ %add, %loop ]
   %count.0 = trunc i32 %add.lcssa to i16
   ret i16 %count.0
+}
+
+define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr %src, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 10
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 10
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    store ptr [[TMP10]], ptr %dst, align 8
+; CHECK-NEXT:    store ptr [[TMP11]], ptr %dst, align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP12]], label %middle.block, label %vector.body
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr ptr, ptr %src, i64 %iv
+  %l = load ptr, ptr %gep, align 8
+  %cast = ptrtoint ptr %l to i64
+  %add = add i64 %cast, 10
+  %cast.2 = inttoptr i64 %add to ptr
+  store ptr %cast.2, ptr %dst, align 8
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 0
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
 }

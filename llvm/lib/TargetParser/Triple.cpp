@@ -90,6 +90,36 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   llvm_unreachable("Invalid ArchType!");
 }
 
+StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
+  switch (Kind) {
+  case Triple::mips:
+    if (SubArch == MipsSubArch_r6)
+      return "mipsisa32r6";
+    break;
+  case Triple::mipsel:
+    if (SubArch == MipsSubArch_r6)
+      return "mipsisa32r6el";
+    break;
+  case Triple::mips64:
+    if (SubArch == MipsSubArch_r6)
+      return "mipsisa64r6";
+    break;
+  case Triple::mips64el:
+    if (SubArch == MipsSubArch_r6)
+      return "mipsisa64r6el";
+    break;
+  case Triple::aarch64:
+    if (SubArch == AArch64SubArch_arm64ec)
+      return "arm64ec";
+    if (SubArch == AArch64SubArch_arm64e)
+      return "arm64e";
+    break;
+  default:
+    break;
+  }
+  return getArchTypeName(Kind);
+}
+
 StringRef Triple::getArchTypePrefix(ArchType Kind) {
   switch (Kind) {
   default:
@@ -234,6 +264,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case PS5: return "ps5";
   case RTEMS: return "rtems";
   case Solaris: return "solaris";
+  case Serenity: return "serenity";
   case TvOS: return "tvos";
   case UEFI: return "uefi";
   case WASI: return "wasi";
@@ -611,6 +642,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("emscripten", Triple::Emscripten)
     .StartsWith("shadermodel", Triple::ShaderModel)
     .StartsWith("liteos", Triple::LiteOS)
+    .StartsWith("serenity", Triple::Serenity)
     .Default(Triple::UnknownOS);
 }
 
@@ -1141,34 +1173,6 @@ std::string Triple::normalize(StringRef Str) {
 
 StringRef Triple::getArchName() const {
   return StringRef(Data).split('-').first;           // Isolate first component
-}
-
-StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) const {
-  switch (Kind) {
-  case Triple::mips:
-    if (SubArch == MipsSubArch_r6)
-      return "mipsisa32r6";
-    break;
-  case Triple::mipsel:
-    if (SubArch == MipsSubArch_r6)
-      return "mipsisa32r6el";
-    break;
-  case Triple::mips64:
-    if (SubArch == MipsSubArch_r6)
-      return "mipsisa64r6";
-    break;
-  case Triple::mips64el:
-    if (SubArch == MipsSubArch_r6)
-      return "mipsisa64r6el";
-    break;
-  case Triple::aarch64:
-    if (SubArch == AArch64SubArch_arm64ec)
-      return "arm64ec";
-    break;
-  default:
-    break;
-  }
-  return getArchTypeName(Kind);
 }
 
 StringRef Triple::getVendorName() const {

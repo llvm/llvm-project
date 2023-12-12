@@ -5,7 +5,7 @@
 // RUN: FileCheck %s
 
 /// Run once with the pattern and compare.
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-transform-dialect-erase-schedule -test-lower-to-llvm | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -test-lower-to-llvm | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
@@ -25,7 +25,7 @@ func.func @print_as_i1_10xi8(%v : vector<10xi8>) {
 func.func @f(%v: vector<16xi16>) {
   %trunc = arith.trunci %v : vector<16xi16> to vector<16xi5>
   func.call @print_as_i1_16xi5(%trunc) : (vector<16xi5>) -> ()
-  //      CHECK: ( 
+  //      CHECK: (
   // CHECK-SAME: 1, 1, 1, 1, 1,
   // CHECK-SAME: 0, 1, 1, 1, 1,
   // CHECK-SAME: 1, 0, 1, 1, 1,
@@ -45,7 +45,7 @@ func.func @f(%v: vector<16xi16>) {
 
   %bitcast = vector.bitcast %trunc : vector<16xi5> to vector<10xi8>
   func.call @print_as_i1_10xi8(%bitcast) : (vector<10xi8>) -> ()
-  //      CHECK: ( 
+  //      CHECK: (
   // CHECK-SAME: 1, 1, 1, 1, 1, 0, 1, 1,
   // CHECK-SAME: 1, 1, 1, 0, 1, 1, 1, 0,
   // CHECK-SAME: 0, 1, 1, 1, 1, 1, 0, 1,
@@ -164,6 +164,13 @@ func.func @fext(%a: vector<5xi8>) {
   return
 }
 
+func.func @fcst_maskedload(%A: memref<?xi4>, %passthru: vector<6xi4>) -> vector<6xi4> {
+  %c0 = arith.constant 0: index
+  %mask = vector.constant_mask [3] : vector<6xi1>
+  %1 = vector.maskedload %A[%c0], %mask, %passthru :
+    memref<?xi4>, vector<6xi1>, vector<6xi4> into vector<6xi4>
+  return %1 : vector<6xi4>
+}
 
 func.func @entry() {
   %v = arith.constant dense<[
@@ -187,15 +194,32 @@ func.func @entry() {
   ]> : vector<5xi8>
   func.call @fext(%v4) : (vector<5xi8>) -> ()
 
+  // Set up memory.
+  %c0 = arith.constant 0: index
+  %c1 = arith.constant 1: index
+  %c6 = arith.constant 6: index
+  %A = memref.alloc(%c6) : memref<?xi4>
+  scf.for %i = %c0 to %c6 step %c1 {
+    %i4 = arith.index_cast %i : index to i4
+    memref.store %i4, %A[%i] : memref<?xi4>
+  }
+  %passthru = arith.constant dense<[7, 8, 9, 10, 11, 12]> : vector<6xi4>
+  %load = call @fcst_maskedload(%A, %passthru) : (memref<?xi4>, vector<6xi4>) -> (vector<6xi4>)
+  vector.print %load : vector<6xi4>
+  // CHECK: ( 0, 1, 2, -6, -5, -4 )
+  memref.dealloc %A : memref<?xi4>
+
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op
-      : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+        : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.rewrite_narrow_types
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.rewrite_narrow_types
+    } : !transform.any_op
+    transform.yield
+  }
 }

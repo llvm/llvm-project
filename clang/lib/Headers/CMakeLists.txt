@@ -93,6 +93,8 @@ set(hlsl_files
 
 set(loongarch_files
   larchintrin.h
+  lasxintrin.h
+  lsxintrin.h
   )
 
 set(mips_msa_files
@@ -114,6 +116,8 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  riscv_bitmanip.h
+  riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
   )

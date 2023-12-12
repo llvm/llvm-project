@@ -33,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
-#include <list>
 #include <map>
 #include <set>
 #include <sstream>
@@ -229,6 +228,10 @@ class ProfiledBinary {
 
   // GUID to Elf symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // These maps are for temporary use of warning diagnosis.
+  DenseSet<int64_t> AddrsWithMultipleSymbols;
+  DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
 
   // Start address to Elf symbol GUID map
   std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
@@ -529,7 +532,7 @@ public:
 
   void flushSymbolizer() { Symbolizer.reset(); }
 
-  MissingFrameInferrer* getMissingContextInferrer() {
+  MissingFrameInferrer *getMissingContextInferrer() {
     return MissingContextInferrer.get();
   }
 

@@ -1933,10 +1933,11 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
-mlir::ValueRange fir::IterWhileOp::getYieldedValues() {
+llvm::MutableArrayRef<mlir::OpOperand>
+fir::IterWhileOp::getYieldedValuesMutable() {
   auto *term = getRegion().front().getTerminator();
-  return getFinalValue() ? term->getOperands().drop_front()
-                         : term->getOperands();
+  return getFinalValue() ? term->getOpOperands().drop_front()
+                         : term->getOpOperands();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2244,10 +2245,11 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
-mlir::ValueRange fir::DoLoopOp::getYieldedValues() {
+llvm::MutableArrayRef<mlir::OpOperand>
+fir::DoLoopOp::getYieldedValuesMutable() {
   auto *term = getRegion().front().getTerminator();
-  return getFinalValue() ? term->getOperands().drop_front()
-                         : term->getOperands();
+  return getFinalValue() ? term->getOpOperands().drop_front()
+                         : term->getOpOperands();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3580,6 +3582,39 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
   term = getElseRegion().front().getTerminator();
   if (resultNum < term->getNumOperands())
     results.push_back(term->getOperand(resultNum));
+}
+
+//===----------------------------------------------------------------------===//
+// BoxOffsetOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult fir::BoxOffsetOp::verify() {
+  auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(
+      fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
+  if (!boxType)
+    return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> type");
+  if (getField() != fir::BoxFieldAttr::base_addr &&
+      getField() != fir::BoxFieldAttr::derived_type)
+    return emitOpError("cannot address provided field");
+  if (getField() == fir::BoxFieldAttr::derived_type)
+    if (!fir::boxHasAddendum(boxType))
+      return emitOpError("can only address derived_type field of derived type "
+                         "or unlimited polymorphic fir.box");
+  return mlir::success();
+}
+
+void fir::BoxOffsetOp::build(mlir::OpBuilder &builder,
+                             mlir::OperationState &result, mlir::Value boxRef,
+                             fir::BoxFieldAttr field) {
+  mlir::Type valueType =
+      fir::unwrapPassByRefType(fir::unwrapRefType(boxRef.getType()));
+  mlir::Type resultType = valueType;
+  if (field == fir::BoxFieldAttr::base_addr)
+    resultType = fir::LLVMPointerType::get(fir::ReferenceType::get(valueType));
+  else if (field == fir::BoxFieldAttr::derived_type)
+    resultType = fir::LLVMPointerType::get(
+        fir::TypeDescType::get(fir::unwrapSequenceType(valueType)));
+  build(builder, result, {resultType}, boxRef, field);
 }
 
 //===----------------------------------------------------------------------===//

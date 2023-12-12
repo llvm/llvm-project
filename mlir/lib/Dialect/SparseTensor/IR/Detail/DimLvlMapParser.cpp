@@ -44,42 +44,20 @@ OptionalParseResult DimLvlMapParser::parseVar(VarKind vk, bool isOptional,
                                               VarInfo::ID &varID,
                                               bool &didCreate) {
   // Save the current location so that we can have error messages point to
-  // the right place.  Note that `Parser::emitWrongTokenError` starts off
-  // with the same location as `AsmParserImpl::getCurrentLocation` returns;
-  // however, `Parser` will then do some various munging with the location
-  // before actually using it, so `AsmParser::emitError` can't quite be used
-  // as a drop-in replacement for `Parser::emitWrongTokenError`.
+  // the right place.
   const auto loc = parser.getCurrentLocation();
-
-  // Several things to note.
-  // (1) the `Parser::isCurrentTokenAKeyword` method checks the exact
-  //     same conditions as the `AffineParser.cpp`-static free-function
-  //     `isIdentifier` which is used by `AffineParser::parseBareIdExpr`.
-  // (2) the `{Parser,AsmParserImpl}::parseOptionalKeyword(StringRef*)`
-  //     methods do the same song and dance about using
-  //     `isCurrentTokenAKeyword`, `getTokenSpelling`, et `consumeToken` as we
-  //     would want to do if we could use the `Parser` class directly.  It
-  //     doesn't provide the nice error handling we want, but we can work around
-  //     that.
   StringRef name;
   if (failed(parser.parseOptionalKeyword(&name))) {
-    // If not actually optional, then `emitError`.
     ERROR_IF(!isOptional, "expected bare identifier")
-    // If is actually optional, then return the null `OptionalParseResult`.
     return std::nullopt;
   }
 
-  // I don't know if we need to worry about the possibility of the caller
-  // recovering from error and then reusing the `DimLvlMapParser` for subsequent
-  // `parseVar`, but I'm erring on the side of caution by distinguishing
-  // all three possible creation policies.
   if (const auto res = env.lookupOrCreate(creationPolicy, name, loc, vk)) {
     varID = res->first;
     didCreate = res->second;
     return success();
   }
-  // TODO(wrengr): these error messages make sense for our intended usage,
-  // but not in general; but it's unclear how best to factor that part out.
+
   switch (creationPolicy) {
   case Policy::MustNot:
     return parser.emitError(loc, "use of undeclared identifier '" + name + "'");
@@ -167,8 +145,6 @@ FailureOr<DimLvlMap> DimLvlMapParser::parseDimLvlMap() {
   FAILURE_IF_FAILED(parseDimSpecList())
   FAILURE_IF_FAILED(parser.parseArrow())
   FAILURE_IF_FAILED(parseLvlSpecList())
-  // TODO(wrengr): Try to improve the error messages from
-  // `VarEnv::emitErrorIfAnyUnbound`.
   InFlightDiagnostic ifd = env.emitErrorIfAnyUnbound(parser);
   if (failed(ifd))
     return ifd;
@@ -182,29 +158,6 @@ ParseResult DimLvlMapParser::parseSymbolBindingList() {
       " in symbol binding list");
 }
 
-// FIXME: The forward-declaration of level-vars is a stop-gap workaround
-// so that we can reuse `AsmParser::parseAffineExpr` in the definition of
-// `DimLvlMapParser::parseDimSpec`.  (In particular, note that all the
-// variables must be bound before entering `AsmParser::parseAffineExpr`,
-// since that method requires every variable to already have a fixed/known
-// `Var::Num`.)
-//
-// However, the forward-declaration list duplicates information which is
-// already encoded by the level-var bindings in `parseLvlSpecList` (namely:
-// the names of the variables themselves, and the order in which the names
-// are bound).  This redundancy causes bad UX, and also means we must be
-// sure to verify consistency between the two sources of information.
-//
-// Therefore, it would be best to remove the forward-declaration list from
-// the syntax.  This can be achieved by implementing our own version of
-// `AffineParser::parseAffineExpr` which calls
-// `parseVarUsage(_,requireKnown=false)` for variables and stores the resulting
-// `VarInfo::ID` in the expression tree (instead of demanding it be resolved to
-// some `Var::Num` immediately).  This would also enable us to use the `VarEnv`
-// directly, rather than building the `{dims,lvls}AndSymbols` lists on the
-// side, and thus would also enable us to avoid the O(n^2) behavior of copying
-// `DimLvlParser::{dims,lvls}AndSymbols` into `AffineParser::dimsAndSymbols`
-// every time `AsmParser::parseAffineExpr` is called.
 ParseResult DimLvlMapParser::parseLvlVarBindingList() {
   return parser.parseCommaSeparatedList(
       OpAsmParser::Delimiter::OptionalBraces,
@@ -233,9 +186,6 @@ ParseResult DimLvlMapParser::parseDimSpec() {
   AffineExpr affine;
   if (succeeded(parser.parseOptionalEqual())) {
     // Parse the dim affine expr, with only any lvl-vars in scope.
-    // FIXME(wrengr): This still has the O(n^2) behavior of copying
-    // our `lvlsAndSymbols` into the `AffineParser::dimsAndSymbols`
-    // field every time `parseDimSpec` is called.
     FAILURE_IF_FAILED(parser.parseAffineExpr(lvlsAndSymbols, affine))
   }
   DimExpr expr{affine};
@@ -304,9 +254,6 @@ static inline Twine nth(Var::Num n) {
   }
 }
 
-// NOTE: This is factored out as a separate method only because `Var`
-// lacks a default-ctor, which makes this conditional difficult to inline
-// at the one call-site.
 FailureOr<LvlVar>
 DimLvlMapParser::parseLvlVarBinding(bool requireLvlVarBinding) {
   // Nothing to parse, just bind an unnamed variable.
@@ -336,17 +283,14 @@ DimLvlMapParser::parseLvlVarBinding(bool requireLvlVarBinding) {
 }
 
 ParseResult DimLvlMapParser::parseLvlSpec(bool requireLvlVarBinding) {
-  // Parse the optional lvl-var binding.  (Actually, `requireLvlVarBinding`
-  // specifies whether that "optional" is actually Must or MustNot.)
+  // Parse the optional lvl-var binding. `requireLvlVarBinding`
+  // specifies whether that "optional" is actually Must or MustNot.
   const auto varRes = parseLvlVarBinding(requireLvlVarBinding);
   FAILURE_IF_FAILED(varRes)
   const LvlVar var = *varRes;
 
   // Parse the lvl affine expr, with only the dim-vars in scope.
   AffineExpr affine;
-  // FIXME(wrengr): This still has the O(n^2) behavior of copying
-  // our `dimsAndSymbols` into the `AffineParser::dimsAndSymbols`
-  // field every time `parseLvlSpec` is called.
   FAILURE_IF_FAILED(parser.parseAffineExpr(dimsAndSymbols, affine))
   LvlExpr expr{affine};
 
@@ -354,7 +298,7 @@ ParseResult DimLvlMapParser::parseLvlSpec(bool requireLvlVarBinding) {
   const auto type = lvlTypeParser.parseLvlType(parser);
   FAILURE_IF_FAILED(type)
 
-  lvlSpecs.emplace_back(var, expr, static_cast<DimLevelType>(*type));
+  lvlSpecs.emplace_back(var, expr, static_cast<LevelType>(*type));
   return success();
 }
 

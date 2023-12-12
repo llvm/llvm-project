@@ -7,6 +7,9 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-print %s -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping -DOMP51
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -ast-print %s -Wno-openmp-mapping -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping -DOMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping
@@ -17,6 +20,10 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping -DOMP51
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP51 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// expected-no-diagnostics
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s -Wno-openmp-mapping -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s -Wno-openmp-mapping -DOMP52
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping -DOMP52 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -131,7 +138,7 @@ T tmain(T argc, T *argv) {
   // CHECK-NEXT: for (T i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 
-#ifdef OMP51
+#if defined(OMP51) || defined(OMP52)
 #pragma omp target parallel for simd if(target:argc > 0) if (simd: argc) nontemporal(argc, c, d) order(unconstrained:concurrent) allocate(omp_high_bw_mem_alloc:f) private(f) uses_allocators(omp_high_bw_mem_alloc)
 #elif OMP5
 #pragma omp target parallel for simd if(target:argc > 0) if (simd: argc) nontemporal(argc, c, d) order(concurrent) allocate(omp_high_bw_mem_alloc:f) private(f) uses_allocators(omp_high_bw_mem_alloc)
@@ -142,6 +149,7 @@ T tmain(T argc, T *argv) {
   // OMP45: #pragma omp target parallel for simd if(target: argc > 0)
   // OMP50: #pragma omp target parallel for simd if(target: argc > 0) if(simd: argc) nontemporal(argc,c,d) order(concurrent) allocate(omp_high_bw_mem_alloc: f) private(f) uses_allocators(omp_high_bw_mem_alloc)
   // OMP51: #pragma omp target parallel for simd if(target: argc > 0) if(simd: argc) nontemporal(argc,c,d) order(unconstrained: concurrent) allocate(omp_high_bw_mem_alloc: f) private(f) uses_allocators(omp_high_bw_mem_alloc)
+  // OMP52: #pragma omp target parallel for simd if(target: argc > 0) if(simd: argc) nontemporal(argc,c,d) order(unconstrained: concurrent) allocate(omp_high_bw_mem_alloc: f) private(f) uses_allocators(omp_high_bw_mem_alloc)
   // CHECK-NEXT: for (T i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 
@@ -237,12 +245,15 @@ int main(int argc, char **argv) {
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
-
+#ifdef OMP52
+#pragma omp target parallel for simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) ordered if (target: argc) num_threads(a) default(shared) shared(e) reduction(+ : h) linear(a: step(-5))
+#else
 #pragma omp target parallel for simd private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) ordered if (target: argc) num_threads(a) default(shared) shared(e) reduction(+ : h) linear(a:-5)
+#endif
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
-  // CHECK: #pragma omp target parallel for simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) ordered if(target: argc) num_threads(a) default(shared) shared(e) reduction(+: h) linear(a: -5)
+  // CHECK: #pragma omp target parallel for simd private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) ordered if(target: argc) num_threads(a) default(shared) shared(e) reduction(+: h) linear(a: step(-5))
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: foo();
@@ -265,7 +276,7 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 
-#ifdef OMP51
+#if defined(OMP51) || defined(OMP52)
 #pragma omp target parallel for simd if (parallel:argc > 0)
 #elif OMP5
 #pragma omp target parallel for simd if (parallel:argc > 0) if(simd: argc)
@@ -276,6 +287,7 @@ int main(int argc, char **argv) {
   // OMP45: #pragma omp target parallel for simd if(parallel: argc > 0)
   // OMP50: #pragma omp target parallel for simd if(parallel: argc > 0) if(simd: argc)
   // OMP51: #pragma omp target parallel for simd if(parallel: argc > 0)
+  // OMP52: #pragma omp target parallel for simd if(parallel: argc > 0)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i) {
   // CHECK-NEXT: }
 

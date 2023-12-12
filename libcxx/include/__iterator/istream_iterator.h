@@ -11,12 +11,13 @@
 #define _LIBCPP___ITERATOR_ISTREAM_ITERATOR_H
 
 #include <__config>
+#include <__fwd/istream.h>
+#include <__fwd/string.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <cstddef>
-#include <iosfwd> // for forward declarations of char_traits and basic_istream
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -46,29 +47,29 @@ private:
     istream_type* __in_stream_;
     _Tp __value_;
 public:
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR istream_iterator() : __in_stream_(nullptr), __value_() {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR istream_iterator() : __in_stream_(nullptr), __value_() {}
 #if _LIBCPP_STD_VER >= 20
     _LIBCPP_HIDE_FROM_ABI constexpr istream_iterator(default_sentinel_t) : istream_iterator() {}
 #endif // _LIBCPP_STD_VER >= 20
-    _LIBCPP_INLINE_VISIBILITY istream_iterator(istream_type& __s) : __in_stream_(_VSTD::addressof(__s))
+    _LIBCPP_HIDE_FROM_ABI istream_iterator(istream_type& __s) : __in_stream_(std::addressof(__s))
         {
             if (!(*__in_stream_ >> __value_))
                 __in_stream_ = nullptr;
         }
 
-    _LIBCPP_INLINE_VISIBILITY const _Tp& operator*() const {return __value_;}
-    _LIBCPP_INLINE_VISIBILITY const _Tp* operator->() const {return _VSTD::addressof((operator*()));}
-    _LIBCPP_INLINE_VISIBILITY istream_iterator& operator++()
+    _LIBCPP_HIDE_FROM_ABI const _Tp& operator*() const {return __value_;}
+    _LIBCPP_HIDE_FROM_ABI const _Tp* operator->() const {return std::addressof((operator*()));}
+    _LIBCPP_HIDE_FROM_ABI istream_iterator& operator++()
         {
             if (!(*__in_stream_ >> __value_))
                 __in_stream_ = nullptr;
             return *this;
         }
-    _LIBCPP_INLINE_VISIBILITY istream_iterator  operator++(int)
+    _LIBCPP_HIDE_FROM_ABI istream_iterator  operator++(int)
         {istream_iterator __t(*this); ++(*this); return __t;}
 
     template <class _Up, class _CharU, class _TraitsU, class _DistanceU>
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
     bool
     operator==(const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __x,
                const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __y);
@@ -81,7 +82,7 @@ public:
 };
 
 template <class _Tp, class _CharT, class _Traits, class _Distance>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator==(const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __x,
            const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __y)
@@ -91,7 +92,7 @@ operator==(const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __x,
 
 #if _LIBCPP_STD_VER <= 17
 template <class _Tp, class _CharT, class _Traits, class _Distance>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __x,
            const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __y)

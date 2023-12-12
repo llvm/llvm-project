@@ -19,7 +19,6 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -39,7 +38,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <utility>
 
 using namespace llvm;
@@ -794,7 +792,8 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     auto MOP = MI.getOperand(RegMaskStartIdx);
     assert(MOP.isReg() && "can only add register operands");
     OriginalCall->addOperand(MachineOperand::CreateReg(
-        MOP.getReg(), /*Def=*/false, /*Implicit=*/true));
+        MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
+        /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
     RegMaskStartIdx++;
   }
   for (const MachineOperand &MO :
@@ -837,6 +836,7 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
   Call->addOperand(CallTarget);
   Call->setCFIType(*MBB.getParent(), MI.getCFIType());
+  Call->copyImplicitOps(*MBB.getParent(), MI);
 
   MachineInstr *BTI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))

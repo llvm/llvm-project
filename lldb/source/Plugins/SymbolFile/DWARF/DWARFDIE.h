@@ -74,7 +74,7 @@ public:
 
   /// Return this DIE's decl context as it is needed to look up types
   /// in Clang's -gmodules debug info format.
-  void GetDeclContext(llvm::SmallVectorImpl<CompilerContext> &context) const;
+  std::vector<CompilerContext> GetDeclContext() const;
 
   // Getting attribute values from the DIE.
   //

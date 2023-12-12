@@ -5,7 +5,12 @@
 # Provide a convenient name for sub-packages to resolve the main C-extension
 # with a relative import.
 from .._mlir_libs import _mlir as _cext
-from typing import Sequence as _Sequence, Union as _Union
+from typing import (
+    Sequence as _Sequence,
+    Type as _Type,
+    TypeVar as _TypeVar,
+    Union as _Union,
+)
 
 __all__ = [
     "equally_sized_accessor",
@@ -123,3 +128,13 @@ def get_op_result_or_op_results(
         if len(op.results) > 0
         else op
     )
+
+
+# This is the standard way to indicate subclass/inheritance relationship
+# see the typing.Type doc string.
+_U = _TypeVar("_U", bound=_cext.ir.Value)
+SubClassValueT = _Type[_U]
+
+ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
+ResultValueT = _Union[ResultValueTypeTuple]
+VariadicResultValueT = _Union[ResultValueT, _Sequence[ResultValueT]]

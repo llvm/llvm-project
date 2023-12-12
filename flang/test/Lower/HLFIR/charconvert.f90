@@ -19,10 +19,10 @@ end subroutine charconvert1
 ! CHECK:     %[[C4_4:.*]] = arith.constant 4 : index
 ! CHECK:     %[[VAL_38:.*]] = arith.divsi %[[VAL_37]], %[[C4_4]] : index
 ! CHECK:     %[[VAL_39:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[ARG2]])  typeparams %[[VAL_38]] : (!fir.box<!fir.array<?x!fir.char<4,?>>>, index, index) -> !fir.boxchar<4>
+! CHECK:     %[[VAL_42:.*]]:2 = fir.unboxchar %[[VAL_39]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 ! CHECK:     %[[C4_5:.*]] = arith.constant 4 : index
 ! CHECK:     %[[VAL_40:.*]] = arith.muli %[[VAL_38]], %[[C4_5]] : index
 ! CHECK:     %[[VAL_41:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_40]] : index)
-! CHECK:     %[[VAL_42:.*]]:2 = fir.unboxchar %[[VAL_39]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 ! CHECK:     fir.char_convert %[[VAL_42]]#0 for %[[VAL_38:.*]] to %[[VAL_41]] : !fir.ref<!fir.char<4,?>>, index, !fir.ref<!fir.char<1,?>>
 
 subroutine charconvert2(x)
@@ -63,9 +63,9 @@ end subroutine
 ! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFcharconvert3Ec4"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 ! CHECK:   %[[VAL_4:.*]] = arith.addi %[[VAL_0]]#1, %[[VAL_0]]#1 : index
 ! CHECK:   %[[VAL_5:.*]] = hlfir.concat %[[VAL_1]]#0, %[[VAL_1]]#0 len %[[VAL_4]] : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:   %[[VAL_6:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_4]] : index)
-! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:   fir.char_convert %[[VAL_7]]#1 for %[[VAL_4:.*]] to %[[VAL_6]] : !fir.ref<!fir.char<1,?>>, index, !fir.ref<!fir.char<4,?>>
 ! CHECK:   hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.char<1,?>>, i1
-! CHECK:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_4]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+! CHECK:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_4]] {uniq_name = ".temp.kindconvert"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 ! CHECK:   hlfir.assign %[[VAL_8]]#0 to %[[VAL_3]]#0 : !fir.boxchar<4>, !fir.boxchar<4>

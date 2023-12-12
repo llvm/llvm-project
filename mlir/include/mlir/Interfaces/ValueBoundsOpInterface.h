@@ -19,6 +19,32 @@
 #include <queue>
 
 namespace mlir {
+class OffsetSizeAndStrideOpInterface;
+
+/// A hyperrectangular slice, represented as a list of offsets, sizes and
+/// strides.
+class HyperrectangularSlice {
+public:
+  HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes,
+                        ArrayRef<OpFoldResult> strides);
+
+  /// Create a hyperrectangular slice with unit strides.
+  HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes);
+
+  /// Infer a hyperrectangular slice from `OffsetSizeAndStrideOpInterface`.
+  HyperrectangularSlice(OffsetSizeAndStrideOpInterface op);
+
+  ArrayRef<OpFoldResult> getMixedOffsets() const { return mixedOffsets; }
+  ArrayRef<OpFoldResult> getMixedSizes() const { return mixedSizes; }
+  ArrayRef<OpFoldResult> getMixedStrides() const { return mixedStrides; }
+
+private:
+  SmallVector<OpFoldResult> mixedOffsets;
+  SmallVector<OpFoldResult> mixedSizes;
+  SmallVector<OpFoldResult> mixedStrides;
+};
 
 using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 
@@ -134,28 +160,6 @@ public:
                           std::optional<int64_t> dim, ValueRange independencies,
                           bool closedUB = false);
 
-  /// Compute a constant bound for the given index-typed value or shape
-  /// dimension size.
-  ///
-  /// `dim` must be `nullopt` if and only if `value` is index-typed. This
-  /// function traverses the backward slice of the given value in a
-  /// worklist-driven manner until `stopCondition` evaluates to "true". The
-  /// constraint set is populated according to `ValueBoundsOpInterface` for each
-  /// visited value. (No constraints are added for values for which the stop
-  /// condition evaluates to "true".)
-  ///
-  /// The stop condition is optional: If none is specified, the backward slice
-  /// is traversed in a breadth-first manner until a constant bound could be
-  /// computed.
-  ///
-  /// By default, lower/equal bounds are closed and upper bounds are open. If
-  /// `closedUB` is set to "true", upper bounds are also closed.
-  static FailureOr<int64_t>
-  computeConstantBound(presburger::BoundType type, Value value,
-                       std::optional<int64_t> dim = std::nullopt,
-                       StopConditionFn stopCondition = nullptr,
-                       bool closedUB = false);
-
   /// Compute a constant bound for the given affine map, where dims and symbols
   /// are bound to the given operands. The affine map must have exactly one
   /// result.
@@ -172,8 +176,16 @@ public:
   ///
   /// By default, lower/equal bounds are closed and upper bounds are open. If
   /// `closedUB` is set to "true", upper bounds are also closed.
+  static FailureOr<int64_t>
+  computeConstantBound(presburger::BoundType type, Value value,
+                       std::optional<int64_t> dim = std::nullopt,
+                       StopConditionFn stopCondition = nullptr,
+                       bool closedUB = false);
   static FailureOr<int64_t> computeConstantBound(
       presburger::BoundType type, AffineMap map, ValueDimList mapOperands,
+      StopConditionFn stopCondition = nullptr, bool closedUB = false);
+  static FailureOr<int64_t> computeConstantBound(
+      presburger::BoundType type, AffineMap map, ArrayRef<Value> mapOperands,
       StopConditionFn stopCondition = nullptr, bool closedUB = false);
 
   /// Compute a constant delta between the given two values. Return "failure"
@@ -194,6 +206,35 @@ public:
   static FailureOr<bool> areEqual(Value value1, Value value2,
                                   std::optional<int64_t> dim1 = std::nullopt,
                                   std::optional<int64_t> dim2 = std::nullopt);
+
+  /// Compute whether the given values/attributes are equal. Return "failure" if
+  /// equality could not be determined.
+  ///
+  /// `ofr1`/`ofr2` must be of index type.
+  static FailureOr<bool> areEqual(OpFoldResult ofr1, OpFoldResult ofr2);
+
+  /// Return "true" if the given slices are guaranteed to be overlapping.
+  /// Return "false" if the given slices are guaranteed to be non-overlapping.
+  /// Return "failure" if unknown.
+  ///
+  /// Slices are overlapping if for all dimensions:
+  /// *      offset1 + size1 * stride1 <= offset2
+  /// * and  offset2 + size2 * stride2 <= offset1
+  ///
+  /// Slice are non-overlapping if the above constraint is not satisfied for
+  /// at least one dimension.
+  static FailureOr<bool> areOverlappingSlices(MLIRContext *ctx,
+                                              HyperrectangularSlice slice1,
+                                              HyperrectangularSlice slice2);
+
+  /// Return "true" if the given slices are guaranteed to be equivalent.
+  /// Return "false" if the given slices are guaranteed to be non-equivalent.
+  /// Return "failure" if unknown.
+  ///
+  /// Slices are equivalent if their offsets, sizes and strices are equal.
+  static FailureOr<bool> areEquivalentSlices(MLIRContext *ctx,
+                                             HyperrectangularSlice slice1,
+                                             HyperrectangularSlice slice2);
 
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.

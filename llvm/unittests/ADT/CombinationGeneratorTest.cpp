@@ -9,14 +9,12 @@
 #include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
-#include <tuple>
 #include <vector>
 
 using namespace llvm;

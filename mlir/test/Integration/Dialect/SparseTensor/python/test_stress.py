@@ -21,12 +21,11 @@ from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 # ===----------------------------------------------------------------------=== #
 
-# TODO: move this boilerplate to its own module, so it can be used by
-# other tests and programs.
+
 class TypeConverter:
     """Converter between NumPy types and MLIR types."""
 
@@ -78,7 +77,6 @@ class TypeConverter:
     ) -> ir.RankedTensorType:
         """Returns the ir.RankedTensorType of a NumPy array.  Note that NumPy
         arrays can only be converted to/from dense tensors, not sparse tensors."""
-        # TODO: handle strides as well?
         return ir.RankedTensorType.get(
             nparray.shape, self.dtype_to_irtype(nparray.dtype)
         )
@@ -112,7 +110,6 @@ class StressTest:
         with ir.InsertionPoint(self._module.body):
             tp0 = types.pop(0)
             self._roundtripTp = tp0
-            # TODO: assert dense? assert element type is recognised by the TypeConverter?
             types.append(tp0)
             funcTp = ir.FunctionType.get(inputs=[tp0], results=[tp0])
             funcOp = func.FuncOp(name="main", type=funcTp)
@@ -197,7 +194,7 @@ def main():
     print("\nTEST: test_stress")
     with ir.Context() as ctx, ir.Location.unknown():
         sparsification_options = f"parallelization-strategy=none "
-        compiler = sparse_compiler.SparseCompiler(
+        compiler = sparsifier.Sparsifier(
             options=sparsification_options, opt_level=0, shared_libs=[support_lib]
         )
         f64 = ir.F64Type.get()
@@ -206,13 +203,9 @@ def main():
         shape = range(2, 3)
         rank = len(shape)
         # All combinations.
-        # TODO: add singleton here too; which requires updating how `np_arg0`
-        # is initialized below.
         levels = list(
             itertools.product(
-                *itertools.repeat(
-                    [st.DimLevelType.dense, st.DimLevelType.compressed], rank
-                )
+                *itertools.repeat([st.LevelType.dense, st.LevelType.compressed], rank)
             )
         )
         # All permutations.
