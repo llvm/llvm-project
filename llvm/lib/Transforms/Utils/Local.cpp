@@ -2135,9 +2135,8 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
   findDbgDeclares(DbgDeclares, Address, &DPValues);
 
   auto ReplaceOne = [&](auto *DII) {
-    auto *DIVar = DII->getVariable();
+    assert(DII->getVariable() && "Missing variable");
     auto *DIExpr = DII->getExpression();
-    assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
     DII->setExpression(DIExpr);
     DII->replaceVariableLocationOp(Address, NewAddress);
