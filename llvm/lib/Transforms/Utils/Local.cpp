@@ -1775,23 +1775,37 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, StoreInst *SI,
 
   DebugLoc NewLoc = getDebugValueLoc(DPV);
 
-  if (!valueCoversEntireFragment(DV->getType(), DPV)) {
-    // FIXME: If storing to a part of the variable described by the dbg.declare,
-    // then we want to insert a DPValue.value for the corresponding fragment.
-    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to DPValue: " << *DPV
-                      << '\n');
-    // For now, when there is a store to parts of the variable (but we do not
-    // know which part) we insert an DPValue record to indicate that we know
-    // nothing about the variable's content.
-    DV = UndefValue::get(DV->getType());
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DPValue *NewDPV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-    SI->getParent()->insertDPValueBefore(NewDPV, SI->getIterator());
+  // If the alloca describes the variable itself, i.e. the expression in the
+  // dbg.declare doesn't start with a dereference, we can perform the
+  // conversion if the value covers the entire fragment of DII.
+  // If the alloca describes the *address* of DIVar, i.e. DIExpr is
+  // *just* a DW_OP_deref, we use DV as is for the dbg.value.
+  // We conservatively ignore other dereferences, because the following two are
+  // not equivalent:
+  //     dbg.declare(alloca, ..., !Expr(deref, plus_uconstant, 2))
+  //     dbg.value(DV, ..., !Expr(deref, plus_uconstant, 2))
+  // The former is adding 2 to the address of the variable, whereas the latter
+  // is adding 2 to the value of the variable. As such, we insist on just a
+  // deref expression.
+  bool CanConvert =
+      DIExpr->isDeref() || (!DIExpr->startsWithDeref() &&
+                            valueCoversEntireFragment(DV->getType(), DPV));
+  if (CanConvert) {
+    insertDbgValueOrDPValue(Builder, DV, DIVar, DIExpr, NewLoc,
+                            SI->getIterator());
     return;
   }
 
+  // FIXME: If storing to a part of the variable described by the dbg.declare,
+  // then we want to insert a dbg.value for the corresponding fragment.
+  LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DPV
+                    << '\n');
   assert(UseNewDbgInfoFormat);
-  // Create a DPValue directly and insert.
+
+  // For now, when there is a store to parts of the variable (but we do not
+  // know which part) we insert an dbg.value intrinsic to indicate that we
+  // know nothing about the variable's content.
+  DV = UndefValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DPValue *NewDPV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
   SI->getParent()->insertDPValueBefore(NewDPV, SI->getIterator());
