@@ -840,7 +840,7 @@ public:
   }
 
   void genEval(Fortran::lower::pft::Evaluation &eval,
-               bool unstructuredContext) override {
+               bool unstructuredContext) override final {
     genFIR(eval, unstructuredContext);
   }
 
