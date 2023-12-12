@@ -277,7 +277,49 @@ func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_and_tile_dims(%arg0: 
 //      CHECK:     %[[mapped_dim1:.+]] = affine.apply #[[map:.+]]()[%[[dim]]]
 //      CHECK:     %[[mapped_dim2:.+]] = affine.apply #[[map1:.+]]()[%[[dim_0]]]
 //      CHECK:     %[[INIT:.+]] = tensor.empty(%[[mapped_dim2]], %[[mapped_dim1]]) : tensor<?x2x56x?x32x32x2xf32>
-//      CHECK:     %[[PACK:.+]] = tensor.pack %arg0 outer_dims_perm = [2, 3, 0, 1] inner_dims_pos = [3, 1, 2] inner_tiles = [32, 32, 2] into %[[INIT]] : tensor<56x?x?x64xf32> -> tensor<?x2x56x?x32x32x2xf32>
+//      CHECK:     %[[PACK:.+]] = tensor.pack %[[ARG0]] outer_dims_perm = [2, 3, 0, 1] inner_dims_pos = [3, 1, 2] inner_tiles = [32, 32, 2] into %[[INIT]] : tensor<56x?x?x64xf32> -> tensor<?x2x56x?x32x32x2xf32>
 //      CHECK:     %[[CAST:.+]] = tensor.cast %[[PACK]] : tensor<?x2x56x?x32x32x2xf32> to tensor<?x?x56x2x32x32x2xf32>
 //      CHECK:     return %[[CAST]] : tensor<?x?x56x2x32x32x2xf32>
+//      CHECK:   }
+
+// -----
+
+func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_sizes(%arg0: tensor<?x?x?x?xf32>, %tile_p : index, %tile_q : index, %tile_r : index) -> tensor<?x?x?x?x?x?x?xf32> {
+  %0 = tensor.empty() : tensor<56x2x2x2x32x2x32xf32>
+  %cast1 = tensor.cast %0 : tensor<56x2x2x2x32x2x32xf32> to tensor<?x?x?x?x?x?x?xf32>
+  %pack = tensor.pack %arg0
+    outer_dims_perm = [0, 1, 2, 3]
+    inner_dims_pos = [1, 2, 3]
+    inner_tiles = [%tile_p, %tile_q, %tile_r]
+    into %cast1 : tensor<?x?x?x?xf32> -> tensor<?x?x?x?x?x?x?xf32>
+
+  %1 = tensor.empty() : tensor<2x2x56x2x32x32x2xf32>
+  %cast2 = tensor.cast %1 : tensor<2x2x56x2x32x32x2xf32> to tensor<?x?x?x?x?x?x?xf32>
+  %transposed = linalg.transpose
+    ins(%pack : tensor<?x?x?x?x?x?x?xf32>)
+    outs(%cast2 : tensor<?x?x?x?x?x?x?xf32>)
+    permutation = [2, 3, 0, 1, 6, 4, 5]
+
+  return %transposed : tensor<?x?x?x?x?x?x?xf32>
+}
+//      CHECK: #[[map:.+]] = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
+//      CHECK: module {
+//      CHECK:   func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_sizes(
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?x?xf32>,
+// CHECK-SAME:   %[[ARG1:.+]]: index, %[[ARG2:.+]]: index,
+// CHECK-SAME:   %[[ARG3:.+]]: index) 
+//      CHECK:     %[[c0:.+]] = arith.constant 0 : index
+//      CHECK:     %[[c1:.+]] = arith.constant 1 : index
+//      CHECK:     %[[c2:.+]] = arith.constant 2 : index
+//      CHECK:     %[[c3:.+]] = arith.constant 3 : index
+//      CHECK:     %[[dim:.+]] = tensor.dim %[[ARG0]], %[[c0]] : tensor<?x?x?x?xf32>
+//      CHECK:     %[[dim_0:.+]] = tensor.dim %[[ARG0]], %[[c1]] : tensor<?x?x?x?xf32>
+//      CHECK:     %[[dim_1:.+]] = tensor.dim %[[ARG0]], %[[c2]] : tensor<?x?x?x?xf32>
+//      CHECK:     %[[dim_2:.+]] = tensor.dim %[[ARG0]], %[[c3]] : tensor<?x?x?x?xf32>
+//      CHECK:     %[[mapped_dim0:.+]] = affine.apply #[[map:.+]]()[%[[dim_2]], %[[ARG3]]]
+//      CHECK:     %[[mapped_dim1:.+]] = affine.apply #[[map:.+]]()[%[[dim_0]], %[[ARG1]]]
+//      CHECK:     %[[mapped_dim2:.+]] = affine.apply #[[map:.+]]()[%[[dim_1]], %[[ARG2]]]
+//      CHECK:     %[[INIT:.+]] = tensor.empty(%[[mapped_dim2]], %[[mapped_dim0]], %[[dim]], %[[mapped_dim1]], %[[ARG3]], %[[ARG1]], %[[ARG2]]) : tensor<?x?x?x?x?x?x?xf32>
+//      CHECK:     %[[PACK:.+]] = tensor.pack %[[ARG0]] outer_dims_perm = [2, 3, 0, 1] inner_dims_pos = [3, 1, 2] inner_tiles = [%[[ARG3]], %[[ARG1]], %[[ARG2]]] into %[[INIT]] : tensor<?x?x?x?xf32> -> tensor<?x?x?x?x?x?x?xf32>
+//      CHECK:     return %[[PACK]] : tensor<?x?x?x?x?x?x?xf32>
 //      CHECK:   }

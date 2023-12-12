@@ -91,35 +91,33 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
 
   LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    auto transposeInputTensor = transposeOp.getOperand(0);
-    auto packOp = transposeInputTensor.getDefiningOp<PackOp>();
+    auto packOp = transposeOp.getOperand(0).getDefiningOp<PackOp>();
 
     if (!packOp)
       return failure();
 
     auto packInnerDimsPos = packOp.getInnerDimsPos();
-    auto packInnerTiles = packOp.getStaticInnerTiles();
+    auto packMixedInnerTiles = packOp.getMixedTiles();
     auto packOuterDimsPerm = packOp.getOuterDimsPerm();
     auto transposePerm = transposeOp.getPermutation();
     SmallVector<int64_t> newPackOuterDimsPermVec;
     SmallVector<int64_t> newPackInnerDimsPosVec;
-    SmallVector<int64_t> newPackInnerTilesVec;
+    SmallVector<OpFoldResult> newPackMixedInnerTilesVec;
 
     // Variable for storing remapped position after considering original
     // outer_dims_perm and permutation attributes of tensor.pack and
     // linalg.transpose.
     int64_t remappedPosition;
-    int64_t finalOuterDimsSize = transposePerm.size() - packInnerTiles.size();
+    int64_t finalOuterDimsSize =
+        transposePerm.size() - packMixedInnerTiles.size();
+    int64_t srcRank = packOp.getSourceRank();
 
     // Process transpose operation for non-tiled outer dimensions
     for (unsigned int i = 0; i < finalOuterDimsSize; ++i) {
       // If tensor.pack has outer_dims_perm attribute, then consider it during
-      // index translation.
+      // index remapping.
       if (!packOuterDimsPerm.empty()) {
-        // Note: static_cast is added around transposePerm[i] to suppress the
-        // compiler warning of comparison between variables of different types.
-        if (static_cast<unsigned long>(transposePerm[i]) <
-            packOuterDimsPerm.size()) {
+        if (transposePerm[i] < srcRank) {
           remappedPosition = packOuterDimsPerm[transposePerm[i]];
         } else {
           return rewriter.notifyMatchFailure(
@@ -138,26 +136,20 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
     for (unsigned int i = finalOuterDimsSize; i < transposePerm.size(); ++i) {
       remappedPosition = transposePerm[i] - finalOuterDimsSize;
 
-      newPackInnerTilesVec.push_back(packInnerTiles[remappedPosition]);
+      newPackMixedInnerTilesVec.push_back(
+          packMixedInnerTiles[remappedPosition]);
       newPackInnerDimsPosVec.push_back(packInnerDimsPos[remappedPosition]);
     }
 
-    SmallVector<OpFoldResult> opFoldResultsTiles;
-    opFoldResultsTiles.reserve(newPackInnerTilesVec.size());
-
-    transform(newPackInnerTilesVec, std::back_inserter(opFoldResultsTiles),
-              [&rewriter](int64_t value) {
-                return IntegerAttr::get(IndexType::get(rewriter.getContext()),
-                                        value);
-              });
-
     Value output = packOp.createDestinationTensor(
-        rewriter, transposeOp.getLoc(), packOp.getSource(), opFoldResultsTiles,
-        newPackInnerDimsPosVec, newPackOuterDimsPermVec);
+        rewriter, transposeOp.getLoc(), packOp.getSource(),
+        newPackMixedInnerTilesVec, newPackInnerDimsPosVec,
+        newPackOuterDimsPermVec);
 
     rewriter.replaceOpWithNewOp<PackOp>(
         transposeOp, packOp.getSource(), output, newPackInnerDimsPosVec,
-        opFoldResultsTiles, packOp.getPaddingValue(), newPackOuterDimsPermVec);
+        newPackMixedInnerTilesVec, packOp.getPaddingValue(),
+        newPackOuterDimsPermVec);
 
     return success();
   }
