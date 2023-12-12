@@ -992,7 +992,7 @@ static void readAArch64PauthAbiTag(const InputSection &sec, ObjFile<ELFT> &f) {
 
   ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
   if (desc.size() < 16) {
-    reportError("too short AArch64 PAuth compatibility info "
+    reportError("AArch64 PAuth compatibility info is too short "
                 "(at least 16 bytes expected)");
     return;
   }

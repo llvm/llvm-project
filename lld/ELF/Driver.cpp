@@ -2648,44 +2648,44 @@ static uint32_t getAndFeatures() {
   return ret;
 }
 
-static void getAarch64PauthInfo() {
+static void getAArch64PauthInfo() {
   if (ctx.objectFiles.empty())
     return;
 
-  auto NonEmptyIt = std::find_if(
+  auto it = std::find_if(
       ctx.objectFiles.begin(), ctx.objectFiles.end(),
       [](const ELFFileBase *f) { return !f->aarch64PauthAbiTag.empty(); });
-  if (NonEmptyIt == ctx.objectFiles.end())
+  if (it == ctx.objectFiles.end())
     return;
 
-  ctx.aarch64PauthAbiTag = (*NonEmptyIt)->aarch64PauthAbiTag;
-  StringRef F1 = (*NonEmptyIt)->getName();
-  for (ELFFileBase *F : ArrayRef(ctx.objectFiles)) {
-    StringRef F2 = F->getName();
-    const SmallVector<uint8_t, 0> &D1 = ctx.aarch64PauthAbiTag;
-    const SmallVector<uint8_t, 0> &D2 = F->aarch64PauthAbiTag;
-    if (D1.empty() != D2.empty()) {
-      auto Helper = [](StringRef Report, const Twine &Msg) {
-        if (Report == "warning")
-          warn(Msg);
-        else if (Report == "error")
-          error(Msg);
+  ctx.aarch64PauthAbiTag = (*it)->aarch64PauthAbiTag;
+  StringRef f1 = (*it)->getName();
+  for (ELFFileBase *f : ArrayRef(ctx.objectFiles)) {
+    StringRef f2 = f->getName();
+    const SmallVector<uint8_t, 0> &d1 = ctx.aarch64PauthAbiTag;
+    const SmallVector<uint8_t, 0> &d2 = f->aarch64PauthAbiTag;
+    if (d1.empty() != d2.empty()) {
+      auto helper = [](StringRef report, const Twine &msg) {
+        if (report == "warning")
+          warn(msg);
+        else if (report == "error")
+          error(msg);
       };
 
-      Helper(config->zPauthReport,
-             (D1.empty() ? F1.str() : F2.str()) +
+      helper(config->zPauthReport,
+             (d1.empty() ? f1.str() : f2.str()) +
                  " has no AArch64 PAuth compatibility info while " +
-                 (D1.empty() ? F2.str() : F1.str()) +
+                 (d1.empty() ? f2.str() : f1.str()) +
                  " has one; either all or no input files must have it");
     }
 
-    if (!D1.empty() && !D2.empty() &&
-        !std::equal(D1.begin(), D1.end(), D2.begin(), D2.end()))
+    if (!d1.empty() && !d2.empty() &&
+        !std::equal(d1.begin(), d1.end(), d2.begin(), d2.end()))
       errorOrWarn(
           "incompatible values of AArch64 PAuth compatibility info found"
           "\n" +
-          F1 + ": 0x" + toHex(ArrayRef(D1.data(), D1.size())) + "\n" + F2 +
-          ": 0x" + toHex(ArrayRef(D2.data(), D2.size())));
+          f1 + ": 0x" + toHex(ArrayRef(d1.data(), d1.size())) + "\n" + f2 +
+          ": 0x" + toHex(ArrayRef(d2.data(), d2.size())));
   }
 }
 
@@ -3027,7 +3027,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   config->andFeatures = getAndFeatures();
 
   if (config->emachine == EM_AARCH64)
-    getAarch64PauthInfo();
+    getAArch64PauthInfo();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent

@@ -21,7 +21,7 @@
 
 # ERR2:      error: {{.*}}: invalid type field value 42 (1 expected)
 # ERR2-NEXT: error: {{.*}}: invalid name field value XXX (ARM expected)
-# ERR2-NEXT: error: {{.*}}: too short AArch64 PAuth compatibility info (at least 16 bytes expected)
+# ERR2-NEXT: error: {{.*}}: AArch64 PAuth compatibility info is too short (at least 16 bytes expected)
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR3 %s
