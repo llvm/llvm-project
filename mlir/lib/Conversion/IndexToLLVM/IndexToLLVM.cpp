@@ -285,6 +285,45 @@ using ConvertIndexXor = mlir::OneToOneConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
 using ConvertIndexBoolConstant =
     mlir::OneToOneConvertToLLVMPattern<BoolConstantOp, LLVM::ConstantOp>;
 
+/// Define lowering patterns for UnrealizedConversionCastOp ops
+struct UnrealizedConversionCastOpLowering
+    : public ConvertOpToLLVMPattern<UnrealizedConversionCastOp> {
+  UnrealizedConversionCastOpLowering(const LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<UnrealizedConversionCastOp>(converter) {}
+
+  LogicalResult
+  matchAndRewrite(UnrealizedConversionCastOp castOp,
+                  typename UnrealizedConversionCastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = castOp.getOperand(0).getType();
+    Type dstType = castOp.getType(0);
+    // Skip cast not related to IndexType.
+    if (!isa<IndexType>(srcType) && !isa<IndexType>(dstType))
+      return failure();
+
+    srcType = getTypeConverter()->convertType(srcType);
+    IntegerType srcIntType = dyn_cast<IntegerType>(srcType);
+    if (!srcIntType)
+      return failure();
+    dstType = getTypeConverter()->convertType(dstType);
+    IntegerType dstIntType = dyn_cast<IntegerType>(dstType);
+    if (!dstIntType)
+      return failure();
+
+    Value src = adaptor.getInputs()[0];
+    uint32_t srcWidth = srcIntType.getWidth();
+    uint32_t dstWidth = dstIntType.getWidth();
+    if (srcWidth == dstWidth)
+      rewriter.replaceOp(castOp, src);
+    else if (srcWidth > dstWidth)
+      rewriter.replaceOpWithNewOp<LLVM::TruncOp>(castOp, dstType, src);
+    else
+      rewriter.replaceOpWithNewOp<LLVM::ZExtOp>(castOp, dstType, src);
+
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -320,7 +359,8 @@ void index::populateIndexToLLVMConversionPatterns(
       ConvertIndexCmp,
       ConvertIndexSizeOf,
       ConvertIndexConstant,
-      ConvertIndexBoolConstant
+      ConvertIndexBoolConstant,
+      UnrealizedConversionCastOpLowering
       // clang-format on
       >(typeConverter);
 }

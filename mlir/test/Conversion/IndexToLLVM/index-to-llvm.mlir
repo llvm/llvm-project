@@ -194,3 +194,39 @@ func.func @index_constant() {
   %3 = index.constant 3000000000
   return
 }
+
+// CHECK-LABEL: @unrealized_conversion_cast_i32_to_i64
+// CHECK-SAME: %[[A:.*]]: i32
+// INDEX32-LABEL: @unrealized_conversion_cast_i32_to_i64
+// INDEX32-SAME: %[[A:.*]]: i32
+// INDEX64-LABEL: @unrealized_conversion_cast_i32_to_i64
+// INDEX64-SAME: %[[A:.*]]: i32
+func.func @unrealized_conversion_cast_i32_to_i64(%a: i32) -> i64 {
+  // CHECK-NEXT: %[[RET:.*]] = llvm.zext %[[A]] : i32 to i64
+  // CHECK-NEXT: return %[[RET]] : i64
+  // INDEX32-NEXT: %[[RET:.*]] = llvm.zext %[[A]] : i32 to i64
+  // INDEX32-NEXT: return %[[RET]] : i64
+  // INDEX64-NEXT: %[[RET:.*]] = llvm.zext %[[A]] : i32 to i64
+  // INDEX64-NEXT: return %[[RET]] : i64
+  %0 = builtin.unrealized_conversion_cast %a : i32 to index
+  %1 = builtin.unrealized_conversion_cast %0 : index to i64
+  return %1 : i64
+}
+
+// CHECK-LABEL: @unrealized_conversion_cast_i64_to_i32
+// CHECK-SAME: %[[A:.*]]: i64
+// INDEX32-LABEL: @unrealized_conversion_cast_i64_to_i32
+// INDEX32-SAME: %[[A:.*]]: i64
+// INDEX64-LABEL: @unrealized_conversion_cast_i64_to_i32
+// INDEX64-SAME: %[[A:.*]]: i64
+func.func @unrealized_conversion_cast_i64_to_i32(%a: i64) -> i32 {
+  // CHECK-NEXT: %[[RET:.*]] = llvm.trunc %[[A]] : i64 to i32
+  // CHECK-NEXT: return %[[RET]] : i32
+  // INDEX32-NEXT: %[[RET:.*]] = llvm.trunc %[[A]] : i64 to i32
+  // INDEX32-NEXT: return %[[RET]] : i32
+  // INDEX64-NEXT: %[[RET:.*]] = llvm.trunc %[[A]] : i64 to i32
+  // INDEX64-NEXT: return %[[RET]] : i32
+  %0 = builtin.unrealized_conversion_cast %a : i64 to index
+  %1 = builtin.unrealized_conversion_cast %0 : index to i32
+  return %1 : i32
+}
