@@ -9834,9 +9834,6 @@ def warn_format_argument_needs_cast : Warning<
 def warn_format_argument_needs_cast_pedantic : Warning<
   warn_format_argument_needs_cast.Summary>,
   InGroup<FormatPedantic>, DefaultIgnore;
-def warn_format_argument_needs_cast_signedness : Warning<
-  warn_format_argument_needs_cast.Summary>,
-  InGroup<FormatSignedness>, DefaultIgnore;
 def warn_printf_positional_arg_exceeds_data_args : Warning <
   "data argument position '%0' exceeds the number of data arguments (%1)">,
   InGroup<Format>;

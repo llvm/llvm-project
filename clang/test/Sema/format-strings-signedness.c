@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -verify -Wformat -Wformat-signedness %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -std=c11 -fsyntax-only -verify -Wformat -Wformat-signedness %s
 
+// Verify that -Wformat-signedness warnings are not reported with only -Wformat
+// (gcc compat).
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat -Werror %s
+
 #include <limits.h>
 
 int printf(const char *restrict format, ...);
@@ -182,3 +186,11 @@ void test_scanf_enum_unsigned_long(enum enum_unsigned_long *x) {
   scanf("%lx", x); // no-warning
 }
 #endif
+
+// Verify that we can suppress a -Wformat-signedness warning by ignoring
+// -Wformat (gcc compat).
+void test_suppress(int x)
+{
+#pragma GCC diagnostic ignored "-Wformat"
+    printf("%u", x);
+}
