@@ -6,12 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03
 
-#include <ranges>
+// template<class T>
+// constexpr T& as-lvalue(T&& t) { // exposition only
+
 #include <utility>
-#include <vector>
 
-using JoinView = decltype(std::views::join(std::declval<std::vector<std::vector<int>>&>()));
-using JoinIter = std::ranges::iterator_t<JoinView>;
-static_assert(std::__is_segmented_iterator<JoinIter>::value);
+void test() {
+  // Check prvalue
+  {
+    [[maybe_unused]] auto& check = std::__as_lvalue(
+        0); // expected-warning {{temporary bound to local reference 'check' will be destroyed at the end of the full-expression}}
+  }
+}
