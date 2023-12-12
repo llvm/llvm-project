@@ -556,7 +556,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
         if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
           if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
             auto IID = II->getIntrinsicID();
-            if (IID == Intrinsic::masked_gather || IID == Intrinsic::masked_scatter)
+            if (IID == Intrinsic::masked_gather ||
+                IID == Intrinsic::masked_scatter)
               AllGathersAndScatters.push_back(&Inst);
           }
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
@@ -701,7 +702,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
 bool ThreadSanitizer::instrumentGatherOrScatter(Instruction *I,
                                                 const DataLayout &DL) {
   InstrumentationIRBuilder IRB(I);
-  auto* II = dyn_cast<IntrinsicInst>(I);
+  auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
   bool IsScatter = (II->getIntrinsicID() == Intrinsic::masked_scatter);
