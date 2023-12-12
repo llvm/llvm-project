@@ -359,3 +359,17 @@ void test19(long long x)
   // FIXME: This case should be supported by codegen, but it fails now.
   asm ("" : "=rm" (x): "0" (e)); // expected-error {{unsupported inline asm: input with type 'st_size128' (aka 'struct _st_size128') matching output with type 'long long'}}
 }
+
+void test20()
+{
+  double f00 = 0.0; 
+  double f01 = 0.0; 
+  double f10 = 0.0; 
+  double f11 = 0.0;
+  int mem;
+  asm volatile ("" : "+f" (f00), "+f" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+f" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+f" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+r" (f10), "+f" (f11), "+m" (mem) :: "memory"); // expected-error {{invalid output constraint '+f' in asm}}
+  asm volatile ("" : "+r" (f00), "+r" (f01), "+r" (f10), "+r" (f11), "+m" (mem) :: "memory"); // no-error
+}
