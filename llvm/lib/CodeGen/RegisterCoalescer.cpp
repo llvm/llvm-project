@@ -1201,6 +1201,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
                       << printMBBReference(MBB) << '\t' << CopyMI);
   }
 
+  const bool IsUndefCopy = CopyMI.getOperand(1).isUndef();
+
   // Remove CopyMI.
   // Note: This is fine to remove the copy before updating the live-ranges.
   // While updating the live-ranges, we only look at slot indices and
@@ -1215,7 +1217,7 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
                   &EndPoints);
   BValNo->markUnused();
 
-  if (CopyMI.getOperand(1).isUndef()) {
+  if (IsUndefCopy) {
     // We're introducing an undef phi def, and need to set undef on any users of
     // the previously local def to avoid artifically extending the lifetime
     // through the block.
