@@ -66,11 +66,11 @@ CHECK:            {{.*}}: `b.c`
 CHECK-LABEL:                       Global Symbols
 CHECK:       ============================================================
 CHECK-NEXT:    Records
-CHECK-NEXT:       64 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:       36 | S_PROCREF [size = 20] `main`
 CHECK-NEXT:            module = 1, sum name = 0, offset = 104
-CHECK-NEXT:       96 | S_PROCREF [size = 16] `g`
+CHECK-NEXT:       68 | S_PROCREF [size = 16] `g`
 CHECK-NEXT:            module = 2, sum name = 0, offset = 104
-CHECK-NEXT:       84 | S_UDT [size = 12] `Foo`
+CHECK-NEXT:       56 | S_UDT [size = 12] `Foo`
 CHECK-NEXT:            original type = 0x1006
 
 CHECK-LABEL:                           Symbols
@@ -112,7 +112,7 @@ SUMMARY-NEXT:              16 Merged IPI records
 SUMMARY-NEXT:               3 Output PDB strings
 SUMMARY-NEXT:               4 Global symbol records
 SUMMARY-NEXT:              14 Module symbol records
-SUMMARY-NEXT:               3 Public symbol records
+SUMMARY-NEXT:               2 Public symbol records
 
 SUMMARY:      Top 10 types responsible for the most TPI input:
 SUMMARY-NEXT:        index     total bytes   count     size

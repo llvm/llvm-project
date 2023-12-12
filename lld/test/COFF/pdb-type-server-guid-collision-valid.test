@@ -13,5 +13,5 @@ RUN: llvm-pdbutil dump -globals collision.pdb | FileCheck %s -check-prefix DUMP
 DUMP-LABEL:                       Global Symbols
 DUMP:       ============================================================
 
-DUMP:     128 | S_GDATA32 [size = 24] `bar_gv`
+DUMP:     100 | S_GDATA32 [size = 24] `bar_gv`
 DUMP-NEXT:           type = 0x104E (Bar), addr = 0002:0004

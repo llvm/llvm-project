@@ -184,28 +184,23 @@ RAW-NEXT:            0x1006: ` -I"C:\Program Files (x86)\Windows Kits\8.1\includ
 RAW:                            Public Symbols
 RAW-NEXT: ============================================================
 RAW-NEXT:   Publics Header
-RAW-NEXT:     sym hash = 568, thunk table addr = 0000:0000
+RAW-NEXT:     sym hash = 556, thunk table addr = 0000:0000
 RAW-NEXT:   GSI Header
-RAW-NEXT:     sig = 0xFFFFFFFF, hdr = 0xF12F091A, hr size = 24, num buckets = 528
+RAW-NEXT:     sig = 0xFFFFFFFF, hdr = 0xF12F091A, hr size = 16, num buckets = 524
 RAW-NEXT:   Records
-RAW-NEXT:        0 | S_PUB32 [size = 28] `__lld_buildid`
-RAW-NEXT:            flags = none, addr = 0002:0028
-RAW-NEXT:       48 | S_PUB32 [size = 20] `main`
+RAW-NEXT:       20 | S_PUB32 [size = 20] `main`
 RAW-NEXT:            flags = function, addr = 0001:0000
-RAW-NEXT:       28 | S_PUB32 [size = 20] `foo`
+RAW-NEXT:        0 | S_PUB32 [size = 20] `foo`
 RAW-NEXT:            flags = function, addr = 0001:0016
 RAW-NOT:             S_PUB32
 RAW-NEXT:   Hash Entries
+RAW-NEXT:     off = 21, refcnt = 1
 RAW-NEXT:     off = 1, refcnt = 1
-RAW-NEXT:     off = 49, refcnt = 1
-RAW-NEXT:     off = 29, refcnt = 1
 RAW-NEXT:   Hash Buckets
 RAW-NEXT:     0x00000000
 RAW-NEXT:     0x0000000c
-RAW-NEXT:     0x00000018
 RAW-NEXT:   Address Map
-RAW-NEXT:     off = 48
-RAW-NEXT:     off = 28
+RAW-NEXT:     off = 20
 RAW-NEXT:     off = 0
 RAW:                            Section Headers
 RAW-NEXT: ============================================================

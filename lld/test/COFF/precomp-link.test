@@ -68,7 +68,7 @@ SUMMARY-NEXT:             170 Merged IPI records
 SUMMARY-NEXT:               5 Output PDB strings
 SUMMARY-NEXT:             167 Global symbol records
 SUMMARY-NEXT:              20 Module symbol records
-SUMMARY-NEXT:               4 Public symbol records
+SUMMARY-NEXT:               3 Public symbol records
 
 // precomp.h
 #pragma once

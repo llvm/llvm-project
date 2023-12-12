@@ -20,9 +20,9 @@
 # int foobar() { return Foo + Bar; }
 
 CHECK:                       Global Symbols
-CHECK:          116 | S_CONSTANT [size = 16] `Bar`
+CHECK:           88 | S_CONSTANT [size = 16] `Bar`
 CHECK-NEXT:           type = 0x1002 (const int), value = 42
-CHECK-NEXT:     100 | S_CONSTANT [size = 16] `Foo`
+CHECK-NEXT:      72 | S_CONSTANT [size = 16] `Foo`
 CHECK-NEXT:           type = 0x1002 (const int), value = 41
-CHECK-NEXT:     156 | S_CONSTANT [size = 16] `Foo`
+CHECK-NEXT:     128 | S_CONSTANT [size = 16] `Foo`
 CHECK-NEXT:           type = 0x1002 (const int), value = 42

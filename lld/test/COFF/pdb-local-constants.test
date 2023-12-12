@@ -13,7 +13,7 @@
 #
 
 CHECK:                       Global Symbols
-CHECK:           68 | S_CONSTANT [size = 20] `g_const`
+CHECK:           40 | S_CONSTANT [size = 20] `g_const`
 CHECK-NEXT:           type = 0x1002 (const int), value = 321
 
 CHECK:                          Symbols

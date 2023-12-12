@@ -54,13 +54,11 @@ CHECK-NEXT: pdb file ni: 1 `{{.*}}pdb-publics-import.test.tmp2.pdb`, src file ni
 CHECK:                             Public Symbols
 CHECK-NEXT: ============================================================
 CHECK-NEXT:    Records
-CHECK-NEXT:       64 | S_PUB32 [size = 28] `__lld_buildid`
-CHECK-NEXT:            flags = none, addr = 0002:0028
-CHECK-NEXT:      140 | S_PUB32 [size = 20] `main`
+CHECK-NEXT:      112 | S_PUB32 [size = 20] `main`
 CHECK-NEXT:            flags = function, addr = 0001:0000
-CHECK-NEXT:       92 | S_PUB32 [size = 24] `exportfn1`
+CHECK-NEXT:       64 | S_PUB32 [size = 24] `exportfn1`
 CHECK-NEXT:            flags = function, addr = 0001:0016
-CHECK-NEXT:      116 | S_PUB32 [size = 24] `exportfn2`
+CHECK-NEXT:       88 | S_PUB32 [size = 24] `exportfn2`
 CHECK-NEXT:            flags = function, addr = 0001:0032
 CHECK-NEXT:       32 | S_PUB32 [size = 32] `__imp_exportfn2`
 CHECK-NEXT:            flags = none, addr = 0002:0136

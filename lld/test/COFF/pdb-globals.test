@@ -20,29 +20,29 @@ RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
 CHECK-LABEL:                        Global Symbols
 CHECK-NEXT: ============================================================
 CHECK-NEXT:   Records
-CHECK-NEXT:      476 | S_UDT [size = 20] `HelloPoint`
+CHECK-NEXT:      444 | S_UDT [size = 20] `HelloPoint`
 CHECK-NEXT:            original type = 0x1007
-CHECK-NEXT:      272 | S_LPROCREF [size = 24] `LocalFunc`
+CHECK-NEXT:      240 | S_LPROCREF [size = 24] `LocalFunc`
 CHECK-NEXT:            module = 1, sum name = 0, offset = 424
-CHECK-NEXT:      224 | S_PROCREF [size = 28] `GlobalFunc`
+CHECK-NEXT:      192 | S_PROCREF [size = 28] `GlobalFunc`
 CHECK-NEXT:            module = 1, sum name = 0, offset = 136
-CHECK-NEXT:      252 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:      220 | S_PROCREF [size = 20] `main`
 CHECK-NEXT:            module = 1, sum name = 0, offset = 224
-CHECK-NEXT:      372 | S_CONSTANT [size = 24] `ConstexprVar`
+CHECK-NEXT:      340 | S_CONSTANT [size = 24] `ConstexprVar`
 CHECK-NEXT:            type = 0x100B (const int), value = 18
-CHECK-NEXT:      296 | S_GDATA32 [size = 28] `__purecall`
+CHECK-NEXT:      264 | S_GDATA32 [size = 28] `__purecall`
 CHECK-NEXT:            type = 0x0403 (void*), addr = 0003:0004
-CHECK-NEXT:      324 | S_GDATA32 [size = 24] `GlobalVar`
+CHECK-NEXT:      292 | S_GDATA32 [size = 24] `GlobalVar`
 CHECK-NEXT:            type = 0x100C (const int*), addr = 0003:0000
-CHECK-NEXT:      348 | S_GTHREAD32 [size = 24] `GlobalTLS`
+CHECK-NEXT:      316 | S_GTHREAD32 [size = 24] `GlobalTLS`
 CHECK-NEXT:            type = 0x0074 (int), addr = 0004:0000
-CHECK-NEXT:      424 | S_LTHREAD32 [size = 24] `StaticTLS`
+CHECK-NEXT:      392 | S_LTHREAD32 [size = 24] `StaticTLS`
 CHECK-NEXT:            type = 0x0074 (int), addr = 0004:0004
-CHECK-NEXT:      448 | S_UDT [size = 28] `HelloPointTypedef`
+CHECK-NEXT:      416 | S_UDT [size = 28] `HelloPointTypedef`
 CHECK-NEXT:            original type = 0x1007
-CHECK-NEXT:      396 | S_LDATA32 [size = 28] `ConstantVar`
+CHECK-NEXT:      364 | S_LDATA32 [size = 28] `ConstantVar`
 CHECK-NEXT:            type = 0x100B (const int), addr = 0002:0000
-CHECK-NEXT:      496 | S_PROCREF [size = 40] `HelloPoint::HelloPoint`
+CHECK-NEXT:      464 | S_PROCREF [size = 40] `HelloPoint::HelloPoint`
 CHECK-NEXT:            module = 1, sum name = 0, offset = 572
 
 CHECK-LABEL:                           Symbols

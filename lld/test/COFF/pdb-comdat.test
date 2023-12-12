@@ -41,15 +41,15 @@ CHECK-LABEL:   Mod 0002 | `* Linker *`:
 CHECK-LABEL:                       Global Symbols
 CHECK-NEXT:  ============================================================
 CHECK-NEXT:    Records
-CHECK-NEXT:       112 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:        84 | S_PROCREF [size = 20] `main`
 CHECK-NEXT:             module = 1, sum name = 0, offset = 120
-CHECK-NEXT:       176 | S_PROCREF [size = 20] `bar`
+CHECK-NEXT:       148 | S_PROCREF [size = 20] `bar`
 CHECK-NEXT:             module = 2, sum name = 0, offset = 120
-CHECK-NEXT:       156 | S_PROCREF [size = 20] `foo`
+CHECK-NEXT:       128 | S_PROCREF [size = 20] `foo`
 CHECK-NEXT:             module = 1, sum name = 0, offset = 208
-CHECK-NEXT:       132 | S_GDATA32 [size = 24] `global`
+CHECK-NEXT:       104 | S_GDATA32 [size = 24] `global`
 CHECK-NEXT:             type = 0x0074 (int), addr = 0003:0000
-CHECK-NEXT:       196 | S_GDATA32 [size = 24] `global`
+CHECK-NEXT:       168 | S_GDATA32 [size = 24] `global`
 CHECK-NEXT:             type = 0x0074 (int), addr = 0003:0000
 
 CHECK:                           Symbols

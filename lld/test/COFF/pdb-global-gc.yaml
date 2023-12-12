@@ -16,7 +16,7 @@
 # CHECK:                             Global Symbols
 # CHECK-NEXT: ============================================================
 # CHECK-NEXT:   Records
-# CHECK-NEXT:       48 | S_GDATA32 [size = 28] `__wc_mb_cur`
+# CHECK-NEXT:       20 | S_GDATA32 [size = 28] `__wc_mb_cur`
 # CHECK-NEXT:            type = 0x0070 (char), addr = 0000:0000
 
 # CHECK:                                Symbols
