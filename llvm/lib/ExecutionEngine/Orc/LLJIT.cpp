@@ -84,65 +84,6 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   return WrapperFn;
 }
 
-class ORCPlatformSupport : public LLJIT::PlatformSupport {
-public:
-  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
-
-  Error initialize(orc::JITDylib &JD) override {
-    using llvm::orc::shared::SPSExecutorAddr;
-    using llvm::orc::shared::SPSString;
-    using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-    enum dlopen_mode : int32_t {
-      ORC_RT_RTLD_LAZY = 0x1,
-      ORC_RT_RTLD_NOW = 0x2,
-      ORC_RT_RTLD_LOCAL = 0x4,
-      ORC_RT_RTLD_GLOBAL = 0x8
-    };
-
-    auto &ES = J.getExecutionSession();
-    auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
-        [](const JITDylibSearchOrder &SO) { return SO; });
-
-    if (auto WrapperAddr =
-            ES.lookup(MainSearchOrder,
-                      J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
-      return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                             DSOHandles[&JD], JD.getName(),
-                                             int32_t(ORC_RT_RTLD_LAZY));
-    } else
-      return WrapperAddr.takeError();
-  }
-
-  Error deinitialize(orc::JITDylib &JD) override {
-    using llvm::orc::shared::SPSExecutorAddr;
-    using SPSDLCloseSig = int32_t(SPSExecutorAddr);
-
-    auto &ES = J.getExecutionSession();
-    auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
-        [](const JITDylibSearchOrder &SO) { return SO; });
-
-    if (auto WrapperAddr =
-            ES.lookup(MainSearchOrder,
-                      J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
-      int32_t result;
-      auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-          WrapperAddr->getAddress(), result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
-        return make_error<StringError>("dlclose failed",
-                                       inconvertibleErrorCode());
-      DSOHandles.erase(&JD);
-    } else
-      return WrapperAddr.takeError();
-    return Error::success();
-  }
-
-private:
-  orc::LLJIT &J;
-  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
-};
-
 class GenericLLVMIRPlatformSupport;
 
 /// orc::Platform component of Generic LLVM IR Platform support.
@@ -655,6 +596,54 @@ public:
 
 namespace llvm {
 namespace orc {
+
+Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
+  using llvm::orc::shared::SPSExecutorAddr;
+  using llvm::orc::shared::SPSString;
+  using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+  enum dlopen_mode : int32_t {
+    ORC_RT_RTLD_LAZY = 0x1,
+    ORC_RT_RTLD_NOW = 0x2,
+    ORC_RT_RTLD_LOCAL = 0x4,
+    ORC_RT_RTLD_GLOBAL = 0x8
+  };
+
+  auto &ES = J.getExecutionSession();
+  auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
+      [](const JITDylibSearchOrder &SO) { return SO; });
+
+  if (auto WrapperAddr = ES.lookup(
+          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
+    return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
+                                           DSOHandles[&JD], JD.getName(),
+                                           int32_t(ORC_RT_RTLD_LAZY));
+  } else
+    return WrapperAddr.takeError();
+}
+
+Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
+  using llvm::orc::shared::SPSExecutorAddr;
+  using SPSDLCloseSig = int32_t(SPSExecutorAddr);
+
+  auto &ES = J.getExecutionSession();
+  auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
+      [](const JITDylibSearchOrder &SO) { return SO; });
+
+  if (auto WrapperAddr = ES.lookup(
+          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
+    int32_t result;
+    auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
+        WrapperAddr->getAddress(), result, DSOHandles[&JD]);
+    if (E)
+      return E;
+    else if (result)
+      return make_error<StringError>("dlclose failed",
+                                     inconvertibleErrorCode());
+    DSOHandles.erase(&JD);
+  } else
+    return WrapperAddr.takeError();
+  return Error::success();
+}
 
 void LLJIT::PlatformSupport::setInitTransform(
     LLJIT &J, IRTransformLayer::TransformFunction T) {
