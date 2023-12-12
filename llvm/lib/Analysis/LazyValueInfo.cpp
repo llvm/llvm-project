@@ -903,11 +903,6 @@ LazyValueInfoImpl::getRangeFor(Value *V, Instruction *CxtI, BasicBlock *BB) {
 
 std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
-  // Without knowing how wide the input is, we can't analyze it in any useful
-  // way.
-  if (!CI->getOperand(0)->getType()->isSized())
-    return ValueLatticeElement::getOverdefined();
-
   // Filter out casts we don't know how to reason about before attempting to
   // recurse on our operand.  This can cut a long search short if we know we're
   // not going to be able to get any useful information anways.
@@ -915,7 +910,6 @@ LazyValueInfoImpl::solveBlockValueCast(CastInst *CI, BasicBlock *BB) {
   case Instruction::Trunc:
   case Instruction::SExt:
   case Instruction::ZExt:
-  case Instruction::BitCast:
     break;
   default:
     // Unhandled instructions are overdefined.
