@@ -379,7 +379,7 @@ class VectorType;
   // Bits of floating-point status. These are NZCV flags, QC bit and cumulative
   // FP exception bits.
   const unsigned FPStatusBits = 0xf800009f;
-  
+
   // Some bits in the FPSCR are not yet defined.  They must be preserved when
   // modifying the contents.
   const unsigned FPReservedBits = 0x00086060;

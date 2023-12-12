@@ -6479,7 +6479,7 @@ SDValue ARMTargetLowering::LowerSET_FPMODE(SDValue Op,
 }
 
 SDValue ARMTargetLowering::LowerRESET_FPMODE(SDValue Op,
-                                            SelectionDAG &DAG) const {
+                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
 
@@ -10614,8 +10614,10 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ZERO_EXTEND:   return LowerVectorExtend(Op.getNode(), DAG, Subtarget);
   case ISD::GET_ROUNDING:  return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:  return LowerSET_ROUNDING(Op, DAG);
-  case ISD::SET_FPMODE:    return LowerSET_FPMODE(Op, DAG);
-  case ISD::RESET_FPMODE:  return LowerRESET_FPMODE(Op, DAG);
+  case ISD::SET_FPMODE:
+    return LowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
   case ISD::SDIV:
     if (Subtarget->isTargetWindows() && !Op.getValueType().isVector())
