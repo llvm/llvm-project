@@ -347,7 +347,12 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     auto *SinkStartAR = cast<SCEVAddRecExpr>(SinkStartInt);
     const Loop *StartARLoop = SrcStartAR->getLoop();
     if (StartARLoop == SinkStartAR->getLoop() &&
-        StartARLoop == InnerLoop->getParentLoop()) {
+        StartARLoop == InnerLoop->getParentLoop() &&
+        // If the diff check would already be loop invariant (due to the
+        // recurrences being the same), then we prefer to keep the diff checks
+        // because they are cheaper.
+        SrcStartAR->getStepRecurrence(*SE) !=
+            SinkStartAR->getStepRecurrence(*SE)) {
       LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
                            "cannot be hoisted out of the outer loop\n");
       CanUseDiffCheck = false;
