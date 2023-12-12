@@ -165,8 +165,7 @@ public:
   LIBC_INLINE_VAR static constexpr BitsType MANTISSA_MASK =
       mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
   LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = EXP_BITS;
-  LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_BIAS =
-      static_cast<uint32_t>(EXP_BIAS);
+  LIBC_INLINE_VAR static constexpr int32_t EXPONENT_BIAS = EXP_BIAS;
   LIBC_INLINE_VAR static constexpr BitsType SIGN_MASK = SIGN_MASK_;
   LIBC_INLINE_VAR static constexpr BitsType EXPONENT_MASK = EXP_MASK;
   LIBC_INLINE_VAR static constexpr BitsType EXP_MANT_MASK = EXP_MASK | SIG_MASK;
