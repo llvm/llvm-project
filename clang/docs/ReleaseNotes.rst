@@ -204,6 +204,9 @@ C Language Changes
   number of elements in the flexible array member. This information can improve
   the results of the array bound sanitizer and the
   ``__builtin_dynamic_object_size`` builtin.
+- Enums will now be represented in TBAA metadata using their actual underlying
+  integer type. Previously they were treated as chars, which meant they could
+  alias with all other types.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -235,6 +238,8 @@ Non-comprehensive list of changes in this release
   except that it returns the size of a type ignoring tail padding.
 * ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``
   and vector types as return value ``19``, to match GCC 14's behavior.
+* The default value of `_MSC_VER` was raised from 1920 to 1933.
+* Since MSVC 19.33 added undocumented attribute ``[[msvc::constexpr]]``, this release adds the attribute as well.
 
 * Added ``#pragma clang fp reciprocal``.
 
@@ -258,6 +263,16 @@ New Compiler Flags
   potentially-throwing destructor will lead to an error.
 
 * ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
+
+* ``-fcx-limited-range`` enables the naive mathematical formulas for complex
+  division and multiplication with no NaN checking of results. The default is
+  ``-fno-cx-limited-range``, but this option is enabled by ``-ffast-math``.
+
+* ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
+  multiplication and enables application of Smith's algorithm for complex
+  division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
+  (1962). The default is ``-fno-cx-fortran-rules``.
+
 
 Deprecated Compiler Flags
 -------------------------
@@ -386,9 +401,6 @@ Improvements to Clang's diagnostics
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
-- The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
-  enumeration's underlying type into account instead of suggesting a type just
-  based on the format string specifier being used.
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
   (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
@@ -508,6 +520,7 @@ Improvements to Clang's diagnostics
        48 | static_assert(1 << 4 == 15);
           |               ~~~~~~~^~~~~
 
+- Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -666,6 +679,12 @@ Bug Fixes in This Version
   Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
+- Fix crash due to incorrectly allowing conversion functions in copy elision.
+  Fixes (`#39319 <https://github.com/llvm/llvm-project/issues/39319>`_) and
+  (`#60182 <https://github.com/llvm/llvm-project/issues/60182>`_) and
+  (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
+  (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
+  (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -851,6 +870,10 @@ Miscellaneous Clang Crashes Fixed
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
 - Fixed a crash when ``-ast-dump=json`` was used for code using class
   template deduction guides.
+- Fixed a crash when a lambda marked as ``static`` referenced a captured
+  variable in an expression.
+  `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+
 
 OpenACC Specific Changes
 ------------------------
@@ -894,11 +917,17 @@ Arm and AArch64 Support
 
 - New AArch64 asm constraints have been added for r8-r11(Uci) and r12-r15(Ucj).
 
-  Support has been added for the following processors (-mcpu identifiers in parenthesis):
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
-  * Arm Cortex-A520 (cortex-a520).
-  * Arm Cortex-A720 (cortex-a720).
-  * Arm Cortex-X4 (cortex-x4).
+  For Arm:
+
+  * Cortex-M52 (cortex-m52).
+
+  For AArch64:
+
+  * Cortex-A520 (cortex-a520).
+  * Cortex-A720 (cortex-a720).
+  * Cortex-X4 (cortex-x4).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -945,6 +974,9 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
+- Clang now supports CUDA SDK up to 12.3
+- Added support for sm_90a
+
 AIX Support
 ^^^^^^^^^^^
 
@@ -984,6 +1016,9 @@ Floating Point Support in Clang
   ``__builtin_exp10f128`` builtins.
 - Add ``__builtin_iszero``, ``__builtin_issignaling`` and
   ``__builtin_issubnormal``.
+- Add support for C99's ``#pragma STDC CX_LIMITED_RANGE`` feature.  This
+  enables the naive mathematical formulas for complex multiplication and
+  division, which are faster but do not correctly handle overflow and infinities.
 
 AST Matchers
 ------------

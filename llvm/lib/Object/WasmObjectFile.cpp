@@ -1092,7 +1092,7 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
   } else if (Sec.Name == "target_features") {
     if (Error Err = parseTargetFeaturesSection(Ctx))
       return Err;
-  } else if (Sec.Name.startswith("reloc.")) {
+  } else if (Sec.Name.starts_with("reloc.")) {
     if (Error Err = parseRelocSection(Sec.Name, Ctx))
       return Err;
   }

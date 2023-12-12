@@ -1558,6 +1558,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
                 break;
           }
         }
+        // Don't split an XOR with -1 as LCGR/AGHI is more compact.
+        if (Opcode == ISD::XOR && Op1->isAllOnes())
+          break;
         if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val)) {
           splitLargeImmediate(Opcode, Node, Node->getOperand(0),
                               Val - uint32_t(Val), uint32_t(Val));

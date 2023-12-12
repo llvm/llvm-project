@@ -3,6 +3,10 @@
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=cortex-a72 -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=generic -S < %s | FileCheck %s --check-prefix=CHECK-GENERIC
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a72 -S < %s | FileCheck %s
 
 ; Test has not predictable select, which should not be transformed to a branch
 define i32 @test1(i32 %a) {

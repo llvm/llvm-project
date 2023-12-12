@@ -102,7 +102,7 @@ bool isELFInitializerSection(StringRef SecName) {
 }
 
 bool isCOFFInitializerSection(StringRef SecName) {
-  return SecName.startswith(".CRT");
+  return SecName.starts_with(".CRT");
 }
 
 } // namespace orc

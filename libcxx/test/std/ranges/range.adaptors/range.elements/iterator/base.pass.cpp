@@ -33,7 +33,7 @@ using ElementsIter = std::ranges::iterator_t<std::ranges::elements_view<BaseView
 static_assert(IsBaseNoexcept<const ElementsIter&>);
 static_assert(IsBaseNoexcept<ElementsIter&>);
 static_assert(IsBaseNoexcept<const ElementsIter&&>);
-static_assert(!IsBaseNoexcept<ElementsIter&&>);
+LIBCPP_STATIC_ASSERT(!IsBaseNoexcept<ElementsIter&&>);
 
 constexpr bool test() {
   std::tuple<int> t{5};
