@@ -582,7 +582,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
       switch (VT) {
       case MVT::i32:
       case MVT::i64:
-        OS << "OPC_CheckTypeI" << MVT(VT).getScalarSizeInBits() << ",\n";
+        OS << "OPC_CheckTypeI" << MVT(VT).getSizeInBits() << ",\n";
         return 1;
       default:
         OS << "OPC_CheckType, " << getEnumName(VT) << ",\n";
