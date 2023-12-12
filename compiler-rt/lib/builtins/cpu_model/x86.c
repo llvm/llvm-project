@@ -656,7 +656,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       // Family 17h models A0h-Afh - Zen2 Mendocino
       CPU = "znver2";
       *Subtype = AMDFAM17H_ZNVER2;
-      break; // 30h-3fh, 60h, 71h: Zen2
+      break;
     }
     if (Model <= 0x0f) {
       *Subtype = AMDFAM17H_ZNVER1;
