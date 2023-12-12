@@ -18,6 +18,10 @@ There are two main drivers in Flang:
 * the compiler driver, `flang`
 * the frontend driver, `flang -fc1`
 
+**_NOTE:_** The driver binary used to be called `flang-new`. For backwards
+compatibility, there is a symlink called `flang-new` that points at `flang`.
+This will be removed in the future.
+
 The **compiler driver** will allow you to control all compilation phases (e.g.
 preprocessing, semantic checks, code-generation, code-optimisation, lowering
 and linking). For frontend specific tasks, the compiler driver creates a
@@ -200,11 +204,7 @@ words, `flang -fc1 <input-file>` is equivalent to `flang -fc1 -fsyntax-only
 
 ## The `flang-to-external-fc` script
 The `flang-to-external-fc` wrapper script for `flang` was introduced as a
-development tool and to facilitate testing. While code-generation is not
-available in Flang, you can use it as a drop-in replacement for other Fortran
-compilers in your build scripts.
-
-The `flang-to-external-fc` wrapper script will:
+development tool and to facilitate testing. In particular, it will:
 * use `flang` to unparse the input source file (i.e. it will run `flang -fc1
   -fdebug-unparse <input-file>`), and then
 * call a host Fortran compiler, e.g. `gfortran`, to compile the unparsed file.
