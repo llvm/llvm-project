@@ -1,5 +1,0 @@
-# RUN: not yaml2obj %s FileCheck --ignore-case %s --check-prefix=ERR
-
-#ERR: yaml2obj: error: unknown document type
-
---- !GOFF

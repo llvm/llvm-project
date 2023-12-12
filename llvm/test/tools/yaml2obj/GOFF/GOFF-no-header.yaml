@@ -1,0 +1,6 @@
+# RUN: not yaml2obj %s FileCheck --ignore-case %s --check-prefix=ERR
+
+## X: [] is an extra field is to workaround document of unknown type error
+# ERR: yaml2obj: error: missing required key 'FileHeader'
+--- !GOFF
+X: []
