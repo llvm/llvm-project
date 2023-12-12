@@ -47,6 +47,8 @@ int main(int, char**)
         // Exact message format varies by platform.
 #if defined(_AIX)
         LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0);
+#elif defined(_NEWLIB_VERSION)
+        LIBCPP_ASSERT(msg.empty());
 #else
         LIBCPP_ASSERT(msg.rfind("Unknown error", 0) == 0);
 #endif

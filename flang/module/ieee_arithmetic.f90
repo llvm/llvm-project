@@ -8,16 +8,16 @@
 
 ! Fortran 2018 Clause 17
 
-! ieee_class_type and ieee_round_type values
-include '../include/flang/Runtime/ieee_arithmetic.h'
+include '../include/flang/Runtime/magic-numbers.h'
 
 module ieee_arithmetic
-  ! 17.1: "The module IEEE_ARITHMETIC behaves as if it contained a
-  ! USE statement for IEEE_EXCEPTIONS; everything that is public in
-  ! IEEE_EXCEPTIONS is public in IEEE_ARITHMETIC."
-  use __Fortran_ieee_exceptions
+  ! F18 Clause 17.1p1:
+  ! The module IEEE_ARITHMETIC behaves as if it contained a USE statement for
+  ! IEEE_EXCEPTIONS; everything that is public in IEEE_EXCEPTIONS is public in
+  ! IEEE_ARITHMETIC.
+  use __fortran_ieee_exceptions
 
-  use __Fortran_builtins, only: &
+  use __fortran_builtins, only: &
     ieee_fma => __builtin_fma, &
     ieee_is_nan => __builtin_ieee_is_nan, &
     ieee_is_negative => __builtin_ieee_is_negative, &
@@ -49,12 +49,16 @@ module ieee_arithmetic
     ieee_signaling_nan = ieee_class_type(_FORTRAN_RUNTIME_IEEE_SIGNALING_NAN), &
     ieee_quiet_nan = ieee_class_type(_FORTRAN_RUNTIME_IEEE_QUIET_NAN), &
     ieee_negative_inf = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_INF), &
-    ieee_negative_normal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_NORMAL), &
-    ieee_negative_subnormal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_SUBNORMAL), &
+    ieee_negative_normal = &
+        ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_NORMAL), &
+    ieee_negative_subnormal = &
+        ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_SUBNORMAL), &
     ieee_negative_zero = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_ZERO), &
     ieee_positive_zero = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_ZERO), &
-    ieee_positive_subnormal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_SUBNORMAL), &
-    ieee_positive_normal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_NORMAL), &
+    ieee_positive_subnormal = &
+         ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_SUBNORMAL), &
+    ieee_positive_normal = &
+        ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_NORMAL), &
     ieee_positive_inf = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_INF), &
     ieee_other_value = ieee_class_type(_FORTRAN_RUNTIME_IEEE_OTHER_VALUE)
 
@@ -294,6 +298,26 @@ module ieee_arithmetic
   PRIVATE_R(IEEE_LOGB)
 #undef IEEE_LOGB_R
 
+#define IEEE_MAX_R(XKIND) \
+  elemental real(XKIND) function ieee_max_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_max_a##XKIND;
+  interface ieee_max
+    SPECIFICS_R(IEEE_MAX_R)
+  end interface ieee_max
+  PRIVATE_R(IEEE_MAX)
+#undef IEEE_MAX_R
+
+#define IEEE_MAX_MAG_R(XKIND) \
+  elemental real(XKIND) function ieee_max_mag_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_max_mag_a##XKIND;
+  interface ieee_max_mag
+    SPECIFICS_R(IEEE_MAX_MAG_R)
+  end interface ieee_max_mag
+  PRIVATE_R(IEEE_MAX_MAG)
+#undef IEEE_MAX_MAG_R
+
 #define IEEE_MAX_NUM_R(XKIND) \
   elemental real(XKIND) function ieee_max_num_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
@@ -313,6 +337,26 @@ module ieee_arithmetic
   end interface ieee_max_num_mag
   PRIVATE_R(IEEE_MAX_NUM_MAG)
 #undef IEEE_MAX_NUM_MAG_R
+
+#define IEEE_MIN_R(XKIND) \
+  elemental real(XKIND) function ieee_min_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_min_a##XKIND;
+  interface ieee_min
+    SPECIFICS_R(IEEE_MIN_R)
+  end interface ieee_min
+  PRIVATE_R(IEEE_MIN)
+#undef IEEE_MIN_R
+
+#define IEEE_MIN_MAG_R(XKIND) \
+  elemental real(XKIND) function ieee_min_mag_a##XKIND(x, y); \
+    real(XKIND), intent(in) :: x, y; \
+  end function ieee_min_mag_a##XKIND;
+  interface ieee_min_mag
+    SPECIFICS_R(IEEE_MIN_MAG_R)
+  end interface ieee_min_mag
+  PRIVATE_R(IEEE_MIN_MAG)
+#undef IEEE_MIN_MAG_R
 
 #define IEEE_MIN_NUM_R(XKIND) \
   elemental real(XKIND) function ieee_min_num_a##XKIND(x, y); \

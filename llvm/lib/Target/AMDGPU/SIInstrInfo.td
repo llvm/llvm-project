@@ -32,6 +32,7 @@ def SIEncodingFamily {
   int GFX90A = 8;
   int GFX940 = 9;
   int GFX11 = 10;
+  int GFX12 = 11;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1035,9 +1036,8 @@ class NamedBitOperand<string Id, string Name = NAME>
 
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
-    CustomOperandProps<1, Op.ParserMatchClass.Name> {
-  let PredicateMethod = Op.ParserMatchClass.PredicateMethod;
-  let ParserMethod = Op.ParserMatchClass.ParserMethod;
+    CustomOperandProps<1> {
+  let ParserMatchClass = Op.ParserMatchClass;
   let PrintMethod = Op.PrintMethod;
 }
 
@@ -1080,6 +1080,8 @@ def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
 def CPol_GLC : ValuePredicatedOperand<CPol, "Op.getImm() & CPol::GLC">;
 def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
+def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
+def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
 
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;
@@ -2756,7 +2758,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.SDWA10)],
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
-                   [!cast<string>(SIEncodingFamily.GFX11)]];
+                   [!cast<string>(SIEncodingFamily.GFX11)],
+                   [!cast<string>(SIEncodingFamily.GFX12)]];
 }
 
 // Get equivalent SOPK instruction.

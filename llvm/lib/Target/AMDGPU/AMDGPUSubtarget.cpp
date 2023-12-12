@@ -1001,6 +1001,9 @@ GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
 }
 
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX12)
+    return 0; // Not MIMG encoding.
+
   if (NSAThreshold.getNumOccurrences() > 0)
     return std::max(NSAThreshold.getValue(), 2u);
 

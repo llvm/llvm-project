@@ -28,7 +28,7 @@ define void @test(ptr %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[F]], i32 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[F]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INDVARS_IV_NEXT]], [[TMP0]]
@@ -50,7 +50,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i32 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %f, i32 %indvars.iv
   store i32 0, ptr %arrayidx, align 4
-  %1 = or i32 %indvars.iv, 1
+  %1 = or disjoint i32 %indvars.iv, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %f, i32 %1
   store i32 0, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i32 %indvars.iv, 2
@@ -86,7 +86,7 @@ define void @test_pattern(ptr %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[F]], i32 [[INDVARS_IV]]
-; CHECK-NEXT:    [[X1:%.*]] = or i32 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[X1:%.*]] = or disjoint i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[F]], i32 [[X1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INDVARS_IV_NEXT]], [[MUL]]
@@ -108,7 +108,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i32 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %f, i32 %indvars.iv
   store i32 2, ptr %arrayidx, align 4
-  %x1 = or i32 %indvars.iv, 1
+  %x1 = or disjoint i32 %indvars.iv, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %f, i32 %x1
   store i32 2, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i32 %indvars.iv, 2

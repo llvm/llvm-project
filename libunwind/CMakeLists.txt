@@ -63,11 +63,6 @@ cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
 
-# TODO: Remove this after branching for LLVM 15
-if(LIBUNWIND_SYSROOT OR LIBUNWIND_TARGET_TRIPLE OR LIBUNWIND_GCC_TOOLCHAIN)
-  message(WARNING "LIBUNWIND_SYSROOT, LIBUNWIND_TARGET_TRIPLE and LIBUNWIND_GCC_TOOLCHAIN are not supported anymore, please use the native CMake equivalents instead")
-endif()
-
 if(MINGW)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
 elseif (LIBUNWIND_ENABLE_SHARED)

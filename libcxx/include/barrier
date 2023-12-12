@@ -76,7 +76,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __empty_completion
 {
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     void operator()() noexcept
     {
     }
@@ -128,14 +128,14 @@ public:
         return numeric_limits<ptrdiff_t>::max();
     }
 
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
             : __expected_(__expected), __base_(std::__construct_barrier_algorithm_base(this->__expected_),
                                                &__destroy_barrier_algorithm_base),
               __expected_adjustment_(0), __completion_(std::move(__completion)), __phase_(0)
     {
     }
-    [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     arrival_token arrive(ptrdiff_t __update)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(
@@ -152,7 +152,7 @@ public:
             }
         return __old_phase;
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void wait(arrival_token&& __old_phase) const
     {
         auto const __test_fn = [this, __old_phase]() -> bool {
@@ -160,7 +160,7 @@ public:
         };
         std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_drop()
     {
         __expected_adjustment_.fetch_sub(1, memory_order_relaxed);
@@ -197,12 +197,12 @@ public:
         return numeric_limits<ptrdiff_t>::max();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
         : __expected(__expected), __arrived(__expected), __completion(std::move(__completion)), __phase(false)
     {
     }
-    [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     arrival_token arrive(ptrdiff_t update)
     {
         auto const __old_phase = __phase.load(memory_order_relaxed);
@@ -220,12 +220,12 @@ public:
         }
         return __old_phase;
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void wait(arrival_token&& __old_phase) const
     {
         __phase.wait(__old_phase, memory_order_acquire);
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_drop()
     {
         __expected.fetch_sub(1, memory_order_relaxed);
@@ -244,7 +244,7 @@ class __barrier_base<__empty_completion> {
 
     __atomic_base<uint64_t>   __phase_arrived_expected;
 
-    static _LIBCPP_INLINE_VISIBILITY
+    static _LIBCPP_HIDE_FROM_ABI
     constexpr uint64_t __init(ptrdiff_t __count) _NOEXCEPT
     {
         return ((uint64_t(1u << 31) - __count) << 32)
@@ -258,12 +258,12 @@ public:
         return ptrdiff_t(1u << 31) - 1;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit inline __barrier_base(ptrdiff_t __count, __empty_completion = __empty_completion())
         : __phase_arrived_expected(__init(__count))
     {
     }
-    [[nodiscard]] inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    [[nodiscard]] inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     arrival_token arrive(ptrdiff_t update)
     {
         auto const __inc = __arrived_unit * update;
@@ -278,7 +278,7 @@ public:
         }
         return __old & __phase_bit;
     }
-    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void wait(arrival_token&& __phase) const
     {
         auto const __test_fn = [=]() -> bool {
@@ -287,7 +287,7 @@ public:
         };
         __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
     }
-    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_drop()
     {
         __phase_arrived_expected.fetch_add(__expected_unit, memory_order_relaxed);
@@ -308,9 +308,9 @@ public:
         return __barrier_base<_CompletionF>::max();
     }
 
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
-        : __b_(__count, _VSTD::move(__completion)) {
+        : __b_(__count, std::move(__completion)) {
         _LIBCPP_ASSERT_UNCATEGORIZED(
             __count >= 0,
             "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
@@ -323,23 +323,23 @@ public:
     barrier(barrier const&) = delete;
     barrier& operator=(barrier const&) = delete;
 
-    [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     arrival_token arrive(ptrdiff_t __update = 1)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(__update > 0, "barrier:arrive must be called with a value greater than 0");
         return __b_.arrive(__update);
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void wait(arrival_token&& __phase) const
     {
-        __b_.wait(_VSTD::move(__phase));
+        __b_.wait(std::move(__phase));
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_wait()
     {
         wait(arrive());
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void arrive_and_drop()
     {
         __b_.arrive_and_drop();

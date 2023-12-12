@@ -324,6 +324,8 @@ def z_vsrl_by_scalar    : SDNode<"SystemZISD::VSRL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vsra_by_scalar    : SDNode<"SystemZISD::VSRA_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
+def z_vrotl_by_scalar   : SDNode<"SystemZISD::VROTL_BY_SCALAR",
+                                 SDT_ZVecBinaryInt>;
 def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZVecBinaryConv>;
 def z_vicmpe            : SDNode<"SystemZISD::VICMPE", SDT_ZVecBinary>;
 def z_vicmph            : SDNode<"SystemZISD::VICMPH", SDT_ZVecBinary>;

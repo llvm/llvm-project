@@ -29,6 +29,6 @@ int main() {
 }
 
 // The empty CU from the pcm should not get copied into the dSYM.
-// CHECK: DW_TAG_compile_unit
-// CHECK-NOT: DW_TAG_compile_unit
-
+// Check that module name occured only once.
+// CHECK: "Empty"
+// CHECK-NOT: "Empty"

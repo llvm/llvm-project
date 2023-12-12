@@ -12,6 +12,7 @@
 
 #include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Testing/CommandLineArgs.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 #include "clang/AST/DeclContextInternals.h"
@@ -6790,10 +6791,13 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 }
 
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {
-  void testImport(llvm::StringRef Code, clang::TestLanguage Lang = Lang_CXX14) {
+  void testImport(llvm::StringRef Code, clang::TestLanguage Lang = Lang_CXX14,
+                  bool FindLast = false) {
     Decl *FromTU = getTuDecl(Code, Lang, "input0.cc");
-    FunctionDecl *From = FirstDeclMatcher<FunctionDecl>().match(
-        FromTU, functionDecl(hasName("foo")));
+    FunctionDecl *From = FindLast ? LastDeclMatcher<FunctionDecl>().match(
+                                        FromTU, functionDecl(hasName("foo")))
+                                  : FirstDeclMatcher<FunctionDecl>().match(
+                                        FromTU, functionDecl(hasName("foo")));
 
     FunctionDecl *To = Import(From, Lang);
     EXPECT_TRUE(To);
@@ -7232,6 +7236,20 @@ TEST_P(ImportAutoFunctions, ReturnWithTypeInSwitch) {
       Lang_CXX17);
 }
 
+TEST_P(ImportAutoFunctions, ReturnWithAutoTemplateType) {
+  testImport(
+      R"(
+      template<class T>
+      struct S {};
+      template<class T>
+      auto foo() {
+        return S<T>{};
+      }
+      auto a = foo<int>();
+      )",
+      Lang_CXX14, /*FindLast=*/true);
+}
+
 struct ImportSourceLocations : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportSourceLocations, PreserveFileIDTreeStructure) {
@@ -7362,11 +7380,12 @@ struct ImportAttributes : public ASTImporterOptionSpecificTestBase {
   }
 
   template <class DT, class AT>
-  void importAttr(const char *Code, AT *&FromAttr, AT *&ToAttr) {
+  void importAttr(const char *Code, AT *&FromAttr, AT *&ToAttr,
+                  TestLanguage Lang = Lang_CXX11) {
     static_assert(std::is_base_of<Attr, AT>::value, "AT should be an Attr");
     static_assert(std::is_base_of<Decl, DT>::value, "DT should be a Decl");
 
-    Decl *FromTU = getTuDecl(Code, Lang_CXX11, "input.cc");
+    Decl *FromTU = getTuDecl(Code, Lang, "input.cc");
     DT *FromD =
         FirstDeclMatcher<DT>().match(FromTU, namedDecl(hasName("test")));
     ASSERT_TRUE(FromD);
@@ -7650,6 +7669,13 @@ TEST_P(ImportAttributes, ImportLocksExcluded) {
       "void test(int A1, int A2) __attribute__((locks_excluded(A1, A2)));",
       FromAttr, ToAttr);
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportC99NoThrowAttr) {
+  NoThrowAttr *FromAttr, *ToAttr;
+  importAttr<FunctionDecl>("void test () __attribute__ ((__nothrow__));",
+                           FromAttr, ToAttr, Lang_C99);
+  checkImported(FromAttr->getAttrName(), ToAttr->getAttrName());
 }
 
 template <typename T>

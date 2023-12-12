@@ -168,6 +168,17 @@ void AMDGPUInstPrinter::printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm();
+
+  if (AMDGPU::isGFX12Plus(STI)) {
+    const int64_t TH = Imm & CPol::TH;
+    const int64_t Scope = Imm & CPol::SCOPE;
+
+    printTH(MI, TH, Scope, O);
+    printScope(Scope, O);
+
+    return;
+  }
+
   if (Imm & CPol::GLC)
     O << ((AMDGPU::isGFX940(STI) &&
            !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
@@ -180,6 +191,89 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     O << (AMDGPU::isGFX940(STI) ? " sc1" : " scc");
   if (Imm & ~CPol::ALL)
     O << " /* unexpected cache policy bit */";
+}
+
+void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
+                                raw_ostream &O) {
+  // For th = 0 do not print this field
+  if (TH == 0)
+    return;
+
+  const unsigned Opcode = MI->getOpcode();
+  const MCInstrDesc &TID = MII.get(Opcode);
+  bool IsStore = TID.mayStore();
+  bool IsAtomic =
+      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
+
+  O << " th:";
+
+  if (IsAtomic) {
+    O << "TH_ATOMIC_";
+    if (TH & AMDGPU::CPol::TH_ATOMIC_CASCADE) {
+      if (Scope >= AMDGPU::CPol::SCOPE_DEV)
+        O << "CASCADE" << (TH & AMDGPU::CPol::TH_ATOMIC_NT ? "_NT" : "_RT");
+      else
+        O << formatHex(TH);
+    } else if (TH & AMDGPU::CPol::TH_ATOMIC_NT)
+      O << "NT" << (TH & AMDGPU::CPol::TH_ATOMIC_RETURN ? "_RETURN" : "");
+    else if (TH & AMDGPU::CPol::TH_ATOMIC_RETURN)
+      O << "RETURN";
+    else
+      O << formatHex(TH);
+  } else {
+    if (!IsStore && TH == AMDGPU::CPol::TH_RESERVED)
+      O << formatHex(TH);
+    else {
+      // This will default to printing load variants when neither MayStore nor
+      // MayLoad flag is present which is the case with instructions like
+      // image_get_resinfo.
+      O << (IsStore ? "TH_STORE_" : "TH_LOAD_");
+      switch (TH) {
+      case AMDGPU::CPol::TH_NT:
+        O << "NT";
+        break;
+      case AMDGPU::CPol::TH_HT:
+        O << "HT";
+        break;
+      case AMDGPU::CPol::TH_BYPASS: // or LU or RT_WB
+        O << (Scope == AMDGPU::CPol::SCOPE_SYS ? "BYPASS"
+                                               : (IsStore ? "RT_WB" : "LU"));
+        break;
+      case AMDGPU::CPol::TH_NT_RT:
+        O << "NT_RT";
+        break;
+      case AMDGPU::CPol::TH_RT_NT:
+        O << "RT_NT";
+        break;
+      case AMDGPU::CPol::TH_NT_HT:
+        O << "NT_HT";
+        break;
+      case AMDGPU::CPol::TH_NT_WB:
+        O << "NT_WB";
+        break;
+      default:
+        llvm_unreachable("unexpected th value");
+      }
+    }
+  }
+}
+
+void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
+  if (Scope == CPol::SCOPE_CU)
+    return;
+
+  O << " scope:";
+
+  if (Scope == CPol::SCOPE_SE)
+    O << "SCOPE_SE";
+  else if (Scope == CPol::SCOPE_DEV)
+    O << "SCOPE_DEV";
+  else if (Scope == CPol::SCOPE_SYS)
+    O << "SCOPE_SYS";
+  else
+    llvm_unreachable("unexpected scope policy value");
+
+  return;
 }
 
 void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,

@@ -10,6 +10,9 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_DECLARATION_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_DECLARATION_H
 
+#include <experimental/__config>
+#include <experimental/__simd/abi_tag.h>
+
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL

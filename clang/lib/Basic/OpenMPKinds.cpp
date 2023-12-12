@@ -104,6 +104,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   .Case(#Name, OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown);
+  case OMPC_fail:
+    return static_cast<unsigned int>(llvm::StringSwitch<llvm::omp::Clause>(Str)
+#define OPENMP_ATOMIC_FAIL_MODIFIER(Name) .Case(#Name, OMPC_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                                         .Default(OMPC_unknown));
   case OMPC_device_type:
     return llvm::StringSwitch<OpenMPDeviceType>(Str)
 #define OPENMP_DEVICE_TYPE_KIND(Name) .Case(#Name, OMPC_DEVICE_TYPE_##Name)
@@ -434,6 +439,11 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'depend' clause type");
+  case OMPC_fail: {
+    OpenMPClauseKind CK = static_cast<OpenMPClauseKind>(Type);
+    return getOpenMPClauseName(CK).data();
+    llvm_unreachable("Invalid OpenMP 'fail' clause modifier");
+  }
   case OMPC_device:
     switch (Type) {
     case OMPC_DEVICE_unknown:
@@ -889,3 +899,10 @@ void clang::getOpenMPCaptureRegions(
     llvm_unreachable("Unknown OpenMP directive");
   }
 }
+
+bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
+  return FailClauseParameter == llvm::omp::OMPC_acquire ||
+         FailClauseParameter == llvm::omp::OMPC_relaxed ||
+         FailClauseParameter == llvm::omp::OMPC_seq_cst;
+}
+

@@ -170,18 +170,18 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   StringRef Hardware;
   StringRef Part;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("CPU implementer"))
+    if (Lines[I].starts_with("CPU implementer"))
       Implementer = Lines[I].substr(15).ltrim("\t :");
-    if (Lines[I].startswith("Hardware"))
+    if (Lines[I].starts_with("Hardware"))
       Hardware = Lines[I].substr(8).ltrim("\t :");
-    if (Lines[I].startswith("CPU part"))
+    if (Lines[I].starts_with("CPU part"))
       Part = Lines[I].substr(8).ltrim("\t :");
   }
 
   if (Implementer == "0x41") { // ARM Ltd.
     // MSM8992/8994 may give cpu part for the core that the kernel is running on,
     // which is undeterministic and wrong. Always return cortex-a53 for these SoC.
-    if (Hardware.endswith("MSM8994") || Hardware.endswith("MSM8996"))
+    if (Hardware.ends_with("MSM8994") || Hardware.ends_with("MSM8996"))
       return "cortex-a53";
 
 
@@ -202,12 +202,14 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xc20", "cortex-m0")
         .Case("0xc23", "cortex-m3")
         .Case("0xc24", "cortex-m4")
+        .Case("0xd24", "cortex-m52")
         .Case("0xd22", "cortex-m55")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
+        .Case("0xd80", "cortex-a520")
         .Case("0xd07", "cortex-a57")
         .Case("0xd08", "cortex-a72")
         .Case("0xd09", "cortex-a73")
@@ -217,10 +219,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd41", "cortex-a78")
         .Case("0xd47", "cortex-a710")
         .Case("0xd4d", "cortex-a715")
+        .Case("0xd81", "cortex-a720")
         .Case("0xd44", "cortex-x1")
         .Case("0xd4c", "cortex-x1c")
         .Case("0xd48", "cortex-x2")
         .Case("0xd4e", "cortex-x3")
+        .Case("0xd82", "cortex-x4")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
         .Case("0xd40", "neoverse-v1")
@@ -363,7 +367,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].startswith("features")) {
+    if (Lines[I].starts_with("features")) {
       size_t Pos = Lines[I].find(':');
       if (Pos != StringRef::npos) {
         Lines[I].drop_front(Pos + 1).split(CPUFeatures, ' ');
@@ -382,7 +386,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 
   // Now check the processor machine type.
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("processor ")) {
+    if (Lines[I].starts_with("processor ")) {
       size_t Pos = Lines[I].find("machine = ");
       if (Pos != StringRef::npos) {
         Pos += sizeof("machine = ") - 1;
@@ -405,7 +409,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   // Look for uarch line to determine cpu name
   StringRef UArch;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("uarch")) {
+    if (Lines[I].starts_with("uarch")) {
       UArch = Lines[I].substr(5).ltrim("\t :");
       break;
     }

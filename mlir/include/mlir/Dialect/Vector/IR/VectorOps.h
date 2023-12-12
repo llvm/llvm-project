@@ -160,6 +160,18 @@ getAsConstantIndexOps(ArrayRef<Value> values);
 // Vector Masking Utilities
 //===----------------------------------------------------------------------===//
 
+/// Infers the mask type for a transfer op given its vector type and
+/// permutation map. The mask in a transfer op operation applies to the
+/// tensor/buffer part of it and its type should match the vector shape
+/// *before* any permutation or broadcasting. For example,
+///
+/// vecType = vector<1x2x3xf32>, permMap = affine_map<(d0, d1, d2) -> (d1, d0)>
+///
+/// Has inferred mask type:
+///
+/// maskType = vector<2x1xi1>
+VectorType inferTransferOpMaskType(VectorType vecType, AffineMap permMap);
+
 /// Create the vector.yield-ended region of a vector.mask op with `maskableOp`
 /// as masked operation.
 void createMaskOpRegion(OpBuilder &builder, Operation *maskableOp);

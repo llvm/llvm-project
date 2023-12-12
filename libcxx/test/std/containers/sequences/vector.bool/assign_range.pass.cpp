@@ -25,7 +25,7 @@ constexpr bool test() {
   static_assert(test_constraints_assign_range<std::vector, bool, char>());
 
   for_all_iterators_and_allocators<bool, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_assign_range<std::vector<bool, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_assign_range<std::vector<bool, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       // `is_contiguous_container_asan_correct` doesn't work on `vector<bool>`.
     });

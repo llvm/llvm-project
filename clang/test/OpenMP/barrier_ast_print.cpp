@@ -17,13 +17,13 @@ T tmain(T argc) {
   static T a;
 #pragma omp barrier
   switch (argc) {
-  case 0:
+  case 0: {
 #pragma omp barrier
-    break;
-  default:
+  } break;
+  default: {
 #pragma omp barrier
 #pragma omp barrier
-    break;
+  } break;
   }
   return a + argc;
 }
@@ -35,11 +35,15 @@ T tmain(T argc) {
 // CHECK-NEXT: #pragma omp barrier
 // CHECK-NEXT: switch (argc) {
 // CHECK-NEXT: case 0:
+// CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp barrier
+// CHECK-NEXT: }
 // CHECK-NEXT: break;
 // CHECK-NEXT: default:
+// CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp barrier
 // CHECK-NEXT: #pragma omp barrier
+// CHECK-NEXT: }
 // CHECK-NEXT: break;
 // CHECK-NEXT: }
 
@@ -49,21 +53,25 @@ int main(int argc, char **argv) {
 #pragma omp barrier
   // CHECK-NEXT: #pragma omp barrier
   switch (argc) {
-  case 0:
+  case 0: {
 #pragma omp barrier
 #pragma omp barrier
-    break;
-  default:
+  } break;
+  default: {
 #pragma omp barrier
-    break;
+  } break;
   }
 // CHECK-NEXT: switch (argc) {
 // CHECK-NEXT: case 0:
+// CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp barrier
 // CHECK-NEXT: #pragma omp barrier
+// CHECK-NEXT: }
 // CHECK-NEXT: break;
 // CHECK-NEXT: default:
+// CHECK-NEXT: {
 // CHECK-NEXT: #pragma omp barrier
+// CHECK-NEXT: }
 // CHECK-NEXT: break;
 // CHECK-NEXT: }
   return tmain(argc) + tmain(argv[0][0]) + a;

@@ -176,6 +176,7 @@ set(BENCHMARK_TESTS
     algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
+    algorithms/for_each.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp

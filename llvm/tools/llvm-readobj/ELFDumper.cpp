@@ -1500,7 +1500,7 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
     return Seg.str();
 
   // E.g. "PT_LOAD" -> "LOAD".
-  assert(Seg.startswith("PT_"));
+  assert(Seg.starts_with("PT_"));
   return Seg.drop_front(3).str();
 }
 
@@ -1557,135 +1557,139 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
 };
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_NONE),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R600),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R630),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RS880),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV670),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV710),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV730),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV770),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CEDAR),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CYPRESS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_JUNIPER),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_REDWOOD),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_SUMO),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_BARTS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAICOS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAYMAN),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX904),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX941),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX942),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1013),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1031),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1032),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1100),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1101),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1102),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1103),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1150),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1151),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_V3),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_V3)
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_NONE),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R600),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R630),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RS880),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV670),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV710),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV730),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV770),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CEDAR),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CYPRESS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_JUNIPER),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_REDWOOD),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_SUMO),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_BARTS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAICOS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAYMAN),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX904),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX941),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX942),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1013),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1031),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1032),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1100),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1101),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1102),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1103),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1150),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1151),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1200),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1201),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_V3),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_V3),
 };
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_NONE),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R600),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R630),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RS880),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV670),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV710),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV730),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV770),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CEDAR),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CYPRESS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_JUNIPER),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_REDWOOD),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_SUMO),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_BARTS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAICOS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAYMAN),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX904),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX941),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX942),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1013),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1031),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1032),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1100),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1101),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1102),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1103),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1150),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1151),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ANY_V4),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_OFF_V4),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ON_V4),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ANY_V4),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_OFF_V4),
-  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ON_V4)
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_NONE),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R600),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R630),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RS880),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV670),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV710),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV730),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV770),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CEDAR),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CYPRESS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_JUNIPER),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_REDWOOD),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_SUMO),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_BARTS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAICOS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAYMAN),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX904),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX941),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX942),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1013),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1031),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1032),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1100),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1101),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1102),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1103),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1150),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1151),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1200),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1201),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ANY_V4),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_OFF_V4),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ON_V4),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ANY_V4),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_OFF_V4),
+    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ON_V4),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
@@ -2023,6 +2027,18 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   uint64_t StringTableSize = 0;
   std::optional<DynRegionInfo> DynSymFromTable;
   for (const Elf_Dyn &Dyn : dynamic_table()) {
+    if (Obj.getHeader().e_machine == EM_AARCH64) {
+      switch (Dyn.d_tag) {
+      case ELF::DT_AARCH64_AUTH_RELRSZ:
+        DynRelrRegion.Size = Dyn.getVal();
+        DynRelrRegion.SizePrintName = "DT_AARCH64_AUTH_RELRSZ value";
+        continue;
+      case ELF::DT_AARCH64_AUTH_RELRENT:
+        DynRelrRegion.EntSize = Dyn.getVal();
+        DynRelrRegion.EntSizePrintName = "DT_AARCH64_AUTH_RELRENT value";
+        continue;
+      }
+    }
     switch (Dyn.d_tag) {
     case ELF::DT_HASH:
       HashTable = reinterpret_cast<const Elf_Hash *>(
@@ -2086,10 +2102,12 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       break;
     case ELF::DT_RELR:
     case ELF::DT_ANDROID_RELR:
+    case ELF::DT_AARCH64_AUTH_RELR:
       DynRelrRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_RELRSZ:
     case ELF::DT_ANDROID_RELRSZ:
+    case ELF::DT_AARCH64_AUTH_RELRSZ:
       DynRelrRegion.Size = Dyn.getVal();
       DynRelrRegion.SizePrintName = Dyn.d_tag == ELF::DT_RELRSZ
                                         ? "DT_RELRSZ value"
@@ -2097,6 +2115,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
       break;
     case ELF::DT_RELRENT:
     case ELF::DT_ANDROID_RELRENT:
+    case ELF::DT_AARCH64_AUTH_RELRENT:
       DynRelrRegion.EntSize = Dyn.getVal();
       DynRelrRegion.EntSizePrintName = Dyn.d_tag == ELF::DT_RELRENT
                                            ? "DT_RELRENT value"
@@ -2463,6 +2482,8 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_PREINIT_ARRAYSZ:
   case DT_RELRSZ:
   case DT_RELRENT:
+  case DT_AARCH64_AUTH_RELRSZ:
+  case DT_AARCH64_AUTH_RELRENT:
   case DT_ANDROID_RELSZ:
   case DT_ANDROID_RELASZ:
     return std::to_string(Value) + " (bytes)";
@@ -2560,7 +2581,7 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
   llvm::sort(Libs);
 
   for (StringRef L : Libs)
-    W.startLine() << L << "\n";
+    W.printString(L);
 }
 
 template <class ELFT>
@@ -3795,9 +3816,12 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
 }
 
 template <class ELFT>
-static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType) {
+static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
+                                   const typename ELFT::Ehdr &EHeader) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
-  bool IsRelr = SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR;
+  bool IsRelr =
+      SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR ||
+      (EHeader.e_machine == EM_AARCH64 && SType == ELF::SHT_AARCH64_AUTH_RELR);
   if (ELFT::Is64Bits)
     OS << "    ";
   else
@@ -3822,15 +3846,18 @@ void GNUELFDumper<ELFT>::printDynamicRelocHeader(unsigned Type, StringRef Name,
   uint64_t Offset = Reg.Addr - this->Obj.base();
   OS << "\n'" << Name.str().c_str() << "' relocation section at offset 0x"
      << utohexstr(Offset, /*LowerCase=*/true) << " contains " << Reg.Size << " bytes:\n";
-  printRelocHeaderFields<ELFT>(OS, Type);
+  printRelocHeaderFields<ELFT>(OS, Type, this->Obj.getHeader());
 }
 
 template <class ELFT>
-static bool isRelocationSec(const typename ELFT::Shdr &Sec) {
+static bool isRelocationSec(const typename ELFT::Shdr &Sec,
+                            const typename ELFT::Ehdr &EHeader) {
   return Sec.sh_type == ELF::SHT_REL || Sec.sh_type == ELF::SHT_RELA ||
          Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_REL ||
          Sec.sh_type == ELF::SHT_ANDROID_RELA ||
-         Sec.sh_type == ELF::SHT_ANDROID_RELR;
+         Sec.sh_type == ELF::SHT_ANDROID_RELR ||
+         (EHeader.e_machine == EM_AARCH64 &&
+          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR);
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
@@ -3846,8 +3873,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       return RelasOrErr->size();
     }
 
-    if (!opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
-                           Sec.sh_type == ELF::SHT_ANDROID_RELR)) {
+    if (!opts::RawRelr &&
+        (Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_RELR ||
+         (this->Obj.getHeader().e_machine == EM_AARCH64 &&
+          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR))) {
       Expected<Elf_Relr_Range> RelrsOrErr = this->Obj.relrs(Sec);
       if (!RelrsOrErr)
         return RelrsOrErr.takeError();
@@ -3859,7 +3888,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
 
   bool HasRelocSections = false;
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (!isRelocationSec<ELFT>(Sec))
+    if (!isRelocationSec<ELFT>(Sec, this->Obj.getHeader()))
       continue;
     HasRelocSections = true;
 
@@ -3876,7 +3905,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << utohexstr(Offset, /*LowerCase=*/true) << " contains " << EntriesNum
        << " entries:\n";
-    printRelocHeaderFields<ELFT>(OS, Sec.sh_type);
+    printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
     this->printRelocationsHelper(Sec);
   }
   if (!HasRelocSections)
@@ -4508,43 +4537,6 @@ static bool checkTLSSections(const typename ELFT::Phdr &Phdr,
 }
 
 template <class ELFT>
-static bool checkOffsets(const typename ELFT::Phdr &Phdr,
-                         const typename ELFT::Shdr &Sec) {
-  // SHT_NOBITS sections don't need to have an offset inside the segment.
-  if (Sec.sh_type == ELF::SHT_NOBITS)
-    return true;
-
-  if (Sec.sh_offset < Phdr.p_offset)
-    return false;
-
-  // Only non-empty sections can be at the end of a segment.
-  if (Sec.sh_size == 0)
-    return (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz);
-  return Sec.sh_offset + Sec.sh_size <= Phdr.p_offset + Phdr.p_filesz;
-}
-
-// Check that an allocatable section belongs to a virtual address
-// space of a segment.
-template <class ELFT>
-static bool checkVMA(const typename ELFT::Phdr &Phdr,
-                     const typename ELFT::Shdr &Sec) {
-  if (!(Sec.sh_flags & ELF::SHF_ALLOC))
-    return true;
-
-  if (Sec.sh_addr < Phdr.p_vaddr)
-    return false;
-
-  bool IsTbss =
-      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
-  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties.
-  bool IsTbssInNonTLS = IsTbss && Phdr.p_type != ELF::PT_TLS;
-  // Only non-empty sections can be at the end of a segment.
-  if (Sec.sh_size == 0 || IsTbssInNonTLS)
-    return Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz;
-  return Sec.sh_addr + Sec.sh_size <= Phdr.p_vaddr + Phdr.p_memsz;
-}
-
-template <class ELFT>
 static bool checkPTDynamic(const typename ELFT::Phdr &Phdr,
                            const typename ELFT::Shdr &Sec) {
   if (Phdr.p_type != ELF::PT_DYNAMIC || Phdr.p_memsz == 0 || Sec.sh_size != 0)
@@ -4675,8 +4667,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionMapping() {
       // readelf additionally makes sure it does not print zero sized sections
       // at end of segments and for PT_DYNAMIC both start and end of section
       // .tbss must only be shown in PT_TLS section.
-      if (checkTLSSections<ELFT>(Phdr, Sec) && checkOffsets<ELFT>(Phdr, Sec) &&
-          checkVMA<ELFT>(Phdr, Sec) && checkPTDynamic<ELFT>(Phdr, Sec)) {
+      if (isSectionInSegment<ELFT>(Phdr, Sec) &&
+          checkTLSSections<ELFT>(Phdr, Sec) &&
+          checkPTDynamic<ELFT>(Phdr, Sec)) {
         Sections +=
             unwrapOrError(this->FileName, this->Obj.getSectionName(Sec)).str() +
             " ";
@@ -5036,7 +5029,7 @@ static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
   const uint8_t *End = Data.end();
   while (Cur != End) {
     unsigned Size;
-    const char *Err;
+    const char *Err = nullptr;
     Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
     if (Err)
       return createError(Err);
@@ -5341,6 +5334,31 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
     return false;
   for (const auto &KV : Props)
     OS << "    " << KV.first << ": " << KV.second << '\n';
+  return true;
+}
+
+template <class ELFT>
+static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
+                             ArrayRef<uint8_t> Desc) {
+  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
+    return false;
+
+  OS << "    AArch64 PAuth ABI tag: ";
+  if (Desc.size() < 16) {
+    OS << format("<corrupted size: expected at least 16, got %d>", Desc.size());
+    return false;
+  }
+
+  uint64_t Platform =
+      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
+  uint64_t Version =
+      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
+  OS << format("platform 0x%" PRIx64 ", version 0x%" PRIx64, Platform, Version);
+
+  if (Desc.size() > 16)
+    OS << ", additional info 0x"
+       << toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16));
+
   return true;
 }
 
@@ -5743,6 +5761,10 @@ const NoteType AndroidNoteTypes[] = {
      "NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)"},
 };
 
+const NoteType ARMNoteTypes[] = {
+    {ELF::NT_ARM_TYPE_PAUTH_ABI_TAG, "NT_ARM_TYPE_PAUTH_ABI_TAG"},
+};
+
 const NoteType CoreNoteTypes[] = {
     {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
     {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
@@ -5840,13 +5862,13 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
       return FindNote(FreeBSDNoteTypes);
     }
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("NetBSD-CORE")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("NetBSD-CORE")) {
     StringRef Result = FindNote(NetBSDCoreNoteTypes);
     if (!Result.empty())
       return Result;
     return FindNote(CoreNoteTypes);
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("OpenBSD")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("OpenBSD")) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.
     StringRef Result = FindNote(OpenBSDCoreNoteTypes);
     if (!Result.empty())
@@ -5861,6 +5883,8 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     return FindNote(LLVMOMPOFFLOADNoteTypes);
   if (Name == "Android")
     return FindNote(AndroidNoteTypes);
+  if (Name == "ARM")
+    return FindNote(ARMNoteTypes);
 
   if (ELFType == ELF::ET_CORE)
     return FindNote(CoreNoteTypes);
@@ -6015,6 +6039,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNote(OS, Type, Descriptor))
+        return Error::success();
+    } else if (Name == "ARM") {
+      if (printAArch64Note<ELFT>(OS, Type, Descriptor))
         return Error::success();
     }
     if (!Descriptor.empty()) {
@@ -6208,11 +6235,13 @@ void ELFDumper<ELFT>::forEachRelocationDo(
                               toString(std::move(E)));
   };
 
-  // SHT_RELR/SHT_ANDROID_RELR sections do not have an associated symbol table.
-  // For them we should not treat the value of the sh_link field as an index of
-  // a symbol table.
+  // SHT_RELR/SHT_ANDROID_RELR/SHT_AARCH64_AUTH_RELR sections do not have an
+  // associated symbol table. For them we should not treat the value of the
+  // sh_link field as an index of a symbol table.
   const Elf_Shdr *SymTab;
-  if (Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_RELR) {
+  if (Sec.sh_type != ELF::SHT_RELR && Sec.sh_type != ELF::SHT_ANDROID_RELR &&
+      !(Obj.getHeader().e_machine == EM_AARCH64 &&
+        Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR)) {
     Expected<const Elf_Shdr *> SymTabOrErr = Obj.getSection(Sec.sh_link);
     if (!SymTabOrErr) {
       Warn(SymTabOrErr.takeError(), "unable to locate a symbol table for");
@@ -6240,6 +6269,10 @@ void ELFDumper<ELFT>::forEachRelocationDo(
       Warn(RangeOrErr.takeError());
     }
     break;
+  case ELF::SHT_AARCH64_AUTH_RELR:
+    if (Obj.getHeader().e_machine != EM_AARCH64)
+      break;
+    [[fallthrough]];
   case ELF::SHT_RELR:
   case ELF::SHT_ANDROID_RELR: {
     Expected<Elf_Relr_Range> RangeOrErr = Obj.relrs(Sec);
@@ -6936,7 +6969,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
   ListScope D(W, "Relocations");
 
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
-    if (!isRelocationSec<ELFT>(Sec))
+    if (!isRelocationSec<ELFT>(Sec, this->Obj.getHeader()))
       continue;
 
     StringRef Name = this->getPrintableSectionName(Sec);
@@ -7578,6 +7611,29 @@ static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
 }
 
 template <class ELFT>
+static bool printAarch64NoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
+                                      ScopedPrinter &W) {
+  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
+    return false;
+
+  if (Desc.size() < 16)
+    return false;
+
+  uint64_t platform =
+      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
+  uint64_t version =
+      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
+  W.printNumber("Platform", platform);
+  W.printNumber("Version", version);
+
+  if (Desc.size() > 16)
+    W.printString("Additional info",
+                  toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16)));
+
+  return true;
+}
+
+template <class ELFT>
 void LLVMELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
     const ArrayRef<uint8_t> AndroidNoteDesc,
@@ -7712,6 +7768,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNoteLLVMStyle(Type, Descriptor, W))
+        return Error::success();
+    } else if (Name == "ARM") {
+      if (printAarch64NoteLLVMStyle<ELFT>(Type, Descriptor, W))
         return Error::success();
     }
     if (!Descriptor.empty()) {

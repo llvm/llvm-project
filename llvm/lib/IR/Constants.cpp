@@ -2556,6 +2556,32 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
   }
 }
 
+Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
+  switch (ID) {
+  case Intrinsic::umax:
+    return Constant::getNullValue(Ty);
+  case Intrinsic::umin:
+    return Constant::getAllOnesValue(Ty);
+  case Intrinsic::smax:
+    return Constant::getIntegerValue(
+        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+  case Intrinsic::smin:
+    return Constant::getIntegerValue(
+        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+  default:
+    return nullptr;
+  }
+}
+
+Constant *ConstantExpr::getIdentity(Instruction *I, Type *Ty,
+                                    bool AllowRHSConstant, bool NSZ) {
+  if (I->isBinaryOp())
+    return getBinOpIdentity(I->getOpcode(), Ty, AllowRHSConstant, NSZ);
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    return getIntrinsicIdentity(II->getIntrinsicID(), Ty);
+  return nullptr;
+}
+
 Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty) {
   switch (Opcode) {
   default:

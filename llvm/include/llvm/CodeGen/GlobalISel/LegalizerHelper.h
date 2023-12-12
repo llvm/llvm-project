@@ -410,6 +410,8 @@ public:
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
+  Register getDynStackAllocTargetPtr(Register SPReg, Register AllocSize,
+                                     Align Alignment, LLT PtrTy);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LegalizeResult lowerStackSave(MachineInstr &MI);
   LegalizeResult lowerStackRestore(MachineInstr &MI);
@@ -430,6 +432,7 @@ public:
   LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LegalizeResult lowerMemcpyInline(MachineInstr &MI);
   LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
+  LegalizeResult lowerVAArg(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

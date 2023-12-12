@@ -105,8 +105,9 @@
    128-bit extended precision type yet */
 typedef long double _Quad;
 #elif KMP_COMPILER_GCC
-/* GCC on NetBSD lacks __multc3/__divtc3 builtins needed for quad */
-#if !KMP_OS_NETBSD
+/* GCC on NetBSD lacks __multc3/__divtc3 builtins needed for quad until
+   NetBSD 10.0 which ships with GCC 10.5 */
+#if (!KMP_OS_NETBSD || __GNUC__ >= 10)
 typedef __float128 _Quad;
 #undef KMP_HAVE_QUAD
 #define KMP_HAVE_QUAD 1

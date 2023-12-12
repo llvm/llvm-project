@@ -209,15 +209,16 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
       llvm::bit_floor(std::clamp<unsigned>(RVVRegisterWidthLMUL, 1, 8));
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::Fixed(ST->getXLen());
+    return TypeSize::getFixed(ST->getXLen());
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::Fixed(
+    return TypeSize::getFixed(
         ST->useRVVForFixedLengthVectors() ? LMUL * ST->getRealMinVLen() : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::Scalable((ST->hasVInstructions() &&
-                               ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
-                                  ? LMUL * RISCV::RVVBitsPerBlock
-                                  : 0);
+    return TypeSize::getScalable(
+        (ST->hasVInstructions() &&
+         ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+            ? LMUL * RISCV::RVVBitsPerBlock
+            : 0);
   }
 
   llvm_unreachable("Unsupported register kind");

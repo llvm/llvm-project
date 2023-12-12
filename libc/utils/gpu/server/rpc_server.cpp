@@ -78,10 +78,12 @@ private:
 
       port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
       port->send([&](rpc::Buffer *buffer, uint32_t id) {
-        buffer->data[0] = fwrite(strs[id], 1, sizes[id], files[id]);
+        flockfile(files[id]);
+        buffer->data[0] = fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
         if (port->get_opcode() == RPC_WRITE_TO_STDOUT_NEWLINE &&
             buffer->data[0] == sizes[id])
-          buffer->data[0] += fwrite("\n", 1, 1, files[id]);
+          buffer->data[0] += fwrite_unlocked("\n", 1, 1, files[id]);
+        funlockfile(files[id]);
         delete[] reinterpret_cast<uint8_t *>(strs[id]);
       });
       break;

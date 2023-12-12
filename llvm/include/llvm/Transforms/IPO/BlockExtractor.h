@@ -16,7 +16,6 @@
 
 #include <vector>
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

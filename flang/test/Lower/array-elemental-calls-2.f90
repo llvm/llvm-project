@@ -122,7 +122,7 @@ subroutine check_compare()
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
-! CHECK:  %[[VAL_27:.*]] = arith.cmpf olt, %[[VAL_25]], %[[VAL_26]] : f64
+! CHECK:  %[[VAL_27:.*]] = arith.cmpf olt, %[[VAL_25]], %[[VAL_26]] {{.*}} : f64
 ! CHECK:  %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (i1) -> !fir.logical<4>
 ! CHECK:  fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<!fir.logical<4>>
 ! CHECK:  fir.call @_QPelem_func_logical4(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.logical<4>>) -> i32

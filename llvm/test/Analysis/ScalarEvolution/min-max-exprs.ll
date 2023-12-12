@@ -51,7 +51,7 @@ define void @f(ptr %A, i32 %N) {
 ; CHECK-NEXT:  Loop %bb1: symbolic max backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:  Loop %bb1: Predicated backedge-taken count is (0 smax %N)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb1: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb1: Trip multiple is 1
 ;
 bb:
   br label %bb1

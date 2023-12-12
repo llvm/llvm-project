@@ -1,0 +1,54 @@
+# RUN: yaml2obj %s -o %t
+
+## .data and .data_copy have the same VMA but different sh_offset values.
+## Check that we can still print LMA correctly.
+# RUN: llvm-objdump --section-headers %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name          Size     VMA              LMA              Type
+# CHECK-NEXT:   0               00000000 0000000000000000 0000000000000000
+# CHECK-NEXT:   1 .text         00000004 0000000000001000 0000000000002000 TEXT
+# CHECK-NEXT:   2 .data         00000004 0000000000002000 0000000000003000 DATA
+# CHECK-NEXT:   3 .data_copy    00000004 0000000000002000 0000000000004000 DATA
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         "00000000"
+    Address:         0x00001000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "00000000"
+    Address:         0x00002000
+  - Name:            .data_copy
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "00000000"
+    Address:         0x00002000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x00001000
+    PAddr:    0x00002000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x00002000
+    PAddr:    0x00003000
+    FirstSec: .data
+    LastSec:  .data
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x00002000
+    PAddr:    0x00004000
+    FirstSec: .data_copy
+    LastSec:  .data_copy

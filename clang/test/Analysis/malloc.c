@@ -266,13 +266,21 @@ void CheckUseZeroAllocated1(void) {
 }
 
 char CheckUseZeroAllocated2(void) {
+  // NOTE: The `AllocaRegion` that models the return value of `alloca()`
+  // doesn't have an associated symbol, so the current implementation of
+  // `MallocChecker::checkUseZeroAllocated()` cannot provide warnings for it.
+  // However, other checkers like core.uninitialized.UndefReturn (that
+  // activates in these TCs) or the array bound checkers provide more generic,
+  // but still sufficient warnings in these cases, so I think it isn't
+  // important to cover this in MallocChecker.
   char *p = alloca(0);
-  return *p; // expected-warning {{Use of memory allocated with size zero}}
+  return *p; // expected-warning {{Undefined or garbage value returned to caller}}
 }
 
 char CheckUseZeroWinAllocated2(void) {
+  // Note: Same situation as `CheckUseZeroAllocated2()`.
   char *p = _alloca(0);
-  return *p; // expected-warning {{Use of memory allocated with size zero}}
+  return *p; // expected-warning {{Undefined or garbage value returned to caller}}
 }
 
 void UseZeroAllocated(int *p) {
@@ -725,6 +733,11 @@ void paramFree(int *p) {
   myfoo(p);
   free(p); // no warning
   myfoo(p); // expected-warning {{Use of memory after it is freed}}
+}
+
+void allocaFree(void) {
+  int *p = alloca(sizeof(int));
+  free(p); // expected-warning {{Memory allocated by alloca() should not be deallocated}}
 }
 
 int* mallocEscapeRet(void) {

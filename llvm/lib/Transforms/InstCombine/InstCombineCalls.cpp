@@ -514,6 +514,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
   }
 
+  Constant *C;
+
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
@@ -549,6 +551,38 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
       return IC.replaceOperand(II, 0, X);
+
+    // cttz(shl(%const, %val), 1) --> add(cttz(%const, 1), %val)
+    if (match(Op0, m_Shl(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCttz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, C, Op1);
+      return BinaryOperator::CreateAdd(ConstCttz, X);
+    }
+
+    // cttz(lshr exact (%const, %val), 1) --> sub(cttz(%const, 1), %val)
+    if (match(Op0, m_Exact(m_LShr(m_ImmConstant(C), m_Value(X)))) &&
+        match(Op1, m_One())) {
+      Value *ConstCttz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, C, Op1);
+      return BinaryOperator::CreateSub(ConstCttz, X);
+    }
+  } else {
+    // ctlz(lshr(%const, %val), 1) --> add(ctlz(%const, 1), %val)
+    if (match(Op0, m_LShr(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCtlz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
+      return BinaryOperator::CreateAdd(ConstCtlz, X);
+    }
+
+    // ctlz(shl nuw (%const, %val), 1) --> sub(ctlz(%const, 1), %val)
+    if (match(Op0, m_NUWShl(m_ImmConstant(C), m_Value(X))) &&
+        match(Op1, m_One())) {
+      Value *ConstCtlz =
+          IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
+      return BinaryOperator::CreateSub(ConstCtlz, X);
+    }
   }
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
@@ -1698,12 +1732,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     auto moveNotAfterMinMax = [&](Value *X, Value *Y) -> Instruction * {
       Value *A;
       if (match(X, m_OneUse(m_Not(m_Value(A)))) &&
-          !isFreeToInvert(A, A->hasOneUse()) &&
-          isFreeToInvert(Y, Y->hasOneUse())) {
-        Value *NotY = Builder.CreateNot(Y);
-        Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
-        Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
-        return BinaryOperator::CreateNot(InvMaxMin);
+          !isFreeToInvert(A, A->hasOneUse())) {
+        if (Value *NotY = getFreelyInverted(Y, Y->hasOneUse(), &Builder)) {
+          Intrinsic::ID InvID = getInverseMinMaxIntrinsic(IID);
+          Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, A, NotY);
+          return BinaryOperator::CreateNot(InvMaxMin);
+        }
       }
       return nullptr;
     };
@@ -4017,9 +4051,9 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
       NC->setDebugLoc(Caller->getDebugLoc());
 
-      Instruction *InsertPt = NewCall->getInsertionPointAfterDef();
-      assert(InsertPt && "No place to insert cast");
-      InsertNewInstBefore(NC, InsertPt->getIterator());
+      auto OptInsertPt = NewCall->getInsertionPointAfterDef();
+      assert(OptInsertPt && "No place to insert cast");
+      InsertNewInstBefore(NC, *OptInsertPt);
       Worklist.pushUsersToWorkList(*Caller);
     } else {
       NV = PoisonValue::get(Caller->getType());

@@ -1316,6 +1316,8 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
         auto Offset = std::distance(Cells.begin(), CellIter);
         for (const auto *Next = CellIter->NextColumnElement; Next;
              Next = Next->NextColumnElement) {
+          if (RowCount >= CellDescs.CellCounts.size())
+            break;
           auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
           auto *End = Start + Offset;
           ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
@@ -1379,7 +1381,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     auto Offset = std::distance(Cells.begin(), CellIter);
     for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
-      if (RowCount > CellDescs.CellCounts.size())
+      if (RowCount >= CellDescs.CellCounts.size())
         break;
       auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
       auto *End = Start + Offset;

@@ -229,7 +229,7 @@ bool AMDGPURegisterBankInfo::isDivergentRegBank(const RegisterBank *RB) const {
 
 unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
                                           const RegisterBank &Src,
-                                          unsigned Size) const {
+                                          TypeSize Size) const {
   // TODO: Should there be a UniformVGPRRegBank which can use readfirstlane?
   if (Dst.getID() == AMDGPU::SGPRRegBankID &&
       (isVectorRegisterBank(Src) || Src.getID() == AMDGPU::VCCRegBankID)) {
@@ -3542,7 +3542,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     if (MI.getOpcode() != AMDGPU::G_FREEZE &&
-        cannotCopy(*DstBank, *SrcBank, Size))
+        cannotCopy(*DstBank, *SrcBank, TypeSize::getFixed(Size)))
       return getInvalidInstructionMapping();
 
     const ValueMapping &ValMap = getValueMapping(0, Size, *DstBank);
@@ -3724,7 +3724,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FMA:
   case AMDGPU::G_FFLOOR:
   case AMDGPU::G_FCEIL:
-  case AMDGPU::G_FRINT:
+  case AMDGPU::G_INTRINSIC_ROUNDEVEN:
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_INTRINSIC_TRUNC:

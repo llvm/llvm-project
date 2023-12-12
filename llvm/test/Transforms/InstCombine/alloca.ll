@@ -248,3 +248,14 @@ entry:
   call void (...) @use(ptr nonnull @int) [ "blah"(ptr %y) ]
   ret void
 }
+
+define void @test_inalloca_with_element_count(ptr %a) {
+; ALL-LABEL: @test_inalloca_with_element_count(
+; ALL-NEXT:    [[ALLOCA1:%.*]] = alloca inalloca [10 x %struct_type], align 4
+; ALL-NEXT:    call void @test9_aux(ptr nonnull inalloca([[STRUCT_TYPE:%.*]]) [[ALLOCA1]])
+; ALL-NEXT:    ret void
+;
+  %alloca = alloca inalloca %struct_type, i32 10, align 4
+  call void @test9_aux(ptr inalloca(%struct_type) %alloca)
+  ret void
+}

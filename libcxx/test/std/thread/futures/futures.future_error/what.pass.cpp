@@ -38,24 +38,24 @@ int main(int, char**) {
 #if TEST_STD_VER >= 17
   {
     std::future_error const f(std::future_errc::broken_promise);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"The associated promise has been destructed prior "
                                            "to the associated state becoming ready."});
   }
   {
     std::future_error f(std::future_errc::future_already_retrieved);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"The future has already been retrieved from "
                                            "the promise or packaged_task."});
   }
   {
     std::future_error f(std::future_errc::promise_already_satisfied);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"The state of the promise has already been set."});
   }
   {
     std::future_error f(std::future_errc::no_state);
-    char const* what = f.what();
+    [[maybe_unused]] char const* what = f.what();
     LIBCPP_ASSERT(what == std::string_view{"Operation not permitted on an object without "
                                            "an associated state."});
   }

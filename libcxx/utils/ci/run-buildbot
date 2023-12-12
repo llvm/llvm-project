@@ -231,20 +231,6 @@ check-generated-output)
         false
     fi
 
-    echo "+++ Making sure libcxx/utils/data/ignore_format.txt was updated appropriately"
-    cp ${MONOREPO_ROOT}/libcxx/utils/data/ignore_format.txt ${BUILD_DIR}/before.txt
-    ${MONOREPO_ROOT}/libcxx/utils/generate_ignore_format.sh
-    diff ${BUILD_DIR}/before.txt ${MONOREPO_ROOT}/libcxx/utils/data/ignore_format.txt | tee ${BUILD_DIR}/ignore_format.diff || true
-    if [ -s ${BUILD_DIR}/ignore_format.diff ]; then
-        echo "It looks like the list of not formatted files has changed."
-        echo "If a file is now properly formatted with clang-format, remove the file name from "
-        echo "libcxx/utils/data/ignore_format.txt. Otherwise you have to fix the"
-        echo "formatting of some of the changed files. The diff above represents the "
-        echo "changes that would be needed to ignore_format.txt to keep it representative "
-        echo "of which files are mis-formatted in the project."
-        false
-    fi
-
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
     set -x
@@ -262,9 +248,6 @@ check-generated-output)
            --exclude 'transcoding.pass.cpp' \
            --exclude 'underflow.pass.cpp' \
            || false
-
-    # Reject code with trailing whitespace
-    ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
 ;;
 #
 # Various Standard modes
@@ -625,6 +608,41 @@ armv7)
 armv7-no-exceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
+    check-runtimes
+;;
+armv7m-picolibc)
+    clean
+
+    # To make it easier to get this builder up and running, build picolibc
+    # from scratch. Anecdotally, the build-picolibc script takes about 16 seconds.
+    # This could be optimised by building picolibc into the Docker container.
+    ${MONOREPO_ROOT}/libcxx/utils/ci/build-picolibc.sh \
+        --build-dir "${BUILD_DIR}" \
+        --install-dir "${INSTALL_DIR}" \
+        --target armv7m-none-eabi
+
+    echo "--- Generating CMake"
+    flags="--sysroot=${INSTALL_DIR}"
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/compiler-rt" \
+        -B "${BUILD_DIR}/compiler-rt" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DLIBCXX_TEST_CONFIG="armv7m-picolibc-libc++.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="armv7m-picolibc-libc++abi.cfg.in" \
+        -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}"
+
+    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
+    mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
+
     check-runtimes
 ;;
 clang-cl-dll)

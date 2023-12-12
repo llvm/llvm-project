@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Floating point exceptions are required for the FE_... macros to be defined.
+// XFAIL: LIBCXX-PICOLIBC-FIXME
+
 // <cfenv>
 
 #include <cfenv>

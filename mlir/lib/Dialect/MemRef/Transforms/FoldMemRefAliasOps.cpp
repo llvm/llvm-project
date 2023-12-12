@@ -187,7 +187,11 @@ static Value getMemRefOperand(nvgpu::LdMatrixOp op) {
 
 static Value getMemRefOperand(vector::LoadOp op) { return op.getBase(); }
 
+static Value getMemRefOperand(vector::StoreOp op) { return op.getBase(); }
+
 static Value getMemRefOperand(vector::MaskedLoadOp op) { return op.getBase(); }
+
+static Value getMemRefOperand(vector::MaskedStoreOp op) { return op.getBase(); }
 
 static Value getMemRefOperand(vector::TransferWriteOp op) {
   return op.getSource();
@@ -557,6 +561,15 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
                 subViewOp.getDroppedDims())),
             op.getMask(), op.getInBoundsAttr());
       })
+      .Case([&](vector::StoreOp op) {
+        rewriter.replaceOpWithNewOp<vector::StoreOp>(
+            op, op.getValueToStore(), subViewOp.getSource(), sourceIndices);
+      })
+      .Case([&](vector::MaskedStoreOp op) {
+        rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
+            op, subViewOp.getSource(), sourceIndices, op.getMask(),
+            op.getValueToStore());
+      })
       .Case([&](gpu::SubgroupMmaStoreMatrixOp op) {
         rewriter.replaceOpWithNewOp<gpu::SubgroupMmaStoreMatrixOp>(
             op, op.getSrc(), subViewOp.getSource(), sourceIndices,
@@ -698,6 +711,8 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                StoreOpOfSubViewOpFolder<affine::AffineStoreOp>,
                StoreOpOfSubViewOpFolder<memref::StoreOp>,
                StoreOpOfSubViewOpFolder<vector::TransferWriteOp>,
+               StoreOpOfSubViewOpFolder<vector::StoreOp>,
+               StoreOpOfSubViewOpFolder<vector::MaskedStoreOp>,
                StoreOpOfSubViewOpFolder<gpu::SubgroupMmaStoreMatrixOp>,
                LoadOpOfExpandShapeOpFolder<affine::AffineLoadOp>,
                LoadOpOfExpandShapeOpFolder<memref::LoadOp>,

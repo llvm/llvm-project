@@ -142,7 +142,8 @@ void RTNAME(RandomNumber)(
     }
     break;
   }
-  terminator.Crash("not yet implemented: RANDOM_NUMBER(): REAL kind %d", kind);
+  terminator.Crash(
+      "not yet implemented: intrinsic: REAL(KIND=%d) in RANDOM_NUMBER", kind);
 }
 
 void RTNAME(RandomSeedSize)(
@@ -156,8 +157,8 @@ void RTNAME(RandomSeedSize)(
   RUNTIME_CHECK(terminator,
       size->rank() == 0 && typeCode &&
           typeCode->first == TypeCategory::Integer);
-  int kind{typeCode->second};
-  switch (kind) {
+  int sizeArg{typeCode->second};
+  switch (sizeArg) {
   case 4:
     *size->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = 1;
     break;
@@ -166,7 +167,8 @@ void RTNAME(RandomSeedSize)(
     break;
   default:
     terminator.Crash(
-        "not yet implemented: RANDOM_SEED(SIZE=): kind %d\n", kind);
+        "not yet implemented: intrinsic: RANDOM_SEED(SIZE=): size %d\n",
+        sizeArg);
   }
 }
 
@@ -182,9 +184,9 @@ void RTNAME(RandomSeedPut)(
       put->rank() == 1 && typeCode &&
           typeCode->first == TypeCategory::Integer &&
           put->GetDimension(0).Extent() >= 1);
-  int kind{typeCode->second};
+  int putArg{typeCode->second};
   GeneratedWord seed;
-  switch (kind) {
+  switch (putArg) {
   case 4:
     seed = *put->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>();
     break;
@@ -192,7 +194,8 @@ void RTNAME(RandomSeedPut)(
     seed = *put->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
     break;
   default:
-    terminator.Crash("not yet implemented: RANDOM_SEED(PUT=): kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: intrinsic: RANDOM_SEED(PUT=): put %d\n", putArg);
   }
   {
     CriticalSection critical{lock};
@@ -221,14 +224,14 @@ void RTNAME(RandomSeedGet)(
       get->rank() == 1 && typeCode &&
           typeCode->first == TypeCategory::Integer &&
           get->GetDimension(0).Extent() >= 1);
-  int kind{typeCode->second};
+  int getArg{typeCode->second};
   GeneratedWord seed;
   {
     CriticalSection critical{lock};
     seed = GetNextValue();
     nextValue = seed;
   }
-  switch (kind) {
+  switch (getArg) {
   case 4:
     *get->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = seed;
     break;
@@ -236,7 +239,8 @@ void RTNAME(RandomSeedGet)(
     *get->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
     break;
   default:
-    terminator.Crash("not yet implemented: RANDOM_SEED(GET=): kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: intrinsic: RANDOM_SEED(GET=): get %d\n", getArg);
   }
 }
 

@@ -190,7 +190,7 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
   // DestReg of the cloned instruction cannot be Dead. Set isDead of DestReg
   // to false anyway in case the isDead flag of RM.OrigMI's dest register
   // is true.
-  (*--MI).getOperand(0).setIsDead(false);
+  (*--MI).clearRegisterDeads(DestReg);
   Rematted.insert(RM.ParentVNI);
   ++NumReMaterialization;
 

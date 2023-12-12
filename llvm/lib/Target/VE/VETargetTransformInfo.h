@@ -98,12 +98,12 @@ public:
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
     case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::Fixed(64);
+      return TypeSize::getFixed(64);
     case TargetTransformInfo::RGK_FixedWidthVector:
       // TODO report vregs once vector isel is stable.
-      return TypeSize::Fixed(0);
+      return TypeSize::getFixed(0);
     case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::Scalable(0);
+      return TypeSize::getScalable(0);
     }
 
     llvm_unreachable("Unsupported register kind");

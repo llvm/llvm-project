@@ -52,28 +52,29 @@ class Matcher {
 public:
   enum KindTy {
     // Matcher state manipulation.
-    Scope,                // Push a checking scope.
-    RecordNode,           // Record the current node.
-    RecordChild,          // Record a child of the current node.
-    RecordMemRef,         // Record the memref in the current node.
-    CaptureGlueInput,     // If the current node has an input glue, save it.
-    MoveChild,            // Move current node to specified child.
-    MoveParent,           // Move current node to parent.
+    Scope,            // Push a checking scope.
+    RecordNode,       // Record the current node.
+    RecordChild,      // Record a child of the current node.
+    RecordMemRef,     // Record the memref in the current node.
+    CaptureGlueInput, // If the current node has an input glue, save it.
+    MoveChild,        // Move current node to specified child.
+    MoveSibling,      // Move current node to specified sibling.
+    MoveParent,       // Move current node to parent.
 
     // Predicate checking.
-    CheckSame,            // Fail if not same as prev match.
-    CheckChildSame,       // Fail if child not same as prev match.
+    CheckSame,      // Fail if not same as prev match.
+    CheckChildSame, // Fail if child not same as prev match.
     CheckPatternPredicate,
-    CheckPredicate,       // Fail if node predicate fails.
-    CheckOpcode,          // Fail if not opcode.
-    SwitchOpcode,         // Dispatch based on opcode.
-    CheckType,            // Fail if not correct type.
-    SwitchType,           // Dispatch based on type.
-    CheckChildType,       // Fail if child has wrong type.
-    CheckInteger,         // Fail if wrong val.
-    CheckChildInteger,    // Fail if child is wrong val.
-    CheckCondCode,        // Fail if not condcode.
-    CheckChild2CondCode,  // Fail if child is wrong condcode.
+    CheckPredicate,      // Fail if node predicate fails.
+    CheckOpcode,         // Fail if not opcode.
+    SwitchOpcode,        // Dispatch based on opcode.
+    CheckType,           // Fail if not correct type.
+    SwitchType,          // Dispatch based on type.
+    CheckChildType,      // Fail if child has wrong type.
+    CheckInteger,        // Fail if wrong val.
+    CheckChildInteger,   // Fail if child is wrong val.
+    CheckCondCode,       // Fail if not condcode.
+    CheckChild2CondCode, // Fail if child is wrong condcode.
     CheckValueType,
     CheckComplexPat,
     CheckAndImm,
@@ -339,6 +340,26 @@ private:
   void printImpl(raw_ostream &OS, unsigned indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<MoveChildMatcher>(M)->getChildNo() == getChildNo();
+  }
+};
+
+/// MoveSiblingMatcher - This tells the interpreter to move into the
+/// specified sibling node.
+class MoveSiblingMatcher : public Matcher {
+  unsigned SiblingNo;
+
+public:
+  MoveSiblingMatcher(unsigned SiblingNo)
+      : Matcher(MoveSibling), SiblingNo(SiblingNo) {}
+
+  unsigned getSiblingNo() const { return SiblingNo; }
+
+  static bool classof(const Matcher *N) { return N->getKind() == MoveSibling; }
+
+private:
+  void printImpl(raw_ostream &OS, unsigned Indent) const override;
+  bool isEqualImpl(const Matcher *M) const override {
+    return cast<MoveSiblingMatcher>(M)->getSiblingNo() == getSiblingNo();
   }
 };
 

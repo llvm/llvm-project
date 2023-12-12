@@ -72,7 +72,7 @@ define i32 @test7(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[B1:%.*]] = and i32 [[B:%.*]], 128
-; CHECK-NEXT:    [[C11:%.*]] = or i32 [[A1]], [[B1]]
+; CHECK-NEXT:    [[C11:%.*]] = or disjoint i32 [[A1]], [[B1]]
 ; CHECK-NEXT:    ret i32 [[C11]]
 ;
   %A1 = and i32 %A, 7
@@ -122,7 +122,7 @@ define <2 x i1> @test9vec(<2 x i8> %a) {
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 3
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[B]], 4
+; CHECK-NEXT:    [[C1:%.*]] = or disjoint i8 [[B]], 4
 ; CHECK-NEXT:    ret i8 [[C1]]
 ;
   %B = and i8 %A, 3
@@ -133,7 +133,7 @@ define i8 @test10(i8 %A) {
 define i8 @test11(i8 %A) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], -13
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[B]], 8
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i8 [[B]], 8
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %B = or i8 %A, 12
