@@ -294,7 +294,7 @@ export namespace std {
 
     namespace views {
       using std::ranges::views::stride;
-    } // namespace views
+    }  // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
 #if 0
