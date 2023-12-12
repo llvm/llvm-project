@@ -411,6 +411,7 @@ struct ReturnLikeOpEquivalence : public llvm::DenseMapInfo<Operation *> {
       return false;
     return OperationEquivalence::isEquivalentTo(
         const_cast<Operation *>(lhs), const_cast<Operation *>(rhs),
+        OperationEquivalence::simpleOpEquivalence,
         OperationEquivalence::ignoreValueEquivalence, nullptr,
         OperationEquivalence::IgnoreLocations);
   }
