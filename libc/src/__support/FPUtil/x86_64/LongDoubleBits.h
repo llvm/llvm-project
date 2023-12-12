@@ -26,18 +26,6 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-template <unsigned Width> struct Padding;
-
-// i386 padding.
-template <> struct Padding<4> {
-  static constexpr unsigned VALUE = 16;
-};
-
-// x86_64 padding.
-template <> struct Padding<8> {
-  static constexpr unsigned VALUE = 48;
-};
-
 template <> struct FPBits<long double> {
   using UIntType = UInt128;
 
@@ -129,11 +117,7 @@ template <> struct FPBits<long double> {
 
   LIBC_INLINE constexpr UIntType uintval() {
     // We zero the padding bits as they can contain garbage.
-    constexpr UIntType MASK =
-        (UIntType(1) << (sizeof(long double) * 8 -
-                         Padding<sizeof(uintptr_t)>::VALUE)) -
-        1;
-    return bits & MASK;
+    return bits & FloatProp::FP_MASK;
   }
 
   LIBC_INLINE constexpr long double get_val() const {
