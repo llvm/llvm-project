@@ -8,38 +8,14 @@
 define void @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @s1, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @s2, align 8
-; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast ogt double [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[COND:%.*]] = select fast i1 [[CMP3]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND]], ptr @s3, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr getelementptr inbounds ([4 x double], ptr @s1, i64 0, i64 1), align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr getelementptr inbounds ([4 x double], ptr @s2, i64 0, i64 1), align 8
-; CHECK-NEXT:    [[CMP3_1:%.*]] = fcmp fast ogt double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[COND_1:%.*]] = select fast i1 [[CMP3_1]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND_1]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 1), align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr getelementptr inbounds ([4 x double], ptr @s1, i64 0, i64 2), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr getelementptr inbounds ([4 x double], ptr @s2, i64 0, i64 2), align 8
-; CHECK-NEXT:    [[CMP3_2:%.*]] = fcmp fast ogt double [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[COND_2:%.*]] = select fast i1 [[CMP3_2]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND_2]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 2), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr getelementptr inbounds ([4 x double], ptr @s1, i64 0, i64 3), align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr getelementptr inbounds ([4 x double], ptr @s2, i64 0, i64 3), align 8
-; CHECK-NEXT:    [[CMP3_3:%.*]] = fcmp fast ogt double [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[COND_3:%.*]] = select fast i1 [[CMP3_3]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND_3]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 3), align 8
-; CHECK-NEXT:    [[CMP15:%.*]] = fcmp fast ule double [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[COND16:%.*]] = select fast i1 [[CMP15]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND16]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 4), align 8
-; CHECK-NEXT:    [[CMP15_1:%.*]] = fcmp fast ule double [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[COND16_1:%.*]] = select fast i1 [[CMP15_1]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND16_1]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 5), align 8
-; CHECK-NEXT:    [[CMP15_2:%.*]] = fcmp fast ule double [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[COND16_2:%.*]] = select fast i1 [[CMP15_2]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND16_2]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 6), align 8
-; CHECK-NEXT:    [[CMP15_3:%.*]] = fcmp fast ule double [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[COND16_3:%.*]] = select fast i1 [[CMP15_3]], double -1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    store double [[COND16_3]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 7), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr @s1, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr @s2, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp fast ogt <4 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x double> <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>, <4 x double> zeroinitializer
+; CHECK-NEXT:    store <4 x double> [[TMP3]], ptr @s3, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast ule <4 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x double> <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>, <4 x double> zeroinitializer
+; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr getelementptr inbounds ([64 x double], ptr @s3, i64 0, i64 4), align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

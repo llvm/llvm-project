@@ -1401,6 +1401,11 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      I);
 
+  // Select might be expanded to move and branch.
+  if (TLI->InstructionOpcodeToISD(Opcode) == ISD::SELECT &&
+      !ValTy->isVectorTy())
+    return 2;
+
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      I);
