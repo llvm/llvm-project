@@ -98,10 +98,9 @@ protected:
   /// number and type of arguments with both the ScalarFTy and the operands of
   /// the call.
   bool checkFunctionType() {
-    // Create a mock vectorized CallInst using dummy values and then use it to
-    // create a vector FunctionType. In the case of scalable ISAs, the created
-    // vector FunctionType might have a mask parameter Type, however, this input
-    // CallInst will not have a mask operand.
+    // For scalable ISAs, the created vector FunctionType might have a mask
+    // parameter Type, according to VFABI. Regardless, this input CallInst,
+    // despite being a vectorized call, it will not have a masked operand.
     SmallVector<Value *, 8> Args;
     SmallVector<Type *, 8> CallTypes;
     for (auto [VFParam, STy] :
@@ -117,46 +116,20 @@ protected:
 
     // Mangled names do not currently encode return Type information. Generally,
     // return types are vectors, so use one.
-    Type *RetTy = ScalarFTy->getReturnType();
-    if (!RetTy->isVoidTy())
-      RetTy = VectorType::get(RetTy, Info.Shape.VF);
+    Type *VecRetTy = ScalarFTy->getReturnType();
+    if (!VecRetTy->isVoidTy())
+      VecRetTy = VectorType::get(VecRetTy, Info.Shape.VF);
 
     FunctionCallee F = M->getOrInsertFunction(
-        VectorName, FunctionType::get(RetTy, CallTypes, false));
+        VectorName, FunctionType::get(VecRetTy, CallTypes, false));
     std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
 
     // Use VFInfo and the mock CallInst to create a FunctionType that will
-    // include a mask where relevant.
-    auto OptVecFTyPos = VFABI::createFunctionType(Info, CI.get(), M.get());
+    // include a mask when relevant.
+    auto OptVecFTyPos =
+        VFABI::createFunctionType(Info, ScalarFTy, VecRetTy, M.get());
     if (!OptVecFTyPos)
       return false;
-
-    // Ensure that masked Instructions are handled
-    if (isMasked()) {
-      // In case of a masked call, try creating another mock CallInst that is
-      // masked. createFunctionType should be able to handle this.
-      SmallVector<Type *, 8> CallTypesInclMask(CallTypes);
-      SmallVector<Value *, 8> ArgsInclMask(Args);
-      Type *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VF);
-      CallTypesInclMask.push_back(MaskTy);
-      ArgsInclMask.push_back(Constant::getNullValue(MaskTy));
-
-      FunctionCallee FMasked = M->getOrInsertFunction(
-          VectorName + "_Masked",
-          FunctionType::get(RetTy, CallTypesInclMask, false));
-      std::unique_ptr<CallInst> CIMasked(
-          CallInst::Create(FMasked, ArgsInclMask));
-      auto OptVecFTyMaskedPos =
-          VFABI::createFunctionType(Info, CIMasked.get(), M.get());
-      if (!OptVecFTyMaskedPos)
-        return false;
-
-      // Both FunctionTypes should have the same number of parameters.
-      assert(
-          (OptVecFTyPos->first->getNumParams() ==
-           OptVecFTyMaskedPos->first->getNumParams()) &&
-          "createFunctionType should accept masked or non masked Instructions");
-    }
 
     FunctionType *VecFTy = OptVecFTyPos->first;
     // Check that vectorized parameters' size match with VFInfo.
@@ -324,7 +297,7 @@ TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_FALSE(checkFunctionType()); // invalid: all operands are scalar
+  EXPECT_TRUE(checkFunctionType());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, -1}));
@@ -389,7 +362,7 @@ TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_FALSE(checkFunctionType()); // invalid: all operands are scalar
+  EXPECT_TRUE(checkFunctionType());
   EXPECT_EQ(Parameters.size(), (unsigned)8);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, 1}));
@@ -452,7 +425,7 @@ TEST_F(VFABIParserTest, ParseUniform) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_FALSE(checkFunctionType()); // invalid: all operands are scalar
+  EXPECT_TRUE(checkFunctionType());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));

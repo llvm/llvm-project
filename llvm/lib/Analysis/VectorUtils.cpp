@@ -1479,32 +1479,17 @@ void VFABI::getVectorVariantNames(
   }
 }
 
-// Returns whether any of the operands or return type of \p I are vectors.
-static bool isVectorized(const Instruction *I) {
-  if (I->getType()->isVectorTy())
-    return true;
-  for (auto &U : I->operands())
-    if (U->getType()->isVectorTy())
-      return true;
-  return false;
-}
-
 std::optional<std::pair<FunctionType *, int>>
-VFABI::createFunctionType(const VFInfo &Info, const Instruction *I,
-                          const Module *M) {
-  // only vectorized calls should reach this method
-  if (!isVectorized(I))
-    return std::nullopt;
-
+VFABI::createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy,
+                          Type *VecRetTy, const Module *M) {
   ElementCount VF = Info.Shape.VF;
-  // get vectorized operands
-  const bool IsCall = isa<CallBase>(I);
-  SmallVector<Type *, 8> VecParams;
-  for (auto [i, U] : enumerate(I->operands())) {
-    // ignore the function pointer when the Instruction is a call
-    if (IsCall && i == I->getNumOperands() - 1)
-      break;
-    VecParams.push_back(U->getType());
+  // Create vector parameter types
+  SmallVector<Type *, 8> VecTypes;
+  for (auto [STy, VFParam] : zip(ScalarFTy->params(), Info.Shape.Parameters)) {
+    if (VFParam.ParamKind == VFParamKind::Vector)
+      VecTypes.push_back(VectorType::get(STy, VF));
+    else
+      VecTypes.push_back(STy);
   }
 
   // Get mask's position mask and append one if not present in the Instruction.
@@ -1515,14 +1500,10 @@ VFABI::createFunctionType(const VFInfo &Info, const Instruction *I,
       return std::nullopt;
 
     MaskPos = OptMaskPos.value();
-    // append a mask only when it's missing
-    if (VecParams.size() == Info.Shape.Parameters.size() - 1) {
-      VectorType *MaskTy =
-          VectorType::get(Type::getInt1Ty(M->getContext()), VF);
-      VecParams.insert(VecParams.begin() + MaskPos, MaskTy);
-    }
+    VectorType *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VF);
+    VecTypes.insert(VecTypes.begin() + MaskPos, MaskTy);
   }
-  FunctionType *VecFTy = FunctionType::get(I->getType(), VecParams, false);
+  FunctionType *VecFTy = FunctionType::get(VecRetTy, VecTypes, false);
   return std::make_pair(VecFTy, MaskPos);
 }
 

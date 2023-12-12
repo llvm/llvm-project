@@ -197,11 +197,10 @@ void getVectorVariantNames(const CallInst &CI,
                            SmallVectorImpl<std::string> &VariantMappings);
 
 /// Returns a pair of the vectorized FunctionType and the mask's position when
-/// there's one, otherwise -1. It rejects any non vectorized calls as this
-/// method should be called at a point where the Instruction \p I is already
-/// vectorized.
+/// there's one, otherwise -1.
 std::optional<std::pair<FunctionType *, int>>
-createFunctionType(const VFInfo &Info, const Instruction *I, const Module *M);
+createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy,
+                   Type *VecRetTy, const Module *M);
 } // end namespace VFABI
 
 /// The Vector Function Database.
