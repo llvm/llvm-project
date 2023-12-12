@@ -18,7 +18,7 @@ add_llvm_library(omptarget
   device.cpp
   interface.cpp
   omptarget.cpp
-  rtl.cpp
+  OffloadRTL.cpp
   LegacyAPI.cpp
   PluginManager.cpp
   DeviceImage.cpp
