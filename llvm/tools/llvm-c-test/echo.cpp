@@ -771,7 +771,7 @@ struct FunCloner {
 
         LLVMAddIncoming(Dst, Values.data(), Blocks.data(), IncomingCount);
         // Copy fast math flags here since we return early
-        if (LLVMGetCanUseFastMathFlags(Src))
+        if (LLVMCanValueUseFastMathFlags(Src))
           LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
         return Dst;
       }
@@ -992,7 +992,7 @@ struct FunCloner {
     }
 
     // Copy fast-math flags on instructions that support them
-    if (LLVMGetCanUseFastMathFlags(Src))
+    if (LLVMCanValueUseFastMathFlags(Src))
       LLVMSetFastMathFlags(Dst, LLVMGetFastMathFlags(Src));
 
     auto Ctx = LLVMGetModuleContext(M);

@@ -3562,7 +3562,7 @@ void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF) {
   cast<Instruction>(P)->setFastMathFlags(mapFromLLVMFastMathFlags(FMF));
 }
 
-LLVMBool LLVMGetCanUseFastMathFlags(LLVMValueRef V) {
+LLVMBool LLVMCanValueUseFastMathFlags(LLVMValueRef V) {
   Value *Val = unwrap<Value>(V);
   return isa<FPMathOperator>(Val);
 }

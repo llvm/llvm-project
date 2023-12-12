@@ -4103,7 +4103,7 @@ void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg);
  * value.
  *
  * Only valid on floating point instructions.
- * @see LLVMGetCanUseFastMathFlags
+ * @see LLVMCanValueUseFastMathFlags
  */
 LLVMFastMathFlags LLVMGetFastMathFlags(LLVMValueRef FPMathInst);
 
@@ -4112,7 +4112,7 @@ LLVMFastMathFlags LLVMGetFastMathFlags(LLVMValueRef FPMathInst);
  * value.
  *
  * Only valid on floating point instructions.
- * @see LLVMGetCanUseFastMathFlags
+ * @see LLVMCanValueUseFastMathFlags
  */
 void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF);
 
@@ -4123,7 +4123,7 @@ void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF);
  * phi, and call instructions whose type is a floating point type, or a vector
  * or array thereof. See https://llvm.org/docs/LangRef.html#fast-math-flags
  */
-LLVMBool LLVMGetCanUseFastMathFlags(LLVMValueRef Inst);
+LLVMBool LLVMCanValueUseFastMathFlags(LLVMValueRef Inst);
 
 /**
  * Gets whether the instruction has the disjoint flag set.

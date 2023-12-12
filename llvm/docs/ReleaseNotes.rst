@@ -227,7 +227,7 @@ Changes to the C API
   * ``LLVMGetOperandBundleTag``
 
 * Added ``LLVMGetFastMathFlags`` and ``LLVMSetFastMathFlags`` for getting/setting
-  the fast-math flags of an instruction, as well as ``LLVMGetCanUseFastMathFlags``
+  the fast-math flags of an instruction, as well as ``LLVMCanValueUseFastMathFlags``
   for checking if an instruction can use such flags
 
 Changes to the CodeGen infrastructure
