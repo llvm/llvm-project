@@ -2239,6 +2239,46 @@ def MemChrOp : CIR_Op<"libc.memchr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// StdFindOp
+//===----------------------------------------------------------------------===//
+
+def SameFirstSecondOperandAndResultType :
+  NativeOpTrait<"SameFirstSecondOperandAndResultType">;
+
+def StdFindOp : CIR_Op<"std.find", [SameFirstSecondOperandAndResultType]> {
+  let arguments = (ins FlatSymbolRefAttr:$original_fn,
+                       AnyType:$first,
+                       AnyType:$last,
+                       AnyType:$pattern);
+  let summary = "std:find()";
+  let results = (outs AnyType:$result);
+
+  let description = [{
+    Search for `pattern` in data range from `first` to `last`. This currently
+    maps to only one form of `std::find`. The `original_fn` operand tracks the
+    mangled named that can be used when lowering to a `cir.call`.
+
+    Example:
+
+    ```mlir
+    ...
+    %result = cir.std.find(@original_fn,
+                           %first : !T, %last : !T, %pattern : !P) -> !T
+    ```
+  }];
+
+  let assemblyFormat = [{
+    `(`
+      $original_fn
+      `,` $first `:` type($first)
+      `,` $last `:` type($last)
+      `,` $pattern `:` type($pattern)
+    `)` `->` type($result) attr-dict
+  }];
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FAbsOp
 //===----------------------------------------------------------------------===//
 
