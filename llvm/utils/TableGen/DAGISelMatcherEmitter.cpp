@@ -737,10 +737,15 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     }
   }
 
-  case Matcher::EmitConvertToTarget:
-    OS << "OPC_EmitConvertToTarget, "
-       << cast<EmitConvertToTargetMatcher>(N)->getSlot() << ",\n";
+  case Matcher::EmitConvertToTarget: {
+    unsigned Slot = cast<EmitConvertToTargetMatcher>(N)->getSlot();
+    if (Slot < 8) {
+      OS << "OPC_EmitConvertToTarget" << Slot << ",\n";
+      return 1;
+    }
+    OS << "OPC_EmitConvertToTarget, " << Slot << ",\n";
     return 2;
+  }
 
   case Matcher::EmitMergeInputChains: {
     const EmitMergeInputChainsMatcher *MN =
