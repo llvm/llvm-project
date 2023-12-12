@@ -128,10 +128,15 @@ not adopted the same programming model.
 approaches to reduce the adoption burden while maintaining the ABI. In this
 model, local variables of pointer type are implicitly treated as wide pointers,
 allowing them to carry bounds information without requiring explicit bounds
-annotations. This approach does not impact the ABI, as local variables are
-hidden from the ABI. Pointers associated with any other variables are treated as
-single object pointers (i.e., ``__single``), ensuring that they always have the
-tightest bounds by default and offering a strong bounds safety guarantee.
+annotations. Please note that this approach doesn't apply to function parameters
+which are considered ABI-visible. As local variables are typically hidden from
+the ABI, this approach has a marginal impact on it. In addition,
+``-fbounds-safety`` employs compile-time restrictions to prevent implicit wide
+pointers from silently breaking the ABI (see `ABI implications of default bounds
+annotations`_). Pointers associated with any other variables, including function
+parameters, are treated as single object pointers (i.e., ``__single``), ensuring
+that they always have the tightest bounds by default and offering a strong
+bounds safety guarantee.
 
 By implementing default bounds annotations based on ABI visibility, a
 considerable portion of C code can operate without modifications within this
@@ -208,8 +213,9 @@ meaning they do not have ABI implications.
   elements of pointee type. ``N`` is an expression of integer type which can be
   a simple reference to declaration, a constant including calls to constant
   functions, or an arithmetic expression that does not have side effect. The
-  annotation cannot apply to pointers to incomplete types or types without size
-  such as ``void *``.
+  ``__counted_by`` annotation cannot apply to pointers to incomplete types or
+  types without size such as ``void *``. Instead, ``__sized_by`` can be used to
+  describe the byte count.
 * ``__sized_by(N)`` : The pointer points to memory that contains ``N`` bytes.
   Just like the argument of ``__counted_by``, ``N`` is an expression of integer
   type which can be a constant, a simple reference to a declaration, or an
@@ -432,9 +438,10 @@ The ``__ptrcheck_abi_assume_*ATTR*()`` macros are defined as pragmas in the
 toolchain header (See `Portability with toolchains that do not support the
 extension`_ for more details about the toolchain header):
 
-```C
+.. code-block:: C
+
 #define __ptrcheck_abi_assume_single() \
-  _Pragma("clang abi_ptr_attr set(single)")
+   _Pragma("clang abi_ptr_attr set(single)")
 
 #define __ptrcheck_abi_assume_indexable() \
   _Pragma("clang abi_ptr_attr set(indexable)")
@@ -444,22 +451,22 @@ extension`_ for more details about the toolchain header):
 
 #define __ptrcheck_abi_assume_unsafe_indexable() \
   _Pragma("clang abi_ptr_attr set(unsafe_indexable)")
-```
+
 
 ABI implications of default bounds annotations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Although modifying types of a local variable doesn't impact the ABI, taking the
-address of such a modified type could create a pointer type that has an ABI
-mismatch. Looking at the following example, ``int *local`` is implicitly ``int
-*__bidi_indexable`` and thus the type of ``&local`` is a pointer to ``int
-*__bidi_indexable``. On the other hand, in ``void foo(int **)``, the parameter
-type is a pointer to ``int *__single`` (i.e., ``void foo(int *__single
-*__single)``) (or a pointer to ``int *__unsafe_indexable`` if it's from a system
-header). The compiler reports an error for casts between pointers whose elements
-have incompatible pointer attributes. This way, ``-fbounds-safety`` prevents
-pointers that are implicitly ``__bidi_indexable`` from silently escaping thereby
-breaking the ABI.
+Although simply modifying types of a local variable doesn't normally impact the
+ABI, taking the address of such a modified type could create a pointer type that
+has an ABI mismatch. Looking at the following example, ``int *local`` is
+implicitly ``int *__bidi_indexable`` and thus the type of ``&local`` is a
+pointer to ``int *__bidi_indexable``. On the other hand, in ``void foo(int
+**)``, the parameter type is a pointer to ``int *__single`` (i.e., ``void
+foo(int *__single *__single)``) (or a pointer to ``int *__unsafe_indexable`` if
+it's from a system header). The compiler reports an error for casts between
+pointers whose elements have incompatible pointer attributes. This way,
+``-fbounds-safety`` prevents pointers that are implicitly ``__bidi_indexable``
+from silently escaping thereby breaking the ABI.
 
 .. code-block:: c
 
@@ -472,16 +479,136 @@ breaking the ABI.
       foo(&local);
    }
 
+A local variable may still be exposed to the ABI if ``typeof()`` takes the type
+of local variable to define an interface as shown in the following example.
+
+.. code-block:: C
+
+   // bar.c
+   void bar(int *) { ... }
+
+   // foo.c
+   void foo(void) {
+      int *p; // implicitly `int *__bidi_indexable p`
+      extern void bar(typeof(p)); // creates an interface of type
+                                  // `void bar(int *__bidi_indexable)`
+   }
+
+Doing this may break the ABI if the parameter is not ``__bidi_indexable`` at the
+definition of function ``bar()`` which is likely the case because parameters are
+``__single`` by default without an explicit annotation.
+
+In order to avoid an implicitly wide pointer from silently breaking the ABI, the
+compiler reports a warning when ``typeof()`` is used on an implicit wide pointer
+at any ABI visible context (e.g., function prototype, struct definition, etc.).
+
+.. _Default pointer types in typeof:
+
+Default pointer types in ``typeof()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When ``typeof()`` takes an expression, it respects the bounds annotation on
+the expression type, including the bounds annotation is implcit. For example,
+the global variable ``g`` in the following code is implicitly ``__single`` so
+``typeof(g)`` gets ``char *__single``. The similar is true for the parameter
+``p``, so ``typeof(p)`` returns ``void *__single``. The local variable ``l`` is
+implicitly ``__bidi_indexable``, so ``typeof(l)`` becomes
+``int *__bidi_indexable``.
+
+.. code-block:: C
+
+   char *g; // typeof(g) == char *__single
+
+   void foo(void *p) {
+      // typeof(p) == void *__single
+
+      int *l; // typeof(l) == int *__bidi_indexable
+   }
+
+When the type of expression has an "external" bounds annotation, e.g.,
+``__sized_by``, ``__counted_by``, etc., the compiler may report an error on
+``typeof`` if the annotation creates a dependency with another declaration or
+variable. For example, the compiler reports an error on ``typeof(p1)`` shown in
+the following code because allowing it can potentially create another type
+dependent on the parameter ``size`` in a different context (Please note that an
+external bounds annotation on a parameter may only refer to another parameter of
+the same function). On the other hand, ``typeof(p2)`` works resulting in ``int
+*__counted_by(10)``, since it doesn't depend on any other declaration.
+
+.. TODO: add a section describing constraints on external bounds annotations
+
+.. code-block:: C
+
+   void foo(int *__counted_by(size) p1, size_t size) {
+      // typeof(p1) == int *__counted_by(size)
+      // -> a compiler error as it tries to create another type
+      // dependent on `size`.
+
+      int *__counted_by(10) p2; // typeof(p2) == int *__counted_by(10)
+                                // -> no error
+
+   }
+
+When ``typeof()`` takes a type name, the compiler doesn't apply an implicit
+bounds annotation on the named pointer types. For example, ``typeof(int*)``
+returns ``int *`` without any bounds annotation. A bounds annotation may be
+added after the fact depending on the context. In the following example,
+``typeof(int *)`` returns ``int *`` so it's equivalent as the local variable is
+declared as ``int *l``, so it eventually becomes implicitly
+``__bidi_indexable``.
+
+.. code-block:: c
+
+   void foo(void) {
+      typeof(int *) l; // `int *__bidi_indexable` (same as `int *l`)
+   }
+
+The programmers can still explicitly add a bounds annotation on the types named
+inside ``typeof``, e.g., ``typeof(int *__bidi_indexable)``, which evaluates to
+``int *__bidi_indexable``.
+
+
 Default pointer types in ``sizeof()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A pointer type in ``sizeof()`` does not have an implicit bounds annotation. When
-a bounds attribute is not specified, the evaluated pointer type is treated
-identically to a plain C pointer type. Therefore, ``sizeof(int*)`` remains the
-same with or without ``-fbounds-safety``. That said, programmers can explicitly
-add attribute to the types, e.g., ``sizeof(int *__bidi_indexable)``, in which
-case the sizeof evaluates to the size of type ``int *__bidi_indexable`` (the
-value equivalent to ``3 * sizeof(int*)``).
+When ``sizeof()`` takes a type name, the compiler doesn't apply an implicit
+bounds annotation on the named pointer types. This means if a bounds annotation
+is not specified, the evaluated pointer type is treated identically to a plain C
+pointer type. Therefore, ``sizeof(int*)`` remains the same with or without
+``-fbounds-safety``. That said, programmers can explicitly add attribute to the
+types, e.g., ``sizeof(int *__bidi_indexable)``, in which case the sizeof
+evaluates to the size of type ``int *__bidi_indexable`` (the value equivalent to
+``3 * sizeof(int*)``).
+
+When ``sizeof()`` takes an expression, i.e., ``sizeof(expr``, it behaves as
+``sizeof(typeof(expr))``, except that ``sizeof(expr)`` does not report an error
+with ``expr`` that has a type with an external bounds annotation dependent on
+another declaration, whereas ``typeof()`` on the same expression would be an
+error as described in :ref:`Default pointer types in typeof`.
+The following example describes this behavior.
+
+.. code-block:: c
+
+   void foo(int *__counted_by(size) p, size_t size) {
+      // sizeof(p) == sizeof(int *__counted_by(size)) == sizeof(int *)
+      // typeof(p): error
+   };
+
+Default pointer types in ``alignof()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``alignof()`` only takes a type name as the argument and it doesn't take an
+expression. Similar to ``sizeof()`` and ``typeof``, the compiler doesn't apply
+an implicit bounds annotation on the pointer types named inside ``alignof()``.
+Therefore, ``alignof(T *)`` remains the same with or without
+``-fbounds-safety``, evaluating into the alignment of the raw pointer ``T *``.
+The programmers can explicitly add a bounds annotation to the types, e.g.,
+``alignof(int *__bidi_indexable)``, which returns the alignment of ``int
+*__bidi_indexable``. A bounds annotation including an internal bounds annotation
+(i.e., ``__indexable`` and ``__bidi_indexable``) doesn't affect the alignment of
+the original pointer. Therefore, ``alignof(int *__bidi_indexable)`` is equal to
+``alignof(int *)``.
+
 
 Default pointer types used in C-style casts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
