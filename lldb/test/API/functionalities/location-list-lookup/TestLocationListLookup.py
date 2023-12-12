@@ -43,6 +43,7 @@ class LocationListLookupTestCase(TestBase):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)
 
+    @skipIf(archs=no_match(["aarch64", "arm"]))
     @skipUnlessDarwin
     def test_loclist_expr(self):
         self.build()
