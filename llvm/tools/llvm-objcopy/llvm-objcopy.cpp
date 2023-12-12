@@ -66,7 +66,7 @@ using namespace llvm::object;
 // The name this program was invoked as.
 static StringRef ToolName;
 
-ErrorSuccess llvm::objcopy::reportWarning(Error E) {
+static ErrorSuccess reportWarning(Error E) {
   assert(E);
   WithColor::warning(errs(), ToolName) << toString(std::move(E)) << '\n';
   return Error::success();

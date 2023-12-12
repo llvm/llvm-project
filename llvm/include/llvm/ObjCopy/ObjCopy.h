@@ -36,9 +36,6 @@ Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
 Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
                              object::Binary &In, raw_ostream &Out);
 
-/// Print a warning using the content of the error \p E.
-ErrorSuccess reportWarning(Error E);
-
 } // end namespace objcopy
 } // end namespace llvm
 

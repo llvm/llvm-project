@@ -99,14 +99,12 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
     Address:         0x0102
-    AddressAlign:    0x0001
     Size:            0x6
     Content:         'EEFF11223344'
   - Name:            .gap1
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x0108
-    AddressAlign:    0x0001
     Content:         'AABBCCDDFEDCBA'
   - Name:            .space2
     Type:            Fill
@@ -116,7 +114,6 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC ]
     Address:         0x0110
-    AddressAlign:    0x0001
     Content:         'A1B2C3D4'
   - Name:            .space3
     Type:            Fill
@@ -126,7 +123,6 @@ Sections:
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_TLS ]
     Address:         0x0180
-    AddressAlign:    0x0008
     Size:            0x0018
   - Name:            .space4
     Type:            Fill
@@ -136,18 +132,15 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
     Address:         0x0184
-    AddressAlign:    0x0001
     Content:         '89ABCDEF'
   - Name:            .nobit_bss
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
     Address:         0x018A
-    AddressAlign:    0x0001
     Size:            0x0008
   - Name:            .comment
     Type:            SHT_PROGBITS
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
-    AddressAlign:    0x0001
     EntSize:         0x0001
     Content:         4743433A
 
