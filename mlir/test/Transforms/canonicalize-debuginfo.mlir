@@ -33,9 +33,31 @@ func.func @hoist_constant(%arg0: memref<8xi32>) {
     memref.store %0, %arg0[%arg1] : memref<8xi32>
     memref.store %1, %arg0[%arg1] : memref<8xi32>
   }
+  // CHECK: return
   return
-}
+// CHECK-NEXT: } loc(#[[LocFunc:.*]])
+} loc("hoist_constant":2:0)
 
 // CHECK-DAG: #[[LocConst0:.*]] = loc("hoist_constant":0:0)
 // CHECK-DAG: #[[LocConst1:.*]] = loc("hoist_constant":1:0)
-// CHECK: #[[FusedLoc]] = loc(fused<"CSE">[#[[LocConst0]], #[[LocConst1]]])
+// CHECK-DAG: #[[LocFunc]] = loc("hoist_constant":2:0)
+// CHECK: #[[FusedLoc]] = loc(fused<"CSE">[#[[LocConst0]], #[[LocFunc]], #[[LocConst1]]])
+
+// -----
+
+// CHECK-LABEL: func @hoist_constant_simple
+func.func @hoist_constant_simple(%arg0: memref<8xi32>) -> i32 {
+  // CHECK-NEXT: arith.constant 88 : i32 loc(#[[FusedLoc:.*]])
+  %0 = arith.constant 42 : i32 loc("hoist_constant_simple":0:0)
+  %1 = arith.constant 0 : index
+  memref.store %0, %arg0[%1] : memref<8xi32>
+
+  %2 = arith.constant 88 : i32 loc("hoist_constant_simple":1:0)
+
+  return %2 : i32
+// CHECK: } loc(#[[LocFunc:.*]])
+} loc("hoist_constant_simple":2:0)
+
+// CHECK-DAG: #[[LocConst1:.*]] = loc("hoist_constant_simple":1:0)
+// CHECK-DAG: #[[LocFunc]] = loc("hoist_constant_simple":2:0)
+// CHECK: #[[FusedLoc]] = loc(fused<"CSE">[#[[LocConst1]], #[[LocFunc]]])

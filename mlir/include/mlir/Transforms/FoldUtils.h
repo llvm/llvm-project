@@ -96,10 +96,12 @@ private:
                                     Dialect *dialect, Attribute value,
                                     Type type, Location loc);
 
-  // Fuse `foldedLocation` into the Location of `retainedOp`. This will result
-  // in `retainedOp` having a FusedLoc with `fusedLocationTag` to help trace the
-  // source of the fusion. If `retainedOp` already had a FusedLoc with the same
-  // tag, `foldedLocation` will simply be appended to it.
+  // Fuse `foldedLocation` into `originalLocation`. This will result in a
+  // FusedLoc with `fusedLocationTag` to help trace the source of the fusion.
+  // If `originalLocation` already had a FusedLoc with the same tag,
+  // `foldedLocation` will simply be appended to it.
+  Location getFusedLocation(Location originalLocation, Location foldedLocation);
+  // Update the location of `retainedOp` by applying `getFusedLocation`.
   void appendFoldedLocation(Operation *retainedOp, Location foldedLocation);
 
   /// Tag for annotating fused locations as a result of merging constants.

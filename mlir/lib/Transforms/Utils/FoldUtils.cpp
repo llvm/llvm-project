@@ -152,8 +152,10 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // anything. Otherwise, we move the constant to the insertion block.
   Block *insertBlock = &insertRegion->front();
   if (opBlock != insertBlock || (&insertBlock->front() != op &&
-                                 !isFolderOwnedConstant(op->getPrevNode())))
+                                 !isFolderOwnedConstant(op->getPrevNode()))) {
     op->moveBefore(&insertBlock->front());
+    appendFoldedLocation(op, insertBlock->getParent()->getLoc());
+  }
 
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
@@ -237,6 +239,7 @@ OperationFolder::processFoldResults(Operation *op,
   auto *insertRegion = getInsertionRegion(interfaces, op->getBlock());
   auto &entry = insertRegion->front();
   rewriter.setInsertionPoint(&entry, entry.begin());
+  Location loc = getFusedLocation(op->getLoc(), insertRegion->getLoc());
 
   // Get the constant map for the insertion region of this operation.
   auto &uniquedConstants = foldScopes[insertRegion];
@@ -259,8 +262,8 @@ OperationFolder::processFoldResults(Operation *op,
     // Check to see if there is a canonicalized version of this constant.
     auto res = op->getResult(i);
     Attribute attrRepl = foldResults[i].get<Attribute>();
-    if (auto *constOp = tryGetOrCreateConstant(
-            uniquedConstants, dialect, attrRepl, res.getType(), op->getLoc())) {
+    if (auto *constOp = tryGetOrCreateConstant(uniquedConstants, dialect,
+                                               attrRepl, res.getType(), loc)) {
       // Ensure that this constant dominates the operation we are replacing it
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
@@ -364,31 +367,36 @@ static Location FlattenFusedLocationRecursively(const Location loc) {
   return loc;
 }
 
-void OperationFolder::appendFoldedLocation(Operation *retainedOp,
+Location OperationFolder::getFusedLocation(Location originalLocation,
                                            Location foldedLocation) {
+  // If they're already equal, no need to fuse.
+  if (originalLocation == foldedLocation)
+    return originalLocation;
+
   // Append into existing fused location if it has the same tag.
   if (auto existingFusedLoc =
-          dyn_cast<FusedLocWith<StringAttr>>(retainedOp->getLoc())) {
+          dyn_cast<FusedLocWith<StringAttr>>(originalLocation)) {
     StringAttr existingMetadata = existingFusedLoc.getMetadata();
     if (existingMetadata == fusedLocationTag) {
       ArrayRef<Location> existingLocations = existingFusedLoc.getLocations();
       SetVector<Location> locations(existingLocations.begin(),
                                     existingLocations.end());
       locations.insert(foldedLocation);
-      Location newFusedLoc = FusedLoc::get(
-          retainedOp->getContext(), locations.takeVector(), existingMetadata);
-      retainedOp->setLoc(FlattenFusedLocationRecursively(newFusedLoc));
-      return;
+      Location newFusedLoc =
+          FusedLoc::get(originalLocation->getContext(), locations.takeVector(),
+                        existingMetadata);
+      return FlattenFusedLocationRecursively(newFusedLoc);
     }
   }
 
   // Create a new fusedloc with retainedOp's loc and foldedLocation.
-  // If they're already equal, no need to fuse.
-  if (retainedOp->getLoc() == foldedLocation)
-    return;
-
   Location newFusedLoc =
-      FusedLoc::get(retainedOp->getContext(),
-                    {retainedOp->getLoc(), foldedLocation}, fusedLocationTag);
-  retainedOp->setLoc(FlattenFusedLocationRecursively(newFusedLoc));
+      FusedLoc::get(originalLocation->getContext(),
+                    {originalLocation, foldedLocation}, fusedLocationTag);
+  return FlattenFusedLocationRecursively(newFusedLoc);
+}
+
+void OperationFolder::appendFoldedLocation(Operation *retainedOp,
+                                           Location foldedLocation) {
+  retainedOp->setLoc(getFusedLocation(retainedOp->getLoc(), foldedLocation));
 }
