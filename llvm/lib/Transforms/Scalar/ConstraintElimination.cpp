@@ -431,7 +431,7 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
     return &GEP;
 
   assert(!IsSigned && "The logic below only supports decomposition for "
-                      "unsinged predicates at the moment.");
+                      "unsigned predicates at the moment.");
   const auto &[BasePtr, ConstantOffset, VariableOffsets, AllInbounds] =
       collectOffsets(GEP, DL);
   if (!BasePtr || !AllInbounds)

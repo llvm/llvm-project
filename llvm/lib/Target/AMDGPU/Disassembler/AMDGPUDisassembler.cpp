@@ -2184,7 +2184,7 @@ AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
 
   // Code Object V3 kernel descriptors.
   StringRef Name = Symbol.Name;
-  if (Symbol.Type == ELF::STT_OBJECT && Name.endswith(StringRef(".kd"))) {
+  if (Symbol.Type == ELF::STT_OBJECT && Name.ends_with(StringRef(".kd"))) {
     Size = 64; // Size = 64 regardless of success or failure.
     return decodeKernelDescriptor(Name.drop_back(3), Bytes, Address);
   }
