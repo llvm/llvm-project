@@ -3520,15 +3520,15 @@ static void printMetadataIdentifier(StringRef Name,
   if (Name.empty()) {
     Out << "<empty name> ";
   } else {
-    if (isalpha(static_cast<unsigned char>(Name[0])) || Name[0] == '-' ||
-        Name[0] == '$' || Name[0] == '.' || Name[0] == '_')
-      Out << Name[0];
+    unsigned char FirstC = static_cast<unsigned char>(Name[0]);
+    if (isalpha(FirstC) || FirstC == '-' || FirstC == '$' || FirstC == '.' ||
+        FirstC == '_')
+      Out << FirstC;
     else
-      Out << '\\' << hexdigit(Name[0] >> 4) << hexdigit(Name[0] & 0x0F);
+      Out << '\\' << hexdigit(FirstC >> 4) << hexdigit(FirstC & 0x0F);
     for (unsigned i = 1, e = Name.size(); i != e; ++i) {
       unsigned char C = Name[i];
-      if (isalnum(static_cast<unsigned char>(C)) || C == '-' || C == '$' ||
-          C == '.' || C == '_')
+      if (isalnum(C) || C == '-' || C == '$' || C == '.' || C == '_')
         Out << C;
       else
         Out << '\\' << hexdigit(C >> 4) << hexdigit(C & 0x0F);

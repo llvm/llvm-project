@@ -81,9 +81,9 @@ def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
 def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
                               SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
-// Operand that is allowed to be a register or a 5 bit immediate.
-// This allows us to pick between VSETIVLI and VSETVLI opcodes using the same
-// pseudo instructions.
+// Operand that is allowed to be a register other than X0, a 5 bit unsigned
+// immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
+// VSETVLI opcodes using the same pseudo instructions.
 def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";

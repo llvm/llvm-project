@@ -4085,16 +4085,13 @@ static bool hasCopyOrMoveCtorParam(ASTContext &Ctx,
   return Ctx.hasSameUnqualifiedType(ParmT, ClassT);
 }
 
-static OverloadingResult
-ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
-                           MultiExprArg Args,
-                           OverloadCandidateSet &CandidateSet,
-                           QualType DestType,
-                           DeclContext::lookup_result Ctors,
-                           OverloadCandidateSet::iterator &Best,
-                           bool CopyInitializing, bool AllowExplicit,
-                           bool OnlyListConstructors, bool IsListInit,
-                           bool SecondStepOfCopyInit = false) {
+static OverloadingResult ResolveConstructorOverload(
+    Sema &S, SourceLocation DeclLoc, MultiExprArg Args,
+    OverloadCandidateSet &CandidateSet, QualType DestType,
+    DeclContext::lookup_result Ctors, OverloadCandidateSet::iterator &Best,
+    bool CopyInitializing, bool AllowExplicit, bool OnlyListConstructors,
+    bool IsListInit, bool RequireActualConstructor,
+    bool SecondStepOfCopyInit = false) {
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByConstructor);
   CandidateSet.setDestAS(DestType.getQualifiers().getAddressSpace());
 
@@ -4157,7 +4154,7 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
   // Note: SecondStepOfCopyInit is only ever true in this case when
   // evaluating whether to produce a C++98 compatibility warning.
   if (S.getLangOpts().CPlusPlus17 && Args.size() == 1 &&
-      !SecondStepOfCopyInit) {
+      !RequireActualConstructor && !SecondStepOfCopyInit) {
     Expr *Initializer = Args[0];
     auto *SourceRD = Initializer->getType()->getAsCXXRecordDecl();
     if (SourceRD && S.isCompleteType(DeclLoc, Initializer->getType())) {
@@ -4225,6 +4222,12 @@ static void TryConstructorInitialization(Sema &S,
     return;
   }
 
+  bool RequireActualConstructor =
+      !(Entity.getKind() != InitializedEntity::EK_Base &&
+        Entity.getKind() != InitializedEntity::EK_Delegating &&
+        Entity.getKind() !=
+            InitializedEntity::EK_LambdaToBlockConversionBlockElement);
+
   // C++17 [dcl.init]p17:
   //     - If the initializer expression is a prvalue and the cv-unqualified
   //       version of the source type is the same class as the class of the
@@ -4234,11 +4237,7 @@ static void TryConstructorInitialization(Sema &S,
   // class or delegating to another constructor from a mem-initializer.
   // ObjC++: Lambda captured by the block in the lambda to block conversion
   // should avoid copy elision.
-  if (S.getLangOpts().CPlusPlus17 &&
-      Entity.getKind() != InitializedEntity::EK_Base &&
-      Entity.getKind() != InitializedEntity::EK_Delegating &&
-      Entity.getKind() !=
-          InitializedEntity::EK_LambdaToBlockConversionBlockElement &&
+  if (S.getLangOpts().CPlusPlus17 && !RequireActualConstructor &&
       UnwrappedArgs.size() == 1 && UnwrappedArgs[0]->isPRValue() &&
       S.Context.hasSameUnqualifiedType(UnwrappedArgs[0]->getType(), DestType)) {
     // Convert qualifications if necessary.
@@ -4286,11 +4285,10 @@ static void TryConstructorInitialization(Sema &S,
     // If the initializer list has no elements and T has a default constructor,
     // the first phase is omitted.
     if (!(UnwrappedArgs.empty() && S.LookupDefaultConstructor(DestRecordDecl)))
-      Result = ResolveConstructorOverload(S, Kind.getLocation(), Args,
-                                          CandidateSet, DestType, Ctors, Best,
-                                          CopyInitialization, AllowExplicit,
-                                          /*OnlyListConstructors=*/true,
-                                          IsListInit);
+      Result = ResolveConstructorOverload(
+          S, Kind.getLocation(), Args, CandidateSet, DestType, Ctors, Best,
+          CopyInitialization, AllowExplicit,
+          /*OnlyListConstructors=*/true, IsListInit, RequireActualConstructor);
   }
 
   // C++11 [over.match.list]p1:
@@ -4300,11 +4298,10 @@ static void TryConstructorInitialization(Sema &S,
   //     elements of the initializer list.
   if (Result == OR_No_Viable_Function) {
     AsInitializerList = false;
-    Result = ResolveConstructorOverload(S, Kind.getLocation(), UnwrappedArgs,
-                                        CandidateSet, DestType, Ctors, Best,
-                                        CopyInitialization, AllowExplicit,
-                                        /*OnlyListConstructors=*/false,
-                                        IsListInit);
+    Result = ResolveConstructorOverload(
+        S, Kind.getLocation(), UnwrappedArgs, CandidateSet, DestType, Ctors,
+        Best, CopyInitialization, AllowExplicit,
+        /*OnlyListConstructors=*/false, IsListInit, RequireActualConstructor);
   }
   if (Result) {
     Sequence.SetOverloadFailure(
@@ -6778,6 +6775,7 @@ static ExprResult CopyObject(Sema &S,
       S, Loc, CurInitExpr, CandidateSet, T, Ctors, Best,
       /*CopyInitializing=*/false, /*AllowExplicit=*/true,
       /*OnlyListConstructors=*/false, /*IsListInit=*/false,
+      /*RequireActualConstructor=*/false,
       /*SecondStepOfCopyInit=*/true)) {
   case OR_Success:
     break;
@@ -6920,6 +6918,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
       S, Loc, CurInitExpr, CandidateSet, CurInitExpr->getType(), Ctors, Best,
       /*CopyInitializing=*/false, /*AllowExplicit=*/true,
       /*OnlyListConstructors=*/false, /*IsListInit=*/false,
+      /*RequireActualConstructor=*/false,
       /*SecondStepOfCopyInit=*/true);
 
   PartialDiagnostic Diag = S.PDiag(diag::warn_cxx98_compat_temp_copy)

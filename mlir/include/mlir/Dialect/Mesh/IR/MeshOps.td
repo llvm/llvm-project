@@ -40,26 +40,27 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     determine the layout and the addressing space of the computation distributed
     across the mesh.
 
-    3. `dim_sizes`: This attribute represents the device assignment along the
-    axes of the cluster. Each integer in the array corresponds to the number of
-    devices along a specific axis. If an integer value is 0, it implies that the
-    number of devices along that axis is unknown. This flexibility allows for
-    dynamic device assignment or configurations where the exact number of
-    devices might not be determined during compile time.
+    3. `dim_sizes`: This attribute represents the shape of the device cluster.
+    It uses the same notation as a tensor shape. Also allowing for dynamic
+    dimensions.
+    This flexibility allows for dynamic device assignment or configurations
+    where the exact number of devices might not be determined during compile
+    time.
+    For example `2x?x4`.
 
     Example:
     ```
     // A device mesh cluster with 3 axes, the total device number is 4 * 8 * 12
     // The dimension sizes are 4, 8, 12 
-    mesh.cluster @mesh0(rank = 3, dim_sizes = [4, 8, 12])
+    mesh.cluster @mesh0(rank = 3, dim_sizes = 4x8x12)
 
     // A device mesh cluster with 2 axes, the total device number is unknown
     // The first dimension size is 4 and the second is unknown
-    mesh.cluster @mesh1(rank = 2, dim_sizes = [4])
+    mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
 
     // A device mesh cluster with 2 axes, the total device number is unknown
     // The first dimension size is unknown and the second is 4
-    mesh.cluster @mesh2(rank = 2, dim_sizes = [0, 4])
+    mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
 
     // A device mesh cluster with 2 axes, the number of devices along both axes
     // is unknown
@@ -76,7 +77,7 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$dim_sizes
   );
   let assemblyFormat = [{
-    $sym_name `(` `rank` `=` $rank (`,` `dim_sizes` `=` $dim_sizes^)? `)`
+    $sym_name `(` `rank` `=` $rank (`,` `dim_sizes` `=` custom<DimensionList>($dim_sizes)^)? `)`
       attr-dict
   }];
   let extraClassDeclaration = [{
@@ -88,7 +89,7 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     template <typename OutIt>
     void canonicalDimSizes(OutIt outIt) {
       std::copy(getDimSizes().begin(), getDimSizes().end(), outIt);
-      std::fill_n(outIt, getRank() - getDimSizes().size(), 0);
+      std::fill_n(outIt, getRank() - getDimSizes().size(), ::mlir::ShapedType::kDynamic);
     }
   }];
   let hasVerifier = 1;
@@ -210,7 +211,7 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
 
     Example:
     ```mlir
-    mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 2])
+    mesh.cluster @mesh0(rank = 2, dim_sizes = 2x2)
     ...
     %1 = mesh.all_gather %0 on @mesh0 mesh_axes = [1] gather_axis = 1
       : tensor<2x2xi8> -> tensor<2x4xi8>
@@ -295,7 +296,7 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
 
     Example:
     ```
-    mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+    mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
     ...
     %1 = mesh.all_to_all %0 on @mesh0 mesh_axes = [0]
       split_axis = 0 concat_axis = 0
@@ -527,7 +528,7 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     across the device group.
     Example:
     ```
-    mesh.cluster @mesh0(rank = 1, dim_sizes = [2, 2])
+    mesh.cluster @mesh0(rank = 1, dim_sizes = 2x2)
     ...
     %1 = mesh.reduce_scatter %0 on @mesh0 mesh_axes = [1]
       reduction = <max> scatter_axis = 0

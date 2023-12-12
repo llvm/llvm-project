@@ -858,22 +858,26 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
   std::map<unsigned, int64_t> coeffientMap;
   for (auto result : dimToLvl.getResults()) {
     if (auto binOp = dyn_cast<AffineBinaryOpExpr>(result)) {
-      auto pos = dyn_cast<AffineDimExpr>(binOp.getLHS()).getPosition();
-      if (result.getKind() == AffineExprKind::FloorDiv) {
+      // Check for "dim op const".
+      auto dimOp = dyn_cast<AffineDimExpr>(binOp.getLHS());
+      auto conOp = dyn_cast<AffineConstantExpr>(binOp.getRHS());
+      if (!dimOp || !conOp)
+        return false;
+      // Inspect "dim / const" or "dim % const".
+      auto pos = dimOp.getPosition();
+      if (binOp.getKind() == AffineExprKind::FloorDiv) {
         // Expect only one floordiv for each dimension.
         if (coeffientMap.find(pos) != coeffientMap.end())
           return false;
-        coeffientMap[pos] =
-            dyn_cast<AffineConstantExpr>(binOp.getRHS()).getValue();
-      } else if (result.getKind() == AffineExprKind::Mod) {
+        // Record coefficient of the floordiv.
+        coeffientMap[pos] = conOp.getValue();
+      } else if (binOp.getKind() == AffineExprKind::Mod) {
         // Expect floordiv before mod.
         if (coeffientMap.find(pos) == coeffientMap.end())
           return false;
         // Expect mod to have the same coefficient as floordiv.
-        if (dyn_cast<AffineConstantExpr>(binOp.getRHS()).getValue() !=
-            coeffientMap[pos]) {
+        if (conOp.getValue() != coeffientMap[pos])
           return false;
-        }
       } else {
         return false;
       }

@@ -284,10 +284,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
   }];
 
   let builders = [
-    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+    OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
-    OpBuilder<(ins "Type":$resultType, "Type":$basePtrType, "Value":$basePtr,
+    OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
