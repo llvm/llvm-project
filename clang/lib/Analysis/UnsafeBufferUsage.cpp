@@ -1534,7 +1534,7 @@ static bool hasUnsupportedSpecifiers(const VarDecl *VD,
 // returned by this function is the last location of the last token.
 static SourceRange getSourceRangeToTokenEnd(const Decl *D,
                                             const SourceManager &SM,
-                                            LangOptions LangOpts) {
+                                            const LangOptions &LangOpts) {
   SourceLocation Begin = D->getBeginLoc();
   SourceLocation
     End = // `D->getEndLoc` should always return the starting location of the

@@ -353,3 +353,13 @@ namespace rotateright {
   char rotateright3[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
   char rotateright4[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
 }
+
+namespace ffs {
+  char ffs1[__builtin_ffs(0) == 0 ? 1 : -1];
+  char ffs2[__builtin_ffs(1) == 1 ? 1 : -1];
+  char ffs3[__builtin_ffs(0xfbe71) == 1 ? 1 : -1];
+  char ffs4[__builtin_ffs(0xfbe70) == 5 ? 1 : -1];
+  char ffs5[__builtin_ffs(1U << (BITSIZE(int) - 1)) == BITSIZE(int) ? 1 : -1];
+  char ffs6[__builtin_ffsl(0x10L) == 5 ? 1 : -1];
+  char ffs7[__builtin_ffsll(0x100LL) == 9 ? 1 : -1];
+}

@@ -602,6 +602,17 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Value = peekToAPSInt(S.Stk, ArgT);
+
+  uint64_t N = Value.countr_zero();
+  pushInt(S, N == Value.getBitWidth() ? 0 : N + 1);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -800,6 +811,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
     if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
       return false;
     break;
 
