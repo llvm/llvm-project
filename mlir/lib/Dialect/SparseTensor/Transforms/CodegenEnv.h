@@ -150,13 +150,16 @@ public:
   void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
-  void setValidLexInsert(Value val);
-  void clearValidLexInsert();
+
+  void startValidLexInsert(Value val);
+  bool isValidLexInsert() const { return redValidLexInsert != nullptr; }
+  void updateValidLexInsert(Value val);
   Value getValidLexInsert() const { return redValidLexInsert; }
+  void endValidLexInsert();
 
   void startCustomReduc(ExprId exp);
   bool isCustomReduc() const { return redCustom != detail::kInvalidId; }
-  Value getCustomRedId();
+  Value getCustomRedId() const;
   void endCustomReduc();
 
 private:
