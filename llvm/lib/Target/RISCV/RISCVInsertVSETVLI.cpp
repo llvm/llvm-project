@@ -1062,11 +1062,6 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (Info.hasSEWLMULRatioOnly() || !Info.isValid() || Info.isUnknown())
     Info = NewInfo;
 
-  if (!RISCVII::hasVLOp(TSFlags)) {
-    Info = NewInfo;
-    return;
-  }
-
   DemandedFields Demanded = getDemanded(MI, MRI, ST);
   const VSETVLIInfo IncomingInfo =
       adjustIncoming(PrevInfo, NewInfo, Demanded, MRI);
