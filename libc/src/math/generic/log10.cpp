@@ -731,29 +731,29 @@ double log10_accurate(int e_x, int index, double m_x) {
 } // namespace
 
 LLVM_LIBC_FUNCTION(double, log10, (double x)) {
-  using FPBits_t = typename fputil::FPBits<double>;
-  FPBits_t xbits(x);
+  using FPBits = typename fputil::FPBits<double>;
+  FPBits xbits(x);
   uint64_t x_u = xbits.uintval();
 
-  int x_e = -FPBits_t::EXPONENT_BIAS;
+  int x_e = -FPBits::EXPONENT_BIAS;
 
   if (LIBC_UNLIKELY(x_u == 0x3FF0'0000'0000'0000ULL)) {
     // log10(1.0) = +0.0
     return 0.0;
   }
 
-  if (LIBC_UNLIKELY(xbits.uintval() < FPBits_t::MIN_NORMAL ||
-                    xbits.uintval() > FPBits_t::MAX_NORMAL)) {
+  if (LIBC_UNLIKELY(xbits.uintval() < FPBits::MIN_NORMAL ||
+                    xbits.uintval() > FPBits::MAX_NORMAL)) {
     if (xbits.is_zero()) {
       // return -Inf and raise FE_DIVBYZERO.
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<double>(FPBits_t::neg_inf());
+      return static_cast<double>(FPBits::neg_inf());
     }
     if (xbits.get_sign() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return FPBits_t::build_quiet_nan(0);
+      return FPBits::build_quiet_nan(0);
     }
     if (xbits.is_inf_or_nan()) {
       return x;
@@ -787,7 +787,7 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
 
   // Set m = 1.mantissa.
   uint64_t x_m = (x_u & 0x000F'FFFF'FFFF'FFFFULL) | 0x3FF0'0000'0000'0000ULL;
-  double m = FPBits_t(x_m).get_val();
+  double m = FPBits(x_m).get_val();
 
   double u, u_sq, err;
   fputil::DoubleDouble r1;
@@ -797,7 +797,7 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
   u = fputil::multiply_add(r, m, -1.0); // exact
 #else
   uint64_t c_m = x_m & 0x3FFF'E000'0000'0000ULL;
-  double c = FPBits_t(c_m).get_val();
+  double c = FPBits(c_m).get_val();
   u = fputil::multiply_add(r, m - c, CD[index]); // exact
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
