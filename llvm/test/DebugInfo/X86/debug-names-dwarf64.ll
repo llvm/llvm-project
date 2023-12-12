@@ -30,6 +30,10 @@
 ; CHECK-NEXT:     CU[0]: 0x00000000
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Abbreviations [
+; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_base_type
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:     }
 ; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_variable
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
@@ -40,10 +44,6 @@
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Abbreviation [[ABBREV_LABEL:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_label
-; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-NEXT:     }
-; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_base_type
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]

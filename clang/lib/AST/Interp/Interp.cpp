@@ -131,6 +131,9 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
   const Function *CurFunc = S.Current->getFunction();
   assert(CurFunc);
 
+  if (CurFunc->isUnevaluatedBuiltin())
+    return;
+
   if (S.Current->Caller && CurFunc->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.

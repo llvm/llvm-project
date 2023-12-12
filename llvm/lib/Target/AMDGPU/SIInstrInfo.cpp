@@ -541,8 +541,10 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
 }
 
 bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                                      int64_t Offset1, bool OffsetIsScalable1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
-                                      unsigned NumLoads,
+                                      int64_t Offset2, bool OffsetIsScalable2,
+                                      unsigned ClusterSize,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
@@ -568,8 +570,8 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   // (3) 9 <= LoadSize <= 12: cluster at max 2 mem ops
   // (4) 13 <= LoadSize <= 16: cluster at max 2 mem ops
   // (5) LoadSize >= 17: do not cluster
-  const unsigned LoadSize = NumBytes / NumLoads;
-  const unsigned NumDWORDs = ((LoadSize + 3) / 4) * NumLoads;
+  const unsigned LoadSize = NumBytes / ClusterSize;
+  const unsigned NumDWORDs = ((LoadSize + 3) / 4) * ClusterSize;
   return NumDWORDs <= 8;
 }
 
@@ -3454,6 +3456,19 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
         return false;
 
+      // If src2 is also a literal constant then we have to choose which one to
+      // fold. In general it is better to choose madak so that the other literal
+      // can be materialized in an sgpr instead of a vgpr:
+      //   s_mov_b32 s0, literal
+      //   v_madak_f32 v0, s0, v0, literal
+      // Instead of:
+      //   v_mov_b32 v1, literal
+      //   v_madmk_f32 v0, v0, literal, v1
+      MachineInstr *Def = MRI->getUniqueVRegDef(Src2->getReg());
+      if (Def && Def->isMoveImmediate() &&
+          !isInlineConstant(Def->getOperand(1)))
+        return false;
+
       unsigned NewOpc =
           IsFMA ? (IsF32                    ? AMDGPU::V_FMAMK_F32
                    : ST.hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
@@ -3499,43 +3514,38 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
     // Added part is the constant: Use v_madak_{f16, f32}.
     if (Src2->isReg() && Src2->getReg() == Reg) {
-      // Not allowed to use constant bus for another operand.
-      // We can however allow an inline immediate as src0.
-      bool Src0Inlined = false;
-      if (Src0->isReg()) {
-        // Try to inline constant if possible.
-        // If the Def moves immediate and the use is single
-        // We are saving VGPR here.
-        MachineInstr *Def = MRI->getUniqueVRegDef(Src0->getReg());
-        if (Def && Def->isMoveImmediate() &&
-          isInlineConstant(Def->getOperand(1)) &&
-          MRI->hasOneUse(Src0->getReg())) {
-          Src0->ChangeToImmediate(Def->getOperand(1).getImm());
-          Src0Inlined = true;
-        } else if ((Src0->getReg().isPhysical() &&
-                    (ST.getConstantBusLimit(Opc) <= 1 &&
-                     RI.isSGPRClass(RI.getPhysRegBaseClass(Src0->getReg())))) ||
-                   (Src0->getReg().isVirtual() &&
-                    (ST.getConstantBusLimit(Opc) <= 1 &&
-                     RI.isSGPRClass(MRI->getRegClass(Src0->getReg())))))
-          return false;
-          // VGPR is okay as Src0 - fallthrough
-      }
-
-      if (Src1->isReg() && !Src0Inlined ) {
-        // We have one slot for inlinable constant so far - try to fill it
-        MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
-        if (Def && Def->isMoveImmediate() &&
-            isInlineConstant(Def->getOperand(1)) &&
-            MRI->hasOneUse(Src1->getReg()) &&
-            commuteInstruction(UseMI)) {
+      if (ST.getConstantBusLimit(Opc) < 2) {
+        // Not allowed to use constant bus for another operand.
+        // We can however allow an inline immediate as src0.
+        bool Src0Inlined = false;
+        if (Src0->isReg()) {
+          // Try to inline constant if possible.
+          // If the Def moves immediate and the use is single
+          // We are saving VGPR here.
+          MachineInstr *Def = MRI->getUniqueVRegDef(Src0->getReg());
+          if (Def && Def->isMoveImmediate() &&
+              isInlineConstant(Def->getOperand(1)) &&
+              MRI->hasOneUse(Src0->getReg())) {
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
-        } else if ((Src1->getReg().isPhysical() &&
-                    RI.isSGPRClass(RI.getPhysRegBaseClass(Src1->getReg()))) ||
-                   (Src1->getReg().isVirtual() &&
-                    RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
-          return false;
+            Src0Inlined = true;
+          } else if (ST.getConstantBusLimit(Opc) <= 1 &&
+                     RI.isSGPRReg(*MRI, Src0->getReg())) {
+            return false;
+          }
+          // VGPR is okay as Src0 - fallthrough
+        }
+
+        if (Src1->isReg() && !Src0Inlined) {
+          // We have one slot for inlinable constant so far - try to fill it
+          MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
+          if (Def && Def->isMoveImmediate() &&
+              isInlineConstant(Def->getOperand(1)) &&
+              MRI->hasOneUse(Src1->getReg()) && commuteInstruction(UseMI))
+            Src0->ChangeToImmediate(Def->getOperand(1).getImm());
+          else if (RI.isSGPRReg(*MRI, Src1->getReg()))
+            return false;
           // VGPR is okay as Src1 - fallthrough
+        }
       }
 
       unsigned NewOpc =
@@ -4136,12 +4146,15 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
-    // This suffers the same problem as the scalar 16-bit cases.
-    return AMDGPU::isInlinableIntLiteralV216(Imm);
+    return (isInt<16>(Imm) || isUInt<16>(Imm)) &&
+           AMDGPU::isInlinableIntLiteral((int16_t)Imm);
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP16: {
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
       // A few special case instructions have 16-bit operands on subtargets
       // where 16-bit instructions are not legal.
@@ -4153,12 +4166,6 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
     }
 
     return false;
-  }
-  case AMDGPU::OPERAND_REG_IMM_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
-    uint32_t Trunc = static_cast<uint32_t>(Imm);
-    return AMDGPU::isInlinableLiteralV216(Trunc, ST.hasInv2PiInlineImm());
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
@@ -5150,6 +5157,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   return true;
 }
 
+// It is more readable to list mapped opcodes on the same line.
+// clang-format off
+
 unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default: return AMDGPU::INSTRUCTION_LIST_END;
@@ -5288,6 +5298,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
 }
+
+// clang-format on
 
 void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -6862,7 +6874,9 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     break;
   case AMDGPU::S_LSHL_B64:
     if (ST.hasOnlyRevVALUShifts()) {
-      NewOpcode = AMDGPU::V_LSHLREV_B64_e64;
+      NewOpcode = ST.getGeneration() >= AMDGPUSubtarget::GFX12
+                      ? AMDGPU::V_LSHLREV_B64_pseudo_e64
+                      : AMDGPU::V_LSHLREV_B64_e64;
       swapOperands(Inst);
     }
     break;
@@ -7540,80 +7554,6 @@ void SIInstrInfo::splitScalar64BitUnaryOp(SIInstrWorklist &Worklist,
 
   // We don't need to legalizeOperands here because for a single operand, src0
   // will support any kind of input.
-
-  // Move all users of this moved value.
-  addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
-}
-
-void SIInstrInfo::splitScalar64BitAddSub(SIInstrWorklist &Worklist,
-                                         MachineInstr &Inst,
-                                         MachineDominatorTree *MDT) const {
-  bool IsAdd = (Inst.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
-
-  MachineBasicBlock &MBB = *Inst.getParent();
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  const auto *CarryRC = RI.getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
-
-  Register FullDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-  Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-
-  Register CarryReg = MRI.createVirtualRegister(CarryRC);
-  Register DeadCarryReg = MRI.createVirtualRegister(CarryRC);
-
-  MachineOperand &Dest = Inst.getOperand(0);
-  MachineOperand &Src0 = Inst.getOperand(1);
-  MachineOperand &Src1 = Inst.getOperand(2);
-  const DebugLoc &DL = Inst.getDebugLoc();
-  MachineBasicBlock::iterator MII = Inst;
-
-  const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
-  const TargetRegisterClass *Src1RC = MRI.getRegClass(Src1.getReg());
-  const TargetRegisterClass *Src0SubRC =
-      RI.getSubRegisterClass(Src0RC, AMDGPU::sub0);
-  const TargetRegisterClass *Src1SubRC =
-      RI.getSubRegisterClass(Src1RC, AMDGPU::sub0);
-
-  MachineOperand SrcReg0Sub0 = buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC,
-                                                       AMDGPU::sub0, Src0SubRC);
-  MachineOperand SrcReg1Sub0 = buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC,
-                                                       AMDGPU::sub0, Src1SubRC);
-
-
-  MachineOperand SrcReg0Sub1 = buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC,
-                                                       AMDGPU::sub1, Src0SubRC);
-  MachineOperand SrcReg1Sub1 = buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC,
-                                                       AMDGPU::sub1, Src1SubRC);
-
-  unsigned LoOpc = IsAdd ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_SUB_CO_U32_e64;
-  MachineInstr *LoHalf =
-    BuildMI(MBB, MII, DL, get(LoOpc), DestSub0)
-    .addReg(CarryReg, RegState::Define)
-    .add(SrcReg0Sub0)
-    .add(SrcReg1Sub0)
-    .addImm(0); // clamp bit
-
-  unsigned HiOpc = IsAdd ? AMDGPU::V_ADDC_U32_e64 : AMDGPU::V_SUBB_U32_e64;
-  MachineInstr *HiHalf =
-    BuildMI(MBB, MII, DL, get(HiOpc), DestSub1)
-    .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
-    .add(SrcReg0Sub1)
-    .add(SrcReg1Sub1)
-    .addReg(CarryReg, RegState::Kill)
-    .addImm(0); // clamp bit
-
-  BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), FullDestReg)
-    .addReg(DestSub0)
-    .addImm(AMDGPU::sub0)
-    .addReg(DestSub1)
-    .addImm(AMDGPU::sub1);
-
-  MRI.replaceRegWith(Dest.getReg(), FullDestReg);
-
-  // Try to legalize the operands in case we need to swap the order to keep it
-  // valid.
-  legalizeOperands(*LoHalf, MDT);
-  legalizeOperands(*HiHalf, MDT);
 
   // Move all users of this moved value.
   addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
@@ -8476,16 +8416,25 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
   return AMDGPU::COPY;
 }
 
-bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
+bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
+                                       Register Reg) const {
   // We need to handle instructions which may be inserted during register
   // allocation to handle the prolog. The initial prolog instruction may have
   // been separated from the start of the block by spills and copies inserted
-  // needed by the prolog.
-  uint16_t Opc = MI.getOpcode();
+  // needed by the prolog. However, the insertions for scalar registers can
+  // always be placed at the BB top as they are independent of the exec mask
+  // value.
+  bool IsNullOrVectorRegister = true;
+  if (Reg) {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    IsNullOrVectorRegister = !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
+  }
 
+  uint16_t Opc = MI.getOpcode();
   // FIXME: Copies inserted in the block prolog for live-range split should also
   // be included.
-  return (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
+  return IsNullOrVectorRegister &&
+         (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
                                  MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
@@ -8727,6 +8676,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
@@ -8785,6 +8736,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  // TODO-GFX12: Remove this.
+  // Hack to allow some GFX12 codegen tests to run before all the encodings are
+  // implemented.
+  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

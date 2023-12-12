@@ -6327,7 +6327,7 @@ INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
       VPrintf(1, "dlopen interceptor: DladdrSelfFName: %p %s\n",
               (void *)SelfFName, SelfFName);
 
-      if (internal_strcmp(SelfFName, filename) == 0) {
+      if (SelfFName && internal_strcmp(SelfFName, filename) == 0) {
         // It's possible they copied the string from dladdr, so
         // we do a string comparison rather than pointer comparison.
         VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",

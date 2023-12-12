@@ -35,7 +35,7 @@ namespace chrono
 {
 
 // [time.clock.file], type file_clock
-using file_clock = _VSTD_FS::_FilesystemClock;
+using file_clock = filesystem::_FilesystemClock;
 
 template<class _Duration>
 using file_time = time_point<file_clock, _Duration>;

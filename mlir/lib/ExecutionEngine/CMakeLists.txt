@@ -181,6 +181,7 @@ if(LLVM_ENABLE_PIC)
   add_mlir_library(mlir_arm_sme_abi_stubs
     SHARED
     ArmSMEStubs.cpp)
+  target_compile_definitions(mlir_arm_sme_abi_stubs PRIVATE mlir_arm_sme_abi_stubs_EXPORTS)
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a

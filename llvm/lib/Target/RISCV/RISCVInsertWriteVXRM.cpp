@@ -171,9 +171,7 @@ class RISCVInsertWriteVXRM : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertWriteVXRM() : MachineFunctionPass(ID) {
-    initializeRISCVInsertWriteVXRMPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVInsertWriteVXRM() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

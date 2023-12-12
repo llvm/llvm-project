@@ -10,7 +10,7 @@
 ! REDEFINE: %{triple} = aarch64-apple-darwin
 ! RUN: not %{compile} | FileCheck %s --check-prefixes=CHECK-NOWIN
 
-! CHECK: llvm.linker_options ["/DEFAULTLIB:", "libtest"]
+! CHECK: llvm.linker_options ["/DEFAULTLIB:libtest"]
 program test
 end program test
 ! CHECK-NOWIN: --dependent-lib is only supported on Windows

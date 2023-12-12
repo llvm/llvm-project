@@ -123,19 +123,29 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   auto ubInt = getConstantIntValue(forOp.getUpperBound());
   auto stepInt = getConstantIntValue(forOp.getStep());
 
-  // No specialization necessary if step already divides upper bound evenly.
-  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
-    return failure();
   // No specialization necessary if step size is 1.
-  if (stepInt == static_cast<int64_t>(1))
+  if (getConstantIntValue(forOp.getStep()) == static_cast<int64_t>(1))
     return failure();
 
-  auto loc = forOp.getLoc();
+  // No specialization necessary if step already divides upper bound evenly.
+  // Fast path: lb, ub and step are constants.
+  if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
+    return failure();
+  // Slow path: Examine the ops that define lb, ub and step.
   AffineExpr sym0, sym1, sym2;
   bindSymbols(b.getContext(), sym0, sym1, sym2);
+  SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
+                              forOp.getStep()};
+  AffineMap map = AffineMap::get(0, 3, {(sym1 - sym0) % sym2});
+  affine::fullyComposeAffineMapAndOperands(&map, &operands);
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(map.getResult(0)))
+    if (constExpr.getValue() == 0)
+      return failure();
+
   // New upper bound: %ub - (%ub - %lb) mod %step
   auto modMap = AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
   b.setInsertionPoint(forOp);
+  auto loc = forOp.getLoc();
   splitBound = b.createOrFold<AffineApplyOp>(loc, modMap,
                                              ValueRange{forOp.getLowerBound(),
                                                         forOp.getUpperBound(),

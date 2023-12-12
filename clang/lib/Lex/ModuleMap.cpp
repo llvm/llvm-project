@@ -1067,9 +1067,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
     if (!canInfer)
       return nullptr;
   } else {
-    OptionalFileEntryRefDegradesToFileEntryPtr ModuleMapRef =
-        getModuleMapFileForUniquing(Parent);
-    ModuleMapFile = ModuleMapRef;
+    ModuleMapFile = getModuleMapFileForUniquing(Parent);
   }
 
   // Look for an umbrella header.
@@ -1866,7 +1864,7 @@ void ModuleMapParser::diagnosePrivateModules(SourceLocation ExplicitLoc,
       continue;
 
     SmallString<128> FullName(ActiveModule->getFullModuleName());
-    if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
+    if (!FullName.starts_with(M->Name) && !FullName.ends_with("Private"))
       continue;
     SmallString<128> FixedPrivModDecl;
     SmallString<128> Canonical(M->Name);
@@ -2509,9 +2507,9 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
       << FixItHint::CreateReplacement(CurrModuleDeclLoc, "framework module");
 }
 
-static int compareModuleHeaders(const Module::Header *A,
-                                const Module::Header *B) {
-  return A->NameAsWritten.compare(B->NameAsWritten);
+static bool compareModuleHeaders(const Module::Header &A,
+                                 const Module::Header &B) {
+  return A.NameAsWritten < B.NameAsWritten;
 }
 
 /// Parse an umbrella directory declaration.
@@ -2574,7 +2572,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    llvm::array_pod_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);

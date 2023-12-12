@@ -131,6 +131,19 @@ public:
       Result->Key.MemoryMappings.push_back(std::move(MemMap));
       return;
     }
+    if (CommentText.consume_front("SNIPPET-ADDRESS")) {
+      // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
+      if (!to_integer<intptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
+                                16)) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
+               << CommentText
+               << "', expected <ADDRESS> to contain a valid integer in "
+                  "hexadecimal format";
+        ++InvalidComments;
+        return;
+      }
+      return;
+    }
   }
 
   unsigned numInvalidComments() const { return InvalidComments; }

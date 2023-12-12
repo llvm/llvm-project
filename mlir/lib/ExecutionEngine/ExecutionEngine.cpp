@@ -175,9 +175,8 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *argIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, index));
       llvm::Value *argPtrPtr =
-          builder.CreateGEP(builder.getInt8PtrTy(), argList, argIndex);
-      llvm::Value *argPtr =
-          builder.CreateLoad(builder.getInt8PtrTy(), argPtrPtr);
+          builder.CreateGEP(builder.getPtrTy(), argList, argIndex);
+      llvm::Value *argPtr = builder.CreateLoad(builder.getPtrTy(), argPtrPtr);
       llvm::Type *argTy = arg.getType();
       llvm::Value *load = builder.CreateLoad(argTy, argPtr);
       args.push_back(load);
@@ -191,9 +190,8 @@ static void packFunctionArguments(Module *module) {
       llvm::Value *retIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, llvm::size(func.args())));
       llvm::Value *retPtrPtr =
-          builder.CreateGEP(builder.getInt8PtrTy(), argList, retIndex);
-      llvm::Value *retPtr =
-          builder.CreateLoad(builder.getInt8PtrTy(), retPtrPtr);
+          builder.CreateGEP(builder.getPtrTy(), argList, retIndex);
+      llvm::Value *retPtr = builder.CreateLoad(builder.getPtrTy(), retPtrPtr);
       builder.CreateStore(result, retPtr);
     }
 

@@ -248,3 +248,7 @@ def TermiosAPI : PublicAPI<"termios.h"> {
 def SetJmpAPI : PublicAPI<"setjmp.h"> {
   let Types = ["jmp_buf"];
 }
+
+def SearchAPI : PublicAPI<"search.h"> {
+  let Types = ["ACTION", "ENTRY", "struct hsearch_data"];
+}

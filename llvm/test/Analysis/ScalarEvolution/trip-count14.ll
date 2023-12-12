@@ -9,7 +9,7 @@ define void @s32_max1(i32 %n, ptr %p) {
 ; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is ((-1 * %n) + ((1 + %n) smax %n)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is ((-1 * %n) + ((1 + %n) smax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -35,7 +35,7 @@ define void @s32_max2(i32 %n, ptr %p) {
 ; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is ((-1 * %n) + ((2 + %n) smax %n)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is ((-1 * %n) + ((2 + %n) smax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 2
@@ -61,7 +61,7 @@ define void @s32_maxx(i32 %n, i32 %x, ptr %p) {
 ; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is ((-1 * %n) + ((%n + %x) smax %n))
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is ((-1 * %n) + ((%n + %x) smax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %x, %n
@@ -91,7 +91,7 @@ define void @s32_max2_unpredictable_exit(i32 %n, i32 %x, ptr %p) {
 ; CHECK-NEXT:    symbolic max exit count for if.end: ((-1 * %n) + ((2 + %n) smax %n))
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is (((-1 * %n) + ((2 + %n) smax %n)) umin ((-1 * %n) + %x))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 2
@@ -121,7 +121,7 @@ define void @u32_max1(i32 %n, ptr %p) {
 ; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is ((-1 * %n) + ((1 + %n) umax %n)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is ((-1 * %n) + ((1 + %n) umax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 1
@@ -147,7 +147,7 @@ define void @u32_max2(i32 %n, ptr %p) {
 ; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is ((-1 * %n) + ((2 + %n) umax %n)), actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is ((-1 * %n) + ((2 + %n) umax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 2
@@ -173,7 +173,7 @@ define void @u32_maxx(i32 %n, i32 %x, ptr %p) {
 ; CHECK-NEXT:  Loop %do.body: symbolic max backedge-taken count is ((-1 * %n) + ((%n + %x) umax %n))
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is ((-1 * %n) + ((%n + %x) umax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %x, %n
@@ -203,7 +203,7 @@ define void @u32_max2_unpredictable_exit(i32 %n, i32 %x, ptr %p) {
 ; CHECK-NEXT:    symbolic max exit count for if.end: ((-1 * %n) + ((2 + %n) umax %n))
 ; CHECK-NEXT:  Loop %do.body: Predicated backedge-taken count is (((-1 * %n) + ((2 + %n) umax %n)) umin ((-1 * %n) + %x))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %do.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %do.body: Trip multiple is 1
 ;
 entry:
   %add = add i32 %n, 2

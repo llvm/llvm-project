@@ -721,7 +721,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
 #define INSTR_PROF_COVFUN_COFF ".lcovfun$M"
-/* Since cov data and cov names sections are not allocated, we don't need to 
+/* Since cov data and cov names sections are not allocated, we don't need to
  * access them at runtime.
  */
 #define INSTR_PROF_COVDATA_COFF ".lcovd"

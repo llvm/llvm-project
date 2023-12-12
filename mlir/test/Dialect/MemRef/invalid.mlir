@@ -611,6 +611,22 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
+  // expected-error@+1 {{expected offsets to be non-negative, but got -1}}
+  %0 = memref.subview %input[-1, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+}
+
+// -----
+
+func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
+  // expected-error@+1 {{expected sizes to be non-negative, but got -1}}
+  %0 = memref.subview %input[2, 256] [-1, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+}
+
+// -----
+
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
   // expected-error@+1 {{expected mixed offsets rank to match mixed sizes rank (2 vs 3) so the rank of the result type is well-formed}}

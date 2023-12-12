@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_SSTREAM
 #define _LIBCPP_SSTREAM
 
+// clang-format off
+
 /*
     sstream synopsis [sstream.syn]
 
@@ -266,6 +268,8 @@ typedef basic_stringstream<wchar_t> wstringstream;
 
 */
 
+// clang-format on
+
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
@@ -320,15 +324,15 @@ private:
 
 public:
     // [stringbuf.cons] constructors:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_stringbuf()
         : __hm_(nullptr), __mode_(ios_base::in | ios_base::out) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_stringbuf(ios_base::openmode __wch)
         : __hm_(nullptr), __mode_(__wch) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_stringbuf(const string_type& __s,
                              ios_base::openmode __wch = ios_base::in | ios_base::out)
         : __str_(__s.get_allocator()), __hm_(nullptr), __mode_(__wch)
@@ -477,7 +481,7 @@ _LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__move_
         __eout = __rhs.epptr() - __p;
     }
     ptrdiff_t __hm = __rhs.__hm_ == nullptr ? -1 : __rhs.__hm_ - __p;
-    __str_ = _VSTD::move(__rhs.__str_);
+    __str_ = std::move(__rhs.__str_);
     __p = const_cast<char_type*>(__str_.data());
     if (__binp != -1)
         this->setg(__p + __binp, __p + __ninp, __p + __einp);
@@ -518,7 +522,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
         __eout = __rhs.epptr() - __p;
     }
     ptrdiff_t __hm = __rhs.__hm_ == nullptr ? -1 : __rhs.__hm_ - __p;
-    __str_ = _VSTD::move(__rhs.__str_);
+    __str_ = std::move(__rhs.__str_);
     __p = const_cast<char_type*>(__str_.data());
     if (__binp != -1)
         this->setg(__p + __binp, __p + __ninp, __p + __einp);
@@ -590,7 +594,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
         __leout = this->epptr() - __p;
     }
     ptrdiff_t __lhm = __hm_ == nullptr ? -1 : __hm_ - __p;
-    _VSTD::swap(__mode_, __rhs.__mode_);
+    std::swap(__mode_, __rhs.__mode_);
     __str_.swap(__rhs.__str_);
     __p = const_cast<char_type*>(__str_.data());
     if (__rbinp != -1)
@@ -624,7 +628,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(basic_stringbuf<_CharT, _Traits, _Allocator>& __x,
      basic_stringbuf<_CharT, _Traits, _Allocator>& __y)
@@ -758,7 +762,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
             }
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
         }
-        __hm_ = _VSTD::max(this->pptr() + 1, __hm_);
+        __hm_ = std::max(this->pptr() + 1, __hm_);
         if (__mode_ & ios_base::in)
         {
             char_type* __p = const_cast<char_type*>(__str_.data());
@@ -842,15 +846,15 @@ private:
 
 public:
     // [istringstream.cons] Constructors:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_istringstream()
         : basic_istream<_CharT, _Traits>(&__sb_), __sb_(ios_base::in) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_istringstream(ios_base::openmode __wch)
         : basic_istream<_CharT, _Traits>(&__sb_), __sb_(__wch | ios_base::in) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_istringstream(const string_type& __s,
                                  ios_base::openmode __wch = ios_base::in)
         : basic_istream<_CharT, _Traits>(&__sb_)
@@ -879,28 +883,28 @@ public:
         : basic_istream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__s, __wch | ios_base::in) {}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_istringstream(basic_istringstream&& __rhs)
-        : basic_istream<_CharT, _Traits>(_VSTD::move(__rhs))
-        , __sb_(_VSTD::move(__rhs.__sb_))
+        : basic_istream<_CharT, _Traits>(std::move(__rhs))
+        , __sb_(std::move(__rhs.__sb_))
     {
         basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
     }
 
     // [istringstream.assign] Assign and swap:
     basic_istringstream& operator=(basic_istringstream&& __rhs) {
-        basic_istream<char_type, traits_type>::operator=(_VSTD::move(__rhs));
-        __sb_ = _VSTD::move(__rhs.__sb_);
+        basic_istream<char_type, traits_type>::operator=(std::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
         return *this;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(basic_istringstream& __rhs) {
         basic_istream<char_type, traits_type>::swap(__rhs);
         __sb_.swap(__rhs.__sb_);
     }
 
     // [istringstream.members] Member functions:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
         return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(&__sb_);
     }
@@ -936,7 +940,7 @@ public:
 };
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(basic_istringstream<_CharT, _Traits, _Allocator>& __x,
      basic_istringstream<_CharT, _Traits, _Allocator>& __y)
@@ -965,15 +969,15 @@ private:
 
 public:
     // [ostringstream.cons] Constructors:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_ostringstream()
         : basic_ostream<_CharT, _Traits>(&__sb_), __sb_(ios_base::out) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_ostringstream(ios_base::openmode __wch)
         : basic_ostream<_CharT, _Traits>(&__sb_), __sb_(__wch | ios_base::out) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_ostringstream(const string_type& __s,
                                  ios_base::openmode __wch = ios_base::out)
         : basic_ostream<_CharT, _Traits>(&__sb_)
@@ -1003,29 +1007,29 @@ public:
         : basic_ostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__s, __wch | ios_base::out) {}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_ostringstream(basic_ostringstream&& __rhs)
-        : basic_ostream<_CharT, _Traits>(_VSTD::move(__rhs))
-        , __sb_(_VSTD::move(__rhs.__sb_))
+        : basic_ostream<_CharT, _Traits>(std::move(__rhs))
+        , __sb_(std::move(__rhs.__sb_))
     {
         basic_ostream<_CharT, _Traits>::set_rdbuf(&__sb_);
     }
 
     // [ostringstream.assign] Assign and swap:
     basic_ostringstream& operator=(basic_ostringstream&& __rhs) {
-        basic_ostream<char_type, traits_type>::operator=(_VSTD::move(__rhs));
-        __sb_ = _VSTD::move(__rhs.__sb_);
+        basic_ostream<char_type, traits_type>::operator=(std::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(basic_ostringstream& __rhs) {
         basic_ostream<char_type, traits_type>::swap(__rhs);
         __sb_.swap(__rhs.__sb_);
     }
 
     // [ostringstream.members] Member functions:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
         return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(&__sb_);
     }
@@ -1061,7 +1065,7 @@ public:
 };
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(basic_ostringstream<_CharT, _Traits, _Allocator>& __x,
      basic_ostringstream<_CharT, _Traits, _Allocator>& __y)
@@ -1090,15 +1094,15 @@ private:
 
 public:
     // [stringstream.cons] constructors
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_stringstream()
         : basic_iostream<_CharT, _Traits>(&__sb_), __sb_(ios_base::in | ios_base::out) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_stringstream(ios_base::openmode __wch)
         : basic_iostream<_CharT, _Traits>(&__sb_), __sb_(__wch) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit basic_stringstream(const string_type& __s,
                                 ios_base::openmode __wch = ios_base::in | ios_base::out)
         : basic_iostream<_CharT, _Traits>(&__sb_)
@@ -1128,28 +1132,28 @@ public:
         : basic_iostream<_CharT, _Traits>(std::addressof(__sb_)), __sb_(__s, __wch) {}
 #endif // _LIBCPP_STD_VER >= 20
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_stringstream(basic_stringstream&& __rhs)
-        : basic_iostream<_CharT, _Traits>(_VSTD::move(__rhs))
-        , __sb_(_VSTD::move(__rhs.__sb_))
+        : basic_iostream<_CharT, _Traits>(std::move(__rhs))
+        , __sb_(std::move(__rhs.__sb_))
     {
         basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
     }
 
     // [stringstream.assign] Assign and swap:
     basic_stringstream& operator=(basic_stringstream&& __rhs) {
-        basic_iostream<char_type, traits_type>::operator=(_VSTD::move(__rhs));
-        __sb_ = _VSTD::move(__rhs.__sb_);
+        basic_iostream<char_type, traits_type>::operator=(std::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
         return *this;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(basic_stringstream& __rhs) {
         basic_iostream<char_type, traits_type>::swap(__rhs);
         __sb_.swap(__rhs.__sb_);
     }
 
     // [stringstream.members] Member functions:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     basic_stringbuf<char_type, traits_type, allocator_type>* rdbuf() const {
         return const_cast<basic_stringbuf<char_type, traits_type, allocator_type>*>(&__sb_);
     }
@@ -1185,7 +1189,7 @@ public:
 };
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(basic_stringstream<_CharT, _Traits, _Allocator>& __x,
      basic_stringstream<_CharT, _Traits, _Allocator>& __y)
@@ -1193,7 +1197,7 @@ swap(basic_stringstream<_CharT, _Traits, _Allocator>& __x,
     __x.swap(__y);
 }
 
-#ifndef _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+#if _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_stringbuf<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_stringstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostringstream<char>;

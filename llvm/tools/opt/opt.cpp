@@ -339,7 +339,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "nvptx-",  "mips-",  "lanai-", "hexagon-", "bpf-",    "avr-",
       "thumb2-", "arm-",   "si-",    "gcn-",     "amdgpu-", "aarch64-",
       "amdgcn-", "polly-", "riscv-", "dxil-"};
-  std::vector<StringRef> PassNameContain = {"ehprepare"};
+  std::vector<StringRef> PassNameContain = {"-eh-prepare"};
   std::vector<StringRef> PassNameExact = {
       "safe-stack",
       "cost-model",
@@ -363,7 +363,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "polyhedral-info",
       "print-polyhedral-info",
       "replace-with-veclib",
-      "jmc-instrument",
+      "jmc-instrumenter",
       "dot-regions",
       "dot-regions-only",
       "view-regions",
@@ -376,7 +376,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "callbrprepare",
   };
   for (const auto &P : PassNamePrefix)
-    if (Pass.startswith(P))
+    if (Pass.starts_with(P))
       return true;
   for (const auto &P : PassNameContain)
     if (Pass.contains(P))

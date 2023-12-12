@@ -210,9 +210,9 @@ static const char *isInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
   if ((Instr.Description.TSFlags & X86II::FormMask) == X86II::Pseudo)
     return "unsupported opcode: pseudo instruction";
-  if ((OpcodeName.startswith("POP") && !OpcodeName.startswith("POPCNT")) ||
-      OpcodeName.startswith("PUSH") || OpcodeName.startswith("ADJCALLSTACK") ||
-      OpcodeName.startswith("LEAVE"))
+  if ((OpcodeName.starts_with("POP") && !OpcodeName.starts_with("POPCNT")) ||
+      OpcodeName.starts_with("PUSH") ||
+      OpcodeName.starts_with("ADJCALLSTACK") || OpcodeName.starts_with("LEAVE"))
     return "unsupported opcode: Push/Pop/AdjCallStack/Leave";
   switch (Instr.Description.Opcode) {
   case X86::LFS16rm:
@@ -1185,10 +1185,14 @@ std::vector<MCInst>
 ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const {
   std::vector<MCInst> ConfigurePerfCounterCode;
   if(SaveRegisters) {
-    // Preservie RAX, RDI, and RSI by pushing them to the stack.
+    // Preserve RAX, RDI, and RSI by pushing them to the stack.
     generateRegisterStackPush(X86::RAX, ConfigurePerfCounterCode);
     generateRegisterStackPush(X86::RDI, ConfigurePerfCounterCode);
     generateRegisterStackPush(X86::RSI, ConfigurePerfCounterCode);
+    // RCX and R11 will get clobbered by the syscall instruction, so save them
+    // as well.
+    generateRegisterStackPush(X86::RCX, ConfigurePerfCounterCode);
+    generateRegisterStackPush(X86::R11, ConfigurePerfCounterCode);
   }
   ConfigurePerfCounterCode.push_back(
       loadImmediate(X86::RDI, 64, APInt(64, getAuxiliaryMemoryStartAddress())));
@@ -1203,9 +1207,12 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
       loadImmediate(X86::RSI, 64, APInt(64, Request)));
   generateSyscall(SYS_ioctl, ConfigurePerfCounterCode);
   if(SaveRegisters) {
+    // Restore R11 then RCX
+    generateRegisterStackPop(X86::R11, ConfigurePerfCounterCode);
+    generateRegisterStackPop(X86::RCX, ConfigurePerfCounterCode);
     // Restore RAX, RDI, and RSI, in reverse order.
     generateRegisterStackPop(X86::RSI, ConfigurePerfCounterCode);
-    generateRegisterStackPop(X86::RIP, ConfigurePerfCounterCode);
+    generateRegisterStackPop(X86::RDI, ConfigurePerfCounterCode);
     generateRegisterStackPop(X86::RAX, ConfigurePerfCounterCode);
   }
   return ConfigurePerfCounterCode;
@@ -1216,7 +1223,7 @@ std::vector<unsigned> ExegesisX86Target::getArgumentRegisters() const {
 }
 
 std::vector<unsigned> ExegesisX86Target::getRegistersNeedSaving() const {
-  return {X86::RAX, X86::RDI, X86::RSI};
+  return {X86::RAX, X86::RDI, X86::RSI, X86::RCX, X86::R11};
 }
 
 #endif // __linux__

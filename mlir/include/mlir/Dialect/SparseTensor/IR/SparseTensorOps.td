@@ -58,7 +58,7 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     Arguments<(ins TensorOf<[AnyType]>:$values,
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels)>,
     Results<(outs AnySparseTensor: $result)> {
-  let summary = "Returns a sparse tensor from the given values, levels";
+  let summary = "Returns a sparse tensor assembled from the given values and levels";
 
   let description = [{
     Assembles the values and per-level coordinate or postion arrays into a sparse tensor.
@@ -71,7 +71,7 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
       each supplies the sparse tensor coordinates scheme in the sparse tensor for
       the corresponding level as specifed by `sparse_tensor::StorageLayout`.
 
-    This operation can be used to materialize a sparse tensor from external
+    This operation can be used to assemble a sparse tensor from external
     sources; e.g., when passing two numpy arrays from Python.
 
     Disclaimer: This is the user's responsibility to provide input that can be
@@ -81,7 +81,6 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     TODO: The returned tensor is allowed (in principle) to have non-identity
     dimOrdering/higherOrdering mappings.  However, the current implementation
     does not yet support them.
-
 
     Example:
 
@@ -109,16 +108,17 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
     Results<(outs TensorOf<[AnyType]>:$ret_values,
                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  ScalarLikeOf<[AnySignlessIntegerOrIndex]>:$val_len,
-                  Variadic<ScalarLikeOf<[AnySignlessIntegerOrIndex]>>:$lvl_lens)> {
-  let summary = "Returns the (values, coordinates) pair unpacked from the input tensor";
+                  AnyIndexingScalarLike:$val_len,
+                  Variadic<AnyIndexingScalarLike>:$lvl_lens)> {
+  let summary = "Returns the (values, coordinates) pair disassembled from the input tensor";
 
   let description = [{
-    The disassemble operation is the inverse of `sparse_tensor::assemble`.  It returns
-    the values and per-level position and coordinate array to the user
-    from the sparse tensor along with the actual length of the memory used in
-    each returned buffer. This operation can be used for returning an
-    unpacked MLIR sparse tensor to frontend; e.g., returning two numpy arrays to Python.
+    The disassemble operation is the inverse of `sparse_tensor::assemble`.
+    It returns the values and per-level position and coordinate array to the
+    user from the sparse tensor along with the actual length of the memory used
+    in each returned buffer. This operation can be used for returning an
+    disassembled MLIR sparse tensor to frontend; e.g., returning two numpy arrays
+    to Python.
 
     Disclaimer: This is the user's responsibility to allocate large enough buffers
     to hold the sparse tensor. The sparsifier simply copies each fields
@@ -921,10 +921,9 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort">,
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort sort the `xs` values along with some `ys` values
-    that are put in a single linear buffer `xy`.
-    The affine map attribute `perm_map` specifies the permutation to be applied on
-    the `xs` before comparison, the rank of the permutation map
+    Sorts the `xs` values along with some `ys` values that are put in a single linear
+    buffer `xy`.  The affine map attribute `perm_map` specifies the permutation to be
+    applied on the `xs` before comparison, the rank of the permutation map
     also specifies the number of `xs` values in `xy`.
     The optional index attribute `ny` provides the number of `ys` values in `xy`.
     When `ny` is not explicitly specified, its value is 0.
@@ -950,14 +949,14 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort">,
 }
 
 def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
-    Arguments<(ins AnyCOOSparseTensor: $input_coo,
+    Arguments<(ins AnySparseTensor: $input_coo,
                    SparseTensorSortKindAttr:$algorithm)>,
-    Results<(outs AnyCOOSparseTensor: $result_coo)> {
+    Results<(outs AnySparseTensor: $result_coo)> {
   let summary = "Reorder the input COO such that it has the the same order as "
                 "the output COO";
   let description = [{
-    sparse_tensor.reorder_coo reorder input COO to the same order as specified by
-    the output format. E.g., reorder an unordered COO into an ordered one.
+    Reorders the input COO to the same order as specified by the output format.
+    E.g., reorder an unordered COO into an ordered one.
 
     The input and result COO tensor must have the same element type, position type and
     coordinate type. At the moment, the operation also only supports ordering

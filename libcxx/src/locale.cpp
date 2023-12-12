@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__utility/unreachable.h>
+#include <__utility/no_destroy.h>
 #include <algorithm>
 #include <clocale>
 #include <codecvt>
@@ -15,9 +15,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <locale>
+#include <new>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 #include <vector>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -80,9 +82,8 @@ locale_t __cloc() {
 
 namespace {
 
-struct release
-{
-    void operator()(locale::facet* p) {p->__release_shared();}
+struct releaser {
+  void operator()(locale::facet* p) { p->__release_shared(); }
 };
 
 template <class T, class ...Args>
@@ -154,9 +155,11 @@ public:
         {return static_cast<size_t>(id) < facets_.size() && facets_[static_cast<size_t>(id)];}
     const locale::facet* use_facet(long id) const;
 
-    static const locale& make_classic();
-    static       locale& make_global();
-private:
+    void acquire();
+    void release();
+    static __no_destroy<__imp> classic_locale_imp_;
+
+  private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
     template <class F> void install_from(const __imp& other);
@@ -168,13 +171,13 @@ locale::__imp::__imp(size_t refs)
       name_("C")
 {
     facets_.clear();
-    install(&make<_VSTD::collate<char> >(1u));
+    install(&make<std::collate<char> >(1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(&make<_VSTD::collate<wchar_t> >(1u));
+    install(&make<std::collate<wchar_t> >(1u));
 #endif
-    install(&make<_VSTD::ctype<char> >(nullptr, false, 1u));
+    install(&make<std::ctype<char> >(nullptr, false, 1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(&make<_VSTD::ctype<wchar_t> >(1u));
+    install(&make<std::ctype<wchar_t> >(1u));
 #endif
     install(&make<codecvt<char, char, mbstate_t> >(1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -222,9 +225,9 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     install(&make<time_put<wchar_t> >(1u));
 #endif
-    install(&make<_VSTD::messages<char> >(1u));
+    install(&make<std::messages<char> >(1u));
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-    install(&make<_VSTD::messages<wchar_t> >(1u));
+    install(&make<std::messages<wchar_t> >(1u));
 #endif
 }
 
@@ -410,28 +413,28 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
         if (c & locale::collate)
         {
-            install_from<_VSTD::collate<char> >(one);
+            install_from<std::collate<char> >(one);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::collate<wchar_t> >(one);
+            install_from<std::collate<wchar_t> >(one);
 #endif
         }
         if (c & locale::ctype)
         {
-            install_from<_VSTD::ctype<char> >(one);
+            install_from<std::ctype<char> >(one);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::ctype<wchar_t> >(one);
+            install_from<std::ctype<wchar_t> >(one);
 #endif
-            install_from<_VSTD::codecvt<char, char, mbstate_t> >(one);
+            install_from<std::codecvt<char, char, mbstate_t> >(one);
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-            install_from<_VSTD::codecvt<char16_t, char, mbstate_t> >(one);
-            install_from<_VSTD::codecvt<char32_t, char, mbstate_t> >(one);
+            install_from<std::codecvt<char16_t, char, mbstate_t> >(one);
+            install_from<std::codecvt<char32_t, char, mbstate_t> >(one);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
-            install_from<_VSTD::codecvt<char16_t, char8_t, mbstate_t> >(one);
-            install_from<_VSTD::codecvt<char32_t, char8_t, mbstate_t> >(one);
+            install_from<std::codecvt<char16_t, char8_t, mbstate_t> >(one);
+            install_from<std::codecvt<char32_t, char8_t, mbstate_t> >(one);
 #endif
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::codecvt<wchar_t, char, mbstate_t> >(one);
+            install_from<std::codecvt<wchar_t, char, mbstate_t> >(one);
 #endif
         }
         if (c & locale::monetary)
@@ -479,9 +482,9 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         }
         if (c & locale::messages)
         {
-            install_from<_VSTD::messages<char> >(one);
+            install_from<std::messages<char> >(one);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-            install_from<_VSTD::messages<wchar_t> >(one);
+            install_from<std::messages<wchar_t> >(one);
 #endif
         }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -501,7 +504,7 @@ locale::__imp::__imp(const __imp& other, facet* f, long id)
       name_("*")
 {
     f->__add_shared();
-    unique_ptr<facet, release> hold(f);
+    unique_ptr<facet, releaser> hold(f);
     facets_ = other.facets_;
     for (unsigned i = 0; i < other.facets_.size(); ++i)
         if (facets_[i])
@@ -520,7 +523,7 @@ void
 locale::__imp::install(facet* f, long id)
 {
     f->__add_shared();
-    unique_ptr<facet, release> hold(f);
+    unique_ptr<facet, releaser> hold(f);
     if (static_cast<size_t>(id) >= facets_.size())
         facets_.resize(static_cast<size_t>(id+1));
     if (facets_[static_cast<size_t>(id)])
@@ -538,95 +541,79 @@ locale::__imp::use_facet(long id) const
 
 // locale
 
-const locale&
-locale::__imp::make_classic()
-{
-    // only one thread can get in here and it only gets in once
-    alignas(locale) static std::byte buf[sizeof(locale)];
-    locale* c = reinterpret_cast<locale*>(&buf);
-    c->__locale_ = &make<__imp>(1u);
-    return *c;
+// We don't do reference counting on the classic locale.
+// It's never destroyed anyway, but atomic reference counting may be very
+// expensive in parallel applications. The classic locale is used by default
+// in all streams. Note: if a new global locale is installed, then we lose
+// the benefit of no reference counting.
+constinit __no_destroy<locale::__imp>
+    locale::__imp::classic_locale_imp_(__uninitialized_tag{}); // initialized below in classic()
+
+const locale& locale::classic() {
+  static const __no_destroy<locale> classic_locale(__private_tag{}, [] {
+    // executed exactly once on first initialization of `classic_locale`
+    locale::__imp::classic_locale_imp_.__emplace(1u);
+    return &locale::__imp::classic_locale_imp_.__get();
+  }());
+  return classic_locale.__get();
 }
 
-const locale&
-locale::classic()
-{
-    static const locale& c = __imp::make_classic();
-    return c;
+locale& locale::__global() {
+  static __no_destroy<locale> g(locale::classic());
+  return g.__get();
 }
 
-locale&
-locale::__imp::make_global()
-{
-    // only one thread can get in here and it only gets in once
-    alignas(locale) static std::byte buf[sizeof(locale)];
-    auto *obj = ::new (&buf) locale(locale::classic());
-    return *obj;
+void locale::__imp::acquire() {
+  if (this != &locale::__imp::classic_locale_imp_.__get())
+    __add_shared();
 }
 
-locale&
-locale::__global()
-{
-    static locale& g = __imp::make_global();
-    return g;
+void locale::__imp::release() {
+  if (this != &locale::__imp::classic_locale_imp_.__get())
+    __release_shared();
 }
 
-locale::locale() noexcept
-    : __locale_(__global().__locale_)
-{
-    __locale_->__add_shared();
-}
+locale::locale() noexcept : __locale_(__global().__locale_) { __locale_->acquire(); }
 
-locale::locale(const locale& l) noexcept
-    : __locale_(l.__locale_)
-{
-    __locale_->__add_shared();
-}
+locale::locale(const locale& l) noexcept : __locale_(l.__locale_) { __locale_->acquire(); }
 
-locale::~locale()
-{
-    __locale_->__release_shared();
-}
+locale::~locale() { __locale_->release(); }
 
 const locale&
 locale::operator=(const locale& other) noexcept
 {
-    other.__locale_->__add_shared();
-    __locale_->__release_shared();
-    __locale_ = other.__locale_;
-    return *this;
+  other.__locale_->acquire();
+  __locale_->release();
+  __locale_ = other.__locale_;
+  return *this;
 }
 
 locale::locale(const char* name)
     : __locale_(name ? new __imp(name)
                      : (__throw_runtime_error("locale constructed with null"), nullptr))
 {
-    __locale_->__add_shared();
+  __locale_->acquire();
 }
 
-locale::locale(const string& name)
-    : __locale_(new __imp(name))
-{
-    __locale_->__add_shared();
-}
+locale::locale(const string& name) : __locale_(new __imp(name)) { __locale_->acquire(); }
 
 locale::locale(const locale& other, const char* name, category c)
     : __locale_(name ? new __imp(*other.__locale_, name, c)
                      : (__throw_runtime_error("locale constructed with null"), nullptr))
 {
-    __locale_->__add_shared();
+  __locale_->acquire();
 }
 
 locale::locale(const locale& other, const string& name, category c)
     : __locale_(new __imp(*other.__locale_, name, c))
 {
-    __locale_->__add_shared();
+  __locale_->acquire();
 }
 
 locale::locale(const locale& other, const locale& one, category c)
     : __locale_(new __imp(*other.__locale_, *one.__locale_, c))
 {
-    __locale_->__add_shared();
+  __locale_->acquire();
 }
 
 string
@@ -642,7 +629,7 @@ locale::__install_ctor(const locale& other, facet* f, long id)
         __locale_ = new __imp(*other.__locale_, f, id);
     else
         __locale_ = other.__locale_;
-    __locale_->__add_shared();
+    __locale_->acquire();
 }
 
 locale
@@ -1071,6 +1058,7 @@ extern "C" const int ** __ctype_toupper_loc();
 const ctype<char>::mask*
 ctype<char>::classic_table() noexcept
 {
+  // clang-format off
     static constexpr const ctype<char>::mask builtin_table[table_size] = {
         cntrl,                          cntrl,
         cntrl,                          cntrl,
@@ -1145,6 +1133,7 @@ ctype<char>::classic_table() noexcept
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
+  // clang-format on
     return builtin_table;
 }
 #else
@@ -1986,10 +1975,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2005,6 +1993,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint16_t t = static_cast<uint16_t>(((c1 & 0x0F) << 12)
@@ -2017,11 +2008,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF5)
         {
-            if (frm_end-frm_nxt < 4)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
-            uint8_t c4 = frm_nxt[3];
             switch (c1)
             {
             case 0xF0:
@@ -2037,8 +2026,16 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
-            if ((c3 & 0xC0) != 0x80 || (c4 & 0xC0) != 0x80)
-                return codecvt_base::error;
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
+            if ((c3 & 0xC0) != 0x80)
+                 return codecvt_base::error;
+            if (frm_end-frm_nxt < 4)
+                 return codecvt_base::partial;
+            uint8_t c4 = frm_nxt[3];
+            if ((c4 & 0xC0) != 0x80)
+                 return codecvt_base::error;
             if (to_end-to_nxt < 2)
                 return codecvt_base::partial;
             if ((((c1 & 7UL) << 18) +
@@ -2107,10 +2104,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2126,6 +2122,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint16_t t = static_cast<uint16_t>(((c1 & 0x0F) << 12)
@@ -2138,11 +2137,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF5)
         {
-            if (frm_end-frm_nxt < 4)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
-            uint8_t c4 = frm_nxt[3];
             switch (c1)
             {
             case 0xF0:
@@ -2158,8 +2155,16 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
-            if ((c3 & 0xC0) != 0x80 || (c4 & 0xC0) != 0x80)
-                return codecvt_base::error;
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
+            if ((c3 & 0xC0) != 0x80)
+                 return codecvt_base::error;
+            if (frm_end-frm_nxt < 4)
+                 return codecvt_base::partial;
+            uint8_t c4 = frm_nxt[3];
+            if ((c4 & 0xC0) != 0x80)
+                 return codecvt_base::error;
             if (to_end-to_nxt < 2)
                 return codecvt_base::partial;
             if ((((c1 & 7UL) << 18) +
@@ -2385,10 +2390,9 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2404,6 +2408,9 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint32_t t = static_cast<uint32_t>(((c1 & 0x0F) << 12)
@@ -2416,11 +2423,9 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
         }
         else if (c1 < 0xF5)
         {
-            if (frm_end-frm_nxt < 4)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
-            uint8_t c4 = frm_nxt[3];
             switch (c1)
             {
             case 0xF0:
@@ -2436,8 +2441,16 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
                     return codecvt_base::error;
                  break;
             }
-            if ((c3 & 0xC0) != 0x80 || (c4 & 0xC0) != 0x80)
-                return codecvt_base::error;
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
+            if ((c3 & 0xC0) != 0x80)
+                 return codecvt_base::error;
+            if (frm_end-frm_nxt < 4)
+                 return codecvt_base::partial;
+            uint8_t c4 = frm_nxt[3];
+            if ((c4 & 0xC0) != 0x80)
+                 return codecvt_base::error;
             uint32_t t = static_cast<uint32_t>(((c1 & 0x07) << 18)
                                              | ((c2 & 0x3F) << 12)
                                              | ((c3 & 0x3F) << 6)
@@ -2643,10 +2656,9 @@ utf8_to_ucs2(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2662,6 +2674,9 @@ utf8_to_ucs2(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint16_t t = static_cast<uint16_t>(((c1 & 0x0F) << 12)

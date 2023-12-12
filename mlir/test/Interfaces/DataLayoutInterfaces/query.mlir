@@ -216,8 +216,8 @@ func.func @integers() {
     "test.data_layout_query"() : () -> i128
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<
-      #dlti.dl_entry<i32, dense<64> : vector<1xi32>>,
-      #dlti.dl_entry<i64, dense<128> : vector<1xi32>>
+      #dlti.dl_entry<i32, dense<64> : vector<1xi64>>,
+      #dlti.dl_entry<i64, dense<128> : vector<1xi64>>
     >} : () -> ()
   "test.op_with_data_layout"() ({
     // CHECK: alignment = 8
@@ -238,8 +238,8 @@ func.func @integers() {
     "test.data_layout_query"() : () -> i128
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<
-      #dlti.dl_entry<i32, dense<[64, 128]> : vector<2xi32>>,
-      #dlti.dl_entry<i64, dense<[128, 256]> : vector<2xi32>>
+      #dlti.dl_entry<i32, dense<[64, 128]> : vector<2xi64>>,
+      #dlti.dl_entry<i64, dense<[128, 256]> : vector<2xi64>>
     >} : () -> ()
   return
 }
@@ -256,8 +256,8 @@ func.func @floats() {
     "test.data_layout_query"() : () -> f80
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<
-      #dlti.dl_entry<f32, dense<64> : vector<1xi32>>,
-      #dlti.dl_entry<f80, dense<128> : vector<1xi32>>
+      #dlti.dl_entry<f32, dense<64> : vector<1xi64>>,
+      #dlti.dl_entry<f80, dense<128> : vector<1xi64>>
     >} : () -> ()
   "test.op_with_data_layout"() ({
     // CHECK: alignment = 8
@@ -270,8 +270,8 @@ func.func @floats() {
     "test.data_layout_query"() : () -> f80
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<
-      #dlti.dl_entry<f32, dense<[64, 128]> : vector<2xi32>>,
-      #dlti.dl_entry<f80, dense<[128, 256]> : vector<2xi32>>
+      #dlti.dl_entry<f32, dense<[64, 128]> : vector<2xi64>>,
+      #dlti.dl_entry<f80, dense<[128, 256]> : vector<2xi64>>
     >} : () -> ()
   return
 }

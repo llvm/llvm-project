@@ -731,7 +731,7 @@ class DebugCommunication(object):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
     ):

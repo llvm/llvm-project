@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "Interp.h"
 #include "PrimType.h"
@@ -33,6 +34,19 @@ PrimType getIntPrimType(const InterpState &S) {
   llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
+PrimType getLongPrimType(const InterpState &S) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned LongWidth = TI.getLongWidth();
+
+  if (LongWidth == 64)
+    return PT_Sint64;
+  else if (LongWidth == 32)
+    return PT_Sint32;
+  else if (LongWidth == 16)
+    return PT_Sint16;
+  llvm_unreachable("long isn't 16, 32 or 64 bit?");
+}
+
 /// Peek an integer value from the stack into an APSInt.
 static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   if (Offset == 0)
@@ -59,13 +73,67 @@ static void pushInt(InterpState &S, int32_t Val) {
     llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
-static bool retInt(InterpState &S, CodePtr OpPC, APValue &Result) {
-  PrimType IntType = getIntPrimType(S);
-  if (IntType == PT_Sint32)
-    return Ret<PT_Sint32>(S, OpPC, Result);
-  else if (IntType == PT_Sint16)
-    return Ret<PT_Sint16>(S, OpPC, Result);
-  llvm_unreachable("Int isn't 16 or 32 bit?");
+static void pushAPSInt(InterpState &S, const APSInt &Val) {
+  bool Signed = Val.isSigned();
+
+  if (Signed) {
+    switch (Val.getBitWidth()) {
+    case 64:
+      S.Stk.push<Integral<64, true>>(
+          Integral<64, true>::from(Val.getSExtValue()));
+      break;
+    case 32:
+      S.Stk.push<Integral<32, true>>(
+          Integral<32, true>::from(Val.getSExtValue()));
+      break;
+    case 16:
+      S.Stk.push<Integral<16, true>>(
+          Integral<16, true>::from(Val.getSExtValue()));
+      break;
+    case 8:
+      S.Stk.push<Integral<8, true>>(
+          Integral<8, true>::from(Val.getSExtValue()));
+      break;
+    default:
+      llvm_unreachable("Invalid integer bitwidth");
+    }
+    return;
+  }
+
+  // Unsigned.
+  switch (Val.getBitWidth()) {
+  case 64:
+    S.Stk.push<Integral<64, false>>(
+        Integral<64, false>::from(Val.getZExtValue()));
+    break;
+  case 32:
+    S.Stk.push<Integral<32, false>>(
+        Integral<32, false>::from(Val.getZExtValue()));
+    break;
+  case 16:
+    S.Stk.push<Integral<16, false>>(
+        Integral<16, false>::from(Val.getZExtValue()));
+    break;
+  case 8:
+    S.Stk.push<Integral<8, false>>(
+        Integral<8, false>::from(Val.getZExtValue()));
+    break;
+  default:
+    llvm_unreachable("Invalid integer bitwidth");
+  }
+}
+
+/// Pushes \p Val to the stack, as a target-dependent 'long'.
+static void pushLong(InterpState &S, int64_t Val) {
+  PrimType LongType = getLongPrimType(S);
+  if (LongType == PT_Sint64)
+    S.Stk.push<Integral<64, true>>(Integral<64, true>::from(Val));
+  else if (LongType == PT_Sint32)
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Val));
+  else if (LongType == PT_Sint16)
+    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Val));
+  else
+    llvm_unreachable("Long isn't 16, 32 or 64 bit?");
 }
 
 static void pushSizeT(InterpState &S, uint64_t Val) {
@@ -87,20 +155,29 @@ static void pushSizeT(InterpState &S, uint64_t Val) {
   }
 }
 
-static bool retSizeT(InterpState &S, CodePtr OpPC, APValue &Result) {
-  const TargetInfo &TI = S.getCtx().getTargetInfo();
-  unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
+static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
+                         std::optional<PrimType> &T) {
+  if (!T)
+    return RetVoid(S, OpPC, Result);
 
-  switch (SizeTWidth) {
-  case 64:
-    return Ret<PT_Uint64>(S, OpPC, Result);
-  case 32:
-    return Ret<PT_Uint32>(S, OpPC, Result);
-  case 16:
-    return Ret<PT_Uint16>(S, OpPC, Result);
+#define RET_CASE(X)                                                            \
+  case X:                                                                      \
+    return Ret<X>(S, OpPC, Result);
+  switch (*T) {
+    RET_CASE(PT_Float);
+    RET_CASE(PT_Bool);
+    RET_CASE(PT_Sint8);
+    RET_CASE(PT_Uint8);
+    RET_CASE(PT_Sint16);
+    RET_CASE(PT_Uint16);
+    RET_CASE(PT_Sint32);
+    RET_CASE(PT_Uint32);
+    RET_CASE(PT_Sint64);
+    RET_CASE(PT_Uint64);
+  default:
+    llvm_unreachable("Unsupported return type for builtin function");
   }
-
-  llvm_unreachable("size_t isn't 64 or 32 bit?");
+#undef RET_CASE
 }
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
@@ -439,40 +516,142 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushInt(S, Val.popcount() % 2);
+  return true;
+}
+
+static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame,
+                                  const Function *Func, const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushInt(S, Val.getBitWidth() - Val.getSignificantBits());
+  return true;
+}
+
+static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushAPSInt(S, APSInt(Val.reverseBits(), /*IsUnsigned=*/true));
+  return true;
+}
+
+static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
+                                          const InterpFrame *Frame,
+                                          const Function *Func,
+                                          const CallExpr *Call) {
+  // This is an unevaluated call, so there are no arguments on the stack.
+  assert(Call->getNumArgs() == 1);
+  const Expr *Arg = Call->getArg(0);
+
+  GCCTypeClass ResultClass =
+      EvaluateBuiltinClassifyType(Arg->getType(), S.getLangOpts());
+  int32_t ReturnVal = static_cast<int32_t>(ResultClass);
+  pushInt(S, ReturnVal);
+  return true;
+}
+
+// __builtin_expect(long, long)
+// __builtin_expect_with_probability(long, long, double)
+static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  // The return value is simply the value of the first parameter.
+  // We ignore the probability.
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3);
+
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  unsigned Offset = align(primSize(getLongPrimType(S))) * 2;
+  if (NumArgs == 3)
+    Offset += align(primSize(PT_Float));
+
+  APSInt Val = peekToAPSInt(S.Stk, ArgT, Offset);
+  pushLong(S, Val.getSExtValue());
+  return true;
+}
+
+/// rotateleft(value, amount)
+static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call,
+                                   bool Right) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+
+  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
+  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+
+  APSInt Result;
+  if (Right)
+    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+  else // Left.
+    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+
+  pushAPSInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Value = peekToAPSInt(S.Stk, ArgT);
+
+  uint64_t N = Value.countr_zero();
+  pushInt(S, N == Value.getBitWidth() ? 0 : N + 1);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
+  QualType ReturnType = Call->getCallReturnType(S.getCtx());
+  std::optional<PrimType> ReturnT = S.getContext().classify(ReturnType);
+  // If classify failed, we assume void.
+  assert(ReturnT || ReturnType->isVoidType());
+
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
-    return Ret<PT_Bool>(S, OpPC, Dummy);
+    break;
   case Builtin::BI__builtin_assume:
-    return RetVoid(S, OpPC, Dummy);
+    break;
   case Builtin::BI__builtin_strcmp:
-    if (interp__builtin_strcmp(S, OpPC, Frame))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_strcmp(S, OpPC, Frame))
+      return false;
     break;
   case Builtin::BI__builtin_strlen:
-    if (interp__builtin_strlen(S, OpPC, Frame))
-      return retSizeT(S, OpPC, Dummy);
+    if (!interp__builtin_strlen(S, OpPC, Frame))
+      return false;
     break;
   case Builtin::BI__builtin_nan:
   case Builtin::BI__builtin_nanf:
   case Builtin::BI__builtin_nanl:
   case Builtin::BI__builtin_nanf16:
   case Builtin::BI__builtin_nanf128:
-    if (interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/false))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/false))
+      return false;
     break;
   case Builtin::BI__builtin_nans:
   case Builtin::BI__builtin_nansf:
   case Builtin::BI__builtin_nansl:
   case Builtin::BI__builtin_nansf16:
   case Builtin::BI__builtin_nansf128:
-    if (interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/true))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/true))
+      return false;
     break;
 
   case Builtin::BI__builtin_huge_val:
@@ -485,15 +664,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_infl:
   case Builtin::BI__builtin_inff16:
   case Builtin::BI__builtin_inff128:
-    if (interp__builtin_inf(S, OpPC, Frame, F))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_inf(S, OpPC, Frame, F))
+      return false;
     break;
   case Builtin::BI__builtin_copysign:
   case Builtin::BI__builtin_copysignf:
   case Builtin::BI__builtin_copysignl:
   case Builtin::BI__builtin_copysignf128:
-    if (interp__builtin_copysign(S, OpPC, Frame, F))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_copysign(S, OpPC, Frame, F))
+      return false;
     break;
 
   case Builtin::BI__builtin_fmin:
@@ -501,8 +680,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128:
-    if (interp__builtin_fmin(S, OpPC, Frame, F))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_fmin(S, OpPC, Frame, F))
+      return false;
     break;
 
   case Builtin::BI__builtin_fmax:
@@ -510,60 +689,60 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxf128:
-    if (interp__builtin_fmax(S, OpPC, Frame, F))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_fmax(S, OpPC, Frame, F))
+      return false;
     break;
 
   case Builtin::BI__builtin_isnan:
-    if (interp__builtin_isnan(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_isnan(S, OpPC, Frame, F))
+      return false;
     break;
   case Builtin::BI__builtin_issignaling:
-    if (interp__builtin_issignaling(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_issignaling(S, OpPC, Frame, F))
+      return false;
     break;
 
   case Builtin::BI__builtin_isinf:
-    if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/false))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/false))
+      return false;
     break;
 
   case Builtin::BI__builtin_isinf_sign:
-    if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true))
+      return false;
     break;
 
   case Builtin::BI__builtin_isfinite:
-    if (interp__builtin_isfinite(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_isfinite(S, OpPC, Frame, F))
+      return false;
     break;
   case Builtin::BI__builtin_isnormal:
-    if (interp__builtin_isnormal(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_isnormal(S, OpPC, Frame, F))
+      return false;
     break;
   case Builtin::BI__builtin_issubnormal:
-    if (interp__builtin_issubnormal(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_issubnormal(S, OpPC, Frame, F))
+      return false;
     break;
   case Builtin::BI__builtin_iszero:
-    if (interp__builtin_iszero(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_iszero(S, OpPC, Frame, F))
+      return false;
     break;
   case Builtin::BI__builtin_isfpclass:
-    if (interp__builtin_isfpclass(S, OpPC, Frame, F, Call))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_isfpclass(S, OpPC, Frame, F, Call))
+      return false;
     break;
   case Builtin::BI__builtin_fpclassify:
-    if (interp__builtin_fpclassify(S, OpPC, Frame, F))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_fpclassify(S, OpPC, Frame, F))
+      return false;
     break;
 
   case Builtin::BI__builtin_fabs:
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:
   case Builtin::BI__builtin_fabsf128:
-    if (interp__builtin_fabs(S, OpPC, Frame, F))
-      return Ret<PT_Float>(S, OpPC, Dummy);
+    if (!interp__builtin_fabs(S, OpPC, Frame, F))
+      return false;
     break;
 
   case Builtin::BI__builtin_popcount:
@@ -572,15 +751,81 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:
-    if (interp__builtin_popcount(S, OpPC, Frame, F, Call))
-      return retInt(S, OpPC, Dummy);
+    if (!interp__builtin_popcount(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_parity:
+  case Builtin::BI__builtin_parityl:
+  case Builtin::BI__builtin_parityll:
+    if (!interp__builtin_parity(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll:
+    if (!interp__builtin_clrsb(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_bitreverse8:
+  case Builtin::BI__builtin_bitreverse16:
+  case Builtin::BI__builtin_bitreverse32:
+  case Builtin::BI__builtin_bitreverse64:
+    if (!interp__builtin_bitreverse(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_classify_type:
+    if (!interp__builtin_classify_type(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability:
+    if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/false))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
+      return false;
     break;
 
   default:
     return false;
   }
 
-  return false;
+  return retPrimValue(S, OpPC, Dummy, ReturnT);
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,

@@ -34,9 +34,7 @@ public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVExpandPseudo() : MachineFunctionPass(ID) {
-    initializeRISCVExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -309,8 +307,8 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
       .addReg(MBBI->getOperand(1).getReg())
       .add(MBBI->getOperand(2));
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
-    // FIXME: Zdinx RV32 can not work on unaligned scalar memory.
-    assert(!STI->enableUnalignedScalarMem());
+    // FIXME: Zdinx RV32 can not work on unaligned memory.
+    assert(!STI->hasFastUnalignedAccess());
 
     assert(MBBI->getOperand(2).getOffset() % 8 == 0);
     MBBI->getOperand(2).setOffset(MBBI->getOperand(2).getOffset() + 4);
@@ -381,9 +379,7 @@ public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVPreRAExpandPseudo() : MachineFunctionPass(ID) {
-    initializeRISCVPreRAExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVPreRAExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

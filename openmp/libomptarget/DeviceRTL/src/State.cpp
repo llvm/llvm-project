@@ -8,14 +8,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "State.h"
+#include "Shared/Environment.h"
+
 #include "Allocator.h"
 #include "Configuration.h"
 #include "Debug.h"
-#include "Environment.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
+#include "State.h"
 #include "Synchronization.h"
 #include "Types.h"
 #include "Utils.h"
