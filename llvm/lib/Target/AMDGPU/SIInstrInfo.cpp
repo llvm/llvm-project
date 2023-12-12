@@ -5157,6 +5157,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   return true;
 }
 
+// It is more readable to list mapped opcodes on the same line.
+// clang-format off
+
 unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default: return AMDGPU::INSTRUCTION_LIST_END;
@@ -5295,6 +5298,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
 }
+
+// clang-format on
 
 void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
