@@ -82,11 +82,6 @@ struct PluginAdaptorTy {
 
   llvm::DenseSet<const __tgt_device_image *> UsedImages;
 
-  // Mutex for thread-safety when calling RTL interface functions.
-  // It is easier to enforce thread-safety at the libomptarget level,
-  // so that developers of new RTLs do not have to worry about it.
-  std::mutex Mtx;
-
 private:
   /// Number of devices the underling plugins sees.
   int32_t NumberOfPluginDevices = -1;

@@ -502,3 +502,6 @@ for.body:
   %inc = add i32 %indvar, 1
   br i1 %cond, label %for.body, label %for.exit
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

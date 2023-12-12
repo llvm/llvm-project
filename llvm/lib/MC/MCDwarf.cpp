@@ -1211,7 +1211,7 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
   // The dwarf label's name does not have the symbol name's leading
   // underbar if any.
   StringRef Name = Symbol->getName();
-  if (Name.startswith("_"))
+  if (Name.starts_with("_"))
     Name = Name.substr(1, Name.size()-1);
 
   // Get the dwarf file number to be used for the dwarf label.

@@ -5480,3 +5480,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #2 = { strictfp}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

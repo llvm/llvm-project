@@ -582,7 +582,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 
   if (Name.consume_front("xop.")) {
     Intrinsic::ID ID = Intrinsic::not_intrinsic;
-    if (Name.startswith("vpermil2")) { // Added in 3.9
+    if (Name.starts_with("vpermil2")) { // Added in 3.9
       // Upgrade any XOP PERMIL2 index operand still using a float/double
       // vector.
       auto Idx = F->getFunctionType()->getParamType(2);

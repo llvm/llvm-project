@@ -78,7 +78,10 @@
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -675,7 +678,7 @@ static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
   // normal pass name w/o parameters == default parameters
   if (Name.empty())
     return true;
-  return Name.startswith("<") && Name.endswith(">");
+  return Name.starts_with("<") && Name.ends_with(">");
 }
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
@@ -1243,8 +1246,8 @@ Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
 /// alias.
 static bool startsWithDefaultPipelineAliasPrefix(StringRef Name) {
-  return Name.startswith("default") || Name.startswith("thinlto") ||
-         Name.startswith("lto");
+  return Name.starts_with("default") || Name.starts_with("thinlto") ||
+         Name.starts_with("lto");
 }
 
 /// Tests whether registered callbacks will accept a given pass name.

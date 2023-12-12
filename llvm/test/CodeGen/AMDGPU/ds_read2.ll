@@ -1540,3 +1540,6 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { convergent nounwind }
 attributes #3 = { nounwind noinline }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

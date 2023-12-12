@@ -12,17 +12,17 @@
 add_llvm_library(omptarget
   SHARED
 
-  api.cpp
   device.cpp
   interface.cpp
   omptarget.cpp
   OmptTracing.cpp
   OmptTracingBuffer.cpp
-  rtl.cpp
+  OffloadRTL.cpp
   LegacyAPI.cpp
   PluginManager.cpp
   DeviceImage.cpp
 
+  OpenMP/API.cpp
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
@@ -71,13 +71,11 @@ target_link_libraries(
   ${CMAKE_DL_LIBS}
   ${LLVM_OFFLOAD_ARCH}
   "-Wl,--no-allow-shlib-undefined")
-#=======
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(omptarget PRIVATE
   TARGET_NAME=omptarget
   DEBUG_PREFIX="omptarget"
 )
-#>>>>>>> d4d88b8499b6
 
 target_compile_options(omptarget PUBLIC ${offload_compile_flags})
 target_link_options(omptarget PUBLIC ${offload_link_flags})

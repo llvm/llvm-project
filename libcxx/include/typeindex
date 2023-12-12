@@ -70,8 +70,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     bool operator==(const type_index& __y) const _NOEXCEPT
         {return *__t_ == *__y.__t_;}
-    _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER <= 17
+    _LIBCPP_HIDE_FROM_ABI
     bool operator!=(const type_index& __y) const _NOEXCEPT
         {return *__t_ != *__y.__t_;}
 #endif

@@ -3019,3 +3019,6 @@ for.body.i:                                       ; preds = %for.body.i, %entry
   store i32 %retval.sroa.0.0.insert.insert, ptr addrspace(1) undef, align 1
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

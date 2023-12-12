@@ -281,3 +281,6 @@ declare hidden <3 x half> @func_v3f16()
 declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
 
 attributes #0 = { nounwind}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

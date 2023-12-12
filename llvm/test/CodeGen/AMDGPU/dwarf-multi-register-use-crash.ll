@@ -562,7 +562,7 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0, !25, !26}
-!llvm.module.flags = !{!27, !28, !29, !30, !31, !32}
+!llvm.module.flags = !{!27, !28, !29, !30, !31, !32, !44}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0 (https://github.com/llvm/llvm-project.git 05256c8d95e0b15bcc502d595c15d902ff520f97)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !8, imports: !20, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "dummy", directory: "dummy", checksumkind: CSK_MD5, checksum: "b67bec84bdce3730b4a6f2ed8d50b85c")
@@ -607,3 +607,4 @@ attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willre
 !41 = !DILocalVariable(name: "dummy", arg: 3, scope: !34, file: !1, line: 49, type: !5)
 !42 = !DILocalVariable(name: "dummy", arg: 4, scope: !34, file: !1, line: 49, type: !5)
 !43 = !DILocation(line: 49, column: 9, scope: !34)
+!44 = !{i32 1, !"amdgpu_code_object_version", i32 500}

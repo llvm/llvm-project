@@ -212,8 +212,8 @@ static Constant *rebuildSplatableConstant(const Constant *C,
     SmallVector<uint32_t> RawBits;
     for (unsigned I = 0; I != SplatBitWidth; I += 32)
       RawBits.push_back(Splat->extractBits(32, I).getZExtValue());
-    if (SclTy->isFloatingPointTy())
-      return ConstantDataVector::getFP(Type::getFloatTy(Ctx), RawBits);
+    if (SclTy->isFloatTy())
+      return ConstantDataVector::getFP(SclTy, RawBits);
     return ConstantDataVector::get(Ctx, RawBits);
   }
 
@@ -221,8 +221,8 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   SmallVector<uint64_t> RawBits;
   for (unsigned I = 0; I != SplatBitWidth; I += 64)
     RawBits.push_back(Splat->extractBits(64, I).getZExtValue());
-  if (SclTy->isFloatingPointTy())
-    return ConstantDataVector::getFP(Type::getDoubleTy(Ctx), RawBits);
+  if (SclTy->isDoubleTy())
+    return ConstantDataVector::getFP(SclTy, RawBits);
   return ConstantDataVector::get(Ctx, RawBits);
 }
 
