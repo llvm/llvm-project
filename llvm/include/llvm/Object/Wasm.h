@@ -144,7 +144,6 @@ public:
   ArrayRef<wasm::WasmGlobal> globals() const { return Globals; }
   ArrayRef<wasm::WasmTag> tags() const { return Tags; }
   ArrayRef<wasm::WasmExport> exports() const { return Exports; }
-  ArrayRef<WasmSymbol> syms() const { return Symbols; }
   const wasm::WasmLinkingData &linkingData() const { return LinkingData; }
   uint32_t getNumberOfSymbols() const { return Symbols.size(); }
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
