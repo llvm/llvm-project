@@ -1826,10 +1826,12 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
 /// Just takes a pointer and checks if its' an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
-  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!Ptr.isUnknownSizeArray())
+  if (!Ptr.isUnknownSizeArray()) {
+    S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
+  }
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_unsupported_unsized_array);
