@@ -32,7 +32,7 @@ ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
   for (const auto &A : ARMArchNames) {
-    if (A.Name.endswith(Syn))
+    if (A.Name.ends_with(Syn))
       return A.ID;
   }
   return ArchKind::INVALID;
@@ -348,7 +348,7 @@ StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.startswith("no")) {
+  if (Name.starts_with("no")) {
     Name = Name.substr(2);
     return true;
   }
