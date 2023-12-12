@@ -15,7 +15,7 @@ target triple = "armv7-unknown-linux-gnueabihf"
 ; CHECK-LABEL: @cvCalcEMD2
 ; CHECK: vector.body
 ; CHECK: store <{{[0-9]+}} x ptr>
-define void @cvCalcEMD2(ptr %dst) local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
+define void @cvCalcEMD2(ptr %dst) {
 entry:
   br label %for.body14.i.i
 
@@ -40,7 +40,7 @@ for.end22.i.i:                                    ; preds = %for.body14.i.i
 ; CHECK-LABEL: @cvCalcEMD2_2
 ; CHECK: vector.body
 ; CHECK: store <{{[0-9]+}} x float>
-define void @cvCalcEMD2_2(ptr %dst) local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
+define void @cvCalcEMD2_2(ptr %dst) {
 entry:
   br label %for.body14.i.i
 
@@ -64,7 +64,7 @@ for.end22.i.i:                                    ; preds = %for.body14.i.i
 ; CHECK-LABEL: @cvCalcEMD3
 ; CHECK: vector.body
 ; CHECK: inttoptr <{{[0-9]+}} x i32>
-define void @cvCalcEMD3(ptr %src, ptr %dst) local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
+define void @cvCalcEMD3(ptr %src, ptr %dst) {
 entry:
   br label %for.body14.i.i
 
@@ -91,7 +91,7 @@ for.end22.i.i:                                    ; preds = %for.body14.i.i
 ; CHECK-LABEL: @cvCalcEMD3_2
 ; CHECK: vector.body
 ; CHECK: ptrtoint <{{[0-9]+}} x ptr>
-define void @cvCalcEMD3_2(ptr %src, ptr %dst) local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
+define void @cvCalcEMD3_2(ptr %src, ptr %dst) {
 entry:
   br label %for.body14.i.i
 
@@ -113,8 +113,3 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
 for.end22.i.i:                                    ; preds = %for.body14.i.i
   unreachable
 }
-
-declare i32 @__gxx_personality_v0(...)
-
-attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+dsp,+neon,+vfp3,-thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
