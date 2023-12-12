@@ -20,7 +20,7 @@ S<bool(2 > 1)> s;
 namespace greatergreater {
   template<typename T> struct S { S(); S(T); };
   void f(S<int>=0); // expected-error {{a space is required between a right angle bracket and an equals sign (use '> =')}}
-  void f(S<S<int>>=S<int>()); // expected-error {{use '> >'}} expected-error {{use '> ='}}
+  void f(S<S<int>>=S<int>()); // expected-warning {{two consecutive right angle brackets}} expected-error {{use '> ='}}
   template<typename T> void t();
   struct R {
     friend void operator==(void (*)(), R) {}
@@ -28,12 +28,12 @@ namespace greatergreater {
   };
   void g() {
     (void)(&t<int>==R()); // expected-error {{use '> ='}}
-    (void)(&t<int>>=R()); // expected-error {{use '> >'}}
+    (void)(&t<int>>=R()); // expected-warning {{two consecutive right angle brackets}}
     (void)(&t<S<int>>>=R());
 #if __cplusplus <= 199711L
-    // expected-error@-2 {{use '> >'}}
+    // expected-warning@-2 {{two consecutive right angle brackets}}
 #endif
-    (void)(&t<S<int>>==R()); // expected-error {{use '> >'}} expected-error {{use '> ='}}
+    (void)(&t<S<int>>==R()); // expected-warning {{two consecutive right angle brackets}} expected-error {{use '> ='}}
   }
 }
 
@@ -83,14 +83,14 @@ namespace pr16225add {
   template<class T1, typename T2> struct foo5 :
     UnknownBase<T1,T2,ABC<T2,T1>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
-    // expected-error@-2 {{use '> >'}}
+    // expected-warning@-2 {{two consecutive right angle brackets}}
 #endif
   { };
 
   template<class T1, typename T2> struct foo6 :
     UnknownBase<T1,ABC<T2,T1>>, // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
-    // expected-error@-2 {{use '> >'}}
+    // expected-warning@-2 {{two consecutive right angle brackets}}
 #endif
     Known<T1>  // expected-error {{too few template arguments for class template 'Known'}}
   { };
@@ -102,21 +102,21 @@ namespace pr16225add {
   template<class T1, typename T2> struct foo8 :
     UnknownBase<X<int,int>,X<int,int>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
-    // expected-error@-2 {{use '> >'}}
+    // expected-warning@-2 {{two consecutive right angle brackets}}
 #endif
   { };
 
   template<class T1, typename T2> struct foo9 :
     UnknownBase<Known<int,int>,X<int,int>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
-    // expected-error@-2 {{use '> >'}}
+    // expected-warning@-2 {{two consecutive right angle brackets}}
 #endif
   { };
 
   template<class T1, typename T2> struct foo10 :
     UnknownBase<Known<int,int>,X<int,X<int,int>>> // expected-error {{no template named 'UnknownBase'}}
 #if __cplusplus <= 199711L
-    // expected-error@-2 {{use '> >'}}
+    // expected-warning@-2 {{two consecutive right angle brackets}}
 #endif
   { };
 
