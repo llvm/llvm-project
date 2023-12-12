@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRArmSMETransforms
   EnableArmStreaming.cpp
+  OuterProductWidening.cpp
   TileAllocation.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -10,6 +11,7 @@ add_mlir_dialect_library(MLIRArmSMETransforms
 
   LINK_LIBS PUBLIC
   MLIRArmSMEDialect
+  MLIRArmSVEDialect
   MLIRFuncDialect
   MLIRLLVMCommonConversion
   MLIRVectorDialect

@@ -122,4 +122,43 @@ def TileAllocation
   let dependentDialects = ["func::FuncDialect"];
 }
 
+def OuterProductWidening
+    : Pass<"arm-sme-outer-product-widening", "mlir::func::FuncOp"> {
+  let summary = "Fold 'arm_sme.outerproduct' operations into widening variants";
+  let description = [{
+    This pass folds 'arm_sme.outerproduct' operations that are chained via the
+    accumulator into 2-way or 4-way ArmSME outer product operations.
+
+    For example:
+    ```mlir
+    %a0_ext = arith.extf %a0 : vector<[4]xf16> to vector<[4]xf32>
+    %b0_ext = arith.extf %b0 : vector<[4]xf16> to vector<[4]xf32>
+    %a1_ext = arith.extf %a1 : vector<[4]xf16> to vector<[4]xf32>
+    %b1_ext = arith.extf %b1 : vector<[4]xf16> to vector<[4]xf32>
+
+    %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xf32>, vector<[4]xf32>
+    %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xf32>, vector<[4]xf32>
+    ```
+
+    Becomes:
+
+    ```mlir
+    %undef = llvm.mlir.undef : vector<[8]xf16>
+    %a0_ins = vector.scalable.insert %a0, %undef[0] : vector<[4]xf16> into vector<[8]xf16>
+    %a1_ins = vector.scalable.insert %a1, %undef[0] : vector<[4]xf16> into vector<[8]xf16>
+    %a_packed = "arm_sve.intr.zip1"(%a0_ins, %a1_ins) : (vector<[8]xf16>, vector<[8]xf16>) -> vector<[8]xf16>
+    %b0_ins = vector.scalable.insert %b0, %undef[0] : vector<[4]xf16> into vector<[8]xf16>
+    %b1_ins = vector.scalable.insert %b1, %undef[0] : vector<[4]xf16> into vector<[8]xf16>
+    %b_packed = "arm_sve.intr.zip1"(%b0_ins, %b1_ins) : (vector<[8]xf16>, vector<[8]xf16>) -> vector<[8]xf16>
+    %0 = arm_sme.fmopa_wide_2way %a_packed, %b_packed : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+    ```
+
+    For further information on the widening ops see:
+    https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop
+    https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smesmopa_wide_4way-arm_smesmopa_wide_4wayop
+  }];
+  let constructor = "mlir::arm_sme::createOuterProductWideningPass()";
+  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect", "LLVM::LLVMDialect"];
+}
+
 #endif // MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_TD
