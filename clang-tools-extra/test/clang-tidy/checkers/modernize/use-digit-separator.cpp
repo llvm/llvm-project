@@ -3,3 +3,35 @@
 int NotFormattedInteger = 1234567;
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: unformatted representation of integer literal '1234567' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234'567
+
+int BinaryNotFormattedInteger = 0b11101101;
+// CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unformatted representation of integer literal '0b11101101' [modernize-use-digit-separator]
+// CHECK-FIXES: 0b1110'1101
+
+int OctNotFormattedInteger = 037512;
+// CHECK-MESSAGES: :[[@LINE-1]]:30: warning: unformatted representation of integer literal '037512' [modernize-use-digit-separator]
+// CHECK-FIXES: 037'512
+
+int HexNotFormattedInteger = 0x4f356;
+// CHECK-MESSAGES: :[[@LINE-1]]:30: warning: unformatted representation of integer literal '0x4f356' [modernize-use-digit-separator]
+// CHECK-FIXES: 0x4'F356
+
+unsigned int UnsignedNotFormattedInteger = 10004U;
+// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: unformatted representation of integer literal '10004U' [modernize-use-digit-separator]
+// CHECK-FIXES: 10'004U
+
+unsigned int UnsignedNotFormattedInteger1 = 100045u;
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of integer literal '100045u' [modernize-use-digit-separator]
+// CHECK-FIXES: 100'045u
+
+long LongNotFormattedInteger = 123456789101112L;
+// CHECK-MESSAGES: :[[@LINE-1]]:32: warning: unformatted representation of integer literal '123456789101112L' [modernize-use-digit-separator]
+// CHECK-FIXES: 123'456'789'101'112L
+
+long LongNotFormattedInteger1 = 12345678910111213l;
+// CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unformatted representation of integer literal '12345678910111213l' [modernize-use-digit-separator]
+// CHECK-FIXES: 12'345'678'910'111'213l
+
+float NotFormattedFloat = 1234.56789;
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: unformatted representation of integer literal '1234.56789' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234.567'89
