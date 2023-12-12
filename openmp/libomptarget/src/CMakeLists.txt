@@ -15,15 +15,15 @@ libomptarget_say("Building offloading runtime library libomptarget.")
 add_llvm_library(omptarget
   SHARED
 
-  api.cpp
   device.cpp
   interface.cpp
   omptarget.cpp
-  rtl.cpp
+  OffloadRTL.cpp
   LegacyAPI.cpp
   PluginManager.cpp
   DeviceImage.cpp
 
+  OpenMP/API.cpp
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
@@ -54,6 +54,9 @@ target_compile_definitions(omptarget PRIVATE
   TARGET_NAME=omptarget
   DEBUG_PREFIX="omptarget"
 )
+
+target_compile_options(omptarget PUBLIC ${offload_compile_flags})
+target_link_options(omptarget PUBLIC ${offload_link_flags})
 
 macro(check_plugin_target target)
 if (TARGET omptarget.rtl.${target})

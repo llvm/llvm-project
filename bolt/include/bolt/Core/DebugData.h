@@ -459,8 +459,6 @@ private:
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
-  // Section size not including header.
-  uint32_t CurrentSectionSize{0};
   bool StrOffsetSectionWasModified = false;
 };
 

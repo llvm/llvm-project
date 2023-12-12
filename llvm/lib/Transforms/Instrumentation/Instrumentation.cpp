@@ -85,3 +85,10 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   return C;
 }
 
+void llvm::setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                         GlobalVariable &GV) {
+  if (TargetTriple.getArch() == Triple::x86_64 &&
+      TargetTriple.getObjectFormat() == Triple::ELF) {
+    GV.setCodeModel(CodeModel::Large);
+  }
+}

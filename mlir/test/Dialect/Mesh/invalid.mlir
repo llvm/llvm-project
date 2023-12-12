@@ -6,16 +6,16 @@ mesh.cluster @mesh0(rank = 0)
 // -----
 
 // expected-error@+1 {{rank of dim_sizes is not expected to be larger than rank of cluster}}
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 3, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x3x4)
 
 // -----
 
-// expected-error@+1 {{dimension size of a mesh cluster is expected to be non-negative}}
-mesh.cluster @mesh0(rank = 2, dim_sizes = [-1])
+// expected-error@+1 {{custom op 'mesh.cluster' Failed parsing dimension list. Did you mean an empty list? It must be denoted by "[]".}}
+mesh.cluster @mesh0(rank = 2, dim_sizes = -1)
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @mesh_axis_duplicated_different_subarray(
     // expected-error@+1 {{mesh axis duplicated}}
@@ -26,7 +26,7 @@ func.func @mesh_axis_duplicated_different_subarray(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @mesh_axis_duplicated_same_subarray(
     // expected-error@+1 {{mesh axis duplicated}}
@@ -37,7 +37,7 @@ func.func @mesh_axis_duplicated_same_subarray(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @mesh_axis_duplicated_bewteen_split_and_partial(
     // expected-error@+1 {{mesh axis duplicated}}
@@ -48,7 +48,7 @@ func.func @mesh_axis_duplicated_bewteen_split_and_partial(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @mesh_axis_negtive_in_split_part(
     // expected-error@+1 {{mesh axis is expected to be non-negative}}
@@ -59,7 +59,7 @@ func.func @mesh_axis_negtive_in_split_part(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @mesh_axis_negtive_in_partial(
     // expected-error@+1 {{mesh axis is expected to be non-negative}}
@@ -80,7 +80,7 @@ func.func @all_reduce_invalid_mesh_symbol(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @all_reduce_invalid_mesh_axis(
     %arg0 : tensor<4xf32>) -> tensor<4xf64> {
@@ -92,7 +92,7 @@ func.func @all_reduce_invalid_mesh_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @all_reduce_duplicate_mesh_axis(
     %arg0 : tensor<4xf32>) -> tensor<4xf64> {
@@ -104,7 +104,7 @@ func.func @all_reduce_duplicate_mesh_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @all_reduce_invalid_tensor_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<5xf64> {
@@ -125,7 +125,7 @@ func.func @all_gather_invalid_mesh_symbol(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @all_gather_invalid_mesh_axis(
     %arg0 : tensor<4xf32>) -> tensor<4xf32> {
@@ -137,7 +137,7 @@ func.func @all_gather_invalid_mesh_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
 
 func.func @all_reduce_duplicate_mesh_axis(
     %arg0 : tensor<4xf32>) -> tensor<4xf32> {
@@ -149,7 +149,7 @@ func.func @all_reduce_duplicate_mesh_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [1])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 1)
 
 func.func @all_gather_invalid_non_gather_axis_dimension_size(
     %arg0 : tensor<3x4xf32>) -> tensor<3x5xf32> {
@@ -161,7 +161,7 @@ func.func @all_gather_invalid_non_gather_axis_dimension_size(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [1, 2])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 1x2)
 
 func.func @all_gather_invalid_gather_axis_dimension_size(
     %arg0 : tensor<3x4xf32>) -> tensor<3x5xf32> {
@@ -173,7 +173,7 @@ func.func @all_gather_invalid_gather_axis_dimension_size(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [1])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 1)
 
 func.func @all_gather_invalid_gather_axis_dynamic_dimension(
     %arg0 : tensor<?xf32>) -> tensor<3xf32> {
@@ -185,7 +185,7 @@ func.func @all_gather_invalid_gather_axis_dynamic_dimension(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [1])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 1)
 
 func.func @all_gather_invalid_gather_axis(
     %arg0 : tensor<3xf32>) -> tensor<3xf32> {
@@ -197,7 +197,7 @@ func.func @all_gather_invalid_gather_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [1])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 1)
 
 func.func @all_gather_invalid_negative_gather_axis(
     %arg0 : tensor<3xf32>) -> tensor<3xf32> {
@@ -220,7 +220,7 @@ func.func @all_to_all_invalid_mesh_symbol(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [1])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 1)
 
 func.func @all_to_all_duplicate_mesh_axis(
     %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
@@ -233,7 +233,7 @@ func.func @all_to_all_duplicate_mesh_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [0, 1])
+mesh.cluster @mesh0(rank = 2, dim_sizes = ?x1)
 
 func.func @all_to_all_invalid_non_dynamic_result_dimension_induced_by_dynamic_device_group(
     %arg0 : tensor<3x6xi8>) -> tensor<3x6xi8> {
@@ -246,7 +246,7 @@ func.func @all_to_all_invalid_non_dynamic_result_dimension_induced_by_dynamic_de
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [1, 1])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 1x1)
 
 func.func @all_to_all_invalid_non_dynamic_result_split_dimension_induced_by_dynamic_operand_dimension(
     %arg0 : tensor<?x6xi8>) -> tensor<3x?xi8> {
@@ -259,7 +259,7 @@ func.func @all_to_all_invalid_non_dynamic_result_split_dimension_induced_by_dyna
 
 // -----
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = [1, 1])
+mesh.cluster @mesh0(rank = 2, dim_sizes = 1x1)
 
 func.func @all_to_all_invalid_non_dynamic_result_concat_dimension_induced_by_dynamic_operand_dimension(
     %arg0 : tensor<3x?xi8>) -> tensor<?x3xi8> {
@@ -272,7 +272,7 @@ func.func @all_to_all_invalid_non_dynamic_result_concat_dimension_induced_by_dyn
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
 
 func.func @all_to_all_invalid_non_dynamic_result_concat_dimension_size(
     %arg0 : tensor<3x2xi8>) -> tensor<1x7xi8> {
@@ -285,7 +285,7 @@ func.func @all_to_all_invalid_non_dynamic_result_concat_dimension_size(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
 
 func.func @all_to_all_invalid_non_dynamic_result_split_dimension_size(
     %arg0 : tensor<3x2xi8>) -> tensor<2x6xi8> {
@@ -298,7 +298,7 @@ func.func @all_to_all_invalid_non_dynamic_result_split_dimension_size(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
 
 func.func @reduce_scatter_duplicate_mesh_axis(
     %arg0 : tensor<?xf32>) -> tensor<?xf64> {
@@ -310,7 +310,7 @@ func.func @reduce_scatter_duplicate_mesh_axis(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
 
 func.func @reduce_scatter_invalid_dynamic_dimension(
     %arg0 : tensor<?xf32>) -> tensor<2xf64> {
@@ -322,7 +322,7 @@ func.func @reduce_scatter_invalid_dynamic_dimension(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
 
 func.func @reduce_scatter_invalid_static_dimension_size(
     %arg0 : tensor<3xf32>) -> tensor<2xf64> {
@@ -334,7 +334,7 @@ func.func @reduce_scatter_invalid_static_dimension_size(
 
 // -----
 
-mesh.cluster @mesh0(rank = 1, dim_sizes = [3])
+mesh.cluster @mesh0(rank = 1, dim_sizes = 3)
 
 func.func @reduce_scatter_invalid_operand_static_dimension_size(
     %arg0 : tensor<4xf32>) -> tensor<?xf64> {

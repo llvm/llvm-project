@@ -1514,7 +1514,7 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
   for (const StringRef &FileWeightEntry : Entries) {
     StringRef SanitizedEntry = FileWeightEntry.trim(" \t\v\f\r");
     // Skip comments.
-    if (SanitizedEntry.startswith("#"))
+    if (SanitizedEntry.starts_with("#"))
       continue;
     // If there's no comma, it's an unweighted profile.
     else if (!SanitizedEntry.contains(','))
