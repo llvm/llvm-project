@@ -1030,6 +1030,9 @@ public:
   Expr *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     return IsExpectedRecordDecl(E) ? E : nullptr;
   }
+  Expr *VisitCallExpr(CallExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
+  }
 
   // "Pass This On" --The Knife
   Expr *VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
@@ -1038,9 +1041,6 @@ public:
     return Visit(E->getBase());
   }
   Expr *VisitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitImplicitCastExpr(ImplicitCastExpr *E) {
-    return Visit(E->getSubExpr());
-  }
   Expr *VisitParenExpr(ParenExpr *E) {
     if (IsExpectedRecordDecl(E))
       return E;
@@ -1070,15 +1070,15 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   const auto *CountedByRD = cast<RecordDecl>(DC);
 
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Expr *CountedByExpr =
+  Expr *CountExpr =
       StructAccessBase(CountedByRD).Visit(const_cast<Expr *>(Base));
-  if (!CountedByExpr)
+  if (!CountExpr)
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (auto *DRE = dyn_cast<DeclRefExpr>(CountedByExpr)) {
+  if (auto *DRE = dyn_cast<DeclRefExpr>(CountExpr)) {
     Res = EmitDeclRefLValue(DRE).getPointer(*this);
-  } else if (CountedByExpr->HasSideEffects(getContext())) {
+  } else if (CountExpr->HasSideEffects(getContext())) {
     auto I = LocalDeclMap.find(VD);
     if (I != LocalDeclMap.end())
       Res = I->second.getPointer();
@@ -4237,10 +4237,13 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                 StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
             StructBase && StructBase->getType()->isPointerType()) {
           if (const ValueDecl *VD = FindCountedByField(Array)) {
-            Addr = EmitPointerWithAlignment(StructBase, &EltBaseInfo,
-                                            &EltTBAAInfo);
-            llvm::Value *Res =
-                EmitCountedByFieldExprImpl(Addr.getPointer(), RD, VD);
+            llvm::Value *Res = ArrayLV.getPointer(*this);
+
+            while (auto *GEP = dyn_cast<llvm::GetElementPtrInst>(Res))
+              // Look through the GEPs to find the base pointer.
+              Res = GEP->getPointerOperand();
+
+            Res = EmitCountedByFieldExprImpl(Res, RD, VD);
             EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
                                 Array->getType(), Accessed);
           }
