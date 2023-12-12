@@ -1791,7 +1791,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   // We may not have the kernarg segment argument if we have no kernel
   // arguments.
   if (!InputPtrReg)
-    return DAG.getConstant(0, SL, PtrVT);
+    return DAG.getConstant(Offset, SL, PtrVT);
 
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
