@@ -603,14 +603,14 @@ public:
         }
         Set.insert(ElemIt->second);
       }
-      LLVM_DEBUG( //
-          dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
-                 << " distinct callees.\n";
-          for (const auto &VI
-               : Set) {
-            dbgs() << "[Workload] Root: " << Root
-                   << " Would include: " << VI.getGUID() << "\n";
-          });
+      LLVM_DEBUG({
+        dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
+               << " distinct callees.\n";
+        for (const auto &VI : Set) {
+          dbgs() << "[Workload] Root: " << Root
+                 << " Would include: " << VI.getGUID() << "\n";
+        }
+      });
     }
   }
 };
