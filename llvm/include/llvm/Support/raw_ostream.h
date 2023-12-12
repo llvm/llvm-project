@@ -640,10 +640,23 @@ public:
 /// A raw stream for sockets reading/writing
 
 class raw_socket_stream;
+
+// Make sure that calls to WSAStartup and WSACleanup are balanced.
+#ifdef _WIN32
+class WSABalancer {
+public:
+  WSABalancer();
+  ~WSABalancer();
+}
+#endif // _WIN32
+
 class ListeningSocket {
   int FD;
   std::string SocketPath;
   ListeningSocket(int SocketFD, StringRef SocketPath);
+#ifdef _WIN32
+  WSABalancer _;
+#endif // _WIN32
 
 public:
   static Expected<ListeningSocket> createUnix(
@@ -655,6 +668,9 @@ public:
 };
 class raw_socket_stream : public raw_fd_stream {
   uint64_t current_pos() const override { return 0; }
+#ifdef _WIN32
+  WSABalancer _;
+#endif // _WIN32
 
 public:
   raw_socket_stream(int SocketFD);
