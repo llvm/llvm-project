@@ -3267,11 +3267,14 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/Mesh/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":FuncDialect",
+        ":IR",
         ":MeshDialect",
         ":MeshShardingInterface",
         ":MeshTransformsPassIncGen",
         ":Pass",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -8968,6 +8971,7 @@ cc_binary(
         "//mlir/test:TestLoopLikeInterface",
         "//mlir/test:TestMath",
         "//mlir/test:TestMemRef",
+        "//mlir/test:TestMesh",
         "//mlir/test:TestNVGPU",
         "//mlir/test:TestOneToNTypeConversion",
         "//mlir/test:TestPDLL",
