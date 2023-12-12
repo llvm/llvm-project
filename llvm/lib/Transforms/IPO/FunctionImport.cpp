@@ -451,77 +451,75 @@ class WorkloadImportsManager : public ModuleImportsManager {
     auto &ValueInfos = SetIter->second;
     SmallVector<EdgeInfo, 128> GlobWorklist;
     for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
+      auto It = DefinedGVSummaries.find(VI.getGUID());
+      if (It != DefinedGVSummaries.end() &&
+          IsPrevailing(VI.getGUID(), It->second)) {
+        LLVM_DEBUG(
+            dbgs() << "[Workload] " << VI.name()
+                   << " has the prevailing variant already in the module "
+                   << ModName << ". No need to import\n");
+        continue;
+      }
       auto Candidates =
           qualifyCalleeCandidates(Index, VI.getSummaryList(), ModName);
 
       const GlobalValueSummary *GVS = nullptr;
-      FunctionImporter::ImportFailureReason LastReason =
-          FunctionImporter::ImportFailureReason::None;
-      for (const auto &Candidate : Candidates) {
-        /// We will prefer importing the prevailing candidate, if not, we'll
-        /// still pick the first available candidate. The reason we want to make
-        /// sure we do import the prevailing candidate is because the goal of
-        /// workload-awareness is to enable optimizations specializing the call
-        /// graph of that workload. Suppose a function is already defined in the
-        /// module, but it's not the prevailing variant. Suppose also we do not
-        /// inline it (in fact, if it were interposable, we can't inline it),
-        /// but we could specialize it to the workload in other ways. However,
-        /// the linker would drop it in the favor of the prevailing copy.
-        /// Instead, by importing the prevailing variant (assuming also the use
-        /// of `-avail-extern-to-local`), we keep the specialization. We could
-        /// alteranatively make the non-prevailing variant local, but the
-        /// prevailing one is also the one for which we would have previously
-        /// collected profiles, making it preferrable.
-        LastReason = Candidate.first;
-        if (Candidate.first == FunctionImporter::ImportFailureReason::None) {
-          const bool Prevailing = IsPrevailing(VI.getGUID(), Candidate.second);
-          if (Prevailing || !GVS) {
-            if (!GVS && !Prevailing)
-              LLVM_DEBUG(dbgs()
-                         << "[Workload] Considering " << VI.name() << " from "
-                         << Candidate.second->modulePath() << " with linkage "
-                         << Candidate.second->linkage()
-                         << " although it's not prevailing, but it's the "
-                            "first available candidate.\n");
-            GVS = Candidate.second;
-            if (Prevailing) {
-              LLVM_DEBUG(dbgs()
-                         << "[Workload] Considering " << VI.name() << " from "
-                         << GVS->modulePath() << " with linkage "
-                         << GVS->linkage() << " because it's prevailing.\n");
-              break;
-            }
-          } else {
-            LLVM_DEBUG(dbgs() << "[Workload] Skipping " << VI.name() << " from "
-                              << Candidate.second->modulePath()
-                              << " with linkage " << Candidate.second->linkage()
-                              << " because it's not prevailing\n");
-          }
-        }
-      }
-      if (!GVS) {
+      auto PotentialCandidates = llvm::map_range(
+          llvm::make_filter_range(
+              Candidates,
+              [&](const auto &Candidate) {
+                return Candidate.first ==
+                       FunctionImporter::ImportFailureReason::None;
+              }),
+          [](const auto &Candidate) { return Candidate.second; });
+      if (PotentialCandidates.empty()) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because can't find eligible Callee. Guid is: "
-                          << Function::getGUID(VI.name())
-                          << ". The reason was: " << getFailureName(LastReason)
-                          << "\n");
-        (void)LastReason; // Only used in LLVM_DEBUG above.
+                          << Function::getGUID(VI.name()) << "\n");
         continue;
       }
+      /// We will prefer importing the prevailing candidate, if not, we'll
+      /// still pick the first available candidate. The reason we want to make
+      /// sure we do import the prevailing candidate is because the goal of
+      /// workload-awareness is to enable optimizations specializing the call
+      /// graph of that workload. Suppose a function is already defined in the
+      /// module, but it's not the prevailing variant. Suppose also we do not
+      /// inline it (in fact, if it were interposable, we can't inline it),
+      /// but we could specialize it to the workload in other ways. However,
+      /// the linker would drop it in the favor of the prevailing copy.
+      /// Instead, by importing the prevailing variant (assuming also the use
+      /// of `-avail-extern-to-local`), we keep the specialization. We could
+      /// alteranatively make the non-prevailing variant local, but the
+      /// prevailing one is also the one for which we would have previously
+      /// collected profiles, making it preferrable.
+      auto PrevailingCandidates = llvm::make_filter_range(
+          PotentialCandidates, [&](const auto *Candidate) {
+            return IsPrevailing(VI.getGUID(), Candidate);
+          });
+      if (PrevailingCandidates.empty()) {
+        if (!llvm::hasSingleElement(PotentialCandidates))
+          LLVM_DEBUG(
+              dbgs()
+              << "[Workload] Found multiple non-prevailing candidates for "
+              << VI.name()
+              << ". This is unexpected. Are module paths passed to the "
+                 "compiler unique for the modules passed to the linker?");
+        GVS = *PotentialCandidates.begin();
+      } else {
+        assert(llvm::hasSingleElement(PrevailingCandidates));
+        GVS = *PrevailingCandidates.begin();
+      }
+
       auto ExportingModule = GVS->modulePath();
+      // We checked that for the prevailing case, but if we happen to have for
+      // example an internal that's defined in this module, it'd have no
+      // PrevailingCandidates.
       if (ExportingModule == ModName) {
         LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
                           << " because its defining module is the same as the "
                              "current module\n");
         continue;
       }
-      if (moduleAlreadyHasPreferredDef(DefinedGVSummaries, VI.getGUID(), GVS)) {
-        LLVM_DEBUG(
-            dbgs() << "[Workload] Not importing " << VI.name()
-                   << " because we have a copy already in this module.\n");
-        continue;
-      }
-
       LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
                         << ExportingModule << " : "
                         << Function::getGUID(VI.name()) << "\n");
@@ -531,28 +529,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
         (*ExportLists)[ExportingModule].insert(VI);
     }
     LLVM_DEBUG(dbgs() << "[Workload] Done\n");
-  }
-
-  bool moduleAlreadyHasPreferredDef(const GVSummaryMapTy &DefinedGVSummaries,
-                                    Function::GUID Guid,
-                                    const GlobalValueSummary *Candidate) {
-    auto DefinedSummary = DefinedGVSummaries.find(Guid);
-    if (DefinedSummary == DefinedGVSummaries.end())
-      return false;
-
-    // See shouldImportGlobal for the justificaton of the isInterposableLinkage.
-    if (!IsPrevailing(Guid, DefinedSummary->second) &&
-        GlobalValue::isInterposableLinkage(DefinedSummary->second->linkage()) &&
-        IsPrevailing(Guid, Candidate)) {
-      LLVM_DEBUG(dbgs() << "[Workload] " << Guid
-                        << ": non-prevailing preexisting definition in module. "
-                           "Importing from "
-                        << Candidate->modulePath() << "\n");
-      return false;
-    }
-    LLVM_DEBUG(dbgs() << "[Workload] " << Guid
-                      << ": ignored! Target already in destination module.\n");
-    return true;
   }
 
 public:
