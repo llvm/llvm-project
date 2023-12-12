@@ -48,6 +48,7 @@ class LDSDIR_Common<string opName, string asm = "", bit direct> : InstSI<
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
+  let maybeAtomic = 0;
 
   string Mnemonic = opName;
   let UseNamedOperandTable = 1;
