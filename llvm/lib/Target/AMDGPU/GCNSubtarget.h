@@ -198,6 +198,7 @@ protected:
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
   bool HasVGPRSingleUseHintInsts = false;
+  bool HasPseudoScalarTrans = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
