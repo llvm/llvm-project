@@ -12,6 +12,7 @@
 #include "src/__support/UInt128.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
+#include "src/__support/math_extras.h"             // mask_trailing_ones
 
 #include <stdint.h>
 
@@ -80,16 +81,6 @@ template <> struct FPBaseProperties<FPType::X86_Binary80> {
       FPEncoding::X86_ExtendedPrecision;
 };
 
-// TODO: Move this utility elsewhere.
-template <typename T, size_t count> static constexpr T mask_trailing_ones() {
-  static_assert(cpp::is_unsigned_v<T>);
-  constexpr unsigned t_bits = CHAR_BIT * sizeof(T);
-  static_assert(count <= t_bits && "Invalid bit index");
-  // It's important not to initialize T with -1, since T may be BigInt which
-  // will take -1 as a uint64_t and only initialize the low 64 bits.
-  return count == 0 ? 0 : ((~T(0)) >> (t_bits - count));
-}
-
 } // namespace internal
 
 template <FPType fp_type>
@@ -122,15 +113,15 @@ private:
 
   // Masks
   LIBC_INLINE_VAR static constexpr UIntType SIG_MASK =
-      internal::mask_trailing_ones<UIntType, SIG_BITS>() << SIG_MASK_SHIFT;
+      mask_trailing_ones<UIntType, SIG_BITS>() << SIG_MASK_SHIFT;
   LIBC_INLINE_VAR static constexpr UIntType EXP_MASK =
-      internal::mask_trailing_ones<UIntType, EXP_BITS>() << EXP_MASK_SHIFT;
+      mask_trailing_ones<UIntType, EXP_BITS>() << EXP_MASK_SHIFT;
   // Trailing underscore on SIGN_MASK_ is temporary - it will be removed
   // once we can replace the public part below with the private one.
   LIBC_INLINE_VAR static constexpr UIntType SIGN_MASK_ =
-      internal::mask_trailing_ones<UIntType, SIGN_BITS>() << SIGN_MASK_SHIFT;
+      mask_trailing_ones<UIntType, SIGN_BITS>() << SIGN_MASK_SHIFT;
   LIBC_INLINE_VAR static constexpr UIntType FP_MASK =
-      internal::mask_trailing_ones<UIntType, TOTAL_BITS>();
+      mask_trailing_ones<UIntType, TOTAL_BITS>();
   static_assert((SIG_MASK & EXP_MASK & SIGN_MASK_) == 0, "masks disjoint");
   static_assert((SIG_MASK | EXP_MASK | SIGN_MASK_) == FP_MASK, "masks cover");
 
@@ -162,7 +153,7 @@ public:
   LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
       MANTISSA_WIDTH + 1;
   LIBC_INLINE_VAR static constexpr BitsType MANTISSA_MASK =
-      internal::mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
+      mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
   LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = EXP_BITS;
   LIBC_INLINE_VAR static constexpr int32_t EXPONENT_BIAS = EXP_BIAS;
   LIBC_INLINE_VAR static constexpr BitsType SIGN_MASK = SIGN_MASK_;
