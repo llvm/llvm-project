@@ -1040,9 +1040,23 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   return true;
 }
 
+// If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
+// maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
+// places.
 static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
-                                  DemandedFields &Demanded,
-                                  const MachineRegisterInfo *MRI);
+                                  DemandedFields &Demanded) {
+  VSETVLIInfo Info = NewInfo;
+
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
+      !PrevInfo.isUnknown()) {
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
+            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+      Info.setVLMul(*NewVLMul);
+    Demanded.LMUL = true;
+  }
+
+  return Info;
+}
 
 // Given an incoming state reaching MI, minimally modifies that state so that it
 // is compatible with MI. The resulting state is guaranteed to be semantically
@@ -1063,8 +1077,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     Info = NewInfo;
 
   DemandedFields Demanded = getDemanded(MI, MRI, ST);
-  const VSETVLIInfo IncomingInfo =
-      adjustIncoming(PrevInfo, NewInfo, Demanded, MRI);
+  const VSETVLIInfo IncomingInfo = adjustIncoming(PrevInfo, NewInfo, Demanded);
 
   // If MI only demands that VL has the same zeroness, we only need to set the
   // AVL if the zeroness differs.  This removes a vsetvli entirely if the types
@@ -1096,25 +1109,6 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     RatiolessInfo.setAVL(Info);
     Info = RatiolessInfo;
   }
-}
-
-static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
-                                  DemandedFields &Demanded,
-                                  const MachineRegisterInfo *MRI) {
-  VSETVLIInfo Info = NewInfo;
-
-  // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
-  // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
-  // places.
-  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
-      !PrevInfo.isUnknown()) {
-    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
-            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
-      Info.setVLMul(*NewVLMul);
-    Demanded.LMUL = true;
-  }
-
-  return Info;
 }
 
 // Given a state with which we evaluated MI (see transferBefore above for why
