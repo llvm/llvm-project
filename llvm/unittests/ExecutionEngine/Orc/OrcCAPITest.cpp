@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -28,6 +29,7 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 
 // OrcCAPITestBase contains several helper methods and pointers for unit tests
@@ -558,13 +560,17 @@ static LLVM_ATTRIBUTE_USED void linkComponents() {
 }
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {
 #endif
-  if (LLVMErrorRef E = LLVMOrcLLJITEnableDebugSupport(Jit))
-    FAIL() << "Error testing LLJIT debug support (triple = " << TargetTriple
-           << "): " << toString(E);
-
   void *Before = findLastDebugDescriptorEntryPtr();
   LLVMMemoryBufferRef ObjBuffer = createTestObject(SumDebugExample, "sum.ll");
   LLVMOrcObjectLayerRef ObjLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
+
+  if (LLVMErrorRef E = LLVMOrcLLJITEnableDebugSupport(Jit)) {
+    EXPECT_FALSE(isa<ObjectLinkingLayer>(unwrap(ObjLayer)))
+        << "Error testing LLJIT debug support "
+        << "(triple = " << TargetTriple << "): " << toString(E);
+    GTEST_SKIP() << "LLJIT C bindings provide debug support only for JITLink";
+  }
+
   if (LLVMErrorRef E =
           LLVMOrcObjectLayerAddObjectFile(ObjLayer, MainDylib, ObjBuffer))
     FAIL() << "Failed to add object file to ObjLinkingLayer (triple = "

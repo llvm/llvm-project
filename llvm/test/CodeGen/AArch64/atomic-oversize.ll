@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 < %s | FileCheck %s
 
 ; Atomics larger than 128-bit are unsupported, and emit libcalls.
 define void @test(ptr %a) nounwind {

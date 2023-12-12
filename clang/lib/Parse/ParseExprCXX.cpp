@@ -1548,7 +1548,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   if (!Stmt.isInvalid() && !TrailingReturnType.isInvalid() &&
       !D.isInvalidType())
-    return Actions.ActOnLambdaExpr(LambdaBeginLoc, Stmt.get(), getCurScope());
+    return Actions.ActOnLambdaExpr(LambdaBeginLoc, Stmt.get());
 
   Actions.ActOnLambdaError(LambdaBeginLoc, getCurScope());
   return ExprError();

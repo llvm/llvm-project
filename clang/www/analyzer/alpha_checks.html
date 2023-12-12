@@ -370,25 +370,6 @@ void sink(NonVirtual *x) {
 }
 </pre></div></div></td></tr>
 
-<tr><td><a id="alpha.cplusplus.EnumCastOutOfRange"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
-(C++)</span><div class="descr">
-  Check for integer to enumeration casts that could result in undefined values.
-</div></div></a></td>
-  <td><div class="exampleContainer expandable">
-    <div class="example"><pre>
-enum TestEnum {
-  A = 0
-};
-
-void foo() {
-  TestEnum t = static_cast<TestEnum>(-1);
-      // warn: the value provided to the cast expression is not in
-               the valid range of values for the enum
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.cplusplus.InvalidatedIterator"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.InvalidatedIterator</span><span class="lang">
 (C++)</span><div class="descr">

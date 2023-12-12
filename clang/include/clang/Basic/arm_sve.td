@@ -2262,3 +2262,14 @@ let TargetGuard = "sme2" in {
   def SVQCVTN_U16_U64_X4 : SInst<"svqcvtn_u16[_{d}_x4]", "b4.d", "Ul", MergeNone, "aarch64_sve_uqcvtn_x4", [IsStreaming], []>;
   def SVQCVTN_U16_S64_X4 : SInst<"svqcvtn_u16[_{d}_x4]", "b4.d", "l", MergeNone, "aarch64_sve_sqcvtun_x4", [IsStreaming], []>;
 }
+
+//
+// Multi-vector unpack
+//
+
+let TargetGuard = "sme2" in {
+  def SVSUNPK_X2 : SInst<"svunpk_{d}[_{1}_x2]", "2h",   "sil",    MergeNone, "aarch64_sve_sunpk_x2", [IsStreaming], []>;
+  def SVUUNPK_X2 : SInst<"svunpk_{d}[_{1}_x2]", "2h",   "UsUiUl", MergeNone, "aarch64_sve_uunpk_x2", [IsStreaming], []>;
+  def SVSUNPK_X4 : SInst<"svunpk_{d}[_{3}_x4]", "42.h", "sil",    MergeNone, "aarch64_sve_sunpk_x4", [IsStreaming], []>;
+  def SVUUNPK_X4 : SInst<"svunpk_{d}[_{3}_x4]", "42.h", "UsUiUl", MergeNone, "aarch64_sve_uunpk_x4", [IsStreaming], []>;
+}

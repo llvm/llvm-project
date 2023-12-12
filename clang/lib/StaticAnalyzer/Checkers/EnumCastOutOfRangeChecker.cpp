@@ -159,6 +159,9 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   // Every initialization an enum with a fixed underlying type but without any
   // enumerators would produce a warning if we were to continue at this point.
   // The most notable example is std::byte in the C++17 standard library.
+  // TODO: Create heuristics to bail out when the enum type is intended to be
+  // used to store combinations of flag values (to mitigate the limitation
+  // described in the docs).
   if (DeclValues.size() == 0)
     return;
 
