@@ -43,7 +43,7 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
       Args.push_back("-global-isel");
       // For now we default GlobalISel to -O0
       Args.push_back("-O0");
-    } else if (Opt.startswith("O")) {
+    } else if (Opt.starts_with("O")) {
       Args.push_back("-" + Opt.str());
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
@@ -140,7 +140,7 @@ int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
 
   for (int I = 1; I < ArgC; ++I) {
     StringRef Arg(ArgV[I]);
-    if (Arg.startswith("-")) {
+    if (Arg.starts_with("-")) {
       if (Arg.equals("-ignore_remaining_args=1"))
         break;
       continue;

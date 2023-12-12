@@ -23,9 +23,11 @@
 
 template <class OutIt, class CharT>
 void test() {
+  bool b                          = true;
+  CharT c                         = CharT('a');
+  int a                           = 42;
   std::basic_string<CharT> string = MAKE_STRING(CharT, "string");
-  auto store = std::make_format_args<std::basic_format_context<OutIt, CharT>>(
-      true, CharT('a'), 42, string);
+  auto store                      = std::make_format_args<std::basic_format_context<OutIt, CharT>>(b, c, a, string);
   std::basic_format_args args = store;
 
   std::basic_string<CharT> output;

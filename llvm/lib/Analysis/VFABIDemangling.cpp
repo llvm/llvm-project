@@ -32,7 +32,7 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
   if (MangledName.empty())
     return ParseRet::Error;
 
-  if (MangledName.startswith(VFABI::_LLVM_)) {
+  if (MangledName.starts_with(VFABI::_LLVM_)) {
     MangledName = MangledName.drop_front(strlen(VFABI::_LLVM_));
     ISA = VFISAKind::LLVM;
   } else {

@@ -8,8 +8,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-SDAG,GFX900-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-GISEL,GFX900-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-SDAG,GFX900-SDAG,GFX900 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL,GFX900-GISEL,GFX900 %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A,GFX9-SDAG,GFX90A-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX9,GFX90A,GFX9-GISEL,GFX90A-GISEL %s
@@ -5482,23 +5482,41 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v5, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_multi_use_mul_chain_add_other_use_all:
-; GFX900:       ; %bb.0: ; %bb
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_add_u32_e32 v0, 1, v0
-; GFX900-NEXT:    v_mul_lo_u32 v2, v0, v1
-; GFX900-NEXT:    v_add_u32_e32 v0, v2, v0
-; GFX900-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX900-NEXT:    v_add_u32_e32 v1, 1, v2
-; GFX900-NEXT:    v_mul_lo_u32 v5, v0, v1
-; GFX900-NEXT:    global_store_dword v[3:4], v2, off
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_store_dword v[3:4], v0, off
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_store_dword v[3:4], v5, off
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_add_u32_e32 v0, v5, v1
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_multi_use_mul_chain_add_other_use_all:
+; GFX900-SDAG:       ; %bb.0: ; %bb
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v0, 1, v0
+; GFX900-SDAG-NEXT:    v_mul_lo_u32 v2, v0, v1
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v0, v2, v0
+; GFX900-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v1, 1, v2
+; GFX900-SDAG-NEXT:    v_mul_lo_u32 v5, v0, v1
+; GFX900-SDAG-NEXT:    global_store_dword v[3:4], v2, off
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-SDAG-NEXT:    global_store_dword v[3:4], v0, off
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-SDAG-NEXT:    global_store_dword v[3:4], v5, off
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v0, v5, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-GISEL-LABEL: v_multi_use_mul_chain_add_other_use_all:
+; GFX900-GISEL:       ; %bb.0: ; %bb
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v0, 1, v0
+; GFX900-GISEL-NEXT:    v_mul_lo_u32 v2, v0, v1
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v0, v2, v0
+; GFX900-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v1, 1, v2
+; GFX900-GISEL-NEXT:    v_mul_lo_u32 v5, v0, v1
+; GFX900-GISEL-NEXT:    global_store_dword v[3:4], v2, off
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GISEL-NEXT:    global_store_dword v[3:4], v0, off
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GISEL-NEXT:    global_store_dword v[3:4], v5, off
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v0, v5, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-SDAG-LABEL: v_multi_use_mul_chain_add_other_use_all:
 ; GFX90A-SDAG:       ; %bb.0: ; %bb
@@ -5686,21 +5704,37 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_multi_use_mul_chain_add_other_use_some:
-; GFX900:       ; %bb.0: ; %bb
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_add_u32_e32 v0, 1, v0
-; GFX900-NEXT:    v_mul_lo_u32 v2, v0, v1
-; GFX900-NEXT:    v_add_u32_e32 v0, v2, v0
-; GFX900-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX900-NEXT:    v_add_u32_e32 v1, 1, v2
-; GFX900-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX900-NEXT:    global_store_dword v[3:4], v2, off
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    global_store_dword v[3:4], v0, off
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-SDAG-LABEL: v_multi_use_mul_chain_add_other_use_some:
+; GFX900-SDAG:       ; %bb.0: ; %bb
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v0, 1, v0
+; GFX900-SDAG-NEXT:    v_mul_lo_u32 v2, v0, v1
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v0, v2, v0
+; GFX900-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v1, 1, v2
+; GFX900-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX900-SDAG-NEXT:    global_store_dword v[3:4], v2, off
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-SDAG-NEXT:    global_store_dword v[3:4], v0, off
+; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-SDAG-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-GISEL-LABEL: v_multi_use_mul_chain_add_other_use_some:
+; GFX900-GISEL:       ; %bb.0: ; %bb
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v0, 1, v0
+; GFX900-GISEL-NEXT:    v_mul_lo_u32 v2, v0, v1
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v0, v2, v0
+; GFX900-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v1, 1, v2
+; GFX900-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v1
+; GFX900-GISEL-NEXT:    global_store_dword v[3:4], v2, off
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GISEL-NEXT:    global_store_dword v[3:4], v0, off
+; GFX900-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GISEL-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-SDAG-LABEL: v_multi_use_mul_chain_add_other_use_some:
 ; GFX90A-SDAG:       ; %bb.0: ; %bb
@@ -8291,7 +8325,102 @@ entry:
   ret <2 x i16> %add0
 }
 
+define i64 @mul_u24_add64(i32 %x, i32 %y, i64 %z) {
+; GFX67-LABEL: mul_u24_add64:
+; GFX67:       ; %bb.0:
+; GFX67-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX67-NEXT:    v_mul_hi_u32_u24_e32 v4, v0, v1
+; GFX67-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX67-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; GFX67-NEXT:    v_addc_u32_e32 v1, vcc, v4, v3, vcc
+; GFX67-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: mul_u24_add64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_hi_u32_u24_e32 v4, v0, v1
+; GFX8-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v4, v3, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: mul_u24_add64:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v1, v[2:3]
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: mul_u24_add64:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mul_hi_u32_u24_e32 v4, v0, v1
+; GFX9-GISEL-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GFX9-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v4, v3, vcc
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: mul_u24_add64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_mad_u64_u32 v[0:1], null, v0, v1, v[2:3]
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: mul_u24_add64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_mul_u32_u24_e32 v4, v0, v1
+; GFX10-GISEL-NEXT:    v_mul_hi_u32_u24_e32 v1, v0, v1
+; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v2
+; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %mul = call i64 @llvm.amdgcn.mul.u24.i64(i32 %x, i32 %y)
+  %add = add i64 %mul, %z
+  ret i64 %add
+}
+
+define i64 @mul_u24_zext_add64(i32 %x, i32 %y, i64 %z) {
+; GFX67-LABEL: mul_u24_zext_add64:
+; GFX67:       ; %bb.0:
+; GFX67-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX67-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX67-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; GFX67-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; GFX67-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: mul_u24_zext_add64:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: mul_u24_zext_add64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: mul_u24_zext_add64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_mul_u32_u24_e32 v0, v0, v1
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+  %mul = call i32 @llvm.amdgcn.mul.u24(i32 %x, i32 %y)
+  %mul.zext = zext i32 %mul to i64
+  %add = add i64 %mul.zext, %z
+  ret i64 %add
+}
+
+declare i64 @llvm.amdgcn.mul.u24.i64(i32, i32)
+declare i32 @llvm.amdgcn.mul.u24(i32, i32)
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX6: {{.*}}
 ; GFX7: {{.*}}
+; GFX900: {{.*}}
 ; GFX90A: {{.*}}

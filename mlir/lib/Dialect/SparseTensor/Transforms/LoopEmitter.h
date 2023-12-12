@@ -453,11 +453,6 @@ private:
     return tid < lvlTypes.size() && lvl < lvlTypes[tid].size();
   }
 
-  /// Forwards the (conceptual) "tree iterator" when iterating over a fully
-  /// reduced slice created by index-reduction.
-  void forwardsReducedSliceLevelTreeIt(OpBuilder &builder, Location loc,
-                                       TensorId tid, Level lvl, Value fcnt);
-
   /// Prepares loop for iterating over `tensor[lvl]`, under the assumption
   /// that `tensor[0...lvl-1]` loops have already been set up.
   void prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
@@ -610,11 +605,6 @@ private:
   void genUnResolvedSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
                                Level lvl);
 
-  /// Invalidates the index kept in slice postion buffers (by setting it to
-  /// zero).
-  /// TODO: We should instead use an SSA value for the index.
-  void invalidateSliceIterIdx(OpBuilder &builder, Location loc, TensorId tid,
-                              Level lvl);
   /// Generates code to get the first non-empty slice of tid on lvl.
   /// return true if has already been resolved.
   bool genSliceBegin(OpBuilder &builder, Location loc, TensorId tid, Level lvl);
@@ -683,6 +673,9 @@ private:
   // But they always starts with the first pidx pointing to coord > slice.offset
   // to avoid iteration from the beginning.
   std::vector<std::vector<std::vector<Value>>> slicePosBuffer;
+  std::vector<std::vector<Value>> sliceTupleNxStartIdx;
+  std::vector<std::vector<Value>> sliceTupleFwdCnt;
+  std::vector<std::vector<bool>> trivialSlice;
 
   // The (size, stride) for each conceptual slice used for index reduction
   // loops.

@@ -315,7 +315,7 @@ getOutputTargetInfoByTargetName(StringRef TargetName) {
     MI.OSABI = ELF::ELFOSABI_FREEBSD;
 
   FileFormat Format;
-  if (TargetName.startswith("elf"))
+  if (TargetName.starts_with("elf"))
     Format = FileFormat::ELF;
   else
     // This should never happen because `TargetName` is valid (it certainly
