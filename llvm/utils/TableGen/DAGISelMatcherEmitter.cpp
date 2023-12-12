@@ -456,6 +456,17 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     return (MCM->getChildNo() >= 8) ? 2 : 1;
   }
 
+  case Matcher::MoveSibling: {
+    const auto *MSM = cast<MoveSiblingMatcher>(N);
+
+    OS << "OPC_MoveSibling";
+    // Handle the specialized forms.
+    if (MSM->getSiblingNo() >= 8)
+      OS << ", ";
+    OS << MSM->getSiblingNo() << ",\n";
+    return (MSM->getSiblingNo() >= 8) ? 2 : 1;
+  }
+
   case Matcher::MoveParent:
     OS << "OPC_MoveParent,\n";
     return 1;
@@ -1128,6 +1139,8 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
     return "OPC_CaptureGlueInput";
   case Matcher::MoveChild:
     return "OPC_MoveChild";
+  case Matcher::MoveSibling:
+    return "OPC_MoveSibling";
   case Matcher::MoveParent:
     return "OPC_MoveParent";
   case Matcher::CheckSame:
