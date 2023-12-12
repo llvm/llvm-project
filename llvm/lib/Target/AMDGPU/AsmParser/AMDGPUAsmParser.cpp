@@ -373,7 +373,7 @@ public:
   bool isOffen() const { return isImmTy(ImmTyOffen); }
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
-  bool isOffset() const { return isImmTy(ImmTyOffset) && isUInt<16>(getImm()); }
+  bool isOffset() const { return isImmTy(ImmTyOffset); }
   bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<8>(getImm()); }
   bool isOffset1() const { return isImmTy(ImmTyOffset1) && isUInt<8>(getImm()); }
   bool isSMEMOffsetMod() const { return isImmTy(ImmTySMEMOffsetMod); }
@@ -1666,6 +1666,7 @@ private:
   SMLoc getInstLoc(const OperandVector &Operands) const;
 
   bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc, const OperandVector &Operands);
+  bool validateOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
@@ -4143,6 +4144,40 @@ SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {
   return getLoc();
 }
 
+bool AMDGPUAsmParser::validateOffset(const MCInst &Inst,
+                                     const OperandVector &Operands) {
+  auto Opcode = Inst.getOpcode();
+  auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::offset);
+  if (OpNum == -1)
+    return true;
+
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & SIInstrFlags::FLAT))
+    return validateFlatOffset(Inst, Operands);
+
+  if ((TSFlags & SIInstrFlags::SMRD))
+    return validateSMEMOffset(Inst, Operands);
+
+  const auto &Op = Inst.getOperand(OpNum);
+  if (isGFX12Plus() &&
+      (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))) {
+    const unsigned OffsetSize = 24;
+    if (!isIntN(OffsetSize, Op.getImm())) {
+      Error(getFlatOffsetLoc(Operands),
+            Twine("expected a ") + Twine(OffsetSize) + "-bit signed offset");
+      return false;
+    }
+  } else {
+    const unsigned OffsetSize = 16;
+    if (!isUIntN(OffsetSize, Op.getImm())) {
+      Error(getFlatOffsetLoc(Operands),
+            Twine("expected a ") + Twine(OffsetSize) + "-bit unsigned offset");
+      return false;
+    }
+  }
+  return true;
+}
+
 bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
                                          const OperandVector &Operands) {
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
@@ -4800,10 +4835,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMovrels(Inst, Operands)) {
     return false;
   }
-  if (!validateFlatOffset(Inst, Operands)) {
-    return false;
-  }
-  if (!validateSMEMOffset(Inst, Operands)) {
+  if (!validateOffset(Inst, Operands)) {
     return false;
   }
   if (!validateMAIAccWrite(Inst, Operands)) {
