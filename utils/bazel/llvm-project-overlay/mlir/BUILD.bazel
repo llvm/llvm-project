@@ -3013,7 +3013,7 @@ cc_library(
         ":MathDialect",
         ":SparseTensorDialect",
         ":SparseTensorEnums",
-        "//llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 
