@@ -1795,7 +1795,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
       Current = Integer;
     } else if (k == BuiltinType::Float || k == BuiltinType::Double ||
-               k == BuiltinType::Float16 || k == BuiltinType::BFloat16) {
+               k == BuiltinType::Float16 || k == BuiltinType::BFloat16 ||
+               k == BuiltinType::Float128) {
       Current = SSE;
     } else if (k == BuiltinType::LongDouble) {
       const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
