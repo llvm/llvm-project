@@ -422,8 +422,7 @@ static APInt defaultComponentBroadcast(Value *V) {
     } else {
       // Detect identical elements in the shufflevector result, even though
       // findScalarElement cannot tell us what that element is.
-      if (ShuffleMask[I] != ShuffleMask[0] &&
-          ShuffleMask[I] != PoisonMaskElem)
+      if (ShuffleMask[I] != ShuffleMask[0] && ShuffleMask[I] != PoisonMaskElem)
         break;
     }
     DemandedElts.clearBit(I);

@@ -1980,10 +1980,10 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
-      .addFrameIndex(FrameIndex) // addr
-      .addMemOperand(MMO)        // offset
-      .addImm(0)                 // last_use
-      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+        .addFrameIndex(FrameIndex) // addr
+        .addMemOperand(MMO)        // offset
+        .addImm(0)                 // last_use
+        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
@@ -6598,7 +6598,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // scratch memory access. In both cases, the legalization never involves
   // conversion to the addr64 form.
   if (isImage(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
-                     (isMUBUF(MI) || isMTBUF(MI)))) {
+                      (isMUBUF(MI) || isMTBUF(MI)))) {
     int RSrcOpName = (isVIMAGE(MI) || isVSAMPLE(MI)) ? AMDGPU::OpName::rsrc
                                                      : AMDGPU::OpName::srsrc;
     MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
@@ -7224,12 +7224,12 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     const DebugLoc &DL = Inst.getDebugLoc();
     Register NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     MachineInstr *NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
-                                 .addImm(0)               // src0_modifiers
+                                 .addImm(0) // src0_modifiers
                                  .add(Inst.getOperand(1))
-                                 .addImm(0)               // src1_modifiers
+                                 .addImm(0) // src1_modifiers
                                  .add(Inst.getOperand(2))
-                                 .addImm(0)               // clamp
-                                 .addImm(0);              // omod
+                                 .addImm(0)  // clamp
+                                 .addImm(0); // omod
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
 
     legalizeOperands(*NewInstr, MDT);

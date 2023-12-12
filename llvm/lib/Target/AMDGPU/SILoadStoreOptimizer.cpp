@@ -161,7 +161,8 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
         if (!AddrOp->isReg())
           return false;
 
-        // TODO: We should be able to merge instructions with other physical reg addresses too.
+        // TODO: We should be able to merge instructions with other physical reg
+        // addresses too.
         if (AddrOp->getReg().isPhysical() &&
             AddrOp->getReg() != AMDGPU::SGPR_NULL)
           return false;

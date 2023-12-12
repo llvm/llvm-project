@@ -1975,17 +1975,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0)
       .scalarize(0);
 
-  getActionDefinitionsBuilder({
-      // TODO: Verify V_BFI_B32 is generated from expanded bit ops
-      G_FCOPYSIGN,
+  getActionDefinitionsBuilder(
+      {// TODO: Verify V_BFI_B32 is generated from expanded bit ops
+       G_FCOPYSIGN,
 
-      G_ATOMIC_CMPXCHG_WITH_SUCCESS,
-      G_ATOMICRMW_NAND,
-      G_ATOMICRMW_FSUB,
-      G_READ_REGISTER,
-      G_WRITE_REGISTER,
+       G_ATOMIC_CMPXCHG_WITH_SUCCESS, G_ATOMICRMW_NAND, G_ATOMICRMW_FSUB,
+       G_READ_REGISTER, G_WRITE_REGISTER,
 
-      G_SADDO, G_SSUBO}).lower();
+       G_SADDO, G_SSUBO})
+      .lower();
 
   if (ST.hasIEEEMinMax()) {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
@@ -1994,8 +1992,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0);
   } else {
     // TODO: Implement
-    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
-        .lower();
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
   }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
@@ -6719,12 +6716,11 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16}};
   int Opcode;
   if (UseNSA) {
-    Opcode =
-        AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                              IsGFX12Plus ? AMDGPU::MIMGEncGfx12 :
-                              IsGFX11 ? AMDGPU::MIMGEncGfx11NSA :
-                                        AMDGPU::MIMGEncGfx10NSA,
-                              NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                   IsGFX12Plus ? AMDGPU::MIMGEncGfx12
+                                   : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
+                                               : AMDGPU::MIMGEncGfx10NSA,
+                                   NumVDataDwords, NumVAddrDwords);
   } else {
     assert(!IsGFX12Plus);
     Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
@@ -6817,8 +6813,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   }
 
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
-    .addDef(DstReg)
-    .addImm(Opcode);
+                 .addDef(DstReg)
+                 .addImm(Opcode);
 
   for (Register R : Ops) {
     MIB.addUse(R);
@@ -6826,8 +6822,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
 
   MIB.addUse(TDescr);
 
-  MIB.addImm(IsA16 ? 1 : 0)
-     .cloneMemRefs(MI);
+  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;
@@ -6876,18 +6871,17 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Ops.push_back(RayDir);
   Ops.push_back(Offsets);
 
-  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY :
-                            AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
-    .addDef(DstReg)
-    .addDef(DstOrigin)
-    .addDef(DstDir)
-    .addImm(Opcode);
+  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                                 : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addDef(DstOrigin)
+                 .addDef(DstDir)
+                 .addImm(Opcode);
 
   for (Register R : Ops)
     MIB.addUse(R);
 
-  MIB.addUse(TDescr)
-     .cloneMemRefs(MI);
+  MIB.addUse(TDescr).cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;

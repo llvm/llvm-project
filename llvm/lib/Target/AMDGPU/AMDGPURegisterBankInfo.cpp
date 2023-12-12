@@ -4914,10 +4914,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
     if (IsDualOrBVH8) {
-      OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID,
-        MRI.getType(MI.getOperand(1).getReg()).getSizeInBits());
-      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID,
-        MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
+      OpdsMapping[1] = AMDGPU::getValueMapping(
+          AMDGPU::VGPRRegBankID,
+          MRI.getType(MI.getOperand(1).getReg()).getSizeInBits());
+      OpdsMapping[2] = AMDGPU::getValueMapping(
+          AMDGPU::VGPRRegBankID,
+          MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
     }
     OpdsMapping[LastRegOpIdx] =
         getSGPROpMapping(MI.getOperand(LastRegOpIdx).getReg(), MRI, *TRI);

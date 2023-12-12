@@ -1070,8 +1070,12 @@ public:
     case ImmTyOffset1: OS << "Offset1"; break;
     case ImmTySMEMOffsetMod: OS << "SMEMOffsetMod"; break;
     case ImmTyCPol: OS << "CPol"; break;
-    case ImmTyIndexKey8bit: OS << "index_key"; break;
-    case ImmTyIndexKey16bit: OS << "index_key"; break;
+    case ImmTyIndexKey8bit:
+      OS << "index_key";
+      break;
+    case ImmTyIndexKey16bit:
+      OS << "index_key";
+      break;
     case ImmTyTFE: OS << "TFE"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
@@ -1122,8 +1126,12 @@ public:
     case ImmTyWaitVMVSrc:
       OS << "WaitVMVSrc";
       break;
-    case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
-    case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
+    case ImmTyGlobalSReg32:
+      OS << "GlobalSReg32";
+      break;
+    case ImmTyGlobalSReg64:
+      OS << "GlobalSReg64";
+      break;
     }
   }
 
@@ -5532,14 +5540,14 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (IVersion.Major >= 12)
         return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP,
-                       Val, ValRange);
+                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, Val,
+                       ValRange);
     } else if (ID == ".amdhsa_ieee_mode") {
       if (IVersion.Major >= 12)
         return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE,
-                       Val, ValRange);
+                       COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, Val,
+                       ValRange);
     } else if (ID == ".amdhsa_fp16_overflow") {
       if (IVersion.Major < 9)
         return Error(IDRange.Start, "directive requires gfx9+", IDRange);
@@ -5567,7 +5575,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        ValRange);
     } else if (ID == ".amdhsa_shared_vgpr_count") {
       if (IVersion.Major < 10 || IVersion.Major >= 12)
-        return Error(IDRange.Start, "directive requires gfx10 or gfx11", IDRange);
+        return Error(IDRange.Start, "directive requires gfx10 or gfx11",
+                     IDRange);
       SharedVGPRCount = Val;
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
                        COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT, Val,
@@ -5606,8 +5615,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (IVersion.Major < 12)
         return Error(IDRange.Start, "directive requires gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
-                       COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN,
-                       Val, ValRange);
+                       COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, Val,
+                       ValRange);
     } else {
       return Error(IDRange.Start, "unknown .amdhsa_kernel directive", IDRange);
     }
@@ -8484,7 +8493,8 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     Inst.addOperand(Inst.getOperand(0));
   }
 
-  // Adding vdst_in operand is already covered for these DPP instructions in cvtVOP3DPP.
+  // Adding vdst_in operand is already covered for these DPP instructions in
+  // cvtVOP3DPP.
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in) &&
       !(Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp_gfx12 ||
@@ -8967,8 +8977,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   int OldIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::old);
   int Src2ModIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
-  int VdstInIdx =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+  int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
   bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
                         Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
                         Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||

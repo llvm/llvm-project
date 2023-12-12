@@ -2044,8 +2044,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
     }
     Wait.ExpCnt = ~0u;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n"
-                      << "Update Instr: " << *It);
+    LLVM_DEBUG(dbgs() << "generateWaitcnt\n" << "Update Instr: " << *It);
   }
 
   if (WCG->createNewWaitcnt(Block, It, Wait))

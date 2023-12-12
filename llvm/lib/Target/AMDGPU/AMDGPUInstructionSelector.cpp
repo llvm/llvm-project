@@ -2119,12 +2119,12 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   }
 
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), Dst0)
-    .addDef(Dst1)
-    .addUse(Addr)
-    .addUse(Data0)
-    .addUse(Data1)
-    .addImm(Offset)
-    .cloneMemRefs(MI);
+                 .addDef(Dst1)
+                 .addUse(Addr)
+                 .addUse(Data0)
+                 .addUse(Data1)
+                 .addImm(Offset)
+                 .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
@@ -5650,7 +5650,6 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   I.eraseFromParent();
   return true;
 }
-
 
 bool AMDGPUInstructionSelector::selectSBarrierLeave(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
