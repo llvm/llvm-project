@@ -971,9 +971,7 @@ WSABalancer::WSABalancer() {
   }
 }
 
-WSABalancer::~WSABalancer() {
-  WSACleanup();
-}
+WSABalancer::~WSABalancer() { WSACleanup(); }
 
 #endif // _WIN32
 

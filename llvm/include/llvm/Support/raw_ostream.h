@@ -647,7 +647,7 @@ class WSABalancer {
 public:
   WSABalancer();
   ~WSABalancer();
-}
+};
 #endif // _WIN32
 
 class ListeningSocket {
