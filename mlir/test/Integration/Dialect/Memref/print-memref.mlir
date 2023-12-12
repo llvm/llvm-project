@@ -124,6 +124,5 @@ module {
     call @printMemrefInd(%11) : (tensor<*xindex>) -> ()
 
     return
-
   }
 }
