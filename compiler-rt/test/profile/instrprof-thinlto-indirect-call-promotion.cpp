@@ -29,7 +29,7 @@
 // both sets accurately. i[3-9]86 specifies arch as Triple::ArchType::x86, (win32|windows)
 // specifies OS as Triple::OS::Win32
 //
-// UNSUPPORTED: target={{i[3-9]86-.*-(win32|windows)}}
+// UNSUPPORTED: target={{i[3-9]86-.*-(win32|windows).*}}
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
