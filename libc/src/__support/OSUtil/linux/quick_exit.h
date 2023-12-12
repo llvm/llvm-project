@@ -19,8 +19,7 @@ namespace LIBC_NAMESPACE {
 
 // mark as no_stack_protector for x86 since TLS can be torn down before calling
 // quick_exit so that the stack protector canary cannot be loaded.
-#if defined(__i386) || defined(__i386__) || defined(__x86_64__) ||             \
-    defined(__x86_64)
+#ifdef LIBC_TARGET_ARCH_IS_X86
 __attribute__((no_stack_protector))
 #endif
 LIBC_INLINE void
