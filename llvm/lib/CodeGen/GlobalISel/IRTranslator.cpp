@@ -2432,7 +2432,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::set_fpenv: {
     Value *FPEnv = CI.getOperand(0);
     MIRBuilder.buildInstr(TargetOpcode::G_SET_FPENV, {},
-                          { getOrCreateVReg(*FPEnv) });
+                          {getOrCreateVReg(*FPEnv)});
     return true;
   }
   case Intrinsic::reset_fpenv: {
