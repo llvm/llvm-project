@@ -189,7 +189,38 @@ let cppNamespace = "::mlir::cir" in {
   def ASTExprInterface : AttrInterface<"ASTExprInterface"> {}
 
   def ASTCallExprInterface : AttrInterface<"ASTCallExprInterface",
-      [ASTExprInterface]> {}
+      [ASTExprInterface]> {
+    let methods = [
+      InterfaceMethod<"", "bool", "isStdFunctionCall",
+                      (ins), [{}], /*defaultImplementation=*/ [{
+          // Check that the entity being called is in standard
+          // "std" namespace.
+          auto callee = $_attr.getAst()->getCallee();
+          if (!callee)
+            return false;
+          auto *ice = dyn_cast<clang::ImplicitCastExpr>(callee);
+          if (!ice)
+            return false;
+
+          auto *dre = dyn_cast_or_null<clang::DeclRefExpr>(ice->getSubExpr());
+          if (!dre)
+            return false;
+          auto qual = dre->getQualifier();
+          if (!qual)
+            return false;
+
+          // FIXME: should we check NamespaceAlias as well?
+          auto nqual = qual->getAsNamespace();
+          if (!nqual || !nqual->getIdentifier() ||
+              nqual->getName().compare("std") != 0)
+            return false;
+
+          return true;
+        }]
+      >
+    ];
+
+  }
 
 
 } // namespace mlir::cir
