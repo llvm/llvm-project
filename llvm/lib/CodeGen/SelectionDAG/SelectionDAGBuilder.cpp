@@ -1237,6 +1237,8 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     dropDanglingDebugInfo(Variable, Expression);
 
     if (DPV.getType() == DPValue::LocationType::Declare) {
+      if (FuncInfo.PreprocessedDPVs.contains(&DPV))
+        continue;
       LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DPV
                         << "\n");
       handleDebugDeclare(DPV.getVariableLocationOp(0), Variable, Expression,
