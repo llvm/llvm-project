@@ -68,7 +68,11 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE constexpr UIntType get_explicit_mantissa() const {
-    return bits & (FloatProp::MANTISSA_MASK | FloatProp::EXPLICIT_BIT_MASK);
+    // The x86 80 bit float represents the leading digit of the mantissa
+    // explicitly. This is the mask for that bit.
+    constexpr UIntType EXPLICIT_BIT_MASK =
+        (UIntType(1) << FloatProp::MANTISSA_WIDTH);
+    return bits & (FloatProp::MANTISSA_MASK | EXPLICIT_BIT_MASK);
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
