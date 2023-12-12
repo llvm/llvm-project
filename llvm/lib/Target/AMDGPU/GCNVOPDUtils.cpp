@@ -142,10 +142,10 @@ namespace {
 /// be turned into VOPD instructions
 /// Greedily pairs instruction candidates. O(n^2) algorithm.
 struct VOPDPairingMutation : ScheduleDAGMutation {
-  MacroFusionPredTy shouldScheduleAdjacent; // NOLINT: function pointer
+  ShouldSchedulePredTy shouldScheduleAdjacent; // NOLINT: function pointer
 
   VOPDPairingMutation(
-      MacroFusionPredTy shouldScheduleAdjacent) // NOLINT: function pointer
+      ShouldSchedulePredTy shouldScheduleAdjacent) // NOLINT: function pointer
       : shouldScheduleAdjacent(shouldScheduleAdjacent) {}
 
   void apply(ScheduleDAGInstrs *DAG) override {

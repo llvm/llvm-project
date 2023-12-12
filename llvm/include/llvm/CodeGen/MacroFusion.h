@@ -14,7 +14,7 @@
 #ifndef LLVM_CODEGEN_MACROFUSION_H
 #define LLVM_CODEGEN_MACROFUSION_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include <functional>
 #include <memory>
 
 namespace llvm {
@@ -29,9 +29,10 @@ class SUnit;
 /// Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
-using MacroFusionPredTy = function_ref<bool(
-    const TargetInstrInfo &TII, const TargetSubtargetInfo &STI,
-    const MachineInstr *FirstMI, const MachineInstr &SecondMI)>;
+using ShouldSchedulePredTy = std::function<bool(const TargetInstrInfo &TII,
+                                                const TargetSubtargetInfo &TSI,
+                                                const MachineInstr *FirstMI,
+                                                const MachineInstr &SecondMI)>;
 
 /// Checks if the number of cluster edges between SU and its predecessors is
 /// less than FuseLimit
@@ -47,17 +48,15 @@ bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
 
 /// Create a DAG scheduling mutation to pair instructions back to back
 /// for instructions that benefit according to the target-specific
-/// predicate functions. shouldScheduleAdjacent will be true if any of the
-/// provided predicates are true.
+/// shouldScheduleAdjacent predicate function.
 std::unique_ptr<ScheduleDAGMutation>
-createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates);
+createMacroFusionDAGMutation(ShouldSchedulePredTy shouldScheduleAdjacent);
 
 /// Create a DAG scheduling mutation to pair branch instructions with one
 /// of their predecessors back to back for instructions that benefit according
-/// to the target-specific predicate functions. shouldScheduleAdjacent will be
-/// true if any of the provided predicates are true.
+/// to the target-specific shouldScheduleAdjacent predicate function.
 std::unique_ptr<ScheduleDAGMutation>
-createBranchMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates);
+createBranchMacroFusionDAGMutation(ShouldSchedulePredTy shouldScheduleAdjacent);
 
 } // end namespace llvm
 
