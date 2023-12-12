@@ -96,6 +96,8 @@ private:
   static_assert(SIGN_BITS + EXP_BITS + SIG_BITS == TOTAL_BITS);
 
 public:
+  // An unsigned integer that is wide enough to contain all of the floating
+  // point bits.
   using UIntType = typename UP::UIntType;
 
   // The number of bits in UIntType.
