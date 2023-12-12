@@ -2942,7 +2942,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     ok &= CheckForCoindexedObject(context, call.arguments[3], name, "errmsg");
     if (call.arguments[0] && call.arguments[1]) {
       for (int j{0}; j < 2; ++j) {
-        if (const Symbol * last{GetLastSymbol(call.arguments[j])};
+        if (const Symbol *last{GetLastSymbol(call.arguments[j])};
             last && !IsAllocatable(last->GetUltimate())) {
           context.messages().Say(call.arguments[j]->sourceLocation(),
               "Argument #%d to MOVE_ALLOC must be allocatable"_err_en_US,

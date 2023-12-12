@@ -284,7 +284,7 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
 
 const char *ensureNullTerminated(
     const char *str, size_t length, Terminator &terminator) {
-  if (length < strlen(str)) {
+  if (length <= strlen(str)) {
     char *newCmd{(char *)malloc(length + 1)};
     if (newCmd == NULL) {
       terminator.Crash("Command not null-terminated, memory allocation failed "
