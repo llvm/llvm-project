@@ -16,22 +16,22 @@ using namespace __tsan;
 
 #ifdef __AVX__
 extern "C" void __tsan_scatter_vector4(__m256i vaddr, int size, uint8_t mask) {
-  void *addr[4] = {};
+  uptr addr[4] = {};
   _mm256_store_si256((__m256i *)addr, vaddr);
   uptr pc = CALLERPC;
   ThreadState *thr = cur_thread();
   for (int i = 0; i < 4; i++)
     if ((mask >> i) & 1)
-      UnalignedMemoryAccess(thr, pc, (uptr)addr[i], size, kAccessWrite);
+      UnalignedMemoryAccess(thr, pc, addr[i], size, kAccessWrite);
 }
 
 extern "C" void __tsan_gather_vector4(__m256i vaddr, int size, uint8_t mask) {
-  void *addr[4] = {};
+  uptr addr[4] = {};
   _mm256_store_si256((__m256i *)addr, vaddr);
   uptr pc = CALLERPC;
   ThreadState *thr = cur_thread();
   for (int i = 0; i < 4; i++)
     if ((mask >> i) & 1)
-      UnalignedMemoryAccess(thr, pc, (uptr)addr[i], size, kAccessRead);
+      UnalignedMemoryAccess(thr, pc, addr[i], size, kAccessRead);
 }
 #endif /*__AVX__*/
