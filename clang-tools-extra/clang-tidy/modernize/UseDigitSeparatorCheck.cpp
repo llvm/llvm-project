@@ -57,7 +57,6 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     unsigned int Radix;
     size_t GroupSize;
     std::string Prefix;
-    std::string Postfix;
     if (OriginalLiteralString.starts_with("0b")) {
       Radix = 2;
       GroupSize = 4;
@@ -76,13 +75,6 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
       GroupSize = 3;
     }
 
-    if (OriginalLiteralString.ends_with("L") ||
-        OriginalLiteralString.ends_with("l") ||
-        OriginalLiteralString.ends_with("U") ||
-        OriginalLiteralString.ends_with("u")) {
-      Postfix = OriginalLiteralString.back();
-    }
-
     // Get formatting literal text
     const llvm::APInt IntegerValue = MatchedInteger->getValue();
     const std::vector<std::string> SplittedIntegerLiteral =
@@ -95,8 +87,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
             [](std::basic_string<char> S1, std::basic_string<char> S2) {
               return S1 + "\'" + S2;
             })
-            .erase(0, 1) +
-        Postfix;
+            .erase(0, 1);
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
@@ -111,15 +102,6 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     const llvm::StringRef OriginalLiteralString = Lexer::getSourceText(
         CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()), Source,
         Context.getLangOpts());
-
-    // Configure formatting
-    std::string Postfix;
-    if (OriginalLiteralString.ends_with("L") ||
-        OriginalLiteralString.ends_with("l") ||
-        OriginalLiteralString.ends_with("F") ||
-        OriginalLiteralString.ends_with("f")) {
-      Postfix = OriginalLiteralString.back();
-    }
 
     // Get formatting literal text
 
@@ -163,7 +145,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
               return S1 + "\'" + S2;
             })
             .erase(0, 1) +
-        '.' + FormatedFractionalSubString + Postfix;
+        '.' + FormatedFractionalSubString;
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
