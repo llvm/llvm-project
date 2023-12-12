@@ -185,7 +185,13 @@ void tools::Cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("_cygwin_dll_entry");
     CmdArgs.push_back("--enable-auto-image-base");
   }
-  CmdArgs.push_back("--dynamicbase");
+  switch (TC.getArch()) {
+  case llvm::Triple::x86_64:
+    CmdArgs.push_back("--dynamicbase");
+    break;
+  case llvm::Triple::aarch64:
+    break;
+  }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
