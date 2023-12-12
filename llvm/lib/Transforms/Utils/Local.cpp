@@ -2131,19 +2131,22 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              DIBuilder &Builder, uint8_t DIExprFlags,
                              int Offset) {
   SmallVector<DbgDeclareInst *, 1> DbgDeclares;
-  findDbgDeclares(DbgDeclares, Address);
-  for (DbgVariableIntrinsic *DII : DbgDeclares) {
-    const DebugLoc &Loc = DII->getDebugLoc();
+  SmallVector<DPValue *, 1> DPValues;
+  findDbgDeclares(DbgDeclares, Address, &DPValues);
+
+  auto ReplaceOne = [&](auto *DII) {
     auto *DIVar = DII->getVariable();
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
-    // Insert llvm.dbg.declare immediately before DII, and remove old
-    // llvm.dbg.declare.
-    Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, DII);
-    DII->eraseFromParent();
-  }
-  return !DbgDeclares.empty();
+    DII->setExpression(DIExpr);
+    DII->replaceVariableLocationOp(Address, NewAddress);
+  };
+
+  for_each(DbgDeclares, ReplaceOne);
+  for_each(DPValues, ReplaceOne);
+
+  return !DbgDeclares.empty() || !DPValues.empty();
 }
 
 static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
