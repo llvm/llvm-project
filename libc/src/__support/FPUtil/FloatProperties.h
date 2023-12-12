@@ -87,49 +87,57 @@ template <FPType fp_type>
 struct FPProperties : public internal::FPBaseProperties<fp_type> {
 private:
   using UP = internal::FPBaseProperties<fp_type>;
-  using UP::EXP_BITS;
-  using UP::SIG_BITS;
-  using UP::TOTAL_BITS;
-
-public:
-  using UIntType = typename UP::UIntType;
-
-private:
-  LIBC_INLINE_VAR static constexpr int STORAGE_BITS =
-      sizeof(UIntType) * CHAR_BIT;
-  static_assert(STORAGE_BITS >= TOTAL_BITS);
-
-  // The number of bits to represent sign.
-  // For documentation purpose, always 1.
+  // The number of bits to represent sign. For documentation purpose, always 1.
   LIBC_INLINE_VAR static constexpr int SIGN_BITS = 1;
+  using UP::EXP_BITS;   // The number of bits for the *exponent* part
+  using UP::SIG_BITS;   // The number of bits for the *significand* part
+  using UP::TOTAL_BITS; // For convenience, the sum of `SIG_BITS`, `EXP_BITS`,
+                        // and `SIGN_BITS`.
   static_assert(SIGN_BITS + EXP_BITS + SIG_BITS == TOTAL_BITS);
 
+public:
+  // An unsigned integer that is wide enough to contain all of the floating
+  // point bits.
+  using UIntType = typename UP::UIntType;
+
+  // The number of bits in UIntType.
+  LIBC_INLINE_VAR static constexpr int UINTTYPE_BITS =
+      sizeof(UIntType) * CHAR_BIT;
+  static_assert(UINTTYPE_BITS >= TOTAL_BITS);
+
+private:
   // The exponent bias. Always positive.
   LIBC_INLINE_VAR static constexpr int32_t EXP_BIAS =
       (1U << (EXP_BITS - 1U)) - 1U;
   static_assert(EXP_BIAS > 0);
 
-  // Shifts
+  // The shift amount to get the *significand* part to the least significant
+  // bit. Always `0` but kept for consistency.
   LIBC_INLINE_VAR static constexpr int SIG_MASK_SHIFT = 0;
+  // The shift amount to get the *exponent* part to the least significant bit.
   LIBC_INLINE_VAR static constexpr int EXP_MASK_SHIFT = SIG_BITS;
+  // The shift amount to get the *sign* part to the least significant bit.
   LIBC_INLINE_VAR static constexpr int SIGN_MASK_SHIFT = SIG_BITS + EXP_BITS;
 
-  // Masks
+  // The bit pattern that keeps only the *significand* part.
   LIBC_INLINE_VAR static constexpr UIntType SIG_MASK =
       mask_trailing_ones<UIntType, SIG_BITS>() << SIG_MASK_SHIFT;
+  // The bit pattern that keeps only the *exponent* part.
   LIBC_INLINE_VAR static constexpr UIntType EXP_MASK =
       mask_trailing_ones<UIntType, EXP_BITS>() << EXP_MASK_SHIFT;
 
 public:
+  // The bit pattern that keeps only the *sign* part.
   LIBC_INLINE_VAR static constexpr UIntType SIGN_MASK =
       mask_trailing_ones<UIntType, SIGN_BITS>() << SIGN_MASK_SHIFT;
-
-private:
+  // The bit pattern that keeps only the *sign + exponent + significand* part.
   LIBC_INLINE_VAR static constexpr UIntType FP_MASK =
       mask_trailing_ones<UIntType, TOTAL_BITS>();
+
   static_assert((SIG_MASK & EXP_MASK & SIGN_MASK) == 0, "masks disjoint");
   static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
 
+private:
   LIBC_INLINE static constexpr UIntType bit_at(int position) {
     return UIntType(1) << position;
   }
