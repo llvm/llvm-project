@@ -21,6 +21,11 @@
 //   constexpr borrowed_iterator_t<R>
 //     ranges::replace(R&& r, const T1& old_value, const T2& new_value, Proj proj = {});
 
+#include "test_macros.h"
+
+// MSVC warning C4244: 'argument': conversion from 'const _Ty2' to 'T', possible loss of data
+TEST_MSVC_DIAGNOSTIC_IGNORED(4244)
+
 #include <algorithm>
 #include <array>
 #include <cassert>

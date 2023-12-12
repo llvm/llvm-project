@@ -78,11 +78,15 @@
 //    void notify_all() noexcept;
 //  };
 
+#include "test_macros.h"
+
+// MSVC warning C4197: 'volatile std::atomic<operator_hijacker *>': top-level volatile in cast is ignored
+TEST_MSVC_DIAGNOSTIC_IGNORED(4197)
+
 #include <atomic>
 #include <type_traits>
 
 #include "operator_hijacker.h"
-#include "test_macros.h"
 
 template <class T>
 void test() {

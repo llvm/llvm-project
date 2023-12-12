@@ -10,13 +10,16 @@
 
 // UNSUPPORTED: c++03, c++11
 
+#include "test_macros.h"
+
 // ignore deprecated volatile return types
-// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-volatile")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wvolatile")
+// MSVC warning C5216: 'volatile int' a volatile qualified return type is deprecated in C++20
+TEST_MSVC_DIAGNOSTIC_IGNORED(5216)
 
 #include <type_traits>
 #include <utility>
-
-#include "test_macros.h"
 
 template <class T>
 std::add_const_t<T> add_const() {

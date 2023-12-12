@@ -8,6 +8,11 @@
 
 // test <csetjmp>
 
+#include "test_macros.h"
+
+// MSVC warning C4611: interaction between '_setjmp' and C++ object destruction is non-portable
+TEST_MSVC_DIAGNOSTIC_IGNORED(4611)
+
 #include <csetjmp>
 #include <cassert>
 #include <type_traits>

@@ -11,6 +11,11 @@
 // template<class C, input_range R, class... Args> requires (!view<C>)
 //   constexpr C to(R&& r, Args&&... args);     // Since C++23
 
+#include "test_macros.h"
+
+// MSVC warning C4244: 'argument': conversion from '_Ty' to 'int', possible loss of data
+TEST_MSVC_DIAGNOSTIC_IGNORED(4244)
+
 #include <ranges>
 
 #include <algorithm>
@@ -19,7 +24,6 @@
 #include <vector>
 #include "container.h"
 #include "test_iterators.h"
-#include "test_macros.h"
 #include "test_range.h"
 
 template <class Container, class Range, class... Args>

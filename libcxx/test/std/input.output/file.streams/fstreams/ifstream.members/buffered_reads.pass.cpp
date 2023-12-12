@@ -29,6 +29,12 @@
 // - Let the library manage a buffer, without specifying any size. In this case, the library will use the default
 //   buffer size of 4096 bytes.
 
+#include "test_macros.h"
+
+// MSVC warning C4242: '+=': conversion from 'const _Ty' to 'size_t', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'std::streamsize' to 'size_t', possible loss of data
+TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244)
+
 #include <cassert>
 #include <codecvt>
 #include <fstream>
@@ -40,7 +46,6 @@
 #include "../types.h"
 #include "assert_macros.h"
 #include "platform_support.h"
-#include "test_macros.h"
 
 template <class BufferPolicy>
 void test_read(BufferPolicy policy, const std::vector<std::streamsize>& payload_sizes) {

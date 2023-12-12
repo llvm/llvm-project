@@ -35,12 +35,15 @@
 //   !is_convertible_v<const OtherLayoutPolicy::template mapping<OtherExtents>&, mapping_type>
 //   || !is_convertible_v<const OtherAccessor&, accessor_type>
 
+#include "test_macros.h"
+
+// MSVC warning C4244: 'initializing': conversion from '_Ty' to '_Ty', possible loss of data
+TEST_MSVC_DIAGNOSTIC_IGNORED(4244)
+
 #include <mdspan>
 #include <type_traits>
 #include <concepts>
 #include <cassert>
-
-#include "test_macros.h"
 
 #include "../MinimalElementType.h"
 #include "../CustomTestLayouts.h"

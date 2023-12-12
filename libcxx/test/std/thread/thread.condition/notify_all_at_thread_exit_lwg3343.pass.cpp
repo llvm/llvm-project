@@ -23,8 +23,12 @@
 //
 // void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk);
 
-#include "make_test_thread.h"
 #include "test_macros.h"
+
+// MSVC warning C4583: 'X::cv_': destructor is not implicitly called
+TEST_MSVC_DIAGNOSTIC_IGNORED(4583)
+
+#include "make_test_thread.h"
 
 #include <condition_variable>
 #include <cassert>

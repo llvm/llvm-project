@@ -10,9 +10,13 @@
 // UNSUPPORTED: libcpp-has-no-experimental-stop_token
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: availability-synchronization_library-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
 
 // jthread& operator=(jthread&&) noexcept;
+
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wself-move")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wself-move")
 
 #include <atomic>
 #include <cassert>
@@ -24,7 +28,6 @@
 #include <vector>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
 static_assert(std::is_nothrow_move_assignable_v<std::jthread>);
 

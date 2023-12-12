@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// Self assignment post-conditions are tested.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
-
 // <memory>
 
 // unique_ptr
@@ -20,11 +17,16 @@
 // test move assignment.  Should only require a MoveConstructible deleter, or if
 //    deleter is a reference, not even that.
 
+#include "test_macros.h"
+
+// Self assignment post-conditions are tested.
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wself-move")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wself-move")
+
 #include <memory>
 #include <utility>
 #include <cassert>
 
-#include "test_macros.h"
 #include "deleter_types.h"
 #include "unique_ptr_test_helper.h"
 

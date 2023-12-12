@@ -18,15 +18,22 @@
 //   constexpr bool     // constexpr after c++17
 //   equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2);
 
+#include "test_macros.h"
+
 // We test the cartesian product, so we sometimes compare differently signed types
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
+// MSVC warning C4242: 'argument': conversion from 'int' to 'const _Ty', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
+// MSVC warning C4310: cast truncates constant value
+// MSVC warning C4389: '==': signed/unsigned mismatch
+TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244 4310 4389)
 
 #include <algorithm>
 #include <cassert>
 #include <functional>
 
 #include "test_iterators.h"
-#include "test_macros.h"
 #include "type_algorithms.h"
 
 template <class UnderlyingType, class Iter1>

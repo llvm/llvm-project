@@ -9,8 +9,6 @@
 // <string>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// To silence a GCC warning-turned-error re. `BadAlloc::value_type`.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-unused-local-typedefs
 
 // template<ranges::input_range R,
 //          class Allocator = allocator<ranges::range_value_t<R>>>
@@ -20,6 +18,12 @@
 //
 // The deduction guide shall not participate in overload resolution if Allocator
 // is a type that does not qualify as an allocator (in addition to the `input_range` concept being satisfied by `R`).
+
+#include "test_macros.h"
+
+// To silence a GCC warning-turned-error re. `BadAlloc::value_type`.
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wunused-local-typedefs")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wunused-local-typedefs")
 
 #include <array>
 #include <string>

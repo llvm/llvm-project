@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// ADDITIONAL_COMPILE_FLAGS: -Wno-ctad-maybe-unsupported
 
 // <mdspan>
+
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wctad-maybe-unsupported")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wctad-maybe-unsupported")
 
 #include <mdspan>
 #include <type_traits>
 #include <concepts>
 #include <cassert>
-
-#include "test_macros.h"
 
 // mdspan
 

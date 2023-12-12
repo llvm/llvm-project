@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
-
 // <algorithm>
 
 // template<InputIterator Iter, class T>
@@ -15,12 +13,18 @@
 //   constexpr Iter   // constexpr after C++17
 //   find(Iter first, Iter last, const T& value);
 
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
+// MSVC warning C4389: '==': signed/unsigned mismatch
+TEST_MSVC_DIAGNOSTIC_IGNORED(4389)
+
 #include <algorithm>
 #include <cassert>
 #include <vector>
 #include <type_traits>
 
-#include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
 

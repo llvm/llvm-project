@@ -10,8 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
-
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
 //   constexpr I ranges::find(I first, S last, const T& value, Proj proj = {});
@@ -19,6 +17,14 @@
 //   requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<R>, Proj>, const T*>
 //   constexpr borrowed_iterator_t<R>
 //     ranges::find(R&& r, const T& value, Proj proj = {});
+
+#include "test_macros.h"
+
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
+// MSVC warning C4242: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244)
 
 #include <algorithm>
 #include <array>

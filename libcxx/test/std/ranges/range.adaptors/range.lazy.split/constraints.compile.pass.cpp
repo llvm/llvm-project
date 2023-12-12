@@ -14,6 +14,12 @@
 //            (forward_range<V> || tiny-range<Pattern>)
 // class lazy_split_view;
 
+#include "test_macros.h"
+
+// This is a compile-only test, so "inline function is not defined" warnings are irrelevant.
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wundefined-inline")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wundefined-inline")
+
 #include <functional>
 #include <ranges>
 

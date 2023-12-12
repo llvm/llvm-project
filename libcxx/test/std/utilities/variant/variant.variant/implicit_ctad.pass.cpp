@@ -14,14 +14,15 @@
 
 // Make sure that the implicitly-generated CTAD works.
 
+#include "test_macros.h"
+
 // We make sure that it is not ill-formed, however we still produce a warning for
 // this one because explicit construction from a variant using CTAD is ambiguous
-// (in the sense that the programer intent is not clear).
-// ADDITIONAL_COMPILE_FLAGS: -Wno-ctad-maybe-unsupported
+// (in the sense that the programmer intent is not clear).
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wctad-maybe-unsupported")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wctad-maybe-unsupported")
 
 #include <variant>
-
-#include "test_macros.h"
 
 int main(int, char**) {
   // This is the motivating example from P0739R0
