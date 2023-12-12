@@ -223,7 +223,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   TsanVectorScatter[0] = M.getOrInsertFunction(
       SmallString<32>("__tsan_scatter_vector4"), Attr, IRB.getVoidTy(),
       VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(4)),
-      IRB.getInt32Ty(), IRB.getInt8Ty());
+      IRB.getInt32Ty(), IRB.getIntNTy(4));
   TsanVectorScatter[1] = M.getOrInsertFunction(
       SmallString<32>("__tsan_scatter_vector8"), Attr, IRB.getVoidTy(),
       VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(8)),
@@ -231,7 +231,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   TsanVectorGather[0] = M.getOrInsertFunction(
       SmallString<32>("__tsan_gather_vector4"), Attr, IRB.getVoidTy(),
       VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(4)),
-      IRB.getInt32Ty(), IRB.getInt8Ty());
+      IRB.getInt32Ty(), IRB.getIntNTy(4));
   TsanVectorGather[1] = M.getOrInsertFunction(
       SmallString<32>("__tsan_gather_vector8"), Attr, IRB.getVoidTy(),
       VectorType::get(IRB.getPtrTy(), ElementCount::getFixed(8)),
@@ -715,7 +715,8 @@ bool ThreadSanitizer::instrumentGatherOrScatter(Instruction *I,
   std::vector<Value *> Args{
       I->getOperand(IsScatter ? 1 : 0),
       llvm::ConstantInt::get(I->getContext(), llvm::APInt(32, BytesPerElement)),
-      IRB.CreateBitCast(I->getOperand(IsScatter ? 3 : 2), IRB.getInt8Ty())};
+      IRB.CreateBitCast(I->getOperand(IsScatter ? 3 : 2),
+                        IRB.getIntNTy(NumElements))};
   IRB.CreateCall(TsanVector[NumElements == 4 ? 0 : 1], Args);
 
   return true;
