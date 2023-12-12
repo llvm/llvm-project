@@ -64,9 +64,9 @@ struct Test {
 struct TestNarrowingEqualTo {
   template <class UnderlyingType>
   TEST_CONSTEXPR_CXX20 void operator()() {
-  TEST_DIAGNOSTIC_PUSH
-  // MSVC warning C4310: cast truncates constant value
-  TEST_MSVC_DIAGNOSTIC_IGNORED(4310)
+    TEST_DIAGNOSTIC_PUSH
+    // MSVC warning C4310: cast truncates constant value
+    TEST_MSVC_DIAGNOSTIC_IGNORED(4310)
 
     UnderlyingType a[] = {
         UnderlyingType(0x1000),
@@ -81,7 +81,7 @@ struct TestNarrowingEqualTo {
         UnderlyingType(0x1603),
         UnderlyingType(0x1604)};
 
-  TEST_DIAGNOSTIC_POP
+    TEST_DIAGNOSTIC_POP
 
     assert(std::equal(a, a + 5, b, std::equal_to<char>()));
 #if TEST_STD_VER >= 14
