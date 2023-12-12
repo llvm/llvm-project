@@ -531,7 +531,7 @@ static bool allowSectionTypeMismatch(const Triple &TT, StringRef SectionName,
     // MIPS .debug_* sections should have SHT_MIPS_DWARF section type to
     // distinguish among sections contain DWARF and ECOFF debug formats,
     // but in assembly files these sections have SHT_PROGBITS type.
-    return SectionName.startswith(".debug_") && Type == ELF::SHT_PROGBITS;
+    return SectionName.starts_with(".debug_") && Type == ELF::SHT_PROGBITS;
   }
   return false;
 }
@@ -634,7 +634,7 @@ EndStmt:
   unsigned Type = ELF::SHT_PROGBITS;
 
   if (TypeName.empty()) {
-    if (SectionName.startswith(".note"))
+    if (SectionName.starts_with(".note"))
       Type = ELF::SHT_NOTE;
     else if (hasPrefix(SectionName, ".init_array"))
       Type = ELF::SHT_INIT_ARRAY;

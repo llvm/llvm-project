@@ -249,8 +249,13 @@ SmallVector<DPValue *> ReplaceableMetadataImpl::getAllDPValueUsers() {
       continue;
     DPVUsersWithID.push_back(&UseMap[Pair.first]);
   }
+  // Order DPValue users in reverse-creation order. Normal dbg.value users
+  // of MetadataAsValues are ordered by their UseList, i.e. reverse order of
+  // when they were added: we need to replicate that here. The structure of
+  // debug-info output depends on the ordering of intrinsics, thus we need
+  // to keep them consistent for comparisons sake.
   llvm::sort(DPVUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second < UserB->second;
+    return UserA->second > UserB->second;
   });
   SmallVector<DPValue *> DPVUsers;
   for (auto UserWithID : DPVUsersWithID)
@@ -413,33 +418,25 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
-    return ArgList->Context.getOrCreateReplaceableUses();
-#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
+  if (auto ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (auto *ArgList = dyn_cast<DIArgList>(&MD))
-    return ArgList->Context.getReplaceableUses();
-#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
+  if (auto ArgList = dyn_cast<DIArgList>(&MD))
+    return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  if (isa<DIArgList>(&MD))
-    return true;
-#endif
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved();
-  return isa<ValueAsMetadata>(&MD);
+  return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
 }
 
 static DISubprogram *getLocalFunctionMetadata(Value *V) {

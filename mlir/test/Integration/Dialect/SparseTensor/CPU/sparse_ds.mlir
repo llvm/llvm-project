@@ -20,10 +20,13 @@
 // REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/ds.mtx"
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
-// TODO: enable!
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
-// R_UN: %{compile} | env %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 
 !Filename = !llvm.ptr
 

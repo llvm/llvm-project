@@ -37,11 +37,11 @@ A global(GLOBAL_INDEX, INITVAL_INITIALIZER);
 int initval = 0;
 int before = 0;
 
-__attribute__((constructor(101))) void run_before(int, char **, char **) {
+__attribute__((constructor(101))) void run_before() {
   before = BEFORE_INITIALIZER;
 }
 
-__attribute__((constructor(65535))) void run_after(int, char **, char **) {
+__attribute__((constructor(65535))) void run_after() {
   ASSERT_EQ(before, BEFORE_INITIALIZER);
 }
 

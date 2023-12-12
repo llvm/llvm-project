@@ -132,7 +132,7 @@ static Expected<std::string> searchForFile(const Twine &FileName) {
 static Error processCommandLineLibraries() {
   for (StringRef BaseName : Libraries) {
     Expected<std::string> FullPath = searchForFile(
-        BaseName.endswith(".o") ? BaseName.str() : "lib" + BaseName + ".a");
+        BaseName.ends_with(".o") ? BaseName.str() : "lib" + BaseName + ".a");
     if (!FullPath)
       return FullPath.takeError();
     InputFiles.push_back(FullPath.get());

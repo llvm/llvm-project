@@ -37,4 +37,21 @@ struct TC : TB<T> {
   ~TC() {}
 };
 
+template class TC<int>;
+
 __device__ TC<int> tc; //expected-error {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
+// Check trivial ctor specialization
+template <typename T>
+struct C {
+    explicit C() {};
+};
+
+template <> C<int>::C() {};
+__device__ C<int> ci_d;
+C<int> ci_h;
+
+// Check non-trivial ctor specialization
+template <> C<float>::C() { static int nontrivial_ctor = 1; }
+__device__ C<float> cf_d; //expected-error {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+C<float> cf_h;

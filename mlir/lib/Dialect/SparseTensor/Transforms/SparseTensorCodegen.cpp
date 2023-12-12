@@ -115,28 +115,28 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
   Value linear = constantIndex(builder, loc, 1);
   const Level lvlRank = stt.getLvlRank();
   for (Level lvl = startLvl; lvl < lvlRank; lvl++) {
-    const auto dlt = stt.getLvlType(lvl);
-    if (isCompressedDLT(dlt) || isLooseCompressedDLT(dlt)) {
+    const auto lt = stt.getLvlType(lvl);
+    if (isCompressedLT(lt) || isLooseCompressedLT(lt)) {
       // Append linear x positions, initialized to zero. Since each compressed
       // dimension initially already has a single zero entry, this maintains
       // the desired "linear + 1" length property at all times. For loose
       // compression, we multiply linear by two in order to append both the
       // lo/hi positions.
       Value posZero = constantZero(builder, loc, stt.getPosType());
-      if (isLooseCompressedDLT(dlt)) {
+      if (isLooseCompressedLT(lt)) {
         Value two = constantIndex(builder, loc, 2);
         linear = builder.create<arith::MulIOp>(loc, linear, two);
       }
       createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, lvl,
                      /*value=*/posZero, /*repeat=*/linear);
       return;
-    } else if (isSingletonDLT(dlt) || is2OutOf4DLT(dlt)) {
+    } else if (isSingletonLT(lt) || is2OutOf4LT(lt)) {
       return; // nothing to do
     }
     // Keep compounding the size, but nothing needs to be initialized
     // at this level. We will eventually reach a compressed level or
     // otherwise the values array for the from-here "all-dense" case.
-    assert(isDenseDLT(dlt));
+    assert(isDenseLT(lt));
     Value size = desc.getLvlSize(builder, loc, lvl);
     linear = builder.create<arith::MulIOp>(loc, linear, size);
   }
@@ -194,7 +194,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       valHeuristic =
           builder.create<arith::MulIOp>(loc, valHeuristic, lvlSizesValues[lvl]);
   } else if (sizeHint) {
-    if (getCOOStart(stt.getEncoding()) == 0) {
+    if (stt.getCOOStart() == 0) {
       posHeuristic = constantIndex(builder, loc, 2);
       crdHeuristic = builder.create<arith::MulIOp>(
           loc, constantIndex(builder, loc, lvlRank), sizeHint); // AOS
@@ -216,7 +216,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       stt,
       [&builder, &fields, stt, loc, posHeuristic, crdHeuristic, valHeuristic,
        enableInit](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-                   Level /*lvl*/, DimLevelType /*dlt*/) -> bool {
+                   Level /*lvl*/, LevelType /*lt*/) -> bool {
         assert(fields.size() == fIdx);
         Value field;
         switch (fKind) {
@@ -248,8 +248,8 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   Value posZero = constantZero(builder, loc, stt.getPosType());
   for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
     desc.setLvlSize(builder, loc, lvl, lvlSizesValues[lvl]);
-    const auto dlt = stt.getLvlType(lvl);
-    if (isCompressedDLT(dlt) || isLooseCompressedDLT(dlt))
+    const auto lt = stt.getLvlType(lvl);
+    if (isCompressedLT(lt) || isLooseCompressedLT(lt))
       createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, lvl,
                      /*value=*/posZero);
   }
@@ -373,8 +373,8 @@ static void genEndInsert(OpBuilder &builder, Location loc,
   const SparseTensorType stt(desc.getRankedTensorType());
   const Level lvlRank = stt.getLvlRank();
   for (Level lvl = 0; lvl < lvlRank; lvl++) {
-    const auto dlt = stt.getLvlType(lvl);
-    if (isCompressedDLT(dlt)) {
+    const auto lt = stt.getLvlType(lvl);
+    if (isCompressedLT(lt)) {
       // Compressed dimensions need a position cleanup for all entries
       // that were not visited during the insertion pass.
       //
@@ -408,8 +408,8 @@ static void genEndInsert(OpBuilder &builder, Location loc,
         builder.setInsertionPointAfter(loop);
       }
     } else {
-      assert(isDenseDLT(dlt) || isLooseCompressedDLT(dlt) ||
-             isSingletonDLT(dlt) || is2OutOf4DLT(dlt));
+      assert(isDenseLT(lt) || isLooseCompressedLT(lt) || isSingletonLT(lt) ||
+             is2OutOf4LT(lt));
     }
   }
 }
@@ -473,8 +473,8 @@ public:
     Value parentPos = constantZero(builder, loc, builder.getIndexType());
     // Generate code for every level.
     for (Level lvl = 0; lvl < lvlRank; lvl++) {
-      const auto dlt = stt.getLvlType(lvl);
-      if (isCompressedDLT(dlt) || isLooseCompressedDLT(dlt)) {
+      const auto lt = stt.getLvlType(lvl);
+      if (isCompressedLT(lt) || isLooseCompressedLT(lt)) {
         // Create:
         //   if (!present) {
         //     coordinates[lvl].push_back(coords[lvl])
@@ -482,13 +482,13 @@ public:
         //   }
         //   positions[lvl] = coordinates.size() - 1
         //   <insert @ positions[lvl] at next level lvl + 1>
-        if (isLooseCompressedDLT(dlt)) {
+        if (isLooseCompressedLT(lt)) {
           Value two = constantIndex(builder, loc, 2);
           parentPos = builder.create<arith::MulIOp>(loc, parentPos, two);
         }
         parentPos =
             genCompressed(builder, loc, desc, coords, value, parentPos, lvl);
-      } else if (isSingletonDLT(dlt) || is2OutOf4DLT(dlt)) {
+      } else if (isSingletonLT(lt) || is2OutOf4LT(lt)) {
         // Create:
         //   coordinates[lvl].push_back(coords[lvl])
         //   positions[lvl] = positions[lvl-1]
@@ -496,7 +496,7 @@ public:
         createPushback(builder, loc, desc, SparseTensorFieldKind::CrdMemRef,
                        lvl, /*value=*/coords[lvl]);
       } else {
-        assert(isDenseDLT(dlt));
+        assert(isDenseLT(lt));
         // Construct the new position as:
         //   positions[lvl] = size * positions[lvl-1] + coords[lvl]
         //   <insert @ positions[lvl] at next level lvl + 1>
@@ -516,7 +516,7 @@ public:
 
   std::string getMangledFuncName() {
     // The mangled name of the function has this format:
-    //   <namePrefix>_<DLT>_<shape>_<ordering>_<eltType>_<crdWidth>_<posWidth>
+    //   <namePrefix>_<LT>_<shape>_<ordering>_<eltType>_<crdWidth>_<posWidth>
     constexpr const char kInsertFuncNamePrefix[] = "_insert_";
     const SparseTensorType stt(llvm::cast<RankedTensorType>(rtp));
     SmallString<32> nameBuffer;
@@ -657,8 +657,7 @@ struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
 
     // Should have been verified.
     assert(dstStt.isAllOrdered() && !srcStt.isAllOrdered() &&
-           isUniqueCOOType(srcStt.getRankedTensorType()) &&
-           isUniqueCOOType(dstStt.getRankedTensorType()));
+           dstStt.isCOOType() && srcStt.isCOOType());
     assert(dstStt.hasSameDimToLvl(srcStt));
 
     // We don't need a mutable descriptor here as we perform sorting in-place.
@@ -745,8 +744,8 @@ public:
     const auto resType = getSparseTensorType(op);
     if (!resType.hasEncoding())
       return failure();
-    Location loc = op.getLoc();
 
+    Location loc = op.getLoc();
     // Deal with copy.
     if (op.getCopy()) {
       auto desc = getDescriptorFromTensorTuple(adaptor.getCopy());
@@ -768,16 +767,14 @@ public:
       return success();
     }
 
-    // Construct the dim/lvl sizes and the (unused) dim2lvl/lvl2dim buffers.
-    SmallVector<Value> dimSizesValues;
+    if (!resType.isIdentity()) {
+      return rewriter.notifyMatchFailure(
+          op, "try run --sparse-reinterpret-map before codegen");
+    }
+    // Level size equals to dimension size since lvl2dim map is an identity map.
     SmallVector<Value> lvlSizesValues;
-    Value dimSizesBuffer;
-    Value dim2lvlBuffer;
-    Value lvl2dimBuffer;
     createDimSizes(rewriter, loc, resType, adaptor.getDynamicSizes(),
-                   dimSizesValues);
-    genMapBuffers(rewriter, loc, resType, dimSizesValues, dimSizesBuffer,
-                  lvlSizesValues, dim2lvlBuffer, lvl2dimBuffer);
+                   /*dimSizesValues=*/lvlSizesValues);
 
     // Construct allocation for each field.
     Value sizeHint = op.getSizeHint();
@@ -809,19 +806,17 @@ public:
     const auto resType = getSparseTensorType(op);
     if (!resType.hasEncoding())
       return failure();
+
+    if (!resType.isIdentity()) {
+      return rewriter.notifyMatchFailure(
+          op, "try run --sparse-reinterpret-map before codegen");
+    }
+
     Location loc = op.getLoc();
-
-    // Construct the dim/lvl sizes and the (unused) dim2lvl/lvl2dim buffers.
-    SmallVector<Value> dimSizesValues;
+    // Level size equals to dimension size since lvl2dim map is an identity map.
     SmallVector<Value> lvlSizesValues;
-    Value dimSizesBuffer;
-    Value dim2lvlBuffer;
-    Value lvl2dimBuffer;
     createDimSizes(rewriter, loc, resType, adaptor.getDynamicSizes(),
-                   dimSizesValues);
-    genMapBuffers(rewriter, loc, resType, dimSizesValues, dimSizesBuffer,
-                  lvlSizesValues, dim2lvlBuffer, lvl2dimBuffer);
-
+                   /*dimSizesValues=*/lvlSizesValues);
     // Construct allocation for each field.
     Value sizeHint; // none
     SmallVector<Value> fields;
@@ -1159,7 +1154,7 @@ public:
         SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,
          loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
-              DimLevelType /*dlt*/) -> bool {
+              LevelType /*lt*/) -> bool {
           // Simply reuses the storage specifier as it is an SSA value.
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(srcDesc.getSpecifier());
@@ -1288,7 +1283,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         stt,
         [&rewriter, &fields, &op, &stt,
          loc](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-              Level /*lvl*/, DimLevelType dlt) -> bool {
+              Level /*lvl*/, LevelType lt) -> bool {
           assert(fields.size() == fIdx);
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(
@@ -1321,7 +1316,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Value posBack = c0; // index to the last value in the position array
     Value memSize = c1; // memory size for current array
 
-    Level trailCOOStart = getCOOStart(stt.getEncoding());
+    Level trailCOOStart = stt.getCOOStart();
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
@@ -1337,21 +1332,21 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         continue;
 
       // Sets up the memory size by reading the last value in position array.
-      DimLevelType dlt = stt.getLvlType(lvl);
+      LevelType lt = stt.getLvlType(lvl);
       // Simply forwards the position index when this is a dense level.
-      if (isDenseDLT(dlt)) {
+      if (isDenseLT(lt)) {
         memSize = rewriter.create<arith::MulIOp>(loc, lvlSize, memSize);
         posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
         continue;
       }
 
-      if (isDLTWithPos(dlt)) {
-        assert(isCompressedDLT(dlt) || isLooseCompressedDLT(dlt));
-        if (isLooseCompressedDLT(dlt)) {
+      if (isWithPosLT(lt)) {
+        assert(isCompressedLT(lt) || isLooseCompressedLT(lt));
+        if (isLooseCompressedLT(lt)) {
           memSize = rewriter.create<arith::MulIOp>(loc, memSize, c2);
           posBack = rewriter.create<arith::SubIOp>(loc, memSize, c1);
         } else {
-          assert(isCompressedDLT(dlt));
+          assert(isCompressedLT(lt));
           posBack = memSize;
           memSize = rewriter.create<arith::AddIOp>(loc, memSize, c1);
         }
@@ -1360,7 +1355,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         memSize = genIndexLoad(rewriter, loc, desc.getPosMemRef(lvl), posBack);
         posBack = rewriter.create<arith::SubIOp>(loc, posBack, c1);
       }
-      assert(isDLTWithCrd(dlt) && lvl <= trailCOOStart);
+      assert(isWithCrdLT(lt) && lvl <= trailCOOStart);
       // FIXME: This seems to be unnecessarily complex, can we simplify it?
       if (lvl == trailCOOStart) {
         Value cooSz = rewriter.create<arith::MulIOp>(
@@ -1391,10 +1386,10 @@ struct SparseDisassembleOpConverter
     Location loc = op.getLoc();
     SmallVector<Value> retMem;
     SmallVector<Value> retLen;
-    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem, &retLen](
-                                      FieldIndex fid,
-                                      SparseTensorFieldKind fKind, Level lvl,
-                                      DimLevelType dlt) -> bool {
+    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem,
+                                   &retLen](FieldIndex fid,
+                                            SparseTensorFieldKind fKind,
+                                            Level lvl, LevelType lt) -> bool {
       if (fKind == SparseTensorFieldKind::StorageSpec)
         return true;
       SparseTensorType stt(desc.getRankedTensorType());
@@ -1458,7 +1453,7 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     const auto dstTp = getSparseTensorType(op.getResult());
     // Creating COO with NewOp is handled by direct IR codegen. All other cases
     // are handled by rewriting.
-    if (!dstTp.hasEncoding() || getCOOStart(dstTp.getEncoding()) != 0)
+    if (!dstTp.hasEncoding() || dstTp.getCOOStart() != 0)
       return failure();
 
     // Implement as follows:

@@ -28,7 +28,7 @@ Expected<Target> Target::create(StringRef TargetValue) {
                  .Default(PLATFORM_UNKNOWN);
 
   if (Platform == PLATFORM_UNKNOWN) {
-    if (PlatformStr.startswith("<") && PlatformStr.endswith(">")) {
+    if (PlatformStr.starts_with("<") && PlatformStr.ends_with(">")) {
       PlatformStr = PlatformStr.drop_front().drop_back();
       unsigned long long RawValue;
       if (!PlatformStr.getAsInteger(10, RawValue))

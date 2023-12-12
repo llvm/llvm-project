@@ -505,6 +505,33 @@ define <vscale x 2 x i64> @insert_nxv2i64_nxv3i64(<3 x i64> %sv) #0 {
   ret <vscale x 2 x i64> %vec
 }
 
+; This shows a case where we were miscompiling because the index of the
+; outer expects a scalable inner and the inner most subvector is fixed length.
+; The code generated happens to be correct if VLEN=128, but is wrong if
+; VLEN=256.
+define <vscale x 8 x i32> @insert_insert_combine(<2 x i32> %subvec) {
+; CHECK-LABEL: insert_insert_combine:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    ret
+  %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32> undef, <2 x i32> %subvec, i64 0)
+  %outer = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> undef, <vscale x 4 x i32> %inner, i64 4)
+  ret <vscale x 8 x i32> %outer
+}
+
+; We can combine these two (even with non-zero index on the outer) because
+; the vector must be an even multiple.
+define <vscale x 8 x i32> @insert_insert_combine2(<vscale x 2 x i32> %subvec) {
+; CHECK-LABEL: insert_insert_combine2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    ret
+  %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv2i32.nxv4i32(<vscale x 4 x i32> undef, <vscale x 2 x i32> %subvec, i64 0)
+  %outer = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> undef, <vscale x 4 x i32> %inner, i64 4)
+  ret <vscale x 8 x i32> %outer
+}
+
+
 attributes #0 = { vscale_range(2,1024) }
 
 declare <vscale x 4 x i1> @llvm.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
@@ -516,6 +543,9 @@ declare <vscale x 32 x half> @llvm.vector.insert.nxv1f16.nxv32f16(<vscale x 32 x
 declare <vscale x 32 x half> @llvm.vector.insert.nxv2f16.nxv32f16(<vscale x 32 x half>, <vscale x 2 x half>, i64)
 
 declare <vscale x 4 x i8> @llvm.vector.insert.nxv1i8.nxv4i8(<vscale x 4 x i8>, <vscale x 1 x i8>, i64 %idx)
+
+declare <vscale x 4 x i32> @llvm.vector.insert.nxv2i32.nxv4i32(<vscale x 4 x i32>, <vscale x 2 x i32>, i64)
+declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32>, <2 x i32>, i64)
 
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv2i32.nxv8i32(<vscale x 8 x i32>, <vscale x 2 x i32>, i64 %idx)
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32>, <vscale x 4 x i32>, i64 %idx)

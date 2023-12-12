@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
-; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX940
-; RUN: llc -march=amdgcn -mcpu=gfx940 -global-isel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX940
+; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX940-SDAG
+; RUN: llc -march=amdgcn -mcpu=gfx940 -global-isel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX940-GISEL
 ; RUN: llc -march=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
@@ -43,7 +43,10 @@ entry:
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_udot2_op_sel:
 ; GFX906: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
-; GFX940: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}}{{$}}
+; GFX940-SDAG: s_mov_b32 [[K:s[0-9]+]], 0x10001
+; GFX940-SDAG: v_dot2_u32_u16 v{{[0-9]+}}, [[K]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX940-GISEL: v_mov_b32_e32 [[K:v[0-9]+]], 0x10001
+; GFX940-GISEL: v_dot2_u32_u16 v{{[0-9]+}}, [[K]], v{{[0-9]+}}, s{{[0-9]+}}{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_op_sel(
     ptr addrspace(1) %r,
