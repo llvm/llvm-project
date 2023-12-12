@@ -147,10 +147,16 @@ private:
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {
+#ifdef LLVM_ON_UNIX
         // See "Exit Status for Commands":
         // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
         constexpr const int kSigOffset = 128;
         return make_error<SnippetSignal>(CRC.RetCode - kSigOffset);
+#else
+        // The exit code of the process on windows is not meaningful as a
+        // signal, so simply pass in -1 as the signal into the error.
+        return make_error<SnippetSignal>(-1);
+#endif // LLVM_ON_UNIX
       }
     }
 
