@@ -13,16 +13,12 @@
 #ifndef LLVM_TEXTAPI_DYLIBREADER_H
 #define LLVM_TEXTAPI_DYLIBREADER_H
 
-#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/RecordsSlice.h"
 
-namespace llvm {
-namespace MachO {
-
-namespace DylibReader {
+namespace llvm::MachO::DylibReader {
 
 struct ParseOption {
   /// Determines arch slice to parse.
@@ -42,9 +38,6 @@ struct ParseOption {
 /// \return List of record slices.
 Expected<Records> readFile(MemoryBufferRef Buffer, const ParseOption &Opt);
 
-} // namespace DylibReader
-
-} // end namespace MachO.
-} // end namespace llvm.
+} // namespace llvm::MachO::DylibReader
 
 #endif // LLVM_TEXTAPI_DYLIBREADER_H
