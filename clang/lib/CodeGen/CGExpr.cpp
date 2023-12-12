@@ -1070,15 +1070,15 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   const auto *CountedByRD = cast<RecordDecl>(DC);
 
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Expr *CountExpr =
+  Expr *StructBase =
       StructAccessBase(CountedByRD).Visit(const_cast<Expr *>(Base));
-  if (!CountExpr)
+  if (!StructBase)
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (auto *DRE = dyn_cast<DeclRefExpr>(CountExpr)) {
+  if (auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
     Res = EmitDeclRefLValue(DRE).getPointer(*this);
-  } else if (CountExpr->HasSideEffects(getContext())) {
+  } else if (StructBase->HasSideEffects(getContext())) {
     auto I = LocalDeclMap.find(VD);
     if (I != LocalDeclMap.end())
       Res = I->second.getPointer();
