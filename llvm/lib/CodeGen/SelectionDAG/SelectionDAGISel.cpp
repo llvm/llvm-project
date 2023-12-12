@@ -1467,7 +1467,7 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
           processDbgDeclare(FuncInfo, DPV.getVariableLocationOp(0),
                             DPV.getExpression(), DPV.getVariable(),
                             DPV.getDebugLoc()))
-        FuncInfo.PreprocessedDPVs.insert(&DPV);
+        FuncInfo.PreprocessedDPVDeclares.insert(&DPV);
     }
   }
 }
