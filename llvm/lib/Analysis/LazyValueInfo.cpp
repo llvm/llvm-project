@@ -802,10 +802,11 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
 }
 
 static ConstantRange getConstantRangeOrFull(const ValueLatticeElement &Val,
-                                            Type *Ty, const DataLayout &DL) {
+                                            Type *Ty) {
+  assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
   if (Val.isConstantRange(/*UndefAllowed*/ false))
     return Val.getConstantRange();
-  return ConstantRange::getFull(DL.getTypeSizeInBits(Ty));
+  return ConstantRange::getFull(Ty->getScalarSizeInBits());
 }
 
 std::optional<ValueLatticeElement>
@@ -825,9 +826,9 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
 
   if (TrueVal.isConstantRange() || FalseVal.isConstantRange()) {
     const ConstantRange &TrueCR =
-        getConstantRangeOrFull(TrueVal, SI->getType(), DL);
+        getConstantRangeOrFull(TrueVal, SI->getType());
     const ConstantRange &FalseCR =
-        getConstantRangeOrFull(FalseVal, SI->getType(), DL);
+        getConstantRangeOrFull(FalseVal, SI->getType());
     Value *LHS = nullptr;
     Value *RHS = nullptr;
     SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
@@ -898,7 +899,7 @@ LazyValueInfoImpl::getRangeFor(Value *V, Instruction *CxtI, BasicBlock *BB) {
   std::optional<ValueLatticeElement> OptVal = getBlockValue(V, BB, CxtI);
   if (!OptVal)
     return std::nullopt;
-  return getConstantRangeOrFull(*OptVal, V->getType(), DL);
+  return getConstantRangeOrFull(*OptVal, V->getType());
 }
 
 std::optional<ValueLatticeElement>
