@@ -452,7 +452,9 @@ public:
   // FLAT instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
-    if (!ST->hasVscnt())
+    // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
+    // these should use VM_CNT.
+    if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
       return VMEM_ACCESS;
     if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst)) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
@@ -542,14 +544,6 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
   for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
   }
-}
-
-// MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS written
-// can be accessed. A load from LDS to VMEM does not need a wait.
-static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-  return SIInstrInfo::isVALU(MI) &&
-         (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI)) &&
-         MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
 }
 
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
@@ -703,7 +697,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         setRegScore(RegNo, T, CurrScore);
       }
     }
-    if (Inst.mayStore() && (TII->isDS(Inst) || mayWriteLDSThroughDMA(Inst))) {
+    if (Inst.mayStore() &&
+        (TII->isDS(Inst) || TII->mayWriteLDSThroughDMA(Inst))) {
+      // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS
+      // written can be accessed. A load from LDS to VMEM does not need a wait.
       setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
     }
   }
@@ -1178,7 +1175,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
           continue;
         // No need to wait before load from VMEM to LDS.
-        if (mayWriteLDSThroughDMA(MI))
+        if (TII->mayWriteLDSThroughDMA(MI))
           continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         // VM_CNT is only relevant to vgpr or LDS.
