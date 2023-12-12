@@ -1307,7 +1307,7 @@ private:
         if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator, tok::comma,
                               tok::star, tok::arrow, tok::amp, tok::ampamp) ||
             // User defined literal.
-            Previous->TokenText.startswith("\"\"")) {
+            Previous->TokenText.starts_with("\"\"")) {
           Previous->setType(TT_OverloadedOperator);
           if (CurrentToken->isOneOf(tok::less, tok::greater))
             break;
@@ -1466,7 +1466,7 @@ private:
         // Mark tokens up to the trailing line comments as implicit string
         // literals.
         if (CurrentToken->isNot(tok::comment) &&
-            !CurrentToken->TokenText.startswith("//")) {
+            !CurrentToken->TokenText.starts_with("//")) {
           CurrentToken->setType(TT_ImplicitStringLiteral);
         }
         next();
@@ -2077,8 +2077,8 @@ private:
       }
       Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::comment)) {
-      if (Current.TokenText.startswith("/*")) {
-        if (Current.TokenText.endswith("*/")) {
+      if (Current.TokenText.starts_with("/*")) {
+        if (Current.TokenText.ends_with("*/")) {
           Current.setType(TT_BlockComment);
         } else {
           // The lexer has for some reason determined a comment here. But we
@@ -3724,8 +3724,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return 100;
     if (Left.is(TT_JsTypeColon))
       return 35;
-    if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
-        (Right.is(TT_TemplateString) && Right.TokenText.startswith("}"))) {
+    if ((Left.is(TT_TemplateString) && Left.TokenText.ends_with("${")) ||
+        (Right.is(TT_TemplateString) && Right.TokenText.starts_with("}"))) {
       return 100;
     }
     // Prefer breaking call chains (".foo") over empty "{}", "[]" or "()".
@@ -4224,7 +4224,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   }
   if (Left.is(TT_BlockComment)) {
     // No whitespace in x(/*foo=*/1), except for JavaScript.
-    return Style.isJavaScript() || !Left.TokenText.endswith("=*/");
+    return Style.isJavaScript() || !Left.TokenText.ends_with("=*/");
   }
 
   // Space between template and attribute.
@@ -4572,8 +4572,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       if (Next && Next->is(TT_FatArrow))
         return true;
     }
-    if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
-        (Right.is(TT_TemplateString) && Right.TokenText.startswith("}"))) {
+    if ((Left.is(TT_TemplateString) && Left.TokenText.ends_with("${")) ||
+        (Right.is(TT_TemplateString) && Right.TokenText.starts_with("}"))) {
       return false;
     }
     // In tagged template literals ("html`bar baz`"), there is no space between
@@ -5212,7 +5212,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Left.is(TT_InheritanceComma)) {
     return true;
   }
-  if (Right.is(tok::string_literal) && Right.TokenText.startswith("R\"")) {
+  if (Right.is(tok::string_literal) && Right.TokenText.starts_with("R\"")) {
     // Multiline raw string literals are special wrt. line breaks. The author
     // has made a deliberate choice and might have aligned the contents of the
     // string literal accordingly. Thus, we try keep existing line breaks.

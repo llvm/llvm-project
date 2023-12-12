@@ -743,7 +743,7 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord &Record) const {
 
   // Filter out symbols prefixed with an underscored as they are understood to
   // be symbols clients should not use.
-  if (Record.Name.startswith("_"))
+  if (Record.Name.starts_with("_"))
     return true;
 
   return false;

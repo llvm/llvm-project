@@ -88,7 +88,7 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
   for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
     llvm::StringRef ArgString(CmdArgs[i]);
 
-    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+    if (ArgString.starts_with("-bE:") || ArgString.starts_with("-bexport:") ||
         ArgString == "-bexpall" || ArgString == "-bexpfull")
       return true;
 
@@ -96,8 +96,8 @@ static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
     if (ArgString == "-b" && i + 1 < Size) {
       ++i;
       llvm::StringRef ArgNextString(CmdArgs[i]);
-      if (ArgNextString.startswith("E:") ||
-          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+      if (ArgNextString.starts_with("E:") ||
+          ArgNextString.starts_with("export:") || ArgNextString == "expall" ||
           ArgNextString == "expfull")
         return true;
     }

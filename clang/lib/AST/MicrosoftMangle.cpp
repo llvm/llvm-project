@@ -63,7 +63,7 @@ struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
       : llvm::raw_svector_ostream(Buffer), OS(OS) {}
   ~msvc_hashing_ostream() override {
     StringRef MangledName = str();
-    bool StartsWithEscape = MangledName.startswith("\01");
+    bool StartsWithEscape = MangledName.starts_with("\01");
     if (StartsWithEscape)
       MangledName = MangledName.drop_front(1);
     if (MangledName.size() < 4096) {

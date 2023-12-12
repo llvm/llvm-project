@@ -204,7 +204,7 @@ public:
 // which don't support these options.
 struct FilterUnusedFlags {
   bool operator() (StringRef S) {
-    return (S == "-no-integrated-as") || S.startswith("-Wa,");
+    return (S == "-no-integrated-as") || S.starts_with("-Wa,");
   }
 };
 

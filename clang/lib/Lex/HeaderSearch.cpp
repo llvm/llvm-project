@@ -796,7 +796,7 @@ static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
     } else if (*I == "PrivateHeaders") {
       ++FoundComp;
       IsPrivateHeader = true;
-    } else if (I->endswith(".framework")) {
+    } else if (I->ends_with(".framework")) {
       StringRef Name = I->drop_back(10); // Drop .framework
       // Need to reset the strings and counter to support nested frameworks.
       FrameworkName.clear();
@@ -1085,7 +1085,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     // If the filename matches a known system header prefix, override
     // whether the file is a system header.
     for (unsigned j = SystemHeaderPrefixes.size(); j; --j) {
-      if (Filename.startswith(SystemHeaderPrefixes[j-1].first)) {
+      if (Filename.starts_with(SystemHeaderPrefixes[j - 1].first)) {
         HFI.DirInfo = SystemHeaderPrefixes[j-1].second ? SrcMgr::C_System
                                                        : SrcMgr::C_User;
         break;
@@ -1694,7 +1694,7 @@ bool HeaderSearch::loadModuleMapFile(FileEntryRef File, bool IsSystem,
     StringRef DirName(Dir->getName());
     if (llvm::sys::path::filename(DirName) == "Modules") {
       DirName = llvm::sys::path::parent_path(DirName);
-      if (DirName.endswith(".framework"))
+      if (DirName.ends_with(".framework"))
         if (auto MaybeDir = FileMgr.getOptionalDirectoryRef(DirName))
           Dir = *MaybeDir;
       // FIXME: This assert can fail if there's a race between the above check
@@ -1965,10 +1965,10 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
       // Special case Apple .sdk folders since the search path is typically a
       // symlink like `iPhoneSimulator14.5.sdk` while the file is instead
       // located in `iPhoneSimulator.sdk` (the real folder).
-      if (NI->endswith(".sdk") && DI->endswith(".sdk")) {
+      if (NI->ends_with(".sdk") && DI->ends_with(".sdk")) {
         StringRef NBasename = path::stem(*NI);
         StringRef DBasename = path::stem(*DI);
-        if (DBasename.startswith(NBasename))
+        if (DBasename.starts_with(NBasename))
           continue;
       }
 

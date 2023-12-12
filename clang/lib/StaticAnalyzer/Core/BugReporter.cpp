@@ -2139,15 +2139,14 @@ PathSensitiveBugReport::PathSensitiveBugReport(
          "checkers to emit warnings, because checkers should depend on "
          "*modeling*, not *diagnostics*.");
 
-  assert(
-      (bt.getCheckerName().startswith("debug") ||
-       !isHidden(ErrorNode->getState()
-                     ->getAnalysisManager()
-                     .getCheckerManager()
-                     ->getCheckerRegistryData(),
-                 bt.getCheckerName())) &&
-          "Hidden checkers musn't emit diagnostics as they are by definition "
-          "non-user facing!");
+  assert((bt.getCheckerName().starts_with("debug") ||
+          !isHidden(ErrorNode->getState()
+                        ->getAnalysisManager()
+                        .getCheckerManager()
+                        ->getCheckerRegistryData(),
+                    bt.getCheckerName())) &&
+         "Hidden checkers musn't emit diagnostics as they are by definition "
+         "non-user facing!");
 }
 
 void PathSensitiveBugReport::addVisitor(
@@ -3064,8 +3063,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   // See whether we need to silence the checker/package.
   for (const std::string &CheckerOrPackage :
        getAnalyzerOptions().SilencedCheckersAndPackages) {
-    if (report->getBugType().getCheckerName().startswith(
-            CheckerOrPackage))
+    if (report->getBugType().getCheckerName().starts_with(CheckerOrPackage))
       return;
   }
 
