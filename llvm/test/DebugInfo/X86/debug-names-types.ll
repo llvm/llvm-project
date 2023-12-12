@@ -222,13 +222,12 @@
 ; CHECK-TYPE-NEXT:      DW_AT_high_pc
 ; CHECK-TYPE-NEXT:      DW_AT_addr_base
 
-; CHECK-TYPE: .debug_info.dwo contents
-; CHECK-TYPE:        DW_TAG_type_unit
-; CHECK-TYPE-NEXT:      DW_AT_language
-; CHECK-TYPE-NEXT:      DW_AT_comp_dir  ("/typeSmall")
-; CHECK-TYPE-NEXT:      DW_AT_dwo_name
+; CHECK-TYPE:           DW_TAG_type_unit
+; CHECK-TYPE-NOT:       DW_TAG
+; CHECK-TYPE:           DW_AT_comp_dir  ("/typeSmall")
+; CHECK-TYPE-NOT:       DW_TAG
+; CHECK-TYPE:           DW_AT_dwo_name
 ; CHECK-TYPE-SAME:        debug-names-types.ll.tmp.mainTypes.dwo
-; CHECK-TYPE-NEXT:      DW_AT_stmt_list
 
 ; ModuleID = 'main.cpp'
 source_filename = "main.cpp"
