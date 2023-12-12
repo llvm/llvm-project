@@ -19,7 +19,7 @@
 
 // z/OS Unix System Services does not have strsignal() support, so the
 // strsignal() function is implemented here.
-static inline char *strsignal(int sig) {
+inline char *strsignal(int sig) {
   static char msg[256];
   sprintf(msg, "%d", sig);
   return msg;
@@ -27,8 +27,8 @@ static inline char *strsignal(int sig) {
 
 // z/OS Unix System Services does not have wait4() support, so the wait4
 // function is implemented here.
-static inline pid_t wait4(pid_t pid, int *wstatus, int options,
-                          struct rusage *rusage) {
+inline pid_t wait4(pid_t pid, int *wstatus, int options,
+                   struct rusage *rusage) {
   pid_t Result = waitpid(pid, wstatus, options);
   int GetrusageRC = getrusage(RUSAGE_CHILDREN, rusage);
   assert(!GetrusageRC && "Must have valid measure of the resources!");
