@@ -3032,12 +3032,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
                                        Record[ASTStmtReader::NumExprFields]);
       break;
 
-    case EXPR_CALL:
-      S = CallExpr::CreateEmpty(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields] & 0xffff,
-          /*HasFPFeatures=*/
-          ((Record[ASTStmtReader::NumExprFields] >> 16) & 0x1), Empty);
+    case EXPR_CALL: {
+      BitsUnpacker CallExprBits(Record[ASTStmtReader::NumExprFields]);
+      auto NumArgs = CallExprBits.getNextBits(/*Width=*/16);
+      auto HasFPFeatures = CallExprBits.getNextBit();
+      S = CallExpr::CreateEmpty(Context, NumArgs, HasFPFeatures, Empty);
       break;
+    }
 
     case EXPR_RECOVERY:
       S = RecoveryExpr::CreateEmpty(
@@ -3775,19 +3776,23 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
-    case EXPR_CXX_OPERATOR_CALL:
-      S = CXXOperatorCallExpr::CreateEmpty(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields] & 0xffff,
-          /*HasFPFeatures=*/
-          ((Record[ASTStmtReader::NumExprFields] >> 16) & 0x1), Empty);
+    case EXPR_CXX_OPERATOR_CALL: {
+      BitsUnpacker CallExprBits(Record[ASTStmtReader::NumExprFields]);
+      auto NumArgs = CallExprBits.getNextBits(/*Width=*/16);
+      auto HasFPFeatures = CallExprBits.getNextBit();
+      S = CXXOperatorCallExpr::CreateEmpty(Context, NumArgs, HasFPFeatures,
+                                           Empty);
       break;
+    }
 
-    case EXPR_CXX_MEMBER_CALL:
-      S = CXXMemberCallExpr::CreateEmpty(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields] & 0xffff,
-          /*HasFPFeatures=*/
-          ((Record[ASTStmtReader::NumExprFields] >> 16) & 0x1), Empty);
+    case EXPR_CXX_MEMBER_CALL: {
+      BitsUnpacker CallExprBits(Record[ASTStmtReader::NumExprFields]);
+      auto NumArgs = CallExprBits.getNextBits(/*Width=*/16);
+      auto HasFPFeatures = CallExprBits.getNextBit();
+      S = CXXMemberCallExpr::CreateEmpty(Context, NumArgs, HasFPFeatures,
+                                         Empty);
       break;
+    }
 
     case EXPR_CXX_REWRITTEN_BINARY_OPERATOR:
       S = new (Context) CXXRewrittenBinaryOperator(Empty);
@@ -3846,11 +3851,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) BuiltinBitCastExpr(Empty);
       break;
 
-    case EXPR_USER_DEFINED_LITERAL:
-      S = UserDefinedLiteral::CreateEmpty(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields],
-          /*HasFPFeatures=*/Record[ASTStmtReader::NumExprFields + 1], Empty);
+    case EXPR_USER_DEFINED_LITERAL: {
+      BitsUnpacker CallExprBits(Record[ASTStmtReader::NumExprFields]);
+      auto NumArgs = CallExprBits.getNextBits(/*Width=*/16);
+      auto HasFPFeatures = CallExprBits.getNextBit();
+      S = UserDefinedLiteral::CreateEmpty(Context, NumArgs, HasFPFeatures,
+                                          Empty);
       break;
+    }
 
     case EXPR_CXX_STD_INITIALIZER_LIST:
       S = new (Context) CXXStdInitializerListExpr(Empty);
@@ -3963,7 +3971,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context,
           /*NumResults=*/Record[ASTStmtReader::NumExprFields] & ((1 << 14) - 1),
           /*HasTemplateKWAndArgsInfo=*/
-              (Record[ASTStmtReader::NumExprFields] >> 14) & (0x1),
+          (Record[ASTStmtReader::NumExprFields] >> 14) & (0x1),
           /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields] >> 14 &
               ((1 << 14) - 1));
       break;
@@ -3973,7 +3981,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context,
           /*NumResults=*/Record[ASTStmtReader::NumExprFields] & ((1 << 14) - 1),
           /*HasTemplateKWAndArgsInfo=*/
-              (Record[ASTStmtReader::NumExprFields] >> 14) & (0x1),
+          (Record[ASTStmtReader::NumExprFields] >> 14) & (0x1),
           /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields] >> 14 &
               ((1 << 14) - 1));
       break;
@@ -4035,12 +4043,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) OpaqueValueExpr(Empty);
       break;
 
-    case EXPR_CUDA_KERNEL_CALL:
-      S = CUDAKernelCallExpr::CreateEmpty(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields] & 0xffff,
-          /*HasFPFeatures=*/
-          ((Record[ASTStmtReader::NumExprFields] >> 16) & 0x1), Empty);
+    case EXPR_CUDA_KERNEL_CALL: {
+      BitsUnpacker CallExprBits(Record[ASTStmtReader::NumExprFields]);
+      auto NumArgs = CallExprBits.getNextBits(/*Width=*/16);
+      auto HasFPFeatures = CallExprBits.getNextBit();
+      S = CUDAKernelCallExpr::CreateEmpty(Context, NumArgs, HasFPFeatures,
+                                          Empty);
       break;
+    }
 
     case EXPR_ASTYPE:
       S = new (Context) AsTypeExpr(Empty);
