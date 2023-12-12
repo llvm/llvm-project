@@ -869,8 +869,7 @@ int ThreadSanitizer::getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr,
                                               const DataLayout &DL) {
   assert(OrigTy->isSized());
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
-  if (TypeSize != 8 && TypeSize != 16 && TypeSize != 32 && TypeSize != 64 &&
-      TypeSize != 128 && TypeSize != 256 && TypeSize != 512) {
+  if (TypeSize < 8 || TypeSize > 512 || !isPowerOf2_32(TypeSize)) {
     NumAccessesWithBadSize++;
     // Ignore all unusual sizes.
     return -1;
