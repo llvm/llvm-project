@@ -554,10 +554,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       } else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
                  isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
-          auto CFunc = CI->getCalledFunction();
-          if (CFunc && (CFunc->getName().contains("llvm.masked.scatter") ||
-                        CFunc->getName().contains("llvm.masked.gather"))) {
-            AllGathersAndScatters.push_back(&Inst);
+          if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+            auto IID = II->getIntrinsicID();
+            if (IID == Intrinsic::masked_gather || IID == Intrinsic::masked_scatter)
+              AllGathersAndScatters.push_back(&Inst);
           }
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
         }
@@ -701,9 +701,10 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
 bool ThreadSanitizer::instrumentGatherOrScatter(Instruction *I,
                                                 const DataLayout &DL) {
   InstrumentationIRBuilder IRB(I);
-  StringRef FunctionNameRef =
-      dyn_cast<CallInst>(I)->getCalledFunction()->getName();
-  bool IsScatter = FunctionNameRef.contains("scatter");
+  auto* II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  bool IsScatter = (II->getIntrinsicID() == Intrinsic::masked_scatter);
   unsigned OperandIdx = IsScatter ? 0 : 3;
   unsigned NumElements =
       cast<FixedVectorType>(I->getOperand(OperandIdx)->getType())
