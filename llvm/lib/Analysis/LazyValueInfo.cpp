@@ -453,6 +453,8 @@ public:
                                      BasicBlock *ToBB,
                                      Instruction *CxtI = nullptr);
 
+  ValueLatticeElement getValueAtUse(const Use &U);
+
   /// Complete flush all previously computed values
   void clear() {
     TheCache.clear();
@@ -1512,6 +1514,52 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
   return *Result;
 }
 
+ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
+  Value *V = U.get();
+  auto *CxtI = cast<Instruction>(U.getUser());
+  ValueLatticeElement VL = getValueInBlock(V, CxtI->getParent(), CxtI);
+
+  // Check whether the only (possibly transitive) use of the value is in a
+  // position where V can be constrained by a select or branch condition.
+  const Use *CurrU = &U;
+  // TODO: Increase limit?
+  const unsigned MaxUsesToInspect = 3;
+  for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
+    std::optional<ValueLatticeElement> CondVal;
+    auto *CurrI = cast<Instruction>(CurrU->getUser());
+    if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
+      // If the value is undef, a different value may be chosen in
+      // the select condition and at use.
+      if (!isGuaranteedNotToBeUndef(SI->getCondition(), AC))
+        break;
+      if (CurrU->getOperandNo() == 1)
+        CondVal = getValueFromCondition(V, SI->getCondition(), true);
+      else if (CurrU->getOperandNo() == 2)
+        CondVal = getValueFromCondition(V, SI->getCondition(), false);
+    } else if (auto *PHI = dyn_cast<PHINode>(CurrI)) {
+      // TODO: Use non-local query?
+      CondVal =
+          getEdgeValueLocal(V, PHI->getIncomingBlock(*CurrU), PHI->getParent());
+    }
+    if (CondVal)
+      VL = intersect(VL, *CondVal);
+
+    // Only follow one-use chain, to allow direct intersection of conditions.
+    // If there are multiple uses, we would have to intersect with the union of
+    // all conditions at different uses.
+    // Stop walking if we hit a non-speculatable instruction. Even if the
+    // result is only used under a specific condition, executing the
+    // instruction itself may cause side effects or UB already.
+    // This also disallows looking through phi nodes: If the phi node is part
+    // of a cycle, we might end up reasoning about values from different cycle
+    // iterations (PR60629).
+    if (!CurrI->hasOneUse() || !isSafeToSpeculativelyExecute(CurrI))
+      break;
+    CurrU = &*CurrI->use_begin();
+  }
+  return VL;
+}
+
 void LazyValueInfoImpl::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
                                    BasicBlock *NewSucc) {
   TheCache.threadEdgeImpl(OldSucc, NewSucc);
@@ -1633,49 +1681,10 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
 
 ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
                                                    bool UndefAllowed) {
-  Value *V = U.get();
-  ConstantRange CR =
-      getConstantRange(V, cast<Instruction>(U.getUser()), UndefAllowed);
-
-  // Check whether the only (possibly transitive) use of the value is in a
-  // position where V can be constrained by a select or branch condition.
-  const Use *CurrU = &U;
-  // TODO: Increase limit?
-  const unsigned MaxUsesToInspect = 3;
-  for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
-    std::optional<ValueLatticeElement> CondVal;
-    auto *CurrI = cast<Instruction>(CurrU->getUser());
-    if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
-      // If the value is undef, a different value may be chosen in
-      // the select condition and at use.
-      if (!isGuaranteedNotToBeUndef(SI->getCondition(), AC))
-        break;
-      if (CurrU->getOperandNo() == 1)
-        CondVal = getValueFromCondition(V, SI->getCondition(), true);
-      else if (CurrU->getOperandNo() == 2)
-        CondVal = getValueFromCondition(V, SI->getCondition(), false);
-    } else if (auto *PHI = dyn_cast<PHINode>(CurrI)) {
-      // TODO: Use non-local query?
-      CondVal =
-          getEdgeValueLocal(V, PHI->getIncomingBlock(*CurrU), PHI->getParent());
-    }
-    if (CondVal && CondVal->isConstantRange())
-      CR = CR.intersectWith(CondVal->getConstantRange());
-
-    // Only follow one-use chain, to allow direct intersection of conditions.
-    // If there are multiple uses, we would have to intersect with the union of
-    // all conditions at different uses.
-    // Stop walking if we hit a non-speculatable instruction. Even if the
-    // result is only used under a specific condition, executing the
-    // instruction itself may cause side effects or UB already.
-    // This also disallows looking through phi nodes: If the phi node is part
-    // of a cycle, we might end up reasoning about values from different cycle
-    // iterations (PR60629).
-    if (!CurrI->hasOneUse() || !isSafeToSpeculativelyExecute(CurrI))
-      break;
-    CurrU = &*CurrI->use_begin();
-  }
-  return CR;
+  auto *Inst = cast<Instruction>(U.getUser());
+  ValueLatticeElement Result =
+      getOrCreateImpl(Inst->getModule()).getValueAtUse(U);
+  return toConstantRange(Result, U->getType(), UndefAllowed);
 }
 
 /// Determine whether the specified value is known to be a
