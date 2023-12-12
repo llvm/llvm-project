@@ -2163,6 +2163,20 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
   return success();
 }
 
+LogicalResult
+mlir::OpTrait::impl::verifySameFirstSecondOperandAndResultType(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 3)) || failed(verifyOneResult(op)))
+    return failure();
+
+  auto checkType = op->getResult(0).getType();
+  if (checkType != op->getOperand(0).getType() &&
+      checkType != op->getOperand(1).getType())
+    return op->emitOpError()
+           << "requires the same type for first operand and result";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // CIR attributes
 // FIXME: move all of these to CIRAttrs.cpp
