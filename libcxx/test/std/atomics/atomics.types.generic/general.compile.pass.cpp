@@ -56,15 +56,11 @@
 //    void notify_all() noexcept;
 //  };
 
-#include "test_macros.h"
-
-// MSVC warning C4197: 'volatile std::atomic<operator_hijacker>': top-level volatile in cast is ignored
-TEST_MSVC_DIAGNOSTIC_IGNORED(4197)
-
 #include <atomic>
 #include <type_traits>
 
 #include "operator_hijacker.h"
+#include "test_macros.h"
 
 template <class T>
 void test() {
@@ -78,8 +74,14 @@ void test() {
 
   TEST_IGNORE_NODISCARD a.is_lock_free();
 
+  TEST_DIAGNOSTIC_PUSH
+  // MSVC warning C4197: 'volatile std::atomic<operator_hijacker>': top-level volatile in cast is ignored
+  TEST_MSVC_DIAGNOSTIC_IGNORED(4197)
+
   TEST_IGNORE_NODISCARD T();
   TEST_IGNORE_NODISCARD T(v);
+
+  TEST_DIAGNOSTIC_POP
 
   TEST_IGNORE_NODISCARD a.load();
   TEST_IGNORE_NODISCARD static_cast<typename T::value_type>(a);

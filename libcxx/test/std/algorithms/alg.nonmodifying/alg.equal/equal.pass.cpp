@@ -25,9 +25,8 @@ TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
 TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
 // MSVC warning C4242: 'argument': conversion from 'int' to 'const _Ty', possible loss of data
 // MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
-// MSVC warning C4310: cast truncates constant value
 // MSVC warning C4389: '==': signed/unsigned mismatch
-TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244 4310 4389)
+TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244 4389)
 
 #include <algorithm>
 #include <cassert>
@@ -65,6 +64,10 @@ struct Test {
 struct TestNarrowingEqualTo {
   template <class UnderlyingType>
   TEST_CONSTEXPR_CXX20 void operator()() {
+  TEST_DIAGNOSTIC_PUSH
+  // MSVC warning C4310: cast truncates constant value
+  TEST_MSVC_DIAGNOSTIC_IGNORED(4310)
+
     UnderlyingType a[] = {
         UnderlyingType(0x1000),
         UnderlyingType(0x1001),
@@ -77,6 +80,8 @@ struct TestNarrowingEqualTo {
         UnderlyingType(0x1602),
         UnderlyingType(0x1603),
         UnderlyingType(0x1604)};
+
+  TEST_DIAGNOSTIC_POP
 
     assert(std::equal(a, a + 5, b, std::equal_to<char>()));
 #if TEST_STD_VER >= 14
