@@ -1150,7 +1150,6 @@ out:
   ret i1 %ret
 }
 
-; FIXME: This is a miscompile.
 define i8 @uadd_sat_undef_range(i8 %x) {
 ; CHECK-LABEL: @uadd_sat_undef_range(
 ; CHECK-NEXT:  entry:
@@ -1164,8 +1163,8 @@ define i8 @uadd_sat_undef_range(i8 %x) {
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8 [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RES1:%.*]] = add nuw i8 [[PHI]], 100
-; CHECK-NEXT:    ret i8 [[RES1]]
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[PHI]], i8 100)
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
 entry:
   switch i8 %x, label %join [
