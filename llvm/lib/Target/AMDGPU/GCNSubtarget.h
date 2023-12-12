@@ -1161,6 +1161,8 @@ public:
 
   bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
+  bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
