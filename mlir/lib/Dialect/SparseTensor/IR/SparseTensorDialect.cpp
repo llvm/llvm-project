@@ -893,7 +893,7 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
       return false;
     }
   }
-  return !coeffientMap.empty() && hasBlock;
+  return hasBlock;
 }
 
 bool mlir::sparse_tensor::hasAnyNonIdentityOperandsOrResults(Operation *op) {
