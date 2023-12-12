@@ -90,8 +90,11 @@ private:
   using UP::EXP_BITS;
   using UP::SIG_BITS;
   using UP::TOTAL_BITS;
+
+public:
   using UIntType = typename UP::UIntType;
 
+private:
   LIBC_INLINE_VAR static constexpr int STORAGE_BITS =
       sizeof(UIntType) * CHAR_BIT;
   static_assert(STORAGE_BITS >= TOTAL_BITS);
@@ -116,14 +119,16 @@ private:
       mask_trailing_ones<UIntType, SIG_BITS>() << SIG_MASK_SHIFT;
   LIBC_INLINE_VAR static constexpr UIntType EXP_MASK =
       mask_trailing_ones<UIntType, EXP_BITS>() << EXP_MASK_SHIFT;
-  // Trailing underscore on SIGN_MASK_ is temporary - it will be removed
-  // once we can replace the public part below with the private one.
-  LIBC_INLINE_VAR static constexpr UIntType SIGN_MASK_ =
+
+public:
+  LIBC_INLINE_VAR static constexpr UIntType SIGN_MASK =
       mask_trailing_ones<UIntType, SIGN_BITS>() << SIGN_MASK_SHIFT;
+
+private:
   LIBC_INLINE_VAR static constexpr UIntType FP_MASK =
       mask_trailing_ones<UIntType, TOTAL_BITS>();
-  static_assert((SIG_MASK & EXP_MASK & SIGN_MASK_) == 0, "masks disjoint");
-  static_assert((SIG_MASK | EXP_MASK | SIGN_MASK_) == FP_MASK, "masks cover");
+  static_assert((SIG_MASK & EXP_MASK & SIGN_MASK) == 0, "masks disjoint");
+  static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
 
   LIBC_INLINE static constexpr UIntType bit_at(int position) {
     return UIntType(1) << position;
@@ -145,25 +150,21 @@ private:
                                                                   : SIG_BITS;
 
 public:
-  // Public facing API to keep the change local to this file.
-  using BitsType = UIntType;
-
   LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = TOTAL_BITS;
   LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_WIDTH = FRACTION_BITS;
   LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
       MANTISSA_WIDTH + 1;
-  LIBC_INLINE_VAR static constexpr BitsType MANTISSA_MASK =
+  LIBC_INLINE_VAR static constexpr UIntType MANTISSA_MASK =
       mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
   LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = EXP_BITS;
   LIBC_INLINE_VAR static constexpr int32_t EXPONENT_BIAS = EXP_BIAS;
-  LIBC_INLINE_VAR static constexpr BitsType SIGN_MASK = SIGN_MASK_;
-  LIBC_INLINE_VAR static constexpr BitsType EXPONENT_MASK = EXP_MASK;
-  LIBC_INLINE_VAR static constexpr BitsType EXP_MANT_MASK = EXP_MASK | SIG_MASK;
+  LIBC_INLINE_VAR static constexpr UIntType EXPONENT_MASK = EXP_MASK;
+  LIBC_INLINE_VAR static constexpr UIntType EXP_MANT_MASK = EXP_MASK | SIG_MASK;
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
   // Else, it is a signalling NAN.
-  static constexpr BitsType QUIET_NAN_MASK = QNAN_MASK;
+  static constexpr UIntType QUIET_NAN_MASK = QNAN_MASK;
 };
 
 //-----------------------------------------------------------------------------
