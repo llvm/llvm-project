@@ -195,7 +195,17 @@ void *malloc(size_t size);
 
 int *mallocRegion(void) {
   int *mem = (int*)malloc(2*sizeof(int));
+
   mem[3] = -2;
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
+  return mem;
+}
+
+int *mallocRegionDeref(void) {
+  int *mem = (int*)malloc(2*sizeof(int));
+
+  *(mem + 3) = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
   return mem;
