@@ -48,6 +48,32 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
 
 static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
 
+/// Return "true" if the given op is guaranteed to have no "Allocate" or "Free"
+/// side effect.
+static bool hasNoAllocateOrFreeSideEffect(Operation *op) {
+  if (isa<MemoryEffectOpInterface>(op))
+    return hasEffect<MemoryEffects::Allocate>(op) ||
+           hasEffect<MemoryEffects::Free>(op);
+  // If the op does not implement the MemoryEffectOpInterface but has has
+  // recursive memory effects, then this op in isolation (without its body) does
+  // not have any side effects. The ops inside the regions of this op will be
+  // processed separately.
+  return op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+}
+
+/// Return "true" if the given op has buffer semantics. I.e., it has buffer
+/// operands, buffer results and/or buffer region entry block arguments.
+static bool hasBufferSemantics(Operation *op) {
+  if (llvm::any_of(op->getOperands(), isMemref) ||
+      llvm::any_of(op->getResults(), isMemref))
+    return true;
+  for (Region &region : op->getRegions())
+    if (!region.empty())
+      if (llvm::any_of(region.front().getArguments(), isMemref))
+        return true;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Backedges analysis
 //===----------------------------------------------------------------------===//
@@ -462,31 +488,6 @@ BufferDeallocation::materializeUniqueOwnership(OpBuilder &builder, Value memref,
   return state.getMemrefWithUniqueOwnership(builder, memref, block);
 }
 
-static bool regionOperatesOnMemrefValues(Region &region) {
-  auto checkBlock = [](Block *block) {
-    if (llvm::any_of(block->getArguments(), isMemref))
-      return WalkResult::interrupt();
-    for (Operation &op : *block) {
-      if (llvm::any_of(op.getOperands(), isMemref))
-        return WalkResult::interrupt();
-      if (llvm::any_of(op.getResults(), isMemref))
-        return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  };
-  WalkResult result = region.walk(checkBlock);
-  if (result.wasInterrupted())
-    return true;
-
-  // Note: Block::walk/Region::walk visits only blocks that are nested under
-  // nested operations, but not direct children.
-  for (Block &block : region)
-    if (checkBlock(&block).wasInterrupted())
-      return true;
-
-  return false;
-}
-
 LogicalResult
 BufferDeallocation::verifyFunctionPreconditions(FunctionOpInterface op) {
   // (1) Ensure that there are supported loops only (no explicit control flow
@@ -512,9 +513,8 @@ LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
   size_t size = regions.size();
   if (((size == 1 && !op->getResults().empty()) || size > 1) &&
       !dyn_cast<RegionBranchOpInterface>(op)) {
-    if (llvm::any_of(regions, regionOperatesOnMemrefValues))
-      return op->emitError("All operations with attached regions need to "
-                           "implement the RegionBranchOpInterface.");
+    return op->emitError("All operations with attached regions need to "
+                         "implement the RegionBranchOpInterface.");
   }
 
   // (2) The pass does not work properly when deallocations are already present.
@@ -648,6 +648,12 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
   // For each operation in the block, handle the interfaces that affect aliasing
   // and ownership of memrefs.
   for (Operation &op : llvm::make_early_inc_range(*block)) {
+    // Skip ops that do not operate on buffers, have no Allocate/Free side
+    // effect and are not terminators. (bufferization.dealloc ops are inserted
+    // in front of terminators, so terminators cannot be skipped.)
+    if (!op.hasTrait<OpTrait::IsTerminator>() && !hasBufferSemantics(&op) &&
+        hasNoAllocateOrFreeSideEffect(&op))
+      continue;
     FailureOr<Operation *> result = handleAllInterfaces(&op);
     if (failed(result))
       return failure();
