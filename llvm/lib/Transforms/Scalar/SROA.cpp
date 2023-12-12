@@ -4856,6 +4856,7 @@ static void insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig,
       NewAddr, Orig->getValue(), Orig->getVariable(), NewFragmentExpr, NewAddr,
       Orig->getAddressExpression(), Orig->getDebugLoc());
   LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign << "\n");
+  (void)NewAssign;
 }
 static void insertNewDbgInst(DIBuilder &DIB, DPValue *Orig, AllocaInst *NewAddr,
                              DIExpression *NewFragmentExpr,
