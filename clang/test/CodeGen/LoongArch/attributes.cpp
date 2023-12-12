@@ -21,17 +21,14 @@ void use2() {
   v4<int> = 1;
 }
 
-// CHECK: @v5 ={{.*}} global i32 0, code_model "large"
-thread_local int v5 __attribute__((model("extreme")));
-
 struct S {
   double d;
 };
 
-// CHECK: @v6 ={{.*}} global {{.*}}, code_model "medium"
-S v6 __attribute__((model("medium")));
+// CHECK: @v5 ={{.*}} global {{.*}}, code_model "medium"
+S v5 __attribute__((model("medium")));
 
 typedef void (*F)();
 
-// CHECK: @v7 ={{.*}} global ptr null, code_model "large"
-F v7 __attribute__((model("extreme")));
+// CHECK: @v6 ={{.*}} global ptr null, code_model "large"
+F v6 __attribute__((model("extreme")));

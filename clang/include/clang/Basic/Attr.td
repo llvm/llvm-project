@@ -143,6 +143,11 @@ def ExternalGlobalVar : SubsetSubject<Var,
                                !S->isLocalExternDecl()}],
                              "external global variables">;
 
+def NonTLSGlobalVar : SubsetSubject<Var,
+                             [{S->hasGlobalStorage() &&
+                               S->getTLSKind() == 0}],
+                             "non-TLS global variables">;
+
 def InlineFunction : SubsetSubject<Function,
                              [{S->isInlineSpecified()}], "inline functions">;
 
@@ -2721,8 +2726,7 @@ def PragmaClangTextSection : InheritableAttr {
 def CodeModel : InheritableAttr {
   let Spellings = [GCC<"model">];
   let Args = [StringArgument<"Model">];
-  let Subjects =
-      SubjectList<[ GlobalVar ], ErrorDiag>;
+  let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
   let Documentation = [CodeModelDocs];
 }
 

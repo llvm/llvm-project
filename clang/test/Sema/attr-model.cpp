@@ -28,4 +28,5 @@ int g __attribute((model("extreme"))); // aarch64-error {{code_model 'extreme' i
                                        // powerpc64-error {{code_model 'extreme' is not yet supported on this target}} \
                                        // riscv64-error {{code_model 'extreme' is not yet supported on this target}} \
                                        // x86_64-error {{code_model 'extreme' is not yet supported on this target}}
-void __attribute((model("extreme"))) h() {} // expected-error {{'model' attribute only applies to global variables}}
+void __attribute((model("extreme"))) h() {} // expected-error {{'model' attribute only applies to non-TLS global variables}}
+thread_local int i __attribute((model("extreme"))); // expected-error {{'model' attribute only applies to non-TLS global variables}}
