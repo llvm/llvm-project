@@ -472,6 +472,11 @@ generic-no-exceptions)
     check-runtimes
     check-abi-list
 ;;
+generic-no-rtti)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-rtti.cmake"
+    check-runtimes
+;;
 #
 # Other miscellaneous jobs
 #

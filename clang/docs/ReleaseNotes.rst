@@ -1073,6 +1073,9 @@ Static Analyzer
   `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
   `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
 
+- Move checker ``alpha.cplusplus.EnumCastOutOfRange`` out of the ``alpha``
+  package to ``optin.core.EnumCastOutOfRange``.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
