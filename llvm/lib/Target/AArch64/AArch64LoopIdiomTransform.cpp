@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass that recognises certain loop idioms and
-// transforms them into more optimised versions of the same loop. In cases
+// This pass implements a pass that recognizes certain loop idioms and
+// transforms them into more optimized versions of the same loop. In cases
 // where this happens, it can be a significant performance win.
 //
-// We currently only recognise one loop that finds the first mismatched byte
+// We currently only recognize one loop that finds the first mismatched byte
 // in an array and returns the index, i.e. something like:
 //
 //  while (++i != n) {
@@ -18,7 +18,7 @@
 //      break;
 //  }
 //
-// In this example we can actually vectorise the loop despite the early exit,
+// In this example we can actually vectorize the loop despite the early exit,
 // although the loop vectorizer does not support it. It requires some extra
 // checks to deal with the possibility of faulting loads when crossing page
 // boundaries. However, even with these checks it is still profitable to do the
@@ -28,7 +28,7 @@
 //
 // TODO List:
 //
-// * When optimising for code size we may want to avoid some transformations.
+// * When optimizing for code size we may want to avoid some transformations.
 // * We can also support the inverse case where we scan for a matching element.
 //
 //===----------------------------------------------------------------------===//
@@ -57,6 +57,10 @@ static cl::opt<bool> DisableByteCmp(
     "disable-aarch64-lit-bytecmp", cl::Hidden, cl::init(false),
     cl::desc("Proceed with AArch64 Loop Idiom Transform Pass, but do "
              "not convert byte-compare loop(s)."));
+
+static cl::opt<bool> VerifyLoops(
+    "aarch64-lit-verify", cl::Hidden, cl::init(false),
+    cl::desc("Verify loops generated AArch64 Loop Idiom Transform Pass."));
 
 namespace llvm {
 
@@ -111,7 +115,7 @@ public:
   }
 
   StringRef getPassName() const override {
-    return "Recognize AArch64-specific loop idioms";
+    return "Transform AArch64-specific loop idioms";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -144,7 +148,7 @@ char AArch64LoopIdiomTransformLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(
     AArch64LoopIdiomTransformLegacyPass, "aarch64-lit",
-    "Transform specific loop idioms into optimised vector forms", false, false)
+    "Transform specific loop idioms into optimized vector forms", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
@@ -152,7 +156,7 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(
     AArch64LoopIdiomTransformLegacyPass, "aarch64-lit",
-    "Transform specific loop idioms into optimised vector forms", false, false)
+    "Transform specific loop idioms into optimized vector forms", false, false)
 
 Pass *llvm::createAArch64LoopIdiomTransformPass() {
   return new AArch64LoopIdiomTransformLegacyPass();
@@ -229,12 +233,9 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
     return false;
 
   BasicBlock *Header = CurLoop->getHeader();
-  BasicBlock *PH = CurLoop->getLoopPreheader();
 
   // In AArch64LoopIdiomTransform::run we have already checked that the loop
   // has a preheader so we can assume it's in a canonical form.
-  auto *EntryBI = cast<BranchInst>(PH->getTerminator());
-
   if (CurLoop->getNumBackEdges() != 1 || CurLoop->getNumBlocks() != 2)
     return false;
 
@@ -295,8 +296,7 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
     for (Instruction &I : *BB)
       if (&I != PN && &I != Index)
         for (User *U : I.users()) {
-          auto UI = cast<Instruction>(U);
-          if (!CurLoop->contains(UI))
+          if (!CurLoop->contains(cast<Instruction>(U)))
             return false;
         }
 
@@ -355,6 +355,40 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   Value *IdxB = GEPB->getOperand(GEPB->getNumIndices());
   if (IdxA != IdxB || !match(IdxA, m_ZExt(m_Specific(Index))))
     return false;
+
+  // Ensure that when the Found and End blocks are identical the PHIs have the
+  // supported format. We don't currently allow cases like this:
+  // while.cond:
+  //   ...
+  //   br i1 %cmp.not, label %while.end, label %while.body
+  //
+  // while.body:
+  //   ...
+  //   br i1 %cmp.not2, label %while.cond, label %while.end
+  //
+  // while.end:
+  //   %final_ptr = phi ptr [ %c, %while.body ], [ %d, %while.cond ]
+  //
+  // Where the incoming values for %final_ptr are unique and from each of the
+  // loop blocks, but not actually defined in the loop. This requires extra
+  // work setting up the byte.compare block, i.e. by introducing a select to
+  // choose the correct value.
+  // TODO: We could add support for this in future.
+  if (FoundBB == EndBB) {
+    for (PHINode &PN : EndBB->phis()) {
+      Value *LastValue = nullptr;
+      for (unsigned I = 0; I < PN.getNumIncomingValues(); I++) {
+        BasicBlock *BB = PN.getIncomingBlock(I);
+        if (CurLoop->contains(BB)) {
+          Value *V = PN.getIncomingValue(I);
+          if (!LastValue)
+            LastValue = V;
+          else if (LastValue != V)
+            return false;
+        }
+      }
+    }
+  }
 
   LLVM_DEBUG(dbgs() << "FOUND IDIOM IN LOOP: \n"
                     << *(EndBB->getParent()) << "\n\n");
@@ -435,8 +469,14 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
   // Update LoopInfo with the new SVE & scalar loops.
   auto SVELoop = LI->AllocateLoop();
   auto ScalarLoop = LI->AllocateLoop();
+
   if (CurLoop->getParentLoop()) {
+    CurLoop->getParentLoop()->addBasicBlockToLoop(MinItCheckBlock, *LI);
+    CurLoop->getParentLoop()->addBasicBlockToLoop(MemCheckBlock, *LI);
+    CurLoop->getParentLoop()->addBasicBlockToLoop(SVELoopPreheaderBlock, *LI);
     CurLoop->getParentLoop()->addChildLoop(SVELoop);
+    CurLoop->getParentLoop()->addBasicBlockToLoop(SVELoopMismatchBlock, *LI);
+    CurLoop->getParentLoop()->addBasicBlockToLoop(LoopPreHeaderBlock, *LI);
     CurLoop->getParentLoop()->addChildLoop(ScalarLoop);
   } else {
     LI->addTopLevelLoop(SVELoop);
@@ -444,14 +484,9 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
   }
 
   // Add the new basic blocks to their associated loops.
-  SVELoop->addBasicBlockToLoop(MinItCheckBlock, *LI);
-  SVELoop->addBasicBlockToLoop(MemCheckBlock, *LI);
-  SVELoop->addBasicBlockToLoop(SVELoopPreheaderBlock, *LI);
   SVELoop->addBasicBlockToLoop(SVELoopStartBlock, *LI);
   SVELoop->addBasicBlockToLoop(SVELoopIncBlock, *LI);
-  SVELoop->addBasicBlockToLoop(SVELoopMismatchBlock, *LI);
 
-  ScalarLoop->addBasicBlockToLoop(LoopPreHeaderBlock, *LI);
   ScalarLoop->addBasicBlockToLoop(LoopStartBlock, *LI);
   ScalarLoop->addBasicBlockToLoop(LoopIncBlock, *LI);
 
@@ -609,12 +644,21 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
   // If we found a mismatch then we need to calculate which lane in the vector
   // had a mismatch and add that on to the current loop index.
   Builder.SetInsertPoint(SVELoopMismatchBlock);
-  Value *PredMatchCmp = Builder.CreateAnd(LoopPred, SVEMatchCmp);
+  PHINode *FoundPred = Builder.CreatePHI(PredVTy, 1, "mismatch_sve_found_pred");
+  FoundPred->addIncoming(SVEMatchCmp, SVELoopStartBlock);
+  PHINode *LastLoopPred =
+      Builder.CreatePHI(PredVTy, 1, "mismatch_sve_last_loop_pred");
+  LastLoopPred->addIncoming(LoopPred, SVELoopStartBlock);
+  PHINode *SVEFoundIndex =
+      Builder.CreatePHI(I64Type, 1, "mismatch_sve_found_index");
+  SVEFoundIndex->addIncoming(SVEIndexPhi, SVELoopStartBlock);
+
+  Value *PredMatchCmp = Builder.CreateAnd(LastLoopPred, FoundPred);
   Value *Ctz = Builder.CreateIntrinsic(
-      Intrinsic::experimental_cttz_elts, {ResType, SVEMatchCmp->getType()},
+      Intrinsic::experimental_cttz_elts, {ResType, PredMatchCmp->getType()},
       {PredMatchCmp, /*ZeroIsPoison=*/Builder.getInt1(true)});
   Ctz = Builder.CreateZExt(Ctz, I64Type);
-  Value *SVELoopRes64 = Builder.CreateAdd(SVEIndexPhi, Ctz, "",
+  Value *SVELoopRes64 = Builder.CreateAdd(SVEFoundIndex, Ctz, "",
                                           /*HasNUW=*/true, /*HasNSW=*/true);
   Value *SVELoopRes = Builder.CreateTrunc(SVELoopRes64, ResType);
 
@@ -659,7 +703,7 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
   Builder.SetInsertPoint(LoopIncBlock);
   Value *PhiInc = Builder.CreateAdd(IndexPhi, ConstantInt::get(ResType, 1));
   IndexPhi->addIncoming(PhiInc, LoopIncBlock);
-  Value *IVCmp = Builder.CreateICmpEQ(IndexPhi, MaxLen);
+  Value *IVCmp = Builder.CreateICmpEQ(PhiInc, MaxLen);
   BranchInst *IVCmpBr = BranchInst::Create(EndBlock, LoopStartBlock, IVCmp);
   Builder.Insert(IVCmpBr);
 
@@ -680,7 +724,18 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
   ResPhi->addIncoming(MaxLen, SVELoopIncBlock);
   ResPhi->addIncoming(SVELoopRes, SVELoopMismatchBlock);
 
-  return Builder.CreateTrunc(ResPhi, ResType);
+  Value *FinalRes = Builder.CreateTrunc(ResPhi, ResType);
+
+  if (VerifyLoops) {
+    ScalarLoop->verifyLoop();
+    SVELoop->verifyLoop();
+    if (!SVELoop->isRecursivelyLCSSAForm(*DT, *LI))
+      report_fatal_error("Loops must remain in LCSSA form!");
+    if (!ScalarLoop->isRecursivelyLCSSAForm(*DT, *LI))
+      report_fatal_error("Loops must remain in LCSSA form!");
+  }
+
+  return FinalRes;
 }
 
 void AArch64LoopIdiomTransform::transformByteCompare(
@@ -688,7 +743,7 @@ void AArch64LoopIdiomTransform::transformByteCompare(
     Value *Index, Value *Start, bool IncIdx, BasicBlock *FoundBB,
     BasicBlock *EndBB) {
 
-  // Insert the byte compare intrinsic at the end of the preheader block
+  // Insert the byte compare code at the end of the preheader block
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   BasicBlock *Header = CurLoop->getHeader();
   BranchInst *PHBranch = cast<BranchInst>(Preheader->getTerminator());
@@ -724,8 +779,11 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   // Create the branch to either the end or found block depending on the value
   // returned by the intrinsic.
   Builder.SetInsertPoint(CmpBB);
-  Value *FoundCmp = Builder.CreateICmpEQ(ByteCmpRes, MaxLen);
-  Builder.CreateCondBr(FoundCmp, EndBB, FoundBB);
+  if (FoundBB != EndBB) {
+    Value *FoundCmp = Builder.CreateICmpEQ(ByteCmpRes, MaxLen);
+    Builder.CreateCondBr(FoundCmp, EndBB, FoundBB);
+  } else
+    Builder.CreateBr(FoundBB);
 
   auto fixSuccessorPhis = [&](BasicBlock *SuccBB) {
     for (PHINode &PN : SuccBB->phis()) {
@@ -734,17 +792,23 @@ void AArch64LoopIdiomTransform::transformByteCompare(
       // meaning this is a Phi collecting the results of the byte compare.
       bool ResPhi = false;
       for (Value *Op : PN.incoming_values())
-        if (Op == CmpBB)
+        if (Op == ByteCmpRes) {
           ResPhi = true;
+          break;
+        }
 
-      // If any of the incoming values were ByteCmp, we need to also add
-      // it as an incoming value from CmpBB.
+      // Any PHI that depended upon the result of the byte compare needs a new
+      // incoming value from CmpBB. This is because the original loop will get
+      // deleted.
       if (ResPhi)
         PN.addIncoming(ByteCmpRes, CmpBB);
       else {
+        // Since there should be no other outside uses of values in the
+        // original loop, any incoming values should be for blocks outside the
+        // loop.
+
         // Otherwise, this is a Phi for different values. We should create
         // a new incoming value from CmpBB matching the same value as from
-        // the old loop.
         for (BasicBlock *BB : PN.blocks())
           if (CurLoop->contains(BB)) {
             PN.addIncoming(PN.getIncomingValueForBlock(BB), CmpBB);
@@ -756,7 +820,8 @@ void AArch64LoopIdiomTransform::transformByteCompare(
 
   // Ensure all Phis in the successors of CmpBB have an incoming value from it.
   fixSuccessorPhis(EndBB);
-  fixSuccessorPhis(FoundBB);
+  if (EndBB != FoundBB)
+    fixSuccessorPhis(FoundBB);
 
   // The new CmpBB block isn't part of the loop, but will need to be added to
   // the outer loop if there is one.
@@ -765,4 +830,10 @@ void AArch64LoopIdiomTransform::transformByteCompare(
 
   // Update the dominator tree with the new block.
   DT->addNewBlock(CmpBB, Preheader);
+
+  if (VerifyLoops && CurLoop->getParentLoop()) {
+    CurLoop->getParentLoop()->verifyLoop();
+    if (!CurLoop->getParentLoop()->isRecursivelyLCSSAForm(*DT, *LI))
+      report_fatal_error("Loops must remain in LCSSA form!");
+  }
 }
