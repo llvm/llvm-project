@@ -6,6 +6,10 @@
 ; indexed profiles. This way the test exercises code path where a profiled
 ; callee address in raw profiles is converted to function hash in index profiles.
 
+; The raw profiles storesd compressed function names, so profile reader should
+; be built with zlib support to decompress them.
+; REQUIRES: zlib
+
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
 ; Do setup work for all below tests: convert raw profiles to indexed profiles,

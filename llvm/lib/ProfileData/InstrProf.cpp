@@ -366,8 +366,9 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
-// DEPRECATED. Use `getIRPGOFuncName`for new code. See that function for
-// details. The implementation is kept for profile matching from older profiles.
+// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// for front-end (Clang, etc) instrumentation.
+// The implementation is kept for profile matching from older profiles.
 // This is similar to `getIRPGOFuncName` except that this function calls
 // 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the

@@ -29,7 +29,7 @@
 // both sets accurately. i[3-9]86 specifies arch as Triple::ArchType::x86, (win32|windows)
 // specifies OS as Triple::OS::Win32
 //
-// UNSUPPORTED: target={{i[3-9]86-.*-(win32|windows).*}}
+// UNSUPPORTED: target={{i.86.*windows.*}}
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -79,7 +79,7 @@
 // IR-NEXT:  %1 = load ptr, ptr getelementptr inbounds ([2 x ptr], ptr @calleeAddrs,
 // IR-NEXT:  tail call void %1(), !prof ![[#PROF2:]]
 
-// The GUID of indirect callee is the MD5 hash of `/path/to/lib.cpp:_ZL7callee0v`
+// The GUID of indirect callee is the MD5 hash of `/path/to/lib.cpp;_ZL7callee0v`
 // that depends on the directory. Use [[#]] for its MD5 hash.
 // Use {{.*}} for integer types so the test works on 32-bit and 64-bit systems.
 // IR: ![[#PROF1]] = !{!"VP", i32 0, {{.*}} 1, {{.*}} [[#]], {{.*}} 1}
