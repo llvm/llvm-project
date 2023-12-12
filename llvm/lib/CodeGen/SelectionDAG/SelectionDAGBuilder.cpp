@@ -6314,8 +6314,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Assume dbg.declare can not currently use DIArgList, i.e.
     // it is non-variadic.
     assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
-    handleDebugDeclare(DI.getVariableLocationOp(0), Variable,
-                       Expression, DI.getDebugLoc());
+    handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
+                       DI.getDebugLoc());
     return;
   }
   case Intrinsic::dbg_label: {
