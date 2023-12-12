@@ -397,6 +397,7 @@ FUNCTION_PASS("safe-stack", SafeStackPass(TM))
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("sccp", SCCPPass())
+FUNCTION_PASS("select-optimize", SelectOptimizePass(TM))
 FUNCTION_PASS("separate-const-offset-from-gep",
               SeparateConstOffsetFromGEPPass())
 FUNCTION_PASS("sink", SinkingPass())
