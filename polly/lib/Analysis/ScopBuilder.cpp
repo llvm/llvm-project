@@ -3255,8 +3255,10 @@ ScopBuilder::buildAliasGroupsForAccesses() {
     if (AS.isMustAlias() || AS.isForwardingAliasSet())
       continue;
     AliasGroupTy AG;
-    for (auto &PR : AS)
-      AG.push_back(PtrToAcc[PR.getValue()]);
+    llvm::SmallPtrSet<const Value *, 8> Seen;
+    for (auto &MemLoc : AS)
+      if (Seen.insert(MemLoc.Ptr).second)
+        AG.push_back(PtrToAcc[const_cast<Value *>(MemLoc.Ptr)]);
     if (AG.size() < 2)
       continue;
     AliasGroups.push_back(std::move(AG));

@@ -49,98 +49,11 @@ class Value;
 class AliasSet : public ilist_node<AliasSet> {
   friend class AliasSetTracker;
 
-  class PointerRec {
-    Value *Val;  // The pointer this record corresponds to.
-    PointerRec **PrevInList = nullptr;
-    PointerRec *NextInList = nullptr;
-    AliasSet *AS = nullptr;
-    LocationSize Size = LocationSize::mapEmpty();
-    AAMDNodes AAInfo;
-
-    // Whether the size for this record has been set at all. This makes no
-    // guarantees about the size being known.
-    bool isSizeSet() const { return Size != LocationSize::mapEmpty(); }
-
-  public:
-    PointerRec(Value *V)
-      : Val(V), AAInfo(DenseMapInfo<AAMDNodes>::getEmptyKey()) {}
-
-    Value *getValue() const { return Val; }
-
-    PointerRec *getNext() const { return NextInList; }
-    bool hasAliasSet() const { return AS != nullptr; }
-
-    PointerRec** setPrevInList(PointerRec **PIL) {
-      PrevInList = PIL;
-      return &NextInList;
-    }
-
-    bool updateSizeAndAAInfo(LocationSize NewSize, const AAMDNodes &NewAAInfo) {
-      bool SizeChanged = false;
-      if (NewSize != Size) {
-        LocationSize OldSize = Size;
-        Size = isSizeSet() ? Size.unionWith(NewSize) : NewSize;
-        SizeChanged = OldSize != Size;
-      }
-
-      if (AAInfo == DenseMapInfo<AAMDNodes>::getEmptyKey())
-        // We don't have a AAInfo yet. Set it to NewAAInfo.
-        AAInfo = NewAAInfo;
-      else {
-        AAMDNodes Intersection(AAInfo.intersect(NewAAInfo));
-        SizeChanged |= Intersection != AAInfo;
-        AAInfo = Intersection;
-      }
-      return SizeChanged;
-    }
-
-    LocationSize getSize() const {
-      assert(isSizeSet() && "Getting an unset size!");
-      return Size;
-    }
-
-    /// Return the AAInfo, or null if there is no information or conflicting
-    /// information.
-    AAMDNodes getAAInfo() const {
-      // If we have missing or conflicting AAInfo, return null.
-      if (AAInfo == DenseMapInfo<AAMDNodes>::getEmptyKey() ||
-          AAInfo == DenseMapInfo<AAMDNodes>::getTombstoneKey())
-        return AAMDNodes();
-      return AAInfo;
-    }
-
-    AliasSet *getAliasSet(AliasSetTracker &AST) {
-      assert(AS && "No AliasSet yet!");
-      if (AS->Forward) {
-        AliasSet *OldAS = AS;
-        AS = OldAS->getForwardedTarget(AST);
-        AS->addRef();
-        OldAS->dropRef(AST);
-      }
-      return AS;
-    }
-
-    void setAliasSet(AliasSet *as) {
-      assert(!AS && "Already have an alias set!");
-      AS = as;
-    }
-
-    void eraseFromList() {
-      if (NextInList) NextInList->PrevInList = PrevInList;
-      *PrevInList = NextInList;
-      if (AS->PtrListEnd == &NextInList) {
-        AS->PtrListEnd = PrevInList;
-        assert(*AS->PtrListEnd == nullptr && "List not terminated right!");
-      }
-      delete this;
-    }
-  };
-
-  // Doubly linked list of nodes.
-  PointerRec *PtrList = nullptr;
-  PointerRec **PtrListEnd;
   // Forwarding pointer.
   AliasSet *Forward = nullptr;
+
+  /// Memory locations in this alias set.
+  std::vector<MemoryLocation> MemoryLocs;
 
   /// All instructions without a specific address in this alias set.
   std::vector<AssertingVH<Instruction>> UnknownInsts;
@@ -178,8 +91,6 @@ class AliasSet : public ilist_node<AliasSet> {
   };
   unsigned Alias : 1;
 
-  unsigned SetSize = 0;
-
   void addRef() { ++RefCount; }
 
   void dropRef(AliasSetTracker &AST) {
@@ -207,65 +118,19 @@ public:
 
   // Alias Set iteration - Allow access to all of the pointers which are part of
   // this alias set.
-  class iterator;
-  iterator begin() const { return iterator(PtrList); }
-  iterator end()   const { return iterator(); }
-  bool empty() const { return PtrList == nullptr; }
+  using iterator = std::vector<MemoryLocation>::const_iterator;
+  iterator begin() const { return MemoryLocs.begin(); }
+  iterator end() const { return MemoryLocs.end(); }
 
-  // Unfortunately, ilist::size() is linear, so we have to add code to keep
-  // track of the list's exact size.
-  unsigned size() { return SetSize; }
+  unsigned size() { return MemoryLocs.size(); }
 
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  /// Define an iterator for alias sets... this is just a forward iterator.
-  class iterator {
-    PointerRec *CurNode;
-
-  public:
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = PointerRec;
-    using difference_type = std::ptrdiff_t;
-    using pointer = value_type *;
-    using reference = value_type &;
-
-    explicit iterator(PointerRec *CN = nullptr) : CurNode(CN) {}
-
-    bool operator==(const iterator& x) const {
-      return CurNode == x.CurNode;
-    }
-    bool operator!=(const iterator& x) const { return !operator==(x); }
-
-    value_type &operator*() const {
-      assert(CurNode && "Dereferencing AliasSet.end()!");
-      return *CurNode;
-    }
-    value_type *operator->() const { return &operator*(); }
-
-    Value *getPointer() const { return CurNode->getValue(); }
-    LocationSize getSize() const { return CurNode->getSize(); }
-    AAMDNodes getAAInfo() const { return CurNode->getAAInfo(); }
-
-    iterator& operator++() {                // Preincrement
-      assert(CurNode && "Advancing past AliasSet.end()!");
-      CurNode = CurNode->getNext();
-      return *this;
-    }
-    iterator operator++(int) { // Postincrement
-      iterator tmp = *this; ++*this; return tmp;
-    }
-  };
-
 private:
   // Can only be created by AliasSetTracker.
   AliasSet()
-      : PtrListEnd(&PtrList), RefCount(0),  AliasAny(false), Access(NoAccess),
-        Alias(SetMustAlias) {}
-
-  PointerRec *getSomePointer() const {
-    return PtrList;
-  }
+      : RefCount(0), AliasAny(false), Access(NoAccess), Alias(SetMustAlias) {}
 
   /// Return the real alias set this represents. If this has been merged with
   /// another set and is forwarding, return the ultimate destination set. This
@@ -284,16 +149,17 @@ private:
 
   void removeFromTracker(AliasSetTracker &AST);
 
-  void addPointer(AliasSetTracker &AST, PointerRec &Entry, LocationSize Size,
-                  const AAMDNodes &AAInfo, bool KnownMustAlias = false,
-                  bool SkipSizeUpdate = false);
+  bool isMustAliasMergeWith(AliasSet &AS, BatchAAResults &BatchAA) const;
+  void addPointer(AliasSetTracker &AST, const MemoryLocation &MemLoc,
+                  bool KnownMustAlias = false);
   void addUnknownInst(Instruction *I, BatchAAResults &AA);
 
 public:
   /// If the specified pointer "may" (or must) alias one of the members in the
   /// set return the appropriate AliasResult. Otherwise return NoAlias.
-  AliasResult aliasesPointer(const Value *Ptr, LocationSize Size,
-                             const AAMDNodes &AAInfo, BatchAAResults &AA) const;
+  AliasResult aliasesPointer(const MemoryLocation &MemLoc,
+                             BatchAAResults &AA) const;
+
   ModRefInfo aliasesUnknownInst(const Instruction *Inst,
                                 BatchAAResults &AA) const;
 };
@@ -307,7 +173,7 @@ class AliasSetTracker {
   BatchAAResults &AA;
   ilist<AliasSet> AliasSets;
 
-  using PointerMapType = DenseMap<AssertingVH<Value>, AliasSet::PointerRec *>;
+  using PointerMapType = DenseMap<MemoryLocation, AliasSet *>;
 
   // Map from pointers to their node
   PointerMapType PointerMap;
@@ -371,7 +237,7 @@ private:
   friend class AliasSet;
 
   // The total number of pointers contained in all "may" alias sets.
-  unsigned TotalMayAliasSetSize = 0;
+  unsigned TotalAliasSetSize = 0;
 
   // A non-null value signifies this AST is saturated. A saturated AST lumps
   // all pointers into a single "May" set.
@@ -379,18 +245,8 @@ private:
 
   void removeAliasSet(AliasSet *AS);
 
-  /// Just like operator[] on the map, except that it creates an entry for the
-  /// pointer if it doesn't already exist.
-  AliasSet::PointerRec &getEntryFor(Value *V) {
-    AliasSet::PointerRec *&Entry = PointerMap[V];
-    if (!Entry)
-      Entry = new AliasSet::PointerRec(V);
-    return *Entry;
-  }
-
   AliasSet &addPointer(MemoryLocation Loc, AliasSet::AccessLattice E);
-  AliasSet *mergeAliasSetsForPointer(const Value *Ptr, LocationSize Size,
-                                     const AAMDNodes &AAInfo,
+  AliasSet *mergeAliasSetsForPointer(const MemoryLocation &MemLoc,
                                      bool &MustAliasAll);
 
   /// Merge all alias sets into a single set that is considered to alias any

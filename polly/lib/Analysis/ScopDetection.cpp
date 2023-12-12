@@ -1158,8 +1158,9 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
         const unsigned int VariantSize = VariantLS.size(),
                            InvariantSize = InvariantLS.size();
 
-        for (const auto &Ptr : AS) {
-          Instruction *Inst = dyn_cast<Instruction>(Ptr.getValue());
+        for (const auto &MemLoc : AS) {
+          Instruction *Inst =
+              dyn_cast<Instruction>(const_cast<Value *>(MemLoc.Ptr));
           if (Inst && Context.CurRegion.contains(Inst)) {
             auto *Load = dyn_cast<LoadInst>(Inst);
             if (Load && InvariantLS.count(Load))

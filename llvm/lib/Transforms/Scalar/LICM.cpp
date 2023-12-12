@@ -2324,7 +2324,7 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   for (auto [Set, HasReadsOutsideSet] : Sets) {
     SmallSetVector<Value *, 8> PointerMustAliases;
     for (const auto &ASI : *Set)
-      PointerMustAliases.insert(ASI.getValue());
+      PointerMustAliases.insert(const_cast<Value *>(ASI.Ptr));
     Result.emplace_back(std::move(PointerMustAliases), HasReadsOutsideSet);
   }
 
