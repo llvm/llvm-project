@@ -3991,12 +3991,10 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Inst.isInvalid())
       return QualType();
 
-    if (!RebuildingTypesInCurrentInstantiation) {
+    {
       Sema::ContextRAII SavedContext(*this, Pattern->getDeclContext());
-      CanonType =
-          SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
-                    AliasTemplate->getLocation(), AliasTemplate->getDeclName());
-    } else {
+      if (RebuildingTypesInCurrentInstantiation)
+        SavedContext.pop();
       CanonType =
           SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
                     AliasTemplate->getLocation(), AliasTemplate->getDeclName());
