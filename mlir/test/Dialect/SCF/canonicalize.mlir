@@ -773,56 +773,6 @@ func.func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
 
 // -----
 
-func.func private @process(%0 : memref<128x128xf32>)
-func.func private @process_tensor(%0 : tensor<128x128xf32>) -> memref<128x128xf32>
-
-// CHECK-LABEL: last_value
-//  CHECK-SAME:   %[[T0:[0-9a-z]*]]: tensor<128x128xf32>
-//  CHECK-SAME:   %[[T1:[0-9a-z]*]]: tensor<128x128xf32>
-//  CHECK-SAME:   %[[T2:[0-9a-z]*]]: tensor<128x128xf32>
-//  CHECK-SAME:   %[[M0:[0-9a-z]*]]: memref<128x128xf32>
-func.func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
-                 %t2: tensor<128x128xf32>, %m0: memref<128x128xf32>,
-                 %lb : index, %ub : index, %step : index)
-  -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
-{
-  // CHECK-NEXT: %[[M1:.*]] = bufferization.to_memref %[[T1]] : memref<128x128xf32>
-  // CHECK-NEXT: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[BBARG_T2:.*]] = %[[T2]]) -> (tensor<128x128xf32>) {
-  %0:3 = scf.for %arg0 = %lb to %ub step %step iter_args(%arg1 = %t0, %arg2 = %t1, %arg3 = %t2)
-    -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
-  {
-    %m1 = bufferization.to_memref %arg2 : memref<128x128xf32>
-
-    // CHECK-NEXT:   call @process(%[[M0]]) : (memref<128x128xf32>) -> ()
-    func.call @process(%m0) : (memref<128x128xf32>) -> ()
-
-    // CHECK-NEXT:   call @process(%[[M1]]) : (memref<128x128xf32>) -> ()
-    func.call @process(%m1) : (memref<128x128xf32>) -> ()
-
-    // This does not hoist (fails the bbArg has at most a single check).
-    // CHECK-NEXT:   %[[T:.*]] = func.call @process_tensor(%[[BBARG_T2]]) : (tensor<128x128xf32>) -> memref<128x128xf32>
-    // CHECK-NEXT:   %[[YIELD_T:.*]] = bufferization.to_tensor %[[T:.*]]
-    %m2 = func.call @process_tensor(%arg3): (tensor<128x128xf32>) -> memref<128x128xf32>
-    %3 = bufferization.to_tensor %m2 : memref<128x128xf32>
-
-    // All this stuff goes away, incrementally
-    %1 = bufferization.to_tensor %m0 : memref<128x128xf32>
-    %2 = bufferization.to_tensor %m1 : memref<128x128xf32>
-
-    // CHECK-NEXT:   scf.yield %[[YIELD_T]] : tensor<128x128xf32>
-    scf.yield %1, %2, %3 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
-
-  // CHECK-NEXT: }
-  }
-
-  // CHECK-NEXT: %[[R0:.*]] = bufferization.to_tensor %[[M0]] : memref<128x128xf32>
-  // CHECK-NEXT: %[[R1:.*]] = bufferization.to_tensor %[[M1]] : memref<128x128xf32>
-  // CHECK-NEXT: return %[[R0]], %[[R1]], %[[FOR_RES]] : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
-  return %0#0, %0#1, %0#2 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
-}
-
-// -----
-
 // CHECK-LABEL: fold_away_iter_with_no_use_and_yielded_input
 //  CHECK-SAME:   %[[A0:[0-9a-z]*]]: i32
 func.func @fold_away_iter_with_no_use_and_yielded_input(%arg0 : i32,

@@ -251,14 +251,14 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless we statically link libc++abi
-# inside libc++.so, we don't build libc++.so at all or we don't have any
-# ABI library.
+# on UNIX platforms other than Apple, and on the Fuchsia platform unless we
+# statically link libc++abi inside libc++.so, we don't build libc++.so at all
+# or we don't have any ABI library.
 if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
     OR NOT LIBCXX_ENABLE_SHARED
     OR LIBCXX_CXX_ABI STREQUAL "none")
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-elseif(UNIX AND NOT APPLE)
+elseif((UNIX OR FUCHSIA) AND NOT APPLE)
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
 else()
   set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
@@ -284,7 +284,9 @@ endif()
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI "Use run time type information." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
 option(LIBCXX_ENABLE_MONOTONIC_CLOCK
   "Build libc++ with support for a monotonic clock.
@@ -372,6 +374,13 @@ if (LIBCXX_HAS_PTHREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+endif()
+
+if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
+  message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
+                      " disabled, since that configuration is broken. See"
+                      " https://github.com/llvm/llvm-project/issues/66117"
+                      " for details.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE

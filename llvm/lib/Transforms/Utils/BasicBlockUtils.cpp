@@ -387,6 +387,18 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
     for (DPValue &DPV : reverse(I.getDbgValueRange())) {
+      // Skip declare-type records, as the debug intrinsic method only works
+      // on dbg.value intrinsics.
+      if (DPV.getType() == DPValue::LocationType::Declare) {
+        // The debug intrinsic method treats dbg.declares are "non-debug"
+        // instructions (i.e., a break in a consecutive range of debug
+        // intrinsics). Emulate that to create identical outputs. See
+        // "Possible improvements" above.
+        // FIXME: Delete the line below.
+        VariableSet.clear();
+        continue;
+      }
+
       DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                         DPV.getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
@@ -478,6 +490,8 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       VariableMap;
   for (auto &I : *BB) {
     for (DPValue &DPV : I.getDbgValueRange()) {
+      if (DPV.getType() == DPValue::LocationType::Declare)
+        continue;
       DebugVariable Key(DPV.getVariable(), std::nullopt,
                         DPV.getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Key);
@@ -1452,17 +1466,6 @@ static void SplitLandingPadPredecessorsImpl(
   }
 }
 
-void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                       ArrayRef<BasicBlock *> Preds,
-                                       const char *Suffix1, const char *Suffix2,
-                                       SmallVectorImpl<BasicBlock *> &NewBBs,
-                                       DominatorTree *DT, LoopInfo *LI,
-                                       MemorySSAUpdater *MSSAU,
-                                       bool PreserveLCSSA) {
-  return SplitLandingPadPredecessorsImpl(
-      OrigBB, Preds, Suffix1, Suffix2, NewBBs,
-      /*DTU=*/nullptr, DT, LI, MSSAU, PreserveLCSSA);
-}
 void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                        ArrayRef<BasicBlock *> Preds,
                                        const char *Suffix1, const char *Suffix2,

@@ -639,11 +639,11 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(sym);
   mlir::Location loc = genLocation(converter, sym);
-  fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  fir::GlobalOp global;
   if (var.isModuleOrSubmoduleVariable()) {
-    // A module global was or will be defined when lowering the module. Emit
-    // only a declaration if the global does not exist at that point.
+    // A non-intrinsic module global is defined when lowering the module.
+    // Emit only a declaration if the global does not exist.
     global = declareGlobal(converter, var, globalName, linkage);
   } else {
     global = defineGlobal(converter, var, globalName, linkage);
@@ -1331,6 +1331,28 @@ void Fortran::lower::defineCommonBlocks(
     finalizeCommonBlockDefinition(loc, converter, global, cmnBlkMems);
 }
 
+mlir::Value Fortran::lower::genCommonBlockMember(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Value commonValue) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  std::size_t byteOffset = sym.GetUltimate().offset();
+  mlir::IntegerType i8Ty = builder.getIntegerType(8);
+  mlir::Type i8Ptr = builder.getRefType(i8Ty);
+  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
+  mlir::Value base = builder.createConvert(loc, seqTy, commonValue);
+
+  mlir::Value offs =
+      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
+  mlir::Value varAddr = builder.create<fir::CoordinateOp>(
+      loc, i8Ptr, base, mlir::ValueRange{offs});
+  mlir::Type symType = converter.genType(sym);
+
+  return Fortran::semantics::FindEquivalenceSet(sym) != nullptr
+             ? castAliasToPointer(builder, loc, symType, varAddr)
+             : builder.createConvert(loc, builder.getRefType(symType), varAddr);
+}
+
 /// The COMMON block is a global structure. `var` will be at some offset
 /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
 /// the symbol map.
@@ -1353,21 +1375,8 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 
     symMap.addSymbol(common, commonAddr);
   }
-  std::size_t byteOffset = varSym.GetUltimate().offset();
-  mlir::IntegerType i8Ty = builder.getIntegerType(8);
-  mlir::Type i8Ptr = builder.getRefType(i8Ty);
-  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
-  mlir::Value base = builder.createConvert(loc, seqTy, commonAddr);
-  mlir::Value offs =
-      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
-  auto varAddr = builder.create<fir::CoordinateOp>(loc, i8Ptr, base,
-                                                   mlir::ValueRange{offs});
-  mlir::Type symType = converter.genType(var.getSymbol());
-  mlir::Value local;
-  if (Fortran::semantics::FindEquivalenceSet(var.getSymbol()) != nullptr)
-    local = castAliasToPointer(builder, loc, symType, varAddr);
-  else
-    local = builder.createConvert(loc, builder.getRefType(symType), varAddr);
+
+  mlir::Value local = genCommonBlockMember(converter, loc, varSym, commonAddr);
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, local);
 }
@@ -2129,8 +2138,6 @@ void Fortran::lower::mapSymbolAttributes(
       if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        if (argType.isa<fir::RecordType>())
-          TODO(loc, "derived type argument passed by value");
         mlir::Type symType = converter.genType(sym);
         addr = builder.create<fir::AllocaOp>(loc, symType);
         if (isCptrByVal) {
@@ -2274,8 +2281,14 @@ void Fortran::lower::mapSymbolAttributes(
                       preAlloc);
 }
 
+void Fortran::lower::createIntrinsicModuleGlobal(
+    Fortran::lower::AbstractConverter &converter, const pft::Variable &var) {
+  defineGlobal(converter, var, converter.mangleName(var.getSymbol()),
+               converter.getFirOpBuilder().createLinkOnceODRLinkage());
+}
+
 void Fortran::lower::createRuntimeTypeInfoGlobal(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &typeInfoSym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(typeInfoSym);

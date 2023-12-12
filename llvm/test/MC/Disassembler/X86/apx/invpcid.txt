@@ -1,0 +1,6 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   invpcid	291(%r28,%r29,4), %r19
+# INTEL: invpcid	r19, xmmword ptr [r28 + 4*r29 + 291]
+0x62,0x8c,0x7a,0x08,0xf2,0x9c,0xac,0x23,0x01,0x00,0x00

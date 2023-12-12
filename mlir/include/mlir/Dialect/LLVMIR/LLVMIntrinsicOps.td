@@ -434,7 +434,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
         llvm::MetadataAsValue::get(ctx,
             llvm::ValueAsMetadata::get(moduleTranslation.lookupValue(opInst.getOperand(0)))),
         llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($varInfo)),
-        llvm::MetadataAsValue::get(ctx, llvm::DIExpression::get(ctx, $locationExpr)),
+        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateExpression($locationExpr)),
       });
   }];
   let mlirBuilder = [{
@@ -455,7 +455,7 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
   let arguments = (ins
     LLVM_AnyPointer:$addr,
     LLVM_DILocalVariableAttr:$varInfo,
-    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
 }
 
@@ -465,7 +465,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
   let arguments = (ins
     LLVM_Type:$value,
     LLVM_DILocalVariableAttr:$varInfo,
-    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
 }
 

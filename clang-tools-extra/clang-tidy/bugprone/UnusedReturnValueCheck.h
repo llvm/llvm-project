@@ -31,7 +31,15 @@ public:
 private:
   std::string CheckedFunctions;
   const std::vector<StringRef> CheckedReturnTypes;
-  const bool AllowCastToVoid;
+
+protected:
+  UnusedReturnValueCheck(StringRef Name, ClangTidyContext *Context,
+                         std::string CheckedFunctions);
+  UnusedReturnValueCheck(StringRef Name, ClangTidyContext *Context,
+                         std::string CheckedFunctions,
+                         std::vector<StringRef> CheckedReturnTypes,
+                         bool AllowCastToVoid);
+  bool AllowCastToVoid;
 };
 
 } // namespace clang::tidy::bugprone

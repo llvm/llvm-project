@@ -961,61 +961,61 @@ for.body:                                         ; preds = %for.body, %for.cond
   %load1 = load i64, ptr addrspace(1) %add.ptr8, align 8
   %add = add i64 %load1, %sum.128
 
-  %add9 = or i32 %block.029, 256
+  %add9 = or disjoint i32 %block.029, 256
   %conv3.1 = zext i32 %add9 to i64
   %add.ptr8.1 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.1
   %load2 = load i64, ptr addrspace(1) %add.ptr8.1, align 8
   %add.1 = add i64 %load2, %add
 
-  %add9.1 = or i32 %block.029, 512
+  %add9.1 = or disjoint i32 %block.029, 512
   %conv3.2 = zext i32 %add9.1 to i64
   %add.ptr8.2 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.2
   %l3 = load i64, ptr addrspace(1) %add.ptr8.2, align 8
   %add.2 = add i64 %l3, %add.1
 
-  %add9.2 = or i32 %block.029, 768
+  %add9.2 = or disjoint i32 %block.029, 768
   %conv3.3 = zext i32 %add9.2 to i64
   %add.ptr8.3 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.3
   %l4 = load i64, ptr addrspace(1) %add.ptr8.3, align 8
   %add.3 = add i64 %l4, %add.2
 
-  %add9.3 = or i32 %block.029, 1024
+  %add9.3 = or disjoint i32 %block.029, 1024
   %conv3.4 = zext i32 %add9.3 to i64
   %add.ptr8.4 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.4
   %l5 = load i64, ptr addrspace(1) %add.ptr8.4, align 8
   %add.4 = add i64 %l5, %add.3
 
-  %add9.4 = or i32 %block.029, 1280
+  %add9.4 = or disjoint i32 %block.029, 1280
   %conv3.5 = zext i32 %add9.4 to i64
   %add.ptr8.5 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.5
   %l6 = load i64, ptr addrspace(1) %add.ptr8.5, align 8
   %add.5 = add i64 %l6, %add.4
 
-  %add9.5 = or i32 %block.029, 1536
+  %add9.5 = or disjoint i32 %block.029, 1536
   %conv3.6 = zext i32 %add9.5 to i64
   %add.ptr8.6 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.6
   %load7 = load i64, ptr addrspace(1) %add.ptr8.6, align 8
   %add.6 = add i64 %load7, %add.5
 
-  %add9.6 = or i32 %block.029, 1792
+  %add9.6 = or disjoint i32 %block.029, 1792
   %conv3.7 = zext i32 %add9.6 to i64
   %add.ptr8.7 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.7
   %load8 = load i64, ptr addrspace(1) %add.ptr8.7, align 8
   %add.7 = add i64 %load8, %add.6
 
-  %add9.7 = or i32 %block.029, 2048
+  %add9.7 = or disjoint i32 %block.029, 2048
   %conv3.8 = zext i32 %add9.7 to i64
   %add.ptr8.8 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.8
   %load9 = load i64, ptr addrspace(1) %add.ptr8.8, align 8
   %add.8 = add i64 %load9, %add.7
 
-  %add9.8 = or i32 %block.029, 2304
+  %add9.8 = or disjoint i32 %block.029, 2304
   %conv3.9 = zext i32 %add9.8 to i64
   %add.ptr8.9 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.9
   %load10 = load i64, ptr addrspace(1) %add.ptr8.9, align 8
   %add.9 = add i64 %load10, %add.8
 
-  %add9.9 = or i32 %block.029, 2560
+  %add9.9 = or disjoint i32 %block.029, 2560
   %conv3.10 = zext i32 %add9.9 to i64
   %add.ptr8.10 = getelementptr inbounds i64, ptr addrspace(1) %add.ptr6, i64 %conv3.10
   %load11 = load i64, ptr addrspace(1) %add.ptr8.10, align 8

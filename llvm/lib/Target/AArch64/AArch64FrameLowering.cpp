@@ -479,6 +479,11 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
 /// included as part of the stack frame.
 bool
 AArch64FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
+  // The stack probing code for the dynamically allocated outgoing arguments
+  // area assumes that the stack is probed at the top - either by the prologue
+  // code, which issues a probe if `hasVarSizedObjects` return true, or by the
+  // most recent variable-sized object allocation. Changing the condition here
+  // may need to be followed up by changes to the probe issuing logic.
   return !MF.getFrameInfo().hasVarSizedObjects();
 }
 
@@ -487,6 +492,9 @@ MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
     MachineBasicBlock::iterator I) const {
   const AArch64InstrInfo *TII =
       static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const AArch64TargetLowering *TLI =
+      MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
+  [[maybe_unused]] MachineFrameInfo &MFI = MF.getFrameInfo();
   DebugLoc DL = I->getDebugLoc();
   unsigned Opc = I->getOpcode();
   bool IsDestroy = Opc == TII->getCallFrameDestroyOpcode();
@@ -513,8 +521,24 @@ MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
       // Most call frames will be allocated at the start of a function so
       // this is OK, but it is a limitation that needs dealing with.
       assert(Amount > -0xffffff && Amount < 0xffffff && "call frame too large");
-      emitFrameOffset(MBB, I, DL, AArch64::SP, AArch64::SP,
-                      StackOffset::getFixed(Amount), TII);
+
+      if (TLI->hasInlineStackProbe(MF) &&
+          -Amount >= AArch64::StackProbeMaxUnprobedStack) {
+        // When stack probing is enabled, the decrement of SP may need to be
+        // probed. We only need to do this if the call site needs 1024 bytes of
+        // space or more, because a region smaller than that is allowed to be
+        // unprobed at an ABI boundary. We rely on the fact that SP has been
+        // probed exactly at this point, either by the prologue or most recent
+        // dynamic allocation.
+        assert(MFI.hasVarSizedObjects() &&
+               "non-reserved call frame without var sized objects?");
+        Register ScratchReg =
+            MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+        inlineStackProbeFixed(I, ScratchReg, -Amount, StackOffset::get(0, 0));
+      } else {
+        emitFrameOffset(MBB, I, DL, AArch64::SP, AArch64::SP,
+                        StackOffset::getFixed(Amount), TII);
+      }
     }
   } else if (CalleePopAmount != 0) {
     // If the calling convention demands that the callee pops arguments from the
@@ -968,6 +992,16 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   }
 }
 
+static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
+                                   const MachineBasicBlock &MBB) {
+  const MachineFunction *MF = MBB.getParent();
+  LiveRegs.addLiveIns(MBB);
+  // Mark callee saved registers as used so we will not choose them.
+  const MCPhysReg *CSRegs = MF->getRegInfo().getCalleeSavedRegs();
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    LiveRegs.addReg(CSRegs[i]);
+}
+
 // Find a scratch register that we can use at the start of the prologue to
 // re-align the stack pointer.  We avoid using callee-save registers since they
 // may appear to be free when this is called from canUseAsPrologue (during
@@ -989,12 +1023,7 @@ static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   LivePhysRegs LiveRegs(TRI);
-  LiveRegs.addLiveIns(*MBB);
-
-  // Mark callee saved registers as used so we will not choose them.
-  const MCPhysReg *CSRegs = MF->getRegInfo().getCalleeSavedRegs();
-  for (unsigned i = 0; CSRegs[i]; ++i)
-    LiveRegs.addReg(CSRegs[i]);
+  getLiveRegsForEntryMBB(LiveRegs, *MBB);
 
   // Prefer X9 since it was historically used for the prologue scratch reg.
   const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -1015,6 +1044,19 @@ bool AArch64FrameLowering::canUseAsPrologue(
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const AArch64TargetLowering *TLI = Subtarget.getTargetLowering();
+  const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
+
+  if (AFI->hasSwiftAsyncContext()) {
+    const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    LivePhysRegs LiveRegs(TRI);
+    getLiveRegsForEntryMBB(LiveRegs, MBB);
+    // The StoreSwiftAsyncContext clobbers X16 and X17. Make sure they are
+    // available.
+    if (!LiveRegs.available(MRI, AArch64::X16) ||
+        !LiveRegs.available(MRI, AArch64::X17))
+      return false;
+  }
 
   // Don't need a scratch register if we're not going to re-align the stack or
   // emit stack probes.

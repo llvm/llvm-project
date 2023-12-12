@@ -174,7 +174,7 @@ define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[INSERT:%.*]], 0
 ; CHECK-NEXT:    [[T1:%.*]] = or i1 [[B]], [[B2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 140
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], 140
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[XOR1:%.*]] = select i1 [[T1]], i64 [[TMP3]], i64 140
 ; CHECK-NEXT:    [[CONV16:%.*]] = sext i8 [[I162:%.*]] to i64
@@ -228,7 +228,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    [[INSERT_EXT51:%.*]] = zext i32 [[I_SROA_8_0]] to i64
 ; CHECK-NEXT:    [[INSERT_SHIFT52:%.*]] = shl nuw i64 [[INSERT_EXT51]], 32
 ; CHECK-NEXT:    [[INSERT_EXT39:%.*]] = zext i32 [[SROA38]] to i64
-; CHECK-NEXT:    [[INSERT_INSERT41:%.*]] = or i64 [[INSERT_SHIFT52]], [[INSERT_EXT39]]
+; CHECK-NEXT:    [[INSERT_INSERT41:%.*]] = or disjoint i64 [[INSERT_SHIFT52]], [[INSERT_EXT39]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[S1]], [[INSERT_INSERT41]]
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne i64 [[REM]], 0
 ; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[NE]] to i32

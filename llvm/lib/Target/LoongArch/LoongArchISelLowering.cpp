@@ -246,8 +246,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+
+      setOperationAction(ISD::SETCC, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
       setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
                          Legal);
@@ -255,12 +259,21 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
-      setOperationAction(ISD::CTPOP, VT, Legal);
+      setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
+      setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
+      setCondCodeAction(
+          {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
+          Expand);
     }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
+      setOperationAction(ISD::FSQRT, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Legal);
+      setCondCodeAction({ISD::SETGE, ISD::SETGT, ISD::SETOGE, ISD::SETOGT,
+                         ISD::SETUGE, ISD::SETUGT},
+                        VT, Expand);
     }
   }
 
@@ -275,8 +288,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+
+      setOperationAction(ISD::SETCC, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Legal);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
       setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
                          Legal);
@@ -284,12 +301,21 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
-      setOperationAction(ISD::CTPOP, VT, Legal);
+      setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
+      setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
+      setCondCodeAction(
+          {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
+          Expand);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
+      setOperationAction(ISD::FSQRT, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Legal);
+      setCondCodeAction({ISD::SETGE, ISD::SETGT, ISD::SETOGE, ISD::SETOGT,
+                         ISD::SETUGE, ISD::SETUGT},
+                        VT, Expand);
     }
   }
 
@@ -310,6 +336,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(LoongArch::R3);
 
   setBooleanContents(ZeroOrOneBooleanContent);
+  setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
   setMaxAtomicSizeInBitsSupported(Subtarget.getGRLen());
 
@@ -381,7 +408,15 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   }
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  // TODO: custom shuffle.
   return SDValue();
 }
 
@@ -2817,6 +2852,15 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lasx_xvsrai_d:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<6>(N, 2, DAG));
+  case Intrinsic::loongarch_lsx_vclz_b:
+  case Intrinsic::loongarch_lsx_vclz_h:
+  case Intrinsic::loongarch_lsx_vclz_w:
+  case Intrinsic::loongarch_lsx_vclz_d:
+  case Intrinsic::loongarch_lasx_xvclz_b:
+  case Intrinsic::loongarch_lasx_xvclz_h:
+  case Intrinsic::loongarch_lasx_xvclz_w:
+  case Intrinsic::loongarch_lasx_xvclz_d:
+    return DAG.getNode(ISD::CTLZ, DL, N->getValueType(0), N->getOperand(1));
   case Intrinsic::loongarch_lsx_vpcnt_b:
   case Intrinsic::loongarch_lsx_vpcnt_h:
   case Intrinsic::loongarch_lsx_vpcnt_w:
@@ -4621,8 +4665,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
   // decode the usage of register name aliases into their official names. And
   // AFAIK, the not yet upstreamed `rustc` for LoongArch will always use
   // official register names.
-  if (Constraint.startswith("{$r") || Constraint.startswith("{$f") ||
-      Constraint.startswith("{$vr") || Constraint.startswith("{$xr")) {
+  if (Constraint.starts_with("{$r") || Constraint.starts_with("{$f") ||
+      Constraint.starts_with("{$vr") || Constraint.starts_with("{$xr")) {
     bool IsFP = Constraint[2] == 'f';
     std::pair<StringRef, StringRef> Temp = Constraint.split('$');
     std::pair<unsigned, const TargetRegisterClass *> R;

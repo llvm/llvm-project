@@ -33,14 +33,6 @@ std::unique_ptr<Pass> createEnableArmStreamingPass(
 std::unique_ptr<Pass> createTileAllocationPass();
 
 //===----------------------------------------------------------------------===//
-// Type ArmSMETypeConverter pass.
-//===----------------------------------------------------------------------===//
-class ArmSMETypeConverter : public LLVMTypeConverter {
-public:
-  ArmSMETypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options);
-};
-
-//===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
 

@@ -436,17 +436,16 @@ namespace dr126 { // dr126: partial
   // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
 }
 
-namespace dr127 { // dr127: yes
+namespace dr127 { // dr127: 2.9
   __extension__ typedef __decltype(sizeof(0)) size_t;
   template<typename T> struct A {
     A() { throw 0; }
     void *operator new(size_t, const char * = 0);
     void operator delete(void *, const char *) { T::error; } // #dr127-delete-const-char
     // expected-error@#dr127-delete-const-char {{type 'void' cannot be used prior to '::' because it has no members}}
-    // expected-note@#dr127-p {{in instantiation of member function 'dr127::A<void>::operator delete' requested here}}
-
+    //   expected-note@#dr127-p {{in instantiation of member function 'dr127::A<void>::operator delete' requested here}}
     // expected-error@#dr127-delete-const-char {{type 'int' cannot be used prior to '::' because it has no members}}
-    // expected-note@#dr127-q {{in instantiation of member function 'dr127::A<int>::operator delete' requested here}}
+    //   expected-note@#dr127-q {{in instantiation of member function 'dr127::A<int>::operator delete' requested here}}
     void operator delete(void *) { T::error; }
   };
   A<void> *p = new A<void>; // #dr127-p
@@ -944,7 +943,7 @@ namespace dr169 { // dr169: yes
   };
 }
 
-namespace { // dr171: yes
+namespace { // dr171: 3.4
   int dr171a;
 }
 int dr171b; // #dr171b-int
@@ -1113,7 +1112,7 @@ namespace dr181 { // dr181: yes
   }
 }
 
-namespace dr182 { // dr182: yes
+namespace dr182 { // dr182: 14
   template <class T> struct C {
     void f();
     void g();

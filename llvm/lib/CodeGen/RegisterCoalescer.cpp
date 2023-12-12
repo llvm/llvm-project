@@ -1694,12 +1694,19 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   // The source interval may also have been on an undef use, in which case the
   // copy introduced a live value.
   if (((V && V->isPHIDef()) || (!V && !DstLI.liveAt(Idx)))) {
-    CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     for (unsigned i = CopyMI->getNumOperands(); i != 0; --i) {
       MachineOperand &MO = CopyMI->getOperand(i-1);
-      if (MO.isReg() && MO.isUse())
+      if (MO.isReg()) {
+        if (MO.isUse())
+          CopyMI->removeOperand(i - 1);
+      } else {
+        assert(MO.isImm() &&
+               CopyMI->getOpcode() == TargetOpcode::SUBREG_TO_REG);
         CopyMI->removeOperand(i-1);
+      }
     }
+
+    CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
                "implicit def\n");
     return CopyMI;

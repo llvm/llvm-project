@@ -814,9 +814,6 @@ private:
   /// is the instantiation location.
   SmallVector<serialization::DeclID, 64> PendingInstantiations;
 
-  llvm::DenseMap<serialization::DeclID, std::set<serialization::DeclID>>
-      PendingInstantiationsOfConstexprEntities;
-
   //@}
 
   /// \name DiagnosticsEngine-relevant special data
@@ -2104,9 +2101,6 @@ public:
                   SmallVectorImpl<std::pair<ValueDecl *,
                                             SourceLocation>> &Pending) override;
 
-  virtual void ReadPendingInstantiationsOfConstexprEntity(
-      const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) override;
-
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
@@ -2421,12 +2415,7 @@ public:
   BitsUnpacker(BitsUnpacker &&) = delete;
   BitsUnpacker operator=(const BitsUnpacker &) = delete;
   BitsUnpacker operator=(BitsUnpacker &&) = delete;
-  ~BitsUnpacker() {
-#ifndef NDEBUG
-    while (isValid())
-      assert(!getNextBit() && "There are unprocessed bits!");
-#endif
-  }
+  ~BitsUnpacker() = default;
 
   void updateValue(uint32_t V) {
     Value = V;

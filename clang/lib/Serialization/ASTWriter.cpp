@@ -849,7 +849,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SEMA_DECL_REFS);
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
-  RECORD(PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES);
   RECORD(UPDATE_VISIBLE);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
@@ -1414,7 +1413,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
       // If we have calculated signature, there is no need to store
       // the size or timestamp.
-      Record.push_back(M.Signature ? 0 : M.File->getSize());
+      Record.push_back(M.Signature ? 0 : M.File.getSize());
       Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
 
       llvm::append_range(Record, M.Signature);
@@ -2183,8 +2182,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
                "Writing to AST an overridden file is not supported");
 
         // The source location entry is a file. Emit input file ID.
-        assert(InputFileIDs[Content->OrigEntry] != 0 && "Missed file entry");
-        Record.push_back(InputFileIDs[Content->OrigEntry]);
+        assert(InputFileIDs[*Content->OrigEntry] != 0 && "Missed file entry");
+        Record.push_back(InputFileIDs[*Content->OrigEntry]);
 
         Record.push_back(getAdjustedNumCreatedFIDs(FID));
 
@@ -4696,7 +4695,7 @@ void ASTWriter::collectNonAffectingInputFiles() {
 
     if (!isModuleMap(File.getFileCharacteristic()) ||
         AffectingModuleMaps.empty() ||
-        AffectingModuleMaps.find(Cache->OrigEntry) != AffectingModuleMaps.end())
+        llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
     IsSLocAffecting[I] = false;
@@ -4836,16 +4835,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   }
   assert(SemaRef.PendingLocalImplicitInstantiations.empty() &&
          "There are local ones at end of translation unit!");
-
-  // Build a record containing all pending instantiations of constexpr
-  // entities.
-  RecordData PendingInstantiationsOfConstexprEntities;
-  for (const auto &I : SemaRef.PendingInstantiationsOfConstexprEntities) {
-    for (const auto &Elem : I.second) {
-      AddDeclRef(I.first, PendingInstantiationsOfConstexprEntities);
-      AddDeclRef(Elem, PendingInstantiationsOfConstexprEntities);
-    }
-  }
 
   // Build a record containing some declaration references.
   RecordData SemaDeclRefs;
@@ -5163,11 +5152,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // Write the record containing pending implicit instantiations.
   if (!PendingInstantiations.empty())
     Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
-
-  // Write the record containing pending instantiations of constexpr entities.
-  if (!PendingInstantiationsOfConstexprEntities.empty())
-    Stream.EmitRecord(PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES,
-                      PendingInstantiationsOfConstexprEntities);
 
   // Write the record containing declaration references of Sema.
   if (!SemaDeclRefs.empty())

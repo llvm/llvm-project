@@ -934,9 +934,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
 
-  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
-                               G_STACKSAVE,
-                               G_STACKRESTORE}).lower();
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
+
+  getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).lower();
 
   if (ST.hasMOPS()) {
     // G_BZERO is not supported. Currently it is only emitted by
@@ -1127,6 +1127,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
 
+  getActionDefinitionsBuilder(G_PREFETCH).custom();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -1174,6 +1176,10 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFCopySign(MI, Helper);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, Helper);
+  case TargetOpcode::G_DYN_STACKALLOC:
+    return legalizeDynStackAlloc(MI, Helper);
+  case TargetOpcode::G_PREFETCH:
+    return legalizePrefetch(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1347,30 +1353,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Value.setReg(ExtValueReg);
     return true;
   }
-  case Intrinsic::prefetch: {
-    MachineIRBuilder MIB(MI);
-    auto &AddrVal = MI.getOperand(1);
-
-    int64_t IsWrite = MI.getOperand(2).getImm();
-    int64_t Locality = MI.getOperand(3).getImm();
-    int64_t IsData = MI.getOperand(4).getImm();
-
-    bool IsStream = Locality == 0;
-    if (Locality != 0) {
-      assert(Locality <= 3 && "Prefetch locality out-of-range");
-      // The locality degree is the opposite of the cache speed.
-      // Put the number the other way around.
-      // The encoding starts at 0 for level 1
-      Locality = 3 - Locality;
-    }
-
-    unsigned PrfOp =
-        (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
-
-    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
-    MI.eraseFromParent();
-    return true;
-  }
   case Intrinsic::aarch64_prefetch: {
     MachineIRBuilder MIB(MI);
     auto &AddrVal = MI.getOperand(1);
@@ -1385,7 +1367,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                      (Target << 1) |     // Cache level bits
                      (unsigned)IsStream; // Stream bit
 
-    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
+    MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
     MI.eraseFromParent();
     return true;
   }
@@ -1944,4 +1926,68 @@ bool AArch64LegalizerInfo::legalizeExtractVectorElt(
     return true;
   return Helper.lowerExtractInsertVectorElt(MI) !=
          LegalizerHelper::LegalizeResult::UnableToLegalize;
+}
+
+bool AArch64LegalizerInfo::legalizeDynStackAlloc(
+    MachineInstr &MI, LegalizerHelper &Helper) const {
+  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // If stack probing is not enabled for this function, use the default
+  // lowering.
+  if (!MF.getFunction().hasFnAttribute("probe-stack") ||
+      MF.getFunction().getFnAttribute("probe-stack").getValueAsString() !=
+          "inline-asm") {
+    Helper.lowerDynStackAlloc(MI);
+    return true;
+  }
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register AllocSize = MI.getOperand(1).getReg();
+  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+  assert(MRI.getType(Dst) == LLT::pointer(0, 64) &&
+         "Unexpected type for dynamic alloca");
+  assert(MRI.getType(AllocSize) == LLT::scalar(64) &&
+         "Unexpected type for dynamic alloca");
+
+  LLT PtrTy = MRI.getType(Dst);
+  Register SPReg =
+      Helper.getTargetLowering().getStackPointerRegisterToSaveRestore();
+  Register SPTmp =
+      Helper.getDynStackAllocTargetPtr(SPReg, AllocSize, Alignment, PtrTy);
+  auto NewMI =
+      MIRBuilder.buildInstr(AArch64::PROBED_STACKALLOC_DYN, {}, {SPTmp});
+  MRI.setRegClass(NewMI.getReg(0), &AArch64::GPR64commonRegClass);
+  MIRBuilder.setInsertPt(*NewMI->getParent(), NewMI);
+  MIRBuilder.buildCopy(Dst, SPTmp);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
+                                            LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIB = Helper.MIRBuilder;
+  auto &AddrVal = MI.getOperand(0);
+
+  int64_t IsWrite = MI.getOperand(1).getImm();
+  int64_t Locality = MI.getOperand(2).getImm();
+  int64_t IsData = MI.getOperand(3).getImm();
+
+  bool IsStream = Locality == 0;
+  if (Locality != 0) {
+    assert(Locality <= 3 && "Prefetch locality out-of-range");
+    // The locality degree is the opposite of the cache speed.
+    // Put the number the other way around.
+    // The encoding starts at 0 for level 1
+    Locality = 3 - Locality;
+  }
+
+  unsigned PrfOp = (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
+
+  MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
+  MI.eraseFromParent();
+  return true;
 }

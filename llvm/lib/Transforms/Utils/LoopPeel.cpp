@@ -351,11 +351,20 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     MaxPeelCount =
         std::min((unsigned)SC->getAPInt().getLimitedValue() - 1, MaxPeelCount);
 
-  auto ComputePeelCount = [&](Value *Condition) -> void {
-    if (!Condition->getType()->isIntegerTy())
+  const unsigned MaxDepth = 4;
+  std::function<void(Value *, unsigned)> ComputePeelCount =
+      [&](Value *Condition, unsigned Depth) -> void {
+    if (!Condition->getType()->isIntegerTy() || Depth >= MaxDepth)
       return;
 
     Value *LeftVal, *RightVal;
+    if (match(Condition, m_And(m_Value(LeftVal), m_Value(RightVal))) ||
+        match(Condition, m_Or(m_Value(LeftVal), m_Value(RightVal)))) {
+      ComputePeelCount(LeftVal, Depth + 1);
+      ComputePeelCount(RightVal, Depth + 1);
+      return;
+    }
+
     CmpInst::Predicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
       return;
@@ -443,7 +452,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (SelectInst *SI = dyn_cast<SelectInst>(&I))
-        ComputePeelCount(SI->getCondition());
+        ComputePeelCount(SI->getCondition(), 0);
     }
 
     auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
@@ -454,7 +463,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     if (L.getLoopLatch() == BB)
       continue;
 
-    ComputePeelCount(BI->getCondition());
+    ComputePeelCount(BI->getCondition(), 0);
   }
 
   return DesiredPeelCount;

@@ -661,7 +661,7 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
     OpIdx += TII->get(Use->getMachineOpcode()).getNumDefs();
   std::optional<unsigned> Latency =
       TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
-  if (Latency > 1 && Use->getOpcode() == ISD::CopyToReg &&
+  if (Latency > 1U && Use->getOpcode() == ISD::CopyToReg &&
       !BB->succ_empty()) {
     unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
     if (Register::isVirtualRegister(Reg))

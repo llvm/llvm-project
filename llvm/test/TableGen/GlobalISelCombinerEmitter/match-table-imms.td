@@ -34,12 +34,12 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const int64_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static int64_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/19, 126, /*)*//*default:*//*Label 3*/ 194,
-// CHECK-NEXT:     /*TargetOpcode::COPY*//*Label 0*/ 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-// CHECK-NEXT:     /*TargetOpcode::G_CONSTANT*//*Label 1*/ 138, 0, 0, 0, 0, 0,
-// CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 2*/ 165,
-// CHECK-NEXT:     // Label 0: @112
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ 137, // Rule ID 0 //
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/19, 127, /*)*//*default:*//*Label 3*/ 195,
+// CHECK-NEXT:     /*TargetOpcode::COPY*//*Label 0*/ 113, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+// CHECK-NEXT:     /*TargetOpcode::G_CONSTANT*//*Label 1*/ 139, 0, 0, 0, 0, 0,
+// CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 2*/ 166,
+// CHECK-NEXT:     // Label 0: @113
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ 138, // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:       GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:       // MIs[0] a
@@ -51,10 +51,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddImm, /*InsnID*/0, /*Imm*/0,
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 4: @137
+// CHECK-NEXT:     // Label 4: @138
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 1: @138
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ 164, // Rule ID 2 //
+// CHECK-NEXT:     // Label 1: @139
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ 165, // Rule ID 2 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule2Enabled,
 // CHECK-NEXT:       GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:       // MIs[0] a
@@ -66,10 +66,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/GILLT_s32, /*Imm*/42,
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 5: @164
+// CHECK-NEXT:     // Label 5: @165
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 2: @165
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ 193, // Rule ID 1 //
+// CHECK-NEXT:     // Label 2: @166
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ 194, // Rule ID 1 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule1Enabled,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
@@ -83,9 +83,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 6: @193
+// CHECK-NEXT:     // Label 6: @194
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 3: @194
+// CHECK-NEXT:     // Label 3: @195
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     };
 // CHECK-NEXT:   return MatchTable0;

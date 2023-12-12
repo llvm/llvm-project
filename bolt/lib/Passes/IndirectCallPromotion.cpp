@@ -158,6 +158,7 @@ static cl::opt<bool> ICPPeelForInline(
 
 } // namespace opts
 
+#ifndef NDEBUG
 static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
   bool IsValid = true;
   for (auto &BFI : BFs) {
@@ -182,6 +183,7 @@ static bool verifyProfile(std::map<uint64_t, BinaryFunction> &BFs) {
   }
   return IsValid;
 }
+#endif
 
 namespace llvm {
 namespace bolt {
@@ -1467,7 +1469,6 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
                                std::max<uint64_t>(TotalIndexBasedCandidates, 1))
          << "%\n";
 
-  (void)verifyProfile;
 #ifndef NDEBUG
   verifyProfile(BFs);
 #endif

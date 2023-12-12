@@ -342,6 +342,10 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset, int64_t MaxOffset) {
+    return getTLI()->getPreferredLargeGEPBaseOffset(MinOffset, MaxOffset);
+  }
+
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
     auto &&IsSupportedByTarget = [this, ScalarMemTy, ScalarValTy](unsigned VF) {

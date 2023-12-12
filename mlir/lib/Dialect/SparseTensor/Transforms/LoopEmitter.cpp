@@ -147,33 +147,15 @@ static Value genSparseReducedAffineCond(OpBuilder &builder, Location loc,
 
 // Helper functions that load/store into the position buffer for slice-driven
 // loops.
-// The sliced pointer buffer is orgnized as:
-// [size, curPtr] (two metadata) + [[pLo0, pLo1, pLo2, ...],
-//                                  [pHi0, pHi1, pHi2, ...],
-//                                  [pNx0, pNx1, pNx2, ...]]
+// The sliced pointer buffer is organized as:
+//     [[pLo0, pLo1, pLo2, ...],
+//      [pHi0, pHi1, pHi2, ...],
+//      [pNx0, pNx1, pNx2, ...]]
 static Value allocSlicePosBuf(OpBuilder &builder, Location loc,
                               Value tupleCnt) {
   Value bufSz = MULI(tupleCnt, C_IDX(kSliceIterWidth));
   // Additional two metadata {memSize, idx} at head.
-  bufSz = ADDI(bufSz, C_IDX(2));
   return genAlloca(builder, loc, bufSz, builder.getIndexType());
-}
-// TODO: We should use SSA value for it.
-// Gets and sets metadata.
-static Value loadSlicePosPtr(OpBuilder &builder, Location loc, Value sPosBuf) {
-  return genIndexLoad(builder, loc, sPosBuf, C_IDX(1));
-}
-static void updateSlicePosPtr(OpBuilder &builder, Location loc, Value sPosBuf,
-                              Value pPtr) {
-  builder.create<memref::StoreOp>(loc, pPtr, sPosBuf, C_IDX(1));
-}
-static Value loadSlicePosTupleNum(OpBuilder &builder, Location loc,
-                                  Value sPosBuf) {
-  return genIndexLoad(builder, loc, sPosBuf, C_IDX(0));
-}
-static void updateSlicePosTupleNum(OpBuilder &builder, Location loc, Value num,
-                                   Value sPosBuf) {
-  builder.create<memref::StoreOp>(loc, num, sPosBuf, C_IDX(0));
 }
 
 // Gets and sets position values for slice-driven loops.
@@ -181,14 +163,14 @@ enum class SlicePosKind { kLo, kHi, kNext };
 static Value getSlicePosIdx(OpBuilder &builder, Location loc, Value posBuf,
                             Value tupleIdx, SlicePosKind posKind) {
   Value dim = builder.create<memref::DimOp>(loc, posBuf, C_IDX(0));
-  Value tupleCnt = DIVUI(SUBI(dim, C_IDX(2)), C_IDX(kSliceIterWidth));
+  Value tupleCnt = DIVUI(dim, C_IDX(kSliceIterWidth));
   switch (posKind) {
   case SlicePosKind::kLo:
-    return ADDI(tupleIdx, C_IDX(2));
+    return tupleIdx;
   case SlicePosKind::kHi:
-    return ADDI(tupleIdx, ADDI(tupleCnt, C_IDX(2)));
+    return ADDI(tupleIdx, tupleCnt);
   case SlicePosKind::kNext:
-    return ADDI(tupleIdx, ADDI(tupleCnt, ADDI(tupleCnt, C_IDX(2))));
+    return ADDI(tupleIdx, MULI(tupleCnt, C_IDX(2)));
   }
   llvm_unreachable("unexpected kind");
 }
@@ -352,6 +334,9 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->dependentLvlMap.assign(
       numTensors, std::vector<std::vector<std::pair<TensorLevel, unsigned>>>());
   this->slicePosBuffer.assign(numTensors, std::vector<std::vector<Value>>());
+  this->sliceTupleNxStartIdx.assign(numTensors, std::vector<Value>());
+  this->sliceTupleFwdCnt.assign(numTensors, std::vector<Value>());
+  this->trivialSlice.assign(numTensors, std::vector<bool>());
   this->sliceMeta.assign(
       numTensors, std::vector<std::vector<std::pair<Value, unsigned>>>());
   this->sliceStack.assign(numTensors, std::vector<SliceInfo>());
@@ -402,10 +387,13 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     dependentLvlMap[tid].assign(
         lvlRank, std::vector<std::pair<TensorLevel, unsigned>>());
     slicePosBuffer[tid].assign(lvlRank, std::vector<Value>());
+    sliceTupleNxStartIdx[tid].assign(lvlRank, Value());
+    sliceTupleFwdCnt[tid].assign(lvlRank, Value());
+    trivialSlice[tid].assign(lvlRank, false);
     sliceMeta[tid].assign(lvlRank, std::vector<std::pair<Value, unsigned>>());
     sliceStack[tid].emplace_back(/*minCrd=*/Value(),
                                  /*offset=*/Value(), /*isNonEmpty*/ Value(),
-                                 std::nullopt, 0);
+                                 /*posTupleNum=*/Value(), std::nullopt, 0);
     if (dimGetter && !isSynTensor(tid)) {
       for (Level l = 0; l < lvlRank; l++) {
         dependentLvlMap[tid][l] = dimGetter(tid, l);
@@ -814,6 +802,7 @@ std::optional<Value> LoopEmitter::genWhileLoopBody(OpBuilder &builder,
     assert(ivs.size() == 1);
     // Coord is the relative offset related to its parents.
     assert(sliceStack[tid].back().depth == 1 && "TODO: not yet implement");
+    sliceTupleFwdCnt[tid][lvl] = SUBI(ivs[0], posits[tid][lvl]);
     // Update c = absOffset[lvl][depth] - absOffset[lvl][depth - 1]
     Value posit = ivs[0];
     Value crdBuf = coordinatesBuffers[tid][lvl];
@@ -1329,11 +1318,17 @@ void LoopEmitter::enterTensorsAtDenseLvls(
         // Update the slice information as we enter the new loop.
         info.minCrd = info.offset = MULI(iv, C_IDX(stride));
         info.isNonEmpty = constantI1(builder, loc, true);
-        levelReducedDep[tid][lvl]++;
       } else {
         posits[tid][lvl] =
             genAddress(builder, loc, tid, lvl, ADDI(info.offset, iv));
+        Value fwdCnt = lvl == 0 || trivialSlice[tid][lvl]
+                           ? C_IDX(0)
+                           : sliceTupleFwdCnt[tid][lvl - 1];
+        Value sz = sliceMeta[tid][lvl].back().first;
+        Value mul = MULI(fwdCnt, sz);
+        sliceTupleFwdCnt[tid][lvl] = ADDI(mul, iv);
       }
+      levelReducedDep[tid][lvl]++;
     } else {
       // Skips the synthetic tensor
       if (isSynTensor(tid))
@@ -1365,15 +1360,9 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       assert(isDenseLT(lvlTypes[tid][lvl]));
       assert(*info.slicedOnLvl == lvl);
       (void)reduced;
-      // Resets slices pointers as the resolved slices are invalidated after we
-      // moves forward to the next slice.
-      invalidateSliceIterIdx(rewriter, loc, tid, lvl);
       info.minCrd = info.offset = info.isNonEmpty = Value();
-      levelReducedDep[tid][lvl]--;
-    } else {
-      forwardsReducedSliceLevelTreeIt(rewriter, loc, tid, lvl,
-                                      constantIndex(rewriter, loc, 1));
     }
+    levelReducedDep[tid][lvl]--;
   }
   if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
@@ -1451,63 +1440,6 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   }
 }
 
-void LoopEmitter::forwardsReducedSliceLevelTreeIt(OpBuilder &builder,
-                                                  Location loc, TensorId tid,
-                                                  Level rootLvl, Value fcnt) {
-  auto stt = getSparseTensorType(tensors[tid]);
-
-  // Finds a [Lvl, leafLvl) range, and all level in between are fully reduced
-  // level (but not resolved). Since we forward an iterator at higher level of
-  // the tree, the subtree need to be pruned.
-  Level leafLvl = rootLvl + 1;
-  while (leafLvl < stt.getLvlRank() && !dependentLvlMap[tid][leafLvl].empty()) {
-    assert(depFullyReduced(tid, leafLvl));
-    leafLvl++;
-  }
-
-  Level curLvl = rootLvl + 1;
-  // Prunes all denses subtree.
-  while (curLvl < leafLvl && isDenseLT(lvlTypes[tid][curLvl])) {
-    // One step forward in parent level results in forwarding `slice.size` step
-    // in child dense level.
-    auto [size, stride] = sliceMeta[tid][curLvl].back();
-    assert(stride == 1 && "Not yet implemented");
-    fcnt = MULI(size, fcnt);
-    curLvl++;
-  }
-
-  Value nxPosPtr = nullptr;
-  if (curLvl < leafLvl) {
-    assert(!isDenseLT(lvlTypes[tid][curLvl]));
-    // The first compressed level, setting up the position pointer for it.
-    Value sPosBuf = slicePosBuffer[tid][curLvl].back();
-    // One step forwards in the parent level result in forwarding one `segment`
-    // in the child sparse level.
-    Value pPosPtr = loadSlicePosPtr(builder, loc, sPosBuf); // previous ptr
-    Value cPosPtr = ADDI(fcnt, pPosPtr);                    // current ptr
-    updateSlicePosPtr(builder, loc, sPosBuf, cPosPtr);
-    // Loads the position pointer start for next level.
-    nxPosPtr =
-        loadSlicePos(builder, loc, sPosBuf, cPosPtr, SlicePosKind::kNext);
-    curLvl++;
-  }
-
-  // TODO: This is not always needed, but we did it unconditionally for now for
-  // simplicity.
-  // It is only needed when `curLvl` is forwarded without traversing its child
-  // level (e.g., the level is in a conjunctive lattices and got pruned), such
-  // that the position pointer is not forwarded inside the loop.
-  for (; curLvl < leafLvl; curLvl++) {
-    assert(nxPosPtr);
-    if (!isDenseLT(lvlTypes[tid][curLvl])) {
-      Value sPosBuf = slicePosBuffer[tid][curLvl].back();
-      updateSlicePosPtr(builder, loc, sPosBuf, nxPosPtr);
-      nxPosPtr =
-          loadSlicePos(builder, loc, sPosBuf, nxPosPtr, SlicePosKind::kNext);
-    }
-  }
-}
-
 void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
                                 MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
@@ -1556,13 +1488,6 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
       const Value nxPos = ADDI(posits[tid][lvl], one);
       forwarded = CMPI(eq, coords[tid][lvl], iv);
       operands.push_back(SELECT(forwarded, nxPos, pos));
-    }
-    {
-      OpBuilder::InsertionGuard guard(builder);
-      auto ifOp = builder.create<scf::IfOp>(loc, TypeRange{}, forwarded,
-                                            /*else=*/false);
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      forwardsReducedSliceLevelTreeIt(builder, loc, tid, lvl, one);
     }
     // The coordinate is invalid now.
     coords[tid][lvl] = nullptr;
@@ -1806,7 +1731,7 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
         unsigned depth = frontSlice.depth - 1;
         Value offset = frontSlice.offset;
         Value sPtrBuf = slicePosBuffer[tid][firstLvl][depth];
-        Value mSz = loadSlicePosTupleNum(builder, loc, sPtrBuf);
+        Value mSz = frontSlice.posTupleNum;
         outerMost = builder.create<scf::ForOp>(
             loc, c0, mSz, c1, innerArgs,
             [this, tid, firstLvl, offset, sPtrBuf, &ip, &pos,
@@ -1917,7 +1842,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
     // Dense slice begin is trivial.
     sliceStack[tid].emplace_back(/*minCoord=*/c0, /*offset=*/c0,
                                  /*nonEmpty=*/constantI1(builder, loc, true),
-                                 lvl, /*depth=*/1);
+                                 c0, lvl, /*depth=*/1);
     return;
   }
   auto [nxSz, stride] = sliceMeta[tid][lvl][1];
@@ -1933,12 +1858,12 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
     pHi = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
                        ADDI(posits[tid][lvl - 1], c1));
   }
-  // Fills out pIdxBuffer[tid][lvl][0] with [/*memSize =*/4, 0, pLo, pHi]
-  updateSlicePosTupleNum(builder, loc, c1, sPtrBuf);
-  updateSlicePosPtr(builder, loc, sPtrBuf, c0);
+  // Fills out pIdxBuffer[tid][lvl][0] with [pLo, pHi]
   updateSlicePos(builder, loc, sPtrBuf, pLo, c0, SlicePosKind::kLo);
   updateSlicePos(builder, loc, sPtrBuf, pHi, c0, SlicePosKind::kHi);
-
+  // Slice over a resolved parent, we only need one pair of pos hi and lo to
+  // specify the current slice.
+  Value tupleNum = c1;
   // This is an non empty tensor if pLo < pHi.
   Value isNonEmpty = CMPI(ult, pLo, pHi);
   // The minimal coord must be at the first on ordered level.
@@ -1950,7 +1875,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
 
   // FIXME: We need the relative offset related to the base slice.
   Value absOffset = offsetFromMinCoord(builder, loc, minCrd, nxSz, isNonEmpty);
-  sliceStack[tid].emplace_back(minCrd, absOffset, isNonEmpty, lvl,
+  sliceStack[tid].emplace_back(minCrd, absOffset, isNonEmpty, tupleNum, lvl,
                                /*depth=*/1);
 }
 
@@ -1982,8 +1907,8 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
   Value remSz = sliceMeta[tid][lvl][depth + 1].first;
   // Dense slice begin is trivial
   if (isDenseLT(lvlTypes[tid][lvl])) {
-    sliceStack[tid].emplace_back(c0, c0, constantI1(builder, loc, false), lvl,
-                                 depth + 1);
+    sliceStack[tid].emplace_back(c0, c0, constantI1(builder, loc, false), c0,
+                                 lvl, depth + 1);
     return;
   }
 
@@ -2072,26 +1997,38 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
   Value isNonEmpty = result[0];
   Value minCrd = result[1];
   // Two metadata [memSize, idx].
-  // TODO: Can use an SSA value for these two metadata
-  updateSlicePosTupleNum(builder, loc, result[2], sPtrBuf);
-  updateSlicePosPtr(builder, loc, sPtrBuf, c0);
   // FIXME: we need the relative offset related to the base slice.
   Value absOffset = offsetFromMinCoord(builder, loc, minCrd, remSz, isNonEmpty);
-  sliceStack[tid].emplace_back(minCrd, absOffset, isNonEmpty, lvl, depth + 1);
+  sliceStack[tid].emplace_back(minCrd, absOffset, isNonEmpty, result[2], lvl,
+                               depth + 1);
 }
 
 bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
                                 Level lvl) {
+  Value curLvlIdx = C_IDX(0);
   if (depFullyReduced(tid, lvl)) {
-    // Do not need to prepare for slice driven loop on dense level after it is
-    // fully reduced.
+    if (lvl == 0 || trivialSlice[tid][lvl]) {
+      sliceTupleNxStartIdx[tid][lvl] = C_IDX(0);
+    } else {
+      if (isDenseLT(lvlTypes[tid][lvl])) {
+        sliceTupleNxStartIdx[tid][lvl] = sliceTupleNxStartIdx[tid][lvl - 1];
+      } else {
+        assert(isCompressedLT(lvlTypes[tid][lvl]));
+        curLvlIdx = ADDI(sliceTupleNxStartIdx[tid][lvl - 1],
+                         sliceTupleFwdCnt[0][lvl - 1]);
+        sliceTupleNxStartIdx[tid][lvl] =
+            loadSlicePos(builder, loc, slicePosBuffer[tid][lvl].back(),
+                         curLvlIdx, SlicePosKind::kNext);
+      }
+    }
     if (isDenseLT(lvlTypes[tid][lvl]))
       return true;
+
+    Value sPosBuf = slicePosBuffer[tid][lvl].back();
     // If constraints on the tensor is fully resolved. We do not need to
     // generates slice begin any more, instead we fall back to TACO-based
     // algorithm to (co)iterates over the slice.
-    Value sPosBuf = slicePosBuffer[tid][lvl].back();
-    Value tupleIdx = loadSlicePosPtr(builder, loc, sPosBuf);
+    Value tupleIdx = curLvlIdx;
     posits[tid][lvl] =
         loadSlicePos(builder, loc, sPosBuf, tupleIdx, SlicePosKind::kLo);
     highs[tid][lvl] =
@@ -2150,21 +2087,14 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
   if (sliceInfo.isInitialTensor() ||
       (lvl >= 1 && lvlFullyResolved(tid, lvl - 1))) {
     // First level or previous level has been full resolved.
+    trivialSlice[tid][lvl] = true;
     genResolvedSliceBegin(builder, loc, tid, lvl);
   } else {
     // The previous level has not been full resolved.
+    trivialSlice[tid][lvl] = false;
     genUnResolvedSliceBegin(builder, loc, tid, lvl);
   }
   return false;
-}
-
-void LoopEmitter::invalidateSliceIterIdx(OpBuilder &builder, Location loc,
-                                         TensorId tid, Level lvl) {
-  for (unsigned i = 0; i <= lvl; i++) {
-    if (!isDenseLT(lvlTypes[tid][i]) && !dependentLvlMap[tid][i].empty()) {
-      updateSlicePosPtr(builder, loc, slicePosBuffer[tid][i].back(), C_IDX(0));
-    }
-  }
 }
 
 std::tuple<Value, Value, Value>
@@ -2191,10 +2121,6 @@ LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
   //   isNonEmpty = false;
   //
   Value absOffset = info.offset;
-  // Resets slices pointers as the resolved slices are invalidated after we
-  // moves forward to the next slice.
-  invalidateSliceIterIdx(builder, loc, tid, lvl);
-
   SmallVector<Value, 3> reduc = {info.minCrd, info.isNonEmpty, absOffset};
   Value sPtrBuf = slicePosBuffer[tid][lvl][info.depth - 1];
   Value fastPathP = CMPI(ugt, info.minCrd, absOffset);
@@ -2221,10 +2147,10 @@ LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
     //    offset = minCrd - size + 1;
     // }
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    reduc[2] = absOffset;                                    // restore value.
-    Value mSz = loadSlicePosTupleNum(builder, loc, sPtrBuf); // memSize
-    reduc[0] = lvlSizes[tid][lvl];                           // next min coord
-    reduc[1] = constantI1(builder, loc, false);              // isNonEmpty
+    reduc[2] = absOffset;                       // restore value.
+    Value mSz = info.posTupleNum;               // tuple number.
+    reduc[0] = lvlSizes[tid][lvl];              // next min coord
+    reduc[1] = constantI1(builder, loc, false); // isNonEmpty
     auto loopArgs = static_cast<ValueRange>(reduc).drop_back();
     auto forOp = scf::buildLoopNest(
         builder, loc, c0, mSz, c1, loopArgs,

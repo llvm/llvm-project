@@ -51,26 +51,26 @@ struct __uses_alloc_ctor
     {};
 
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __user_alloc_construct_impl (integral_constant<int, 0>, _Tp *__storage, const _Allocator &, _Args &&... __args )
 {
-    new (__storage) _Tp (_VSTD::forward<_Args>(__args)...);
+    new (__storage) _Tp (std::forward<_Args>(__args)...);
 }
 
 // FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __user_alloc_construct_impl (integral_constant<int, 1>, _Tp *__storage, const _Allocator &__a, _Args &&... __args )
 {
-    new (__storage) _Tp (allocator_arg, __a, _VSTD::forward<_Args>(__args)...);
+    new (__storage) _Tp (allocator_arg, __a, std::forward<_Args>(__args)...);
 }
 
 // FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __user_alloc_construct_impl (integral_constant<int, 2>, _Tp *__storage, const _Allocator &__a, _Args &&... __args )
 {
-    new (__storage) _Tp (_VSTD::forward<_Args>(__args)..., __a);
+    new (__storage) _Tp (std::forward<_Args>(__args)..., __a);
 }
 
 #endif // _LIBCPP_CXX03_LANG

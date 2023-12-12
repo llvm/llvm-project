@@ -459,6 +459,7 @@ public:
     // use counts.
     SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
+    DC.removeValue(&I);
     I.eraseFromParent();
     for (Value *Op : Ops)
       Worklist.handleUseCountDecrement(Op);
@@ -739,13 +740,11 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const SimplifyQuery &SQ;
-
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

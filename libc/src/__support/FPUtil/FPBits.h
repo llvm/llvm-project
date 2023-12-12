@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
@@ -45,8 +44,7 @@ template <typename T> struct FPBits {
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
   using FloatProp = FloatProperties<T>;
-  // TODO: Change UintType name to BitsType for consistency.
-  using UIntType = typename FloatProp::BitsType;
+  using UIntType = typename FloatProp::UIntType;
 
   UIntType bits;
 
@@ -60,13 +58,13 @@ template <typename T> struct FPBits {
     return bits & FloatProp::MANTISSA_MASK;
   }
 
-  LIBC_INLINE constexpr void set_unbiased_exponent(UIntType expVal) {
+  LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
     expVal = (expVal << (FloatProp::MANTISSA_WIDTH)) & FloatProp::EXPONENT_MASK;
     bits &= ~(FloatProp::EXPONENT_MASK);
     bits |= expVal;
   }
 
-  LIBC_INLINE constexpr uint16_t get_unbiased_exponent() const {
+  LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
     return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
                     (FloatProp::MANTISSA_WIDTH));
   }
@@ -74,7 +72,7 @@ template <typename T> struct FPBits {
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr UIntType get_explicit_mantissa() {
-    return ((get_unbiased_exponent() > 0 && !is_inf_or_nan())
+    return ((get_biased_exponent() > 0 && !is_inf_or_nan())
                 ? (FloatProp::MANTISSA_MASK + 1)
                 : 0) |
            (FloatProp::MANTISSA_MASK & bits);
@@ -127,7 +125,7 @@ template <typename T> struct FPBits {
   LIBC_INLINE constexpr UIntType uintval() const { return bits; }
 
   LIBC_INLINE constexpr int get_exponent() const {
-    return int(get_unbiased_exponent()) - EXPONENT_BIAS;
+    return int(get_biased_exponent()) - EXPONENT_BIAS;
   }
 
   // If the number is subnormal, the exponent is treated as if it were the
@@ -137,13 +135,13 @@ template <typename T> struct FPBits {
   // will give a slightly incorrect result. Additionally, zero has an exponent
   // of zero, and that should actually be treated as zero.
   LIBC_INLINE constexpr int get_explicit_exponent() const {
-    const int unbiased_exp = int(get_unbiased_exponent());
+    const int biased_exp = int(get_biased_exponent());
     if (is_zero()) {
       return 0;
-    } else if (unbiased_exp == 0) {
+    } else if (biased_exp == 0) {
       return 1 - EXPONENT_BIAS;
     } else {
-      return unbiased_exp - EXPONENT_BIAS;
+      return biased_exp - EXPONENT_BIAS;
     }
   }
 
@@ -222,14 +220,14 @@ template <typename T> struct FPBits {
   LIBC_INLINE static constexpr FPBits<T> make_value(UIntType number, int ep) {
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
+    int lz = cpp::countl_zero(number) - FloatProp::EXPONENT_WIDTH;
     number <<= lz;
     ep -= lz;
 
     if (LIBC_LIKELY(ep >= 0)) {
       // Implicit number bit will be removed by mask
       result.set_mantissa(number);
-      result.set_unbiased_exponent(ep + 1);
+      result.set_biased_exponent(ep + 1);
     } else {
       result.set_mantissa(number >> -ep);
     }
@@ -237,10 +235,10 @@ template <typename T> struct FPBits {
   }
 
   LIBC_INLINE static constexpr FPBits<T>
-  create_value(bool sign, UIntType unbiased_exp, UIntType mantissa) {
+  create_value(bool sign, UIntType biased_exp, UIntType mantissa) {
     FPBits<T> result;
     result.set_sign(sign);
-    result.set_unbiased_exponent(unbiased_exp);
+    result.set_biased_exponent(biased_exp);
     result.set_mantissa(mantissa);
     return result;
   }

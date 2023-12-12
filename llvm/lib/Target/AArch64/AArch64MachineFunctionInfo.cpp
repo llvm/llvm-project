@@ -78,8 +78,8 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
 
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
-  assert(Key.equals_insensitive("a_key") || Key.equals_insensitive("b_key"));
-  return Key.equals_insensitive("b_key");
+  assert(Key == "a_key" || Key == "b_key");
+  return Key == "b_key";
 }
 
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
@@ -100,9 +100,8 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   } else {
     const StringRef BTIEnable =
         F.getFnAttribute("branch-target-enforcement").getValueAsString();
-    assert(BTIEnable.equals_insensitive("true") ||
-           BTIEnable.equals_insensitive("false"));
-    BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
+    assert(BTIEnable == "true" || BTIEnable == "false");
+    BranchTargetEnforcement = BTIEnable == "true";
   }
 
   // The default stack probe size is 4096 if the function has no

@@ -11,12 +11,6 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
-    name = "bit_test",
-    srcs = ["bit_test.cpp"],
-    deps = ["//libc:__support_bit"],
-)
-
-libc_test(
     name = "math_extras_test",
     srcs = ["math_extras_test.cpp"],
     deps = ["//libc:__support_math_extras"],

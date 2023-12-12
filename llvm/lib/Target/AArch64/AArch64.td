@@ -622,9 +622,6 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
-def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
-  "Enable ARMv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
-
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -695,7 +692,7 @@ def HasV9_4aOps : SubtargetFeature<
 
 def HasV9_5aOps : SubtargetFeature<
   "v9.5a", "HasV9_5aOps", "true", "Support ARM v9.5a instructions",
-  [HasV9_4aOps, FeatureCPA]>;
+  [HasV9_4aOps]>;
 
 def HasV8_0rOps : SubtargetFeature<
   "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",
@@ -1483,9 +1480,9 @@ def ProcessorFeatures {
                                        FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
                                        FeatureRCPC, FeatureSPE, FeatureSSBS,
                                        FeaturePerfMon];
-  list<SubtargetFeature> NeoverseN2 = [HasV8_5aOps, FeatureBF16, FeatureETE,
+  list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
-                                       FeatureSVE2BitPerm, FeatureTRBE, FeatureCrypto,
+                                       FeatureSVE2BitPerm, FeatureTRBE,
                                        FeaturePerfMon];
   list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                            FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
