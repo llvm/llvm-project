@@ -18,8 +18,6 @@
 #include <immintrin.h>
 #include <sanitizer_common/sanitizer_internal_defs.h>
 #include <stdint.h>
-using __sanitizer::tid_t;
-using __sanitizer::uptr;
 
 // This header should NOT include any other headers.
 // All functions in this header are extern "C" and start with __tsan_.
