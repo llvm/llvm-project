@@ -278,8 +278,10 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   ICmpInst::Predicate UnsignedPred =
       ConstantRange::getEquivalentPredWithFlippedSignedness(
           Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0)),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1)));
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                     /*UndefAllowed*/ true),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                     /*UndefAllowed*/ true));
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
