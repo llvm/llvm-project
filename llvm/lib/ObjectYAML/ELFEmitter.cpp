@@ -666,7 +666,7 @@ bool ELFState<ELFT>::initImplicitHeader(ContiguousBlobAccumulator &CBA,
     initSymtabSectionHeader(Header, SymtabType::Static, CBA, YAMLSec);
   else if (SecName == ".dynsym")
     initSymtabSectionHeader(Header, SymtabType::Dynamic, CBA, YAMLSec);
-  else if (SecName.startswith(".debug_")) {
+  else if (SecName.starts_with(".debug_")) {
     // If a ".debug_*" section's type is a preserved one, e.g., SHT_DYNAMIC, we
     // will not treat it as a debug section.
     if (YAMLSec && !isa<ELFYAML::RawContentSection>(YAMLSec))

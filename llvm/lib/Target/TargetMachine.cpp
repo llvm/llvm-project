@@ -43,10 +43,11 @@ bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
 
-  if (isa<Function>(GO))
-    return getCodeModel() == CodeModel::Large;
+  auto *GV = dyn_cast<GlobalVariable>(GO);
 
-  auto *GV = cast<GlobalVariable>(GO);
+  // Functions/GlobalIFuncs are only large under the large code model.
+  if (!GV)
+    return getCodeModel() == CodeModel::Large;
 
   if (GV->isThreadLocal())
     return false;
@@ -78,6 +79,8 @@ bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
 
   if (getCodeModel() == CodeModel::Medium ||
       getCodeModel() == CodeModel::Large) {
+    if (!GV->getValueType()->isSized())
+      return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
     uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
     return Size == 0 || Size > LargeDataThreshold;

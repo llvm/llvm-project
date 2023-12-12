@@ -75,7 +75,7 @@ public:
 };
 
 /// Time spend in the current scope, assigned to the function name.
-#define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
+#define TIMESCOPE() llvm::TimeTraceScope TimeScope(__PRETTY_FUNCTION__)
 
 /// Time spend in the current scope, assigned to the function name and source
 /// info.
