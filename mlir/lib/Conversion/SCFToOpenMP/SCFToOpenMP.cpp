@@ -339,10 +339,11 @@ static omp::ReductionDeclareOp declareReduction(PatternRewriter &builder,
 namespace {
 
 struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
-
+  static constexpr unsigned kUseOpenMPDefaultNumThreads = 0;
   unsigned numThreads;
 
-  ParallelOpLowering(MLIRContext *context, unsigned numThreads = 0)
+  ParallelOpLowering(MLIRContext *context,
+                     unsigned numThreads = kUseOpenMPDefaultNumThreads)
       : OpRewritePattern<scf::ParallelOp>(context), numThreads(numThreads) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
