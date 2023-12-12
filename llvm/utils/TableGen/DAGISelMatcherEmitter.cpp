@@ -578,9 +578,16 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 
  case Matcher::CheckType:
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
-      OS << "OPC_CheckType, "
-         << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
-      return 2;
+      MVT::SimpleValueType VT = cast<CheckTypeMatcher>(N)->getType();
+      switch (VT) {
+      case MVT::i32:
+      case MVT::i64:
+        OS << "OPC_CheckTypeI" << MVT(VT).getSizeInBits() << ",\n";
+        return 1;
+      default:
+        OS << "OPC_CheckType, " << getEnumName(VT) << ",\n";
+        return 2;
+      }
     }
     OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
        << ", " << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
@@ -730,10 +737,15 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     }
   }
 
-  case Matcher::EmitConvertToTarget:
-    OS << "OPC_EmitConvertToTarget, "
-       << cast<EmitConvertToTargetMatcher>(N)->getSlot() << ",\n";
+  case Matcher::EmitConvertToTarget: {
+    unsigned Slot = cast<EmitConvertToTargetMatcher>(N)->getSlot();
+    if (Slot < 8) {
+      OS << "OPC_EmitConvertToTarget" << Slot << ",\n";
+      return 1;
+    }
+    OS << "OPC_EmitConvertToTarget, " << Slot << ",\n";
     return 2;
+  }
 
   case Matcher::EmitMergeInputChains: {
     const EmitMergeInputChainsMatcher *MN =
