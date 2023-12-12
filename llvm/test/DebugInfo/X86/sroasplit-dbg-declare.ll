@@ -56,4 +56,3 @@ attributes #1 = { nounwind readnone speculatable }
 ; CHECK-NOT:  = alloca [9 x i32]
 ; CHECK-NOT:  call void @llvm.dbg.declare(metadata ptr
 
-; CHECK: declare void @llvm.dbg.declare(metadata, metadata, metadata)
