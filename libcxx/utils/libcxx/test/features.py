@@ -224,35 +224,6 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
-    # Some platform do not provide complete floating point environment.
-    Feature(
-        name="has-compolete-fenv",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            #include <fenv.h>
-
-            #if !( \
-                defined FE_DIVBYZERO \
-                && defined FE_INEXACT \
-                && defined FE_INVALID \
-                && defined FE_INEXACT \
-                && defined FE_OVERFLOW \
-                && defined FE_UNDERFLOW \
-                && defined FE_ALL_EXCEPT \
-                && defined FE_DOWNWARD \
-                && defined FE_TONEAREST \
-                && defined FE_TOWARDZERO \
-                && defined FE_UPWARD \
-                && defined FE_DFL_ENV \
-                && defined FE_INEXACT)
-            #error Floating point environment not complete
-            #endif
-
-            int main(int, char**) { return 0; }
-          """,
-        ),
-    ),
     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
