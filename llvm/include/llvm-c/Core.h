@@ -4116,7 +4116,7 @@ void LLVMSetFastMathFlags(LLVMValueRef FPMathInst, LLVMFastMathFlags FMF);
  * Check if a given value can potentially have fast math flags
  *
  * Will return true for floating point arithmetic instructions, and for select,
- * phil, and call instructions whose type is a floating point type, or a vector
+ * phi, and call instructions whose type is a floating point type, or a vector
  * or array thereof See https://llvm.org/docs/LangRef.html#fast-math-flags
  */
 LLVMBool LLVMGetCanUseFastMathFlags(LLVMValueRef Inst);
