@@ -151,8 +151,8 @@ enum class PGOMapFeaturesEnum {
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
-    cl::values(clEnumValN(PGOMapFeaturesEnum::FuncEntryCount, "func-entry-count",
-                          "Function Entry Count"),
+    cl::values(clEnumValN(PGOMapFeaturesEnum::FuncEntryCount,
+                          "func-entry-count", "Function Entry Count"),
                clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
                           "Basic Block Frequency"),
                clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob",
