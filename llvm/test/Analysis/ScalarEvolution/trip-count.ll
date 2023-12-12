@@ -127,10 +127,10 @@ leave:
 define void @non_zero_from_loop_guard(i16 %n) {
 ; CHECK-LABEL: 'non_zero_from_loop_guard'
 ; CHECK-NEXT:  Determining loop execution counts for: @non_zero_from_loop_guard
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax (%n /u 2)))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (%n /u 2))<nsw>
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 32766
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax (%n /u 2)))<nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (1 umax (%n /u 2)))<nsw>
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (%n /u 2))<nsw>
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (%n /u 2))<nsw>
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
