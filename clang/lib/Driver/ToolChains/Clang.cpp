@@ -3437,8 +3437,7 @@ static void RenderTrivialAutoVarInitOptions(const Driver &D,
         Args.MakeArgString("-ftrivial-auto-var-init-stop-after=" + Val));
   }
 
-  if (Arg *A =
-          Args.getLastArg(options::OPT_ftrivial_auto_var_init_max_size)) {
+  if (Arg *A = Args.getLastArg(options::OPT_ftrivial_auto_var_init_max_size)) {
     if (!Args.hasArg(options::OPT_ftrivial_auto_var_init) ||
         StringRef(
             Args.getLastArg(options::OPT_ftrivial_auto_var_init)->getValue()) ==

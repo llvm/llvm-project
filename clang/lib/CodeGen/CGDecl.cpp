@@ -1772,7 +1772,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
       if (CGM.stopAutoInit())
         return;
       if (trivialAutoVarInitMaxSize > 0 &&
-          allocSize >= trivialAutoVarInitMaxSize)
+          allocSize > trivialAutoVarInitMaxSize)
         return;
       emitStoresForZeroInit(CGM, D, Loc, isVolatile, Builder);
       break;
@@ -1780,7 +1780,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
       if (CGM.stopAutoInit())
         return;
       if (trivialAutoVarInitMaxSize > 0 &&
-          allocSize >= trivialAutoVarInitMaxSize)
+          allocSize > trivialAutoVarInitMaxSize)
         return;
       emitStoresForPatternInit(CGM, D, Loc, isVolatile, Builder);
       break;
