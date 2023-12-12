@@ -522,6 +522,14 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       New = &*std::prev(InsertPt);
       if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
+
+      // The operand registers of the "sunk" instruction have their live range
+      // extended and their kill flags may no longer be correct. Conservatively
+      // clear the kill flags.
+      if (UsedRegA)
+        MRI->clearKillFlags(UsedRegA);
+      if (UsedRegB)
+        MRI->clearKillFlags(UsedRegB);
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
