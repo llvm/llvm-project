@@ -1184,7 +1184,6 @@ void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
     } else if (isa<Argument>(Address)) {
       // Address is an argument, so try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
-      assert(Intrinsic == Intrinsic::dbg_declare);
       EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
                                FuncArgumentDbgValueKind::Declare, N);
       return;
@@ -1196,7 +1195,6 @@ void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
   } else {
     // If Address is an argument then try to emit its dbg value using
     // virtual register info from the FuncInfo.ValueMap.
-    assert(Intrinsic == Intrinsic::dbg_declare);
     if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
                                   FuncArgumentDbgValueKind::Declare, N)) {
       LLVM_DEBUG(dbgs() << "dbg_declare: Dropping debug info"
