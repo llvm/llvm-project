@@ -60,7 +60,7 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&PartMappings[PMI_FPRB64], 1},
     {&PartMappings[PMI_FPRB64], 1},
     {&PartMappings[PMI_FPRB64], 1},
-    // Maximum 3 VR LMUL=1 operands.
+    // Maximum 3 VR LMUL={1, MF2, MF4, MF8} operands.
     {&PartMappings[PMI_VRB64], 1},
     {&PartMappings[PMI_VRB64], 1},
     {&PartMappings[PMI_VRB64], 1},
