@@ -3627,10 +3627,10 @@ def ftrivial_auto_var_init_stop_after : Joined<["-"], "ftrivial-auto-var-init-st
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Stop initializing trivial automatic stack variables after the specified number of instances">,
   MarshallingInfoInt<LangOpts<"TrivialAutoVarInitStopAfter">>;
-def ftrivial_auto_var_init_size_bound : Joined<["-"], "ftrivial-auto-var-init-size-bound=">, Group<f_Group>,
+def ftrivial_auto_var_init_max_size : Joined<["-"], "ftrivial-auto-var-init-max-size=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Stop initializing trivial automatic stack variables if var size exceeds the specified number of instances (in bytes)">,
-  MarshallingInfoInt<LangOpts<"TrivialAutoVarInitSizeBound">>;
+  MarshallingInfoInt<LangOpts<"TrivialAutoVarInitMaxSize">>;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Emit full debug info for all types used by the program">;
