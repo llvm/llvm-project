@@ -2711,11 +2711,10 @@ CheckOpcode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
   return N->getOpcode() == Opc;
 }
 
-LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckType(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
-          const TargetLowering *TLI, const DataLayout &DL) {
-  MVT::SimpleValueType VT =
-      static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+LLVM_ATTRIBUTE_ALWAYS_INLINE static bool CheckType(MVT::SimpleValueType VT,
+                                                   SDValue N,
+                                                   const TargetLowering *TLI,
+                                                   const DataLayout &DL) {
   if (N.getValueType() == VT)
     return true;
 
@@ -2724,13 +2723,11 @@ CheckType(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckChildType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-               SDValue N, const TargetLowering *TLI, const DataLayout &DL,
-               unsigned ChildNo) {
+CheckChildType(MVT::SimpleValueType VT, SDValue N, const TargetLowering *TLI,
+               const DataLayout &DL, unsigned ChildNo) {
   if (ChildNo >= N.getNumOperands())
-    return false;  // Match fails if out of range child #.
-  return ::CheckType(MatcherTable, MatcherIndex, N.getOperand(ChildNo), TLI,
-                     DL);
+    return false; // Match fails if out of range child #.
+  return ::CheckType(VT, N.getOperand(ChildNo), TLI, DL);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -2829,7 +2826,8 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
                                        bool &Result,
                                        const SelectionDAGISel &SDISel,
                   SmallVectorImpl<std::pair<SDValue, SDNode*>> &RecordedNodes) {
-  switch (Table[Index++]) {
+  unsigned Opcode = Table[Index++];
+  switch (Opcode) {
   default:
     Result = false;
     return Index-1;  // Could not evaluate this predicate.
@@ -2856,12 +2854,27 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
     Result = !::CheckOpcode(Table, Index, N.getNode());
     return Index;
   case SelectionDAGISel::OPC_CheckType:
-    Result = !::CheckType(Table, Index, N, SDISel.TLI,
-                          SDISel.CurDAG->getDataLayout());
+  case SelectionDAGISel::OPC_CheckTypeI32:
+  case SelectionDAGISel::OPC_CheckTypeI64: {
+    MVT::SimpleValueType VT;
+    switch (Opcode) {
+    case SelectionDAGISel::OPC_CheckTypeI32:
+      VT = MVT::i32;
+      break;
+    case SelectionDAGISel::OPC_CheckTypeI64:
+      VT = MVT::i64;
+      break;
+    default:
+      VT = static_cast<MVT::SimpleValueType>(Table[Index++]);
+      break;
+    }
+    Result = !::CheckType(VT, N, SDISel.TLI, SDISel.CurDAG->getDataLayout());
     return Index;
+  }
   case SelectionDAGISel::OPC_CheckTypeRes: {
     unsigned Res = Table[Index++];
-    Result = !::CheckType(Table, Index, N.getValue(Res), SDISel.TLI,
+    Result = !::CheckType(static_cast<MVT::SimpleValueType>(Table[Index++]),
+                          N.getValue(Res), SDISel.TLI,
                           SDISel.CurDAG->getDataLayout());
     return Index;
   }
@@ -2872,11 +2885,13 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
   case SelectionDAGISel::OPC_CheckChild4Type:
   case SelectionDAGISel::OPC_CheckChild5Type:
   case SelectionDAGISel::OPC_CheckChild6Type:
-  case SelectionDAGISel::OPC_CheckChild7Type:
-    Result = !::CheckChildType(
-                 Table, Index, N, SDISel.TLI, SDISel.CurDAG->getDataLayout(),
-                 Table[Index - 1] - SelectionDAGISel::OPC_CheckChild0Type);
+  case SelectionDAGISel::OPC_CheckChild7Type: {
+    Result =
+        !::CheckChildType(static_cast<MVT::SimpleValueType>(Table[Index++]), N,
+                          SDISel.TLI, SDISel.CurDAG->getDataLayout(),
+                          Opcode - SelectionDAGISel::OPC_CheckChild0Type);
     return Index;
+  }
   case SelectionDAGISel::OPC_CheckCondCode:
     Result = !::CheckCondCode(Table, Index, N);
     return Index;
@@ -3306,15 +3321,29 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
 
     case OPC_CheckType:
-      if (!::CheckType(MatcherTable, MatcherIndex, N, TLI,
-                       CurDAG->getDataLayout()))
+    case OPC_CheckTypeI32:
+    case OPC_CheckTypeI64:
+      MVT::SimpleValueType VT;
+      switch (Opcode) {
+      case OPC_CheckTypeI32:
+        VT = MVT::i32;
+        break;
+      case OPC_CheckTypeI64:
+        VT = MVT::i64;
+        break;
+      default:
+        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        break;
+      }
+      if (!::CheckType(VT, N, TLI, CurDAG->getDataLayout()))
         break;
       continue;
 
     case OPC_CheckTypeRes: {
       unsigned Res = MatcherTable[MatcherIndex++];
-      if (!::CheckType(MatcherTable, MatcherIndex, N.getValue(Res), TLI,
-                       CurDAG->getDataLayout()))
+      if (!::CheckType(
+              static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]),
+              N.getValue(Res), TLI, CurDAG->getDataLayout()))
         break;
       continue;
     }
@@ -3387,9 +3416,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckChild2Type: case OPC_CheckChild3Type:
     case OPC_CheckChild4Type: case OPC_CheckChild5Type:
     case OPC_CheckChild6Type: case OPC_CheckChild7Type:
-      if (!::CheckChildType(MatcherTable, MatcherIndex, N, TLI,
-                            CurDAG->getDataLayout(),
-                            Opcode - OPC_CheckChild0Type))
+      if (!::CheckChildType(
+              static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]),
+              N, TLI, CurDAG->getDataLayout(), Opcode - OPC_CheckChild0Type))
         break;
       continue;
     case OPC_CheckCondCode:
