@@ -6149,6 +6149,32 @@ gentbl_cc_library(
     deps = [":NVVMOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "NVVMFromLLVMIRConversionsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-intr-from-llvmir-conversions"],
+            "include/mlir/Dialect/LLVMIR/NVVMFromLLVMIRConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
+    deps = [":NVVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVVMConvertibleLLVMIRIntrinsicsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-convertible-llvmir-intrinsics"],
+            "include/mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
+    deps = [":NVVMOpsTdFiles"],
+)
+
 cc_library(
     name = "BasicPtxBuilderInterface",
     srcs = ["lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp"],
@@ -8350,8 +8376,8 @@ cc_library(
 
 cc_library(
     name = "NVVMToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/NVVM/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/NVVM/*.h"]),
+    srcs = ["lib/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
         ":DialectUtils",
@@ -8469,6 +8495,23 @@ cc_library(
 )
 
 cc_library(
+    name = "LLVMIRToNVVMTranslation",
+    srcs = ["lib/Target/LLVMIR/Dialect/NVVM/LLVMIRToNVVMTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/NVVM/LLVMIRToNVVMTranslation.h"],
+    includes = ["include"],
+    deps = [
+        ":FromLLVMIRTranslation",
+        ":IR",
+        ":NVVMConvertibleLLVMIRIntrinsicsIncGen",
+        ":NVVMDialect",
+        ":NVVMFromLLVMIRConversionsIncGen",
+        ":Support",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenACCToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenACC/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
@@ -8521,6 +8564,7 @@ cc_library(
         ":BuiltinToLLVMIRTranslation",
         ":GPUToLLVMIRTranslation",
         ":LLVMIRToLLVMTranslation",
+        ":LLVMIRToNVVMTranslation",
         ":LLVMToLLVMIRTranslation",
         ":NVVMTarget",
         ":NVVMToLLVMIRTranslation",
