@@ -3541,9 +3541,19 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
 
-    case OPC_EmitConvertToTarget:  {
+    case OPC_EmitConvertToTarget:
+    case OPC_EmitConvertToTarget0:
+    case OPC_EmitConvertToTarget1:
+    case OPC_EmitConvertToTarget2:
+    case OPC_EmitConvertToTarget3:
+    case OPC_EmitConvertToTarget4:
+    case OPC_EmitConvertToTarget5:
+    case OPC_EmitConvertToTarget6:
+    case OPC_EmitConvertToTarget7: {
       // Convert from IMM/FPIMM to target version.
-      unsigned RecNo = MatcherTable[MatcherIndex++];
+      unsigned RecNo = Opcode == OPC_EmitConvertToTarget
+                           ? MatcherTable[MatcherIndex++]
+                           : Opcode - OPC_EmitConvertToTarget0;
       assert(RecNo < RecordedNodes.size() && "Invalid EmitConvertToTarget");
       SDValue Imm = RecordedNodes[RecNo].first;
 
