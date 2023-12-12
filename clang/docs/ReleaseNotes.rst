@@ -641,6 +641,10 @@ Bug Fixes in This Version
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
 - Clang now properly diagnoses use of stand-alone OpenMP directives after a
   label (including ``case`` or ``default`` labels).
+- Fix crash when dealing with ill-formed code where we were not handling invalid
+  redeclarations properly.
+  Fixes (`#69468 <https://github.com/llvm/llvm-project/issues/69468>`_)
+
 
   Before:
 
