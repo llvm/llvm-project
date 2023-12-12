@@ -1301,12 +1301,9 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
   return ValueLatticeElement::getOverdefined();
 }
 
-/// Compute the value of Val on the edge BBFrom -> BBTo. Returns false if
-/// Val is not constrained on the edge.  Result is unspecified if return value
-/// is false.
-static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
-                                                       BasicBlock *BBFrom,
-                                                       BasicBlock *BBTo) {
+/// Compute the value of Val on the edge BBFrom -> BBTo.
+static ValueLatticeElement getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
+                                             BasicBlock *BBTo) {
   // TODO: Handle more complex conditionals. If (v == 0 || v2 < 1) is false, we
   // know that v != 0.
   if (BranchInst *BI = dyn_cast<BranchInst>(BBFrom->getTerminator())) {
@@ -1380,7 +1377,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
   if (SwitchInst *SI = dyn_cast<SwitchInst>(BBFrom->getTerminator())) {
     Value *Condition = SI->getCondition();
     if (!isa<IntegerType>(Val->getType()))
-      return std::nullopt;
+      return ValueLatticeElement::getOverdefined();
     bool ValUsesConditionAndMayBeFoldable = false;
     if (Condition != Val) {
       // Check if Val has Condition as an operand.
@@ -1388,7 +1385,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
         ValUsesConditionAndMayBeFoldable = isOperationFoldable(Usr) &&
             usesOperand(Usr, Condition);
       if (!ValUsesConditionAndMayBeFoldable)
-        return std::nullopt;
+        return ValueLatticeElement::getOverdefined();
     }
     assert((Condition == Val || ValUsesConditionAndMayBeFoldable) &&
            "Condition != Val nor Val doesn't use Condition");
@@ -1406,7 +1403,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
         ValueLatticeElement EdgeLatticeVal =
             constantFoldUser(Usr, Condition, CaseValue, DL);
         if (EdgeLatticeVal.isOverdefined())
-          return std::nullopt;
+          return ValueLatticeElement::getOverdefined();
         EdgeVal = EdgeLatticeVal.getConstantRange();
       }
       if (DefaultCase) {
@@ -1423,7 +1420,7 @@ static std::optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
     }
     return ValueLatticeElement::getRange(std::move(EdgesVals));
   }
-  return std::nullopt;
+  return ValueLatticeElement::getOverdefined();
 }
 
 /// Compute the value of Val on the edge BBFrom -> BBTo or the value at
@@ -1435,9 +1432,7 @@ LazyValueInfoImpl::getEdgeValue(Value *Val, BasicBlock *BBFrom,
   if (Constant *VC = dyn_cast<Constant>(Val))
     return ValueLatticeElement::get(VC);
 
-  ValueLatticeElement LocalResult =
-      getEdgeValueLocal(Val, BBFrom, BBTo)
-          .value_or(ValueLatticeElement::getOverdefined());
+  ValueLatticeElement LocalResult = getEdgeValueLocal(Val, BBFrom, BBTo);
   if (hasSingleValue(LocalResult))
     // Can't get any more precise here
     return LocalResult;
