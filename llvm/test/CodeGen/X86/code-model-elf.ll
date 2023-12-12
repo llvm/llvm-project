@@ -583,6 +583,18 @@ define internal void @static_fn() #0 {
 
 declare void @extern_fn()
 
+@ifunc_func = ifunc void (), ptr @resolver
+@dso_local_ifunc_func = dso_local ifunc void (), ptr @resolver
+
+define internal ptr @resolver() {
+; CHECK-LABEL: resolver:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+entry:
+  ret ptr null
+}
+
 define dso_local ptr @lea_static_fn() #0 {
 ; SMALL-STATIC-LABEL: lea_static_fn:
 ; SMALL-STATIC:       # %bb.0:
@@ -616,9 +628,9 @@ define dso_local ptr @lea_static_fn() #0 {
 ;
 ; LARGE-PIC-LABEL: lea_static_fn:
 ; LARGE-PIC:       # %bb.0:
-; LARGE-PIC-NEXT:  .L13$pb:
-; LARGE-PIC-NEXT:    leaq .L13$pb(%rip), %rax
-; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L13$pb, %rcx
+; LARGE-PIC-NEXT:  .L14$pb:
+; LARGE-PIC-NEXT:    leaq .L14$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L14$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movabsq $static_fn@GOTOFF, %rax
 ; LARGE-PIC-NEXT:    addq %rcx, %rax
@@ -659,9 +671,9 @@ define dso_local ptr @lea_global_fn() #0 {
 ;
 ; LARGE-PIC-LABEL: lea_global_fn:
 ; LARGE-PIC:       # %bb.0:
-; LARGE-PIC-NEXT:  .L14$pb:
-; LARGE-PIC-NEXT:    leaq .L14$pb(%rip), %rax
-; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L14$pb, %rcx
+; LARGE-PIC-NEXT:  .L15$pb:
+; LARGE-PIC-NEXT:    leaq .L15$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L15$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movabsq $global_fn@GOTOFF, %rax
 ; LARGE-PIC-NEXT:    addq %rcx, %rax
@@ -702,14 +714,100 @@ define dso_local ptr @lea_extern_fn() #0 {
 ;
 ; LARGE-PIC-LABEL: lea_extern_fn:
 ; LARGE-PIC:       # %bb.0:
-; LARGE-PIC-NEXT:  .L15$pb:
-; LARGE-PIC-NEXT:    leaq .L15$pb(%rip), %rax
-; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L15$pb, %rcx
+; LARGE-PIC-NEXT:  .L16$pb:
+; LARGE-PIC-NEXT:    leaq .L16$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L16$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movabsq $extern_fn@GOT, %rax
 ; LARGE-PIC-NEXT:    movq (%rcx,%rax), %rax
 ; LARGE-PIC-NEXT:    retq
   ret ptr @extern_fn
+}
+
+define dso_local ptr @lea_ifunc() #0 {
+; SMALL-STATIC-LABEL: lea_ifunc:
+; SMALL-STATIC:       # %bb.0:
+; SMALL-STATIC-NEXT:    movq ifunc_func@GOTPCREL(%rip), %rax
+; SMALL-STATIC-NEXT:    retq
+;
+; MEDIUM-STATIC-LABEL: lea_ifunc:
+; MEDIUM-STATIC:       # %bb.0:
+; MEDIUM-STATIC-NEXT:    movq ifunc_func@GOTPCREL(%rip), %rax
+; MEDIUM-STATIC-NEXT:    retq
+;
+; LARGE-STATIC-LABEL: lea_ifunc:
+; LARGE-STATIC:       # %bb.0:
+; LARGE-STATIC-NEXT:    movabsq $ifunc_func, %rax
+; LARGE-STATIC-NEXT:    retq
+;
+; SMALL-PIC-LABEL: lea_ifunc:
+; SMALL-PIC:       # %bb.0:
+; SMALL-PIC-NEXT:    movq ifunc_func@GOTPCREL(%rip), %rax
+; SMALL-PIC-NEXT:    retq
+;
+; MEDIUM-SMALL-DATA-PIC-LABEL: lea_ifunc:
+; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
+; MEDIUM-SMALL-DATA-PIC-NEXT:    movq ifunc_func@GOTPCREL(%rip), %rax
+; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
+;
+; MEDIUM-PIC-LABEL: lea_ifunc:
+; MEDIUM-PIC:       # %bb.0:
+; MEDIUM-PIC-NEXT:    movq ifunc_func@GOTPCREL(%rip), %rax
+; MEDIUM-PIC-NEXT:    retq
+;
+; LARGE-PIC-LABEL: lea_ifunc:
+; LARGE-PIC:       # %bb.0:
+; LARGE-PIC-NEXT:  .L17$pb:
+; LARGE-PIC-NEXT:    leaq .L17$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L17$pb, %rcx
+; LARGE-PIC-NEXT:    addq %rax, %rcx
+; LARGE-PIC-NEXT:    movabsq $ifunc_func@GOT, %rax
+; LARGE-PIC-NEXT:    movq (%rcx,%rax), %rax
+; LARGE-PIC-NEXT:    retq
+  ret ptr @ifunc_func
+}
+
+define dso_local ptr @lea_dso_local_ifunc() #0 {
+; SMALL-STATIC-LABEL: lea_dso_local_ifunc:
+; SMALL-STATIC:       # %bb.0:
+; SMALL-STATIC-NEXT:    movl $dso_local_ifunc_func, %eax
+; SMALL-STATIC-NEXT:    retq
+;
+; MEDIUM-STATIC-LABEL: lea_dso_local_ifunc:
+; MEDIUM-STATIC:       # %bb.0:
+; MEDIUM-STATIC-NEXT:    movabsq $dso_local_ifunc_func, %rax
+; MEDIUM-STATIC-NEXT:    retq
+;
+; LARGE-STATIC-LABEL: lea_dso_local_ifunc:
+; LARGE-STATIC:       # %bb.0:
+; LARGE-STATIC-NEXT:    movabsq $dso_local_ifunc_func, %rax
+; LARGE-STATIC-NEXT:    retq
+;
+; SMALL-PIC-LABEL: lea_dso_local_ifunc:
+; SMALL-PIC:       # %bb.0:
+; SMALL-PIC-NEXT:    leaq dso_local_ifunc_func(%rip), %rax
+; SMALL-PIC-NEXT:    retq
+;
+; MEDIUM-SMALL-DATA-PIC-LABEL: lea_dso_local_ifunc:
+; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
+; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq dso_local_ifunc_func(%rip), %rax
+; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
+;
+; MEDIUM-PIC-LABEL: lea_dso_local_ifunc:
+; MEDIUM-PIC:       # %bb.0:
+; MEDIUM-PIC-NEXT:    leaq dso_local_ifunc_func(%rip), %rax
+; MEDIUM-PIC-NEXT:    retq
+;
+; LARGE-PIC-LABEL: lea_dso_local_ifunc:
+; LARGE-PIC:       # %bb.0:
+; LARGE-PIC-NEXT:  .L18$pb:
+; LARGE-PIC-NEXT:    leaq .L18$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L18$pb, %rcx
+; LARGE-PIC-NEXT:    addq %rax, %rcx
+; LARGE-PIC-NEXT:    movabsq $dso_local_ifunc_func@GOTOFF, %rax
+; LARGE-PIC-NEXT:    addq %rcx, %rax
+; LARGE-PIC-NEXT:    retq
+  ret ptr @dso_local_ifunc_func
 }
 
 ; FIXME: The result is same for small, medium and large model, because we
@@ -780,9 +878,9 @@ define dso_local float @load_constant_pool(float %x) #0 {
 ;
 ; LARGE-PIC-LABEL: load_constant_pool:
 ; LARGE-PIC:       # %bb.0:
-; LARGE-PIC-NEXT:  .L17$pb:
-; LARGE-PIC-NEXT:    leaq .L17$pb(%rip), %rax
-; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L17$pb, %rcx
+; LARGE-PIC-NEXT:  .L20$pb:
+; LARGE-PIC-NEXT:    leaq .L20$pb(%rip), %rax
+; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L20$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}@GOTOFF, %rax
 ; LARGE-PIC-NEXT:    addss (%rcx,%rax), %xmm0
