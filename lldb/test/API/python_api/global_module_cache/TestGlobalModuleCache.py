@@ -12,7 +12,6 @@ import shutil
 from pathlib import Path
 import time
 
-
 class GlobalModuleCacheTestCase(TestBase):
     # NO_DEBUG_INFO_TESTCASE = True
 
@@ -49,7 +48,6 @@ class GlobalModuleCacheTestCase(TestBase):
     @expectedFailureAll
     def test_OneTargetTwoDebuggers(self):
         self.do_test(True, False)
-
 
     def do_test(self, one_target, one_debugger):
         # Make sure that if we have one target, and we run, then
@@ -137,7 +135,7 @@ class GlobalModuleCacheTestCase(TestBase):
             fail_msg = fail_msg + "\nError after MPD: " + error_after_mpd
         if fail_msg != "":
             self.fail(fail_msg)
-        
+
     def check_image_list_result(self, num_a_dot_out, num_main_dot_o):
         # Check the global module list, there should only be one a.out, and if we are
         # doing dwarf in .o file, there should only be one .o file.  This returns
@@ -161,12 +159,11 @@ class GlobalModuleCacheTestCase(TestBase):
                 found_a_dot_out += 1
             if "main.o" in line:
                 found_main_dot_o += 1
-
         
         if num_a_dot_out != found_a_dot_out:
             return f"Got {found_a_dot_out} number of a.out's, expected {num_a_dot_out}"
             
         if found_main_dot_o > 0 and num_main_dot_o != found_main_dot_o:
             return f"Got {found_main_dot_o} number of main.o's, expected {num_main_dot_o}"
-        
+
         return ""
