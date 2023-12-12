@@ -9180,18 +9180,29 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 
 std::optional<DestSourcePair>
 AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
-
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0) {
+  bool OpIsORRWrs = MI.getOpcode() == AArch64::ORRWrs;
+  bool OpIsORRXrs = MI.getOpcode() == AArch64::ORRXrs;
+  if (!(OpIsORRWrs || OpIsORRXrs) || MI.getOperand(3).getImm() != 0x0)
+    return std::nullopt;
+  Register Reg1 = MI.getOperand(1).getReg();
+
+  if (OpIsORRWrs && Reg1 == AArch64::WZR) {
+    Register Reg0 = MI.getOperand(0).getReg();
+    if (Reg0.isPhysical()) {
+      const MachineFunction *MF = MI.getMF();
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      for (const MachineOperand &MO : MI.implicit_operands())
+        if (MO.isDef() && MO.isImplicit() &&
+            TRI->isSubRegister(MO.getReg(), Reg0)) {
+          return std::nullopt;
+        }
+    }
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
 
-  if (MI.getOpcode() == AArch64::ORRXrs &&
-      MI.getOperand(1).getReg() == AArch64::XZR &&
-      MI.getOperand(3).getImm() == 0x0) {
+  if (OpIsORRXrs && Reg1 == AArch64::XZR) {
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
 
