@@ -124,7 +124,7 @@
 
 // Unused option warning should only be emitted once.
 // RUN: touch %t.o
-// RUN: %clang-cache %clang -target arm64-apple-macosx12 -fsyntax-only %s -Wl,-ObjC 2>&1 | FileCheck %s -check-prefix=UNUSED_OPT
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -target arm64-apple-macosx12 -fsyntax-only %s -Wl,-ObjC 2>&1 | FileCheck %s -check-prefix=UNUSED_OPT
 // UNUSED_OPT-NOT: warning:
 // UNUSED_OPT: warning: -Wl,-ObjC: 'linker' input unused
 // UNUSED_OPT-NOT: warning:
