@@ -1997,6 +1997,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
     .unsupported();
 
+  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }

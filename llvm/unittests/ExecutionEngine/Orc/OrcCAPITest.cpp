@@ -9,10 +9,12 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/LLJIT.h"
+#include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
 #include "gtest/gtest.h"
 
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
@@ -209,6 +211,20 @@ constexpr StringRef SumExample =
       %r = add nsw i32 %x, %y
       ret i32 %r
     }
+  )";
+
+constexpr StringRef SumDebugExample =
+    R"(
+    define i32 @sum(i32 %x, i32 %y) {
+    entry:
+      %r = add nsw i32 %x, %y
+      ret i32 %r
+    }
+    !llvm.module.flags = !{!0}
+    !llvm.dbg.cu = !{!1}
+    !0 = !{i32 2, !"Debug Info Version", i32 3}
+    !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, emissionKind: FullDebug)
+    !2 = !DIFile(filename: "sum.c", directory: "/tmp")
   )";
 
 } // end anonymous namespace.
@@ -492,6 +508,75 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
            << "): " << toString(E);
   ASSERT_TRUE(!!SumAddr);
+}
+
+// This must be kept in sync with gdb/gdb/jit.h .
+extern "C" {
+
+typedef enum {
+  JIT_NOACTION = 0,
+  JIT_REGISTER_FN,
+  JIT_UNREGISTER_FN
+} jit_actions_t;
+
+struct jit_code_entry {
+  struct jit_code_entry *next_entry;
+  struct jit_code_entry *prev_entry;
+  const char *symfile_addr;
+  uint64_t symfile_size;
+};
+
+struct jit_descriptor {
+  uint32_t version;
+  // This should be jit_actions_t, but we want to be specific about the
+  // bit-width.
+  uint32_t action_flag;
+  struct jit_code_entry *relevant_entry;
+  struct jit_code_entry *first_entry;
+};
+
+// We put information about the JITed function in this global, which the
+// debugger reads.  Make sure to specify the version statically, because the
+// debugger checks the version before we can set it during runtime.
+extern struct jit_descriptor __jit_debug_descriptor;
+
+static void *findLastDebugDescriptorEntryPtr() {
+  struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;
+  while (Last && Last->next_entry)
+    Last = Last->next_entry;
+  return Last;
+}
+}
+
+#if defined(_AIX) or not(defined(__ELF__) or defined(__MACH__))
+TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
+#else
+static LLVM_ATTRIBUTE_USED void linkComponents() {
+  errs() << "Linking in runtime functions\n"
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n';
+}
+TEST_F(OrcCAPITestBase, EnableDebugSupport) {
+#endif
+  if (LLVMErrorRef E = LLVMOrcLLJITEnableDebugSupport(Jit))
+    FAIL() << "Error testing LLJIT debug support (triple = " << TargetTriple
+           << "): " << toString(E);
+
+  void *Before = findLastDebugDescriptorEntryPtr();
+  LLVMMemoryBufferRef ObjBuffer = createTestObject(SumDebugExample, "sum.ll");
+  LLVMOrcObjectLayerRef ObjLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
+  if (LLVMErrorRef E =
+          LLVMOrcObjectLayerAddObjectFile(ObjLayer, MainDylib, ObjBuffer))
+    FAIL() << "Failed to add object file to ObjLinkingLayer (triple = "
+           << TargetTriple << "): " << toString(E);
+
+  LLVMOrcJITTargetAddress SumAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &SumAddr, "sum"))
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
+           << "): " << toString(E);
+
+  void *After = findLastDebugDescriptorEntryPtr();
+  ASSERT_NE(Before, After);
 }
 
 #if defined(_AIX)

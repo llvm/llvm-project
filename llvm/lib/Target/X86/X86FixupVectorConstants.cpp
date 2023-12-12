@@ -190,12 +190,13 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   Type *SclTy = OriginalType->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   NumSclBits = std::min<unsigned>(NumSclBits, SplatBitWidth);
+  LLVMContext &Ctx = OriginalType->getContext();
 
   if (NumSclBits == 8) {
     SmallVector<uint8_t> RawBits;
     for (unsigned I = 0; I != SplatBitWidth; I += 8)
       RawBits.push_back(Splat->extractBits(8, I).getZExtValue());
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   if (NumSclBits == 16) {
@@ -204,25 +205,25 @@ static Constant *rebuildSplatableConstant(const Constant *C,
       RawBits.push_back(Splat->extractBits(16, I).getZExtValue());
     if (SclTy->is16bitFPTy())
       return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   if (NumSclBits == 32) {
     SmallVector<uint32_t> RawBits;
     for (unsigned I = 0; I != SplatBitWidth; I += 32)
       RawBits.push_back(Splat->extractBits(32, I).getZExtValue());
-    if (SclTy->isFloatTy())
-      return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    if (SclTy->isFloatingPointTy())
+      return ConstantDataVector::getFP(Type::getFloatTy(Ctx), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   // Fallback to i64 / double.
   SmallVector<uint64_t> RawBits;
   for (unsigned I = 0; I != SplatBitWidth; I += 64)
     RawBits.push_back(Splat->extractBits(64, I).getZExtValue());
-  if (SclTy->isDoubleTy())
-    return ConstantDataVector::getFP(SclTy, RawBits);
-  return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+  if (SclTy->isFloatingPointTy())
+    return ConstantDataVector::getFP(Type::getDoubleTy(Ctx), RawBits);
+  return ConstantDataVector::get(Ctx, RawBits);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
@@ -285,7 +286,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
   case X86::VMOVUPSYrm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF128, X86::VBROADCASTSDYrm,
+    return ConvertToBroadcast(0, X86::VBROADCASTF128rm, X86::VBROADCASTSDYrm,
                               X86::VBROADCASTSSYrm, 0, 0, 1);
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
@@ -318,7 +319,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
     return ConvertToBroadcast(
-        0, HasAVX2 ? X86::VBROADCASTI128 : X86::VBROADCASTF128,
+        0, HasAVX2 ? X86::VBROADCASTI128rm : X86::VBROADCASTF128rm,
         HasAVX2 ? X86::VPBROADCASTQYrm : X86::VBROADCASTSDYrm,
         HasAVX2 ? X86::VPBROADCASTDYrm : X86::VBROADCASTSSYrm,
         HasAVX2 ? X86::VPBROADCASTWYrm : 0, HasAVX2 ? X86::VPBROADCASTBYrm : 0,

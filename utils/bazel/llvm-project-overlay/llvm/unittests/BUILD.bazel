@@ -309,6 +309,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",

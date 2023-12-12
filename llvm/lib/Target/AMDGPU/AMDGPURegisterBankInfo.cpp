@@ -3317,25 +3317,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 8); // M0
       return;
-    case Intrinsic::prefetch:
-      if (!Subtarget.hasPrefetch()) {
-        MI.eraseFromParent();
-        return;
-      }
-      if (!Subtarget.hasVectorPrefetch()) {
-        unsigned PtrBank = getRegBankID(MI.getOperand(1).getReg(), MRI,
-                                        AMDGPU::SGPRRegBankID);
-        if (PtrBank == AMDGPU::VGPRRegBankID) {
-          MI.eraseFromParent();
-          return;
-        }
-      }
-      // FIXME: There is currently no support for prefetch in global isel.
-      // There is no node equivalence and what's worse there is no MMO produced
-      // for a prefetch on global isel path.
-      // Prefetch does not affect execution so erase it for now.
-      MI.eraseFromParent();
-      return;
     case Intrinsic::amdgcn_s_mov_from_global:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 3); // M0
@@ -3506,6 +3487,25 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_MAD_U64_U32:
   case AMDGPU::G_AMDGPU_MAD_I64_I32:
     applyMappingMAD_64_32(B, OpdMapper);
+    return;
+  case AMDGPU::G_PREFETCH:
+    if (!Subtarget.hasPrefetch()) {
+      MI.eraseFromParent();
+      return;
+    }
+    if (!Subtarget.hasVectorPrefetch()) {
+      unsigned PtrBank =
+          getRegBankID(MI.getOperand(0).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      if (PtrBank == AMDGPU::VGPRRegBankID) {
+        MI.eraseFromParent();
+        return;
+      }
+    }
+    // FIXME: There is currently no support for prefetch in global isel.
+    // There is no node equivalence and what's worse there is no MMO produced
+    // for a prefetch on global isel path.
+    // Prefetch does not affect execution so erase it for now.
+    MI.eraseFromParent();
     return;
   default:
     break;
@@ -5191,9 +5191,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
       OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
       break;
-    case Intrinsic::prefetch:
-      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
-      break;
     case Intrinsic::amdgcn_s_sleep_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
@@ -5332,6 +5329,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FPTRUNC_ROUND_UPWARD:
   case AMDGPU::G_FPTRUNC_ROUND_DOWNWARD:
     return getDefaultMappingVOP(MI);
+  case AMDGPU::G_PREFETCH:
+    OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    break;
   }
 
   return getInstructionMapping(/*ID*/1, /*Cost*/1,

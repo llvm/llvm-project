@@ -559,7 +559,7 @@ bool llvm::StripDebugInfo(Module &M) {
   for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {
     // We're stripping debug info, and without them, coverage information
     // doesn't quite make sense.
-    if (NMD.getName().startswith("llvm.dbg.") ||
+    if (NMD.getName().starts_with("llvm.dbg.") ||
         NMD.getName() == "llvm.gcov") {
       NMD.eraseFromParent();
       Changed = true;

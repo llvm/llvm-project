@@ -364,7 +364,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "polyhedral-info",
       "print-polyhedral-info",
       "replace-with-veclib",
-      "jmc-instrument",
+      "jmc-instrumenter",
       "dot-regions",
       "dot-regions-only",
       "view-regions",
@@ -377,7 +377,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "callbrprepare",
   };
   for (const auto &P : PassNamePrefix)
-    if (Pass.startswith(P))
+    if (Pass.starts_with(P))
       return true;
   for (const auto &P : PassNameContain)
     if (Pass.contains(P))
