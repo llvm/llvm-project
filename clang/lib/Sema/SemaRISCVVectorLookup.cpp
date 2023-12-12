@@ -386,7 +386,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  unsigned Index = IntrinsicList.size();
+  uint32_t Index = IntrinsicList.size();
   IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
