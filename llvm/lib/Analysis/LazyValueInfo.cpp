@@ -754,7 +754,8 @@ LazyValueInfoImpl::solveBlockValuePHINode(PHINode *PN, BasicBlock *BB) {
 }
 
 static ValueLatticeElement getValueFromCondition(Value *Val, Value *Cond,
-                                                 bool isTrueDest = true);
+                                                 bool isTrueDest = true,
+                                                 unsigned Depth = 0);
 
 // If we can determine a constraint on the value given conditions assumed by
 // the program, intersect those constraints with BBLV
@@ -1213,36 +1214,22 @@ static ValueLatticeElement getValueFromOverflowCondition(
   return ValueLatticeElement::getRange(NWR);
 }
 
-// Tracks a Value * condition and whether we're interested in it or its inverse
-typedef PointerIntPair<Value *, 1, bool> CondValue;
+static ValueLatticeElement getValueFromCondition(
+    Value *Val, Value *Cond, bool IsTrueDest, unsigned Depth) {
+  if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
+    return getValueFromICmpCondition(Val, ICI, IsTrueDest);
 
-static std::optional<ValueLatticeElement> getValueFromConditionImpl(
-    Value *Val, CondValue CondVal, bool isRevisit,
-    SmallDenseMap<CondValue, ValueLatticeElement> &Visited,
-    SmallVectorImpl<CondValue> &Worklist) {
+  if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
+    if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
+      if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
+        return getValueFromOverflowCondition(Val, WO, IsTrueDest);
 
-  Value *Cond = CondVal.getPointer();
-  bool isTrueDest = CondVal.getInt();
-  if (!isRevisit) {
-    if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
-      return getValueFromICmpCondition(Val, ICI, isTrueDest);
-
-    if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
-      if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
-        if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
-          return getValueFromOverflowCondition(Val, WO, isTrueDest);
-  }
+  if (++Depth == MaxAnalysisRecursionDepth)
+    return ValueLatticeElement::getOverdefined();
 
   Value *N;
-  if (match(Cond, m_Not(m_Value(N)))) {
-    CondValue NKey(N, !isTrueDest);
-    auto NV = Visited.find(NKey);
-    if (NV == Visited.end()) {
-      Worklist.push_back(NKey);
-      return std::nullopt;
-    }
-    return NV->second;
-  }
+  if (match(Cond, m_Not(m_Value(N))))
+    return getValueFromCondition(Val, N, !IsTrueDest, Depth);
 
   Value *L, *R;
   bool IsAnd;
@@ -1253,64 +1240,19 @@ static std::optional<ValueLatticeElement> getValueFromConditionImpl(
   else
     return ValueLatticeElement::getOverdefined();
 
-  auto LV = Visited.find(CondValue(L, isTrueDest));
-  auto RV = Visited.find(CondValue(R, isTrueDest));
+  ValueLatticeElement LV = getValueFromCondition(Val, L, IsTrueDest, Depth);
+  ValueLatticeElement RV = getValueFromCondition(Val, R, IsTrueDest, Depth);
 
   // if (L && R) -> intersect L and R
   // if (!(L || R)) -> intersect !L and !R
   // if (L || R) -> union L and R
   // if (!(L && R)) -> union !L and !R
-  if ((isTrueDest ^ IsAnd) && (LV != Visited.end())) {
-    ValueLatticeElement V = LV->second;
-    if (V.isOverdefined())
-      return V;
-    if (RV != Visited.end()) {
-      V.mergeIn(RV->second);
-      return V;
-    }
+  if (IsTrueDest ^ IsAnd) {
+    LV.mergeIn(RV);
+    return LV;
   }
 
-  if (LV == Visited.end() || RV == Visited.end()) {
-    assert(!isRevisit);
-    if (LV == Visited.end())
-      Worklist.push_back(CondValue(L, isTrueDest));
-    if (RV == Visited.end())
-      Worklist.push_back(CondValue(R, isTrueDest));
-    return std::nullopt;
-  }
-
-  return intersect(LV->second, RV->second);
-}
-
-ValueLatticeElement getValueFromCondition(Value *Val, Value *Cond,
-                                          bool isTrueDest) {
-  assert(Cond && "precondition");
-  SmallDenseMap<CondValue, ValueLatticeElement> Visited;
-  SmallVector<CondValue> Worklist;
-
-  CondValue CondKey(Cond, isTrueDest);
-  Worklist.push_back(CondKey);
-  do {
-    CondValue CurrentCond = Worklist.back();
-    // Insert an Overdefined placeholder into the set to prevent
-    // infinite recursion if there exists IRs that use not
-    // dominated by its def as in this example:
-    //   "%tmp3 = or i1 undef, %tmp4"
-    //   "%tmp4 = or i1 undef, %tmp3"
-    auto Iter =
-        Visited.try_emplace(CurrentCond, ValueLatticeElement::getOverdefined());
-    bool isRevisit = !Iter.second;
-    std::optional<ValueLatticeElement> Result = getValueFromConditionImpl(
-        Val, CurrentCond, isRevisit, Visited, Worklist);
-    if (Result) {
-      Visited[CurrentCond] = *Result;
-      Worklist.pop_back();
-    }
-  } while (!Worklist.empty());
-
-  auto Result = Visited.find(CondKey);
-  assert(Result != Visited.end());
-  return Result->second;
+  return intersect(LV, RV);
 }
 
 // Return true if Usr has Op as an operand, otherwise false.

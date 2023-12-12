@@ -95,7 +95,7 @@ namespace llvm {
     /// specified value at the specified instruction. This may only be called
     /// on integer-typed Values.
     ConstantRange getConstantRange(Value *V, Instruction *CxtI,
-                                   bool UndefAllowed = true);
+                                   bool UndefAllowed);
 
     /// Return the ConstantRange constraint that is known to hold for the value
     /// at a specific use-site.
