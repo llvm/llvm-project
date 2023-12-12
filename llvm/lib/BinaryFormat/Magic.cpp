@@ -26,7 +26,7 @@ using namespace llvm::sys::fs;
 
 template <size_t N>
 static bool startswith(StringRef Magic, const char (&S)[N]) {
-  return Magic.startswith(StringRef(S, N - 1));
+  return Magic.starts_with(StringRef(S, N - 1));
 }
 
 /// Identify the magic in magic.
@@ -217,11 +217,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "MZ") && Magic.size() >= 0x3c + 4) {
       uint32_t off = read32le(Magic.data() + 0x3c);
       // PE/COFF file, either EXE or DLL.
-      if (Magic.substr(off).startswith(
+      if (Magic.substr(off).starts_with(
               StringRef(COFF::PEMagic, sizeof(COFF::PEMagic))))
         return file_magic::pecoff_executable;
     }
-    if (Magic.startswith("Microsoft C/C++ MSF 7.00\r\n"))
+    if (Magic.starts_with("Microsoft C/C++ MSF 7.00\r\n"))
       return file_magic::pdb;
     if (startswith(Magic, "MDMP"))
       return file_magic::minidump;

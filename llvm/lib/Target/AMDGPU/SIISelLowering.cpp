@@ -14461,7 +14461,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::pair(0U, RC);
   }
 
-  if (Constraint.startswith("{") && Constraint.endswith("}")) {
+  if (Constraint.starts_with("{") && Constraint.ends_with("}")) {
     StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
     if (RegName.consume_front("v")) {
       RC = &AMDGPU::VGPR_32RegClass;

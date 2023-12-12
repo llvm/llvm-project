@@ -548,7 +548,7 @@ public:
     assert(!ContextStr.empty());
     // Note that `[]` wrapped input indicates a full context string, otherwise
     // it's treated as context-less function name only.
-    bool HasContext = ContextStr.startswith("[");
+    bool HasContext = ContextStr.starts_with("[");
     if (!HasContext) {
       State = UnknownContext;
       Func = FunctionId(ContextStr);
