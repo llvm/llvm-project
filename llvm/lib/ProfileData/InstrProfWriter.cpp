@@ -537,6 +537,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       RecordTableGenerator.insert(I.first, I.second);
     }
 
+    // The call to Emit invokes RecordWriterTrait::EmitData which destructs
+    // the memprof record copies owned by the RecordTableGenerator. This works
+    // because the RecordTableGenerator is not used after this point.
     uint64_t RecordTableOffset =
         RecordTableGenerator.Emit(OS.OS, *RecordWriter);
 
