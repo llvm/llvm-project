@@ -3411,12 +3411,16 @@ unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
   case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHLREV_B64_e32_gfx12:
+  case AMDGPU::V_LSHLREV_B64_e64_gfx12:
   case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHRREV_B64_e64_gfx12:
   case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_e64_gfx11:
+  case AMDGPU::V_ASHRREV_I64_e64_gfx12:
   case AMDGPU::V_LSHL_B64_e64:
   case AMDGPU::V_LSHR_B64_e64:
   case AMDGPU::V_ASHR_I64_e64:
@@ -3571,8 +3575,12 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
                : MCRegister::NoRegister;
   };
 
+  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
+  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
+
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-  auto InvalidCompOprIdx = InstInfo.getInvalidCompOperandIndex(getVRegIdx);
+  auto InvalidCompOprIdx =
+      InstInfo.getInvalidCompOperandIndex(getVRegIdx, SkipSrc);
   if (!InvalidCompOprIdx)
     return true;
 
