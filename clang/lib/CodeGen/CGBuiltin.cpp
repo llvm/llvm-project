@@ -137,6 +137,10 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
       {Builtin::BI__builtin_modfl, "modf"},
   };
 
+  static SmallDenseMap<unsigned, StringRef, 4> PPCDoubleDoubleBuiltins{
+      {Builtin::BI__builtin_frexpl, "frexpl"},
+  };
+
   // If the builtin has been declared explicitly with an assembler label,
   // use the mangled name. This differs from the plain label on platforms
   // that prefix labels.
@@ -149,6 +153,11 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
         F128Builtins.contains(BuiltinID))
       Name = F128Builtins[BuiltinID];
+    else if (getTriple().isPPC() && getTriple().isOSLinux() &&
+             &getTarget().getLongDoubleFormat() ==
+                 &llvm::APFloat::PPCDoubleDouble() &&
+             PPCDoubleDoubleBuiltins.contains(BuiltinID))
+      Name = PPCDoubleDoubleBuiltins[BuiltinID];
     else if (getTriple().isOSAIX() &&
              &getTarget().getLongDoubleFormat() ==
                  &llvm::APFloat::IEEEdouble() &&
@@ -3410,9 +3419,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    { Src0->getType(), Src1->getType() });
     return RValue::get(Builder.CreateCall(F, { Src0, Src1 }));
   }
+  case Builtin::BI__builtin_frexpl: {
+    auto &Triple = getTarget().getTriple();
+    if (Triple.isPPC() && Triple.isOSLinux() &&
+        &getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
-  case Builtin::BI__builtin_frexpl:
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
