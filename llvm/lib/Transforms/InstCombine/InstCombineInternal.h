@@ -277,6 +277,7 @@ private:
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
   Instruction *tryCombinePtrAuthCall(CallBase &Call);
+  Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
