@@ -7411,7 +7411,7 @@ static SDValue getTargetNode(JumpTableSDNode *N, const SDLoc &DL, EVT Ty,
 static SDValue getLargeGlobalAddress(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
                                      SelectionDAG &DAG) {
   RISCVConstantPoolConstant *CPV =
-      RISCVConstantPoolConstant::Create(N->getGlobal(), RISCVCP::GlobalValue);
+      RISCVConstantPoolConstant::Create(N->getGlobal());
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
   SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
   return DAG.getLoad(
@@ -7421,8 +7421,8 @@ static SDValue getLargeGlobalAddress(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
 
 static SDValue getLargeBlockAddress(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
                                     SelectionDAG &DAG) {
-  RISCVConstantPoolConstant *CPV = RISCVConstantPoolConstant::Create(
-      N->getBlockAddress(), RISCVCP::BlockAddress);
+  RISCVConstantPoolConstant *CPV =
+      RISCVConstantPoolConstant::Create(N->getBlockAddress());
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
   SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
   return DAG.getLoad(

@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVCONSTANTPOOLVALUE_H
 #define LLVM_LIB_TARGET_RISCV_RISCVCONSTANTPOOLVALUE_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -74,10 +75,8 @@ class RISCVConstantPoolConstant : public RISCVConstantPoolValue {
                             RISCVCP::RISCVCPKind Kind);
 
 public:
-  static RISCVConstantPoolConstant *Create(const GlobalValue *GV,
-                                           RISCVCP::RISCVCPKind Kind);
-  static RISCVConstantPoolConstant *Create(const Constant *C,
-                                           RISCVCP::RISCVCPKind Kind);
+  static RISCVConstantPoolConstant *Create(const GlobalValue *GV);
+  static RISCVConstantPoolConstant *Create(const BlockAddress *BA);
 
   const GlobalValue *getGlobalValue() const;
   const BlockAddress *getBlockAddress() const;
@@ -99,14 +98,14 @@ public:
 };
 
 class RISCVConstantPoolSymbol : public RISCVConstantPoolValue {
-  const std::string S;
+  const StringRef S;
 
   RISCVConstantPoolSymbol(LLVMContext &C, StringRef s);
 
 public:
   static RISCVConstantPoolSymbol *Create(LLVMContext &C, StringRef s);
 
-  std::string getSymbol() const { return S; }
+  StringRef getSymbol() const { return S; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -116,6 +115,7 @@ public:
   void print(raw_ostream &O) const override;
 
   bool equals(const RISCVConstantPoolSymbol *A) const { return S == A->S; }
+
   static bool classof(const RISCVConstantPoolValue *RCPV) {
     return RCPV->isExtSymbol();
   }

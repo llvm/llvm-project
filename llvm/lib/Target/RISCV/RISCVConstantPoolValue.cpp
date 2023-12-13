@@ -40,15 +40,14 @@ RISCVConstantPoolConstant::RISCVConstantPoolConstant(Type *Ty,
     : RISCVConstantPoolValue(Ty, Kind), CVal(GV) {}
 
 RISCVConstantPoolConstant *
-RISCVConstantPoolConstant::Create(const GlobalValue *GV,
-                                  RISCVCP::RISCVCPKind Kind) {
-  return new RISCVConstantPoolConstant(GV->getType(), GV, Kind);
+RISCVConstantPoolConstant::Create(const GlobalValue *GV) {
+  return new RISCVConstantPoolConstant(GV->getType(), GV, RISCVCP::GlobalValue);
 }
 
 RISCVConstantPoolConstant *
-RISCVConstantPoolConstant::Create(const Constant *C,
-                                  RISCVCP::RISCVCPKind Kind) {
-  return new RISCVConstantPoolConstant(C->getType(), C, Kind);
+RISCVConstantPoolConstant::Create(const BlockAddress *BA) {
+  return new RISCVConstantPoolConstant(BA->getType(), BA,
+                                       RISCVCP::BlockAddress);
 }
 
 int RISCVConstantPoolConstant::getExistingMachineCPValue(
