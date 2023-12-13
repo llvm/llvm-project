@@ -9185,21 +9185,14 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // and zero immediate operands used as an alias for mov instruction.
   if (MI.getOpcode() == AArch64::ORRWrs &&
       MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0) {
-    Register Reg0 = MI.getOperand(0).getReg();
-    // ORRWrs is copy instruction when there's no implicit def of the X
-    // register.
-    if (Reg0.isPhysical()) {
-      const MachineFunction *MF = MI.getMF();
-      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-      for (const MachineOperand &MO : MI.implicit_operands())
-        if (MO.isDef() && MO.isImplicit() &&
-            TRI->isSubRegister(MO.getReg(), Reg0)) {
-          return std::nullopt;
-        }
-    }
+      MI.getOperand(3).getImm() == 0x0 &&
+      // Check that the w->w move is not a zero-extending w->x mov.
+      (!MI.getOperand(0).getReg().isVirtual() ||
+       MI.getOperand(0).getSubReg() == 0) &&
+      (!MI.getOperand(0).getReg().isPhysical() ||
+       MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
+                                    AArch64::X0) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
