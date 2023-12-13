@@ -229,7 +229,11 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   } else if (auto llvmFun = dyn_cast<mlir::LLVM::LLVMFuncOp>(sourceSymbol)) {
     sourceType = llvmFun.getFunctionType();
     symName = llvmFun.getSymName();
-  } else {
+  } else if (auto fun = dyn_cast<mlir::cir::FuncOp>(sourceSymbol)) {
+    sourceType = converter->convertType(fun.getFunctionType());
+    symName = fun.getSymName();
+  }
+  else {
     llvm_unreachable("Unexpected GlobalOp type");
   }
 

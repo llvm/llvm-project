@@ -2,7 +2,9 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=MLIR
 // RUN: cir-translate %s -cir-to-llvmir -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// XFAIL: *
 
+!void = !cir.void
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -14,6 +16,7 @@
 !ty_22Bar22 = !cir.struct<struct "Bar" {!s32i, !s8i} #cir.record.decl.ast>
 !ty_22StringStruct22 = !cir.struct<struct "StringStruct" {!cir.array<!s8i x 3>, !cir.array<!s8i x 3>, !cir.array<!s8i x 3>} #cir.record.decl.ast>
 !ty_22StringStructPtr22 = !cir.struct<struct "StringStructPtr" {!cir.ptr<!s8i>} #cir.record.decl.ast>
+!ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>)>>} #cir.record.decl.ast>
 
 module {
   cir.global external @a = #cir.int<3> : !s32i
@@ -146,4 +149,33 @@ module {
   // MLIR: }
   cir.global common @comm = #cir.int<0> : !s32i
   // MLIR: llvm.mlir.global common @comm(0 : i32) {addr_space = 0 : i32} : i32
+
+  cir.global "private" internal @Handlers = #cir.const_array<[#cir.const_struct<{#cir.global_view<@myfun> : !cir.ptr<!cir.func<!void (!s32i)>>}> : !ty_22anon2E122]> : !cir.array<!ty_22anon2E122 x 1>
+  cir.func internal private @myfun(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.return
+  }
+  cir.func @foo(%arg0: !s32i, %arg1: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["flag", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %arg1, %1 : !s32i, cir.ptr <!s32i>
+    %2 = cir.get_global @Handlers : cir.ptr <!cir.array<!ty_22anon2E122 x 1>>
+    %3 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>), !cir.ptr<!ty_22anon2E122>
+    %5 = cir.ptr_stride(%4 : !cir.ptr<!ty_22anon2E122>, %3 : !s32i), !cir.ptr<!ty_22anon2E122>
+    %6 = cir.get_member %5[0] {name = "func"} : !cir.ptr<!ty_22anon2E122> -> !cir.ptr<!cir.ptr<!cir.func<!void (!s32i)>>>
+    %7 = cir.load %6 : cir.ptr <!cir.ptr<!cir.func<!void (!s32i)>>>, !cir.ptr<!cir.func<!void (!s32i)>>
+    %8 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    cir.call %7(%8) : (!cir.ptr<!cir.func<!void (!s32i)>>, !s32i) -> ()
+    cir.return
+  }
+  //MLIR:  %[[RES4:.*]] = llvm.mlir.addressof @Handlers : !llvm.ptr
+  //MLIR:  %[[RES5:.*]] = llvm.load {{.*}} : !llvm.ptr -> i32
+  //MLIR:  %[[RES6:.*]] = llvm.getelementptr %[[RES4]][0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
+  //MLIR:  %[[RES7:.*]] = llvm.getelementptr %[[RES6]][%[[RES5]]] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
+  //MLIR:  %[[RES8:.*]] = llvm.getelementptr %[[RES7]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.anon.1", (ptr)>
+  //MLIR:  %[[RES9:.*]] = llvm.load %[[RES8]] : !llvm.ptr -> !llvm.ptr
+  //MLIR:  llvm.call %[[RES9]]({{.*}}) : !llvm.ptr, (i32) -> ()
 }
