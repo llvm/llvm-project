@@ -71,7 +71,7 @@ namespace std  // purposefully not versioned
 {
 enum class byte : unsigned char {};
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte  operator| (byte  __lhs, byte __rhs) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte  operator| (byte  __lhs, byte __rhs) noexcept
 {
     return static_cast<byte>(
       static_cast<unsigned char>(
@@ -79,10 +79,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr byte  operator| (byte  __lhs, byte __rhs) noexce
     ));
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
 { return __lhs = __lhs | __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte  operator& (byte  __lhs, byte __rhs) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte  operator& (byte  __lhs, byte __rhs) noexcept
 {
     return static_cast<byte>(
       static_cast<unsigned char>(
@@ -90,10 +90,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr byte  operator& (byte  __lhs, byte __rhs) noexce
     ));
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
 { return __lhs = __lhs & __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte  operator^ (byte  __lhs, byte __rhs) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte  operator^ (byte  __lhs, byte __rhs) noexcept
 {
     return static_cast<byte>(
       static_cast<unsigned char>(
@@ -101,10 +101,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr byte  operator^ (byte  __lhs, byte __rhs) noexce
     ));
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept
 { return __lhs = __lhs ^ __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr byte  operator~ (byte __b) noexcept
+_LIBCPP_HIDE_FROM_ABI inline constexpr byte  operator~ (byte __b) noexcept
 {
     return static_cast<byte>(
       static_cast<unsigned char>(
