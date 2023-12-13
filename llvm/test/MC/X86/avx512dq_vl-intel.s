@@ -144,3 +144,6 @@
 # CHECK: vfpclassps	k2 {k7}, dword ptr [rcx]{1to8}, 123
 # CHECK: encoding: [0x62,0xf3,0x7d,0x3f,0x66,0x11,0x7b]
          vfpclassps	k2 {k7}, dword ptr [rcx]{1to8}, 123
+# CHECK: vcvttps2uqq     xmm1 {k2}, qword ptr [ecx + 128]
+# CHECK: encoding: [0x67,0x62,0xf1,0x7d,0x0a,0x78,0x49,0x10]
+         vcvttps2uqq     xmm1 {k2}, qword ptr [ecx + 128]

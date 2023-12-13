@@ -138,9 +138,7 @@
 ; 64BIT-LABEL:   fixedStack:
 ; 64BIT-DAG:     - { id: 0, type: default, offset: 112, size: 8, alignment: 16, stack-id: default,
 
-; 64BIT-LABEL:   stack:
-; 64BIT-DAG:     - { id: 0, name: arg1, type: default, offset: 0, size: 8, alignment: 8,
-; 64BIT-DAG:     - { id: 1, name: arg2, type: default, offset: 0, size: 8, alignment: 8,
+; 64BIT-LABEL:   stack: []
 
 ; 64BIT-LABEL:   body:             |
 ; 64BIT-DAG:     liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10
@@ -305,9 +303,7 @@
 ; 64BIT-LABEL:   fixedStack:
 ; 64BIT-DAG:       - { id: 0, type: default, offset: 152, size: 8
 
-; 64BIT-LABEL:   stack:
-; 64BIT-DAG:       - { id: 0, name: arg1, type: default, offset: 0, size: 8
-; 64BIT-DAG:       - { id: 1, name: arg2, type: default, offset: 0, size: 8
+; 64BIT-LABEL:   stack:           []
 
 ; 64BIT-LABEL:     body:             |
 ; 64BIT-DAG:       liveins: $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8, $f9, $f10, $f11, $f12, $f13
