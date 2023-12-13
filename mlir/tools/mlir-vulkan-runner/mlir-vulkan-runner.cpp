@@ -106,9 +106,8 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
                   mlir::gpu::GPUDialect, mlir::spirv::SPIRVDialect,
-                  mlir::scf::SCFDialect,
-                  mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-                  mlir::vector::VectorDialect>();
+                  mlir::scf::SCFDialect, mlir::func::FuncDialect,
+                  mlir::memref::MemRefDialect, mlir::vector::VectorDialect>();
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
 
