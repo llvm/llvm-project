@@ -1693,6 +1693,7 @@ enum : unsigned {
 enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
   GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
+  GNU_PROPERTY_AARCH64_FEATURE_1_GCS = 1 << 2,
 };
 
 // x86 processor feature bits.
