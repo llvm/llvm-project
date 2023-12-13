@@ -1432,14 +1432,12 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     StringRef TripleOS = Triple.getOSName();
     StringRef TripleEnvironmentType = Triple.getEnvironmentTypeName(Triple.getEnvironment());
 
-    if (TripleVersion == 0 && TripleVersionName != "" && TripleEnvironmentType == "android"
-      && TripleOS != "unknown") {
-        Diags.Report(diag::err_android_version_invalid) << TripleVersionName
-                                                        << TripleArch
-                                                        << Triple.getVendorName()
-                                                        << TripleOS
-                                                        << TripleEnvironmentType;
-        ContainsError = true;
+    if (TripleVersion == 0 && TripleVersionName != "" &&
+        TripleEnvironmentType == "android" && TripleOS != "unknown") {
+      Diags.Report(diag::err_android_version_invalid)
+          << TripleVersionName << TripleArch << Triple.getVendorName()
+          << TripleOS << TripleEnvironmentType;
+      ContainsError = true;
     }
   }
 
