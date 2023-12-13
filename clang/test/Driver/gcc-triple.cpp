@@ -10,5 +10,5 @@
 // RUN: %clang --target=x86_64-redhat-linux-gnu \
 // RUN:   --sysroot=%S/Inputs/fedora_39_tree --gcc-triple=x86_64-gentoo-linux -v 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=TRIPLE_DOESNT_EXIST
-//
+
 // TRIPLE_DOESNT_EXIST-NOT: x86_64-gentoo-linux
