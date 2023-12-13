@@ -3385,6 +3385,9 @@ static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
              .Case("normal", "small")
              .Case("extreme", "large")
              .Default(CM);
+  } else {
+    S.Diag(LiteralLoc, diag::err_attr_codemodel);
+    return;
   }
 
   // Check that the value is acceptable.
