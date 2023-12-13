@@ -103,7 +103,7 @@ void initializeEdgeBundlesPass(PassRegistry&);
 void initializeEHContGuardCatchretPass(PassRegistry &);
 void initializeExpandLargeFpConvertLegacyPassPass(PassRegistry&);
 void initializeExpandLargeDivRemLegacyPassPass(PassRegistry&);
-void initializeExpandMemCmpPassPass(PassRegistry&);
+void initializeExpandMemCmpLegacyPassPass(PassRegistry &);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeExpandReductionsPass(PassRegistry&);
 void initializeExpandVectorPredicationPass(PassRegistry &);
