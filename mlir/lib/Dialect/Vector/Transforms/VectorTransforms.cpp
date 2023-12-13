@@ -1493,18 +1493,20 @@ struct DropUnitDimFromElementwiseOps final
     if (sourceVectorType.getRank() < 2)
       return failure();
 
-    bool trailingDimUnitFixed = ((sourceVectorType.getShape().back() == 1) &&
-                                 (!sourceVectorType.getScalableDims().back()));
-    bool leadDimUnitFixed = ((sourceVectorType.getShape().front() == 1) &&
-                             (!sourceVectorType.getScalableDims().front()));
-    if (!leadDimUnitFixed && !trailingDimUnitFixed)
+    bool hasTrailingDimUnitFixed =
+        ((sourceVectorType.getShape().back() == 1) &&
+         (!sourceVectorType.getScalableDims().back()));
+    bool hasLeadingDimUnitFixed =
+        ((sourceVectorType.getShape().front() == 1) &&
+         (!sourceVectorType.getScalableDims().front()));
+    if (!hasLeadingDimUnitFixed && !hasTrailingDimUnitFixed)
       return failure();
 
     // Drop leading/trailing unit dim by applying vector.shape_cast to all
     // operands
     auto elTy = sourceVectorType.getElementType();
     VectorType newVType =
-        leadDimUnitFixed
+        hasLeadingDimUnitFixed
             ? VectorType::get(sourceVectorType.getShape().drop_front(1), elTy,
                               sourceVectorType.getScalableDims().drop_front(1))
             : VectorType::get(sourceVectorType.getShape().drop_back(1), elTy,
@@ -1598,8 +1600,8 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
   patterns.add<ShapeCastOpFolder>(patterns.getContext(), benefit);
 }
 
-void mlir::vector::populateReorderShapeCastPatterns(RewritePatternSet &patterns,
-                                                    PatternBenefit benefit) {
+void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropUnitDimFromElementwiseOps, ShapeCastOpFolder>(
       patterns.getContext(), benefit);
 }
