@@ -213,6 +213,9 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_V2INT32,
   OPERAND_REG_INLINE_C_V2FP32,
 
+  // Operand for split barrier inline constant
+  OPERAND_INLINE_SPLIT_BARRIER_INT32,
+
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
@@ -1024,6 +1027,12 @@ enum Register_Flag : uint8_t {
 
 } // namespace VirtRegFlag
 
+} // namespace AMDGPU
+
+namespace AMDGPU {
+namespace Barrier {
+enum Type { TRAP = -2, WORKGROUP = -1 };
+} // namespace Barrier
 } // namespace AMDGPU
 
 // clang-format off
