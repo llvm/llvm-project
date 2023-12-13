@@ -465,7 +465,8 @@ class InitListChecker {
   void FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
                                const InitializedEntity &ParentEntity,
                                InitListExpr *ILE, bool &RequiresSecondPass,
-                               bool FillWithNoInit = false);
+                               bool FillWithNoInit = false,
+                               bool WarnIfMissing = false);
   void FillInEmptyInitializations(const InitializedEntity &Entity,
                                   InitListExpr *ILE, bool &RequiresSecondPass,
                                   InitListExpr *OuterILE, unsigned OuterIndex,
@@ -654,11 +655,16 @@ void InitListChecker::FillInEmptyInitForBase(
   }
 }
 
-void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
-                                        const InitializedEntity &ParentEntity,
-                                              InitListExpr *ILE,
-                                              bool &RequiresSecondPass,
-                                              bool FillWithNoInit) {
+static bool hasAnyDesignatedInits(const InitListExpr *IL) {
+  return llvm::any_of(*IL, [=](const Stmt *Init) {
+    return isa_and_nonnull<DesignatedInitExpr>(Init);
+  });
+}
+
+void InitListChecker::FillInEmptyInitForField(
+    unsigned Init, FieldDecl *Field, const InitializedEntity &ParentEntity,
+    InitListExpr *ILE, bool &RequiresSecondPass, bool FillWithNoInit,
+    bool WarnIfMissing) {
   SourceLocation Loc = ILE->getEndLoc();
   unsigned NumInits = ILE->getNumInits();
   InitializedEntity MemberEntity
@@ -726,15 +732,52 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
 
     if (hadError || VerifyOnly) {
       // Do nothing
-    } else if (Init < NumInits) {
-      ILE->setInit(Init, MemberInit.getAs<Expr>());
-    } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
-      // Empty initialization requires a constructor call, so
-      // extend the initializer list to include the constructor
-      // call and make a note that we'll need to take another pass
-      // through the initializer list.
-      ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
-      RequiresSecondPass = true;
+    } else {
+      if (WarnIfMissing) {
+        auto CheckAnonMember = [&](const FieldDecl *FD,
+                                   auto &&CheckAnonMember) -> FieldDecl * {
+          FieldDecl *Uninitialized = nullptr;
+          RecordDecl *RD = FD->getType()->getAsRecordDecl();
+          assert(RD && "Not anonymous member checked?");
+          for (auto *F : RD->fields()) {
+            FieldDecl *UninitializedFieldInF = nullptr;
+            if (F->isAnonymousStructOrUnion())
+              UninitializedFieldInF = CheckAnonMember(F, CheckAnonMember);
+            else if (!F->isUnnamedBitfield() &&
+                     !F->getType()->isIncompleteArrayType() &&
+                     !F->hasInClassInitializer())
+              UninitializedFieldInF = F;
+
+            if (RD->isUnion() && !UninitializedFieldInF)
+              return nullptr;
+            if (!Uninitialized)
+              Uninitialized = UninitializedFieldInF;
+          }
+          return Uninitialized;
+        };
+
+        FieldDecl *FieldToDiagnose = nullptr;
+        if (Field->isAnonymousStructOrUnion())
+          FieldToDiagnose = CheckAnonMember(Field, CheckAnonMember);
+        else if (!Field->isUnnamedBitfield() &&
+                 !Field->getType()->isIncompleteArrayType())
+          FieldToDiagnose = Field;
+
+        if (FieldToDiagnose)
+          SemaRef.Diag(Loc, diag::warn_missing_field_initializers)
+              << FieldToDiagnose;
+      }
+
+      if (Init < NumInits) {
+        ILE->setInit(Init, MemberInit.getAs<Expr>());
+      } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
+        // Empty initialization requires a constructor call, so
+        // extend the initializer list to include the constructor
+        // call and make a note that we'll need to take another pass
+        // through the initializer list.
+        ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
+        RequiresSecondPass = true;
+      }
     }
   } else if (InitListExpr *InnerILE
                = dyn_cast<InitListExpr>(ILE->getInit(Init))) {
@@ -802,9 +845,25 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
         }
       }
     } else {
+      InitListExpr *SForm =
+          ILE->isSyntacticForm() ? ILE : ILE->getSyntacticForm();
       // The fields beyond ILE->getNumInits() are default initialized, so in
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
+
+      // Some checks that are required for missing fields warning are bound to
+      // how many elements the initializer list originally was provided; perform
+      // them before the list is expanded.
+      bool WarnIfMissingField =
+          !SForm->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
+          ILE->getNumInits();
+
+      // Disable check for missing fields when designators are used in C to
+      // match gcc behaviour.
+      // FIXME: Should we emulate possible gcc warning bug?
+      WarnIfMissingField &=
+          SemaRef.getLangOpts().CPlusPlus || !hasAnyDesignatedInits(SForm);
+
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
         ++NumElems;
@@ -832,7 +891,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
           return;
 
         FillInEmptyInitForField(Init, Field, Entity, ILE, RequiresSecondPass,
-                                FillWithNoInit);
+                                FillWithNoInit, WarnIfMissingField);
         if (hadError)
           return;
 
@@ -945,13 +1004,6 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
                                  /*FillWithNoInit =*/true);
     }
   }
-}
-
-static bool hasAnyDesignatedInits(const InitListExpr *IL) {
-  for (const Stmt *Init : *IL)
-    if (isa_and_nonnull<DesignatedInitExpr>(Init))
-      return true;
-  return false;
 }
 
 InitListChecker::InitListChecker(
@@ -2225,11 +2277,7 @@ void InitListChecker::CheckStructUnionTypes(
   size_t NumRecordDecls = llvm::count_if(RD->decls(), [&](const Decl *D) {
     return isa<FieldDecl>(D) || isa<RecordDecl>(D);
   });
-  bool CheckForMissingFields =
-    !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
   bool HasDesignatedInit = false;
-
-  llvm::SmallPtrSet<FieldDecl *, 4> InitializedFields;
 
   while (Index < IList->getNumInits()) {
     Expr *Init = IList->getInit(Index);
@@ -2254,24 +2302,17 @@ void InitListChecker::CheckStructUnionTypes(
 
       // Find the field named by the designated initializer.
       DesignatedInitExpr::Designator *D = DIE->getDesignator(0);
-      if (!VerifyOnly && D->isFieldDesignator()) {
+      if (!VerifyOnly && D->isFieldDesignator() && !DesignatedInitFailed) {
         FieldDecl *F = D->getFieldDecl();
-        InitializedFields.insert(F);
-        if (!DesignatedInitFailed) {
-          QualType ET = SemaRef.Context.getBaseElementType(F->getType());
-          if (checkDestructorReference(ET, InitLoc, SemaRef)) {
-            hadError = true;
-            return;
-          }
+        QualType ET = SemaRef.Context.getBaseElementType(F->getType());
+        if (checkDestructorReference(ET, InitLoc, SemaRef)) {
+          hadError = true;
+          return;
         }
       }
 
       InitializedSomething = true;
 
-      // Disable check for missing fields when designators are used.
-      // This matches gcc behaviour.
-      if (!SemaRef.getLangOpts().CPlusPlus)
-        CheckForMissingFields = false;
       continue;
     }
 
@@ -2350,7 +2391,6 @@ void InitListChecker::CheckStructUnionTypes(
     CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
-    InitializedFields.insert(*Field);
 
     if (RD->isUnion() && StructuredList) {
       // Initialize the first field within the union.
@@ -2358,28 +2398,6 @@ void InitListChecker::CheckStructUnionTypes(
     }
 
     ++Field;
-  }
-
-  // Emit warnings for missing struct field initializers.
-  if (!VerifyOnly && InitializedSomething && CheckForMissingFields &&
-      !RD->isUnion()) {
-    // It is possible we have one or more unnamed bitfields remaining.
-    // Find first (if any) named field and emit warning.
-    for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
-                                                           : Field,
-                                    end = RD->field_end();
-         it != end; ++it) {
-      if (HasDesignatedInit && InitializedFields.count(*it))
-        continue;
-
-      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
-          !it->getType()->isIncompleteArrayType()) {
-        SemaRef.Diag(IList->getSourceRange().getEnd(),
-                     diag::warn_missing_field_initializers)
-            << *it;
-        break;
-      }
-    }
   }
 
   // Check that any remaining fields can be value-initialized if we're not

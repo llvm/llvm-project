@@ -115,10 +115,10 @@ std::optional<Operation *> CodegenEnv::genLoopBoundary(
   SmallVector<Value> params;
   if (isReduc()) {
     params.push_back(redVal);
-    if (redValidLexInsert)
+    if (isValidLexInsert())
       params.push_back(redValidLexInsert);
   } else {
-    assert(!redValidLexInsert);
+    assert(!isValidLexInsert());
   }
   if (isExpand())
     params.push_back(expCount);
@@ -128,8 +128,8 @@ std::optional<Operation *> CodegenEnv::genLoopBoundary(
   unsigned i = 0;
   if (isReduc()) {
     updateReduc(params[i++]);
-    if (redValidLexInsert)
-      setValidLexInsert(params[i++]);
+    if (isValidLexInsert())
+      updateValidLexInsert(params[i++]);
   }
   if (isExpand())
     updateExpandCount(params[i++]);
@@ -235,14 +235,14 @@ void CodegenEnv::endExpand() {
 //===----------------------------------------------------------------------===//
 
 void CodegenEnv::startReduc(ExprId exp, Value val) {
-  assert(!isReduc() && exp != detail::kInvalidId);
+  assert(!isReduc() && exp != detail::kInvalidId && val);
   redExp = exp;
   redVal = val;
   latticeMerger.setExprValue(exp, val);
 }
 
 void CodegenEnv::updateReduc(Value val) {
-  assert(isReduc());
+  assert(isReduc() && val);
   redVal = val;
   latticeMerger.clearExprValue(redExp);
   latticeMerger.setExprValue(redExp, val);
@@ -257,13 +257,18 @@ Value CodegenEnv::endReduc() {
   return val;
 }
 
-void CodegenEnv::setValidLexInsert(Value val) {
-  assert(isReduc() && val);
+void CodegenEnv::startValidLexInsert(Value val) {
+  assert(!isValidLexInsert() && isReduc() && val);
   redValidLexInsert = val;
 }
 
-void CodegenEnv::clearValidLexInsert() {
-  assert(!isReduc());
+void CodegenEnv::updateValidLexInsert(Value val) {
+  assert(redValidLexInsert && isReduc() && val);
+  redValidLexInsert = val;
+}
+
+void CodegenEnv::endValidLexInsert() {
+  assert(isValidLexInsert() && !isReduc());
   redValidLexInsert = Value();
 }
 
@@ -272,7 +277,7 @@ void CodegenEnv::startCustomReduc(ExprId exp) {
   redCustom = exp;
 }
 
-Value CodegenEnv::getCustomRedId() {
+Value CodegenEnv::getCustomRedId() const {
   assert(isCustomReduc());
   return dyn_cast<sparse_tensor::ReduceOp>(exp(redCustom).op).getIdentity();
 }

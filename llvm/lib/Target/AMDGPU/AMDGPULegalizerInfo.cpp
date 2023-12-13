@@ -681,13 +681,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    getActionDefinitionsBuilder({G_ADD, G_SUB})
-      .legalFor({S32, S16, V2S16})
-      .clampMaxNumElementsStrict(0, S16, 2)
-      .scalarize(0)
-      .minScalar(0, S16)
-      .widenScalarToNextMultipleOf(0, 32)
-      .maxScalar(0, S32);
+    if (ST.hasScalarAddSub64()) {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S64, S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    } else {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    }
 
     getActionDefinitionsBuilder(G_MUL)
       .legalFor({S32, S16, V2S16})
