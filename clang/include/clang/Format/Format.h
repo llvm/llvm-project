@@ -3749,23 +3749,34 @@ struct FormatStyle {
   /// \version 13
   ReferenceAlignmentStyle ReferenceAlignment;
 
+  enum ReflowCommentsStyle : int8_t { RCS_Never, RCS_IndentOnly, RCS_Always };
   // clang-format off
   /// If ``true``, clang-format will attempt to re-flow comments. That is it
   /// will touch a comment and *reflow* long comments into new lines, trying to
   /// obey the ``ColumnLimit``.
   /// \code
-  ///    false:
+  ///    RCS_Never:
   ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
   ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+  ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+  ///         * and a misaligned second line */
   ///
-  ///    true:
+  ///    RCS_IndentOnly:
+  ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+  ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
+  ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
+  ///     * and a misaligned second line */
+  ///
+  ///    RCS_Always:
   ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
   ///    // information
   ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
   ///     * information */
+  ///    /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
+  ///     * information and a misaligned second line */
   /// \endcode
   /// \version 3.8
-  bool ReflowComments;
+  ReflowCommentsStyle ReflowComments;
   // clang-format on
 
   /// Remove optional braces of control statements (``if``, ``else``, ``for``,

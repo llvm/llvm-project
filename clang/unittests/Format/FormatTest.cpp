@@ -17851,7 +17851,7 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
 
   // Test across comments
   Style.MaxEmptyLinesToKeep = 10;
-  Style.ReflowComments = false;
+  Style.ReflowComments = FormatStyle::RCS_Never;
   Style.AlignConsecutiveMacros.AcrossComments = true;
   verifyFormat("#define a    3\n"
                "// line comment\n"
@@ -18598,7 +18598,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLinesAndComments) {
                "y = 1;",
                Alignment);
 
-  Alignment.ReflowComments = true;
+  Alignment.ReflowComments = FormatStyle::RCS_Always;
   Alignment.ColumnLimit = 50;
   verifyFormat("int x   = 0;\n"
                "int yy  = 1; /// specificlennospace\n"
@@ -18996,7 +18996,7 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "y = 1;",
                Alignment);
 
-  EXPECT_EQ(Alignment.ReflowComments, true);
+  EXPECT_EQ(Alignment.ReflowComments, FormatStyle::RCS_Always);
   Alignment.ColumnLimit = 50;
   verifyFormat("int x   = 0;\n"
                "int yy  = 1; /// specificlennospace\n"
