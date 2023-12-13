@@ -1868,12 +1868,16 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_PRIV)
     return MCDisassembler::Fail;
 
-  PRINT_DIRECTIVE(".amdhsa_dx10_clamp", COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
+  if (!isGFX12Plus())
+    PRINT_DIRECTIVE(".amdhsa_dx10_clamp",
+                    COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP);
 
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_DEBUG_MODE)
     return MCDisassembler::Fail;
 
-  PRINT_DIRECTIVE(".amdhsa_ieee_mode", COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
+  if (!isGFX12Plus())
+    PRINT_DIRECTIVE(".amdhsa_ieee_mode",
+                    COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE);
 
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_BULKY)
     return MCDisassembler::Fail;
@@ -1899,6 +1903,11 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
     PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED);
     PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS);
   }
+
+  if (isGFX12Plus())
+    PRINT_DIRECTIVE(".amdhsa_round_robin_scheduling",
+                    COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN);
+
   return MCDisassembler::Success;
 }
 
