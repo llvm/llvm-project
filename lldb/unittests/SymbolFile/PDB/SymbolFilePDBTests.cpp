@@ -382,7 +382,6 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  TypeMap results;
 
   auto clang_ast_ctx_or_err =
       symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
