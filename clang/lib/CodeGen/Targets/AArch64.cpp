@@ -138,6 +138,8 @@ public:
                   BPI.BranchTargetEnforcement ? "true" : "false");
     Fn->addFnAttr("branch-protection-pauth-lr",
                   BPI.BranchProtectionPAuthLR ? "true" : "false");
+    Fn->addFnAttr("guarded-control-stack",
+                  BPI.GuardedControlStack ? "true" : "false");
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
