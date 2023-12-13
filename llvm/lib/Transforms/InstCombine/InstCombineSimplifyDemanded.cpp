@@ -640,6 +640,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                     DemandedMask, Known))
             return R;
 
+      // Do not simplify if shl is part of funnel-shift pattern
+      if (I->hasOneUse()) {
+        auto *Inst = dyn_cast<Instruction>(I->user_back());
+        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+          if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
+            auto [IID, FShiftArgs] = *Opt;
+            if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
+                FShiftArgs[0] == FShiftArgs[1])
+              return nullptr;
+          }
+        }
+      }
+
       // TODO: If we only want bits that already match the signbit then we don't
       // need to shift.
 
@@ -699,6 +712,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
+
+      // Do not simplify if lshr is part of funnel-shift pattern
+      if (I->hasOneUse()) {
+        auto *Inst = dyn_cast<Instruction>(I->user_back());
+        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+          if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
+            auto [IID, FShiftArgs] = *Opt;
+            if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
+                FShiftArgs[0] == FShiftArgs[1])
+              return nullptr;
+          }
+        }
+      }
 
       // If we are just demanding the shifted sign bit and below, then this can
       // be treated as an ASHR in disguise.

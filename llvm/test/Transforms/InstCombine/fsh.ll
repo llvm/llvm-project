@@ -726,7 +726,7 @@ define i32 @fsh_rotate_5(i8 %x, i32 %y) {
 ; CHECK-LABEL: @fsh_rotate_5(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[T1]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[Y]], i32 5)
+; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 5)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;
 
@@ -742,7 +742,7 @@ define i32 @fsh_rotate_18(i8 %x, i32 %y) {
 ; CHECK-LABEL: @fsh_rotate_18(
 ; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[T1]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[Y]], i32 18)
+; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 18)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;
 
@@ -769,12 +769,12 @@ define i32 @fsh_load_rotate_12(ptr %data) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
 ; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
+; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
 ; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[SHL6]], [[CONV9]]
-; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[TMP4]], [[SHL3]]
-; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR]], i32 12)
+; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
+; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR10]], i32 12)
 ; CHECK-NEXT:    ret i32 [[OR15]]
 ;
 
@@ -822,7 +822,7 @@ define i32 @fsh_load_rotate_25(ptr %data) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
 ; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
-; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[CONV9]], i32 [[OR10]], i32 25)
+; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR10]], i32 25)
 ; CHECK-NEXT:    ret i32 [[OR15]]
 ;
 
