@@ -729,7 +729,8 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
   }
 
   if (ObjectSymIt == CurrentObjectAddresses.end()) {
-    Warning("could not find object file symbol for symbol " + Twine(Name));
+    Warning("could not find symbol '" + Twine(Name) + "' in object file '" +
+            CurrentDebugMapObject->getObjectFilename() + "'");
     return;
   }
 
