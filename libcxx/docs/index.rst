@@ -4,6 +4,10 @@
 "libc++" C++ Standard Library
 =============================
 
+.. image:: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule
+   :target: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml
+   :alt: Build and Test libc++
+
 Overview
 ========
 
