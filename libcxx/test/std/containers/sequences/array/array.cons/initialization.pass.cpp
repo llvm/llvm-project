@@ -181,6 +181,20 @@ TEST_CONSTEXPR_CXX14 bool with_all_types()
     return true;
 }
 
+// This is a regression test -- previously, libc++ would implement empty arrays by
+// storing an array of characters, which means that the array would be initializable
+// from nonsense like an integer (or anything else that can be narrowed to char).
+#if TEST_STD_VER >= 20
+template <class T>
+concept is_list_initializable_int = requires {
+    { T{123} };
+};
+
+struct Foo { };
+static_assert(!is_list_initializable_int<std::array<Foo, 0>>);
+static_assert(!is_list_initializable_int<std::array<Foo, 1>>);
+#endif
+
 int main(int, char**)
 {
     with_all_types<test_initialization>();
