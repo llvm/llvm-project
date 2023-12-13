@@ -685,6 +685,9 @@ Bug Fixes in This Version
   (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
   (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
+- Fixed false positive error emitted when templated alias inside a class
+  used private members of the same class.
+  Fixes (`#41693 <https://github.com/llvm/llvm-project/issues/41693>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

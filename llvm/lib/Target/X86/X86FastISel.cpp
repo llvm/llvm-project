@@ -714,6 +714,12 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
     if (TM.getCodeModel() != CodeModel::Small)
       return false;
 
+    // Can't handle large objects yet.
+    if (auto *GO = dyn_cast<GlobalObject>(GV)) {
+      if (TM.isLargeGlobalObject(GO))
+        return false;
+    }
+
     // Can't handle TLS yet.
     if (GV->isThreadLocal())
       return false;
