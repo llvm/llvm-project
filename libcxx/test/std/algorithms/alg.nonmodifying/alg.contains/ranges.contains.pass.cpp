@@ -153,15 +153,14 @@ constexpr void test_iterators() {
 }
 
 constexpr bool test() {
-  types::for_each(
-    types::type_list<char, short, int, long, long long>{}, []<class T> {
-      types::for_each(types::cpp20_input_iterator_list<T*>{}, []<class Iter> {
-        if constexpr (std::forward_iterator<Iter>)
-          test_iterators<Iter>();
-        test_iterators<Iter, sentinel_wrapper<Iter>>();
-        test_iterators<Iter, sized_sentinel<Iter>>();
-      });
+  types::for_each(types::type_list<char, short, int, long, long long>{}, []<class T> {
+    types::for_each(types::cpp20_input_iterator_list<T*>{}, []<class Iter> {
+      if constexpr (std::forward_iterator<Iter>)
+        test_iterators<Iter>();
+      test_iterators<Iter, sentinel_wrapper<Iter>>();
+      test_iterators<Iter, sized_sentinel<Iter>>();
     });
+  });
 
   { // count invocations of the projection
     int a[]              = {1, 9, 0, 13, 25};
