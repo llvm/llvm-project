@@ -28,6 +28,16 @@ jobs:
         run: python3 -c "import sys; print(sys.version)"
       - name: Test Checkout
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            libcxx
+            libcxxabi
+            llvm/utils
+            llvm/cmake
+            llvm/CMakelists.txt
+            cmake
+            runtimes
       - name: End Step
         if: always()
         run: echo "End Step"
