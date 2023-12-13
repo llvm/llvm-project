@@ -3659,8 +3659,8 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   // underlying address space, even if it was lowered to a different one,
   // e.g. private accesses lowered to use MUBUF instructions on a scratch
   // buffer.
-  if (isDS(MIa) || isLDSDMA(MIa)) {
-    if (isDS(MIb) || isLDSDMA(MIb))
+  if (isDS(MIa)) {
+    if (isDS(MIb))
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
 
     return !isFLAT(MIb) || isSegmentSpecificFLAT(MIb);
