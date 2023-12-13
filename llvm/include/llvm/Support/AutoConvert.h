@@ -30,7 +30,6 @@ extern "C" {
 int enableAutoConversion(int FD);
 int disableAutoConversion(int FD);
 int restoreStdHandleAutoConversion(int FD);
-int overrideAutoConversion(int FD, char *Filetag);
 #ifdef __cplusplus
 }
 #endif // __cplusplus
