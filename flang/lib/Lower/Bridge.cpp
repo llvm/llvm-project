@@ -303,9 +303,12 @@ public:
                      },
                      [&](Fortran::lower::pft::ModuleLikeUnit &m) {
                        lowerModuleDeclScope(m);
-                       for (Fortran::lower::pft::FunctionLikeUnit &f :
-                            m.nestedFunctions)
-                         declareFunction(f);
+                       for (Fortran::lower::pft::NestedUnit &unit :
+                            m.nestedUnits) {
+                         if (auto *f = std::get_if<
+                                 Fortran::lower::pft::FunctionLikeUnit>(&unit))
+                           declareFunction(*f);
+                       }
                      },
                      [&](Fortran::lower::pft::BlockDataUnit &b) {
                        if (!globalOmpRequiresSymbol)
@@ -387,13 +390,17 @@ public:
 
     // Compute the set of host associated entities from the nested functions.
     llvm::SetVector<const Fortran::semantics::Symbol *> escapeHost;
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      collectHostAssociatedVariables(f, escapeHost);
+    for (Fortran::lower::pft::NestedUnit &nested : funit.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&nested))
+        collectHostAssociatedVariables(*f, escapeHost);
+    }
     funit.setHostAssociatedSymbols(escapeHost);
 
     // Declare internal procedures
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      declareFunction(f);
+    for (Fortran::lower::pft::NestedUnit &nested : funit.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&nested))
+        declareFunction(*f);
+    }
   }
 
   /// Get the scope that is defining or using \p sym. The returned scope is not
@@ -4667,8 +4674,10 @@ private:
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      lowerFunc(f); // internal procedure
+    for (Fortran::lower::pft::NestedUnit &nested : funit.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&nested))
+        lowerFunc(*f); // internal procedure
+    }
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
@@ -4692,8 +4701,10 @@ private:
 
   /// Lower functions contained in a module.
   void lowerMod(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    for (Fortran::lower::pft::FunctionLikeUnit &f : mod.nestedFunctions)
-      lowerFunc(f);
+    for (Fortran::lower::pft::NestedUnit &unit : mod.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
+        lowerFunc(*f);
+    }
   }
 
   void setCurrentPosition(const Fortran::parser::CharBlock &position) {
