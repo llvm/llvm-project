@@ -148,7 +148,8 @@ double expectedCacheHitRatio(
   for (BinaryFunction *BF : BinaryFunctions) {
     if (BF->getLayout().block_empty())
       continue;
-    uint64_t Page = BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
+    const uint64_t Page =
+        BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
     PageSamples[Page] += FunctionSamples.at(BF);
   }
 
@@ -159,14 +160,16 @@ double expectedCacheHitRatio(
     if (BF->getLayout().block_empty() || FunctionSamples.at(BF) == 0.0)
       continue;
     double Samples = FunctionSamples.at(BF);
-    uint64_t Page = BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
+    const uint64_t Page =
+        BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
     // The probability that the page is not present in the cache
-    double MissProb = pow(1.0 - PageSamples[Page] / TotalSamples, ITLBEntries);
+    const double MissProb =
+        pow(1.0 - PageSamples[Page] / TotalSamples, ITLBEntries);
 
     // Processing all callers of the function
     for (std::pair<BinaryFunction *, uint64_t> Pair : Calls[BF]) {
       BinaryFunction *SrcFunction = Pair.first;
-      uint64_t SrcPage =
+      const uint64_t SrcPage =
           BBAddr.at(SrcFunction->getLayout().block_front()) / ITLBPageSize;
       // Is this a 'long' or a 'short' call?
       if (Page != SrcPage) {
