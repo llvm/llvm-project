@@ -709,7 +709,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Clone the llvm.experimental.noalias.decl again for the NewHeader.
       BasicBlock::iterator NewHeaderInsertionPoint =
-        NewHeader->getFirstNonPHIIt();
+          NewHeader->getFirstNonPHIIt();
       for (NoAliasScopeDeclInst *NAD : NoAliasDeclInstructions) {
         LLVM_DEBUG(dbgs() << "  Cloning llvm.experimental.noalias.scope.decl:"
                           << *NAD << "\n");
