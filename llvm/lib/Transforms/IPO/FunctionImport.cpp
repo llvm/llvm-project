@@ -568,7 +568,11 @@ public:
     std::map<std::string, std::vector<std::string>> WorkloadDefs;
     json::Path::Root NullRoot;
     // The JSON is supposed to contain a dictionary matching the type of
-    // WorkloadDefs.
+    // WorkloadDefs. For example:
+    // {
+    //   "rootFunction_1": ["function_to_import_1", "function_to_import_2"],
+    //   "rootFunction_2": ["function_to_import_3", "function_to_import_4"]
+    // }
     auto Parsed = json::parse(Buffer->getBuffer());
     if (!Parsed)
       report_fatal_error(Parsed.takeError());
