@@ -8,7 +8,7 @@ HLSL Function Calls
 Introduction
 ============
 
-This document descries the design and implementation of HLSL's function call
+This document describes the design and implementation of HLSL's function call
 semantics in Clang. This includes details related to argument conversion and
 parameter lifetimes.
 
