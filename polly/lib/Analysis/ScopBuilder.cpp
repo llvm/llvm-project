@@ -2563,16 +2563,13 @@ bool checkCandidatePairAccesses(MemoryAccess *LoadMA, MemoryAccess *StoreMA,
   if (Valid) {
     // Finally, check if they are no other instructions accessing this memory
     isl::map AllAccsRel = LoadAccs.unite(StoreAccs);
-
     AllAccsRel = AllAccsRel.intersect_domain(Domain);
     isl::set AllAccs = AllAccsRel.range();
-
     Valid = !hasIntersectingAccesses(AllAccs, LoadMA, StoreMA, Domain, MemAccs);
 
     LLVM_DEBUG(dbgs() << " == The accessed memory is " << (Valid ? "not " : "")
                       << "accessed by other instructions!\n");
   }
-
   return Valid;
 }
 
@@ -2605,6 +2602,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
         dyn_cast<const LoadInst>(CandidatePair.first->getAccessInstruction());
     MemoryAccess::ReductionType RT =
         getReductionType(dyn_cast<BinaryOperator>(Load->user_back()), Load);
+
     // If no overlapping access was found we mark the load and store as
     // reduction like.
     LoadMA->markAsReductionLike(RT);
