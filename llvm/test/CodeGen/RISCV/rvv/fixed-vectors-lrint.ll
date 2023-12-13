@@ -576,17 +576,17 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; RV32-NEXT:    vfmv.f.s fa5, v8
 ; RV32-NEXT:    fcvt.w.d a0, fa5
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslide1down.vx v8, v10, a0
 ; RV32-NEXT:    fld fa5, 32(sp)
 ; RV32-NEXT:    fld fa4, 40(sp)
 ; RV32-NEXT:    fld fa3, 48(sp)
 ; RV32-NEXT:    fld fa2, 56(sp)
-; RV32-NEXT:    fcvt.w.d a1, fa5
-; RV32-NEXT:    fcvt.w.d a2, fa4
-; RV32-NEXT:    fcvt.w.d a3, fa3
-; RV32-NEXT:    vslide1down.vx v8, v10, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a2
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    fcvt.w.d a0, fa5
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    fcvt.w.d a0, fa4
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    fcvt.w.d a0, fa3
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-NEXT:    fcvt.w.d a0, fa2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-NEXT:    addi sp, s0, -128
@@ -629,17 +629,17 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; RV64-i32-NEXT:    vfmv.f.s fa5, v8
 ; RV64-i32-NEXT:    fcvt.l.d a0, fa5
 ; RV64-i32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-i32-NEXT:    vslide1down.vx v8, v10, a0
 ; RV64-i32-NEXT:    fld fa5, 32(sp)
 ; RV64-i32-NEXT:    fld fa4, 40(sp)
 ; RV64-i32-NEXT:    fld fa3, 48(sp)
 ; RV64-i32-NEXT:    fld fa2, 56(sp)
-; RV64-i32-NEXT:    fcvt.l.d a1, fa5
-; RV64-i32-NEXT:    fcvt.l.d a2, fa4
-; RV64-i32-NEXT:    fcvt.l.d a3, fa3
-; RV64-i32-NEXT:    vslide1down.vx v8, v10, a0
-; RV64-i32-NEXT:    vslide1down.vx v8, v8, a1
-; RV64-i32-NEXT:    vslide1down.vx v8, v8, a2
-; RV64-i32-NEXT:    vslide1down.vx v8, v8, a3
+; RV64-i32-NEXT:    fcvt.l.d a0, fa5
+; RV64-i32-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-i32-NEXT:    fcvt.l.d a0, fa4
+; RV64-i32-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-i32-NEXT:    fcvt.l.d a0, fa3
+; RV64-i32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-i32-NEXT:    fcvt.l.d a0, fa2
 ; RV64-i32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-i32-NEXT:    addi sp, s0, -128
@@ -663,16 +663,16 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; RV64-i64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-i64-NEXT:    vse64.v v8, (a0)
 ; RV64-i64-NEXT:    fld fa5, 56(sp)
+; RV64-i64-NEXT:    fld fa4, 48(sp)
+; RV64-i64-NEXT:    fld fa3, 32(sp)
+; RV64-i64-NEXT:    fld fa2, 40(sp)
 ; RV64-i64-NEXT:    fcvt.l.d a0, fa5
 ; RV64-i64-NEXT:    sd a0, 120(sp)
-; RV64-i64-NEXT:    fld fa5, 48(sp)
-; RV64-i64-NEXT:    fcvt.l.d a0, fa5
+; RV64-i64-NEXT:    fcvt.l.d a0, fa4
 ; RV64-i64-NEXT:    sd a0, 112(sp)
-; RV64-i64-NEXT:    fld fa5, 40(sp)
-; RV64-i64-NEXT:    fcvt.l.d a0, fa5
+; RV64-i64-NEXT:    fcvt.l.d a0, fa2
 ; RV64-i64-NEXT:    sd a0, 104(sp)
-; RV64-i64-NEXT:    fld fa5, 32(sp)
-; RV64-i64-NEXT:    fcvt.l.d a0, fa5
+; RV64-i64-NEXT:    fcvt.l.d a0, fa3
 ; RV64-i64-NEXT:    sd a0, 96(sp)
 ; RV64-i64-NEXT:    vfmv.f.s fa5, v8
 ; RV64-i64-NEXT:    fcvt.l.d a0, fa5

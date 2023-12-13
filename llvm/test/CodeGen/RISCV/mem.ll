@@ -22,9 +22,8 @@ define dso_local i32 @lb(ptr %a) nounwind {
 define dso_local i32 @lh(ptr %a) nounwind {
 ; RV32I-LABEL: lh:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lh a1, 4(a0)
 ; RV32I-NEXT:    lh zero, 0(a0)
-; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    lh a0, 4(a0)
 ; RV32I-NEXT:    ret
   %1 = getelementptr i16, ptr %a, i32 2
   %2 = load i16, ptr %1
@@ -37,9 +36,8 @@ define dso_local i32 @lh(ptr %a) nounwind {
 define dso_local i32 @lw(ptr %a) nounwind {
 ; RV32I-LABEL: lw:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a1, 12(a0)
 ; RV32I-NEXT:    lw zero, 0(a0)
-; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    lw a0, 12(a0)
 ; RV32I-NEXT:    ret
   %1 = getelementptr i32, ptr %a, i32 3
   %2 = load i32, ptr %1
@@ -50,9 +48,9 @@ define dso_local i32 @lw(ptr %a) nounwind {
 define dso_local i32 @lbu(ptr %a) nounwind {
 ; RV32I-LABEL: lbu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 4(a0)
-; RV32I-NEXT:    lbu a0, 0(a0)
-; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    lbu a1, 0(a0)
+; RV32I-NEXT:    lbu a0, 4(a0)
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
   %1 = getelementptr i8, ptr %a, i32 4
   %2 = load i8, ptr %1
@@ -66,9 +64,9 @@ define dso_local i32 @lbu(ptr %a) nounwind {
 define dso_local i32 @lhu(ptr %a) nounwind {
 ; RV32I-LABEL: lhu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lhu a1, 10(a0)
-; RV32I-NEXT:    lhu a0, 0(a0)
-; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    lhu a1, 0(a0)
+; RV32I-NEXT:    lhu a0, 10(a0)
+; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
   %1 = getelementptr i16, ptr %a, i32 5
   %2 = load i16, ptr %1
@@ -121,10 +119,10 @@ define dso_local void @sw(ptr %a, i32 %b) nounwind {
 define dso_local i32 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; RV32I-LABEL: load_sext_zext_anyext_i1:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 1(a0)
-; RV32I-NEXT:    lbu a2, 2(a0)
 ; RV32I-NEXT:    lbu zero, 0(a0)
-; RV32I-NEXT:    sub a0, a2, a1
+; RV32I-NEXT:    lbu a1, 1(a0)
+; RV32I-NEXT:    lbu a0, 2(a0)
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, ptr %a, i32 1
@@ -143,10 +141,10 @@ define dso_local i32 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 define dso_local i16 @load_sext_zext_anyext_i1_i16(ptr %a) nounwind {
 ; RV32I-LABEL: load_sext_zext_anyext_i1_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lbu a1, 1(a0)
-; RV32I-NEXT:    lbu a2, 2(a0)
 ; RV32I-NEXT:    lbu zero, 0(a0)
-; RV32I-NEXT:    sub a0, a2, a1
+; RV32I-NEXT:    lbu a1, 1(a0)
+; RV32I-NEXT:    lbu a0, 2(a0)
+; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, ptr %a, i32 1

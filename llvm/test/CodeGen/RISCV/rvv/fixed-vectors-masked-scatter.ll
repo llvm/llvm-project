@@ -3183,7 +3183,7 @@ define void @mscatter_truemask_v4i64(<4 x i64> %val, <4 x ptr> %ptrs) {
 ;
 ; RV64ZVE32F-LABEL: mscatter_truemask_v4i64:
 ; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    ld a6, 8(a1)
+; RV64ZVE32F-NEXT:    ld a7, 8(a1)
 ; RV64ZVE32F-NEXT:    ld a4, 16(a1)
 ; RV64ZVE32F-NEXT:    ld a2, 24(a1)
 ; RV64ZVE32F-NEXT:    ld t0, 8(a0)
@@ -3191,16 +3191,16 @@ define void @mscatter_truemask_v4i64(<4 x i64> %val, <4 x ptr> %ptrs) {
 ; RV64ZVE32F-NEXT:    ld a3, 24(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vmset.m v8
-; RV64ZVE32F-NEXT:    vmv.x.s a7, v8
+; RV64ZVE32F-NEXT:    vmv.x.s a6, v8
 ; RV64ZVE32F-NEXT:    beqz zero, .LBB39_5
 ; RV64ZVE32F-NEXT:  # %bb.1: # %else
-; RV64ZVE32F-NEXT:    andi a0, a7, 2
+; RV64ZVE32F-NEXT:    andi a0, a6, 2
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB39_6
 ; RV64ZVE32F-NEXT:  .LBB39_2: # %else2
-; RV64ZVE32F-NEXT:    andi a0, a7, 4
+; RV64ZVE32F-NEXT:    andi a0, a6, 4
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB39_7
 ; RV64ZVE32F-NEXT:  .LBB39_3: # %else4
-; RV64ZVE32F-NEXT:    andi a0, a7, 8
+; RV64ZVE32F-NEXT:    andi a0, a6, 8
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB39_8
 ; RV64ZVE32F-NEXT:  .LBB39_4: # %else6
 ; RV64ZVE32F-NEXT:    ret
@@ -3208,15 +3208,15 @@ define void @mscatter_truemask_v4i64(<4 x i64> %val, <4 x ptr> %ptrs) {
 ; RV64ZVE32F-NEXT:    ld a1, 0(a1)
 ; RV64ZVE32F-NEXT:    ld a0, 0(a0)
 ; RV64ZVE32F-NEXT:    sd a0, 0(a1)
-; RV64ZVE32F-NEXT:    andi a0, a7, 2
+; RV64ZVE32F-NEXT:    andi a0, a6, 2
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB39_2
 ; RV64ZVE32F-NEXT:  .LBB39_6: # %cond.store1
-; RV64ZVE32F-NEXT:    sd t0, 0(a6)
-; RV64ZVE32F-NEXT:    andi a0, a7, 4
+; RV64ZVE32F-NEXT:    sd t0, 0(a7)
+; RV64ZVE32F-NEXT:    andi a0, a6, 4
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB39_3
 ; RV64ZVE32F-NEXT:  .LBB39_7: # %cond.store3
 ; RV64ZVE32F-NEXT:    sd a5, 0(a4)
-; RV64ZVE32F-NEXT:    andi a0, a7, 8
+; RV64ZVE32F-NEXT:    andi a0, a6, 8
 ; RV64ZVE32F-NEXT:    beqz a0, .LBB39_4
 ; RV64ZVE32F-NEXT:  .LBB39_8: # %cond.store5
 ; RV64ZVE32F-NEXT:    sd a3, 0(a2)

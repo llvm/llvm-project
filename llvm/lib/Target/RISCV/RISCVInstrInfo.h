@@ -157,12 +157,19 @@ public:
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
       const TargetRegisterInfo *TRI) const override;
 
+  bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2, int64_t &Offset1,
+                               int64_t &Offset2) const override;
+
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
                            int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
+
+  bool shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2, int64_t Offset1,
+                               int64_t Offset2,
+                               unsigned NumLoads) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,

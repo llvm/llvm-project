@@ -409,32 +409,32 @@ define void @t7(ptr nocapture %a, ptr nocapture %b) nounwind {
 ; RV32-BOTH-LABEL: t7:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    lw a2, 12(a1)
-; RV32-BOTH-NEXT:    sw a2, 12(a0)
-; RV32-BOTH-NEXT:    lw a2, 8(a1)
-; RV32-BOTH-NEXT:    sw a2, 8(a0)
-; RV32-BOTH-NEXT:    lw a2, 4(a1)
-; RV32-BOTH-NEXT:    sw a2, 4(a0)
+; RV32-BOTH-NEXT:    lw a3, 8(a1)
+; RV32-BOTH-NEXT:    lw a4, 4(a1)
 ; RV32-BOTH-NEXT:    lw a1, 0(a1)
+; RV32-BOTH-NEXT:    sw a2, 12(a0)
+; RV32-BOTH-NEXT:    sw a3, 8(a0)
+; RV32-BOTH-NEXT:    sw a4, 4(a0)
 ; RV32-BOTH-NEXT:    sw a1, 0(a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-LABEL: t7:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lw a2, 12(a1)
-; RV64-NEXT:    sw a2, 12(a0)
-; RV64-NEXT:    lw a2, 8(a1)
-; RV64-NEXT:    sw a2, 8(a0)
-; RV64-NEXT:    lw a2, 4(a1)
-; RV64-NEXT:    sw a2, 4(a0)
+; RV64-NEXT:    lw a3, 8(a1)
+; RV64-NEXT:    lw a4, 4(a1)
 ; RV64-NEXT:    lw a1, 0(a1)
+; RV64-NEXT:    sw a2, 12(a0)
+; RV64-NEXT:    sw a3, 8(a0)
+; RV64-NEXT:    sw a4, 4(a0)
 ; RV64-NEXT:    sw a1, 0(a0)
 ; RV64-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: t7:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    ld a2, 8(a1)
-; RV64-FAST-NEXT:    sd a2, 8(a0)
 ; RV64-FAST-NEXT:    ld a1, 0(a1)
+; RV64-FAST-NEXT:    sd a2, 8(a0)
 ; RV64-FAST-NEXT:    sd a1, 0(a0)
 ; RV64-FAST-NEXT:    ret
 entry:
