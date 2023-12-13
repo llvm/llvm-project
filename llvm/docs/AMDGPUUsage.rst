@@ -866,10 +866,12 @@ supported for the ``amdgcn`` target.
   target architecture and is detailed in the ISA descriptions.
 
 **Buffer Strided Pointer**
-  The buffer index pointer is an experimental address space. It is supposed to
-  model a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
+  The buffer index pointer is an experimental address space. It represents
+  a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
   Pointer**. Additionally, it contains an index into the buffer, which
-  allows the direct addressing of structured elements.
+  allows the direct addressing of structured elements. These components appear
+  in that order, i.e., the descriptor comes first, then the 32-bit offset
+  followed by the 32-bit index.
 
   The bits in the buffer descriptor must meet the following requirements:
   the stride is the size of a structured element, the "add tid" flag must be 0,
