@@ -18,6 +18,7 @@
 #include <fcntl.h> // For mode_t and other flags to the open syscall
 #include <stdio.h>
 #include <sys/syscall.h> // For syscall numbers
+#include <sys/stat.h> // For S_IS*, S_IF*, and S_IR* flags.
 
 namespace LIBC_NAMESPACE {
 
