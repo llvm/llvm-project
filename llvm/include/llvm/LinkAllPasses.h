@@ -148,8 +148,7 @@ namespace {
       llvm::AliasAnalysis AA(TLI);
       llvm::BatchAAResults BAA(AA);
       llvm::AliasSetTracker X(BAA);
-      X.add(nullptr, llvm::LocationSize::beforeOrAfterPointer(),
-            llvm::AAMDNodes()); // for -print-alias-sets
+      X.add(llvm::MemoryLocation()); // for -print-alias-sets
       (void) llvm::AreStatisticsEnabled();
       (void) llvm::sys::RunningOnValgrind();
     }
