@@ -403,7 +403,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP,
-                                                       unsigned Index,
+                                                       uint32_t Index,
                                                        bool IsOverload) {
   ASTContext &Context = S.Context;
   RVVIntrinsicDef &IDef = IntrinsicList[Index];
