@@ -92,6 +92,8 @@ set(TSAN_HEADERS
   tsan_interface.h
   tsan_interface.inc
   tsan_interface_ann.h
+  tsan_interface_avx2.h
+  tsan_interface_avx512.h
   tsan_interface_java.h
   tsan_mman.h
   tsan_mutexset.h
@@ -244,13 +246,11 @@ else()
     add_compiler_rt_object_libraries(RTTSanAVX2
         ARCHS ${arch}
         SOURCES tsan_interface_avx2.cpp
-        ADDITIONAL_HEADERS tsan_interface_avx2.h 
-        CFLAGS ${TSAN_RTL_CFLAGS} $<IF:$<BOOL:${COMPILER_RT_HAS_MAVX2_FLAG}>,-mavx2,"">)
+        CFLAGS ${TSAN_RTL_CFLAGS} -mavx2)
     add_compiler_rt_object_libraries(RTTSanAVX512
         ARCHS ${arch}
         SOURCES tsan_interface_avx512.cpp
-        ADDITIONAL_HEADERS tsan_interface_avx512.h 
-        CFLAGS ${TSAN_RTL_CFLAGS} $<IF:$<BOOL:${COMPILER_RT_HAS_MAVX512F_FLAG}>,-mavx512f,"">)
+        CFLAGS ${TSAN_RTL_CFLAGS} -mavx512f)
     add_compiler_rt_runtime(clang_rt.tsan
       STATIC
       ARCHS ${arch}
