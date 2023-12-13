@@ -52,7 +52,7 @@ static void make_mem_bad(void *p, size_t s) {
   // With misaligned `p` or short granules we can't guarantee tag mismatch.
   if (__hwasan_test_shadow(p, s) != 0)
     abort();
-  if (s > 1 && __hwasan_test_shadow(((char*)p) + s - 1, 1) != 0)
+  if (s > 1 && __hwasan_test_shadow(((char *)p) + s - 1, 1) != 0)
     abort();
 }
 #else
