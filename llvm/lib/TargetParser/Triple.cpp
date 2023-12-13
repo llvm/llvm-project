@@ -819,8 +819,6 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 }
 
 static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
-  if (T.isOSDarwin())
-    return Triple::MachO;
   switch (T.getArch()) {
   case Triple::UnknownArch:
   case Triple::aarch64:
@@ -833,8 +831,10 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
       return Triple::COFF;
     else if (T.isUEFI())
       return Triple::COFF;
-    return Triple::ELF;
 
+    if (T.isOSDarwin())
+      return Triple::MachO;
+    return Triple::ELF;
   case Triple::aarch64_be:
   case Triple::amdgcn:
   case Triple::amdil64:
@@ -887,6 +887,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ppc:
     if (T.isOSAIX())
       return Triple::XCOFF;
+    if (T.isOSDarwin())
+      return Triple::MachO;
     return Triple::ELF;
 
   case Triple::systemz:
