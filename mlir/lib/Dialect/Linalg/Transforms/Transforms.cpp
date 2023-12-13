@@ -381,11 +381,6 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(unPackOp, "outer dims perm NYI");
 
   RankedTensorType packedTensorType = unPackOp.getSourceType();
-  if (!packedTensorType.hasStaticShape()) {
-    return rewriter.notifyMatchFailure(
-        unPackOp,
-        "non-static shape NYI, needs a more powerful tensor.expand_shape op");
-  }
 
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
@@ -434,8 +429,21 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
       stripMinedTensorType, packingMetadata.reassociations);
+
+  // Get dynamic dims for stripMined shape
+  SmallVector<Value> dims(llvm::map_range(
+      llvm::seq<int64_t>(0, packedTensorType.getRank()), [&](int64_t i) {
+        return rewriter.create<tensor::DimOp>(loc, unPackOp.getSource(), i);
+      }));
+  applyPermutationToVector(dims, lastDimsToInsertPositionsPerm);
+  SmallVector<Value> dynDims;
+  for (int64_t i = 0; i < stripMinedTensorType.getRank(); i++) {
+    if (stripMinedTensorType.isDynamicDim(i))
+      dynDims.push_back(dims[i]);
+  }
+
   auto emptyOp =
-      rewriter.create<tensor::EmptyOp>(loc, stripMinedTensorType, ValueRange{});
+      rewriter.create<tensor::EmptyOp>(loc, stripMinedTensorType, dynDims);
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
       loc, unPackOp.getSource(), emptyOp, lastDimsToInsertPositionsPerm);
 

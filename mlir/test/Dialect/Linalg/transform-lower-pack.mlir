@@ -428,6 +428,8 @@ module attributes {transform.with_named_sequence} {
 // Check that we can lower unpack with dynamic dimensions in the destination.
 // CHECK-LABEL: func.func @unpack_with_dynamic_dest(
 // CHECK-SAME: %[[ARG0:.*]]: tensor<32x2x49x16x16xf32>, %[[ARG1:.*]]: tensor<32x?x?xf32>)
+//      CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
+//      CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 //      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<32x2x16x49x16xf32>
 //      CHECK: %[[TRAN:.*]] = linalg.transpose
 // CHECK-SAME:    ins(%[[ARG0]] : tensor<32x2x49x16x16xf32>)
@@ -435,9 +437,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:   permutation = [0, 1, 3, 2, 4]
 //      CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0], [1, 2], [3, 4]]
 // CHECK-SAME:   : tensor<32x2x16x49x16xf32> into tensor<32x32x784xf32>
-//      CHECK:  %[[C1:.*]] = arith.constant 1 : index
 //      CHECK: %[[DIM1:.*]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<32x?x?xf32>
-//      CHECK: %[[C2:.*]] = arith.constant 2 : index
 //      CHECK: %[[DIM2:.*]] = tensor.dim %[[ARG1]], %[[C2]] : tensor<32x?x?xf32>
 //      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0, 0] [32, %[[DIM1]], %[[DIM2]]] [1, 1, 1]
 // CHECK-SAME:   : tensor<32x32x784xf32> to tensor<32x?x?xf32>
