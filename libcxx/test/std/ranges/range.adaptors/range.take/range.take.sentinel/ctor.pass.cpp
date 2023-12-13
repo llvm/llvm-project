@@ -34,14 +34,14 @@ constexpr bool test() {
 
   {
     // Test the conversion from "sentinel" to "sentinel-to-const".
-    using TakeView = std::ranges::take_view<MoveOnlyView>;
-    using Sentinel = std::ranges::sentinel_t<TakeView>;
+    using TakeView      = std::ranges::take_view<MoveOnlyView>;
+    using Sentinel      = std::ranges::sentinel_t<TakeView>;
     using ConstSentinel = std::ranges::sentinel_t<const TakeView>;
     static_assert(std::is_convertible_v<Sentinel, ConstSentinel>);
-    TakeView tv = TakeView(MoveOnlyView(buffer), 4);
-    Sentinel s = tv.end();
+    TakeView tv      = TakeView(MoveOnlyView(buffer), 4);
+    Sentinel s       = tv.end();
     ConstSentinel cs = s;
-    cs = s;  // test assignment also
+    cs               = s; // test assignment also
     assert(tv.begin() + 4 == s);
     assert(tv.begin() + 4 == cs);
     assert(std::as_const(tv).begin() + 4 == s);
@@ -50,12 +50,12 @@ constexpr bool test() {
 
   {
     // Test the constructor from "base-sentinel" to "sentinel".
-    using TakeView = std::ranges::take_view<MoveOnlyView>;
-    using Sentinel = std::ranges::sentinel_t<TakeView>;
+    using TakeView             = std::ranges::take_view<MoveOnlyView>;
+    using Sentinel             = std::ranges::sentinel_t<TakeView>;
     sentinel_wrapper<int*> sw1 = MoveOnlyView(buffer).end();
-    static_assert( std::is_constructible_v<Sentinel, sentinel_wrapper<int*>>);
+    static_assert(std::is_constructible_v<Sentinel, sentinel_wrapper<int*>>);
     static_assert(!std::is_convertible_v<sentinel_wrapper<int*>, Sentinel>);
-    auto s = Sentinel(sw1);
+    auto s                                        = Sentinel(sw1);
     std::same_as<sentinel_wrapper<int*>> auto sw2 = s.base();
     assert(base(sw2) == base(sw1));
   }
