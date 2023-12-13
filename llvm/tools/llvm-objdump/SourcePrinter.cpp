@@ -508,12 +508,8 @@ SourcePrinter::SourcePrinter(const object::ObjectFile *Obj,
 
 // TODO Light/dark shades? 256-color terminals?
 const raw_ostream::Colors LineColors[] = {
-  raw_ostream::RED,
-  raw_ostream::GREEN,
-  raw_ostream::YELLOW,
-  raw_ostream::BLUE,
-  raw_ostream::MAGENTA,
-  raw_ostream::CYAN,
+    raw_ostream::RED,  raw_ostream::GREEN,   raw_ostream::YELLOW,
+    raw_ostream::BLUE, raw_ostream::MAGENTA, raw_ostream::CYAN,
 };
 
 raw_ostream::Colors ControlFlowPrinter::PickColor() {
@@ -528,7 +524,8 @@ raw_ostream::Colors ControlFlowPrinter::PickColor() {
 void ControlFlowPrinter::addEdge(uint64_t From, uint64_t To) {
   auto It = Targets.find(To);
   if (It == Targets.end())
-    It = Targets.insert(std::make_pair(To, ControlFlowTarget(To, PickColor()))).first;
+    It = Targets.insert(std::make_pair(To, ControlFlowTarget(To, PickColor())))
+             .first;
   It->second.addSource(From);
 }
 
@@ -559,7 +556,6 @@ void ControlFlowPrinter::finalise() {
         break;
     T->Column = Column;
     MaxColumn = std::max(MaxColumn, Column);
-
   }
 
   setControlFlowColumnWidth(MaxColumn * 2 + 4);

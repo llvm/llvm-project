@@ -180,7 +180,9 @@ struct VisualizeJumpsMode {
   VisualizeJumpsMode(Chars_t Chars, Colors_t Colors)
       : Chars(Chars), Colors(Colors) {}
 
-  static VisualizeJumpsMode GetDefault() { return VisualizeJumpsMode(Unicode, Auto); }
+  static VisualizeJumpsMode GetDefault() {
+    return VisualizeJumpsMode(Unicode, Auto);
+  }
 
   bool enabled() const { return Chars != Off; }
   bool color_enabled() const { return enabled() && Colors != BlackAndWhite; }
@@ -192,7 +194,6 @@ struct VisualizeJumpsMode {
   }
 };
 
-
 class ControlFlowPrinter {
   struct ControlFlowTarget {
     uint64_t Target;
@@ -201,7 +202,8 @@ class ControlFlowPrinter {
     raw_ostream::Colors Color;
 
     ControlFlowTarget(uint64_t Target, raw_ostream::Colors Color)
-        : Target(Target), Column(~0U), Color(Color), High(Target), Low(Target) {}
+        : Target(Target), Column(~0U), Color(Color), High(Target), Low(Target) {
+    }
     ControlFlowTarget(const ControlFlowTarget &) = delete;
     ControlFlowTarget(ControlFlowTarget &&) = default;
 

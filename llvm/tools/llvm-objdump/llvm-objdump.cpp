@@ -509,7 +509,7 @@ unsigned objdump::GetColumnIndent(MCSubtargetInfo const &STI,
 
   // Encoding: depends on architecture
   if (ShowRawInsn)
-      Indent += EncodingColumnWidth(STI.getTargetTriple());
+    Indent += EncodingColumnWidth(STI.getTargetTriple());
 
   // Special case for assembly string: the assembly printer uses tabs, so we
   // need to ensure we start the instruction on a tab stop (multiple of 8).
@@ -542,7 +542,7 @@ void objdump::IndentToColumn(MCSubtargetInfo const &STI,
   if (Col == DisassemblyColumn::Assembly) {
     TargetIndent -= 1;
     if (TargetIndent < CurrentIndent)
-      TargetIndent =  alignTo(CurrentIndent + 1, 8) - 1;
+      TargetIndent = alignTo(CurrentIndent + 1, 8) - 1;
   }
 
   if (TargetIndent > CurrentIndent)
@@ -1358,14 +1358,12 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   }
 }
 
-static void
-collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
-                          MCDisassembler *DisAsm, MCInstPrinter *IP,
-                          const MCSubtargetInfo *STI, uint64_t SectionAddr,
-                          uint64_t Start, uint64_t End,
-                          std::unordered_map<uint64_t, std::string> &Labels,
-                          ControlFlowPrinter &CFP,
-                          std::vector<RelocationRef> &Relocs) {
+static void collectLocalBranchTargets(
+    ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
+    MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
+    uint64_t Start, uint64_t End,
+    std::unordered_map<uint64_t, std::string> &Labels, ControlFlowPrinter &CFP,
+    std::vector<RelocationRef> &Relocs) {
   if (MIA)
     MIA->resetState();
 
@@ -1950,7 +1948,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         continue;
       Start -= SectionAddr;
       End -= SectionAddr;
-
 
       formatted_raw_ostream FOS(outs());
 
@@ -3393,7 +3390,8 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     if (DisassemblyColor == ColorOutput::Invalid)
       invalidArgValue(A);
   }
-  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_visualize_jumps, OBJDUMP_visualize_jumps_EQ)) {
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_visualize_jumps,
+                                               OBJDUMP_visualize_jumps_EQ)) {
     if (A->getOption().matches(OBJDUMP_visualize_jumps)) {
       // --visualize-jumps without an argument default to unicode, auto-color.
       VisualizeJumps = VisualizeJumpsMode::GetDefault();
@@ -3421,7 +3419,6 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
                              A->getSpelling() + "'");
         }
       }
-
 
       VisualizeJumps = VisualizeJumpsMode(Chars, Color);
     }
