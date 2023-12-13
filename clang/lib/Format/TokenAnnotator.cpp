@@ -23,9 +23,6 @@
 
 namespace clang {
 namespace format {
-static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
-                                      const AnnotatedLine &Line,
-                                      FormatToken *&ClosingParen);
 
 static bool mustBreakAfterAttributes(const FormatToken &Tok,
                                      const FormatStyle &Style) {
@@ -167,10 +164,8 @@ private:
                TT_OverloadedOperatorLParen))) {
         return false;
       }
-      FormatToken *ClosingParen = nullptr;
       if (Previous.Previous->is(tok::kw_operator) &&
-          isFunctionDeclarationName(Style.isCpp(), *Previous.Previous, Line,
-                                    ClosingParen)) {
+          CurrentToken->is(tok::l_paren)) {
         return false;
       }
     }
