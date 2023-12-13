@@ -2605,7 +2605,6 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
         dyn_cast<const LoadInst>(CandidatePair.first->getAccessInstruction());
     MemoryAccess::ReductionType RT =
         getReductionType(dyn_cast<BinaryOperator>(Load->user_back()), Load);
-
     // If no overlapping access was found we mark the load and store as
     // reduction like.
     LoadMA->markAsReductionLike(RT);
