@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
