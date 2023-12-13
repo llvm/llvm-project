@@ -4,6 +4,10 @@
 
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
+// The test try to check two things:
+//  1. Internal mutexes used by `inparent` thread do not deadlock `inchild`
+//     thread.
+//  2. Stack poisoned by `inparent` is not poisoned in `inchild` thread.
 
 #include <assert.h>
 #include <pthread.h>
@@ -22,7 +26,7 @@ pthread_barrier_t bar;
 
 // Without appropriate workarounds this code can cause the forked process to
 // start with locked internal mutexes.
-void CanDeadLock() {
+void ShouldNotDeadlock() {
   // Don't bother with leaks, we try to trigger allocator or lsan deadlock.
   __lsan::ScopedDisabler disable;
   char *volatile p = new char[10];
@@ -42,7 +46,7 @@ NOSAN static void *inparent(void *arg) {
   pthread_barrier_wait(&bar);
 
   for (;;)
-    CanDeadLock();
+    ShouldNotDeadlock();
 
   return 0;
 }
@@ -50,7 +54,7 @@ NOSAN static void *inparent(void *arg) {
 NOSAN static void *inchild(void *arg) {
   char t[kBufferSize];
   check_mem_is_good(t, sizeof(t));
-  CanDeadLock();
+  ShouldNotDeadlock();
   return 0;
 }
 
