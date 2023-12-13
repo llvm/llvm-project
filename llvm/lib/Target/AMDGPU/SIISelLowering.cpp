@@ -763,6 +763,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasIEEEMinMax())
+    setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
+                       {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::v2i16, MVT::v2f16, MVT::i128},
@@ -800,6 +804,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
                        ISD::FMAXNUM_IEEE,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -11786,10 +11792,14 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
-  case AMDGPUISD::FMIN3: {
+  case AMDGPUISD::FMIN3:
+  case AMDGPUISD::FMAXIMUM3:
+  case AMDGPUISD::FMINIMUM3: {
     // FIXME: Shouldn't treat the generic operations different based these.
     // However, we aren't really required to flush the result from
     // minnum/maxnum..
@@ -11943,7 +11953,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
-  case AMDGPU::G_FMAXNUM_IEEE: {
+  case AMDGPU::G_FMAXNUM_IEEE:
+  case AMDGPU::G_FMINIMUM:
+  case AMDGPU::G_FMAXIMUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
@@ -12131,6 +12143,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
     return AMDGPUISD::FMAX3;
+  case ISD::FMAXIMUM:
+    return AMDGPUISD::FMAXIMUM3;
   case ISD::SMAX:
     return AMDGPUISD::SMAX3;
   case ISD::UMAX:
@@ -12138,6 +12152,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
     return AMDGPUISD::FMIN3;
+  case ISD::FMINIMUM:
+    return AMDGPUISD::FMINIMUM3;
   case ISD::SMIN:
     return AMDGPUISD::SMIN3;
   case ISD::UMIN:
@@ -12497,7 +12513,9 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMAXNUM_IEEE:
-    case ISD::FMINNUM_IEEE: {
+    case ISD::FMINNUM_IEEE:
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM: {
       SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
                                  Vec.getOperand(0), Idx);
       SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
@@ -13759,6 +13777,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM:
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
