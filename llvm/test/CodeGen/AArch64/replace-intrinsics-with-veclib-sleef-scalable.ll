@@ -3,8 +3,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; NOTE: The existing TLI mappings are not used since the -replace-with-veclib pass is broken for scalable vectors.
-
 ;.
 ; CHECK: @llvm.compiler.used = appending global [16 x ptr] [ptr @_ZGVsMxv_cos, ptr @_ZGVsMxv_cosf, ptr @_ZGVsMxv_exp, ptr @_ZGVsMxv_expf, ptr @_ZGVsMxv_exp2, ptr @_ZGVsMxv_exp2f, ptr @_ZGVsMxv_exp10, ptr @_ZGVsMxv_exp10f, ptr @_ZGVsMxv_log, ptr @_ZGVsMxv_logf, ptr @_ZGVsMxv_log10, ptr @_ZGVsMxv_log10f, ptr @_ZGVsMxv_log2, ptr @_ZGVsMxv_log2f, ptr @_ZGVsMxv_sin, ptr @_ZGVsMxv_sinf], section "llvm.metadata"
 ;.

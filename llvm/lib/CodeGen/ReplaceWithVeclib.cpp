@@ -69,20 +69,20 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
   return TLIFunc;
 }
 
-/// Replace the call to the vector intrinsic ( \p OldFunc ) with a call to the
-/// corresponding function from the vector library ( \p TLIFunc ).
-static bool replaceWithTLIFunction(const Module *M, CallInst &CI,
-                                   const ElementCount &VecVF, Function *OldFunc,
-                                   Function *TLIFunc, FunctionType *VecFTy,
-                                   bool IsMasked) {
+/// Replace the call to the vector intrinsic ( \p FuncToReplace ) with a call to
+/// the corresponding function from the vector library ( \p TLIFunc ).
+static void replaceWithTLIFunction(CallInst &CI, VFInfo &Info,
+                                   Function *TLIFunc, FunctionType *VecFTy) {
   IRBuilder<> IRBuilder(&CI);
   SmallVector<Value *> Args(CI.args());
-  if (IsMasked) {
+  if (auto OptMaskpos = Info.getParamIndexForOptionalMask()) {
     if (Args.size() == VecFTy->getNumParams())
       static_assert(true && "mask was already in place");
 
-    auto *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VecVF);
-    Args.push_back(Constant::getAllOnesValue(MaskTy));
+    auto *MaskTy =
+        VectorType::get(Type::getInt1Ty(CI.getContext()), Info.Shape.VF);
+    Args.insert(Args.begin() + OptMaskpos.value(),
+                Constant::getAllOnesValue(MaskTy));
   }
 
   // Preserve the operand bundles.
@@ -95,26 +95,18 @@ static bool replaceWithTLIFunction(const Module *M, CallInst &CI,
   // Preserve fast math flags for FP math.
   if (isa<FPMathOperator>(Replacement))
     Replacement->copyFastMathFlags(&CI);
-
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `"
-                    << OldFunc->getName() << "` with call to `"
-                    << TLIFunc->getName() << "`.\n");
-  ++NumCallsReplaced;
-  return true;
 }
 
-/// Utility method to get the VecDesc, depending on whether there is a TLI
-/// mapping, either with or without a mask.
+/// Utility method to get the VecDesc, depending on whether there is such a TLI
+/// mapping, prioritizing a masked version.
 static std::optional<const VecDesc *> getVecDesc(const TargetLibraryInfo &TLI,
                                                  const StringRef &ScalarName,
                                                  const ElementCount &VF) {
-  const VecDesc *VDMasked = TLI.getVectorMappingInfo(ScalarName, VF, true);
-  const VecDesc *VDNoMask = TLI.getVectorMappingInfo(ScalarName, VF, false);
-  // Invalid when there are both variants (ie masked and unmasked), or none
-  if ((VDMasked == nullptr) == (VDNoMask == nullptr))
-    return std::nullopt;
-
-  return {VDMasked != nullptr ? VDMasked : VDNoMask};
+  if (auto *VDMasked = TLI.getVectorMappingInfo(ScalarName, VF, true))
+    return VDMasked;
+  if (auto *VDNoMask = TLI.getVectorMappingInfo(ScalarName, VF, false))
+    return VDNoMask;
+  return std::nullopt;
 }
 
 /// Returns whether it is able to replace a call to the intrinsic \p CI with a
@@ -146,10 +138,9 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
         VF = VectorArgTy->getElementCount();
       else if (VF != VectorArgTy->getElementCount())
         return false;
-    } else {
+    } else
       // enters when it is supposed to be a vector argument but it isn't.
       return false;
-    }
   }
 
   // Try to reconstruct the name for the scalar version of this intrinsic using
@@ -164,26 +155,19 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   if (!TLI.isFunctionVectorizable(ScalarName))
     return false;
 
+  // Try to find the mapping for the scalar version of this intrinsic and the
+  // exact vector width of the call operands in the TargetLibraryInfo.
   auto OptVD = getVecDesc(TLI, ScalarName, VF);
   if (!OptVD)
     return false;
 
   const VecDesc *VD = *OptVD;
-  // Try to find the mapping for the scalar version of this intrinsic and the
-  // exact vector width of the call operands in the TargetLibraryInfo.
-  StringRef TLIName = TLI.getVectorizedFunction(ScalarName, VF, VD->isMasked());
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Looking up TLI mapping for `"
-                    << ScalarName << "` and vector width " << VF << ".\n");
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Found TLI mapping from: `" << ScalarName
+                    << "` and vector width " << VF << " to: `"
+                    << VD->getVectorFnName() << "`.\n");
 
-  // TLI failed to find a correct mapping.
-  if (TLIName.empty())
-    return false;
-
-  // Find the vector Function and replace the call to the intrinsic with a call
-  // to the vector library function.
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Found TLI function `" << TLIName
-                    << "`.\n");
-
+  // Replace the call to the intrinsic with a call to the vector library
+  // function.
   Type *ScalarRetTy = CI.getType()->getScalarType();
   FunctionType *ScalarFTy = FunctionType::get(ScalarRetTy, ScalarTypes, false);
   const std::string MangledName = VD->getVectorFunctionABIVariantString();
@@ -191,17 +175,20 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   if (!OptInfo)
     return false;
 
-  // get the vector FunctionType
-  Module *M = CI.getModule();
-  auto OptFTy = VFABI::createFunctionType(*OptInfo, ScalarFTy);
-  if (!OptFTy)
+  FunctionType *VectorFTy = VFABI::createFunctionType(*OptInfo, ScalarFTy);
+  if (!VectorFTy)
     return false;
 
-  Function *OldFunc = CI.getCalledFunction();
-  FunctionType *VectorFTy = *OptFTy;
-  Function *TLIFunc = getTLIFunction(M, VectorFTy, OldFunc, TLIName);
-  return replaceWithTLIFunction(M, CI, OptInfo->Shape.VF, OldFunc, TLIFunc,
-                                VectorFTy, VD->isMasked());
+  Function *FuncToReplace = CI.getCalledFunction();
+  Function *TLIFunc = getTLIFunction(CI.getModule(), VectorFTy, FuncToReplace,
+                                     VD->getVectorFnName());
+  replaceWithTLIFunction(CI, *OptInfo, TLIFunc, VectorFTy);
+
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `"
+                    << FuncToReplace->getName() << "` with call to `"
+                    << TLIFunc->getName() << "`.\n");
+  ++NumCallsReplaced;
+  return true;
 }
 
 static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
