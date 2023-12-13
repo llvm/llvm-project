@@ -284,7 +284,9 @@ endif()
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI "Use run time type information." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
 option(LIBCXX_ENABLE_MONOTONIC_CLOCK
   "Build libc++ with support for a monotonic clock.
@@ -372,6 +374,13 @@ if (LIBCXX_HAS_PTHREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+endif()
+
+if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
+  message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
+                      " disabled, since that configuration is broken. See"
+                      " https://github.com/llvm/llvm-project/issues/66117"
+                      " for details.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE

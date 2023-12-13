@@ -1026,6 +1026,8 @@ enum Register_Flag : uint8_t {
 
 } // namespace AMDGPU
 
+// clang-format off
+
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
 #define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
 #define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
@@ -1134,6 +1136,7 @@ enum Register_Flag : uint8_t {
 #define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
 #define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
 
+// clang-format on
 
 // Helpers for setting FLOAT_MODE
 #define FP_ROUND_ROUND_TO_NEAREST 0

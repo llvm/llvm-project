@@ -154,11 +154,11 @@ cl::opt<bool> SkipRetExitBlock(
 
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
-class InstrProfiling final {
+class InstrLowerer final {
 public:
-  InstrProfiling(Module &M, const InstrProfOptions &Options,
-                 std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
-                 bool IsCS)
+  InstrLowerer(Module &M, const InstrProfOptions &Options,
+               std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
+               bool IsCS)
       : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
         GetTLI(GetTLI) {}
 
@@ -563,14 +563,14 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  InstrProfiling Lowerer(M, Options, GetTLI, IsCS);
+  InstrLowerer Lowerer(M, Options, GetTLI, IsCS);
   if (!Lowerer.lower())
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
 }
 
-bool InstrProfiling::lowerIntrinsics(Function *F) {
+bool InstrLowerer::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
   for (BasicBlock &BB : *F) {
@@ -610,7 +610,7 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
   return true;
 }
 
-bool InstrProfiling::isRuntimeCounterRelocationEnabled() const {
+bool InstrLowerer::isRuntimeCounterRelocationEnabled() const {
   // Mach-O don't support weak external references.
   if (TT.isOSBinFormatMachO())
     return false;
@@ -622,14 +622,14 @@ bool InstrProfiling::isRuntimeCounterRelocationEnabled() const {
   return TT.isOSFuchsia();
 }
 
-bool InstrProfiling::isCounterPromotionEnabled() const {
+bool InstrLowerer::isCounterPromotionEnabled() const {
   if (DoCounterPromotion.getNumOccurrences() > 0)
     return DoCounterPromotion;
 
   return Options.DoCounterPromotion;
 }
 
-void InstrProfiling::promoteCounterLoadStores(Function *F) {
+void InstrLowerer::promoteCounterLoadStores(Function *F) {
   if (!isCounterPromotionEnabled())
     return;
 
@@ -686,7 +686,7 @@ static bool containsProfilingIntrinsics(Module &M) {
          containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
 }
 
-bool InstrProfiling::lower() {
+bool InstrLowerer::lower() {
   bool MadeChange = false;
   bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
   if (NeedsRuntimeHook)
@@ -778,7 +778,7 @@ static FunctionCallee getOrInsertValueProfilingCall(
   return M.getOrInsertFunction(FuncName, ValueProfilingCallTy, AL);
 }
 
-void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
+void InstrLowerer::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
   GlobalVariable *Name = Ind->getName();
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
   uint64_t Index = Ind->getIndex()->getZExtValue();
@@ -787,7 +787,7 @@ void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
       std::max(PD.NumValueSites[ValueKind], (uint32_t)(Index + 1));
 }
 
-void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
+void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // TODO: Value profiling heavily depends on the data section which is omitted
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
@@ -833,7 +833,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
-Value *InstrProfiling::getCounterAddress(InstrProfCntrInstBase *I) {
+Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
@@ -873,7 +873,7 @@ Value *InstrProfiling::getCounterAddress(InstrProfCntrInstBase *I) {
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
-Value *InstrProfiling::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
+Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   IRBuilder<> Builder(I);
 
@@ -892,7 +892,7 @@ Value *InstrProfiling::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   return Addr;
 }
 
-void InstrProfiling::lowerCover(InstrProfCoverInst *CoverInstruction) {
+void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
   // We store zero to represent that this block is covered.
@@ -900,7 +900,7 @@ void InstrProfiling::lowerCover(InstrProfCoverInst *CoverInstruction) {
   CoverInstruction->eraseFromParent();
 }
 
-void InstrProfiling::lowerTimestamp(
+void InstrLowerer::lowerTimestamp(
     InstrProfTimestampInst *TimestampInstruction) {
   assert(TimestampInstruction->getIndex()->isZeroValue() &&
          "timestamp probes are always the first probe for a function");
@@ -915,7 +915,7 @@ void InstrProfiling::lowerTimestamp(
   TimestampInstruction->eraseFromParent();
 }
 
-void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
+void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
@@ -934,7 +934,7 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   Inc->eraseFromParent();
 }
 
-void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
+void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
   ConstantArray *Names =
       cast<ConstantArray>(CoverageNamesVar->getInitializer());
   for (unsigned I = 0, E = Names->getNumOperands(); I < E; ++I) {
@@ -951,7 +951,7 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
   CoverageNamesVar->eraseFromParent();
 }
 
-void InstrProfiling::lowerMCDCTestVectorBitmapUpdate(
+void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -1003,7 +1003,7 @@ void InstrProfiling::lowerMCDCTestVectorBitmapUpdate(
   Update->eraseFromParent();
 }
 
-void InstrProfiling::lowerMCDCCondBitmapUpdate(
+void InstrLowerer::lowerMCDCCondBitmapUpdate(
     InstrProfMCDCCondBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int32Ty = Type::getInt32Ty(M.getContext());
@@ -1186,8 +1186,8 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   return true;
 }
 
-void InstrProfiling::maybeSetComdat(GlobalVariable *GV, Function *Fn,
-                                    StringRef VarName) {
+void InstrLowerer::maybeSetComdat(GlobalVariable *GV, Function *Fn,
+                                  StringRef VarName) {
   bool DataReferencedByCode = profDataReferencedByCode(M);
   bool NeedComdat = needsComdatForCounter(*Fn, M);
   bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
@@ -1208,8 +1208,8 @@ void InstrProfiling::maybeSetComdat(GlobalVariable *GV, Function *Fn,
     GV->setLinkage(GlobalValue::InternalLinkage);
 }
 
-GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
-                                                    InstrProfSectKind IPSK) {
+GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
+                                                  InstrProfSectKind IPSK) {
   GlobalVariable *NamePtr = Inc->getName();
 
   // Match the linkage and visibility of the name global.
@@ -1278,9 +1278,9 @@ GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
 }
 
 GlobalVariable *
-InstrProfiling::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
-                                    StringRef Name,
-                                    GlobalValue::LinkageTypes Linkage) {
+InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
+                                  StringRef Name,
+                                  GlobalValue::LinkageTypes Linkage) {
   uint64_t NumBytes = Inc->getNumBitmapBytes()->getZExtValue();
   auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M.getContext()), NumBytes);
   auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
@@ -1290,7 +1290,7 @@ InstrProfiling::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
 }
 
 GlobalVariable *
-InstrProfiling::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
+InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionBitmaps)
@@ -1305,8 +1305,8 @@ InstrProfiling::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
 }
 
 GlobalVariable *
-InstrProfiling::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
-                                     GlobalValue::LinkageTypes Linkage) {
+InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
+                                   GlobalValue::LinkageTypes Linkage) {
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
@@ -1330,7 +1330,7 @@ InstrProfiling::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
 }
 
 GlobalVariable *
-InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
+InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionCounters)
@@ -1383,7 +1383,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   return PD.RegionCounters;
 }
 
-void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc) {
+void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
   if (DebugInfoCorrelate)
@@ -1523,7 +1523,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc) {
   ReferencedNames.push_back(NamePtr);
 }
 
-void InstrProfiling::emitVNodes() {
+void InstrLowerer::emitVNodes() {
   if (!ValueProfileStaticAlloc)
     return;
 
@@ -1574,7 +1574,7 @@ void InstrProfiling::emitVNodes() {
   UsedVars.push_back(VNodesVar);
 }
 
-void InstrProfiling::emitNameData() {
+void InstrLowerer::emitNameData() {
   std::string UncompressedData;
 
   if (ReferencedNames.empty())
@@ -1608,7 +1608,7 @@ void InstrProfiling::emitNameData() {
     NamePtr->eraseFromParent();
 }
 
-void InstrProfiling::emitRegistration() {
+void InstrLowerer::emitRegistration() {
   if (!needsRuntimeRegistrationOfSectionRange(TT))
     return;
 
@@ -1649,7 +1649,7 @@ void InstrProfiling::emitRegistration() {
   IRB.CreateRetVoid();
 }
 
-bool InstrProfiling::emitRuntimeHook() {
+bool InstrLowerer::emitRuntimeHook() {
   // We expect the linker to be invoked with -u<hook_var> flag for Linux
   // in which case there is no need to emit the external variable.
   if (TT.isOSLinux() || TT.isOSAIX())
@@ -1691,7 +1691,7 @@ bool InstrProfiling::emitRuntimeHook() {
   return true;
 }
 
-void InstrProfiling::emitUses() {
+void InstrLowerer::emitUses() {
   // The metadata sections are parallel arrays. Optimizers (e.g.
   // GlobalOpt/ConstantMerge) may not discard associated sections as a unit, so
   // we conservatively retain all unconditionally in the compiler.
@@ -1713,7 +1713,7 @@ void InstrProfiling::emitUses() {
   appendToUsed(M, UsedVars);
 }
 
-void InstrProfiling::emitInitialization() {
+void InstrLowerer::emitInitialization() {
   // Create ProfileFileName variable. Don't don't this for the
   // context-sensitive instrumentation lowering: This lowering is after
   // LTO/ThinLTO linking. Pass PGOInstrumentationGenCreateVar should

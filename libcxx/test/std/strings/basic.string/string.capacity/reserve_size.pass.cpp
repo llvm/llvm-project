@@ -64,6 +64,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     test<S>(0, 0, 50);
   }
   {
+    test<S>(100, 1, 5);
     test<S>(100, 50, 5);
     test<S>(100, 50, 10);
     test<S>(100, 50, 50);

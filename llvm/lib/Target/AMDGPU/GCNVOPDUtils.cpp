@@ -103,7 +103,13 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     return false;
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
-  if (InstInfo.hasInvalidOperand(getVRegIdx))
+
+  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
+  bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
+                 FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
+                 SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
+
+  if (InstInfo.hasInvalidOperand(getVRegIdx, SkipSrc))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI

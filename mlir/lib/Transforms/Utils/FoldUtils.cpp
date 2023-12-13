@@ -331,6 +331,39 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   return newIt.first->second;
 }
 
+/// Helper that flattens nested fused locations to a single fused location.
+/// Fused locations nested under non-fused locations are not flattened, and
+/// calling this on non-fused locations is a no-op as a result.
+///
+/// Fused locations are only flattened into parent fused locations if the
+/// child fused location has no metadata, or if the metadata of the parent and
+/// child fused locations are the same---this to avoid breaking cases where
+/// metadata matter.
+static Location FlattenFusedLocationRecursively(const Location loc) {
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    SetVector<Location> flattenedLocs;
+    Attribute metadata = fusedLoc.getMetadata();
+
+    for (const Location &unflattenedLoc : fusedLoc.getLocations()) {
+      Location flattenedLoc = FlattenFusedLocationRecursively(unflattenedLoc);
+      auto flattenedFusedLoc = dyn_cast<FusedLoc>(flattenedLoc);
+
+      if (flattenedFusedLoc && (!flattenedFusedLoc.getMetadata() ||
+                                flattenedFusedLoc.getMetadata() == metadata)) {
+        ArrayRef<Location> nestedLocations = flattenedFusedLoc.getLocations();
+        flattenedLocs.insert(nestedLocations.begin(), nestedLocations.end());
+      } else {
+        flattenedLocs.insert(flattenedLoc);
+      }
+    }
+
+    return FusedLoc::get(loc->getContext(), flattenedLocs.takeVector(),
+                         fusedLoc.getMetadata());
+  }
+
+  return loc;
+}
+
 void OperationFolder::appendFoldedLocation(Operation *retainedOp,
                                            Location foldedLocation) {
   // Append into existing fused location if it has the same tag.
@@ -344,7 +377,7 @@ void OperationFolder::appendFoldedLocation(Operation *retainedOp,
       locations.insert(foldedLocation);
       Location newFusedLoc = FusedLoc::get(
           retainedOp->getContext(), locations.takeVector(), existingMetadata);
-      retainedOp->setLoc(newFusedLoc);
+      retainedOp->setLoc(FlattenFusedLocationRecursively(newFusedLoc));
       return;
     }
   }
@@ -357,5 +390,5 @@ void OperationFolder::appendFoldedLocation(Operation *retainedOp,
   Location newFusedLoc =
       FusedLoc::get(retainedOp->getContext(),
                     {retainedOp->getLoc(), foldedLocation}, fusedLocationTag);
-  retainedOp->setLoc(newFusedLoc);
+  retainedOp->setLoc(FlattenFusedLocationRecursively(newFusedLoc));
 }
