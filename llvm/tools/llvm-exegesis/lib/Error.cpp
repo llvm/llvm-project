@@ -9,8 +9,8 @@
 #include "Error.h"
 
 #ifdef LLVM_ON_UNIX
-#include <string.h>
 #include "llvm/Support/SystemZ/zOSSupport.h"
+#include <string.h>
 #endif // LLVM_ON_UNIX
 
 namespace llvm {
