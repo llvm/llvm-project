@@ -7408,37 +7408,45 @@ static SDValue getTargetNode(JumpTableSDNode *N, const SDLoc &DL, EVT Ty,
   return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
 }
 
-static SDValue getTargetNode(ExternalSymbolSDNode *N, SDLoc DL, EVT Ty,
-                             SelectionDAG &DAG, unsigned Flags) {
-  llvm_unreachable("Unexpected node type.");
+static SDValue getLargeGlobalAddress(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
+                                     SelectionDAG &DAG) {
+  RISCVConstantPoolConstant *CPV =
+      RISCVConstantPoolConstant::Create(N->getGlobal(), RISCVCP::GlobalValue);
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+}
+
+static SDValue getLargeBlockAddress(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
+                                    SelectionDAG &DAG) {
+  RISCVConstantPoolConstant *CPV = RISCVConstantPoolConstant::Create(
+      N->getBlockAddress(), RISCVCP::BlockAddress);
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+}
+
+static SDValue getLargeExternalSymbol(ExternalSymbolSDNode *N, SDLoc DL, EVT Ty,
+                                      SelectionDAG &DAG) {
+  RISCVConstantPoolSymbol *CPV =
+      RISCVConstantPoolSymbol::Create(*DAG.getContext(), N->getSymbol());
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
+  SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
+  return DAG.getLoad(
+      Ty, DL, DAG.getEntryNode(), LC,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
 }
 
 template <class NodeTy>
 static SDValue getLargeAddr(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG) {
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N)) {
-    RISCVConstantPoolConstant *CPV =
-        RISCVConstantPoolConstant::Create(G->getGlobal(), RISCVCP::GlobalValue);
-    SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
-    SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
-    return DAG.getLoad(
-        Ty, DL, DAG.getEntryNode(), LC,
-        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+    return getLargeGlobalAddress(G, DL, Ty, DAG);
   } else if (BlockAddressSDNode *B = dyn_cast<BlockAddressSDNode>(N)) {
-    RISCVConstantPoolConstant *CPV = RISCVConstantPoolConstant::Create(
-        B->getBlockAddress(), RISCVCP::BlockAddress);
-    SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
-    SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
-    return DAG.getLoad(
-        Ty, DL, DAG.getEntryNode(), LC,
-        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
-  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N)) {
-    RISCVConstantPoolSymbol *CPV =
-        RISCVConstantPoolSymbol::Create(*DAG.getContext(), S->getSymbol());
-    SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
-    SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
-    return DAG.getLoad(
-        Ty, DL, DAG.getEntryNode(), LC,
-        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+    return getLargeBlockAddress(B, DL, Ty, DAG);
   } else {
     // Using pc-relative mode for other node type.
     SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
@@ -20194,10 +20202,12 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // split it and then direct call can be matched by PseudoCALL.
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      Callee = getLargeAddr(S, DL, getPointerTy(DAG.getDataLayout()), DAG);
+      Callee =
+          getLargeGlobalAddress(S, DL, getPointerTy(DAG.getDataLayout()), DAG);
     } else if (ExternalSymbolSDNode *S =
                    dyn_cast<ExternalSymbolSDNode>(Callee)) {
-      Callee = getLargeAddr(S, DL, getPointerTy(DAG.getDataLayout()), DAG);
+      Callee =
+          getLargeExternalSymbol(S, DL, getPointerTy(DAG.getDataLayout()), DAG);
     }
   } else {
     if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
