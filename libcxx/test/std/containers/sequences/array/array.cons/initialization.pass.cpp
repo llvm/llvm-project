@@ -18,38 +18,33 @@ struct NoDefault {
     TEST_CONSTEXPR NoDefault(int) { }
 };
 
-// Test default initialization
-struct test_default_initialization {
+struct test_initialization {
     template <typename T>
     TEST_CONSTEXPR_CXX14 void operator()() const
     {
-        std::array<T, 0> a0; (void)a0;
-        std::array<T, 1> a1; (void)a1;
-        std::array<T, 2> a2; (void)a2;
-        std::array<T, 3> a3; (void)a3;
+        // Check default initalization
+        {
+            std::array<T, 0> a0; (void)a0;
+            // Before C++20, default initialization doesn't work inside constexpr for
+            // trivially default constructible types. This only apply to non-empty arrays,
+            // since empty arrays don't hold an element of type T.
+            if (TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED || !std::is_trivially_default_constructible<T>::value) {
+                std::array<T, 1> a1; (void)a1;
+                std::array<T, 2> a2; (void)a2;
+                std::array<T, 3> a3; (void)a3;
+            }
 
-        std::array<NoDefault, 0> nodefault; (void)nodefault;
-    }
-};
+            std::array<NoDefault, 0> nodefault; (void)nodefault;
+        }
 
-// Additional tests for constexpr default initialization of empty arrays since
-// it seems that making a variable constexpr and merely having a non-constexpr
-// variable in a constexpr function behave differently.
-//
-// Reproducer for https://github.com/llvm/llvm-project/issues/74375
-struct test_default_initialization_74375 {
-    template <typename T>
-    TEST_CONSTEXPR_CXX14 void operator()() const
-    {
-        constexpr std::array<T, 0> a0; (void)a0;
-        constexpr std::array<NoDefault, 0> nodefault; (void)nodefault;
-    }
-};
+        // A const empty array can also be default-initialized regardless of the type
+        // it contains. For non-empty arrays, this doesn't work whenever T doesn't
+        // have a user-provided default constructor.
+        {
+            const std::array<T, 0> a0; (void)a0;
+            const std::array<NoDefault, 0> nodefault; (void)nodefault;
+        }
 
-struct test_nondefault_initialization {
-    template <typename T>
-    TEST_CONSTEXPR_CXX14 void operator()() const
-    {
         // Check direct-list-initialization syntax (introduced in C++11)
     #if TEST_STD_VER >= 11
         {
@@ -188,16 +183,10 @@ TEST_CONSTEXPR_CXX14 bool with_all_types()
 
 int main(int, char**)
 {
-    with_all_types<test_nondefault_initialization>();
-    with_all_types<test_default_initialization>();
-    with_all_types<test_default_initialization_74375>();
+    with_all_types<test_initialization>();
     test_initializer_list();
 #if TEST_STD_VER >= 14
-    static_assert(with_all_types<test_nondefault_initialization>(), "");
-#if TEST_STD_VER >= 20
-    static_assert(with_all_types<test_default_initialization>(), "");
-#endif
-    static_assert(with_all_types<test_default_initialization_74375>(), "");
+    static_assert(with_all_types<test_initialization>(), "");
     static_assert(test_initializer_list(), "");
 #endif
 
