@@ -692,6 +692,7 @@ def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop"
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                                AssemblerPredicate<(all_of FeatureStdExtZimop),
                                "'Zimop' (May-Be-Operations)">;
+
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Smaia encompasses all added CSRs and all "
