@@ -96,29 +96,27 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
     if (!packOp)
       return failure();
 
-    auto packInnerDimsPos = packOp.getInnerDimsPos();
-    auto packMixedInnerTiles = packOp.getMixedTiles();
-    auto packOuterDimsPerm = packOp.getOuterDimsPerm();
+    auto innerDimsPos = packOp.getInnerDimsPos();
+    auto mixedInnerTiles = packOp.getMixedTiles();
+    auto outerDimsPerm = packOp.getOuterDimsPerm();
     auto transposePerm = transposeOp.getPermutation();
-    SmallVector<int64_t> newPackOuterDimsPermVec;
-    SmallVector<int64_t> newPackInnerDimsPosVec;
-    SmallVector<OpFoldResult> newPackMixedInnerTilesVec;
-
-    // Variable for storing remapped position after considering original
-    // outer_dims_perm and permutation attributes of tensor.pack and
-    // linalg.transpose.
-    int64_t remappedPosition;
-    int64_t finalOuterDimsSize =
-        transposePerm.size() - packMixedInnerTiles.size();
+    SmallVector<int64_t> newOuterDimsPermVec;
+    SmallVector<int64_t> newInnerDimsPosVec;
+    SmallVector<OpFoldResult> newMixedInnerTilesVec;
     int64_t srcRank = packOp.getSourceRank();
 
     // Process transpose operation for non-tiled outer dimensions
-    for (unsigned int i = 0; i < finalOuterDimsSize; ++i) {
+    for (unsigned int i = 0; i < srcRank; ++i) {
+      // Variable for storing remapped position after considering original
+      // outer_dims_perm and permutation attributes of tensor.pack and
+      // linalg.transpose.
+      int64_t remappedPosition;
+
       // If tensor.pack has outer_dims_perm attribute, then consider it during
       // index remapping.
-      if (!packOuterDimsPerm.empty()) {
+      if (!outerDimsPerm.empty()) {
         if (transposePerm[i] < srcRank) {
-          remappedPosition = packOuterDimsPerm[transposePerm[i]];
+          remappedPosition = outerDimsPerm[transposePerm[i]];
         } else {
           return rewriter.notifyMatchFailure(
               transposeOp,
@@ -129,27 +127,23 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
         remappedPosition = transposePerm[i];
       }
 
-      newPackOuterDimsPermVec.push_back(remappedPosition);
+      newOuterDimsPermVec.push_back(remappedPosition);
     }
 
     // Process transpose operation for tiled inner dimensions
-    for (unsigned int i = finalOuterDimsSize; i < transposePerm.size(); ++i) {
-      remappedPosition = transposePerm[i] - finalOuterDimsSize;
-
-      newPackMixedInnerTilesVec.push_back(
-          packMixedInnerTiles[remappedPosition]);
-      newPackInnerDimsPosVec.push_back(packInnerDimsPos[remappedPosition]);
+    for (unsigned int i = srcRank; i < transposePerm.size(); ++i) {
+      int64_t remappedPosition = transposePerm[i] - srcRank;
+      newMixedInnerTilesVec.push_back(mixedInnerTiles[remappedPosition]);
+      newInnerDimsPosVec.push_back(innerDimsPos[remappedPosition]);
     }
 
     Value output = packOp.createDestinationTensor(
         rewriter, transposeOp.getLoc(), packOp.getSource(),
-        newPackMixedInnerTilesVec, newPackInnerDimsPosVec,
-        newPackOuterDimsPermVec);
+        newMixedInnerTilesVec, newInnerDimsPosVec, newOuterDimsPermVec);
 
     rewriter.replaceOpWithNewOp<PackOp>(
-        transposeOp, packOp.getSource(), output, newPackInnerDimsPosVec,
-        newPackMixedInnerTilesVec, packOp.getPaddingValue(),
-        newPackOuterDimsPermVec);
+        transposeOp, packOp.getSource(), output, newInnerDimsPosVec,
+        newMixedInnerTilesVec, packOp.getPaddingValue(), newOuterDimsPermVec);
 
     return success();
   }
