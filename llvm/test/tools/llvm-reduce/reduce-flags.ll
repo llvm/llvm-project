@@ -216,3 +216,19 @@ define i64 @zext_nneg_keep(i32 %a) {
   %op = zext nneg i32 %a to i64
   ret i64 %op
 }
+
+; CHECK-LABEL: @or_disjoint_drop(
+; INTERESTING: = or
+; RESULT: or i32
+define i32 @or_disjoint_drop(i32 %a, i32 %b) {
+  %op = or disjoint i32 %a, %b
+  ret i32 %op
+}
+
+; CHECK-LABEL: @or_disjoint_keep(
+; INTERESTING: = or disjoint
+; RESULT: or disjoint i32
+define i32 @or_disjoint_keep(i32 %a, i32 %b) {
+  %op = or disjoint i32 %a, %b
+  ret i32 %op
+}

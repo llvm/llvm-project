@@ -33,6 +33,9 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
       } else if (auto *NNI = dyn_cast<PossiblyNonNegInst>(&I)) {
         if (NNI->hasNonNeg() && !O.shouldKeep())
           NNI->setNonNeg(false);
+      } else if (auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
+        if (PDI->isDisjoint() && !O.shouldKeep())
+          PDI->setIsDisjoint(false);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         if (GEP->isInBounds() && !O.shouldKeep())
           GEP->setIsInBounds(false);
