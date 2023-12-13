@@ -35,5 +35,13 @@ inline pid_t wait4(pid_t pid, int *wstatus, int options,
   return Result;
 }
 
+// z/OS Unix System Services does not have strnlen() support, so the strnlen()
+// function is implemented here.
+inline std::size_t strnlen(const char *S, std::size_t MaxLen) {
+  const char *PtrToNullChar =
+      static_cast<const char *>(std::memchr(S, '\0', MaxLen));
+  return PtrToNullChar ? PtrToNullChar - S : MaxLen;
+}
+
 #endif
 #endif
