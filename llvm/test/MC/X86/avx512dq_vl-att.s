@@ -144,3 +144,6 @@
 # CHECK: vfpclassps	$123, (%rcx){1to8}, %k2 {%k7}
 # CHECK: encoding: [0x62,0xf3,0x7d,0x3f,0x66,0x11,0x7b]
          vfpclassps	$123, (%rcx){1to8}, %k2 {%k7}
+# CHECK: vcvttps2uqq     128(%ecx), %xmm1 {%k2}
+# CHECK: encoding: [0x67,0x62,0xf1,0x7d,0x0a,0x78,0x49,0x10]
+         vcvttps2uqq     128(%ecx), %xmm1 {%k2}
