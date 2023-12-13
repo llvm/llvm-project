@@ -2955,9 +2955,7 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   if (std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange())
     return CR->getUnsignedMax().ult(1ull << 32);
 
-  if (auto *GO = GV->getAliaseeObject())
-    return !TM.isLargeGlobalObject(GO);
-  return true;
+  return !TM.isLargeGlobalValue(GV);
 }
 
 bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,

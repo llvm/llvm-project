@@ -91,9 +91,8 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
       if (CM == CodeModel::Large)
         return X86II::MO_GOTOFF;
       // Large objects use GOTOFF, otherwise use RIP-rel access.
-      if (auto *GO = dyn_cast_or_null<GlobalObject>(GV))
-        return TM.isLargeGlobalObject(GO) ? X86II::MO_GOTOFF
-                                          : X86II::MO_NO_FLAG;
+      if (GV)
+        return TM.isLargeGlobalValue(GV) ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
       // For non-GlobalObjects, the small and medium code models treat them as
       // accessible with a RIP-rel access.
       return X86II::MO_NO_FLAG;
