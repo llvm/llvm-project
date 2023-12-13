@@ -557,6 +557,7 @@ public:
     uint64_t StringOffsetsBase;
     uint64_t EntryOffsetsBase;
     uint64_t EntriesBase;
+    bool HasIdxParent = false;
 
     void dumpCUs(ScopedPrinter &W) const;
     void dumpLocalTUs(ScopedPrinter &W) const;
@@ -770,6 +771,13 @@ public:
   /// Return the Name Index covering the compile unit at CUOffset, or nullptr if
   /// there is no Name Index covering that unit.
   const NameIndex *getCUNameIndex(uint64_t CUOffset);
+
+  /// Returns true if all the NameIndices in this table provide IDX_parent
+  /// capabilities.
+  bool supportsIdxParent() const {
+    return all_of(NameIndices,
+                  [](const NameIndex &Idx) { return Idx.HasIdxParent; });
+  }
 };
 
 /// If `Name` is the name of a templated function that includes template

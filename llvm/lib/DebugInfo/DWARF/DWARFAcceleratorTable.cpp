@@ -578,6 +578,10 @@ Error DWARFDebugNames::NameIndex::extract() {
                              "Section too small: cannot read abbreviations.");
 
   EntriesBase = Offset + Hdr.AbbrevTableSize;
+  HasIdxParent = false;
+  auto IsIdxParent = [](auto IdxFormPair) {
+    return IdxFormPair.Index == dwarf::Index::DW_IDX_parent;
+  };
 
   for (;;) {
     auto AbbrevOr = extractAbbrev(&Offset);
@@ -585,6 +589,7 @@ Error DWARFDebugNames::NameIndex::extract() {
       return AbbrevOr.takeError();
     if (isSentinel(*AbbrevOr))
       return Error::success();
+    HasIdxParent |= any_of(AbbrevOr->Attributes, IsIdxParent);
 
     if (!Abbrevs.insert(std::move(*AbbrevOr)).second)
       return createStringError(errc::invalid_argument,
