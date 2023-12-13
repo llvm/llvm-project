@@ -18,7 +18,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
-#define GEN_PASS_DEF_CONSTEXTRUDEROPT
+#define GEN_PASS_DEF_CONSTANTARGUMENTGLOBALISATIONOPT
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
@@ -151,10 +151,11 @@ public:
 
 // this pass attempts to convert immediate scalar literals in function calls
 // to global constants to allow transformations as Dead Argument Elimination
-class ConstExtruderOpt
-    : public fir::impl::ConstExtruderOptBase<ConstExtruderOpt> {
+class ConstantArgumentGlobalisationOpt
+    : public fir::impl::ConstantArgumentGlobalisationOptBase<
+          ConstantArgumentGlobalisationOpt> {
 public:
-  ConstExtruderOpt() = default;
+  ConstantArgumentGlobalisationOpt() = default;
 
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
@@ -184,6 +185,6 @@ public:
 };
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::createConstExtruderPass() {
-  return std::make_unique<ConstExtruderOpt>();
+std::unique_ptr<mlir::Pass> fir::createConstantArgumentGlobalisationPass() {
+  return std::make_unique<ConstantArgumentGlobalisationOpt>();
 }

@@ -86,6 +86,8 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
 
 DisableOption(ExternalNameConversion, "external-name-interop",
     "convert names with external convention");
+DisableOption(ConstantArgumentGlobalisation, "constant-argument-globalisation",
+    "disable the local constants to global constant conversion");
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
@@ -270,6 +272,8 @@ inline void createDefaultFIROptimizerPassPipeline(
     // These passes may increase code size.
     pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
+    if (!disableConstantArgumentGlobalisation)
+      pm.addPass(fir::createConstantArgumentGlobalisationPass());
   }
 
   if (pc.LoopVersioning)
