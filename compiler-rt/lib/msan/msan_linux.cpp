@@ -14,23 +14,22 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
-#include "msan.h"
-#include "msan_report.h"
-#include "msan_thread.h"
+#  include <elf.h>
+#  include <link.h>
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <sys/resource.h>
+#  include <sys/time.h>
+#  include <unistd.h>
+#  include <unwind.h>
 
-#include <elf.h>
-#include <link.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <unwind.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
+#  include "msan.h"
+#  include "msan_report.h"
+#  include "msan_thread.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
 
 namespace __msan {
 
