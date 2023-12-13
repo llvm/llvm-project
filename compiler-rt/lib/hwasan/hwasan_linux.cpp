@@ -526,16 +526,16 @@ void HwasanInstallAtForkHandler() {
     if (CAN_SANITIZE_LEAKS) {
       __lsan::LockGlobal();
     }
-    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and do the
-    // job.
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+    // stuff we need.
     __lsan::LockThreads();
     __lsan::LockAllocator();
     StackDepotLockAll();
   };
   auto after = []() {
     StackDepotUnlockAll();
-    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and do the
-    // job.
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+    // the stuff we need.
     __lsan::UnlockAllocator();
     __lsan::UnlockThreads();
     if (CAN_SANITIZE_LEAKS) {
