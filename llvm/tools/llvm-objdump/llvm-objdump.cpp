@@ -514,9 +514,8 @@ unsigned objdump::GetColumnIndent(MCSubtargetInfo const &STI,
   // Special case for assembly string: the assembly printer uses tabs, so we
   // need to ensure we start the instruction on a tab stop (multiple of 8).
   Indent = alignTo(Indent, 8);
-  if (Col == DisassemblyColumn::Assembly) {
+  if (Col == DisassemblyColumn::Assembly)
     return Indent;
-  }
 
   // Assembly width can be configured with --debug-vars-indent=
   // FIXME this variable name is confusing.
@@ -1376,8 +1375,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   End += SectionAddr;
   uint64_t Index = Start;
 
-  std::vector<RelocationRef>::const_iterator RelCur = Relocs.begin();
-  std::vector<RelocationRef>::const_iterator RelEnd = Relocs.end();
+  auto RelCur = Relocs.begin();
+  auto RelEnd = Relocs.end();
 
   while (Index < End) {
     // Disassemble a real instruction and record function-local branch labels.

@@ -211,19 +211,19 @@ const char *LiveVariablePrinter::getLineChar(LineChar C) const {
   bool IsASCII = DbgVariables == DVASCII;
   switch (C) {
   case LineChar::RangeStart:
-    return IsASCII ? "^" : (const char *)u8"\u2548";
+    return IsASCII ? "^" : u8"\u2548";
   case LineChar::RangeMid:
-    return IsASCII ? "|" : (const char *)u8"\u2503";
+    return IsASCII ? "|" : u8"\u2503";
   case LineChar::RangeEnd:
-    return IsASCII ? "v" : (const char *)u8"\u253b";
+    return IsASCII ? "v" : u8"\u253b";
   case LineChar::LabelVert:
-    return IsASCII ? "|" : (const char *)u8"\u2502";
+    return IsASCII ? "|" : u8"\u2502";
   case LineChar::LabelCornerNew:
-    return IsASCII ? "/" : (const char *)u8"\u250c";
+    return IsASCII ? "/" : u8"\u250c";
   case LineChar::LabelCornerActive:
-    return IsASCII ? "|" : (const char *)u8"\u2520";
+    return IsASCII ? "|" : u8"\u2520";
   case LineChar::LabelHoriz:
-    return IsASCII ? "-" : (const char *)u8"\u2500";
+    return IsASCII ? "-" : u8"\u2500";
   }
   llvm_unreachable("Unhandled LineChar enum");
 }
@@ -516,6 +516,15 @@ const raw_ostream::Colors LineColors[] = {
   raw_ostream::CYAN,
 };
 
+raw_ostream::Colors ControlFlowPrinter::PickColor() {
+  if (!OutputMode.color_enabled())
+    return raw_ostream::RESET;
+  auto Ret = LineColors[NextColorIdx];
+  NextColorIdx =
+      (NextColorIdx + 1) % (sizeof(LineColors) / sizeof(LineColors[0]));
+  return Ret;
+}
+
 void ControlFlowPrinter::addEdge(uint64_t From, uint64_t To) {
   auto It = Targets.find(To);
   if (It == Targets.end())
@@ -551,32 +560,24 @@ void ControlFlowPrinter::finalise() {
     T->Column = Column;
     MaxColumn = std::max(MaxColumn, Column);
 
-#if 1
-    LLVM_DEBUG(
-      dbgs() << "Target: 0x" << Twine::utohexstr(T->Target) << " (" << T->Length()
-             << ") Column " << Column << ":\n";
-      for (auto Source : T->Sources)
-        dbgs() << "  Source: 0x" << Twine::utohexstr(Source) << "\n";
-    );
-#endif
   }
 
   setControlFlowColumnWidth(MaxColumn * 2 + 4);
 }
 
 const char *ControlFlowPrinter::getLineChar(LineChar C) const {
-  bool IsASCII = OutputMode.Chars == VisualizeJumpsMode::ASCII;
+  bool IsASCII = !OutputMode.unicode_enabled();
   switch (C) {
   case LineChar::Horiz:
-    return IsASCII ? "-" : (const char *)u8"\u2500";
+    return IsASCII ? "-" : u8"\u2500";
   case LineChar::Vert:
-    return IsASCII ? "|" : (const char *)u8"\u2502";
+    return IsASCII ? "|" : u8"\u2502";
   case LineChar::TopCorner:
-    return IsASCII ? "/" : (const char *)u8"\u256d";
+    return IsASCII ? "/" : u8"\u256d";
   case LineChar::BottomCorner:
-    return IsASCII ? "\\" : (const char *)u8"\u2570";
+    return IsASCII ? "\\" : u8"\u2570";
   case LineChar::Tee:
-    return IsASCII ? "+" : (const char *)u8"\u251c";
+    return IsASCII ? "+" : u8"\u251c";
   case LineChar::Arrow:
     return ">";
   }

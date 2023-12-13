@@ -184,6 +184,7 @@ struct VisualizeJumpsMode {
 
   bool enabled() const { return Chars != Off; }
   bool color_enabled() const { return enabled() && Colors != BlackAndWhite; }
+  bool unicode_enabled() const { return Chars == Unicode; }
 
   void ResolveAutoColor(raw_ostream &OS) {
     if (Colors == Auto)
@@ -246,14 +247,7 @@ class ControlFlowPrinter {
   const MCSubtargetInfo &STI;
 
   int NextColorIdx;
-  raw_ostream::Colors PickColor() {
-    if ((OutputMode & VisualizeJumpsMode::ColorMask) ==
-        VisualizeJumpsMode::Off)
-      return raw_ostream::RESET;
-    auto Ret = LineColors[NextColorIdx];
-    NextColorIdx = (NextColorIdx + 1) % (sizeof(LineColors) / sizeof(LineColors[0]));
-    return Ret;
-  }
+  raw_ostream::Colors PickColor();
 
   int getIndentLevel() const { return 10; }
 
