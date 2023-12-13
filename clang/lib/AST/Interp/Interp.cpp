@@ -350,11 +350,6 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   }
 
   if (!F->isConstexpr()) {
-    // Don't emit anything if we're checking for a potential constant
-    // expression. That will happen later when actually executing.
-    if (S.checkingPotentialConstantExpression())
-      return false;
-
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
@@ -371,13 +366,21 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
       // FIXME: If DiagDecl is an implicitly-declared special member function
       // or an inheriting constructor, we should be much more explicit about why
       // it's not constexpr.
-      if (CD && CD->isInheritingConstructor())
+      if (CD && CD->isInheritingConstructor()) {
         S.FFDiag(Loc, diag::note_constexpr_invalid_inhctor, 1)
           << CD->getInheritedConstructor().getConstructor()->getParent();
-      else
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+      } else {
+        // Don't emit anything if the function isn't defined and we're checking
+        // for a constant expression. It might be defined at the point we're
+        // actually calling it.
+        if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
+          return false;
+
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+      }
     } else {
       S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
     }
