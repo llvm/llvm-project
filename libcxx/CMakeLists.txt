@@ -651,6 +651,19 @@ get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 add_library(cxx-sanitizer-flags INTERFACE)
 target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 
+# _LIBCPP_INSTRUMENTED_WITH_ASAN informs that library was built with ASan.
+# Defining _LIBCPP_INSTRUMENTED_WITH_ASAN while building the library with ASan is required.
+# Normally, the _LIBCPP_INSTRUMENTED_WITH_ASAN flag is used to keep information whether
+# dylibs are built with AddressSanitizer. However, when building libc++,
+# this flag needs to be defined so that the resulting dylib has all ASan functionalities guarded by this flag.
+# If the _LIBCPP_INSTRUMENTED_WITH_ASAN flag is not defined, then parts of the ASan instrumentation code in libc++
+# will not be compiled into it, resulting in false positives.
+# For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
+string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
+if (NOT "${building_with_asan}" STREQUAL "-1")
+  config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
+endif()
+
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
   if (NOT MSVC)
