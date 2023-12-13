@@ -91,6 +91,9 @@ class SourceCoverageViewHTML : public SourceCoverageView {
   void renderBranchView(raw_ostream &OS, BranchView &BRV,
                         unsigned ViewDepth) override;
 
+  void renderMCDCView(raw_ostream &OS, MCDCView &BRV,
+                      unsigned ViewDepth) override;
+
   void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
                                unsigned ViewDepth) override;
 
