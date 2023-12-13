@@ -124,6 +124,9 @@
 						"swift"
 					]
 				},
+				"variables": {
+					"pickProcess": "extension.pickNativeProcess"
+				},
 				"program": "./bin/lldb-dap",
 				"windows": {
 					"program": "./bin/lldb-dap.exe"
