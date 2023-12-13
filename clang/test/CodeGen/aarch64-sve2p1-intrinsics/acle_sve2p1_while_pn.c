@@ -276,7 +276,7 @@ svcount_t test_svwhilegt_c64_vl4(int64_t op1, int64_t op2)
 //
 svcount_t test_svwhilehi_c8_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c8,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilegt_c8,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c8_vl4(
@@ -291,7 +291,7 @@ svcount_t test_svwhilehi_c8_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c8_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c8,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilegt_c8,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c16_vl2(
@@ -306,7 +306,7 @@ svcount_t test_svwhilehi_c8_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c16_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c16,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilegt_c16,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c16_vl4(
@@ -321,7 +321,7 @@ svcount_t test_svwhilehi_c16_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c16_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c16,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilegt_c16,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c32_vl2(
@@ -336,7 +336,7 @@ svcount_t test_svwhilehi_c16_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c32_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c32,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilegt_c32,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c32_vl4(
@@ -351,7 +351,7 @@ svcount_t test_svwhilehi_c32_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c32_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c32,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilegt_c32,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c64_vl2(
@@ -366,7 +366,7 @@ svcount_t test_svwhilehi_c32_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c64_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c64,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilegt_c64,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehi_c64_vl4(
@@ -381,7 +381,7 @@ svcount_t test_svwhilehi_c64_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehi_c64_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehi_c64,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilegt_c64,_u64)(op1, op2, 4);
 }
 
 
@@ -399,7 +399,7 @@ svcount_t test_svwhilehi_c64_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c8_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c8,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilege_c8,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c8_vl4(
@@ -414,7 +414,7 @@ svcount_t test_svwhilehs_c8_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c8_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c8,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilege_c8,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c16_vl2(
@@ -429,7 +429,7 @@ svcount_t test_svwhilehs_c8_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c16_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c16,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilege_c16,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c16_vl4(
@@ -444,7 +444,7 @@ svcount_t test_svwhilehs_c16_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c16_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c16,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilege_c16,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c32_vl2(
@@ -459,7 +459,7 @@ svcount_t test_svwhilehs_c16_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c32_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c32,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilege_c32,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c32_vl4(
@@ -474,7 +474,7 @@ svcount_t test_svwhilehs_c32_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c32_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c32,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilege_c32,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c64_vl2(
@@ -489,7 +489,7 @@ svcount_t test_svwhilehs_c32_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c64_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c64,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilege_c64,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilehs_c64_vl4(
@@ -504,7 +504,7 @@ svcount_t test_svwhilehs_c64_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilehs_c64_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilehs_c64,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilege_c64,_u64)(op1, op2, 4);
 }
 
 
@@ -645,7 +645,7 @@ svcount_t test_svwhilele_c64_vl4(int64_t op1, int64_t op2)
 //
 svcount_t test_svwhilelo_c8_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c8,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilelt_c8,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c8_vl4(
@@ -660,7 +660,7 @@ svcount_t test_svwhilelo_c8_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c8_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c8,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilelt_c8,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c16_vl2(
@@ -675,7 +675,7 @@ svcount_t test_svwhilelo_c8_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c16_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c16,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilelt_c16,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c16_vl4(
@@ -690,7 +690,7 @@ svcount_t test_svwhilelo_c16_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c16_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c16,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilelt_c16,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c32_vl2(
@@ -705,7 +705,7 @@ svcount_t test_svwhilelo_c16_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c32_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c32,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilelt_c32,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c32_vl4(
@@ -720,7 +720,7 @@ svcount_t test_svwhilelo_c32_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c32_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c32,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilelt_c32,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c64_vl2(
@@ -735,7 +735,7 @@ svcount_t test_svwhilelo_c32_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c64_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c64,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilelt_c64,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilelo_c64_vl4(
@@ -750,7 +750,7 @@ svcount_t test_svwhilelo_c64_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilelo_c64_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilelo_c64,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilelt_c64,_u64)(op1, op2, 4);
 }
 
 
@@ -768,7 +768,7 @@ svcount_t test_svwhilelo_c64_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c8_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c8,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilele_c8,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilels_c8_vl4(
@@ -783,7 +783,7 @@ svcount_t test_svwhilels_c8_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c8_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c8,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilele_c8,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilels_c16_vl2(
@@ -798,7 +798,7 @@ svcount_t test_svwhilels_c8_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c16_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c16,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilele_c16,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilels_c16_vl4(
@@ -813,7 +813,7 @@ svcount_t test_svwhilels_c16_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c16_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c16,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilele_c16,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilels_c32_vl2(
@@ -828,7 +828,7 @@ svcount_t test_svwhilels_c16_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c32_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c32,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilele_c32,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilels_c32_vl4(
@@ -843,7 +843,7 @@ svcount_t test_svwhilels_c32_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c32_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c32,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilele_c32,_u64)(op1, op2, 4);
 }
 
 // CHECK-LABEL: @test_svwhilels_c64_vl2(
@@ -858,7 +858,7 @@ svcount_t test_svwhilels_c32_vl4(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c64_vl2(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c64,_u64)(op1, op2, 2);
+  return SVE_ACLE_FUNC(svwhilele_c64,_u64)(op1, op2, 2);
 }
 
 // CHECK-LABEL: @test_svwhilels_c64_vl4(
@@ -873,7 +873,7 @@ svcount_t test_svwhilels_c64_vl2(uint64_t op1, uint64_t op2)
 //
 svcount_t test_svwhilels_c64_vl4(uint64_t op1, uint64_t op2)
 {
-  return SVE_ACLE_FUNC(svwhilels_c64,_u64)(op1, op2, 4);
+  return SVE_ACLE_FUNC(svwhilele_c64,_u64)(op1, op2, 4);
 }
 
 
