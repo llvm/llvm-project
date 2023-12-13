@@ -594,6 +594,40 @@ bb:
   ret i64 %tmp2
 }
 
+
+define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
+; CHECK-LABEL: add_v128i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v16, (a1)
+; CHECK-NEXT:    vadd.vv v8, v8, v16
+; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <128 x i8>, ptr %x
+  %b = load <128 x i8>, ptr %y
+  %c = add <128 x i8> %a, %b
+  store <128 x i8> %c, ptr %x
+  ret void
+}
+
+define void @add_v16i64(ptr %x, ptr %y) vscale_range(2,2) {
+; CHECK-LABEL: add_v16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vle64.v v16, (a1)
+; CHECK-NEXT:    vadd.vv v8, v8, v16
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = load <16 x i64>, ptr %x
+  %b = load <16 x i64>, ptr %y
+  %c = add <16 x i64> %a, %b
+  store <16 x i64> %c, ptr %x
+  ret void
+}
+
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,

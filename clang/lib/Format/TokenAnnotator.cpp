@@ -164,6 +164,10 @@ private:
                TT_OverloadedOperatorLParen))) {
         return false;
       }
+      if (Previous.Previous->is(tok::kw_operator) &&
+          CurrentToken->is(tok::l_paren)) {
+        return false;
+      }
     }
 
     FormatToken *Left = CurrentToken->Previous;
