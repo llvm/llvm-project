@@ -1010,6 +1010,8 @@ class ThreadSafetyAnalyzer {
   ThreadSafetyHandler &Handler;
   const CXXMethodDecl *CurrentMethod;
   LocalVariableMap LocalVarMap;
+  // Maps constructed objects to `this` placeholder prior to initialization.
+  llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
   FactManager FactMan;
   std::vector<CFGBlockInfo> BlockInfo;
 
@@ -1528,8 +1530,6 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
 
   ThreadSafetyAnalyzer *Analyzer;
   FactSet FSet;
-  /// Maps constructed objects to `this` placeholder prior to initialization.
-  llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
@@ -1790,7 +1790,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       std::pair<til::LiteralPtr *, StringRef> Placeholder =
           Analyzer->SxBuilder.createThisPlaceholder(Exp);
       [[maybe_unused]] auto inserted =
-          ConstructedObjects.insert({Exp, Placeholder.first});
+          Analyzer->ConstructedObjects.insert({Exp, Placeholder.first});
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder.first;
@@ -2109,10 +2109,10 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
         E = EWC->getSubExpr()->IgnoreParens();
       E = UnpackConstruction(E);
 
-      if (auto Object = ConstructedObjects.find(E);
-          Object != ConstructedObjects.end()) {
+      if (auto Object = Analyzer->ConstructedObjects.find(E);
+          Object != Analyzer->ConstructedObjects.end()) {
         Object->second->setClangDecl(VD);
-        ConstructedObjects.erase(Object);
+        Analyzer->ConstructedObjects.erase(Object);
       }
     }
   }
@@ -2121,11 +2121,11 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
 void BuildLockset::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *Exp) {
   if (const ValueDecl *ExtD = Exp->getExtendingDecl()) {
-    if (auto Object =
-            ConstructedObjects.find(UnpackConstruction(Exp->getSubExpr()));
-        Object != ConstructedObjects.end()) {
+    if (auto Object = Analyzer->ConstructedObjects.find(
+            UnpackConstruction(Exp->getSubExpr()));
+        Object != Analyzer->ConstructedObjects.end()) {
       Object->second->setClangDecl(ExtD);
-      ConstructedObjects.erase(Object);
+      Analyzer->ConstructedObjects.erase(Object);
     }
   }
 }
@@ -2419,15 +2419,15 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
           // Clean up constructed object even if there are no attributes to
           // keep the number of objects in limbo as small as possible.
-          if (auto Object = LocksetBuilder.ConstructedObjects.find(
+          if (auto Object = ConstructedObjects.find(
                   TD.getBindTemporaryExpr()->getSubExpr());
-              Object != LocksetBuilder.ConstructedObjects.end()) {
+              Object != ConstructedObjects.end()) {
             const auto *DD = TD.getDestructorDecl(AC.getASTContext());
             if (DD->hasAttrs())
               // TODO: the location here isn't quite correct.
               LocksetBuilder.handleCall(nullptr, DD, Object->second,
                                         TD.getBindTemporaryExpr()->getEndLoc());
-            LocksetBuilder.ConstructedObjects.erase(Object);
+            ConstructedObjects.erase(Object);
           }
           break;
         }
