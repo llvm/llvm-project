@@ -1,4 +1,4 @@
-//===- LoopScheduler.cpp -------------------------------------------------===//
+//===- IterationGraphSorter.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,11 +20,10 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-/// A helper class that visits an affine expression and tries to find an
-/// AffineDimExpr to which the corresponding iterator from a GenericOp matches
-/// the desired iterator type.
-/// If there is no matched iterator type, returns the first DimExpr in the
-/// expression.
+/// A helper class that visits an affine expression and tries to find
+/// an AffineDimExpr to which the corresponding iterator from a GenericOp
+/// matches the desired iterator type. If there is no matched iterator
+/// type, the method returns the first DimExpr in the expression.
 class AffineDimFinder : public AffineExprVisitor<AffineDimFinder> {
 public:
   explicit AffineDimFinder(ArrayRef<utils::IteratorType> itTypes)
@@ -81,11 +80,9 @@ inline static bool includesDenseOutput(SortMask mask) {
   return includesAny(mask, SortMask::kIncludeDenseOutput);
 }
 
-/// A helper to compute a topological sort. O(n^2) time complexity
-/// as we use adj matrix for the graph.
-/// The sorted result will put the first Reduction iterator to the
-/// latest possible position.
 AffineMap IterationGraphSorter::topoSort() {
+  // The sorted result will put the first Reduction iterator to the
+  // latest possible position.
   std::vector<unsigned> redIt; // reduce iterator with 0 degree
   std::vector<unsigned> parIt; // parallel iterator with 0 degree
   const unsigned numLoops = getNumLoops();
@@ -170,6 +167,7 @@ AffineMap IterationGraphSorter::sort(SortMask mask, Value ignored) {
   // Reset the interation graph.
   for (auto &row : itGraph)
     std::fill(row.begin(), row.end(), false);
+
   // Reset cached in-degree.
   std::fill(inDegree.begin(), inDegree.end(), 0);
 
@@ -179,7 +177,6 @@ AffineMap IterationGraphSorter::sort(SortMask mask, Value ignored) {
     // Skip dense inputs when not requested.
     if ((!enc && !includesDenseInput(mask)) || in == ignored)
       continue;
-
     addConstraints(in, map);
   }
 
