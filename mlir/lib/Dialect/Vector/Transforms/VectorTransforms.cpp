@@ -1468,7 +1468,12 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 ///  %B_row_sc = vector.shape_cast %B_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %A_row_sc = vector.shape_cast %A_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %mul = arith.mulf %B_row_sc, %A_row_sc : vector<[4]xf32>
+///  %cast_new = vector.shape_cast %mul : vector<[4]xf32> to vector<1x[4]xf32>
+///  %cast = vector.shape_cast %cast_new : vector<1x[4]xf32> to vector<[4]xf32>
 /// ```
+///
+/// Patterns for folding shape_casts should instantly eliminate `%cast_new` and
+/// `%cast`.
 struct DropUnitDimFromElementwiseOps final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
   using OpTraitRewritePattern::OpTraitRewritePattern;
@@ -1595,7 +1600,8 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateReorderShapeCastPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
-  patterns.add<DropUnitDimFromElementwiseOps>(patterns.getContext(), benefit);
+  patterns.add<DropUnitDimFromElementwiseOps, ShapeCastOpFolder>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
