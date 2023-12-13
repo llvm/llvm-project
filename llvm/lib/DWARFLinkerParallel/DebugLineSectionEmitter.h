@@ -149,6 +149,7 @@ private:
       // A null-terminated string containing the full or relative path name of a
       // source file.
       Section.emitString(File.Name.getForm(), *FileNameStr);
+
       // An unsigned LEB128 number representing the directory index of a
       // directory in the include_directories section.
       encodeULEB128(File.DirIdx, Section.OS);

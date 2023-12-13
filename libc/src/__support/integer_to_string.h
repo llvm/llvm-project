@@ -255,7 +255,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       if constexpr (Fmt::BASE == 10) {
         write_unsigned_number(abs(value), sink);
       } else {
-        write_unsigned_number(cpp::bit_cast<UNSIGNED_T>(value), sink);
+        write_unsigned_number(static_cast<UNSIGNED_T>(value), sink);
       }
       // width
       while (sink.ok() && sink.size() < Fmt::MIN_DIGITS)

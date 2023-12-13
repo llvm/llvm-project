@@ -1084,3 +1084,133 @@ define i64 @explode_16xi64(<16 x i64> %v) {
   %add14 = add i64 %add13, %e15
   ret i64 %add14
 }
+
+define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
+; RV32-LABEL: explode_16xi32_exact_vlen:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vslidedown.vi v12, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v12
+; RV32-NEXT:    vslidedown.vi v12, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v12
+; RV32-NEXT:    vmv.x.s a2, v9
+; RV32-NEXT:    vslidedown.vi v12, v9, 1
+; RV32-NEXT:    vmv.x.s a3, v12
+; RV32-NEXT:    vslidedown.vi v12, v9, 2
+; RV32-NEXT:    vmv.x.s a4, v12
+; RV32-NEXT:    vslidedown.vi v9, v9, 3
+; RV32-NEXT:    vmv.x.s a5, v9
+; RV32-NEXT:    vmv.x.s a6, v10
+; RV32-NEXT:    vslidedown.vi v9, v10, 1
+; RV32-NEXT:    vmv.x.s a7, v9
+; RV32-NEXT:    vslidedown.vi v9, v10, 2
+; RV32-NEXT:    vmv.x.s t0, v9
+; RV32-NEXT:    vslidedown.vi v9, v10, 3
+; RV32-NEXT:    vmv.x.s t1, v9
+; RV32-NEXT:    vmv.x.s t2, v11
+; RV32-NEXT:    vslidedown.vi v9, v11, 1
+; RV32-NEXT:    vmv.x.s t3, v9
+; RV32-NEXT:    vslidedown.vi v9, v11, 2
+; RV32-NEXT:    vmv.x.s t4, v9
+; RV32-NEXT:    vslidedown.vi v9, v11, 3
+; RV32-NEXT:    vmv.x.s t5, v9
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vmv.x.s t6, v8
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, t6, a0
+; RV32-NEXT:    add a2, a2, a3
+; RV32-NEXT:    add a2, a2, a4
+; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    add a5, a5, a6
+; RV32-NEXT:    add a5, a5, a7
+; RV32-NEXT:    add a5, a5, t0
+; RV32-NEXT:    add a0, a0, a5
+; RV32-NEXT:    add t1, t1, t2
+; RV32-NEXT:    add t1, t1, t3
+; RV32-NEXT:    add t1, t1, t4
+; RV32-NEXT:    add t1, t1, t5
+; RV32-NEXT:    add a0, a0, t1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_16xi32_exact_vlen:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v12, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v12
+; RV64-NEXT:    vslidedown.vi v12, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v12
+; RV64-NEXT:    vmv.x.s a2, v9
+; RV64-NEXT:    vslidedown.vi v12, v9, 1
+; RV64-NEXT:    vmv.x.s a3, v12
+; RV64-NEXT:    vslidedown.vi v12, v9, 2
+; RV64-NEXT:    vmv.x.s a4, v12
+; RV64-NEXT:    vslidedown.vi v9, v9, 3
+; RV64-NEXT:    vmv.x.s a5, v9
+; RV64-NEXT:    vmv.x.s a6, v10
+; RV64-NEXT:    vslidedown.vi v9, v10, 1
+; RV64-NEXT:    vmv.x.s a7, v9
+; RV64-NEXT:    vslidedown.vi v9, v10, 2
+; RV64-NEXT:    vmv.x.s t0, v9
+; RV64-NEXT:    vslidedown.vi v9, v10, 3
+; RV64-NEXT:    vmv.x.s t1, v9
+; RV64-NEXT:    vmv.x.s t2, v11
+; RV64-NEXT:    vslidedown.vi v9, v11, 1
+; RV64-NEXT:    vmv.x.s t3, v9
+; RV64-NEXT:    vslidedown.vi v9, v11, 2
+; RV64-NEXT:    vmv.x.s t4, v9
+; RV64-NEXT:    vslidedown.vi v9, v11, 3
+; RV64-NEXT:    vmv.x.s t5, v9
+; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vredxor.vs v8, v8, v9
+; RV64-NEXT:    vmv.x.s t6, v8
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    add a0, t6, a0
+; RV64-NEXT:    add a2, a2, a3
+; RV64-NEXT:    add a2, a2, a4
+; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    add a5, a5, a6
+; RV64-NEXT:    add a5, a5, a7
+; RV64-NEXT:    add a5, a5, t0
+; RV64-NEXT:    add a0, a0, a5
+; RV64-NEXT:    add t1, t1, t2
+; RV64-NEXT:    add t1, t1, t3
+; RV64-NEXT:    add t1, t1, t4
+; RV64-NEXT:    add t1, t1, t5
+; RV64-NEXT:    addw a0, a0, t1
+; RV64-NEXT:    ret
+  %e0 = extractelement <16 x i32> %v, i32 0
+  %e1 = extractelement <16 x i32> %v, i32 1
+  %e2 = extractelement <16 x i32> %v, i32 2
+  %e3 = extractelement <16 x i32> %v, i32 3
+  %e4 = extractelement <16 x i32> %v, i32 4
+  %e5 = extractelement <16 x i32> %v, i32 5
+  %e6 = extractelement <16 x i32> %v, i32 6
+  %e7 = extractelement <16 x i32> %v, i32 7
+  %e8 = extractelement <16 x i32> %v, i32 8
+  %e9 = extractelement <16 x i32> %v, i32 9
+  %e10 = extractelement <16 x i32> %v, i32 10
+  %e11 = extractelement <16 x i32> %v, i32 11
+  %e12 = extractelement <16 x i32> %v, i32 12
+  %e13 = extractelement <16 x i32> %v, i32 13
+  %e14 = extractelement <16 x i32> %v, i32 14
+  %e15 = extractelement <16 x i32> %v, i32 15
+  %add0 = xor i32 %e0, %e1
+  %add1 = add i32 %add0, %e2
+  %add2 = add i32 %add1, %e3
+  %add3 = add i32 %add2, %e4
+  %add4 = add i32 %add3, %e5
+  %add5 = add i32 %add4, %e6
+  %add6 = add i32 %add5, %e7
+  %add7 = add i32 %add6, %e8
+  %add8 = add i32 %add7, %e9
+  %add9 = add i32 %add8, %e10
+  %add10 = add i32 %add9, %e11
+  %add11 = add i32 %add10, %e12
+  %add12 = add i32 %add11, %e13
+  %add13 = add i32 %add12, %e14
+  %add14 = add i32 %add13, %e15
+  ret i32 %add14
+}

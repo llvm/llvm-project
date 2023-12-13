@@ -141,7 +141,9 @@ static int initialize(Lang Language) {
     unsigned NSLen;
     const char *HeaderName;
   };
-#define SYMBOL(Name, NS, Header) {#NS #Name, StringRef(#NS).size(), #Header},
+#define SYMBOL(Name, NS, Header)                                               \
+  {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
+   #Header},
   switch (Language) {
   case Lang::C: {
     static constexpr Symbol CSymbols[] = {

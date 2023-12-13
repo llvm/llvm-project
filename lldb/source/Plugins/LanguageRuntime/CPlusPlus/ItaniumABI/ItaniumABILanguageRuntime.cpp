@@ -82,24 +82,30 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
       lookup_name.append(class_name.data(), class_name.size());
 
       type_info.SetName(class_name);
-      const bool exact_match = true;
+      ConstString const_lookup_name(lookup_name);
       TypeList class_types;
-
+      ModuleSP module_sp = vtable_info.symbol->CalculateSymbolContextModule();
       // First look in the module that the vtable symbol came from and
       // look for a single exact match.
-      llvm::DenseSet<SymbolFile *> searched_symbol_files;
-      ModuleSP module_sp = vtable_info.symbol->CalculateSymbolContextModule();
-      if (module_sp)
-        module_sp->FindTypes(ConstString(lookup_name), exact_match, 1,
-                              searched_symbol_files, class_types);
+      TypeResults results;
+      TypeQuery query(const_lookup_name.GetStringRef(),
+                      TypeQueryOptions::e_exact_match |
+                          TypeQueryOptions::e_find_one);
+      if (module_sp) {
+        module_sp->FindTypes(query, results);
+        TypeSP type_sp = results.GetFirstType();
+        if (type_sp)
+          class_types.Insert(type_sp);
+      }
 
       // If we didn't find a symbol, then move on to the entire module
       // list in the target and get as many unique matches as possible
-      Target &target = m_process->GetTarget();
-      if (class_types.Empty())
-        target.GetImages().FindTypes(nullptr, ConstString(lookup_name),
-                                      exact_match, UINT32_MAX,
-                                      searched_symbol_files, class_types);
+      if (class_types.Empty()) {
+        query.SetFindOne(false);
+        m_process->GetTarget().GetImages().FindTypes(nullptr, query, results);
+        for (const auto &type_sp : results.GetTypeMap().Types())
+          class_types.Insert(type_sp);
+      }
 
       lldb::TypeSP type_sp;
       if (class_types.Empty()) {
@@ -607,7 +613,7 @@ bool ItaniumABILanguageRuntime::ExceptionBreakpointsExplainStop(
     return false;
 
   uint64_t break_site_id = stop_reason->GetValue();
-  return m_process->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+  return m_process->GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
       break_site_id, m_cxx_exception_bp_sp->GetID());
 }
 

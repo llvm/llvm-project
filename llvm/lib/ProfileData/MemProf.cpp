@@ -76,10 +76,12 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
 }
 
 GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {
-  // Canonicalize the function name to drop suffixes such as ".llvm.", ".uniq."
-  // etc. We can then match functions in the profile use phase prior to the
-  // addition of these suffixes. Note that this applies to both instrumented and
-  // sampled function names.
+  // Canonicalize the function name to drop suffixes such as ".llvm.". Note
+  // we do not drop any ".__uniq." suffixes, as getCanonicalFnName does not drop
+  // those by default. This is by design to differentiate internal linkage
+  // functions during matching. By dropping the other suffixes we can then match
+  // functions in the profile use phase prior to their addition. Note that this
+  // applies to both instrumented and sampled function names.
   StringRef CanonicalName =
       sampleprof::FunctionSamples::getCanonicalFnName(FunctionName);
 

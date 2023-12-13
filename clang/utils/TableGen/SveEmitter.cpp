@@ -744,6 +744,12 @@ void SVEType::applyModifier(char Mod) {
     BFloat = false;
     ElementBitwidth = 64;
     break;
+  case '[':
+    Signed = false;
+    Float = false;
+    BFloat = false;
+    ElementBitwidth = 8;
+    break;
   case 't':
     Signed = true;
     Float = false;
@@ -1280,6 +1286,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVBfloat16_t svbfloat16_t;\n";
 
   OS << "#include <arm_bf16.h>\n";
+  OS << "#include <arm_vector_types.h>\n";
 
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
@@ -1571,7 +1578,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
   OS << "#endif\n";
 
-  OS << "#include <arm_sve.h> \n\n";
+  OS << "#include <arm_sve.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1724,4 +1731,5 @@ void EmitSmeBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
 void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMERangeChecks(OS);
 }
+
 } // End namespace clang

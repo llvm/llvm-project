@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s --check-prefix=CHECK-HIR
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s --check-prefix=CHECK-HIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion --cse | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification --sparse-tensor-conversion --cse | \
 // RUN: FileCheck %s --check-prefix=CHECK-MIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion --cse \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification --sparse-tensor-conversion --cse \
 // RUN: --func-bufferize --arith-bufferize           \
 // RUN: --tensor-bufferize --finalizing-bufferize |  \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
@@ -21,15 +21,15 @@
 }
 
 // CHECK-HIR-LABEL:   func @matvec(
-// CHECK-HIR-SAME:      %[[VAL_0:.*]]: tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR-SAME:      %[[VAL_0:.*]]: tensor<32x64xf64, #sparse{{[0-9]*}}>
 // CHECK-HIR-SAME:      %[[VAL_1:.*]]: tensor<64xf64>,
 // CHECK-HIR-SAME:      %[[VAL_2:.*]]: tensor<32xf64>) -> tensor<32xf64> {
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}>
+// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}>
+// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse{{[0-9]*}}>
 // CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {

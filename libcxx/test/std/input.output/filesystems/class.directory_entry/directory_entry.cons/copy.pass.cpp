@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -14,13 +14,14 @@
 
 // directory_entry(const directory_entry&) = default;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
 #include "test_convertible.h"
+namespace fs = std::filesystem;
 
 static void copy_ctor() {
   using namespace fs;

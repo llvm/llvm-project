@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -pedantic -verify=pedantic-ref -std=c11 %s
 
 typedef __INTPTR_TYPE__ intptr_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 _Static_assert(1, "");
 _Static_assert(0 != 1, "");
@@ -81,3 +82,6 @@ const intptr_t L = (intptr_t)(&(yy->y)); // expected-error {{not a compile-time 
                                          // pedantic-expected-error {{not a compile-time constant}} \
                                          // ref-error {{not a compile-time constant}} \
                                          // pedantic-ref-error {{not a compile-time constant}}
+const ptrdiff_t m = &m + 137 - &m;
+_Static_assert(m == 137, ""); // pedantic-ref-warning {{GNU extension}} \
+                              // pedantic-expected-warning {{GNU extension}}

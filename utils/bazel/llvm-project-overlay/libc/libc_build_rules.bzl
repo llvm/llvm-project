@@ -144,8 +144,7 @@ def libc_math_function(
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_nearest_integer_operations",
         ":__support_fputil_normal_float",
-        ":__support_fputil_platform_defs",
-        ":__support_builtin_wrappers",
+        ":__support_math_extras",
         ":__support_fputil_except_value_utils",
     ]
     libc_function(

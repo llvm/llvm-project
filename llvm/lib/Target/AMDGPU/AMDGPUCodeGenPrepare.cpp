@@ -624,34 +624,6 @@ static Value *insertValues(IRBuilder<> &Builder,
   return NewVal;
 }
 
-// Returns 24-bit or 48-bit (as per `NumBits` and `Size`) mul of `LHS` and
-// `RHS`. `NumBits` is the number of KnownBits of the result and `Size` is the
-// width of the original destination.
-static Value *getMul24(IRBuilder<> &Builder, Value *LHS, Value *RHS,
-                       unsigned Size, unsigned NumBits, bool IsSigned) {
-  if (Size <= 32 || NumBits <= 32) {
-    Intrinsic::ID ID =
-        IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
-    return Builder.CreateIntrinsic(ID, {}, {LHS, RHS});
-  }
-
-  assert(NumBits <= 48);
-
-  Intrinsic::ID LoID =
-      IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
-  Intrinsic::ID HiID =
-      IsSigned ? Intrinsic::amdgcn_mulhi_i24 : Intrinsic::amdgcn_mulhi_u24;
-
-  Value *Lo = Builder.CreateIntrinsic(LoID, {}, {LHS, RHS});
-  Value *Hi = Builder.CreateIntrinsic(HiID, {}, {LHS, RHS});
-
-  IntegerType *I64Ty = Builder.getInt64Ty();
-  Lo = Builder.CreateZExtOrTrunc(Lo, I64Ty);
-  Hi = Builder.CreateZExtOrTrunc(Hi, I64Ty);
-
-  return Builder.CreateOr(Lo, Builder.CreateShl(Hi, 32));
-}
-
 bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   if (I.getOpcode() != Instruction::Mul)
     return false;
@@ -691,26 +663,20 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   extractValues(Builder, RHSVals, RHS);
 
   IntegerType *I32Ty = Builder.getInt32Ty();
+  IntegerType *IntrinTy = Size > 32 ? Builder.getInt64Ty() : I32Ty;
+  Type *DstTy = LHSVals[0]->getType();
+
   for (int I = 0, E = LHSVals.size(); I != E; ++I) {
-    Value *LHS, *RHS;
-    if (IsSigned) {
-      LHS = Builder.CreateSExtOrTrunc(LHSVals[I], I32Ty);
-      RHS = Builder.CreateSExtOrTrunc(RHSVals[I], I32Ty);
-    } else {
-      LHS = Builder.CreateZExtOrTrunc(LHSVals[I], I32Ty);
-      RHS = Builder.CreateZExtOrTrunc(RHSVals[I], I32Ty);
-    }
-
-    Value *Result =
-        getMul24(Builder, LHS, RHS, Size, LHSBits + RHSBits, IsSigned);
-
-    if (IsSigned) {
-      ResultVals.push_back(
-          Builder.CreateSExtOrTrunc(Result, LHSVals[I]->getType()));
-    } else {
-      ResultVals.push_back(
-          Builder.CreateZExtOrTrunc(Result, LHSVals[I]->getType()));
-    }
+    Value *LHS = IsSigned ? Builder.CreateSExtOrTrunc(LHSVals[I], I32Ty)
+                          : Builder.CreateZExtOrTrunc(LHSVals[I], I32Ty);
+    Value *RHS = IsSigned ? Builder.CreateSExtOrTrunc(RHSVals[I], I32Ty)
+                          : Builder.CreateZExtOrTrunc(RHSVals[I], I32Ty);
+    Intrinsic::ID ID =
+        IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
+    Value *Result = Builder.CreateIntrinsic(ID, {IntrinTy}, {LHS, RHS});
+    Result = IsSigned ? Builder.CreateSExtOrTrunc(Result, DstTy)
+                      : Builder.CreateZExtOrTrunc(Result, DstTy);
+    ResultVals.push_back(Result);
   }
 
   Value *NewVal = insertValues(Builder, Ty, ResultVals);
@@ -2233,7 +2199,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   Impl.DT = DTWP ? &DTWP->getDomTree() : nullptr;
   Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
-  SIModeRegisterDefaults Mode(F);
+  SIModeRegisterDefaults Mode(F, *Impl.ST);
   Impl.HasFP32DenormalFlush =
       Mode.FP32Denormals == DenormalMode::getPreserveSign();
   return Impl.run(F);
@@ -2250,7 +2216,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   Impl.UA = &FAM.getResult<UniformityInfoAnalysis>(F);
   Impl.DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
-  SIModeRegisterDefaults Mode(F);
+  SIModeRegisterDefaults Mode(F, *Impl.ST);
   Impl.HasFP32DenormalFlush =
       Mode.FP32Denormals == DenormalMode::getPreserveSign();
   PreservedAnalyses PA = PreservedAnalyses::none();

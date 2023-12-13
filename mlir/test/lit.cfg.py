@@ -106,6 +106,7 @@ tools = [
     "mlir-capi-quant-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
@@ -130,6 +131,9 @@ if config.enable_rocm_runner:
 
 if config.enable_cuda_runner:
     tools.extend([add_runtime("mlir_cuda_runtime")])
+
+if config.enable_sycl_runner:
+    tools.extend([add_runtime("mlir_sycl_runtime")])
 
 if config.mlir_run_arm_sme_tests:
     config.substitutions.append(

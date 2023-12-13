@@ -213,22 +213,22 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*description=*/"Returns the size of the given type computed using the "
                       "relevant entries. The data layout object can be used "
                       "for recursive queries.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"::llvm::TypeSize",
       /*methodName=*/"getTypeSize",
       /*args=*/(ins "::mlir::Type":$type,
                     "const ::mlir::DataLayout &":$dataLayout,
                     "::mlir::DataLayoutEntryListRef":$params),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        unsigned bits = ConcreteOp::getTypeSizeInBits(type, dataLayout, params);
-        return ::llvm::divideCeil(bits, 8);
+        ::llvm::TypeSize bits = ConcreteOp::getTypeSizeInBits(type, dataLayout, params);
+        return ::mlir::detail::divideCeil(bits, 8u);
       }]
     >,
     StaticInterfaceMethod<
       /*description=*/"Returns the size of the given type in bits computed "
                       "using the relevant entries. The data layout object can "
                       "be used for recursive queries.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"::llvm::TypeSize",
       /*methodName=*/"getTypeSizeInBits",
       /*args=*/(ins "::mlir::Type":$type,
                     "const ::mlir::DataLayout &":$dataLayout,
@@ -243,7 +243,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*description=*/"Returns the alignment required by the ABI for the given "
                       "type computed using the relevant entries. The data "
                       "layout object can be used for recursive queries.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"uint64_t",
       /*methodName=*/"getTypeABIAlignment",
       /*args=*/(ins "::mlir::Type":$type,
                     "const ::mlir::DataLayout &":$dataLayout,
@@ -257,7 +257,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*description=*/"Returns the alignment preferred by the given type "
                       "computed using the relevant entries. The data layout"
                       "object can be used for recursive queries.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"uint64_t",
       /*methodName=*/"getTypePreferredAlignment",
       /*args=*/(ins "::mlir::Type":$type,
                     "const ::mlir::DataLayout &":$dataLayout,
@@ -284,7 +284,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*description=*/"Returns the natural stack alignment in bits computed "
                       "using the relevant entries. The data layout object "
                       "can be used for recursive queries.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"uint64_t",
       /*methodName=*/"getStackAlignment",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",
@@ -331,19 +331,19 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the size of this type in bytes.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"::llvm::TypeSize",
       /*methodName=*/"getTypeSize",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
                     "::mlir::DataLayoutEntryListRef":$params),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        unsigned bits = $_type.getTypeSizeInBits(dataLayout, params);
-        return ::llvm::divideCeil(bits, 8);
+        ::llvm::TypeSize bits = $_type.getTypeSizeInBits(dataLayout, params);
+        return ::mlir::detail::divideCeil(bits, 8u);
       }]
     >,
     InterfaceMethod<
       /*description=*/"Returns the size of this type in bits.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"::llvm::TypeSize",
       /*methodName=*/"getTypeSizeInBits",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
                     "::mlir::DataLayoutEntryListRef":$params)
@@ -351,7 +351,7 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
     InterfaceMethod<
       /*description=*/"Returns the ABI-required alignment for this type, "
                       "in bytes",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"uint64_t",
       /*methodName=*/"getABIAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
                     "::mlir::DataLayoutEntryListRef":$params)
@@ -359,7 +359,7 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
     InterfaceMethod<
       /*description=*/"Returns the preferred alignment for this type, "
                       "in bytes.",
-      /*retTy=*/"unsigned",
+      /*retTy=*/"uint64_t",
       /*methodName=*/"getPreferredAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
                     "::mlir::DataLayoutEntryListRef":$params)

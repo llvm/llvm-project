@@ -1276,7 +1276,7 @@ struct VectorScalableInsertOpLowering
   matchAndRewrite(vector::ScalableInsertOp insOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::vector_insert>(
-        insOp, adaptor.getSource(), adaptor.getDest(), adaptor.getPos());
+        insOp, adaptor.getDest(), adaptor.getSource(), adaptor.getPos());
     return success();
   }
 };

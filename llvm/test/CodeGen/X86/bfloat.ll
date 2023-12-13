@@ -1401,9 +1401,9 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; AVXNC-NEXT:    jne .LBB12_2
 ; AVXNC-NEXT:  # %bb.1: # %cond.load
 ; AVXNC-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024]
-; AVXNC-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [49024,49024,49024,49024,49024,49024,49024,49024]
-; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
-; AVXNC-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
+; AVXNC-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024]
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm2
+; AVXNC-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; AVXNC-NEXT:  .LBB12_2: # %else
 ; AVXNC-NEXT:    xorl %eax, %eax
 ; AVXNC-NEXT:    testb %al, %al

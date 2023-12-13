@@ -29,7 +29,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %add
   store i32 %conv, ptr %arrayidx, align 4
   %mul = shl i64 %i.02, 1
-  %add13 = or i64 %mul, 1
+  %add13 = or disjoint i64 %mul, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %add13
   %0 = load i32, ptr %arrayidx2, align 4
   %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1
@@ -68,7 +68,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %add
   store i32 %conv, ptr %arrayidx, align 4
   %mul1 = shl i64 %i.02, 1
-  %add23 = or i64 %mul1, 1
+  %add23 = or disjoint i64 %mul1, 1
   %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %add23
   %0 = load i32, ptr %arrayidx3, align 4
   %incdec.ptr = getelementptr inbounds i32, ptr %B.addr.01, i64 1

@@ -9,6 +9,7 @@
 #ifndef MLIR_PASS_PASS_H
 #define MLIR_PASS_PASS_H
 
+#include "mlir/IR/Action.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LogicalResult.h"
@@ -455,6 +456,52 @@ protected:
   std::unique_ptr<Pass> clonePass() const override {
     return std::make_unique<PassT>(*static_cast<const PassT *>(this));
   }
+};
+
+/// This class encapsulates the "action" of executing a single pass. This allows
+/// a user of the Action infrastructure to query information about an action in
+/// (for example) a breakpoint context. You could use it like this:
+///
+///  auto onBreakpoint = [&](const ActionActiveStack *backtrace) {
+///    if (auto passExec = dyn_cast<PassExecutionAction>(anAction))
+///      record(passExec.getPass());
+///    return ExecutionContext::Apply;
+///  };
+///  ExecutionContext exeCtx(onBreakpoint);
+///
+class PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
+  using Base = tracing::ActionImpl<PassExecutionAction>;
+
+public:
+  /// Define a TypeID for this PassExecutionAction.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PassExecutionAction)
+  /// Construct a PassExecutionAction. This is called by the OpToOpPassAdaptor
+  /// when it calls `executeAction`.
+  PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass);
+
+  /// The tag required by ActionImpl to identify this action.
+  static constexpr StringLiteral tag = "pass-execution";
+
+  /// Print a textual version of this action to `os`.
+  void print(raw_ostream &os) const override;
+
+  /// Get the pass that will be executed by this action. This is not a class of
+  /// passes, or all instances of a pass kind, this is a single pass.
+  const Pass &getPass() const { return pass; }
+
+  /// Get the operation that is the base of this pass. For example, an
+  /// OperationPass<ModuleOp> would return a ModuleOp.
+  Operation *getOp() const;
+
+public:
+  /// Reference to the pass being run. Notice that this will *not* extend the
+  /// lifetime of the pass, and so this class is therefore unsafe to keep past
+  /// the lifetime of the `executeAction` call.
+  const Pass &pass;
+
+  /// The base op for this pass. For an OperationPass<ModuleOp>, we would have a
+  /// ModuleOp here.
+  Operation *op;
 };
 
 } // namespace mlir

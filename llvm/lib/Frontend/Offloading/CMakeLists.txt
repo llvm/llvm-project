@@ -11,4 +11,5 @@ add_llvm_component_library(LLVMFrontendOffloading
   Core
   Support
   TransformUtils
+  TargetParser
 )

@@ -637,7 +637,8 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in,
   dag VData = !if(vdata_in, (ins vdata_op:$vdata_in), (ins vdata_op:$vdata));
   dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddrClass:$vaddr)));
   dag MainInputs = (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset);
-  dag CPol = !if(vdata_in, (ins CPol_GLC1:$cpol), (ins CPol_0:$cpol));
+  dag CPol = !if(vdata_in, (ins CPol_GLC_WithDefault:$cpol),
+                           (ins CPol_NonGLC_WithDefault:$cpol));
 
   dag ret = !con(Data, MainInputs, CPol);
 }

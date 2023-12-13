@@ -140,7 +140,7 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     return EditBOZOutput<4>(
         io, edit, reinterpret_cast<const unsigned char *>(&n), KIND);
   case 'L':
-    return EditLogicalOutput(io, edit, *reinterpret_cast<const char *>(&n));
+    return EditLogicalOutput(io, edit, n != 0 ? true : false);
   case 'A': // legacy extension
     return EditCharacterOutput(
         io, edit, reinterpret_cast<char *>(&n), sizeof n);
@@ -433,27 +433,28 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
   }
   // Multiple conversions may be needed to get the right number of
   // effective rounded fractional digits.
-  int extraDigits{0};
   bool canIncrease{true};
-  while (true) {
+  for (int extraDigits{fracDigits == 0 ? 1 : 0};;) {
     decimal::ConversionToDecimalResult converted{
         ConvertToDecimal(extraDigits + fracDigits, rounding, flags)};
-    if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+    const char *convertedStr{converted.str};
+    if (IsInfOrNaN(convertedStr, static_cast<int>(converted.length))) {
       return editWidth > 0 &&
               converted.length > static_cast<std::size_t>(editWidth)
           ? EmitRepeated(io_, '*', editWidth)
           : EmitPrefix(edit, converted.length, editWidth) &&
-              EmitAscii(io_, converted.str, converted.length) &&
+              EmitAscii(io_, convertedStr, converted.length) &&
               EmitSuffix(edit);
     }
     int expo{converted.decimalExponent + edit.modes.scale /*kP*/};
-    int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
+    int signLength{*convertedStr == '-' || *convertedStr == '+' ? 1 : 0};
     int convertedDigits{static_cast<int>(converted.length) - signLength};
     if (IsZero()) { // don't treat converted "0" as significant digit
       expo = 0;
       convertedDigits = 0;
     }
-    int trailingOnes{0};
+    bool isNegative{*convertedStr == '-'};
+    char one[2];
     if (expo > extraDigits && extraDigits >= 0 && canIncrease) {
       extraDigits = expo;
       if (!edit.digits.has_value()) { // F0
@@ -462,24 +463,45 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       canIncrease = false; // only once
       continue;
     } else if (expo == -fracDigits && convertedDigits > 0) {
-      if ((rounding == decimal::FortranRounding::RoundUp &&
-              *converted.str != '-') ||
-          (rounding == decimal::FortranRounding::RoundDown &&
-              *converted.str == '-') ||
-          (rounding == decimal::FortranRounding::RoundToZero &&
-              rounding != edit.modes.round && // it changed below
-              converted.str[signLength] >= '5')) {
-        // Round up/down to a scaled 1
+      // Result will be either a signed zero or power of ten, depending
+      // on rounding.
+      char leading{convertedStr[signLength]};
+      bool roundToPowerOfTen{false};
+      switch (edit.modes.round) {
+      case decimal::FortranRounding::RoundUp:
+        roundToPowerOfTen = !isNegative;
+        break;
+      case decimal::FortranRounding::RoundDown:
+        roundToPowerOfTen = isNegative;
+        break;
+      case decimal::FortranRounding::RoundToZero:
+        break;
+      case decimal::FortranRounding::RoundNearest:
+        if (leading == '5' &&
+            rounding == decimal::FortranRounding::RoundNearest) {
+          // Try again, rounding away from zero.
+          rounding = isNegative ? decimal::FortranRounding::RoundDown
+                                : decimal::FortranRounding::RoundUp;
+          extraDigits = 1 - fracDigits; // just one digit needed
+          continue;
+        }
+        roundToPowerOfTen = leading > '5';
+        break;
+      case decimal::FortranRounding::RoundCompatible:
+        roundToPowerOfTen = leading >= '5';
+        break;
+      }
+      if (roundToPowerOfTen) {
         ++expo;
-        convertedDigits = 0;
-        trailingOnes = 1;
-      } else if (rounding != decimal::FortranRounding::RoundToZero) {
-        // Convert again with truncation so first digit can be checked
-        // on the next iteration by the code above
-        rounding = decimal::FortranRounding::RoundToZero;
-        continue;
+        convertedDigits = 1;
+        if (signLength > 0) {
+          one[0] = *convertedStr;
+          one[1] = '1';
+        } else {
+          one[0] = '1';
+        }
+        convertedStr = one;
       } else {
-        // Value rounds down to zero
         expo = 0;
         convertedDigits = 0;
       }
@@ -493,17 +515,14 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     int digitsAfterPoint{convertedDigits - digitsBeforePoint};
     int trailingZeroes{flags & decimal::Minimize
             ? 0
-            : std::max(0,
-                  fracDigits -
-                      (zeroesAfterPoint + digitsAfterPoint + trailingOnes))};
+            : std::max(0, fracDigits - (zeroesAfterPoint + digitsAfterPoint))};
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
-            digitsAfterPoint + trailingOnes + trailingZeroes ==
+            digitsAfterPoint + trailingZeroes ==
         0) {
       zeroesBeforePoint = 1; // "." -> "0."
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
-        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingOnes +
-        trailingZeroes};
+        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes};
     int width{editWidth > 0 ? editWidth : totalLength};
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
@@ -513,13 +532,12 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       ++totalLength;
     }
     return EmitPrefix(edit, totalLength, width) &&
-        EmitAscii(io_, converted.str, signLength + digitsBeforePoint) &&
+        EmitAscii(io_, convertedStr, signLength + digitsBeforePoint) &&
         EmitRepeated(io_, '0', zeroesBeforePoint) &&
         EmitAscii(io_, edit.modes.editingFlags & decimalComma ? "," : ".", 1) &&
         EmitRepeated(io_, '0', zeroesAfterPoint) &&
-        EmitAscii(io_, converted.str + signLength + digitsBeforePoint,
+        EmitAscii(io_, convertedStr + signLength + digitsBeforePoint,
             digitsAfterPoint) &&
-        EmitRepeated(io_, '1', trailingOnes) &&
         EmitRepeated(io_, '0', trailingZeroes) &&
         EmitRepeated(io_, ' ', trailingBlanks_) && EmitSuffix(edit);
   }

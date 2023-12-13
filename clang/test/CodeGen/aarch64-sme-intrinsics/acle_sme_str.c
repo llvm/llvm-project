@@ -6,86 +6,53 @@
 
 #include <arm_sme_draft_spec_subject_to_change.h>
 
-// CHECK-C-LABEL: define dso_local void @test_svstr_vnum_za(
-// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE]], ptr [[PTR]])
-// CHECK-C-NEXT:    ret void
-//
-// CHECK-CXX-LABEL: define dso_local void @_Z18test_svstr_vnum_zajPv(
-// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE]], ptr [[PTR]])
-// CHECK-CXX-NEXT:    ret void
+// CHECK-C-LABEL: @test_svstr_vnum_za(
+// CHECK-CXX-LABEL: @_Z18test_svstr_vnum_zajPv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 0)
+// CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za(uint32_t slice_base, void *ptr) {
   svstr_vnum_za(slice_base, ptr, 0);
 }
 
-// CHECK-C-LABEL: define dso_local void @test_svstr_vnum_za_1(
-// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[SVLB:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVLB]], 15
-// CHECK-C-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
-// CHECK-C-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE]], 15
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[TILESLICE]], ptr [[TMP0]])
-// CHECK-C-NEXT:    ret void
-//
-// CHECK-CXX-LABEL: define dso_local void @_Z20test_svstr_vnum_za_1jPv(
-// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[SVLB:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVLB]], 15
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
-// CHECK-CXX-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE]], 15
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[TILESLICE]], ptr [[TMP0]])
-// CHECK-CXX-NEXT:    ret void
+// CHECK-C-LABEL: @test_svstr_vnum_za_1(
+// CHECK-CXX-LABEL: @_Z20test_svstr_vnum_za_1jPv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 15)
+// CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za_1(uint32_t slice_base, void *ptr) {
   svstr_vnum_za(slice_base, ptr, 15);
 }
 
-// CHECK-C-LABEL: define dso_local void @test_svstr_za(
-// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE]], ptr [[PTR]])
-// CHECK-C-NEXT:    ret void
-//
-// CHECK-CXX-LABEL: define dso_local void @_Z13test_svstr_zajPv(
-// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE]], ptr [[PTR]])
-// CHECK-CXX-NEXT:    ret void
+// CHECK-C-LABEL: @test_svstr_za(
+// CHECK-CXX-LABEL: @_Z13test_svstr_zajPv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 0)
+// CHECK-NEXT:    ret void
 //
 void test_svstr_za(uint32_t slice_base, void *ptr) {
   svstr_za(slice_base, ptr);
 }
 
-// CHECK-C-LABEL: define dso_local void @test_svstr_vnum_za_var(
-// CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[SVLB:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVLB]], [[VNUM]]
-// CHECK-C-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
-// CHECK-C-NEXT:    [[TMP1:%.*]] = trunc i64 [[VNUM]] to i32
-// CHECK-C-NEXT:    [[TILESLICE:%.*]] = add i32 [[TMP1]], [[SLICE_BASE]]
-// CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[TILESLICE]], ptr [[TMP0]])
-// CHECK-C-NEXT:    ret void
-//
-// CHECK-CXX-LABEL: define dso_local void @_Z22test_svstr_vnum_za_varjPvl(
-// CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[SVLB:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVLB]], [[VNUM]]
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = trunc i64 [[VNUM]] to i32
-// CHECK-CXX-NEXT:    [[TILESLICE:%.*]] = add i32 [[TMP1]], [[SLICE_BASE]]
-// CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[TILESLICE]], ptr [[TMP0]])
-// CHECK-CXX-NEXT:    ret void
+// CHECK-C-LABEL: @test_svstr_vnum_za_var(
+// CHECK-CXX-LABEL: @_Z22test_svstr_vnum_za_varjPvl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[VNUM:%.*]] to i32
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 [[TMP0:%.*]])
+// CHECK-NEXT:    ret void
 //
 void test_svstr_vnum_za_var(uint32_t slice_base, void *ptr, int64_t vnum) {
   svstr_vnum_za(slice_base, ptr, vnum);
 }
-//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-// CHECK: {{.*}}
+
+// CHECK-C-LABEL: @test_svstr_vnum_za_2(
+// CHECK-CXX-LABEL: @_Z20test_svstr_vnum_za_2jPv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[SLICE_BASE:%.*]], ptr [[PTR:%.*]], i32 16)
+// CHECK-NEXT:    ret void
+//
+void test_svstr_vnum_za_2(uint32_t slice_base, void *ptr) {
+  svstr_vnum_za(slice_base, ptr, 16);
+}

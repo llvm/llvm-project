@@ -24,7 +24,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -72,7 +72,7 @@ private:
 template <class... _Args>
 _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
 __throw_filesystem_error(_Args&&... __args) {
-  throw filesystem_error(_VSTD::forward<_Args>(__args)...);
+  throw filesystem_error(std::forward<_Args>(__args)...);
 }
 #  else
 template <class... _Args>
@@ -84,6 +84,6 @@ __throw_filesystem_error(_Args&&...) {
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_FILESYSTEM_ERROR_H

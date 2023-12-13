@@ -65,7 +65,7 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
     if (Op->getType() != IntIdxTy)
       Op = Builder->CreateIntCast(Op, IntIdxTy, true, Op->getName() + ".c");
     TypeSize TSize = DL.getTypeAllocSize(GTI.getIndexedType());
-    if (TSize != TypeSize::Fixed(1)) {
+    if (TSize != TypeSize::getFixed(1)) {
       Value *Scale = Builder->CreateTypeSize(IntIdxTy->getScalarType(), TSize);
       if (IntIdxTy->isVectorTy())
         Scale = Builder->CreateVectorSplat(

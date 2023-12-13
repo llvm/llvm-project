@@ -80,7 +80,7 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[__FIRST_ADDR_I_I]], align 4
 ; IC-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[TMP31]], i32 1
 ; IC-NEXT:    store ptr [[TMP32]], ptr [[__FIRST_ADDR_I_I]], align 4
-; IC-NEXT:    [[TMP33:%.*]] = add i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
+; IC-NEXT:    [[TMP33:%.*]] = add nsw i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
 ; IC-NEXT:    br label [[BB12_I_I]]
 ; IC:       bb12.i.i:
 ; IC-NEXT:    [[__TRIP_COUNT_0_I_I]] = phi i32 [ [[TMP7]], [[ENTRY:%.*]] ], [ [[TMP33]], [[BB11_I_I]] ]
@@ -94,9 +94,9 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC-NEXT:    [[TMP39:%.*]] = sub i32 [[TMP36]], [[TMP38]]
 ; IC-NEXT:    [[TMP40:%.*]] = ashr i32 [[TMP39]], 2
 ; IC-NEXT:    switch i32 [[TMP40]], label [[BB26_I_I:%.*]] [
-; IC-NEXT:    i32 1, label [[BB22_I_I:%.*]]
-; IC-NEXT:    i32 2, label [[BB18_I_I:%.*]]
-; IC-NEXT:    i32 3, label [[BB14_I_I:%.*]]
+; IC-NEXT:      i32 1, label [[BB22_I_I:%.*]]
+; IC-NEXT:      i32 2, label [[BB18_I_I:%.*]]
+; IC-NEXT:      i32 3, label [[BB14_I_I:%.*]]
 ; IC-NEXT:    ]
 ; IC:       bb14.i.i:
 ; IC-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[__FIRST_ADDR_I_I]], align 4
@@ -188,7 +188,7 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC_SROA-NEXT:    br label [[_ZST4FINDIN9__GNU_CXX17__NORMAL_ITERATORIPIST6VECTORIISAIIEEEEIET_S7_S7_RKT0__EXIT]]
 ; IC_SROA:       bb11.i.i:
 ; IC_SROA-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP15]], i32 1
-; IC_SROA-NEXT:    [[TMP19:%.*]] = add i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
+; IC_SROA-NEXT:    [[TMP19:%.*]] = add nsw i32 [[__TRIP_COUNT_0_I_I:%.*]], -1
 ; IC_SROA-NEXT:    br label [[BB12_I_I]]
 ; IC_SROA:       bb12.i.i:
 ; IC_SROA-NEXT:    [[__FIRST_ADDR_I_I_SROA_0_0]] = phi ptr [ [[TMP2]], [[ENTRY:%.*]] ], [ [[TMP18]], [[BB11_I_I]] ]
@@ -201,9 +201,9 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC_SROA-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP21]], [[TMP22]]
 ; IC_SROA-NEXT:    [[TMP24:%.*]] = ashr i32 [[TMP23]], 2
 ; IC_SROA-NEXT:    switch i32 [[TMP24]], label [[BB26_I_I:%.*]] [
-; IC_SROA-NEXT:    i32 1, label [[BB22_I_I:%.*]]
-; IC_SROA-NEXT:    i32 2, label [[BB18_I_I:%.*]]
-; IC_SROA-NEXT:    i32 3, label [[BB14_I_I:%.*]]
+; IC_SROA-NEXT:      i32 1, label [[BB22_I_I:%.*]]
+; IC_SROA-NEXT:      i32 2, label [[BB18_I_I:%.*]]
+; IC_SROA-NEXT:      i32 3, label [[BB14_I_I:%.*]]
 ; IC_SROA-NEXT:    ]
 ; IC_SROA:       bb14.i.i:
 ; IC_SROA-NEXT:    [[TMP25:%.*]] = load i32, ptr [[__FIRST_ADDR_I_I_SROA_0_0]], align 4

@@ -144,8 +144,6 @@ bool FlagParser::runHandler(const char *Name, const char *Value,
     case FlagType::FT_int:
       char *ValueEnd;
       long V = strtol(Value, &ValueEnd, 10);
-      static_assert(INT_MAX <= LONG_MAX);
-      static_assert(INT_MIN >= LONG_MIN);
       // strtol returns LONG_MAX on overflow and LONG_MIN on underflow.
       // This is why we compare-equal here (and lose INT_MIN and INT_MAX as a
       // value, but that's okay)

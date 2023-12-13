@@ -634,7 +634,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    li a3, 0
 ; RV32MV-NEXT:    call __moddi3@plt
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32MV-NEXT:    vslide1down.vx v8, v8, a0
+; RV32MV-NEXT:    vmv.v.x v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    addi a0, sp, 16
 ; RV32MV-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -765,7 +765,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    mul a4, a4, a5
 ; RV64MV-NEXT:    sub a1, a1, a4
 ; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64MV-NEXT:    vslide1down.vx v8, v8, a1
+; RV64MV-NEXT:    vmv.v.x v8, a1
 ; RV64MV-NEXT:    vslide1down.vx v8, v8, a3
 ; RV64MV-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64MV-NEXT:    vslidedown.vi v8, v8, 1

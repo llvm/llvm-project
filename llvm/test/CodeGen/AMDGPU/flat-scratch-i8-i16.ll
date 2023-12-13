@@ -11,16 +11,14 @@ define amdgpu_ps void @test_scratch_load_i8_zext_v(ptr addrspace(5) %in, ptr %ou
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 1, v0
-; GFX10-NEXT:    scratch_load_ubyte v0, v0, off
+; GFX10-NEXT:    scratch_load_ubyte v0, v0, off offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i8_zext_v:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_nc_u32_e32 v0, 1, v0
-; GFX11-NEXT:    scratch_load_u8 v0, v0, off
+; GFX11-NEXT:    scratch_load_u8 v0, v0, off offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -38,16 +36,14 @@ define amdgpu_ps void @test_scratch_load_i8_sext_v(ptr addrspace(5) %in, ptr %ou
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 1, v0
-; GFX10-NEXT:    scratch_load_sbyte v0, v0, off
+; GFX10-NEXT:    scratch_load_sbyte v0, v0, off offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i8_sext_v:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_nc_u32_e32 v0, 1, v0
-; GFX11-NEXT:    scratch_load_i8 v0, v0, off
+; GFX11-NEXT:    scratch_load_i8 v0, v0, off offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -65,16 +61,14 @@ define amdgpu_ps void @test_scratch_load_i16_zext_v(ptr addrspace(5) %in, ptr %o
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 2, v0
-; GFX10-NEXT:    scratch_load_ushort v0, v0, off
+; GFX10-NEXT:    scratch_load_ushort v0, v0, off offset:2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i16_zext_v:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_nc_u32_e32 v0, 2, v0
-; GFX11-NEXT:    scratch_load_u16 v0, v0, off
+; GFX11-NEXT:    scratch_load_u16 v0, v0, off offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -92,16 +86,14 @@ define amdgpu_ps void @test_scratch_load_i16_sext_v(ptr addrspace(5) %in, ptr %o
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, 2, v0
-; GFX10-NEXT:    scratch_load_sshort v0, v0, off
+; GFX10-NEXT:    scratch_load_sshort v0, v0, off offset:2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i16_sext_v:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_nc_u32_e32 v0, 2, v0
-; GFX11-NEXT:    scratch_load_i16 v0, v0, off
+; GFX11-NEXT:    scratch_load_i16 v0, v0, off offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -359,16 +351,14 @@ define amdgpu_ps void @test_scratch_load_i8_zext_s(ptr addrspace(5) inreg %in, p
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    s_add_i32 s2, s2, 1
-; GFX10-NEXT:    scratch_load_ubyte v2, off, s2
+; GFX10-NEXT:    scratch_load_ubyte v2, off, s2 offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i8_zext_s:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_i32 s0, s0, 1
-; GFX11-NEXT:    scratch_load_u8 v2, off, s0
+; GFX11-NEXT:    scratch_load_u8 v2, off, s0 offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
@@ -386,16 +376,14 @@ define amdgpu_ps void @test_scratch_load_i8_sext_s(ptr addrspace(5) inreg %in, p
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    s_add_i32 s2, s2, 1
-; GFX10-NEXT:    scratch_load_sbyte v2, off, s2
+; GFX10-NEXT:    scratch_load_sbyte v2, off, s2 offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i8_sext_s:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_i32 s0, s0, 1
-; GFX11-NEXT:    scratch_load_i8 v2, off, s0
+; GFX11-NEXT:    scratch_load_i8 v2, off, s0 offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
@@ -413,16 +401,14 @@ define amdgpu_ps void @test_scratch_load_i16_zext_s(ptr addrspace(5) inreg %in, 
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    s_add_i32 s2, s2, 2
-; GFX10-NEXT:    scratch_load_ushort v2, off, s2
+; GFX10-NEXT:    scratch_load_ushort v2, off, s2 offset:2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i16_zext_s:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_i32 s0, s0, 2
-; GFX11-NEXT:    scratch_load_u16 v2, off, s0
+; GFX11-NEXT:    scratch_load_u16 v2, off, s0 offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
@@ -440,16 +426,14 @@ define amdgpu_ps void @test_scratch_load_i16_sext_s(ptr addrspace(5) inreg %in, 
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    s_add_i32 s2, s2, 2
-; GFX10-NEXT:    scratch_load_sshort v2, off, s2
+; GFX10-NEXT:    scratch_load_sshort v2, off, s2 offset:2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i16_sext_s:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_add_i32 s0, s0, 2
-; GFX11-NEXT:    scratch_load_i16 v2, off, s0
+; GFX11-NEXT:    scratch_load_i16 v2, off, s0 offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
@@ -713,19 +697,16 @@ define amdgpu_ps void @test_scratch_load_i8_zext_svs(ptr addrspace(5) inreg %in,
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_add3_u32 v0, s2, v0, 1
-; GFX10-NEXT:    scratch_load_ubyte v0, v0, off
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-NEXT:    scratch_load_ubyte v0, v0, off offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i8_zext_svs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add3_u32 v0, s0, v0, 1
-; GFX11-NEXT:    scratch_load_u8 v0, v0, off
+; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX11-NEXT:    scratch_load_u8 v0, v0, off offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -745,19 +726,16 @@ define amdgpu_ps void @test_scratch_load_i8_sext_svs(ptr addrspace(5) inreg %in,
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_add3_u32 v0, s2, v0, 1
-; GFX10-NEXT:    scratch_load_sbyte v0, v0, off
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-NEXT:    scratch_load_sbyte v0, v0, off offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i8_sext_svs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add3_u32 v0, s0, v0, 1
-; GFX11-NEXT:    scratch_load_i8 v0, v0, off
+; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX11-NEXT:    scratch_load_i8 v0, v0, off offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -777,19 +755,16 @@ define amdgpu_ps void @test_scratch_load_i16_zext_svs(ptr addrspace(5) inreg %in
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_add3_u32 v0, s2, v0, 2
-; GFX10-NEXT:    scratch_load_ushort v0, v0, off
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-NEXT:    scratch_load_ushort v0, v0, off offset:2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i16_zext_svs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add3_u32 v0, s0, v0, 2
-; GFX11-NEXT:    scratch_load_u16 v0, v0, off
+; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX11-NEXT:    scratch_load_u16 v0, v0, off offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm
@@ -809,19 +784,16 @@ define amdgpu_ps void @test_scratch_load_i16_sext_svs(ptr addrspace(5) inreg %in
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_add3_u32 v0, s2, v0, 2
-; GFX10-NEXT:    scratch_load_sshort v0, v0, off
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX10-NEXT:    scratch_load_sshort v0, v0, off offset:2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[1:2], v0
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scratch_load_i16_sext_svs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add3_u32 v0, s0, v0, 2
-; GFX11-NEXT:    scratch_load_i16 v0, v0, off
+; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX11-NEXT:    scratch_load_i16 v0, v0, off offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX11-NEXT:    s_endpgm

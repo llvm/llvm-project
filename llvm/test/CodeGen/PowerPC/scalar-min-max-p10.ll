@@ -70,3 +70,20 @@ entry:
   %0 = tail call fast fp128 @llvm.minnum.f128(fp128 %a, fp128 %b)
   ret fp128 %0
 }
+
+define fp128 @olt_sel(fp128 %a, fp128 %b) {
+; CHECK-LABEL: olt_sel:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    plxv vs36, .LCPI6_0@PCREL(0), 1
+; CHECK-NEXT:    xscmpuqp cr0, v2, v4
+; CHECK-NEXT:    blt cr0, .LBB6_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    vmr v3, v4
+; CHECK-NEXT:  .LBB6_2: # %entry
+; CHECK-NEXT:    vmr v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %0 = fcmp fast olt fp128 %a, 0xL00000000000000000000000000000000
+  %1 = select i1 %0, fp128 %b, fp128 0xL00000000000000000000000000000000
+  ret fp128 %1
+}

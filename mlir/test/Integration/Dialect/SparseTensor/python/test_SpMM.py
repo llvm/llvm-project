@@ -16,7 +16,7 @@ from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 @dsl.linalg_structured_op
@@ -126,18 +126,18 @@ def main():
         e = False
         opt = f"parallelization-strategy=none"
         levels = [
-            [st.DimLevelType.compressed_nu, st.DimLevelType.singleton],
-            [st.DimLevelType.dense, st.DimLevelType.dense],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.dense],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [st.LevelType.compressed_nu, st.LevelType.singleton],
+            [st.LevelType.dense, st.LevelType.dense],
+            [st.LevelType.dense, st.LevelType.compressed],
+            [st.LevelType.compressed, st.LevelType.dense],
+            [st.LevelType.compressed, st.LevelType.compressed],
         ]
         orderings = [
             ir.AffineMap.get_permutation([0, 1]),
             ir.AffineMap.get_permutation([1, 0]),
         ]
         bitwidths = [0]
-        compiler = sparse_compiler.SparseCompiler(
+        compiler = sparsifier.Sparsifier(
             options=opt, opt_level=0, shared_libs=[support_lib]
         )
         for level in levels:

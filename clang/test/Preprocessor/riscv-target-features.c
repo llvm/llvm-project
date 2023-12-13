@@ -29,7 +29,9 @@
 // CHECK-NOT: __riscv_xcvalu {{.*$}}
 // CHECK-NOT: __riscv_xcvbi {{.*$}}
 // CHECK-NOT: __riscv_xcvbitmanip {{.*$}}
+// CHECK-NOT: __riscv_xcvelw {{.*$}}
 // CHECK-NOT: __riscv_xcvmac {{.*$}}
+// CHECK-NOT: __riscv_xcvmem {{.*$}}
 // CHECK-NOT: __riscv_xcvsimd {{.*$}}
 // CHECK-NOT: __riscv_xsfcie {{.*$}}
 // CHECK-NOT: __riscv_xsfvcp {{.*$}}
@@ -1054,12 +1056,12 @@
 // CHECK-ZFBFMIN-EXT: __riscv_zfbfmin 8000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN: -march=rv32i_zicfilp0p2 -x c -E -dM %s \
+// RUN: -march=rv32i_zicfilp0p4 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZICFILP-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv64i_zicfilp0p2 -x c -E -dM %s \
+// RUN: -march=rv64i_zicfilp0p4 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZICFILP-EXT %s
-// CHECK-ZICFILP-EXT: __riscv_zicfilp 2000{{$}}
+// CHECK-ZICFILP-EXT: __riscv_zicfilp 4000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zicond1p0 -x c -E -dM %s \

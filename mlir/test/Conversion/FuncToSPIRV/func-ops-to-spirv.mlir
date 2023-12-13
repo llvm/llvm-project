@@ -49,3 +49,15 @@ func.func @call_functions(%arg0: index) -> index {
 }
 
 // -----
+
+func.func @dim_index_out_of_bounds() {
+  %c6 = arith.constant 6 : index
+  %alloc_4 = memref.alloc() : memref<4xi64>
+  %dim = memref.dim %alloc_4, %c6 : memref<4xi64>
+  %alloca_100 = memref.alloca() : memref<100xi64>
+  // expected-error@+1 {{'affine.vector_load' op index must be a valid dimension or symbol identifier}}
+  %70 = affine.vector_load %alloca_100[%dim] : memref<100xi64>, vector<31xi64>
+  return
+}
+
+// -----

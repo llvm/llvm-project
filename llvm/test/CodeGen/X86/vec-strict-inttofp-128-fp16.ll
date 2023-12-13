@@ -74,13 +74,13 @@ define <8 x half> @uitofp_v8i1_v8f16(<8 x i1> %x) #0 {
 ; X86-LABEL: uitofp_v8i1_v8f16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
-; X86-NEXT:    vcvtuw2ph %xmm0, %xmm0
+; X86-NEXT:    vcvtw2ph %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_v8i1_v8f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; X64-NEXT:    vcvtuw2ph %xmm0, %xmm0
+; X64-NEXT:    vcvtw2ph %xmm0, %xmm0
 ; X64-NEXT:    retq
  %result = call <8 x half> @llvm.experimental.constrained.uitofp.v8f16.v8i1(<8 x i1> %x,
                                                               metadata !"round.dynamic",
@@ -104,7 +104,7 @@ define <8 x half> @uitofp_v8i8_v8f16(<8 x i8> %x) #0 {
 ; CHECK-LABEL: uitofp_v8i8_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-NEXT:    vcvtuw2ph %xmm0, %xmm0
+; CHECK-NEXT:    vcvtw2ph %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
  %result = call <8 x half> @llvm.experimental.constrained.uitofp.v8f16.v8i8(<8 x i8> %x,
                                                               metadata !"round.dynamic",

@@ -8497,6 +8497,32 @@ half16 __ovld __cnfn sinpi(half16);
 #endif //cl_khr_fp16
 
 /**
+ * Compute square root.
+ */
+float __ovld __cnfn sqrt(float);
+float2 __ovld __cnfn sqrt(float2);
+float3 __ovld __cnfn sqrt(float3);
+float4 __ovld __cnfn sqrt(float4);
+float8 __ovld __cnfn sqrt(float8);
+float16 __ovld __cnfn sqrt(float16);
+#ifdef cl_khr_fp64
+double __ovld __cnfn sqrt(double);
+double2 __ovld __cnfn sqrt(double2);
+double3 __ovld __cnfn sqrt(double3);
+double4 __ovld __cnfn sqrt(double4);
+double8 __ovld __cnfn sqrt(double8);
+double16 __ovld __cnfn sqrt(double16);
+#endif //cl_khr_fp64
+#ifdef cl_khr_fp16
+half __ovld __cnfn sqrt(half);
+half2 __ovld __cnfn sqrt(half2);
+half3 __ovld __cnfn sqrt(half3);
+half4 __ovld __cnfn sqrt(half4);
+half8 __ovld __cnfn sqrt(half8);
+half16 __ovld __cnfn sqrt(half16);
+#endif //cl_khr_fp16
+
+/**
  * Compute tangent.
  */
 float __ovld __cnfn tan(float);

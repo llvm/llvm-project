@@ -44,7 +44,7 @@ define void @y(ptr %addr) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 10
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 10
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 11
+; CHECK-NEXT:  Loop %loop: Trip multiple is 11
 ;
   entry:
   br label %loop

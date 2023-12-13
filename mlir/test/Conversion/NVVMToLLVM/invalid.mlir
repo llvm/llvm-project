@@ -132,3 +132,34 @@ func.func @wgmma_f32_m32(%descA : i64, %descB : i64) {
       -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
   return 
 }
+// -----
+
+func.func @set_max_register() {
+  // expected-error @+1 {{new register size must be in between 24 to 256}}
+  nvvm.setmaxregister decrease 8
+  func.return
+}
+
+// -----
+
+func.func @set_max_register() {
+  // expected-error @+1 {{new register size must be multiple of 8}}
+  nvvm.setmaxregister decrease 51
+  func.return
+}
+
+// -----
+
+func.func @fence_proxy() {
+  // expected-error @+1 {{op only async_shared fence can have space attribute}}
+  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async>, space = #nvvm.shared_space<cluster>}
+  func.return
+}
+
+// -----
+
+func.func @fence_proxy() {
+  // expected-error @+1 {{op async_shared fence requires space attribute}}
+  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>}
+  func.return
+}

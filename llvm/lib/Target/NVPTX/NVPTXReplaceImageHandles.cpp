@@ -1812,7 +1812,7 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
     StringRef Sym = TexHandleDef.getOperand(6).getSymbolName();
     std::string ParamBaseName = std::string(MF.getName());
     ParamBaseName += "_param_";
-    assert(Sym.startswith(ParamBaseName) && "Invalid symbol reference");
+    assert(Sym.starts_with(ParamBaseName) && "Invalid symbol reference");
     unsigned Param = atoi(Sym.data()+ParamBaseName.size());
     std::string NewSym;
     raw_string_ostream NewSymStr(NewSym);

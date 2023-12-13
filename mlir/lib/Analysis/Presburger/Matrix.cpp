@@ -466,8 +466,8 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 
 FracMatrix::FracMatrix(IntMatrix m)
     : FracMatrix(m.getNumRows(), m.getNumColumns()) {
-  for (unsigned i = 0; i < m.getNumRows(); i++)
-    for (unsigned j = 0; j < m.getNumColumns(); j++)
+  for (unsigned i = 0, r = m.getNumRows(); i < r; i++)
+    for (unsigned j = 0, c = m.getNumColumns(); j < c; j++)
       this->at(i, j) = m.at(i, j);
 }
 
@@ -554,4 +554,26 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
     determinant *= m.at(i, i);
 
   return determinant;
+}
+
+FracMatrix FracMatrix::gramSchmidt() const {
+  // Create a copy of the argument to store
+  // the orthogonalised version.
+  FracMatrix orth(*this);
+
+  // For each vector (row) in the matrix, subtract its unit
+  // projection along each of the previous vectors.
+  // This ensures that it has no component in the direction
+  // of any of the previous vectors.
+  for (unsigned i = 1, e = getNumRows(); i < e; i++) {
+    for (unsigned j = 0; j < i; j++) {
+      Fraction jNormSquared = dotProduct(orth.getRow(j), orth.getRow(j));
+      assert(jNormSquared != 0 && "some row became zero! Inputs to this "
+                                  "function must be linearly independent.");
+      Fraction projectionScale =
+          dotProduct(orth.getRow(i), orth.getRow(j)) / jNormSquared;
+      orth.addToRow(j, i, -projectionScale);
+    }
+  }
+  return orth;
 }

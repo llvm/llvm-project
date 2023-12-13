@@ -296,7 +296,7 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
-  SIModeRegisterDefaults Mode(F);
+  SIModeRegisterDefaults Mode(F, *ST);
   HasFP32Denormals = Mode.FP32Denormals != DenormalMode::getPreserveSign();
   HasFP64FP16Denormals =
       Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
@@ -321,11 +321,11 @@ TypeSize
 GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::Fixed(32);
+    return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::Fixed(ST->hasPackedFP32Ops() ? 64 : 32);
+    return TypeSize::getFixed(ST->hasPackedFP32Ops() ? 64 : 32);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::Scalable(0);
+    return TypeSize::getScalable(0);
   }
   llvm_unreachable("Unsupported register kind");
 }
@@ -892,7 +892,7 @@ bool GCNTTIImpl::isReadRegisterSourceOfDivergence(
     return true;
 
   // Special case scalar registers that start with 'v'.
-  if (RegName.startswith("vcc") || RegName.empty())
+  if (RegName.starts_with("vcc") || RegName.empty())
     return false;
 
   // VGPR or AGPR is divergent. There aren't any specially named vector
@@ -1163,8 +1163,8 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
   // no way to support merge for backend defined attributes.
-  SIModeRegisterDefaults CallerMode(*Caller);
-  SIModeRegisterDefaults CalleeMode(*Callee);
+  SIModeRegisterDefaults CallerMode(*Caller, *CallerST);
+  SIModeRegisterDefaults CalleeMode(*Callee, *CalleeST);
   if (!CallerMode.isInlineCompatible(CalleeMode))
     return false;
 

@@ -166,6 +166,13 @@ public:
     return builder.genShape(loc, lbounds, extents);
   }
 
+  fir::FortranVariableOpInterface
+  gen(const Fortran::evaluate::DataRef &dataRef) {
+    return std::visit(
+        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
+        dataRef.u);
+  }
+
 private:
   /// Struct that is filled while visiting a part-ref (in the "visit" member
   /// function) before the top level "gen" generates an hlfir.declare for the
@@ -309,13 +316,6 @@ private:
     PartInfo partInfo;
     mlir::Type resultType = visit(component, partInfo);
     return genDesignate(resultType, partInfo, component);
-  }
-
-  fir::FortranVariableOpInterface
-  gen(const Fortran::evaluate::DataRef &dataRef) {
-    return std::visit(
-        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
-        dataRef.u);
   }
 
   fir::FortranVariableOpInterface
@@ -1425,7 +1425,9 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(getLoc(), "lowering ProcRef to HLFIR");
+    TODO(
+        getLoc(),
+        "lowering function references that return procedure pointers to HLFIR");
   }
 
   template <typename T>
@@ -1921,6 +1923,15 @@ fir::ExtendedValue Fortran::lower::convertExprToValue(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  return convertToValue(loc, converter, loweredExpr, stmtCtx);
+}
+
+fir::ExtendedValue Fortran::lower::convertDataRefToValue(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::DataRef &dataRef, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FortranVariableOpInterface loweredExpr =
+      HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx).gen(dataRef);
   return convertToValue(loc, converter, loweredExpr, stmtCtx);
 }
 

@@ -34,16 +34,16 @@ template <class Range, class Out = int*>
 concept HasRotateCopyR = requires(Range range, Out out) { std::ranges::rotate_copy(range, nullptr, out); };
 
 static_assert(HasRotateCopyIt<int*>);
-static_assert(!HasRotateCopyIt<BidirectionalIteratorNotDerivedFrom>);
-static_assert(!HasRotateCopyIt<BidirectionalIteratorNotDecrementable>);
+static_assert(!HasRotateCopyIt<ForwardIteratorNotDerivedFrom>);
+static_assert(!HasRotateCopyIt<ForwardIteratorNotIncrementable>);
 static_assert(!HasRotateCopyIt<int*, SentinelForNotSemiregular>);
 static_assert(!HasRotateCopyIt<int*, SentinelForNotWeaklyEqualityComparableWith>);
 static_assert(!HasRotateCopyIt<int*, OutputIteratorNotIndirectlyWritable>);
 static_assert(!HasRotateCopyIt<int*, OutputIteratorNotInputOrOutputIterator>);
 
 static_assert(HasRotateCopyR<UncheckedRange<int*>>);
-static_assert(!HasRotateCopyR<BidirectionalRangeNotDerivedFrom>);
-static_assert(!HasRotateCopyR<BidirectionalRangeNotDecrementable>);
+static_assert(!HasRotateCopyR<ForwardRangeNotDerivedFrom>);
+static_assert(!HasRotateCopyR<ForwardRangeNotIncrementable>);
 static_assert(!HasRotateCopyR<UncheckedRange<int*, SentinelForNotSemiregular>>);
 static_assert(!HasRotateCopyR<UncheckedRange<int*>, OutputIteratorNotIndirectlyWritable>);
 static_assert(!HasRotateCopyR<UncheckedRange<int*>, OutputIteratorNotInputOrOutputIterator>);
@@ -112,6 +112,7 @@ constexpr void test_out_iterators() {
 }
 
 constexpr bool test() {
+  test_out_iterators<forward_iterator<int*>>();
   test_out_iterators<bidirectional_iterator<int*>>();
   test_out_iterators<random_access_iterator<int*>>();
   test_out_iterators<contiguous_iterator<int*>>();
