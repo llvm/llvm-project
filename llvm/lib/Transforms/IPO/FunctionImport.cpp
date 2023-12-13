@@ -153,7 +153,13 @@ static cl::opt<std::string> WorkloadDefinitions(
              "dictionary. The keys are root functions, the values are lists of "
              "functions to import in the module defining the root. It is "
              "assumed -funique-internal-linkage-names was used, to ensure "
-             "local linkage functions have unique names."),
+             "local linkage functions have unique names. For example: \n"
+             "{\n"
+             "  \"rootFunction_1\": [\"function_to_import_1\", "
+             "\"function_to_import_2\"], \n"
+             "  \"rootFunction_2\": [\"function_to_import_3\", "
+             "\"function_to_import_4\"] \n"
+             "}"),
     cl::Hidden);
 
 // Load lazily a module from \p FileName in \p Context.
@@ -473,7 +479,7 @@ class WorkloadImportsManager : public ModuleImportsManager {
                                   << " ImportFailureReason: "
                                   << getFailureName(Candidate.first) << "\n");
                 return Candidate.first ==
-                       FunctionImporter::ImportFailureReason::None;
+                        FunctionImporter::ImportFailureReason::None;
               }),
           [](const auto &Candidate) { return Candidate.second; });
       if (PotentialCandidates.empty()) {

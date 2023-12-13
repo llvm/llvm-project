@@ -1,68 +1,9 @@
+; Test workload based importing via -thinlto-workload-def
+;
 ; Set up
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
 ; RUN: split-file %s %t
-;
-;--- m1.ll
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
-
-declare void @m1_variant()
-declare void @m2_f1_alias()
-
-define dso_local void @m1_f1() {
-  call void @m1_f2()
-  call void @noninterposable_f()
-  ret void
-}
-
-define internal void @m1_f2() {
-  call void @interposable_f()
-  ret void
-}
-
-define external void @interposable_f() {
-  call void @m1_variant()
-  ret void
-}
-
-define linkonce_odr void @noninterposable_f() {
-  call void @m1_variant()
-  ret void
-}
-;--- m2.ll
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
-
-declare void @m2_variant()
-
-define dso_local void @m2_f1() {
-  call void @interposable_f()
-  call void @noninterposable_f()
-  ret void
-}
-
-@m2_f1_alias = alias void (...), ptr @m2_f1
-
-define weak void @interposable_f() {
-  call void @m2_variant() 
-  ret void
-}
-
-define linkonce_odr void @noninterposable_f() {
-  call void @m2_variant()
-  ret void
-}
-;--- m3.ll
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
-
-declare void @m1_f1()
-
-define dso_local void @m3_f1() {
-  call void @m1_f1()
-  ret void
-}
 ;
 ; RUN: opt -module-summary %t/m1.ll -o %t/m1.bc
 ; RUN: opt -module-summary %t/m2.ll -o %t/m2.bc
@@ -140,6 +81,10 @@ define dso_local void @m3_f1() {
 ; FIRST-NEXT:   call void @m2_variant
 ;
 ; FIRST-LABEL:  define available_externally void @m2_f1_alias
+;
+; For the second module we expect to get the functions imported from m1: m1_f1
+; and m1_f2. interposable_f will also come from m1 because that's where its
+; prevailing variant is.
 ; SECOND-LABEL: @m2_f1
 ;
 ; SECOND-LABEL: define weak_odr void @noninterposable_f
@@ -150,4 +95,68 @@ define dso_local void @m3_f1() {
 ; we import @interposable_f from m1, the prevailing variant.
 ; SECOND-LABEL: define available_externally void @interposable_f
 ; SECOND-NEXT:  call void @m1_variant
+;
+; The third module remains unchanged. The more robust test is the `diff` test
+; in the run lines above.
 ; THIRD-LABEL: define available_externally void @m1_f1
+
+;--- m1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+declare void @m1_variant()
+declare void @m2_f1_alias()
+
+define dso_local void @m1_f1() {
+  call void @m1_f2()
+  call void @noninterposable_f()
+  ret void
+}
+
+define internal void @m1_f2() {
+  call void @interposable_f()
+  ret void
+}
+
+define external void @interposable_f() {
+  call void @m1_variant()
+  ret void
+}
+
+define linkonce_odr void @noninterposable_f() {
+  call void @m1_variant()
+  ret void
+}
+;--- m2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+declare void @m2_variant()
+
+define dso_local void @m2_f1() {
+  call void @interposable_f()
+  call void @noninterposable_f()
+  ret void
+}
+
+@m2_f1_alias = alias void (...), ptr @m2_f1
+
+define weak void @interposable_f() {
+  call void @m2_variant() 
+  ret void
+}
+
+define linkonce_odr void @noninterposable_f() {
+  call void @m2_variant()
+  ret void
+}
+;--- m3.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+declare void @m1_f1()
+
+define dso_local void @m3_f1() {
+  call void @m1_f1()
+  ret void
+}
