@@ -1210,13 +1210,14 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   bool AutoInitExceedMaxSize = false;
   if (IsAutoInit) {
     AutoInitExceedMaxSize = trivialAutoVarInitMaxSize > 0 &&
-        SizeVal->getValue().sgt(trivialAutoVarInitMaxSize);
+                            SizeVal->getValue().sgt(trivialAutoVarInitMaxSize);
   }
 
   // If the initializer is all or mostly the same, codegen with bzero / memset
   // then do a few stores afterward.
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
-    if (AutoInitExceedMaxSize) return;
+    if (AutoInitExceedMaxSize)
+      return;
     auto *I = Builder.CreateMemSet(Loc, llvm::ConstantInt::get(CGM.Int8Ty, 0),
                                    SizeVal, isVolatile);
     if (IsAutoInit)
@@ -1236,7 +1237,8 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   llvm::Value *Pattern =
       shouldUseMemSetToInitialize(constant, ConstantSize, CGM.getDataLayout());
   if (Pattern) {
-    if (AutoInitExceedMaxSize) return;
+    if (AutoInitExceedMaxSize)
+      return;
     uint64_t Value = 0x00;
     if (!isa<llvm::UndefValue>(Pattern)) {
       const llvm::APInt &AP = cast<llvm::ConstantInt>(Pattern)->getValue();
@@ -1277,10 +1279,10 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   // Copy from a global.
   if (!AutoInitExceedMaxSize) {
     auto *I =
-      Builder.CreateMemCpy(Loc,
-                           createUnnamedGlobalForMemcpyFrom(
-                               CGM, D, Builder, constant, Loc.getAlignment()),
-                           SizeVal, isVolatile);
+        Builder.CreateMemCpy(Loc,
+                             createUnnamedGlobalForMemcpyFrom(
+                                 CGM, D, Builder, constant, Loc.getAlignment()),
+                             SizeVal, isVolatile);
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
   }
