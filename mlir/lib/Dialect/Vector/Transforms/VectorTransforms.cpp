@@ -1453,7 +1453,7 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 ///   sc_b = shape_cast(b)
 ///   res = elementwise(sc_a, sc_b)
 ///   return shape_cast(res)
-/// for which `a` and `b` are vectors of rank > 2 and have unit leading and/or
+/// for which `a` and `b` are vectors of rank > 1 and have unit leading and/or
 /// trailing dimension.
 ///
 /// Ex:
@@ -1505,12 +1505,9 @@ struct DropUnitDimFromElementwiseOps final
     // Drop leading/trailing unit dim by applying vector.shape_cast to all
     // operands
     auto elTy = sourceVectorType.getElementType();
-    VectorType newVType =
-        hasLeadingDimUnitFixed
-            ? VectorType::get(sourceVectorType.getShape().drop_front(1), elTy,
-                              sourceVectorType.getScalableDims().drop_front(1))
-            : VectorType::get(sourceVectorType.getShape().drop_back(1), elTy,
-                              sourceVectorType.getScalableDims().drop_back(1));
+    int64_t dim = hasLeadingDimUnitFixed ? 0 : sourceVectorType.getRank() - 1;
+    VectorType newVType = VectorType::Builder(sourceVectorType).dropDim(dim);
+
     SmallVector<Value> newOperands;
     auto loc = op->getLoc();
     for (auto operand : op->getOperands()) {
@@ -1520,13 +1517,13 @@ struct DropUnitDimFromElementwiseOps final
 
     // Create an updated elementwise Op without leading/trailing unit dim
     Operation *elementwiseOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(),
-                        newOperands, newVType, op->getAttrs());
+        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
+                        newVType, op->getAttrs());
 
     // Restore the leading/trailing unit dim by applying vector.shape_cast to
     // the result
     rewriter.replaceOpWithNewOp<ShapeCastOp>(op, sourceVectorType,
-                                             elementwiseOp->getResults()[0]);
+                                             elementwiseOp->getResult(0));
 
     return success();
   }
