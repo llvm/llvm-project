@@ -4,10 +4,6 @@
 "libc++" C++ Standard Library
 =============================
 
-.. image:: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule
-   :target: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml
-   :alt: Build and Test libc++
-
 Overview
 ========
 
@@ -70,6 +66,10 @@ Getting Started with libc++
 
 Current Status
 ==============
+
+.. image:: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule
+   :target: https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule
+   :alt: Build and Test libc++
 
 After its initial introduction, many people have asked "why start a new
 library instead of contributing to an existing library?" (like Apache's
@@ -206,6 +206,7 @@ Design Documents
 Build Bots and Test Coverage
 ============================
 
+* `Github Actions CI pipeline <https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml>`_
 * `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
 * `LLVM Buildbot Builders <https://lab.llvm.org/buildbot>`_
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`
