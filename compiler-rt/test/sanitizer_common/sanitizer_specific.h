@@ -42,7 +42,18 @@ static void make_mem_good(void *p, size_t s) {
   __hwasan_tag_memory(p, __hwasan_get_tag_from_pointer(p), s);
 }
 static void make_mem_bad(void *p, size_t s) {
-  __hwasan_tag_memory(p, ~__hwasan_get_tag_from_pointer(p), s);
+  uint8_t tag = ~__hwasan_get_tag_from_pointer(p);
+  if (!tag) {
+    // Nothing wrong with tag zero, but non-zero tags help to detect never
+    // tagged memory.
+    tag = 1;
+  }
+  __hwasan_tag_memory(p, , s);
+  // With missaligned `p` or short granules we can't guaranlee tag mismatch.
+  if (__hwasan_test_shadow(p, s) != 0)
+    abort();
+  if (s > 1 && __hwasan_test_shadow((reinterpret_cast<char*>(p) + s - 1, 1) != 0)
+    abort();
 }
 #else
 static void check_mem_is_good(void *p, size_t s) {}

@@ -9985,6 +9985,10 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
   if (TypeFlags.isOverloadCvt())
     return {Ops[0]->getType(), Ops.back()->getType()};
 
+  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
+      ResultType->isVectorTy())
+    return {ResultType, Ops[1]->getType()};
+
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
 }

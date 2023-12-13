@@ -340,28 +340,39 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
 /// child fused locations are the same---this to avoid breaking cases where
 /// metadata matter.
 static Location FlattenFusedLocationRecursively(const Location loc) {
-  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
-    SetVector<Location> flattenedLocs;
-    Attribute metadata = fusedLoc.getMetadata();
+  auto fusedLoc = dyn_cast<FusedLoc>(loc);
+  if (!fusedLoc)
+    return loc;
 
-    for (const Location &unflattenedLoc : fusedLoc.getLocations()) {
-      Location flattenedLoc = FlattenFusedLocationRecursively(unflattenedLoc);
-      auto flattenedFusedLoc = dyn_cast<FusedLoc>(flattenedLoc);
+  SetVector<Location> flattenedLocs;
+  Attribute metadata = fusedLoc.getMetadata();
+  ArrayRef<Location> unflattenedLocs = fusedLoc.getLocations();
+  bool hasAnyNestedLocChanged = false;
 
-      if (flattenedFusedLoc && (!flattenedFusedLoc.getMetadata() ||
-                                flattenedFusedLoc.getMetadata() == metadata)) {
-        ArrayRef<Location> nestedLocations = flattenedFusedLoc.getLocations();
-        flattenedLocs.insert(nestedLocations.begin(), nestedLocations.end());
-      } else {
-        flattenedLocs.insert(flattenedLoc);
-      }
+  for (const Location &unflattenedLoc : unflattenedLocs) {
+    Location flattenedLoc = FlattenFusedLocationRecursively(unflattenedLoc);
+
+    auto flattenedFusedLoc = dyn_cast<FusedLoc>(flattenedLoc);
+    if (flattenedFusedLoc && (!flattenedFusedLoc.getMetadata() ||
+                              flattenedFusedLoc.getMetadata() == metadata)) {
+      hasAnyNestedLocChanged = true;
+      ArrayRef<Location> nestedLocations = flattenedFusedLoc.getLocations();
+      flattenedLocs.insert(nestedLocations.begin(), nestedLocations.end());
+    } else {
+      if (flattenedLoc != unflattenedLoc)
+        hasAnyNestedLocChanged = true;
+
+      flattenedLocs.insert(flattenedLoc);
     }
-
-    return FusedLoc::get(loc->getContext(), flattenedLocs.takeVector(),
-                         fusedLoc.getMetadata());
   }
 
-  return loc;
+  if (!hasAnyNestedLocChanged &&
+      unflattenedLocs.size() == flattenedLocs.size()) {
+    return loc;
+  }
+
+  return FusedLoc::get(loc->getContext(), flattenedLocs.takeVector(),
+                       fusedLoc.getMetadata());
 }
 
 void OperationFolder::appendFoldedLocation(Operation *retainedOp,

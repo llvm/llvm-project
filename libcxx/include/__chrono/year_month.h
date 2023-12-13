@@ -53,13 +53,13 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const year_month& __lhs, const year_month& __rhs) noexcept
 { return __lhs.year() == __rhs.year() && __lhs.month() == __rhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const year_month& __lhs, const year_month& __rhs) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const year_month& __lhs, const year_month& __rhs) noexcept {
     if (auto __c = __lhs.year() <=> __rhs.year(); __c != 0)
       return __c;
     return __lhs.month() <=> __rhs.month();
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const year_month& __lhs, const months& __rhs) noexcept
 {
     int __dmi = static_cast<int>(static_cast<unsigned>(__lhs.month())) - 1 + __rhs.count();
@@ -68,27 +68,27 @@ year_month operator+(const year_month& __lhs, const months& __rhs) noexcept
     return (__lhs.year() + years(__dy)) / month(static_cast<unsigned>(__dmi));
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const months& __lhs, const year_month& __rhs) noexcept
 { return __rhs + __lhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const year_month& __lhs, const years& __rhs) noexcept
 { return (__lhs.year() + __rhs) / __lhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator+(const years& __lhs, const year_month& __rhs) noexcept
 { return __rhs + __lhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 months operator-(const year_month& __lhs, const year_month& __rhs) noexcept
 { return (__lhs.year() - __rhs.year()) + months(static_cast<unsigned>(__lhs.month()) - static_cast<unsigned>(__rhs.month())); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator-(const year_month& __lhs, const months& __rhs) noexcept
 { return __lhs + -__rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 year_month operator-(const year_month& __lhs, const years& __rhs) noexcept
 { return __lhs + -__rhs; }
 
