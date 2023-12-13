@@ -1739,7 +1739,8 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (Emitted.find(Def->getMangledName()) != Emitted.end())
       continue;
 
-    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower() << "_";
+    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower()
+       << "_";
     OS << Def->getMangledName() << ":\n";
 
     if (Def->isFlagSet(IsStreamingFlag))
