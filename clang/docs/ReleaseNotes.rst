@@ -836,6 +836,9 @@ Bug Fixes to C++ Support
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
 
+- Fixed crash when parsing inconsistent arguments in variadic template variables. Fixes:
+  `(#70280: <hhttps://github.com/llvm/llvm-project/issues/70191>`_)
+
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
@@ -1068,9 +1071,6 @@ Static Analyzer
   `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
   `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
   `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
-
-- Resolving Inconsistent Arguments Panic in Variadic Template Variables.
-  (`#70280: <https://github.com/llvm/llvm-project/pull/70280>`_).
 
 .. _release-notes-sanitizers:
 
