@@ -1238,6 +1238,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16: // mandatory literal is always size 4
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return 4;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
