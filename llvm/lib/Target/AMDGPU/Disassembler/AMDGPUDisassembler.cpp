@@ -107,6 +107,13 @@ static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
   return addOperand(Inst, DAsm->decodeBoolReg(Val));
 }
 
+static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
+                                       uint64_t Addr,
+                                       const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeSplitBarrier(Val));
+}
+
 #define DECODE_OPERAND(StaticDecoderName, DecoderName)                         \
   static DecodeStatus StaticDecoderName(MCInst &Inst, unsigned Imm,            \
                                         uint64_t /*Addr*/,                     \
@@ -1745,6 +1752,10 @@ MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
   return STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
              ? decodeSrcOp(OPW64, Val)
              : decodeSrcOp(OPW32, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeSplitBarrier(unsigned Val) const {
+  return decodeSrcOp(OPW32, Val);
 }
 
 bool AMDGPUDisassembler::isVI() const {
