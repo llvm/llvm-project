@@ -135,6 +135,94 @@ subroutine omp_target_exit_device
 end subroutine omp_target_exit_device
 
 !===============================================================================
+! Target_Update `to` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_update_to() {
+subroutine omp_target_update_to
+   integer :: a(1024)
+
+   !CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+
+   !CHECK: %[[TO_MAP:.*]] = omp.map_info var_ptr(%[[A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)
+   !CHECK-SAME: map_clauses(to) capture(ByRef)
+   !CHECK-SAME: bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+
+   !CHECK: omp.target_update_data motion_entries(%[[TO_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update to(a)
+end subroutine omp_target_update_to
+
+!===============================================================================
+! Target_Update `from` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_update_from() {
+subroutine omp_target_update_from
+   integer :: a(1024)
+
+   !CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+
+   !CHECK: %[[FROM_MAP:.*]] = omp.map_info var_ptr(%[[A_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)
+   !CHECK-SAME: map_clauses(from) capture(ByRef)
+   !CHECK-SAME: bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+
+   !CHECK: omp.target_update_data motion_entries(%[[FROM_MAP]] : !fir.ref<!fir.array<1024xi32>>)
+   !$omp target update from(a)
+end subroutine omp_target_update_from
+
+!===============================================================================
+! Target_Update `if` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_update_if() {
+subroutine omp_target_update_if
+   integer :: a(1024)
+   logical :: i
+
+   !CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+   !CHECK-DAG: %[[COND:.*]] = fir.convert %{{.*}} : (!fir.logical<4>) -> i1
+
+   !CHECK: omp.target_update_data if(%[[COND]] : i1) motion_entries
+   !$omp target update from(a) if(i)
+end subroutine omp_target_update_if
+
+!===============================================================================
+! Target_Update `device` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_update_device() {
+subroutine omp_target_update_device
+   integer :: a(1024)
+   logical :: i
+
+   !CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+   !CHECK-DAG: %[[DEVICE:.*]] = arith.constant 1 : i32
+
+   !CHECK: omp.target_update_data device(%[[DEVICE]] : i32) motion_entries
+   !$omp target update from(a) device(1)
+end subroutine omp_target_update_device
+
+!===============================================================================
+! Target_Update `nowait` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_update_nowait() {
+subroutine omp_target_update_nowait
+   integer :: a(1024)
+   logical :: i
+
+   !CHECK-DAG: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})
+   !CHECK-DAG: %[[BOUNDS:.*]] = omp.bounds
+
+   !CHECK: omp.target_update_data nowait motion_entries
+   !$omp target update from(a) nowait
+end subroutine omp_target_update_nowait
+
+!===============================================================================
 ! Target_Data with region
 !===============================================================================
 
