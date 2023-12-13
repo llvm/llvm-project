@@ -1505,7 +1505,6 @@ struct DropUnitDimFromElementwiseOps final
 
     // Drop leading/trailing unit dim by applying vector.shape_cast to all
     // operands
-    auto elTy = sourceVectorType.getElementType();
     int64_t dim = hasLeadingDimUnitFixed ? 0 : sourceVectorType.getRank() - 1;
     VectorType newVType = VectorType::Builder(sourceVectorType).dropDim(dim);
 
