@@ -81,14 +81,14 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
 
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
+      .Case("auto", OpenACCClauseKind::Auto)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("if_present", OpenACCClauseKind::IfPresent)
-      .Case("seq", OpenACCClauseKind::Seq)
       .Case("independent", OpenACCClauseKind::Independent)
-      .Case("auto", OpenACCClauseKind::Auto)
-      .Case("worker", OpenACCClauseKind::Worker)
-      .Case("vector", OpenACCClauseKind::Vector)
       .Case("nohost", OpenACCClauseKind::NoHost)
+      .Case("seq", OpenACCClauseKind::Seq)
+      .Case("vector", OpenACCClauseKind::Vector)
+      .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
 }
 
@@ -234,7 +234,7 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   if (FirstTok.isNot(tok::identifier)) {
     P.Diag(FirstTok, diag::err_acc_missing_directive);
 
-    if (!FirstTok.isAnnotation())
+    if (P.getCurToken().isNot(tok::annot_pragma_openacc_end))
       P.ConsumeAnyToken();
 
     return OpenACCDirectiveKind::Invalid;
@@ -291,6 +291,11 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   return DirKind;
 }
 
+// The OpenACC Clause List is a comma or space-delimited list of clauses (see
+// the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
+// really have its owner grammar and each individual one has its own definition.
+// However, they all are named with a single-identifier (or auto!) token,
+// followed in some cases by either braces or parens.
 bool ParseOpenACCClause(Parser &P) {
   if (!P.getCurToken().isOneOf(tok::identifier, tok::kw_auto))
     return P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
