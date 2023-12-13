@@ -14,15 +14,13 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if SANITIZER_POSIX
+#  include <pthread.h>
 
-#include "lsan.h"
-
-#include <pthread.h>
-
-#include "lsan_allocator.h"
-#include "lsan_thread.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
+#  include "lsan.h"
+#  include "lsan_allocator.h"
+#  include "lsan_thread.h"
+#  include "sanitizer_common/sanitizer_stacktrace.h"
+#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __lsan {
 
