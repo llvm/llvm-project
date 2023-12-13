@@ -1429,13 +1429,16 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     unsigned TripleVersion = Triple.getEnvironmentVersion().getMajor();
     StringRef TripleVersionName = Triple.getVersionName();
     StringRef TripleArch = Triple.getArchName();
+    StringRef TripleOS = Triple.getOSName();
     StringRef TripleEnvironmentType = Triple.getEnvironmentTypeName(Triple.getEnvironment());
 
-    if (TripleVersion == 0 && TripleVersionName != "" && TripleEnvironmentType == "android") {
-        Diags.Report(diag::err_android_version_invalid) << Triple.getVersionName()
-                                                        << Triple.getArchName()
+    if (TripleVersion == 0 && TripleVersionName != "" && TripleEnvironmentType == "android"
+      && TripleOS != "unknown") {
+        Diags.Report(diag::err_android_version_invalid) << TripleVersionName
+                                                        << TripleArch
                                                         << Triple.getVendorName()
-                                                        << Triple.getOSAndEnvironmentName();
+                                                        << TripleOS
+                                                        << TripleEnvironmentType;
         ContainsError = true;
     }
   }

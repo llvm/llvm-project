@@ -688,14 +688,6 @@ ToolChain::getFallbackAndroidTargetPath(StringRef BaseDir) const {
   unsigned TripleVersion = getTriple().getEnvironmentVersion().getMajor();
   unsigned BestVersion = 0;
 
-  if (TripleVersion == 0) {
-    return llvm::createStringError("version " + getTriple().getVersionName() +
-                                   " in triple " + getTriple().getArchName() +
-                                   "-" + getTriple().getVendorName() + "-" +
-                                   getTriple().getOSAndEnvironmentName() +
-                                   " is invalid\n";);
-  }
-
   SmallString<32> TripleDir;
   bool UsingUnversionedDir = false;
   std::error_code EC;
