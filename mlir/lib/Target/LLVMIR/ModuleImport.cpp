@@ -1735,6 +1735,11 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                  .value()));
   }
 
+  if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
+      attr.isStringAttribute()) {
+    funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+  }
+
   if (llvm::Attribute attr = func->getFnAttribute("target-features");
       attr.isStringAttribute()) {
     funcOp.setTargetFeaturesAttr(

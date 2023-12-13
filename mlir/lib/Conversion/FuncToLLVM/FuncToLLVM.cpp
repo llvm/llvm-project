@@ -64,6 +64,7 @@ using namespace mlir;
 static constexpr StringRef varargsAttrName = "func.varargs";
 static constexpr StringRef linkageAttrName = "llvm.linkage";
 static constexpr StringRef barePtrAttrName = "llvm.bareptr";
+static constexpr StringRef targetFeaturesAttrName = "llvm.target_features";
 
 /// Return `true` if the `op` should use bare pointer calling convention.
 static bool shouldUseBarePtrCallConv(Operation *op,
@@ -79,6 +80,7 @@ static void filterFuncAttributes(FunctionOpInterface func,
   for (const NamedAttribute &attr : func->getDiscardableAttrs()) {
     if (attr.getName() == linkageAttrName ||
         attr.getName() == varargsAttrName ||
+        attr.getName() == targetFeaturesAttrName ||
         attr.getName() == LLVM::LLVMDialect::getReadnoneAttrName())
       continue;
     result.push_back(attr);
@@ -377,6 +379,19 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
         {LLVM::ModRefInfo::NoModRef, LLVM::ModRefInfo::NoModRef,
          LLVM::ModRefInfo::NoModRef});
     newFuncOp.setMemoryAttr(memoryAttr);
+  }
+
+  // Create target_features attribute.
+  if (funcOp->hasAttr(targetFeaturesAttrName)) {
+    auto attr = funcOp->getAttrOfType<StringAttr>(targetFeaturesAttrName);
+    if (!attr) {
+      funcOp->emitError() << "Contains " << targetFeaturesAttrName
+                          << " attribute not of type StringAttr";
+      return rewriter.notifyMatchFailure(
+          funcOp, "Contains target features attribute not of type StringAttr");
+    }
+    newFuncOp.setTargetFeaturesAttr(
+        LLVM::TargetFeaturesAttr::get(rewriter.getContext(), attr.strref()));
   }
 
   // Propagate argument/result attributes to all converted arguments/result

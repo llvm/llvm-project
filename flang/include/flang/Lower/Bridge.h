@@ -21,10 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
-
-namespace llvm {
-class DataLayout;
-} // namespace llvm
+#include "llvm/Target/TargetMachine.h"
 
 namespace Fortran {
 namespace common {
@@ -64,11 +61,11 @@ public:
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
          const Fortran::common::LanguageFeatureControl &languageFeatures,
-         const llvm::DataLayout *dataLayout = nullptr) {
+         const llvm::TargetMachine &targetMachine) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
                           loweringOptions, envDefaults, languageFeatures,
-                          dataLayout);
+                          targetMachine);
   }
 
   //===--------------------------------------------------------------------===//
@@ -110,6 +107,8 @@ public:
     return languageFeatures;
   }
 
+  const llvm::TargetMachine &getTargetMachine() const { return targetMachine; }
+
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext() const;
 
@@ -147,7 +146,7 @@ private:
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
       const Fortran::common::LanguageFeatureControl &languageFeatures,
-      const llvm::DataLayout *dataLayout);
+      const llvm::TargetMachine &targetMachine);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
@@ -164,6 +163,7 @@ private:
   const Fortran::lower::LoweringOptions &loweringOptions;
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
+  const llvm::TargetMachine &targetMachine;
 };
 
 } // namespace lower
