@@ -434,6 +434,10 @@ FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 FUNCTION_PASS_WITH_PARAMS(
+    "cfguard", "CFGuardPass",
+    [](CFGuardPass::Mechanism M) { return CFGuardPass(M); },
+    parseCFGuardPassOptions, "check;dispatch")
+FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
