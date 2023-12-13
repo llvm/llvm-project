@@ -21,6 +21,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -1479,9 +1480,8 @@ void VFABI::getVectorVariantNames(
   }
 }
 
-std::optional<std::pair<FunctionType *, int>>
-VFABI::createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy,
-                          Type *VecRetTy, const Module *M) {
+std::optional<FunctionType *>
+VFABI::createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy) {
   ElementCount VF = Info.Shape.VF;
   // Create vector parameter types
   SmallVector<Type *, 8> VecTypes;
@@ -1500,11 +1500,15 @@ VFABI::createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy,
       return std::nullopt;
 
     MaskPos = OptMaskPos.value();
-    VectorType *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VF);
+    VectorType *MaskTy =
+        VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
     VecTypes.insert(VecTypes.begin() + MaskPos, MaskTy);
   }
-  FunctionType *VecFTy = FunctionType::get(VecRetTy, VecTypes, false);
-  return std::make_pair(VecFTy, MaskPos);
+  auto *RetTy = ScalarFTy->getReturnType();
+  if (!RetTy->isVoidTy())
+    RetTy = VectorType::get(ScalarFTy->getReturnType(), VF);
+  FunctionType *VecFTy = FunctionType::get(RetTy, VecTypes, false);
+  return VecFTy;
 }
 
 bool VFShape::hasValidParameterList() const {

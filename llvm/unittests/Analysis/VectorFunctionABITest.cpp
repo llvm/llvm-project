@@ -126,12 +126,11 @@ protected:
 
     // Use VFInfo and the mock CallInst to create a FunctionType that will
     // include a mask when relevant.
-    auto OptVecFTyPos =
-        VFABI::createFunctionType(Info, ScalarFTy, VecRetTy, M.get());
-    if (!OptVecFTyPos)
+    auto OptVecFTy = VFABI::createFunctionType(Info, ScalarFTy);
+    if (!OptVecFTy)
       return false;
 
-    FunctionType *VecFTy = OptVecFTyPos->first;
+    FunctionType *VecFTy = *OptVecFTy;
     // Check that vectorized parameters' size match with VFInfo.
     // Both may include a mask.
     if ((VecFTy->getNumParams() != Info.Shape.Parameters.size()))
