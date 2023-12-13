@@ -26,10 +26,18 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-template <> struct FPBits<long double> {
-  using UIntType = UInt128;
+template <> struct FPBits<long double> : private FloatProperties<long double> {
+  using typename FloatProperties<long double>::UIntType;
+  using FloatProperties<long double>::BIT_WIDTH;
+  using FloatProperties<long double>::EXP_MANT_MASK;
+  using FloatProperties<long double>::EXPONENT_MASK;
+  using FloatProperties<long double>::EXPONENT_BIAS;
+  using FloatProperties<long double>::EXPONENT_WIDTH;
+  using FloatProperties<long double>::MANTISSA_MASK;
+  using FloatProperties<long double>::MANTISSA_WIDTH;
+  using FloatProperties<long double>::QUIET_NAN_MASK;
+  using FloatProperties<long double>::SIGN_MASK;
 
-  static constexpr int EXPONENT_BIAS = 0x3FFF;
   static constexpr int MAX_EXPONENT = 0x7FFF;
   static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
@@ -41,59 +49,52 @@ template <> struct FPBits<long double> {
       (UIntType(MAX_EXPONENT - 1) << (MantissaWidth<long double>::VALUE + 1)) |
       (UIntType(1) << MantissaWidth<long double>::VALUE) | MAX_SUBNORMAL;
 
-  using FloatProp = FloatProperties<long double>;
-
   UIntType bits;
 
   LIBC_INLINE constexpr void set_mantissa(UIntType mantVal) {
-    mantVal &= (FloatProp::MANTISSA_MASK);
-    bits &= ~(FloatProp::MANTISSA_MASK);
+    mantVal &= MANTISSA_MASK;
+    bits &= ~MANTISSA_MASK;
     bits |= mantVal;
   }
 
   LIBC_INLINE constexpr UIntType get_mantissa() const {
-    return bits & FloatProp::MANTISSA_MASK;
+    return bits & MANTISSA_MASK;
   }
 
   LIBC_INLINE constexpr UIntType get_explicit_mantissa() const {
     // The x86 80 bit float represents the leading digit of the mantissa
     // explicitly. This is the mask for that bit.
-    constexpr UIntType EXPLICIT_BIT_MASK =
-        (UIntType(1) << FloatProp::MANTISSA_WIDTH);
-    return bits & (FloatProp::MANTISSA_MASK | EXPLICIT_BIT_MASK);
+    constexpr UIntType EXPLICIT_BIT_MASK = UIntType(1) << MANTISSA_WIDTH;
+    return bits & (MANTISSA_MASK | EXPLICIT_BIT_MASK);
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
-    expVal =
-        (expVal << (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH)) &
-        FloatProp::EXPONENT_MASK;
-    bits &= ~(FloatProp::EXPONENT_MASK);
+    expVal = (expVal << (BIT_WIDTH - 1 - EXPONENT_WIDTH)) & EXPONENT_MASK;
+    bits &= ~EXPONENT_MASK;
     bits |= expVal;
   }
 
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
-                    (FloatProp::BIT_WIDTH - 1 - FloatProp::EXPONENT_WIDTH));
+    return uint16_t((bits & EXPONENT_MASK) >> (BIT_WIDTH - 1 - EXPONENT_WIDTH));
   }
 
   LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    bits &= ~(UIntType(1) << FloatProp::MANTISSA_WIDTH);
-    bits |= (UIntType(implicitVal) << FloatProp::MANTISSA_WIDTH);
+    bits &= ~(UIntType(1) << MANTISSA_WIDTH);
+    bits |= (UIntType(implicitVal) << MANTISSA_WIDTH);
   }
 
   LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return bool((bits & (UIntType(1) << FloatProp::MANTISSA_WIDTH)) >>
-                FloatProp::MANTISSA_WIDTH);
+    return bool((bits & (UIntType(1) << MANTISSA_WIDTH)) >> MANTISSA_WIDTH);
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {
-    bits &= ~(FloatProp::SIGN_MASK);
-    UIntType sign1 = UIntType(signVal) << (FloatProp::BIT_WIDTH - 1);
+    bits &= ~SIGN_MASK;
+    UIntType sign1 = UIntType(signVal) << (BIT_WIDTH - 1);
     bits |= sign1;
   }
 
   LIBC_INLINE constexpr bool get_sign() const {
-    return bool((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
+    return bool((bits & SIGN_MASK) >> (BIT_WIDTH - 1));
   }
 
   LIBC_INLINE constexpr FPBits() : bits(0) {}
@@ -117,7 +118,7 @@ template <> struct FPBits<long double> {
 
   LIBC_INLINE constexpr UIntType uintval() {
     // We zero the padding bits as they can contain garbage.
-    return bits & FloatProp::FP_MASK;
+    return bits & FP_MASK;
   }
 
   LIBC_INLINE constexpr long double get_val() const {
@@ -196,7 +197,7 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE static constexpr long double build_quiet_nan(UIntType v) {
-    return build_nan(FloatProp::QUIET_NAN_MASK | v);
+    return build_nan(QUIET_NAN_MASK | v);
   }
 
   LIBC_INLINE static constexpr long double min_normal() {

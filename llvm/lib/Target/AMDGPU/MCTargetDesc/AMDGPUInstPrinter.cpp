@@ -708,6 +708,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
     case MCOI::OPERAND_IMMEDIATE:
+    case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
       printImmediate32(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
