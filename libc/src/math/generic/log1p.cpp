@@ -871,11 +871,11 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
 } // namespace
 
 LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
-  using FPBits = typename fputil::FPBits<double>;
-  constexpr int EXPONENT_BIAS = FPBits::EXPONENT_BIAS;
-  constexpr int MANTISSA_WIDTH = FPBits::MANTISSA_WIDTH;
-  constexpr uint64_t MANTISSA_MASK = FPBits::MANTISSA_MASK;
-  FPBits xbits(x);
+  using FPBits_t = typename fputil::FPBits<double>;
+  constexpr int EXPONENT_BIAS = FPBits_t::EXPONENT_BIAS;
+  constexpr int MANTISSA_WIDTH = FPBits_t::FloatProp::MANTISSA_WIDTH;
+  constexpr uint64_t MANTISSA_MASK = FPBits_t::FloatProp::MANTISSA_MASK;
+  FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
   fputil::DoubleDouble x_dd{0.0, 0.0};
@@ -886,19 +886,19 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
     // |x| >= 1
     if (LIBC_UNLIKELY(x_u >= 0x4650'0000'0000'0000ULL)) {
       // x >= 2^102 or x is negative, inf, or NaN
-      if (LIBC_UNLIKELY(x_u > FPBits::MAX_NORMAL)) {
+      if (LIBC_UNLIKELY(x_u > FPBits_t::MAX_NORMAL)) {
         // x <= -1.0 or x is Inf or NaN
         if (x_u == 0xbff0'0000'0000'0000ULL) {
           // x = -1.0
           fputil::set_errno_if_required(ERANGE);
           fputil::raise_except_if_required(FE_DIVBYZERO);
-          return static_cast<double>(FPBits::neg_inf());
+          return static_cast<double>(FPBits_t::neg_inf());
         }
         if (xbits.get_sign() && !xbits.is_nan()) {
           // x < -1.0
           fputil::set_errno_if_required(EDOM);
           fputil::raise_except_if_required(FE_INVALID);
-          return FPBits::build_quiet_nan(0);
+          return FPBits_t::build_quiet_nan(0);
         }
         // x is +Inf or NaN
         return x;
@@ -928,11 +928,11 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
       bool rdn = (tn - 0x1p-24f != tn);
 
       if (x > 0 && rdp) {
-        return FPBits(x_u - 1).get_val();
+        return FPBits_t(x_u - 1).get_val();
       }
 
       if (x < 0 && rdn) {
-        return FPBits(x_u + 1).get_val();
+        return FPBits_t(x_u + 1).get_val();
       }
 
       return x;
@@ -945,7 +945,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   //   |x_dd.hi| >= 2^-54
   //   |x_dd.lo| < ulp(x_dd.hi)
 
-  FPBits xhi_bits(x_dd.hi);
+  FPBits_t xhi_bits(x_dd.hi);
   x_u = xhi_bits.uintval();
   // Range reduction:
   // Find k such that |x_hi - k * 2^-7| <= 2^-8.
@@ -969,10 +969,10 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   // Scaling factior = 2^(-xh_bits.get_exponent())
   uint64_t s_u =
       (static_cast<uint64_t>(EXPONENT_BIAS) << (MANTISSA_WIDTH + 1)) -
-      (x_u & FPBits::EXPONENT_MASK);
+      (x_u & FPBits_t::FloatProp::EXPONENT_MASK);
   // When the exponent of x is 2^1023, its inverse, 2^(-1023), is subnormal.
   const double EXPONENT_CORRECTION[2] = {0.0, 0x1.0p-1023};
-  double scaling = FPBits(s_u).get_val() + EXPONENT_CORRECTION[s_u == 0];
+  double scaling = FPBits_t(s_u).get_val() + EXPONENT_CORRECTION[s_u == 0];
   // Normalize arguments:
   //   1 <= m_dd.hi < 2
   //   |m_dd.lo| < 2^-52.
@@ -999,8 +999,8 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   v_hi = fputil::multiply_add(r, m_dd.hi, -1.0); // Exact.
 #else
   // c = 1 + idx * 2^-7.
-  double c = FPBits((static_cast<uint64_t>(idx) << (MANTISSA_WIDTH - 7)) +
-                    uint64_t(0x3FF0'0000'0000'0000ULL))
+  double c = FPBits_t((static_cast<uint64_t>(idx) << (MANTISSA_WIDTH - 7)) +
+                      uint64_t(0x3FF0'0000'0000'0000ULL))
                  .get_val();
   v_hi = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]); // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA
