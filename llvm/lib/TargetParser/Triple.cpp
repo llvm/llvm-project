@@ -1201,8 +1201,7 @@ StringRef Triple::getOSAndEnvironmentName() const {
 static VersionTuple parseVersionFromName(StringRef Name) {
   VersionTuple Version;
   if (Version.tryParse(Name)) {
-    errs() << "The input is "<< Name << " and it is invalid. Should pass an "<<
-    "integer or integer combination! e.g. 2, 9.5 or 3.4.5\n";
+    errs() << "version "<< Name << " is invalid\n";
     exit(1);
   }
   return Version.withoutBuild();
