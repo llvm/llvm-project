@@ -1,6 +1,6 @@
 // RUN: %clang -O0 %s -o %t && %env_tool_opts=die_after_fork=0 %run %t
 
-// UNSUPPORTED: asan, lsan, hwasan
+// UNSUPPORTED: asan, hwasan
 
 // The test uses pthread barriers which are not available on Darwin.
 // UNSUPPORTED: darwin
