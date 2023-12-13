@@ -271,7 +271,7 @@
 ; RV32ZVFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvl32b1p0"
 ; RV32ZVFBFWMA: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvfbfwma0p8_zvl32b1p0"
 ; RV32ZACAS: .attribute 5, "rv32i2p1_a2p1_zacas1p0"
-; RV32ZICFILP: .attribute 5, "rv32i2p1_zicfilp0p2"
+; RV32ZICFILP: .attribute 5, "rv32i2p1_zicfilp0p4"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p1_zmmul1p0"
@@ -360,7 +360,7 @@
 ; RV64ZVFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvl32b1p0"
 ; RV64ZVFBFWMA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvfbfwma0p8_zvl32b1p0"
 ; RV64ZACAS: .attribute 5, "rv64i2p1_a2p1_zacas1p0"
-; RV64ZICFILP: .attribute 5, "rv64i2p1_zicfilp0p2"
+; RV64ZICFILP: .attribute 5, "rv64i2p1_zicfilp0p4"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
