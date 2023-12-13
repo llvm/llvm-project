@@ -1,0 +1,33 @@
+
+name: Libc++ Task Runners Test
+on:
+  pull_request:
+    paths:
+      - 'libcxx/**'
+      - 'libcxxabi/**'
+      - 'libunwind/**'
+      - 'runtimes/**'
+      - 'cmake/**'
+      - '.github/workflows/libcxx-runners-test.yaml'
+
+permissions:
+  contents: read # Default everything to read-only
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  stage1:
+    if: github.repository_owner == 'llvm'
+    runs-on: libcxx-runners-1-set
+    steps:
+      - name: Breathing
+        run: echo hello
+      - name: Test Python
+        run: python3 -c "import sys; print(sys.version)"
+      - name: Test Checkout
+        uses: actions/checkout@v4
+      - name: End Step
+        if: always()
+        run: echo "End Step"

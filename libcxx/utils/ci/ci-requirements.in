@@ -1,0 +1,14 @@
+beartype
+flask
+google-api-python-client
+matplotlib
+networkx
+pandas
+peewee
+psutil
+psycopg2-binary
+pydantic>=2.0.0
+Pygithub
+requests
+rich
+tqdm
