@@ -795,7 +795,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
 
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
-              dyn_cast<llvm::DICompileUnit>(diGlobalVar->getScope())) {
+              dyn_cast_if_present<llvm::DICompileUnit>(
+                  diGlobalVar->getScope())) {
         // Update the compile unit with this incoming global variable expression
         // during the finalizing step later.
         allGVars[compileUnit].push_back(diGlobalExpr);
