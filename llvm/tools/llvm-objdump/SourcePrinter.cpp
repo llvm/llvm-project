@@ -524,7 +524,7 @@ void ControlFlowPrinter::addEdge(uint64_t From, uint64_t To) {
 }
 
 void ControlFlowPrinter::finalise() {
-  if (!enabled()) {
+  if (!OutputMode.enabled()) {
     setControlFlowColumnWidth(0);
     return;
   }
@@ -565,8 +565,7 @@ void ControlFlowPrinter::finalise() {
 }
 
 const char *ControlFlowPrinter::getLineChar(LineChar C) const {
-  bool IsASCII =
-      (OutputMode & VisualizeJumpsMode::CharsMask) == VisualizeJumpsMode::CharsASCII;
+  bool IsASCII = OutputMode.Chars == VisualizeJumpsMode::ASCII;
   switch (C) {
   case LineChar::Horiz:
     return IsASCII ? "-" : (const char *)u8"\u2500";
@@ -588,7 +587,7 @@ const char *ControlFlowPrinter::getLineChar(LineChar C) const {
 
 void ControlFlowPrinter::printInst(formatted_raw_ostream &OS,
                                    uint64_t Addr) const {
-  if (!enabled())
+  if (!OutputMode.enabled())
     return;
 
   SmallVector<const ControlFlowTarget *, 8> Columns;
@@ -608,8 +607,7 @@ void ControlFlowPrinter::printInst(formatted_raw_ostream &OS,
 
   auto Color = [&](raw_ostream &OS,
                    raw_ostream::Colors Color) -> raw_ostream & {
-    if ((OutputMode & VisualizeJumpsMode::ColorMask) !=
-        VisualizeJumpsMode::Off) {
+    if (OutputMode.color_enabled()) {
       OS << Color;
     }
     return OS;
@@ -656,7 +654,7 @@ void ControlFlowPrinter::printInst(formatted_raw_ostream &OS,
 // TODO boolean params -> enum?
 void ControlFlowPrinter::printOther(formatted_raw_ostream &OS, uint64_t Addr,
                                     bool BeforeInst, bool AfterInst) const {
-  if (!enabled())
+  if (!OutputMode.enabled())
     return;
 
   assert(!(BeforeInst && AfterInst));
@@ -666,8 +664,7 @@ void ControlFlowPrinter::printOther(formatted_raw_ostream &OS, uint64_t Addr,
 
   auto Color = [&](raw_ostream &OS,
                    raw_ostream::Colors Color) -> raw_ostream & {
-    if ((OutputMode & VisualizeJumpsMode::ColorMask) !=
-        VisualizeJumpsMode::Off) {
+    if (OutputMode.color_enabled()) {
       OS << Color;
     }
     return OS;

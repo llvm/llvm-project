@@ -1588,7 +1588,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   }
 
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
-  if (InlineRelocs || VisualizeJumps)
+  if (InlineRelocs || VisualizeJumps.enabled())
     RelocMap = getRelocsMap(Obj);
   bool Is64Bits = Obj.getBytesInAddress() > 4;
 
@@ -2070,7 +2070,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
       ControlFlowPrinter CFP(VisualizeJumps, *DT->SubtargetInfo);
-      if (SymbolizeOperands || VisualizeJumps) {
+      if (SymbolizeOperands || VisualizeJumps.enabled()) {
         collectLocalBranchTargets(
             Bytes, DT->InstrAnalysis.get(), DT->DisAsm.get(),
             DT->InstPrinter.get(), PrimaryTarget.SubtargetInfo.get(),
@@ -3397,41 +3397,37 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_visualize_jumps, OBJDUMP_visualize_jumps_EQ)) {
     if (A->getOption().matches(OBJDUMP_visualize_jumps)) {
       // --visualize-jumps without an argument default to unicode, auto-color.
-      VisualizeJumps = (VisualizeJumpsMode)(VisualizeJumpsMode::CharsUnicode |
-                                            VisualizeJumpsMode::ColorAuto);
+      VisualizeJumps = VisualizeJumpsMode::GetDefault();
     } else {
       SmallVector<StringRef, 2> Parts;
       StringRef(A->getValue()).split(Parts, ",");
-      VisualizeJumpsMode Color = VisualizeJumpsMode::ColorAuto;
-      VisualizeJumpsMode Chars = VisualizeJumpsMode::CharsUnicode;
+      VisualizeJumpsMode::Chars_t Chars = VisualizeJumpsMode::Unicode;
+      VisualizeJumpsMode::Colors_t Color = VisualizeJumpsMode::Auto;
 
       for (StringRef Part : Parts) {
         if (Part == "off") {
-          Color = VisualizeJumpsMode::Off;
           Chars = VisualizeJumpsMode::Off;
         } else if (Part == "nocolor") {
-          Color = VisualizeJumpsMode::Off;
+          Color = VisualizeJumpsMode::BlackAndWhite;
         } else if (Part == "auto") {
-          Color = VisualizeJumpsMode::ColorAuto;
+          Color = VisualizeJumpsMode::Auto;
         } else if (Part == "color") {
-          Color = VisualizeJumpsMode::Color3Bit;
+          Color = VisualizeJumpsMode::ThreeBit;
         } else if (Part == "ascii") {
-          Chars = VisualizeJumpsMode::CharsASCII;
+          Chars = VisualizeJumpsMode::ASCII;
         } else if (Part == "unicode") {
-          Chars = VisualizeJumpsMode::CharsUnicode;
+          Chars = VisualizeJumpsMode::Unicode;
         } else {
           reportCmdLineError("'" + Part + "' is not a valid value for '" +
                              A->getSpelling() + "'");
         }
       }
 
-      if (Color == VisualizeJumpsMode::ColorAuto) {
-        Color = outs().has_colors() ? VisualizeJumpsMode::Color3Bit
-                                    : VisualizeJumpsMode::Off;
-      }
 
-      VisualizeJumps = (VisualizeJumpsMode)(Color | Chars);
+      VisualizeJumps = VisualizeJumpsMode(Chars, Color);
     }
+
+    VisualizeJumps.ResolveAutoColor(outs());
   }
 
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);

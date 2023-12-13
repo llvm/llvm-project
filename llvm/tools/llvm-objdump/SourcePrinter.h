@@ -169,22 +169,28 @@ public:
                                StringRef Delimiter = "; ");
 };
 
-enum VisualizeJumpsMode : int {
-  Off = 0,
+struct VisualizeJumpsMode {
+  enum Chars_t { Off, ASCII, Unicode };
+  enum Colors_t { BlackAndWhite, ThreeBit, Auto };
 
-  ColorAuto = 0x1,
-  Color3Bit,
-  //Color8Bit, // TODO GNU objdump can use more colors in 256-color terminals
+  Chars_t Chars;
+  Colors_t Colors;
 
-  CharsASCII = 0x10,
-  CharsUnicode = 0x20,
+  VisualizeJumpsMode() : Chars(Off), Colors(BlackAndWhite) {}
+  VisualizeJumpsMode(Chars_t Chars, Colors_t Colors)
+      : Chars(Chars), Colors(Colors) {}
 
-  ColorMask = 0xf,
-  CharsMask = 0xf0,
+  static VisualizeJumpsMode GetDefault() { return VisualizeJumpsMode(Unicode, Auto); }
+
+  bool enabled() const { return Chars != Off; }
+  bool color_enabled() const { return enabled() && Colors != BlackAndWhite; }
+
+  void ResolveAutoColor(raw_ostream &OS) {
+    if (Colors == Auto)
+      Colors = OS.has_colors() ? ThreeBit : BlackAndWhite;
+  }
 };
 
-
-extern const raw_ostream::Colors LineColors[6];
 
 class ControlFlowPrinter {
   struct ControlFlowTarget {
@@ -249,7 +255,6 @@ class ControlFlowPrinter {
     return Ret;
   }
 
-  bool enabled() const { return OutputMode != VisualizeJumpsMode::Off; }
   int getIndentLevel() const { return 10; }
 
   enum class LineChar {
