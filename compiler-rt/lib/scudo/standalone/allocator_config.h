@@ -153,6 +153,8 @@ struct DefaultConfig {
       static const s32 MinReleaseToOsIntervalMs = INT32_MIN;
       static const s32 MaxReleaseToOsIntervalMs = INT32_MAX;
     };
+    static const bool VerifyInUseAddresses = true;
+    static const u32 InUseBlocksSize = 1000U;
     template <typename Config> using CacheT = MapAllocatorCache<Config>;
   };
 
@@ -198,6 +200,8 @@ struct AndroidConfig {
       static const s32 MinReleaseToOsIntervalMs = 0;
       static const s32 MaxReleaseToOsIntervalMs = 1000;
     };
+    static const bool VerifyInUseAddresses = true;
+    static const u32 InUseBlocksSize = 1000U;
     template <typename Config> using CacheT = MapAllocatorCache<Config>;
   };
 
@@ -230,6 +234,8 @@ struct FuchsiaConfig {
   template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
 
   struct Secondary {
+    static const bool VerifyInUseAddresses = true;
+    static const u32 InUseBlocksSize = 1000U;
     template <typename Config> using CacheT = MapAllocatorNoCache<Config>;
   };
   template <typename Config> using SecondaryT = MapAllocator<Config>;
@@ -254,6 +260,8 @@ struct TrustyConfig {
   template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
 
   struct Secondary {
+    static const bool VerifyInUseAddresses = true;
+    static const u32 InUseBlocksSize = 1000U;
     template <typename Config> using CacheT = MapAllocatorNoCache<Config>;
   };
 

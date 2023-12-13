@@ -85,6 +85,8 @@ template <typename Config> static void testSecondaryBasic(void) {
 struct NoCacheConfig {
   static const bool MaySupportMemoryTagging = false;
   struct Secondary {
+    static const bool VerifyInUseAddresses = true;
+    static const scudo::u32 InUseBlocksSize = 1000U;
     template <typename Config>
     using CacheT = scudo::MapAllocatorNoCache<Config>;
   };
@@ -102,6 +104,8 @@ struct TestConfig {
       static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
     };
 
+    static const bool VerifyInUseAddresses = true;
+    static const scudo::u32 InUseBlocksSize = 1000U;
     template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
   };
 };
