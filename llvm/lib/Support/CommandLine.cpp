@@ -1714,7 +1714,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
         continue;
       }
 
-      auto reportUnknownArgument = [&](bool IsArg,
+      auto ReportUnknownArgument = [&](bool IsArg,
                                        StringRef NearestArgumentName) {
         *Errs << ProgramName << ": Unknown "
               << (IsArg ? "command line argument" : "subcommand") << " '"
@@ -1732,9 +1732,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       };
 
       if (i > 1 || !MaybeNamedSubCommand)
-        reportUnknownArgument(/*IsArg=*/true, NearestHandlerString);
+        ReportUnknownArgument(/*IsArg=*/true, NearestHandlerString);
       else
-        reportUnknownArgument(/*IsArg=*/false, NearestSubCommandString);
+        ReportUnknownArgument(/*IsArg=*/false, NearestSubCommandString);
 
       ErrorParsing = true;
       continue;
