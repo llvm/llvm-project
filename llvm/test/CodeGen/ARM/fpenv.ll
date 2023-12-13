@@ -231,7 +231,7 @@ define void @reset_fpmode_02() nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI16_0:
-; CHECK-NEXT:    .long 4161298687 @ 0xf80860ff
+; CHECK-NEXT:    .long 4160774399 @ 0xf80060ff
 entry:
   call void @llvm.reset.fpmode()
   ret void
