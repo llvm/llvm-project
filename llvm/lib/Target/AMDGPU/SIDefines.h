@@ -1120,6 +1120,9 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_DX10_CLAMP(x)                                      (((x) & 0x1) << 21)
 #define   G_00B848_DX10_CLAMP(x)                                      (((x) >> 21) & 0x1)
 #define   C_00B848_DX10_CLAMP                                         0xFFDFFFFF
+#define   S_00B848_RR_WG_MODE(x)                                      (((x) & 0x1) << 21)
+#define   G_00B848_RR_WG_MODE(x)                                      (((x) >> 21) & 0x1)
+#define   C_00B848_RR_WG_MODE                                         0xFFDFFFFF
 #define   S_00B848_DEBUG_MODE(x)                                      (((x) & 0x1) << 22)
 #define   G_00B848_DEBUG_MODE(x)                                      (((x) >> 22) & 0x1)
 #define   C_00B848_DEBUG_MODE                                         0xFFBFFFFF
