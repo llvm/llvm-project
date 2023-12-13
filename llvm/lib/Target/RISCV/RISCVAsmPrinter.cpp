@@ -1106,8 +1106,8 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
     MCSym = GetExternalSymbolSymbol(Sym);
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(
-      MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
 }

@@ -7432,8 +7432,8 @@ static SDValue getLargeAddr(NodeTy *N, SDLoc DL, EVT Ty, SelectionDAG &DAG) {
         Ty, DL, DAG.getEntryNode(), LC,
         MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N)) {
-    RISCVConstantPoolSymbol *CPV = RISCVConstantPoolSymbol::Create(
-        *DAG.getContext(), S->getSymbol());
+    RISCVConstantPoolSymbol *CPV =
+        RISCVConstantPoolSymbol::Create(*DAG.getContext(), S->getSymbol());
     SDValue CPAddr = DAG.getTargetConstantPool(CPV, Ty, Align(8));
     SDValue LC = DAG.getNode(RISCVISD::LLA, DL, Ty, CPAddr);
     return DAG.getLoad(

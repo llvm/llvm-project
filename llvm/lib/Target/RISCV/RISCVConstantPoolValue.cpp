@@ -21,12 +21,12 @@
 
 using namespace llvm;
 
-RISCVConstantPoolValue::RISCVConstantPoolValue(
-    LLVMContext &C, RISCVCP::RISCVCPKind Kind)
+RISCVConstantPoolValue::RISCVConstantPoolValue(LLVMContext &C,
+                                               RISCVCP::RISCVCPKind Kind)
     : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), Kind(Kind) {}
 
-RISCVConstantPoolValue::RISCVConstantPoolValue(
-    Type *Ty, RISCVCP::RISCVCPKind Kind)
+RISCVConstantPoolValue::RISCVConstantPoolValue(Type *Ty,
+                                               RISCVCP::RISCVCPKind Kind)
     : MachineConstantPoolValue(Ty), Kind(Kind) {}
 
 int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
@@ -73,12 +73,11 @@ const BlockAddress *RISCVConstantPoolConstant::getBlockAddress() const {
   return dyn_cast_or_null<BlockAddress>(CVal);
 }
 
-RISCVConstantPoolSymbol::RISCVConstantPoolSymbol(
-    LLVMContext &C, StringRef s)
+RISCVConstantPoolSymbol::RISCVConstantPoolSymbol(LLVMContext &C, StringRef s)
     : RISCVConstantPoolValue(C, RISCVCP::ExtSymbol), S(s) {}
 
-RISCVConstantPoolSymbol *
-RISCVConstantPoolSymbol::Create(LLVMContext &C, StringRef s) {
+RISCVConstantPoolSymbol *RISCVConstantPoolSymbol::Create(LLVMContext &C,
+                                                         StringRef s) {
   return new RISCVConstantPoolSymbol(C, s);
 }
 
@@ -91,6 +90,4 @@ void RISCVConstantPoolSymbol::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
   ID.AddString(S);
 }
 
-void RISCVConstantPoolSymbol::print(raw_ostream &O) const {
-  O << S;
-}
+void RISCVConstantPoolSymbol::print(raw_ostream &O) const { O << S; }

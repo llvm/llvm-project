@@ -115,9 +115,7 @@ public:
 
   void print(raw_ostream &O) const override;
 
-  bool equals(const RISCVConstantPoolSymbol *A) const {
-    return S == A->S;
-  }
+  bool equals(const RISCVConstantPoolSymbol *A) const { return S == A->S; }
   static bool classof(const RISCVConstantPoolValue *RCPV) {
     return RCPV->isExtSymbol();
   }
