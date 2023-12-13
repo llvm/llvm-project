@@ -4,6 +4,6 @@
 
 ; Function Attrs: norecurse nounwind readnone
 define i32 @test(i32 %len) #0 {
-  %1 = sdiv i32 %len, 15
+  %1 = srem i32 %len, 15
   ret i32 %1
 }
