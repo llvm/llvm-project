@@ -16,7 +16,7 @@ export namespace std {
     using std::ranges::in_in_result;
     using std::ranges::in_out_out_result;
     using std::ranges::in_out_result;
-    // using std::ranges::in_value_result;
+    using std::ranges::in_value_result;
     using std::ranges::min_max_result;
     // using std::ranges::out_value_result;
   } // namespace ranges
@@ -47,6 +47,12 @@ export namespace std {
     using std::ranges::contains_subrange;
   } // namespace ranges
 #endif
+
+  // [alg.fold], fold
+  namespace ranges {
+    using std::ranges::fold_left;
+    using std::ranges::fold_left_with_iter;
+  } // namespace ranges
 
   // [alg.foreach], for each
   using std::for_each;
