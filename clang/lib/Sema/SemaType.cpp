@@ -5371,7 +5371,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             !(D.getIdentifier() &&
               ((D.getIdentifier()->getName() == "printf" &&
                 LangOpts.getOpenCLCompatibleVersion() >= 120) ||
-               D.getIdentifier()->getName().startswith("__")))) {
+               D.getIdentifier()->getName().starts_with("__")))) {
           S.Diag(D.getIdentifierLoc(), diag::err_opencl_variadic_function);
           D.setInvalidType(true);
         }
