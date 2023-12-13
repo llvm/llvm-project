@@ -210,6 +210,14 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
+  // Lane mask PHIs, PHI where all register operands have sgpr register class
+  // with S1 LLT, are already selected in divergence lowering pass.
+  if (I.getOpcode() == AMDGPU::PHI) {
+    assert(MRI->getType(DefReg) == LLT::scalar(1));
+    assert(TRI.isSGPRClass(MRI->getRegClass(DefReg)));
+    return true;
+  }
+
   if (DefTy == LLT::scalar(1)) {
     if (!AllowRiskySelect) {
       LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
