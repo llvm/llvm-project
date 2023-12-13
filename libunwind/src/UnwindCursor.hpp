@@ -2723,10 +2723,10 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(static_cast<void *>(pc)) ||
-      !isReadableAddr(static_cast<void *>(pc + 4)))
+  if (!isReadableAddr(static_cast<const void *>(pc)) ||
+      !isReadableAddr(static_cast<const void *>(pc + 4)))
     return false;
-  auto *instructions = reinterpret_cast<uint32_t *>(pc);
+  auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
   if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
     return false;
@@ -2779,10 +2779,10 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(static_cast<void *>(pc)) ||
-      !isReadableAddr(static_cast<void *>(pc + 4)))
+  if (!isReadableAddr(static_cast<const void *>(pc)) ||
+      !isReadableAddr(static_cast<const void *>(pc + 4)))
     return false;
-  const auto *instructions = reinterpret_cast<uint32_t *>(pc);
+  const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for the two instructions used in the sigreturn trampoline
   // __vdso_rt_sigreturn:
   //
@@ -2838,10 +2838,10 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(static_cast<void *>(pc)) ||
-      !isReadableAddr(static_cast<void *>(pc + 2)))
+  if (!isReadableAddr(static_cast<const void *>(pc)) ||
+      !isReadableAddr(static_cast<const void *>(pc + 2)))
     return false;
-  const auto inst = *reinterpret_cast<uint16_t *>(pc);
+  const auto inst = *reinterpret_cast<const uint16_t *>(pc);
   if (inst == 0x0a77 || inst == 0x0aad) {
     _info = {};
     _info.start_ip = pc;
