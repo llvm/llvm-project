@@ -78,13 +78,11 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
        << "  WaveID: " << FI.second.WaveID
        << "  LDSKernelId: " << FI.second.LDSKernelId
        << "  PrivateSegmentWaveByteOffset: "
-          << FI.second.PrivateSegmentWaveByteOffset
+       << FI.second.PrivateSegmentWaveByteOffset
        << "  ImplicitBufferPtr: " << FI.second.ImplicitBufferPtr
-       << "  ImplicitArgPtr: " << FI.second.ImplicitArgPtr
-       << "  WorkItemIDX " << FI.second.WorkItemIDX
-       << "  WorkItemIDY " << FI.second.WorkItemIDY
-       << "  WorkItemIDZ " << FI.second.WorkItemIDZ
-       << '\n';
+       << "  ImplicitArgPtr: " << FI.second.ImplicitArgPtr << "  WorkItemIDX "
+       << FI.second.WorkItemIDX << "  WorkItemIDY " << FI.second.WorkItemIDY
+       << "  WorkItemIDZ " << FI.second.WorkItemIDZ << '\n';
   }
 }
 

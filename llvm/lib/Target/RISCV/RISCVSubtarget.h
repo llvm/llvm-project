@@ -193,7 +193,10 @@ public:
     return UserReservedRegister[i];
   }
 
-  bool hasMacroFusion() const { return hasLUIADDIFusion(); }
+  bool hasMacroFusion() const {
+    return hasLUIADDIFusion() || hasAUIPCADDIFusion() ||
+           hasShiftedZExtFusion() || hasLDADDFusion();
+  }
 
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }

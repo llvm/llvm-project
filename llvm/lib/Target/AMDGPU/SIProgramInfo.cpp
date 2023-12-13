@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 //
 
-#include "GCNSubtarget.h"
 #include "SIProgramInfo.h"
+#include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 

@@ -592,12 +592,9 @@ protected:
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
 
-  bool insertWait(MachineBasicBlock::iterator &MI,
-                  SIAtomicScope Scope,
-                  SIAtomicAddrSpace AddrSpace,
-                  SIMemOp Op,
-                  bool IsCrossAddrSpaceOrdering,
-                  Position Pos) const override;
+  bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                  SIAtomicAddrSpace AddrSpace, SIMemOp Op,
+                  bool IsCrossAddrSpaceOrdering, Position Pos) const override;
 
   bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, Position Pos) const override;
@@ -2199,8 +2196,7 @@ bool SIGfx12CacheControl::setScope(const MachineBasicBlock::iterator MI,
 
 bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                      SIAtomicScope Scope,
-                                     SIAtomicAddrSpace AddrSpace,
-                                     SIMemOp Op,
+                                     SIAtomicAddrSpace AddrSpace, SIMemOp Op,
                                      bool IsCrossAddrSpaceOrdering,
                                      Position Pos) const {
   bool Changed = false;

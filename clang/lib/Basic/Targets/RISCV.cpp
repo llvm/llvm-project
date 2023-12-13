@@ -304,11 +304,18 @@ bool RISCVTargetInfo::initFeatureMap(
 
   // RISCVISAInfo makes implications for ISA features
   std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-  // Add non-ISA features like `relax` and `save-restore` back
-  for (const std::string &Feature : NewFeaturesVec)
-    if (!llvm::is_contained(ImpliedFeatures, Feature))
-      ImpliedFeatures.push_back(Feature);
 
+  // parseFeatures normalizes the feature set by dropping any explicit
+  // negatives, and non-extension features.  We need to preserve the later
+  // for correctness and want to preserve the former for consistency.
+  for (auto &Feature : NewFeaturesVec) {
+     StringRef ExtName = Feature;
+     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
+     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
+     if (!llvm::is_contained(ImpliedFeatures, ("+" + ExtName).str()) &&
+         !llvm::is_contained(ImpliedFeatures, ("-" + ExtName).str()))
+       ImpliedFeatures.push_back(Feature);
+  }
   return TargetInfo::initFeatureMap(Features, Diags, CPU, ImpliedFeatures);
 }
 

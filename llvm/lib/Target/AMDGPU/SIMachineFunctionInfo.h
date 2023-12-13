@@ -98,18 +98,12 @@ public:
   }
 
   // These are inaccessible memory from IR.
-  bool isAliased(const MachineFrameInfo *) const override {
-    return false;
-  }
+  bool isAliased(const MachineFrameInfo *) const override { return false; }
 
   // These are inaccessible memory from IR.
-  bool mayAlias(const MachineFrameInfo *) const override {
-    return false;
-  }
+  bool mayAlias(const MachineFrameInfo *) const override { return false; }
 
-  void printCustom(raw_ostream &OS) const override {
-    OS << "GlobalRegister";
-  }
+  void printCustom(raw_ostream &OS) const override { OS << "GlobalRegister"; }
 };
 
 namespace yaml {

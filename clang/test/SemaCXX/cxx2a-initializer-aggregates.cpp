@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic,override,reorder -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,pedantic,override,reorder -Wno-c++20-designator -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,pedantic -Werror=c99-designator -Wno-reorder-init-list -Wno-initializer-overrides -Werror=nested-anon-types -Werror=gnu-anonymous-struct
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,reorder -Wno-c99-designator -Werror=reorder-init-list -Wno-initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,override -Wno-c99-designator -Wno-reorder-init-list -Werror=initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
@@ -39,6 +39,7 @@ A a1 = {
 };
 int arr[3] = {[1] = 5}; // pedantic-error {{array designators are a C99 extension}}
 B b = {.a.x = 0}; // pedantic-error {{nested designators are a C99 extension}}
+                  // wmissing-warning@-1 {{missing field 'y' initializer}}
 A a2 = {
   .x = 1, // pedantic-error {{mixture of designated and non-designated initializers in the same initializer list is a C99 extension}}
   2 // pedantic-note {{first non-designated initializer is here}}
@@ -60,7 +61,6 @@ B b2 = {.a = 1}; // pedantic-error {{brace elision for designated initializer is
 B b3 = {.a = 1, 2}; // pedantic-error {{mixture of designated and non-designated}} pedantic-note {{first non-designated}} pedantic-error {{brace elision}}
 B b4 = {.a = 1, 2, 3}; // pedantic-error {{mixture of designated and non-designated}} pedantic-note {{first non-designated}} pedantic-error {{brace elision}} expected-error {{excess elements}}
 B b5 = {.a = nullptr}; // expected-error {{cannot initialize}}
-                       // wmissing-warning@-1 {{missing field 'y' initializer}}
 struct C { int :0, x, :0, y, :0; };
 C c = {
   .x = 1, // override-note {{previous}}
@@ -246,4 +246,88 @@ void foo() {
                            // reorder-note-re@-1 {{previous initialization for field 'GH63759::C::(anonymous union at {{.*}})' is here}}
                            //
 }
+}
+
+namespace GH70384 {
+
+struct A {
+  int m;
+  union { int a; float n = 0; };
+};
+
+struct B {
+  int m;
+  int b;
+  union { int a ; };
+};
+
+union CU {
+  int a = 1;
+  double b;
+};
+
+struct C {
+  int a;
+  union { int b; CU c;};
+};
+
+struct CC {
+  int a;
+  CU c;
+};
+
+void foo() {
+  A a = A{.m = 0};
+  A aa = {0};
+  A aaa = {.a = 7}; // wmissing-warning {{missing field 'm' initializer}}
+  B b = {.m = 1, .b = 3 }; //wmissing-warning {{missing field 'a' initializer}}
+  B bb = {1}; // wmissing-warning {{missing field 'b' initializer}}
+              // wmissing-warning@-1 {{missing field 'a' initializer}}
+  C c = {.a = 1}; // wmissing-warning {{missing field 'b' initializer}}
+  CC cc = {.a = 1}; // wmissing-warning {{missing field 'c' initializer}}
+}
+
+struct C1 {
+  int m;
+  union { float b; union {int n = 1; }; };
+  // pedantic-error@-1 {{anonymous types declared in an anonymous union are an extension}}
+};
+
+struct C2 {
+  int m;
+  struct { float b; int n = 1; }; // pedantic-error {{anonymous structs are a GNU extension}}
+};
+
+struct C3 {
+  int m;
+  struct { float b = 1; union {int a;}; int n = 1; };
+  // pedantic-error@-1 {{anonymous structs are a GNU extension}}
+  // pedantic-error@-2 {{anonymous types declared in an anonymous struct are an extension}}
+};
+
+C1 c = C1{.m = 1};
+C1 cc = C1{.b = 1}; // wmissing-warning {{missing field 'm' initializer}}
+C2 c1 = C2{.m = 1}; // wmissing-warning {{missing field 'b' initializer}}
+C2 c22 = C2{.m = 1, .b = 1};
+C3 c2 = C3{.b = 1}; // wmissing-warning {{missing field 'a' initializer}}
+                    // wmissing-warning@-1 {{missing field 'm' initializer}}
+
+struct C4 {
+  union {
+    struct { int n; }; // pedantic-error {{anonymous structs are a GNU extension}}
+    // pedantic-error@-1 {{anonymous types declared in an anonymous union are an extension}}
+    int m = 0; };
+  int z;
+};
+C4 a = {.z = 1};
+
+struct C5 {
+  int a;
+  struct { // pedantic-error {{anonymous structs are a GNU extension}}
+    int x;
+    struct { int y = 0; };  // pedantic-error {{anonymous types declared in an anonymous struct are an extension}}
+                            // pedantic-error@-1 {{anonymous structs are a GNU extension}}
+  };
+};
+C5 c5 = C5{.a = 0}; //wmissing-warning {{missing field 'x' initializer}}
 }

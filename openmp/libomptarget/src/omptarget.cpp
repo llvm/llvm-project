@@ -194,8 +194,8 @@ static int initLibrary(DeviceTy &Device) {
         break;
       }
 
-      DeviceTy::HDTTMapAccessorTy HDTTMap =
-          Device.HostDataToTargetMap.getExclusiveAccessor();
+      MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+          Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
 
       __tgt_target_table *HostTable = &TransTable->HostTable;
       for (__tgt_offload_entry *CurrDeviceEntry = TargetTable->EntriesBegin,
@@ -213,8 +213,8 @@ static int initLibrary(DeviceTy &Device) {
         // therefore we must allow for multiple weak symbols to be loaded from
         // the fat binary. Treat these mappings as any other "regular"
         // mapping. Add entry to map.
-        if (Device.getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
-                                  CurrHostEntry->size))
+        if (Device.getMappingInfo().getTgtPtrBegin(HDTTMap, CurrHostEntry->addr,
+                                                   CurrHostEntry->size))
           continue;
 
         void *CurrDeviceEntryAddr = CurrDeviceEntry->addr;
@@ -604,8 +604,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     bool UpdateRef =
         !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) && !(FromMapper && I == 0);
 
-    DeviceTy::HDTTMapAccessorTy HDTTMap =
-        Device.HostDataToTargetMap.getExclusiveAccessor();
+    MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+        Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
       DP("Has a pointer entry: \n");
       // Base is address of pointer.
@@ -621,7 +621,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // entry for a global that might not already be allocated by the time the
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
-      PointerTpr = Device.getTargetPointer(
+      PointerTpr = Device.getMappingInfo().getTargetPointer(
           HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
           /*HstPtrName=*/nullptr,
           /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
@@ -651,7 +651,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasFlagTo = ArgTypes[I] & OMP_TGT_MAPTYPE_TO;
     const bool HasFlagAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     // Note that HDTTMap will be released in getTargetPointer.
-    auto TPR = Device.getTargetPointer(
+    auto TPR = Device.getMappingInfo().getTargetPointer(
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry());
@@ -768,8 +768,8 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     // will avoid another thread reusing the entry now. Note that we do
     // not request (exclusive) access to the HDTT map if DelEntry is
     // not set.
-    DeviceTy::HDTTMapAccessorTy HDTTMap =
-        Device->HostDataToTargetMap.getExclusiveAccessor();
+    MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+        Device->getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
 
     // We cannot use a lock guard because we may end up delete the mutex.
     // We also explicitly unlocked the entry after it was put in the EntriesInfo
@@ -807,10 +807,10 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     if (!DelEntry)
       continue;
 
-    Ret = Device->eraseMapEntry(HDTTMap, Entry, DataSize);
+    Ret = Device->getMappingInfo().eraseMapEntry(HDTTMap, Entry, DataSize);
     // Entry is already remove from the map, we can unlock it now.
     HDTTMap.destroy();
-    Ret |= Device->deallocTgtPtrAndEntry(Entry, DataSize);
+    Ret |= Device->getMappingInfo().deallocTgtPtrAndEntry(Entry, DataSize);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Deallocating data from device failed.\n");
       break;
@@ -868,9 +868,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
-    TargetPointerResultTy TPR =
-        Device.getTgtPtrBegin(HstPtrBegin, DataSize, UpdateRef, HasHoldModifier,
-                              !IsImplicit, ForceDelete, /*FromDataEnd=*/true);
+    TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
+        HstPtrBegin, DataSize, UpdateRef, HasHoldModifier, !IsImplicit,
+        ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
         (DataSize || HasPresentModifier)) {
@@ -965,9 +965,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                                 void *HstPtrBegin, int64_t ArgSize,
                                 int64_t ArgType, AsyncInfoTy &AsyncInfo) {
-  TargetPointerResultTy TPR =
-      Device.getTgtPtrBegin(HstPtrBegin, ArgSize, /*UpdateRefCount=*/false,
-                            /*UseHoldRefCount=*/false, /*MustContain=*/true);
+  TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
+      HstPtrBegin, ArgSize, /*UpdateRefCount=*/false,
+      /*UseHoldRefCount=*/false, /*MustContain=*/true);
   void *TgtPtrBegin = TPR.TargetPointer;
   if (!TPR.isPresent()) {
     DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
@@ -1445,9 +1445,10 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
         uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
         void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
         void *&PointerTgtPtrBegin = AsyncInfo.getVoidPtrLocation();
-        TargetPointerResultTy TPR = DeviceOrErr->getTgtPtrBegin(
-            HstPtrVal, ArgSizes[I], /*UpdateRefCount=*/false,
-            /*UseHoldRefCount=*/false);
+        TargetPointerResultTy TPR =
+            DeviceOrErr->getMappingInfo().getTgtPtrBegin(
+                HstPtrVal, ArgSizes[I], /*UpdateRefCount=*/false,
+                /*UseHoldRefCount=*/false);
         PointerTgtPtrBegin = TPR.TargetPointer;
         if (!TPR.isPresent()) {
           DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
@@ -1503,9 +1504,10 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
     } else {
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)
         HstPtrBase = *reinterpret_cast<void **>(HstPtrBase);
-      TPR = DeviceOrErr->getTgtPtrBegin(HstPtrBegin, ArgSizes[I],
-                                        /*UpdateRefCount=*/false,
-                                        /*UseHoldRefCount=*/false);
+      TPR = DeviceOrErr->getMappingInfo().getTgtPtrBegin(
+          HstPtrBegin, ArgSizes[I],
+          /*UpdateRefCount=*/false,
+          /*UseHoldRefCount=*/false);
       TgtPtrBegin = TPR.TargetPointer;
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
 #ifdef OMPTARGET_DEBUG

@@ -345,10 +345,10 @@ static cl::opt<bool> EnableImageIntrinsicOptimizer(
     cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
     cl::Hidden);
 
-static cl::opt<bool> EnableLoopPrefetch(
-    "amdgpu-loop-prefetch",
-    cl::desc("Enable loop data prefetch on AMDGPU"),
-    cl::Hidden, cl::init(false));
+static cl::opt<bool>
+    EnableLoopPrefetch("amdgpu-loop-prefetch",
+                       cl::desc("Enable loop data prefetch on AMDGPU"),
+                       cl::Hidden, cl::init(false));
 
 static cl::opt<bool> EnableMaxIlpSchedStrategy(
     "amdgpu-enable-max-ilp-scheduling-strategy",
@@ -607,8 +607,8 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
 /// Predicate for Internalize pass.
 static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
-    return F->isDeclaration() || F->getName().startswith("__asan_") ||
-           F->getName().startswith("__sanitizer_") ||
+    return F->isDeclaration() || F->getName().starts_with("__asan_") ||
+           F->getName().starts_with("__sanitizer_") ||
            AMDGPU::isEntryFunctionCC(F->getCallingConv());
 
   GV.removeDeadConstantUsers();

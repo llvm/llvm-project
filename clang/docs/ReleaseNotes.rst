@@ -264,6 +264,16 @@ New Compiler Flags
 
 * ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
 
+* ``-fcx-limited-range`` enables the naive mathematical formulas for complex
+  division and multiplication with no NaN checking of results. The default is
+  ``-fno-cx-limited-range``, but this option is enabled by ``-ffast-math``.
+
+* ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
+  multiplication and enables application of Smith's algorithm for complex
+  division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
+  (1962). The default is ``-fno-cx-fortran-rules``.
+
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -391,9 +401,6 @@ Improvements to Clang's diagnostics
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
-- The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
-  enumeration's underlying type into account instead of suggesting a type just
-  based on the format string specifier being used.
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
   (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
@@ -513,6 +520,7 @@ Improvements to Clang's diagnostics
        48 | static_assert(1 << 4 == 15);
           |               ~~~~~~~^~~~~
 
+- Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -677,6 +685,9 @@ Bug Fixes in This Version
   (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
   (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
+- Fixed false positive error emitted when templated alias inside a class
+  used private members of the same class.
+  Fixes (`#41693 <https://github.com/llvm/llvm-project/issues/41693>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -862,6 +873,10 @@ Miscellaneous Clang Crashes Fixed
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
 - Fixed a crash when ``-ast-dump=json`` was used for code using class
   template deduction guides.
+- Fixed a crash when a lambda marked as ``static`` referenced a captured
+  variable in an expression.
+  `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+
 
 OpenACC Specific Changes
 ------------------------
@@ -962,6 +977,9 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
+- Clang now supports CUDA SDK up to 12.3
+- Added support for sm_90a
+
 AIX Support
 ^^^^^^^^^^^
 
@@ -1001,6 +1019,9 @@ Floating Point Support in Clang
   ``__builtin_exp10f128`` builtins.
 - Add ``__builtin_iszero``, ``__builtin_issignaling`` and
   ``__builtin_issubnormal``.
+- Add support for C99's ``#pragma STDC CX_LIMITED_RANGE`` feature.  This
+  enables the naive mathematical formulas for complex multiplication and
+  division, which are faster but do not correctly handle overflow and infinities.
 
 AST Matchers
 ------------
@@ -1054,6 +1075,9 @@ Static Analyzer
   `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
   `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
   `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
+
+- Move checker ``alpha.cplusplus.EnumCastOutOfRange`` out of the ``alpha``
+  package to ``optin.core.EnumCastOutOfRange``.
 
 .. _release-notes-sanitizers:
 

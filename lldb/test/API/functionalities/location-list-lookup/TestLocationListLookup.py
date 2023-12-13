@@ -43,6 +43,7 @@ class LocationListLookupTestCase(TestBase):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)
 
+    @skipIf(compiler="clang", compiler_version=["<=", "11.0"])
     @skipUnlessDarwin
     def test_loclist_expr(self):
         self.build()

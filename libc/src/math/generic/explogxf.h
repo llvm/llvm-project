@@ -285,7 +285,7 @@ LIBC_INLINE static double log2_eval(double x) {
       (LOG_P1_SIZE - 1);
 
   bs.bits &= FPB::FloatProp::MANTISSA_MASK >> LOG_P1_BITS;
-  bs.set_unbiased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.set_biased_exponent(FPB::FloatProp::EXPONENT_BIAS);
   double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
 
   // Taylor series for log(2,1+x)
@@ -316,7 +316,7 @@ LIBC_INLINE static double log_eval(double x) {
 
   // Set bs to (1 + (mx - p1*2^(-7))
   bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;
-  bs.set_unbiased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.set_biased_exponent(FPB::FloatProp::EXPONENT_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
   double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];
 
