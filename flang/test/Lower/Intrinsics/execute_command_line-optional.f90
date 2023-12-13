@@ -12,40 +12,40 @@ subroutine all_args_optional(command, isWait, exitVal, cmdVal, msg)
   LOGICAL, OPTIONAL :: isWait
   ! Note: command is not optional in execute_command_line and must be present
   call execute_command_line(command, isWait, exitVal, cmdVal, msg)
-! CHECK:         %0 = fir.declare %[[cmdstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcmdval"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK-NEXT:    %1:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:    %2 = fir.declare %1#0 typeparams %1#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcommand"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
-! CHECK-NEXT:    %3 = fir.emboxchar %2, %1#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK-NEXT:    %4 = fir.declare %[[exitstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEexitval"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK-NEXT:    %5 = fir.declare %[[waitArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEiswait"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
-! CHECK-NEXT:    %6:2 = fir.unboxchar %[[cmdmsgArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:    %7 = fir.declare %6#0 typeparams %6#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEmsg"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
-! CHECK-NEXT:    %8 = fir.emboxchar %7, %6#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK-NEXT:    %9 = fir.is_present %5 : (!fir.ref<!fir.logical<4>>) -> i1
-! CHECK-NEXT:    %10 = fir.is_present %4 : (!fir.ref<i32>) -> i1
-! CHECK-NEXT:    %11 = fir.is_present %0 : (!fir.ref<i32>) -> i1
-! CHECK-NEXT:    %12 = fir.is_present %8 : (!fir.boxchar<1>) -> i1
-! CHECK-NEXT:    %13 = fir.embox %2 typeparams %1#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT:    %14 = fir.if %9 -> (!fir.logical<4>) {
-! CHECK-NEXT:      %31 = fir.load %5 : !fir.ref<!fir.logical<4>>
-! CHECK-NEXT:      fir.result %31 : !fir.logical<4>
+! CHECK:         %[[cmdstatDeclare:.*]] = fir.declare %[[cmdstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcmdval"} : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK-NEXT:    %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NEXT:    %[[commandDeclare:.*]] = fir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcommand"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
+! CHECK-NEXT:    %[[commandBoxTemp:.*]] = fir.emboxchar %[[commandDeclare]], %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK-NEXT:    %[[exitstatDeclare:.*]] = fir.declare %[[exitstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEexitval"} : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK-NEXT:    %[[waitDeclare:.*]] = fir.declare %[[waitArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEiswait"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
+! CHECK-NEXT:    %[[cmdmsgUnbox:.*]]:2 = fir.unboxchar %[[cmdmsgArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NEXT:    %[[cmdmsgDeclare:.*]] = fir.declare %[[cmdmsgUnbox]]#0 typeparams %[[cmdmsgUnbox]]#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEmsg"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
+! CHECK-NEXT:    %[[cmdmsgBoxTemp:.*]] = fir.emboxchar %[[cmdmsgDeclare]], %[[cmdmsgUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK-NEXT:    %[[waitIsPresent:.*]] = fir.is_present %[[waitDeclare]] : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK-NEXT:    %[[exitstatIsPresent:.*]] = fir.is_present %[[exitstatDeclare]] : (!fir.ref<i32>) -> i1
+! CHECK-NEXT:    %[[cmdstatIsPresent:.*]] = fir.is_present %[[cmdstatDeclare]] : (!fir.ref<i32>) -> i1
+! CHECK-NEXT:    %[[cmdmsgIsPresent:.*]] = fir.is_present %[[cmdmsgBoxTemp]] : (!fir.boxchar<1>) -> i1
+! CHECK-NEXT:    %[[commandBox:.*]] = fir.embox %[[commandDeclare]] typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT:    %[[waitLoaded:.*]] = fir.if %[[waitIsPresent]] -> (!fir.logical<4>) {
+! CHECK-NEXT:      %[[VAL_31:.*]] = fir.load %[[waitDeclare]] : !fir.ref<!fir.logical<4>>
+! CHECK-NEXT:      fir.result %[[VAL_31]] : !fir.logical<4>
 ! CHECK-NEXT:    } else {
-! CHECK-NEXT:      %31 = fir.convert %false : (i1) -> !fir.logical<4>
-! CHECK-NEXT:      fir.result %31 : !fir.logical<4>
+! CHECK-NEXT:      %[[VAL_31:.*]] = fir.convert %false : (i1) -> !fir.logical<4>
+! CHECK-NEXT:      fir.result %[[VAL_31]] : !fir.logical<4>
 ! CHECK-NEXT:    }
-! CHECK-NEXT:    %15 = fir.embox %4 : (!fir.ref<i32>) -> !fir.box<i32>
-! CHECK-NEXT:    %16 = fir.absent !fir.box<i32>
-! CHECK-NEXT:    %17 = arith.select %10, %15, %16 : !fir.box<i32>
-! CHECK-NEXT:    %18 = fir.embox %0 : (!fir.ref<i32>) -> !fir.box<i32>
-! CHECK-NEXT:    %19 = arith.select %11, %18, %16 : !fir.box<i32>
-! CHECK-NEXT:    %20 = fir.embox %7 typeparams %6#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-! CHECK-NEXT:    %21 = fir.absent !fir.box<!fir.char<1,?>> 
-! CHECK-NEXT:    %22 = arith.select %12, %20, %21 : !fir.box<!fir.char<1,?>>
-! CHECK:         %24 = fir.convert %13 : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT:    %25 = fir.convert %14 : (!fir.logical<4>) -> i1
-! CHECK-NEXT:    %26 = fir.convert %17 : (!fir.box<i32>) -> !fir.box<none>
-! CHECK-NEXT:    %27 = fir.convert %19 : (!fir.box<i32>) -> !fir.box<none>
-! CHECK-NEXT:    %28 = fir.convert %22 : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK:         %30 = fir.call @_FortranAExecuteCommandLine(%24, %25, %26, %27, %28, %29, %c14_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK-NEXT:    %[[exitstatArgBox:.*]] = fir.embox %[[exitstatDeclare]] : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK-NEXT:    %[[absentBoxi32:.*]] = fir.absent !fir.box<i32>
+! CHECK-NEXT:    %[[exitstatBox:.*]] = arith.select %[[exitstatIsPresent]], %[[exitstatArgBox]], %[[absentBoxi32]] : !fir.box<i32>
+! CHECK-NEXT:    %[[cmdstatArgBox:.*]] = fir.embox %[[cmdstatDeclare]] : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK-NEXT:    %[[cmdstatBox:.*]] = arith.select %[[cmdstatIsPresent]], %[[cmdstatArgBox]], %[[absentBoxi32]] : !fir.box<i32>
+! CHECK-NEXT:    %[[cmdmsgArgBox:.*]] = fir.embox %[[cmdmsgDeclare]] typeparams %[[cmdmsgUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT:    %[[absentBox:.*]] = fir.absent !fir.box<!fir.char<1,?>> 
+! CHECK-NEXT:    %[[cmdmsgBox:.*]] = arith.select %[[cmdmsgIsPresent]], %[[cmdmsgArgBox]], %[[absentBox]] : !fir.box<!fir.char<1,?>>
+! CHECK:         %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK-NEXT:    %[[wait:.*]] = fir.convert %[[waitLoaded]] : (!fir.logical<4>) -> i1
+! CHECK-NEXT:    %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i32>) -> !fir.box<none>
+! CHECK-NEXT:    %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i32>) -> !fir.box<none>
+! CHECK-NEXT:    %[[cmdmsg:.*]] = fir.convert %[[cmdmsgBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK:         %[[VAL_30:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdstat]], %[[cmdmsg]], %[[VAL_29:.*]], %c14_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:    return
 end subroutine all_args_optional
