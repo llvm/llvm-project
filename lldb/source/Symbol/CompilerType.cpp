@@ -491,28 +491,6 @@ uint32_t CompilerType::GetNumberOfNonEmptyBaseClasses() {
   return ret;
 }
 
-CompilerType CompilerType::GetTemplateArgumentType(uint32_t idx) {
-  CompilerType empty_type;
-  if (!IsValid())
-    return empty_type;
-
-  CompilerType type;
-  const bool expand_pack = true;
-  switch (GetTemplateArgumentKind(idx, true)) {
-  case lldb::eTemplateArgumentKindType:
-    type = GetTypeTemplateArgument(idx, expand_pack);
-    break;
-  case lldb::eTemplateArgumentKindIntegral:
-    type = GetIntegralTemplateArgument(idx, expand_pack)->type;
-    break;
-  default:
-    break;
-  }
-  if (type.IsValid())
-    return type;
-  return empty_type;
-}
-
 // Type Completion
 
 bool CompilerType::GetCompleteType() const {

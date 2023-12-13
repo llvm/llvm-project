@@ -248,8 +248,6 @@ public:
   /// Go through the base classes and count non-empty ones.
   uint32_t GetNumberOfNonEmptyBaseClasses();
 
-  CompilerType GetTemplateArgumentType(uint32_t idx);
-
   /// \}
 
   /// Type Completion.
