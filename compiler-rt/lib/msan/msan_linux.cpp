@@ -26,10 +26,13 @@
 #  include <unwind.h>
 
 #  include "msan.h"
+#  include "msan_allocator.h"
+#  include "msan_chained_origin_depot.h"
 #  include "msan_report.h"
 #  include "msan_thread.h"
 #  include "sanitizer_common/sanitizer_common.h"
 #  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __msan {
 
@@ -254,6 +257,22 @@ void MsanTSDDtor(void *tsd) {
   MsanThread::TSDDtor(tsd);
 }
 #endif
+
+void InstallAtForkHandler() {
+  auto before = []() {
+    // Usually we lock ThreadRegistry, but msan does not have one.
+    LockAllocator();
+    StackDepotLockAll();
+    ChainedOriginDepotLockAll();
+  };
+  auto after = []() {
+    ChainedOriginDepotUnlockAll();
+    StackDepotUnlockAll();
+    UnlockAllocator();
+    // Usually we unlock ThreadRegistry, but msan does not have one.
+  };
+  pthread_atfork(before, after, after);
+}
 
 } // namespace __msan
 
