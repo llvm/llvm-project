@@ -8389,12 +8389,12 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       }
     }
   } else {
-    bool handled = false;
+    bool handled{false};
     if (const auto *nvList{
             std::get_if<std::list<parser::CompilerDirective::NameValue>>(
                 &x.u)}) {
       for (const parser::CompilerDirective::NameValue &nv : *nvList) {
-        std::string name = std::get<parser::Name>(nv.t).ToString();
+        std::string name{std::get<parser::Name>(nv.t).ToString()};
         const std::initializer_list<const char *> handledAttrs{
             "arm_streaming",
             "arm_locally_streaming",
