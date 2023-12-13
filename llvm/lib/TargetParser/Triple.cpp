@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -1199,7 +1200,11 @@ StringRef Triple::getOSAndEnvironmentName() const {
 
 static VersionTuple parseVersionFromName(StringRef Name) {
   VersionTuple Version;
-  Version.tryParse(Name);
+  if (Version.tryParse(Name)) {
+    errs() << "The input is "<< Name << " and it is invalid. Should pass an "<<
+    "integer or integer combination! e.g. 2, 9.5 or 3.4.5\n";
+    exit(1);
+  }
   return Version.withoutBuild();
 }
 
