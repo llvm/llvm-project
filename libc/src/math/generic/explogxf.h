@@ -274,18 +274,17 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
 
 // x should be positive, normal finite value
 LIBC_INLINE static double log2_eval(double x) {
-  using FPB = fputil::FPBits<double>;
-  FPB bs(x);
+  using FPBits = fputil::FPBits<double>;
+  FPBits bs(x);
 
   double result = 0;
   result += bs.get_exponent();
 
-  int p1 =
-      (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - LOG_P1_BITS)) &
-      (LOG_P1_SIZE - 1);
+  int p1 = (bs.get_mantissa() >> (FPBits::MANTISSA_WIDTH - LOG_P1_BITS)) &
+           (LOG_P1_SIZE - 1);
 
-  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> LOG_P1_BITS;
-  bs.set_biased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.bits &= FPBits::MANTISSA_MASK >> LOG_P1_BITS;
+  bs.set_biased_exponent(FPBits::EXPONENT_BIAS);
   double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
 
   // Taylor series for log(2,1+x)
@@ -304,19 +303,18 @@ LIBC_INLINE static double log2_eval(double x) {
 LIBC_INLINE static double log_eval(double x) {
   // For x = 2^ex * (1 + mx)
   //   log(x) = ex * log(2) + log(1 + mx)
-  using FPB = fputil::FPBits<double>;
-  FPB bs(x);
+  using FPBits = fputil::FPBits<double>;
+  FPBits bs(x);
 
   double ex = static_cast<double>(bs.get_exponent());
 
   // p1 is the leading 7 bits of mx, i.e.
   // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
-  int p1 = static_cast<int>(bs.get_mantissa() >>
-                            (FPB::FloatProp::MANTISSA_WIDTH - 7));
+  int p1 = static_cast<int>(bs.get_mantissa() >> (FPBits::MANTISSA_WIDTH - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
-  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;
-  bs.set_biased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.bits &= FPBits::MANTISSA_MASK >> 7;
+  bs.set_biased_exponent(FPBits::EXPONENT_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
   double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];
 
