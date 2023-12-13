@@ -11,7 +11,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -1209,10 +1208,7 @@ StringRef Triple::getVersionName() const {
 
 static VersionTuple parseVersionFromName(StringRef Name) {
   VersionTuple Version;
-  if (Version.tryParse(Name)) {
-    errs() << "version "<< Name << " is invalid\n";
-    exit(1);
-  }
+  Version.tryParse(Name);
   return Version.withoutBuild();
 }
 
