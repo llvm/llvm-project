@@ -4963,6 +4963,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (64 * 4))
                                                      GFX7-GFX11
                                                        roundup(lds-size / (128 * 4))
+                                                     GFX950
+                                                       roundup(lds-size / (320 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions
