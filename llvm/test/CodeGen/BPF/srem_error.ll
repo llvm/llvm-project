@@ -3,6 +3,6 @@
 ; CHECK: unsupported signed division
 
 define i32 @test(i32 %len) {
-  %1 = sdiv i32 %len, 15
+  %1 = srem i32 %len, 15
   ret i32 %1
 }
