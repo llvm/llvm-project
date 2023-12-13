@@ -362,14 +362,21 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   auto clonedOp = cast<TilingInterface>(
       cloneOpAndUpdateDestinationArgs(rewriter, op, clonedOpDestination));
 
-  // 5b. Tile the cloned operation.
+  // 5b. Early return cloned op if tiling is not happenning.
+  if (llvm::all_of(tileSizeVector,
+                   [](OpFoldResult v) { return isZeroIndex(v); })) {
+    return scf::SCFTilingResult{/*tiledOps=*/{clonedOp}, /*loops=*/{},
+                                clonedOp->getResults()};
+  }
+
+  // 5c. Tile the cloned operation.
   FailureOr<TilingResult> tiledImplementation =
       clonedOp.getTiledImplementation(rewriter, offsets, sizes);
   if (failed(tiledImplementation)) {
     return rewriter.notifyMatchFailure(op, "failed to tile operation");
   }
 
-  // 5c. Delete the cloned operation.
+  // 5d. Delete the cloned operation.
   rewriter.eraseOp(clonedOp);
 
   // If loops are empty, the tiled op is used as the replacement for the untiled
