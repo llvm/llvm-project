@@ -1778,6 +1778,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/find_first_of.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/find_if_not.h>
+#include <__algorithm/fold.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/generate.h>
