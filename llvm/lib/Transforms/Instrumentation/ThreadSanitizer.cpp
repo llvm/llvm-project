@@ -511,6 +511,24 @@ void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
   }
 }
 
+bool sanitizeGatherOrScatter(const Instruction &Inst, const bool HasAVX2,
+                             const bool HasAVX512F) {
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (!II)
+    return false;
+  auto IID = II->getIntrinsicID();
+  if (IID == Intrinsic::masked_gather || IID == Intrinsic::masked_scatter) {
+    unsigned OperandIdx =
+        II->getIntrinsicID() == Intrinsic::masked_scatter ? 0 : 3;
+    unsigned NumElements =
+        cast<FixedVectorType>(II->getOperand(OperandIdx)->getType())
+            ->getNumElements();
+    if (HasAVX512F && NumElements <= 8 || HasAVX2 && NumElements <= 4)
+      return true;
+  }
+  return false;
+}
+
 bool ThreadSanitizer::sanitizeFunction(Function &F,
                                        const TargetLibraryInfo &TLI) {
   // This is required to prevent instrumenting call to __tsan_init from within
@@ -540,6 +558,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
+  Attribute TFAttr = F.getFnAttribute("target-features");
+  bool HasAVX2Attr = TFAttr.getValueAsString().contains("+avx2");
+  bool HasAVX512FAttr = TFAttr.getValueAsString().contains("+avx512f");
+
   // Traverse all instructions, collect loads/stores/returns/gathers/scatters,
   // check for calls.
   for (auto &BB : F) {
@@ -554,12 +576,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       } else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
                  isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
-          if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-            auto IID = II->getIntrinsicID();
-            if (IID == Intrinsic::masked_gather ||
-                IID == Intrinsic::masked_scatter)
-              AllGathersAndScatters.push_back(&Inst);
-          }
+          if (sanitizeGatherOrScatter(Inst, HasAVX2Attr, HasAVX512FAttr))
+            AllGathersAndScatters.push_back(&Inst);
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
         }
         if (isa<MemIntrinsic>(Inst)) {
