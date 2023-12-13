@@ -532,6 +532,8 @@ static bool AsanInitInternal() {
     InstallAtExitCheckLeaks();
   }
 
+  InstallAtForkHandler();
+
 #if CAN_SANITIZE_UB
   __ubsan::InitAsPlugin();
 #endif
