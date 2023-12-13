@@ -1946,6 +1946,23 @@ def SVPSEL_COUNT_ALIAS_S : SInst<"svpsel_lane_c32", "}}Pm", "Pi", MergeNone, "",
 def SVPSEL_COUNT_ALIAS_D : SInst<"svpsel_lane_c64", "}}Pm", "Pl", MergeNone, "", [IsStreamingCompatible], []>;
 }
 
+// Standalone sve2.1 builtins
+let TargetGuard = "sve2p1" in {
+def SVORQV   : SInst<"svorqv[_{d}]", "{Pd", "csilUcUsUiUl", MergeNone, "aarch64_sve_orqv", [IsReductionQV]>;
+def SVEORQV  : SInst<"sveorqv[_{d}]", "{Pd", "csilUcUsUiUl", MergeNone, "aarch64_sve_eorqv", [IsReductionQV]>;
+def SVADDQV  : SInst<"svaddqv[_{d}]", "{Pd", "hfdcsilUcUsUiUl", MergeNone, "aarch64_sve_addqv", [IsReductionQV]>;
+def SVANDQV  : SInst<"svandqv[_{d}]", "{Pd", "csilUcUsUiUl", MergeNone, "aarch64_sve_andqv", [IsReductionQV]>;
+def SVSMAXQV : SInst<"svmaxqv[_{d}]", "{Pd", "csil", MergeNone, "aarch64_sve_smaxqv", [IsReductionQV]>;
+def SVUMAXQV : SInst<"svmaxqv[_{d}]", "{Pd", "UcUsUiUl", MergeNone, "aarch64_sve_umaxqv", [IsReductionQV]>;
+def SVSMINQV : SInst<"svminqv[_{d}]", "{Pd", "csil", MergeNone, "aarch64_sve_sminqv", [IsReductionQV]>;
+def SVUMINQV : SInst<"svminqv[_{d}]", "{Pd", "UcUsUiUl", MergeNone, "aarch64_sve_uminqv", [IsReductionQV]>;
+
+def SVFMAXNMQV: SInst<"svmaxnmqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fmaxnmqv", [IsReductionQV]>;
+def SVFMINNMQV: SInst<"svminnmqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fminnmqv", [IsReductionQV]>;
+def SVFMAXQV: SInst<"svmaxqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fmaxqv", [IsReductionQV]>;
+def SVFMINQV: SInst<"svminqv[_{d}]", "{Pd", "hfd", MergeNone, "aarch64_sve_fminqv", [IsReductionQV]>;
+}
+
 let TargetGuard = "sve2p1|sme2" in {
 //FIXME: Replace IsStreamingCompatible with IsStreamingOrHasSVE2p1 when available
 def SVPEXT_SINGLE : SInst<"svpext_lane_{d}", "P}i", "QcQsQiQl", MergeNone, "aarch64_sve_pext", [IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
