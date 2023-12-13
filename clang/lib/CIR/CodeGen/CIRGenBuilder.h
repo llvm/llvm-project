@@ -754,14 +754,18 @@ public:
       Offset %= EltSize;
     } else if (auto StructTy = Ty.dyn_cast<mlir::cir::StructType>()) {
       auto Elts = StructTy.getMembers();
+      unsigned Pos = 0;
       for (size_t I = 0; I < Elts.size(); ++I) {
         auto EltSize = Layout.getTypeAllocSize(Elts[I]);
-        if (Offset < EltSize) {
+        unsigned AlignMask = Layout.getABITypeAlign(Elts[I]) - 1;
+        Pos = (Pos + AlignMask) & ~AlignMask;
+        if (Offset < Pos + EltSize) {
           Indices.push_back(I);
           SubType = Elts[I];
+          Offset -= Pos;
           break;
         }
-        Offset -= EltSize;
+        Pos += EltSize;
       }
     } else {
       llvm_unreachable("unexpected type");
