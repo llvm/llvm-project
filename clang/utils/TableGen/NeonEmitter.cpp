@@ -2237,7 +2237,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
   for (auto &TS : TDTypeVec) {
     bool IsA64 = false;
     Type T(TS, ".");
- if (T.isDouble())
+    if (T.isDouble())
       IsA64 = true;
 
     if (InIfdef && !IsA64) {
@@ -2253,6 +2253,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
       OS << "typedef __attribute__((neon_polyvector_type(";
     else
       OS << "typedef __attribute__((neon_vector_type(";
+
     Type T2 = T;
     T2.makeScalar();
     OS << T.getNumElements() << "))) ";
