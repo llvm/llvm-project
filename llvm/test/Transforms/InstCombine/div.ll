@@ -1527,6 +1527,19 @@ define i4 @udiv_mul_nuw_constant_mul_constant(i4 %a) {
   ret i4 %div
 }
 
+define i4 @udiv_mul_nuw_mul_negative(i4 %a) {
+; CHECK-LABEL: @udiv_mul_nuw_mul_negative(
+; CHECK-NEXT:    [[ADD4:%.*]] = mul i4 [[A:%.*]], -3
+; CHECK-NEXT:    [[ADD5:%.*]] = shl nuw i4 [[A]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul i4 %a, 13
+  %add5 = mul nuw i4 %a, 4
+  %div = udiv i4 %add5, %add4
+  ret i4 %div
+}
+
 define i4 @sdiv_mul_nsw_mul_nsw_allones(i4 %a) {
 ; CHECK-LABEL: @sdiv_mul_nsw_mul_nsw_allones(
 ; CHECK-NEXT:    [[ADD4:%.*]] = sub nsw i4 0, [[A:%.*]]
