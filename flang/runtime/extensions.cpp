@@ -10,7 +10,7 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
-#include "flang/Runtime/character.h"
+#include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
@@ -26,8 +26,8 @@ namespace Fortran::runtime {
 
 void GetUsernameEnvVar(
     const char *envName, std::byte *arg, std::int64_t length) {
-  Descriptor name{
-      *Descriptor::Create(1, sizeof(envName), const_cast<char *>(envName), 0)};
+  Descriptor name{*Descriptor::Create(
+      1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)

@@ -20,7 +20,10 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/symbol.h"
+#include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstring>
 #include <optional>
 #include <set>
 #include <type_traits>
@@ -1039,7 +1042,7 @@ parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
 parser::Message *AttachDeclaration(parser::Message *, const Symbol &);
 template <typename MESSAGES, typename... A>
 parser::Message *SayWithDeclaration(
-    MESSAGES &messages, const Symbol &symbol, A &&...x) {
+    MESSAGES &messages, const Symbol &symbol, A &&... x) {
   return AttachDeclaration(messages.Say(std::forward<A>(x)...), symbol);
 }
 
