@@ -323,6 +323,11 @@ protected:
         // This historical but ambiguous name for the minSdkVersion macro. Keep
         // defined for compatibility.
         Builder.defineMacro("__ANDROID_API__", "__ANDROID_MIN_SDK_VERSION__");
+      } else {
+        llvm::errs() << "version "<< Triple.getVersionName() <<
+        " in triple " << Triple.getArchName() << "-" << Triple.getVendorName()
+        << "-" << Triple.getOSAndEnvironmentName() << " is invalid\n";
+        exit(1);
       }
     } else {
         Builder.defineMacro("__gnu_linux__");

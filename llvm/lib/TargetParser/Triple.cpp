@@ -1199,6 +1199,14 @@ StringRef Triple::getOSAndEnvironmentName() const {
   return Tmp.split('-').second;                      // Strip second component
 }
 
+StringRef Triple::getVersionName() const {
+  StringRef VersionName = getEnvironmentName();
+  StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
+  if (VersionName.startswith(EnvironmentTypeName))
+    return VersionName.substr(EnvironmentTypeName.size());
+  return VersionName;
+}
+
 static VersionTuple parseVersionFromName(StringRef Name) {
   VersionTuple Version;
   if (Version.tryParse(Name)) {

@@ -434,6 +434,10 @@ public:
   /// string (separated by a '-' if the environment component is present).
   StringRef getOSAndEnvironmentName() const;
 
+  /// Get the version component of the environment component as a single
+  /// string (the version after the environment).
+  StringRef getVersionName() const;
+
   /// @}
   /// @name Convenience Predicates
   /// @{
