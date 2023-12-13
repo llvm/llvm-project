@@ -33,42 +33,42 @@ template <class T>
 void test_type() {
   {
     static_assert(sizeof(std::array<T, 0>) == sizeof(T), "");
-    static_assert(alignof(std::array<T, 0>) == alignof(T), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 0>) == TEST_ALIGNOF(T), "");
     static_assert(sizeof(std::array<T, 0>) == sizeof(T[1]), "");
     static_assert(sizeof(std::array<T, 0>) == sizeof(MyArray<T, 1>), "");
-    static_assert(alignof(std::array<T, 0>) == alignof(MyArray<T, 1>), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 0>) == TEST_ALIGNOF(MyArray<T, 1>), "");
   }
 
   {
     static_assert(sizeof(std::array<T, 1>) == sizeof(T), "");
-    static_assert(alignof(std::array<T, 1>) == alignof(T), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 1>) == TEST_ALIGNOF(T), "");
     static_assert(sizeof(std::array<T, 1>) == sizeof(T[1]), "");
     static_assert(sizeof(std::array<T, 1>) == sizeof(MyArray<T, 1>), "");
-    static_assert(alignof(std::array<T, 1>) == alignof(MyArray<T, 1>), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 1>) == TEST_ALIGNOF(MyArray<T, 1>), "");
   }
 
   {
     static_assert(sizeof(std::array<T, 2>) == sizeof(T) * 2, "");
-    static_assert(alignof(std::array<T, 2>) == alignof(T), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 2>) == TEST_ALIGNOF(T), "");
     static_assert(sizeof(std::array<T, 2>) == sizeof(T[2]), "");
     static_assert(sizeof(std::array<T, 2>) == sizeof(MyArray<T, 2>), "");
-    static_assert(alignof(std::array<T, 2>) == alignof(MyArray<T, 2>), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 2>) == TEST_ALIGNOF(MyArray<T, 2>), "");
   }
 
   {
     static_assert(sizeof(std::array<T, 3>) == sizeof(T) * 3, "");
-    static_assert(alignof(std::array<T, 3>) == alignof(T), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 3>) == TEST_ALIGNOF(T), "");
     static_assert(sizeof(std::array<T, 3>) == sizeof(T[3]), "");
     static_assert(sizeof(std::array<T, 3>) == sizeof(MyArray<T, 3>), "");
-    static_assert(alignof(std::array<T, 3>) == alignof(MyArray<T, 3>), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 3>) == TEST_ALIGNOF(MyArray<T, 3>), "");
   }
 
   {
     static_assert(sizeof(std::array<T, 444>) == sizeof(T) * 444, "");
-    static_assert(alignof(std::array<T, 444>) == alignof(T), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 444>) == TEST_ALIGNOF(T), "");
     static_assert(sizeof(std::array<T, 444>) == sizeof(T[444]), "");
     static_assert(sizeof(std::array<T, 444>) == sizeof(MyArray<T, 444>), "");
-    static_assert(alignof(std::array<T, 444>) == alignof(MyArray<T, 444>), "");
+    static_assert(TEST_ALIGNOF(std::array<T, 444>) == TEST_ALIGNOF(MyArray<T, 444>), "");
   }
 }
 
@@ -84,13 +84,13 @@ struct WithPadding {
 };
 
 #if TEST_STD_VER >= 11
-struct alignas(alignof(std::max_align_t) * 2) Overaligned1 {};
+struct alignas(TEST_ALIGNOF(std::max_align_t) * 2) Overaligned1 {};
 
-struct alignas(alignof(std::max_align_t) * 2) Overaligned2 {
+struct alignas(TEST_ALIGNOF(std::max_align_t) * 2) Overaligned2 {
   char data[1000];
 };
 
-struct alignas(alignof(std::max_align_t)) Overaligned3 {
+struct alignas(TEST_ALIGNOF(std::max_align_t)) Overaligned3 {
   char data[1000];
 };
 
