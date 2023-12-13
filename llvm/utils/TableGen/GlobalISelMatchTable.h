@@ -2075,21 +2075,10 @@ public:
     return R->getKind() == OR_Imm;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    if (CImmLLT) {
-      assert(Table.isCombiner() &&
-             "ConstantInt immediate are only for combiners!");
-      Table << MatchTable::Opcode("GIR_AddCImm")
-            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
-            << MatchTable::Comment("Type") << *CImmLLT
-            << MatchTable::Comment("Imm") << MatchTable::IntValue(8, Imm)
-            << MatchTable::LineBreak;
-    } else {
-      Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-            << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Imm")
-            << MatchTable::IntValue(8, Imm) << MatchTable::LineBreak;
-    }
-  }
+  static void emitAddImm(MatchTable &Table, RuleMatcher &RM, unsigned InsnID,
+                         int64_t Imm, StringRef ImmName = "Imm");
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Adds an enum value for a subreg index to the instruction being built.
