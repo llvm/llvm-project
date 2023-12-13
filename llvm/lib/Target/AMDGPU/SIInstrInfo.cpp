@@ -7112,12 +7112,12 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     const DebugLoc &DL = Inst.getDebugLoc();
     Register NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     MachineInstr *NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
-                                 .addImm(0)               // src0_modifiers
+                                 .addImm(0) // src0_modifiers
                                  .add(Inst.getOperand(1))
-                                 .addImm(0)               // src1_modifiers
+                                 .addImm(0) // src1_modifiers
                                  .add(Inst.getOperand(2))
-                                 .addImm(0)               // clamp
-                                 .addImm(0);              // omod
+                                 .addImm(0)  // clamp
+                                 .addImm(0); // omod
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
 
     legalizeOperands(*NewInstr, MDT);
