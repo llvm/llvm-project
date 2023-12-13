@@ -332,8 +332,6 @@ def : SiFiveReg<"mnepc", 0x351>;
 def : SiFiveReg<"mncause", 0x352>;
 def : SiFiveReg<"mnstatus", 0x353>;
 def : SiFiveReg<"mbpm", 0x7C0>;
-def : SiFiveReg<"mfd", 0x7C1>;
-def : SiFiveReg<"mpd", 0x7C8>;
 }
 
 //===----------------------------------------------------------------------===//
