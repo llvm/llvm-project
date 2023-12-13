@@ -97,6 +97,7 @@ public:
   bool isScalar() const { return NumVectors == 0; }
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
+  bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
@@ -466,7 +467,8 @@ std::string SVEType::builtin_str() const {
     return S;
   }
 
-  assert(isScalableVector() && "Unsupported type");
+  if (isFixedLengthVector())
+    return "V" + utostr(getNumElements() * NumVectors) + S;
   return "q" + utostr(getNumElements() * NumVectors) + S;
 }
 
@@ -499,7 +501,7 @@ std::string SVEType::str() const {
 
     if (!isScalarPredicate() && !isPredicateVector() && !isSvcount())
       S += utostr(ElementBitwidth);
-    if (!isScalableVector() && isVector())
+    if (isFixedLengthVector())
       S += "x" + utostr(getNumElements());
     if (NumVectors > 1)
       S += "x" + utostr(NumVectors);
@@ -609,6 +611,11 @@ void SVEType::applyModifier(char Mod) {
     Svcount = false;
     Bitwidth = 16;
     ElementBitwidth = 1;
+    break;
+  case '{':
+    IsScalable = false;
+    Bitwidth = 128;
+    NumVectors = 1;
     break;
   case 's':
   case 'a':

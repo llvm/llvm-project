@@ -604,7 +604,7 @@ LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
 static bool startsWithWord(StringRef name, StringRef word) {
   if (name.size() < word.size()) return false;
   return ((name.size() == word.size() || !isLowercase(name[word.size()])) &&
-          name.startswith(word));
+          name.starts_with(word));
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
@@ -742,7 +742,7 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
 
 std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
   StringRef Name = Sel.getNameForSlot(0);
-  assert(Name.startswith("set") && "invalid setter name");
+  assert(Name.starts_with("set") && "invalid setter name");
   return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
 }
 
