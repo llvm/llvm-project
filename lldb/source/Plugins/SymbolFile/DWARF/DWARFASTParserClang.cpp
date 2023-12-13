@@ -152,16 +152,16 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   // If this type comes from a Clang module, recursively look in the
   // DWARF section of the .pcm file in the module cache. Clang
   // generates DWO skeleton units as breadcrumbs to find them.
-  std::vector<CompilerContext> decl_context = die.GetDeclContext();
-  TypeMap pcm_types;
+  std::vector<lldb_private::CompilerContext> die_context = die.GetDeclContext();
+  TypeQuery query(die_context, TypeQueryOptions::e_module_search |
+                                   TypeQueryOptions::e_find_one);
+  TypeResults results;
 
   // The type in the Clang module must have the same language as the current CU.
-  LanguageSet languages;
-  languages.Insert(SymbolFileDWARF::GetLanguageFamily(*die.GetCU()));
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
-                                              searched_symbol_files, pcm_types);
-  if (pcm_types.Empty()) {
+  query.AddLanguage(SymbolFileDWARF::GetLanguageFamily(*die.GetCU()));
+  clang_module_sp->FindTypes(query, results);
+  TypeSP pcm_type_sp = results.GetTypeMap().FirstType();
+  if (!pcm_type_sp) {
     // Since this type is defined in one of the Clang modules imported
     // by this symbol file, search all of them. Instead of calling
     // sym_file->FindTypes(), which would return this again, go straight
@@ -170,24 +170,20 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
     // Well-formed clang modules never form cycles; guard against corrupted
     // ones by inserting the current file.
-    searched_symbol_files.insert(&sym_file);
+    results.AlreadySearched(&sym_file);
     sym_file.ForEachExternalModule(
-        *sc.comp_unit, searched_symbol_files, [&](Module &module) {
-          module.GetSymbolFile()->FindTypes(decl_context, languages,
-                                            searched_symbol_files, pcm_types);
-          return pcm_types.GetSize();
+        *sc.comp_unit, results.GetSearchedSymbolFiles(), [&](Module &module) {
+          module.FindTypes(query, results);
+          pcm_type_sp = results.GetTypeMap().FirstType();
+          return !pcm_type_sp;
         });
   }
 
-  if (!pcm_types.GetSize())
+  if (!pcm_type_sp)
     return TypeSP();
 
   // We found a real definition for this type in the Clang module, so lets use
   // it and cache the fact that we found a complete type for this die.
-  TypeSP pcm_type_sp = pcm_types.GetTypeAtIndex(0);
-  if (!pcm_type_sp)
-    return TypeSP();
-
   lldb_private::CompilerType pcm_type = pcm_type_sp->GetForwardCompilerType();
   lldb_private::CompilerType type =
       GetClangASTImporter().CopyType(m_ast, pcm_type);
