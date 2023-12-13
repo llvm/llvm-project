@@ -1201,6 +1201,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
                       << printMBBReference(MBB) << '\t' << CopyMI);
   }
 
+  const bool IsUndefCopy = CopyMI.getOperand(1).isUndef();
+
   // Remove CopyMI.
   // Note: This is fine to remove the copy before updating the live-ranges.
   // While updating the live-ranges, we only look at slot indices and
@@ -1214,6 +1216,19 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
   LIS->pruneValue(*static_cast<LiveRange *>(&IntB), CopyIdx.getRegSlot(),
                   &EndPoints);
   BValNo->markUnused();
+
+  if (IsUndefCopy) {
+    // We're introducing an undef phi def, and need to set undef on any users of
+    // the previously local def to avoid artifically extending the lifetime
+    // through the block.
+    for (MachineOperand &MO : MRI->use_nodbg_operands(IntB.reg())) {
+      const MachineInstr &MI = *MO.getParent();
+      SlotIndex UseIdx = LIS->getInstructionIndex(MI);
+      if (!IntB.liveAt(UseIdx))
+        MO.setIsUndef(true);
+    }
+  }
+
   // Extend IntB to the EndPoints of its original live interval.
   LIS->extendToIndices(IntB, EndPoints);
 
