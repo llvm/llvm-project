@@ -9190,6 +9190,8 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   if (OpIsORRWrs && Reg1 == AArch64::WZR) {
     Register Reg0 = MI.getOperand(0).getReg();
+    // ORRWrs is copy instruction when there's no implicit def of the X
+    // register.
     if (Reg0.isPhysical()) {
       const MachineFunction *MF = MI.getMF();
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
@@ -9206,6 +9208,15 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
 
+  return std::nullopt;
+}
+
+std::optional<DestSourcePair>
+AArch64InstrInfo::isCopyLikeInstrImpl(const MachineInstr &MI) const {
+  if (MI.getOpcode() == AArch64::ORRWrs &&
+      MI.getOperand(1).getReg() == AArch64::WZR &&
+      MI.getOperand(3).getImm() == 0x0)
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   return std::nullopt;
 }
 
@@ -9252,7 +9263,7 @@ static std::optional<ParamLoadedValue>
 describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
                        const TargetInstrInfo *TII,
                        const TargetRegisterInfo *TRI) {
-  auto DestSrc = TII->isCopyInstr(MI);
+  auto DestSrc = TII->isCopyLikeInstr(MI);
   if (!DestSrc)
     return std::nullopt;
 
