@@ -233,6 +233,16 @@ TEST_F(LinkModuleTest, NewCAPIFailure) {
   EXPECT_EQ("Linking globals named 'foo': symbol multiply defined!", Err);
 }
 
+TEST_F(LinkModuleTest, IgnoreFromSrcIfConflict) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
+  std::unique_ptr<Module> SourceM(getExternal(Ctx, "foo"));
+  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  bool Failed = Linker::linkModules(*DestM, std::move(SourceM),
+                                    Linker::Flags::IgnoreFromSrcIfConflict);
+  ASSERT_FALSE(Failed);
+}
+
 TEST_F(LinkModuleTest, MoveDistinctMDs) {
   LLVMContext C;
   SMDiagnostic Err;

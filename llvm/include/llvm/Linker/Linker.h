@@ -27,6 +27,7 @@ public:
     None = 0,
     OverrideFromSrc = (1 << 0),
     LinkOnlyNeeded = (1 << 1),
+    IgnoreFromSrcIfConflict = (1 << 2),
   };
 
   Linker(Module &M);

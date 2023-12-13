@@ -1,0 +1,8 @@
+# RUN: not llvm-link %S/Inputs/f.ll %S/Inputs/f_1.ll 2>&1 | FileCheck %s
+# RUN: llvm-link %S/Inputs/f.ll --ignore-if-conflict %S/Inputs/f_1.ll -S | FileCheck -check-prefix=IGNORE %s
+
+# CHECK: error: Linking globals named 'f': symbol multiply defined!
+
+# IGNORE: define void @f() {
+# IGNORE-NEXT: entry:
+# IGNORE-NEXT: ret void

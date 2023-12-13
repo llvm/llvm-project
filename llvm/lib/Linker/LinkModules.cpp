@@ -52,6 +52,9 @@ class ModuleLinker {
 
   bool shouldOverrideFromSrc() { return Flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return Flags & Linker::LinkOnlyNeeded; }
+  bool shouldIgnoreFromSrcIfConflict() {
+    return Flags & Linker::IgnoreFromSrcIfConflict;
+  }
 
   bool shouldLinkFromSource(bool &LinkFromSrc, const GlobalValue &Dest,
                             const GlobalValue &Src);
@@ -314,6 +317,11 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
   if (Dest.isWeakForLinker()) {
     assert(Src.hasExternalLinkage());
     LinkFromSrc = true;
+    return false;
+  }
+
+  if (shouldIgnoreFromSrcIfConflict()) {
+    LinkFromSrc = false;
     return false;
   }
 

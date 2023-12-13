@@ -53,6 +53,12 @@ static cl::list<std::string> OverridingInputs(
         "input bitcode file which can override previously defined symbol(s)"),
     cl::cat(LinkCategory));
 
+static cl::list<std::string> IgnoreIfConflictInputs(
+    "ignore-if-conflict", cl::value_desc("filename"),
+    cl::desc("defined symbol(s) of input bitcode file which can be ignore if "
+             "previously same defined symbol(s)"),
+    cl::cat(LinkCategory));
+
 // Option to simulate function importing for testing. This enables using
 // llvm-link to simulate ThinLTO backend processes.
 static cl::list<std::string> Imports(
@@ -382,7 +388,8 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
 static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
                       const cl::list<std::string> &Files, unsigned Flags) {
   // Filter out flags that don't apply to the first file we load.
-  unsigned ApplicableFlags = Flags & Linker::Flags::OverrideFromSrc;
+  unsigned ApplicableFlags = Flags & (Linker::Flags::OverrideFromSrc |
+                                      Linker::Flags::IgnoreFromSrcIfConflict);
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
@@ -486,6 +493,11 @@ int main(int argc, char **argv) {
   // Next the -override ones.
   if (!linkFiles(argv[0], Context, L, OverridingInputs,
                  Flags | Linker::Flags::OverrideFromSrc))
+    return 1;
+
+  // Next the -ignore-if-conflict ones.
+  if (!linkFiles(argv[0], Context, L, IgnoreIfConflictInputs,
+                 Flags | Linker::Flags::IgnoreFromSrcIfConflict))
     return 1;
 
   // Import any functions requested via -import

@@ -57,6 +57,14 @@ OPTIONS
   a symbol is declared more than twice, the definition from the file declared
   last takes precedence.
 
+.. option:: --ignore-if-conflict <filename>
+
+  Adds the passed-in file to the link and ignores symbols that have already
+  been declared with the definitions in the file that is passed in. This flag
+  can be specified multiple times to have multiple files act as ignores. If
+  a symbol is declared more than twice, the definition from the file declared
+  first takes precedence.
+
 .. option:: --import <function:filename>
 
   Specify a function that should be imported from the specified file for
