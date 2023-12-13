@@ -154,6 +154,7 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
                                  !isFolderOwnedConstant(op->getPrevNode())))
     op->moveBefore(&insertBlock->front());
 
+  op->setLoc(erasedFoldedLocation);
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
   return true;
@@ -193,8 +194,7 @@ void OperationFolder::clear() {
 /// Get or create a constant using the given builder. On success this returns
 /// the constant operation, nullptr otherwise.
 Value OperationFolder::getOrCreateConstant(Block *block, Dialect *dialect,
-                                           Attribute value, Type type,
-                                           Location loc) {
+                                           Attribute value, Type type) {
   // Find an insertion point for the constant.
   auto *insertRegion = getInsertionRegion(interfaces, block);
   auto &entry = insertRegion->front();
@@ -202,8 +202,8 @@ Value OperationFolder::getOrCreateConstant(Block *block, Dialect *dialect,
 
   // Get the constant map for the insertion region of this operation.
   auto &uniquedConstants = foldScopes[insertRegion];
-  Operation *constOp =
-      tryGetOrCreateConstant(uniquedConstants, dialect, value, type, loc);
+  Operation *constOp = tryGetOrCreateConstant(uniquedConstants, dialect, value,
+                                              type, erasedFoldedLocation);
   return constOp ? constOp->getResult(0) : Value();
 }
 
@@ -258,8 +258,9 @@ OperationFolder::processFoldResults(Operation *op,
     // Check to see if there is a canonicalized version of this constant.
     auto res = op->getResult(i);
     Attribute attrRepl = foldResults[i].get<Attribute>();
-    if (auto *constOp = tryGetOrCreateConstant(
-            uniquedConstants, dialect, attrRepl, res.getType(), op->getLoc())) {
+    if (auto *constOp =
+            tryGetOrCreateConstant(uniquedConstants, dialect, attrRepl,
+                                   res.getType(), erasedFoldedLocation)) {
       // Ensure that this constant dominates the operation we are replacing it
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
