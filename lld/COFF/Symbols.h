@@ -278,7 +278,7 @@ public:
 
   // A null chunk indicates that this is __ImageBase. Otherwise, this is some
   // other synthesized chunk, like SEHTableChunk.
-  uint32_t getRVA() { return c ? c->getRVA() + offset: 0; }
+  uint32_t getRVA() { return c ? c->getRVA() + offset : 0; }
   Chunk *getChunk() { return c; }
 
 private:
