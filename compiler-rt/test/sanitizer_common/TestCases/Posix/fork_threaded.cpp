@@ -18,10 +18,10 @@
 
 static const size_t kBufferSize = 1 << 20;
 
-static void *background(void *arg) { return nullptr; }
-
 pthread_barrier_t bar;
 
+// Without appropriate workarounds this code can cause the forked process to
+// start with locked internal mutexes.
 void CanDeadLock() {
   // Don't bother with leaks, we try to trigger allocator or lsan deadlock.
   __lsan::ScopedDisabler disable;
