@@ -19,16 +19,23 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -466,6 +473,8 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
   AddIRPass addIRPass(MPM, Opt.DebugPM);
+  // `ProfileSummaryInfo` is always valid.
+  addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   addISelPasses(addIRPass);
 
   AddMachinePass addPass(MFPM);
@@ -653,7 +662,7 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
 
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
-    addPass(SelectOptimizePass());
+    addPass(SelectOptimizePass(&TM));
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -671,19 +680,19 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // removed from the parent invoke(s). This could happen when a landing
     // pad is shared by multiple invokes and is also a target of a normal
     // edge from elsewhere.
-    addPass(SjLjEHPreparePass());
+    addPass(SjLjEHPreparePass(&TM));
     [[fallthrough]];
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
-    addPass(DwarfEHPass(getOptLevel()));
+    addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::WinEH:
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
     addPass(WinEHPreparePass());
-    addPass(DwarfEHPass(getOptLevel()));
+    addPass(DwarfEHPreparePass(&TM));
     break;
   case ExceptionHandling::Wasm:
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
@@ -691,7 +700,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
     addPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false));
-    addPass(WasmEHPass());
+    addPass(WasmEHPreparePass());
     break;
   case ExceptionHandling::None:
     addPass(LowerInvokePass());

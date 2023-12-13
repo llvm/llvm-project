@@ -23,7 +23,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -61,8 +60,8 @@ AST_MATCHER(clang::QualType, isFloating) {
   return !Node.isNull() && Node->isFloatingType();
 }
 
-AST_MATCHER_P(clang::Expr, anyOfExhaustive,
-              llvm::ArrayRef<Matcher<clang::Stmt>>, Exprs) {
+AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
+              Exprs) {
   bool FoundMatch = false;
   for (const auto &InnerMatcher : Exprs) {
     clang::ast_matchers::internal::BoundNodesTreeBuilder Result = *Builder;
@@ -304,7 +303,7 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
 
 void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   const auto Matches = MatchBuilder{DiffThreshold};
-  static const auto ConstantMatchers = {
+  std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
       Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
       Matches.matchEulerTopLevel(), Matches.matchEgamma(),
       Matches.matchInvSqrtPi(),     Matches.matchInvPi(),
@@ -316,7 +315,7 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
 
   Finder->addMatcher(
       expr(
-          anyOfExhaustive(ConstantMatchers),
+          anyOfExhaustive(std::move(ConstantMatchers)),
           unless(hasParent(explicitCastExpr(hasDestinationType(isFloating())))),
           hasType(qualType(hasCanonicalTypeUnqualified(
               anyOf(qualType(asString("float")).bind("float"),

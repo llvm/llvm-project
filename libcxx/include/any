@@ -194,9 +194,7 @@ namespace __any_imp
       if (__id && *__id == typeid(_Tp))
           return true;
 #endif
-      if (!__id && __fallback_id == __any_imp::__get_fallback_typeid<_Tp>())
-          return true;
-      return false;
+      return !__id && __fallback_id == __any_imp::__get_fallback_typeid<_Tp>();
   }
 
   template <class _Tp>

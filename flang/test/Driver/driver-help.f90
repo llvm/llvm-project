@@ -54,6 +54,7 @@
 ! HELP-NEXT:                         Select Windows run-time library
 ! HELP-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! HELP-NEXT: -fno-fortran-main       Do not include Fortran_main.a (provided by Flang) when linking
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fno-lto                Disable LTO mode (default)
 ! HELP-NEXT: -fno-ppc-native-vector-element-order

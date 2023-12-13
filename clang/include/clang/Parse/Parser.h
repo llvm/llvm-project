@@ -770,6 +770,10 @@ private:
   void HandlePragmaFEnvRound();
 
   /// Handle the annotation token produced for
+  /// #pragma STDC CX_LIMITED_RANGE...
+  void HandlePragmaCXLimitedRange();
+
+  /// Handle the annotation token produced for
   /// #pragma float_control
   void HandlePragmaFloatControl();
 
@@ -3544,6 +3548,7 @@ private:
   void ParseOpenACCCacheVarList();
   /// Parses a single variable in a variable list for the 'cache' construct.
   bool ParseOpenACCCacheVar();
+  bool ParseOpenACCWaitArgument();
 
 private:
   //===--------------------------------------------------------------------===//

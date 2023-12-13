@@ -3646,6 +3646,14 @@ def : MutualExclusions<[Owner, Pointer]>;
 
 // Microsoft-related attributes
 
+def MSConstexpr : InheritableAttr {
+  let LangOpts = [MicrosoftExt];
+  let Spellings = [CXX11<"msvc", "constexpr">];
+  let Subjects = SubjectList<[Function, ReturnStmt], ErrorDiag,
+                             "functions and return statements">;
+  let Documentation = [MSConstexprDocs];
+}
+
 def MSNoVTable : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
   let Spellings = [Declspec<"novtable">];
   let Subjects = SubjectList<[CXXRecord]>;
@@ -4250,7 +4258,8 @@ def HLSLResource : InheritableAttr {
                             "StructuredBuffer", "CBuffer", "Sampler",
                             "TBuffer", "RTAccelerationStructure",
                             "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
+                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+              DefaultBoolArgument<"isROV", /*default=*/0>
               ];
   let Documentation = [InternalOnly];
 }

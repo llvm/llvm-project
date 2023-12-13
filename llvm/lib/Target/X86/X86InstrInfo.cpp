@@ -8026,9 +8026,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     // Folding a V_SET0 or V_SETALLONES as a load, to ease register pressure.
     // Create a constant-pool entry and operands to load from it.
 
-    // Medium and large mode can't fold loads this way.
-    if (MF.getTarget().getCodeModel() != CodeModel::Small &&
-        MF.getTarget().getCodeModel() != CodeModel::Kernel)
+    // Large code model can't fold loads this way.
+    if (MF.getTarget().getCodeModel() == CodeModel::Large)
       return nullptr;
 
     // x86-32 PIC requires a PIC base register for constant pools.
@@ -8717,11 +8716,6 @@ bool X86InstrInfo::isSafeToMoveRegClassDefs(
 /// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
 ///
 unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
-  assert((!Subtarget.is64Bit() ||
-          MF->getTarget().getCodeModel() == CodeModel::Medium ||
-          MF->getTarget().getCodeModel() == CodeModel::Large) &&
-         "X86-64 PIC uses RIP relative addressing");
-
   X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
   Register GlobalBaseReg = X86FI->getGlobalBaseReg();
   if (GlobalBaseReg != 0)
@@ -10083,12 +10077,6 @@ struct CGBR : public MachineFunctionPass {
         static_cast<const X86TargetMachine *>(&MF.getTarget());
     const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
 
-    // Don't do anything in the 64-bit small and kernel code models. They use
-    // RIP-relative addressing for everything.
-    if (STI.is64Bit() && (TM->getCodeModel() == CodeModel::Small ||
-                          TM->getCodeModel() == CodeModel::Kernel))
-      return false;
-
     // Only emit a global base reg in PIC mode.
     if (!TM->isPositionIndependent())
       return false;
@@ -10114,16 +10102,7 @@ struct CGBR : public MachineFunctionPass {
       PC = GlobalBaseReg;
 
     if (STI.is64Bit()) {
-      if (TM->getCodeModel() == CodeModel::Medium) {
-        // In the medium code model, use a RIP-relative LEA to materialize the
-        // GOT.
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PC)
-            .addReg(X86::RIP)
-            .addImm(0)
-            .addReg(0)
-            .addExternalSymbol("_GLOBAL_OFFSET_TABLE_")
-            .addReg(0);
-      } else if (TM->getCodeModel() == CodeModel::Large) {
+      if (TM->getCodeModel() == CodeModel::Large) {
         // In the large code model, we are aiming for this code, though the
         // register allocation may vary:
         //   leaq .LN$pb(%rip), %rax
@@ -10146,7 +10125,14 @@ struct CGBR : public MachineFunctionPass {
             .addReg(PBReg, RegState::Kill)
             .addReg(GOTReg, RegState::Kill);
       } else {
-        llvm_unreachable("unexpected code model");
+        // In other code models, use a RIP-relative LEA to materialize the
+        // GOT.
+        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PC)
+            .addReg(X86::RIP)
+            .addImm(0)
+            .addReg(0)
+            .addExternalSymbol("_GLOBAL_OFFSET_TABLE_")
+            .addReg(0);
       }
     } else {
       // Operand of MovePCtoStack is completely ignored by asm printer. It's
