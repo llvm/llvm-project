@@ -1,4 +1,5 @@
-//===- IndirectBrExpandPass.cpp - Expand indirectbr to switch -------------===//
+//===- IndirectBrExpandLegacyPass.cpp - Expand indirectbr to switch
+//-------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,14 +49,14 @@ using namespace llvm;
 
 namespace {
 
-class IndirectBrExpandPass : public FunctionPass {
+class IndirectBrExpandLegacyPass : public FunctionPass {
   const TargetLowering *TLI = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  IndirectBrExpandPass() : FunctionPass(ID) {
-    initializeIndirectBrExpandPassPass(*PassRegistry::getPassRegistry());
+  IndirectBrExpandLegacyPass() : FunctionPass(ID) {
+    initializeIndirectBrExpandLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -67,19 +68,19 @@ public:
 
 } // end anonymous namespace
 
-char IndirectBrExpandPass::ID = 0;
+char IndirectBrExpandLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(IndirectBrExpandPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(IndirectBrExpandLegacyPass, DEBUG_TYPE,
                       "Expand indirectbr instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(IndirectBrExpandPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(IndirectBrExpandLegacyPass, DEBUG_TYPE,
                     "Expand indirectbr instructions", false, false)
 
 FunctionPass *llvm::createIndirectBrExpandPass() {
-  return new IndirectBrExpandPass();
+  return new IndirectBrExpandLegacyPass();
 }
 
-bool IndirectBrExpandPass::runOnFunction(Function &F) {
+bool IndirectBrExpandLegacyPass::runOnFunction(Function &F) {
   auto &DL = F.getParent()->getDataLayout();
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
