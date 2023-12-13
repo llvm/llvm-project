@@ -9,20 +9,20 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lhu s0, 6(a0)
+; CHECK-NEXT:    lhu s0, 0(a0)
+; CHECK-NEXT:    lhu a1, 2(a0)
 ; CHECK-NEXT:    lhu s1, 4(a0)
-; CHECK-NEXT:    lhu s2, 0(a0)
-; CHECK-NEXT:    lhu a0, 2(a0)
-; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    lhu s2, 6(a0)
+; CHECK-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fsw fa0, 8(sp)
-; CHECK-NEXT:    fmv.w.x fa0, s2
+; CHECK-NEXT:    fmv.w.x fa0, s0
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fsw fa0, 0(sp)
 ; CHECK-NEXT:    fmv.w.x fa0, s1
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fsw fa0, 12(sp)
-; CHECK-NEXT:    fmv.w.x fa0, s0
+; CHECK-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fsw fa0, 4(sp)
 ; CHECK-NEXT:    addi a0, sp, 8

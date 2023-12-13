@@ -1,25 +1,10 @@
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=riscv32 -verify-misched -debug-only=machine-scheduler -o - 2>&1 < %s \
-; RUN:   | FileCheck -check-prefix=NOCLUSTER %s
+; RUN:   | FileCheck -check-prefix=LDCLUSTER %s
 ; RUN: llc -mtriple=riscv64 -verify-misched -debug-only=machine-scheduler -o - 2>&1 < %s \
-; RUN:   | FileCheck -check-prefix=NOCLUSTER %s
-; RUN: llc -mtriple=riscv32 -riscv-misched-load-clustering -verify-misched \
-; RUN:     -debug-only=machine-scheduler -o - 2>&1 < %s \
 ; RUN:   | FileCheck -check-prefix=LDCLUSTER %s
-; RUN: llc -mtriple=riscv64 -riscv-misched-load-clustering -verify-misched \
-; RUN:     -debug-only=machine-scheduler -o - 2>&1 < %s \
-; RUN:   | FileCheck -check-prefix=LDCLUSTER %s
-
 
 define i32 @load_clustering_1(ptr nocapture %p) {
-; NOCLUSTER: ********** MI Scheduling **********
-; NOCLUSTER-LABEL: load_clustering_1:%bb.0
-; NOCLUSTER: *** Final schedule for %bb.0 ***
-; NOCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
-; NOCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
-; NOCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
-; NOCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
-;
 ; LDCLUSTER: ********** MI Scheduling **********
 ; LDCLUSTER-LABEL: load_clustering_1:%bb.0
 ; LDCLUSTER: *** Final schedule for %bb.0 ***
