@@ -19,9 +19,9 @@
 
 namespace llvm {
 
-class LLVMContext;
-class GlobalValue;
 class BlockAddress;
+class GlobalValue;
+class LLVMContext;
 
 namespace RISCVCP {
 
