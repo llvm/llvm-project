@@ -9,6 +9,7 @@
 #ifndef SCUDO_COMBINED_H_
 #define SCUDO_COMBINED_H_
 
+#include "atomic_helpers.h"
 #include "chunk.h"
 #include "common.h"
 #include "flags.h"
@@ -967,18 +968,21 @@ public:
                            const char *RingBufferPtr, size_t RingBufferSize,
                            const char *Memory, const char *MemoryTags,
                            uintptr_t MemoryAddr, size_t MemorySize) {
+    // N.B. we need to support corrupted data in any of the buffers here. We get
+    // this information from an external process (the crashing process) that
+    // shouldn't be able to crash crash_dump.
     *ErrorInfo = {};
     if (!allocatorSupportsMemoryTagging<Config>() ||
         MemoryAddr + MemorySize < MemoryAddr)
       return;
 
-    if (DepotPtr && DepotSize < sizeof(StackDepot)) {
-      return;
-    }
-    if (DepotPtr &&
-        !reinterpret_cast<const StackDepot *>(DepotPtr)->isValid(DepotSize)) {
-      // corrupted stack depot.
-      return;
+    if (DepotPtr) {
+      // check for corrupted StackDepot. First we need to check whether we can
+      // read the metadata, then whether the metadata matches the size.
+      if (DepotSize < sizeof(StackDepot))
+        return;
+      if (!reinterpret_cast<const StackDepot *>(DepotPtr)->isValid(DepotSize))
+        return;
     }
 
     size_t NextErrorReport = 0;
@@ -1520,14 +1524,23 @@ private:
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
     // We store alloc and free stacks for each entry.
     constexpr auto kStacksPerRingBufferEntry = 2;
+    constexpr auto kMaxU32Pow2 = ~(UINT32_MAX >> 1);
+    static_assert(isPowerOfTwo(kMaxU32Pow2));
+    if (AllocationRingBufferSize > kMaxU32Pow2 / kStacksPerRingBufferEntry)
+      return;
     u32 TabSize = static_cast<u32>(roundUpPowerOfTwo(kStacksPerRingBufferEntry *
                                                      AllocationRingBufferSize));
     constexpr auto kFramesPerStack = 8;
     static_assert(isPowerOfTwo(kFramesPerStack));
+    if (TabSize > UINT32_MAX / kFramesPerStack)
+      return;
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
     DCHECK(isPowerOfTwo(RingSize));
     static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
 
+    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
+                                           UINT32_MAX * sizeof(atomic_u32) <
+                  UINTPTR_MAX);
     StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
                      sizeof(atomic_u32) * TabSize;
     MemMapT DepotMap;

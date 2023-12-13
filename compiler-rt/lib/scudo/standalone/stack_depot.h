@@ -100,42 +100,33 @@ public:
   // Ensure that RingSize, RingMask and TabMask are set up in a way that
   // all accesses are within range of BufSize.
   bool isValid(uptr BufSize) const {
-    if (RingSize > UINTPTR_MAX / sizeof(atomic_u64)) {
+    if (RingSize > UINTPTR_MAX / sizeof(atomic_u64))
       return false;
-    }
-    if (RingSize == 0 || !isPowerOfTwo(RingSize)) {
+    if (RingSize == 0 || !isPowerOfTwo(RingSize))
       return false;
-    }
     uptr RingBytes = sizeof(atomic_u64) * RingSize;
-    if (RingMask + 1 != RingSize) {
+    if (RingMask + 1 != RingSize)
       return false;
-    }
 
-    if (TabMask == 0) {
+    if (TabMask == 0)
       return false;
-    }
-    if ((TabMask - 1) > UINTPTR_MAX / sizeof(atomic_u32)) {
+    if ((TabMask - 1) > UINTPTR_MAX / sizeof(atomic_u32))
       return false;
-    }
     uptr TabSize = TabMask + 1;
-    if (!isPowerOfTwo(TabSize)) {
+    if (!isPowerOfTwo(TabSize))
       return false;
-    }
     uptr TabBytes = sizeof(atomic_u32) * TabSize;
 
     // Subtract and detect underflow.
-    if (BufSize < sizeof(StackDepot)) {
+    if (BufSize < sizeof(StackDepot))
       return false;
-    }
     BufSize -= sizeof(StackDepot);
-    if (BufSize < TabBytes) {
+    if (BufSize < TabBytes)
       return false;
-    }
-    BufSize = TabBytes;
-    if (BufSize < RingBytes) {
+    BufSize -= TabBytes;
+    if (BufSize < RingBytes)
       return false;
-    }
-    return BufSize == 0;
+    return BufSize == RingBytes;
   }
 
   // Insert hash of the stack trace [Begin, End) into the stack depot, and
