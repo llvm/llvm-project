@@ -1123,7 +1123,7 @@ void Writer::createMiscChunks() {
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
     if (Symbol *buildidSym = ctx.symtab.findUnderscore("__build_guid"))
       replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
-                                      buildId);
+                                      buildId, 4);
   }
 
   if (config->cetCompat) {
