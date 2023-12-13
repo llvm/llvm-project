@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
-#include "LoopEmitter.h"
+#include "Utils/CodegenUtils.h"
+#include "Utils/LoopEmitter.h"
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"

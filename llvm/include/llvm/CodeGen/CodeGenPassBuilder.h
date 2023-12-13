@@ -25,14 +25,19 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -47,6 +52,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
@@ -623,7 +629,7 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addPass(MergeICmpsPass());
-    addPass(ExpandMemCmpPass());
+    addPass(ExpandMemCmpPass(&TM));
   }
 
   // Run GC lowering passes for builtin collectors
@@ -679,7 +685,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // removed from the parent invoke(s). This could happen when a landing
     // pad is shared by multiple invokes and is also a target of a normal
     // edge from elsewhere.
-    addPass(SjLjEHPreparePass());
+    addPass(SjLjEHPreparePass(&TM));
     [[fallthrough]];
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:

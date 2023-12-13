@@ -416,6 +416,15 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx11:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx11:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx11:
+  case AMDGPU::V_ADD_CO_CI_U32_e32_gfx12:
+  case AMDGPU::V_SUB_CO_CI_U32_e32_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp_gfx12:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx12:
     printDefaultVccOperand(false, STI, O);
     break;
   }
@@ -699,6 +708,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
     case MCOI::OPERAND_IMMEDIATE:
+    case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
       printImmediate32(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -807,6 +817,18 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx11:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx11:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx11:
+  case AMDGPU::V_CNDMASK_B32_e32_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_e32_gfx12:
+  case AMDGPU::V_SUB_CO_CI_U32_e32_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx12:
+  case AMDGPU::V_CNDMASK_B32_dpp_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp_gfx12:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp_gfx12:
+  case AMDGPU::V_CNDMASK_B32_dpp8_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx12:
 
   case AMDGPU::V_CNDMASK_B32_e32_gfx6_gfx7:
   case AMDGPU::V_CNDMASK_B32_e32_vi:
