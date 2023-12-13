@@ -1,4 +1,4 @@
-// RUN: %clangxx -O0 %s -o %t && %env_tool_opts=die_after_fork=0 %run %t
+// RUN: %clang -O0 %s -o %t && %env_tool_opts=die_after_fork=0 %run %t
 
 // UNSUPPORTED: asan, lsan, hwasan
 
@@ -28,10 +28,11 @@ pthread_barrier_t bar;
 // start with locked internal mutexes.
 void ShouldNotDeadlock() {
   // Don't bother with leaks, we try to trigger allocator or lsan deadlock.
-  __lsan::ScopedDisabler disable;
-  char *volatile p = new char[10];
+  __lsan_disable();
+  void *volatile p = malloc(10);
   __lsan_do_recoverable_leak_check();
-  delete[] p;
+  free(p);
+  __lsan_enable();
 }
 
 // Prevent stack buffer cleanup by instrumentation.
@@ -59,7 +60,7 @@ NOSAN static void *inchild(void *arg) {
 int main(void) {
   pid_t pid;
 
-  pthread_barrier_init(&bar, nullptr, 2);
+  pthread_barrier_init(&bar, NULL, 2);
   pthread_t thread_id;
   while (pthread_create(&thread_id, 0, &inparent, 0) != 0) {
   }
