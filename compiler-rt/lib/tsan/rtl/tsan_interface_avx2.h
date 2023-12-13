@@ -27,14 +27,14 @@ extern "C" {
 #endif
 
 #if !SANITIZER_GO
-#  ifdef __AVX__
+#  ifdef __AVX2__
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_scatter_vector4(__m256i vaddr,
                                                           int width,
                                                           uint8_t mask);
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_gather_vector4(__m256i vaddr,
                                                          int width,
                                                          uint8_t mask);
-#  endif /*__AVX__*/
+#  endif /*__AVX2__*/
 #endif   // SANITIZER_GO
 
 #ifdef __cplusplus
