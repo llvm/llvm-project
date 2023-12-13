@@ -83,6 +83,15 @@ int foo() {
 // CHECK: cir.func {{.*@foo}}
 // CHECK:   {{.*}} = cir.get_global @optind : cir.ptr <!s32i>
 
+struct Glob {
+  double a[42];
+  int pad1[3];
+  double b[42];
+} glob;
+
+double *const glob_ptr = &glob.b[1];
+// CHECK: cir.global external @glob_ptr = #cir.global_view<@glob, [2 : i32, 1 : i32]> : !cir.ptr<f64>
+
 // TODO: test tentatives with internal linkage.
 
 // Tentative definition is THE definition. Should be zero-initialized.
