@@ -1390,6 +1390,7 @@ static void sectionMapping(IO &IO, ELFYAML::BBAddrMapSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Content", Section.Content);
   IO.mapOptional("Entries", Section.Entries);
+  IO.mapOptional("PGOAnalyses", Section.PGOAnalyses);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::StackSizesSection &Section) {
@@ -1823,6 +1824,28 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
+}
+
+void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(
+    IO &IO, ELFYAML::PGOAnalysisMapEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("FuncEntryCount", E.FuncEntryCount);
+  IO.mapOptional("PGOBBEntries", E.PGOBBEntries);
+}
+
+void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry>::mapping(
+    IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("BBFreq", E.BBFreq);
+  IO.mapOptional("Successors", E.Successors);
+}
+
+void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
+    mapping(IO &IO,
+            ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("ID", E.ID);
+  IO.mapRequired("BrProb", E.BrProb);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,

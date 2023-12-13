@@ -781,6 +781,22 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMesh",
+    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    hdrs = glob(["lib/Dialect/Mesh/**/*.h"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:MeshDialect",
+        "//mlir:MeshTransforms",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestNVGPU",
     srcs = glob(["lib/Dialect/NVGPU/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],

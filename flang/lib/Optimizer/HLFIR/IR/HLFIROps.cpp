@@ -663,7 +663,6 @@ template <typename NumericalReductionOp>
 static mlir::LogicalResult
 verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
   mlir::Value array = reductionOp->getArray();
-  mlir::Value dim = reductionOp->getDim();
   mlir::Value mask = reductionOp->getMask();
 
   fir::SequenceType arrayTy =

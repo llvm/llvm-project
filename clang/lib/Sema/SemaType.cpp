@@ -8360,12 +8360,25 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   // not to need a separate attribute)
   if (!(S.Context.getTargetInfo().hasFeature("neon") ||
         S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM)) {
+        S.Context.getTargetInfo().hasFeature("sve") ||
+        S.Context.getTargetInfo().hasFeature("sme") ||
+        IsTargetCUDAAndHostARM) &&
+      VecKind == VectorKind::Neon) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'neon', 'mve', 'sve' or 'sme'";
+    Attr.setInvalid();
+    return;
+  }
+  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
+        S.Context.getTargetInfo().hasFeature("mve") ||
+        IsTargetCUDAAndHostARM) &&
+      VecKind == VectorKind::NeonPoly) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
         << Attr << "'neon' or 'mve'";
     Attr.setInvalid();
     return;
   }
+
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)

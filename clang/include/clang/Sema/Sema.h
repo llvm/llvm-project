@@ -7311,8 +7311,7 @@ public:
 
   /// ActOnLambdaExpr - This is called when the body of a lambda expression
   /// was successfully completed.
-  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                             Scope *CurScope);
+  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body);
 
   /// Does copying/destroying the captured variable have side effects?
   bool CaptureHasSideEffects(const sema::Capture &From);
@@ -8738,7 +8737,7 @@ public:
                              SourceLocation IILoc,
                              bool DeducedTSTContext = true);
 
-
+  bool RebuildingTypesInCurrentInstantiation = false;
   TypeSourceInfo *RebuildTypeInCurrentInstantiation(TypeSourceInfo *T,
                                                     SourceLocation Loc,
                                                     DeclarationName Name);
