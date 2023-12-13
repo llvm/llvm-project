@@ -117,9 +117,9 @@ func.func @pad_pack_different_padding_value(%src: tensor<16641x16xf32>) -> tenso
 
 // -----
 
-func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>, %padding: f32) -> tensor<1x57x56x2x32xf32> {
+func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>) -> tensor<1x57x56x2x32xf32> {
   %0 = tensor.empty() : tensor<56x2x1x57x32xf32>
-  %pack = tensor.pack %arg0 padding_value(%padding : f32)
+  %pack = tensor.pack %arg0
     outer_dims_perm = [0, 3, 2, 1]
     inner_dims_pos = [3]
     inner_tiles = [32]
@@ -133,7 +133,33 @@ func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>, %pad
   return %transposed : tensor<1x57x56x2x32xf32>
 }
 //      CHECK: func @tensor_pack_linalg_transpose_fold(
-// CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>, %[[PADDING:.+]]: f32)
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
+//      CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<1x57x56x2x32xf32>
+//      CHECK:   %[[PACK:.+]] = tensor.pack %[[ARG0]]
+// CHECK-SAME:      outer_dims_perm = [2, 1, 0, 3]
+// CHECK-SAME:      inner_dims_pos = [3] inner_tiles = [32] 
+// CHECK-SAME:       into %[[INIT]]
+//      CHECK:   return %[[PACK]]
+
+// -----
+
+func.func @tensor_pack_linalg_transpose_fold_with_padding(%arg0: tensor<56x57x1x55xf32>, %padding: f32) -> tensor<1x57x56x2x32xf32> {
+  %0 = tensor.empty() : tensor<56x2x1x57x32xf32>
+  %pack = tensor.pack %arg0 padding_value(%padding : f32)
+    outer_dims_perm = [0, 3, 2, 1]
+    inner_dims_pos = [3]
+    inner_tiles = [32]
+    into %0 : tensor<56x57x1x55xf32> -> tensor<56x2x1x57x32xf32>
+
+  %1 = tensor.empty() : tensor<1x57x56x2x32xf32>
+  %transposed = linalg.transpose
+    ins(%pack : tensor<56x2x1x57x32xf32>)
+    outs(%1 : tensor<1x57x56x2x32xf32>)
+    permutation = [2, 3, 0, 1, 4]
+  return %transposed : tensor<1x57x56x2x32xf32>
+}
+//      CHECK: func @tensor_pack_linalg_transpose_fold_with_padding(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x55xf32>, %[[PADDING:.+]]: f32)
 //      CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<1x57x56x2x32xf32>
 //      CHECK:   %[[PACK:.+]] = tensor.pack %[[ARG0]] padding_value(%[[PADDING]] : f32)
 // CHECK-SAME:      outer_dims_perm = [2, 1, 0, 3]
