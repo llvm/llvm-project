@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
@@ -628,7 +629,7 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addPass(MergeICmpsPass());
-    addPass(ExpandMemCmpPass());
+    addPass(ExpandMemCmpPass(&TM));
   }
 
   // Run GC lowering passes for builtin collectors
