@@ -2246,7 +2246,8 @@ void InstrRefBasedLDV::accumulateFragmentMap(MachineInstr &MI) {
   AllSeenFragments.insert(ThisFragment);
 }
 
-void InstrRefBasedLDV::process(MachineInstr &MI, const FuncValueTable *MLiveOuts,
+void InstrRefBasedLDV::process(MachineInstr &MI,
+                               const FuncValueTable *MLiveOuts,
                                const FuncValueTable *MLiveIns) {
   // Try to interpret an MI as a debug or transfer instruction. Only if it's
   // none of these should we interpret it's register defs as new value
