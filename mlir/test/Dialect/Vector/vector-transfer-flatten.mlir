@@ -271,6 +271,20 @@ func.func @fold_unit_dim_add_basic(%arg0 : vector<1x8xi32>) -> vector<1x8xi32> {
 
 // -----
 
+func.func @fold_unit_dim_add_leading_and_trailing(%arg0 : vector<1x8x1xi32>) -> vector<1x8x1xi32> {
+   %add = arith.addi %arg0, %arg0 : vector<1x8x1xi32>
+   return %add : vector<1x8x1xi32>
+}
+// CHECK-LABEL:   func.func @fold_unit_dim_add_leading_and_trailing(
+// CHECK-SAME:      %[[VAL_0:.*]]: vector<1x8x1xi32>) -> vector<1x8x1xi32> {
+// CHECK:           %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x8x1xi32> to vector<8xi32>
+// CHECK:           %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x8x1xi32> to vector<8xi32>
+// CHECK:           %[[VAL_3:.*]] = arith.addi %[[VAL_1]], %[[VAL_2]] : vector<8xi32>
+// CHECK:           %[[VAL_4:.*]] = vector.shape_cast %[[VAL_3]] : vector<8xi32> to vector<1x8x1xi32>
+// CHECK:           return %[[VAL_4]] : vector<1x8x1xi32>
+
+// -----
+
 func.func @fold_unit_dim_add(%arg0 : vector<8x1xi32>,
                              %arg1 : vector<1x8xi32>) -> vector<8xi32> {
    %sc_arg0 = vector.shape_cast %arg0 : vector<8x1xi32> to vector<1x8xi32>

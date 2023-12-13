@@ -1446,15 +1446,16 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-/// Replace:
+/// For vectors with either leading or trailing unit dim, replaces:
 ///   elementwise(a, b)
 /// with:
 ///   sc_a = shape_cast(a)
 ///   sc_b = shape_cast(b)
 ///   res = elementwise(sc_a, sc_b)
 ///   return shape_cast(res)
-/// for which `a` and `b` are vectors of rank > 1 and have unit leading and/or
-/// trailing dimension.
+/// The newly inserted shape_cast Ops fold (before elementwise Op) and then
+/// restore (after elementwise Op) the unit dim. Vectors `a` and `b` are
+/// required to be rank > 1.
 ///
 /// Ex:
 /// ```
