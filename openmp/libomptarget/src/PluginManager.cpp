@@ -290,8 +290,8 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
   // Flush in-process OMPT trace records and shut down helper threads
   // before unloading the library.
-  OMPT_TRACING_IF_ENABLED(
-      llvm::omp::target::ompt::TraceRecordManager.shutdownHelperThreads(););
+  OMPT_TRACING_IF_ENABLED(llvm::omp::target::ompt::TraceRecordManager
+                              .flushAndShutdownHelperThreads(););
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.

@@ -573,7 +573,9 @@ uint64_t OmptTracingBufferMgr::addNewFlushEntry(BufPtr buf, void *cursor) {
  * existing buffers in creation order and flush all the ready TRs
  */
 int OmptTracingBufferMgr::flushAllBuffers(int DeviceId) {
-  if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1)
+  DP("Flushing buffers for device %d\n", DeviceId);
+  // Overloading MAX_NUM_DEVICES to mean all devices.
+  if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES)
     return 0; // failed to flush
 
   if (!areHelperThreadsAvailable())
@@ -603,8 +605,9 @@ int OmptTracingBufferMgr::flushAllBuffers(int DeviceId) {
     }
     BufPtr curr_buf = buf_itr->second;
 
-    // If the device-id does not match, skip it.
-    if (curr_buf->DeviceId != DeviceId) {
+    // If the device-id does not match, skip it. A device-id of MAX_NUM_DEVICES
+    // indicates flushing for all devices.
+    if (DeviceId != MAX_NUM_DEVICES && curr_buf->DeviceId != DeviceId) {
       ++curr_buf_id;
       continue;
     }
@@ -620,6 +623,7 @@ int OmptTracingBufferMgr::flushAllBuffers(int DeviceId) {
     // This buffer has not been flushed yet
     void *CurrBufCursor = getBufferCursor(curr_buf);
     uint64_t flush_id = addNewFlushEntry(curr_buf, CurrBufCursor);
+    (void)flush_id; // Silence warning.
     DP("flushAllBuffers: Added new id %lu cursor %p buf %p\n", flush_id,
        CurrBufCursor, curr_buf->Start);
 
@@ -701,6 +705,13 @@ void OmptTracingBufferMgr::shutdownHelperThreads() {
 
   // Now destroy all the helper threads
   destroyHelperThreads();
+}
+
+void OmptTracingBufferMgr::flushAndShutdownHelperThreads() {
+  std::unique_lock<std::mutex> Lock(llvm::omp::target::ompt::TraceControlMutex);
+  // Flush buffers for all devices.
+  flushAllBuffers(MAX_NUM_DEVICES);
+  shutdownHelperThreads();
 }
 
 void OmptTracingBufferMgr::createHelperThreads() {

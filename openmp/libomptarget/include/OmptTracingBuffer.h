@@ -364,8 +364,13 @@ public:
   // The caller must not hold the flush lock
   void startHelperThreads();
 
-  // The caller must not hold the flush lock
+  // The caller must not hold the flush lock. The helper threads are shut down
+  // without flushing any outstanding trace records.
   void shutdownHelperThreads();
+
+  // The caller must not hold the flush lock. The helper threads are shut down
+  // after flushing all outstanding trace records for all devices.
+  void flushAndShutdownHelperThreads();
 
   // Assign a cursor for a new trace record. This will assign a trace record
   // for the provided device-id, allocating a new buffer if required.
