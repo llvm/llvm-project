@@ -43,36 +43,49 @@ constexpr bool test() {
 
   { // year_month_weekday + months (and switched)
     year_month_weekday ym{year{1234}, January, weekday_indexed{Tuesday, 3}};
-    for (int i = 0; i <= 10; ++i) // TODO test wrap-around
-    {
-      year_month_weekday ym1 = ym + months{i};
-      year_month_weekday ym2 = months{i} + ym;
-      assert(static_cast<int>(ym1.year()) == 1234);
-      assert(static_cast<int>(ym2.year()) == 1234);
-      assert(ym1.month() == month(1 + i));
-      assert(ym2.month() == month(1 + i));
-      assert(ym1.weekday() == Tuesday);
-      assert(ym2.weekday() == Tuesday);
-      assert(ym1.index() == 3);
-      assert(ym2.index() == 3);
-      assert(ym1 == ym2);
+    for (int i = 0; i <= 10; ++i) {
+      year_month_weekday ymwd1 = ym + months{i};
+      year_month_weekday ymwd2 = months{i} + ym;
+      assert(static_cast<int>(ymwd1.year()) == 1234);
+      assert(static_cast<int>(ymwd2.year()) == 1234);
+      assert(ymwd1.month() == month(1 + i));
+      assert(ymwd2.month() == month(1 + i));
+      assert(ymwd1.weekday() == Tuesday);
+      assert(ymwd2.weekday() == Tuesday);
+      assert(ymwd1.index() == 3);
+      assert(ymwd2.index() == 3);
+      assert(ymwd1 == ymwd2);
+    }
+    // Test the year wraps around.
+    for (int i = 12; i <= 15; ++i) {
+      year_month_weekday ymwd1 = ym + months{i};
+      year_month_weekday ymwd2 = months{i} + ym;
+      assert(static_cast<int>(ymwd1.year()) == 1235);
+      assert(static_cast<int>(ymwd2.year()) == 1235);
+      assert(ymwd1.month() == month(1 + i - 12));
+      assert(ymwd2.month() == month(1 + i - 12));
+      assert(ymwd1.weekday() == Tuesday);
+      assert(ymwd2.weekday() == Tuesday);
+      assert(ymwd1.index() == 3);
+      assert(ymwd2.index() == 3);
+      assert(ymwd1 == ymwd2);
     }
   }
 
   { // year_month_weekday + years (and switched)
     year_month_weekday ym{year{1234}, std::chrono::January, weekday_indexed{Tuesday, 3}};
     for (int i = 0; i <= 10; ++i) {
-      year_month_weekday ym1 = ym + years{i};
-      year_month_weekday ym2 = years{i} + ym;
-      assert(static_cast<int>(ym1.year()) == i + 1234);
-      assert(static_cast<int>(ym2.year()) == i + 1234);
-      assert(ym1.month() == January);
-      assert(ym2.month() == January);
-      assert(ym1.weekday() == Tuesday);
-      assert(ym2.weekday() == Tuesday);
-      assert(ym1.index() == 3);
-      assert(ym2.index() == 3);
-      assert(ym1 == ym2);
+      year_month_weekday ymwd1 = ym + years{i};
+      year_month_weekday ymwd2 = years{i} + ym;
+      assert(static_cast<int>(ymwd1.year()) == i + 1234);
+      assert(static_cast<int>(ymwd2.year()) == i + 1234);
+      assert(ymwd1.month() == January);
+      assert(ymwd2.month() == January);
+      assert(ymwd1.weekday() == Tuesday);
+      assert(ymwd2.weekday() == Tuesday);
+      assert(ymwd1.index() == 3);
+      assert(ymwd2.index() == 3);
+      assert(ymwd1 == ymwd2);
     }
   }
 

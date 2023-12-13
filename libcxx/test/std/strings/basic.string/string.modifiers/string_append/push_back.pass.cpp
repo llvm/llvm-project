@@ -68,6 +68,10 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S(), 'a', S(1, 'a'));
   test(S("12345"), 'a', S("12345a"));
   test(S("12345678901234567890"), 'a', S("12345678901234567890a"));
+  test(S("123abcabcdefghabcdefgh"), 'a', S("123abcabcdefghabcdefgha"));
+  test(S("123abcabcdefghabcdefgha"), 'b', S("123abcabcdefghabcdefghab"));
+  test(S("123abcabcdefghabcdefghab"), 'c', S("123abcabcdefghabcdefghabc"));
+  test(S("123abcabcdefghabcdefghabc"), 'd', S("123abcabcdefghabcdefghabcd"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
