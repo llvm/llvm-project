@@ -280,12 +280,11 @@ LIBC_INLINE static double log2_eval(double x) {
   double result = 0;
   result += bs.get_exponent();
 
-  int p1 =
-      (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - LOG_P1_BITS)) &
-      (LOG_P1_SIZE - 1);
+  int p1 = (bs.get_mantissa() >> (FPB::MANTISSA_WIDTH - LOG_P1_BITS)) &
+           (LOG_P1_SIZE - 1);
 
-  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> LOG_P1_BITS;
-  bs.set_biased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.bits &= FPB::MANTISSA_MASK >> LOG_P1_BITS;
+  bs.set_biased_exponent(FPB::EXPONENT_BIAS);
   double dx = (bs.get_val() - 1.0) * LOG_P1_1_OVER[p1];
 
   // Taylor series for log(2,1+x)
@@ -311,12 +310,11 @@ LIBC_INLINE static double log_eval(double x) {
 
   // p1 is the leading 7 bits of mx, i.e.
   // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
-  int p1 = static_cast<int>(bs.get_mantissa() >>
-                            (FPB::FloatProp::MANTISSA_WIDTH - 7));
+  int p1 = static_cast<int>(bs.get_mantissa() >> (FPB::MANTISSA_WIDTH - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
-  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;
-  bs.set_biased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  bs.bits &= FPB::MANTISSA_MASK >> 7;
+  bs.set_biased_exponent(FPB::EXPONENT_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
   double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];
 
