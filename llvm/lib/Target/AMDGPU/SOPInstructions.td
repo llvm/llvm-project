@@ -847,6 +847,15 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
 
+// On GFX12 MIN/MAX instructions do not read MODE register.
+let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
+    isReMaterializable = 1, SchedRW = [WriteSFPU] in {
+  def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
+  def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
+  def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
+  def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", fmaximum>;
+}
+
 //===----------------------------------------------------------------------===//
 // SOPK Instructions
 //===----------------------------------------------------------------------===//
@@ -2017,6 +2026,10 @@ defm S_MIN_NUM_F32 : SOP2_Real_Renamed_gfx12<0x042, S_MIN_F32, "s_min_num_f32">;
 defm S_MAX_NUM_F32 : SOP2_Real_Renamed_gfx12<0x043, S_MAX_F32, "s_max_num_f32">;
 defm S_MIN_NUM_F16 : SOP2_Real_Renamed_gfx12<0x04b, S_MIN_F16, "s_min_num_f16">;
 defm S_MAX_NUM_F16 : SOP2_Real_Renamed_gfx12<0x04c, S_MAX_F16, "s_max_num_f16">;
+defm S_MINIMUM_F32 : SOP2_Real_gfx12<0x04f>;
+defm S_MAXIMUM_F32 : SOP2_Real_gfx12<0x050>;
+defm S_MINIMUM_F16 : SOP2_Real_gfx12<0x051>;
+defm S_MAXIMUM_F16 : SOP2_Real_gfx12<0x052>;
 
 defm S_ADD_CO_U32    : SOP2_Real_Renamed_gfx12<0x000, S_ADD_U32, "s_add_co_u32">;
 defm S_SUB_CO_U32    : SOP2_Real_Renamed_gfx12<0x001, S_SUB_U32, "s_sub_co_u32">;
