@@ -3185,9 +3185,6 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 #define GET_SME_STREAMING_ATTRS
 #include "clang/Basic/arm_sme_streaming_attrs.inc"
 #undef GET_SME_STREAMING_ATTRS
-#define GET_SVE_STREAMING_ATTRS
-#include "clang/Basic/arm_sve_streaming_attrs.inc"
-#undef GET_SVE_STREAMING_ATTRS
     }
 
     if (BuiltinType)
@@ -3211,6 +3208,7 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
+
     switch (BuiltinID) {
     default:
       break;
@@ -3230,9 +3228,6 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 #define GET_SVE_IMMEDIATE_CHECK
 #include "clang/Basic/arm_sve_sema_rangechecks.inc"
 #undef GET_SVE_IMMEDIATE_CHECK
-#define GET_SME_IMMEDIATE_CHECK
-#include "clang/Basic/arm_sme_sema_rangechecks.inc"
-#undef GET_SME_IMMEDIATE_CHECK
   }
 
   return ParseSVEImmChecks(TheCall, ImmChecks);

@@ -1717,14 +1717,17 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     return A->getMangledName() < B->getMangledName();
   });
 
+  StringRef ExtensionKind;
   switch (Kind) {
   case ACLEKind::SME:
-    OS << "#ifdef GET_SME_STREAMING_ATTRS\n";
+    ExtensionKind = "SME";
     break;
   case ACLEKind::SVE:
-    OS << "#ifdef GET_SVE_STREAMING_ATTRS\n";
+    ExtensionKind = "SVE";
     break;
   }
+
+  OS << "#ifdef GET_" << ExtensionKind << "_STREAMING_ATTRS\n";
 
   // Ensure these are only emitted once.
   std::set<std::string> Emitted;
@@ -1736,14 +1739,7 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (Emitted.find(Def->getMangledName()) != Emitted.end())
       continue;
 
-    switch (Kind) {
-    case ACLEKind::SME:
-      OS << "case SME::BI__builtin_sme_";
-      break;
-    case ACLEKind::SVE:
-      OS << "case SVE::BI__builtin_sve_";
-      break;
-    }
+    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower() << "_";
     OS << Def->getMangledName() << ":\n";
 
     if (Def->isFlagSet(IsStreamingFlag))
