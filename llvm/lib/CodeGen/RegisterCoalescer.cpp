@@ -1611,8 +1611,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
 
-  if (NewMI.getOperand(0).getSubReg())
-    NewMI.getOperand(0).setIsUndef();
+  NewMI.setRegisterDefReadUndef(NewMI.getOperand(0).getReg());
 
   // Transfer over implicit operands to the rematerialized instruction.
   for (MachineOperand &MO : ImplicitOps)
