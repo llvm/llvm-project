@@ -20,6 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/Debug.h"
 #include <cstring>
 #include <memory>
