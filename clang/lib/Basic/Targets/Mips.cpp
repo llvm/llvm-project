@@ -196,7 +196,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("_MIPS_ARCH_" + StringRef(CPU).upper());
 
-  if (StringRef(CPU).startswith("octeon"))
+  if (StringRef(CPU).starts_with("octeon"))
     Builder.defineMacro("__OCTEON__");
 
   if (CPU != "mips1") {
