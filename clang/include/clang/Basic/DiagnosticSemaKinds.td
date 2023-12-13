@@ -3146,8 +3146,10 @@ def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
 def err_attribute_invalid_sve_type : Error<
   "%0 attribute applied to non-SVE type %1">;
+def err_attribute_x86_feature_gro_vector_size_unsupported : Error<
+  "vector size is not supported when '-mgeneral-regs-only' is specified">;
 def err_attribute_bad_sve_vector_size : Error<
-  "invalid SVE vector size '%0', must match value set by "
+  "invalid vector size '%0', must match value set by "
   "'-msve-vector-bits' ('%1')">;
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
