@@ -225,9 +225,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     StringRef ABIStr = Target.getABI();
     unsigned XLen = Target.getPointerWidth(LangAS::Default);
     unsigned ABIFLen = 0;
-    if (ABIStr.endswith("f"))
+    if (ABIStr.ends_with("f"))
       ABIFLen = 32;
-    else if (ABIStr.endswith("d"))
+    else if (ABIStr.ends_with("d"))
       ABIFLen = 64;
     return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen);
   }
@@ -308,9 +308,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::loongarch64: {
     StringRef ABIStr = Target.getABI();
     unsigned ABIFRLen = 0;
-    if (ABIStr.endswith("f"))
+    if (ABIStr.ends_with("f"))
       ABIFRLen = 32;
-    else if (ABIStr.endswith("d"))
+    else if (ABIStr.ends_with("d"))
       ABIFRLen = 64;
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
@@ -1715,7 +1715,7 @@ static void AppendTargetMangling(const CodeGenModule &CGM,
   llvm::sort(Info.Features, [&Target](StringRef LHS, StringRef RHS) {
     // Multiversioning doesn't allow "no-${feature}", so we can
     // only have "+" prefixes here.
-    assert(LHS.startswith("+") && RHS.startswith("+") &&
+    assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
     return Target.multiVersionSortPriority(LHS.substr(1)) >
            Target.multiVersionSortPriority(RHS.substr(1));
@@ -1769,7 +1769,7 @@ static void AppendTargetClonesMangling(const CodeGenModule &CGM,
   } else {
     Out << '.';
     StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
-    if (FeatureStr.startswith("arch="))
+    if (FeatureStr.starts_with("arch="))
       Out << "arch_" << FeatureStr.substr(sizeof("arch=") - 1);
     else
       Out << FeatureStr;
@@ -3828,7 +3828,7 @@ namespace {
       if (!BuiltinID || !BI.isLibFunction(BuiltinID))
         return false;
       StringRef BuiltinName = BI.getName(BuiltinID);
-      if (BuiltinName.startswith("__builtin_") &&
+      if (BuiltinName.starts_with("__builtin_") &&
           Name == BuiltinName.slice(strlen("__builtin_"), StringRef::npos)) {
         return true;
       }
@@ -4164,7 +4164,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               Feature.push_back(CurFeat.trim());
           }
         } else {
-          if (Version.startswith("arch="))
+          if (Version.starts_with("arch="))
             Architecture = Version.drop_front(sizeof("arch=") - 1);
           else if (Version != "default")
             Feature.push_back(Version);

@@ -194,7 +194,7 @@ public:
 
 namespace views {
 namespace __split_view {
-struct __fn : __range_adaptor_closure<__fn> {
+struct __fn {
   // clang-format off
   template <class _Range, class _Pattern>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI

@@ -2,6 +2,9 @@
 
 // UNSUPPORTED: hwasan
 
+// The test uses pthread barriers which are not available on Darwin.
+// UNSUPPORTED: darwin
+
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
 // The test try to check two things:
@@ -58,6 +61,10 @@ NOSAN static void *inchild(void *arg) {
 }
 
 int main(void) {
+#if __has_feature(hwaddress_sanitizer)
+  __hwasan_enable_allocator_tagging();
+#endif
+
   pid_t pid;
 
   pthread_barrier_init(&bar, NULL, 2);
