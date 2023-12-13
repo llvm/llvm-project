@@ -78,6 +78,7 @@
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"

@@ -53,7 +53,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeHardwareLoopsLegacyPass(Registry);
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
-  initializeIndirectBrExpandPassPass(Registry);
+  initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeJMCInstrumenterPass(Registry);
