@@ -448,15 +448,6 @@ void SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
   // TODO
 }
 
-void SymbolFileBreakpad::FindTypes(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {}
-
-void SymbolFileBreakpad::FindTypes(
-    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {}
-
 void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   Log *log = GetLog(LLDBLog::Symbols);
   Module &module = *m_objfile_sp->GetModule();

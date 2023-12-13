@@ -184,8 +184,6 @@ public:
 
   static void DumpDeclContextHiearchy(clang::DeclContext *decl_ctx);
 
-  static bool DeclsAreEquivalent(clang::Decl *lhs_decl, clang::Decl *rhs_decl);
-
   static bool GetCompleteDecl(clang::ASTContext *ast, clang::Decl *decl);
 
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
@@ -557,6 +555,9 @@ public:
   CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                            size_t arg_idx) override;
 
+  std::vector<lldb_private::CompilerContext>
+  DeclGetCompilerContext(void *opaque_decl) override;
+
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   // CompilerDeclContext override functions
@@ -585,6 +586,9 @@ public:
                                       void *other_opaque_decl_ctx) override;
 
   lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override;
+
+  std::vector<lldb_private::CompilerContext>
+  DeclContextGetCompilerContext(void *opaque_decl_ctx) override;
 
   // Clang specific clang::DeclContext functions
 

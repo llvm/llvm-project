@@ -1626,16 +1626,18 @@ static size_t LookupTypeInModule(Target *target,
                                  CommandInterpreter &interpreter, Stream &strm,
                                  Module *module, const char *name_cstr,
                                  bool name_is_regex) {
-  TypeList type_list;
   if (module && name_cstr && name_cstr[0]) {
-    const uint32_t max_num_matches = UINT32_MAX;
-    bool name_is_fully_qualified = false;
+    TypeQuery query(name_cstr);
+    TypeResults results;
+    module->FindTypes(query, results);
 
-    ConstString name(name_cstr);
-    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    module->FindTypes(name, name_is_fully_qualified, max_num_matches,
-                      searched_symbol_files, type_list);
-
+    TypeList type_list;
+    SymbolContext sc;
+    if (module)
+      sc.module_sp = module->shared_from_this();
+    // Sort the type results and put the results that matched in \a module
+    // first if \a module was specified.
+    sc.SortTypeList(results.GetTypeMap(), type_list);
     if (type_list.Empty())
       return 0;
 
@@ -1668,22 +1670,21 @@ static size_t LookupTypeInModule(Target *target,
       }
       strm.EOL();
     }
+    return type_list.GetSize();
   }
-  return type_list.GetSize();
+  return 0;
 }
 
 static size_t LookupTypeHere(Target *target, CommandInterpreter &interpreter,
                              Stream &strm, Module &module,
                              const char *name_cstr, bool name_is_regex) {
+  TypeQuery query(name_cstr);
+  TypeResults results;
+  module.FindTypes(query, results);
   TypeList type_list;
-  const uint32_t max_num_matches = UINT32_MAX;
-  bool name_is_fully_qualified = false;
-
-  ConstString name(name_cstr);
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  module.FindTypes(name, name_is_fully_qualified, max_num_matches,
-                   searched_symbol_files, type_list);
-
+  SymbolContext sc;
+  sc.module_sp = module.shared_from_this();
+  sc.SortTypeList(results.GetTypeMap(), type_list);
   if (type_list.Empty())
     return 0;
 
@@ -2003,7 +2004,7 @@ protected:
             result.GetOutputStream().EOL();
             result.GetOutputStream().EOL();
           }
-          if (INTERRUPT_REQUESTED(GetDebugger(), 
+          if (INTERRUPT_REQUESTED(GetDebugger(),
                                   "Interrupted in dump all symtabs with {0} "
                                   "of {1} dumped.", num_dumped, num_modules))
             break;
@@ -2033,8 +2034,8 @@ protected:
                 result.GetOutputStream().EOL();
                 result.GetOutputStream().EOL();
               }
-              if (INTERRUPT_REQUESTED(GetDebugger(), 
-                    "Interrupted in dump symtab list with {0} of {1} dumped.", 
+              if (INTERRUPT_REQUESTED(GetDebugger(),
+                    "Interrupted in dump symtab list with {0} of {1} dumped.",
                     num_dumped, num_matches))
                 break;
 
@@ -2097,7 +2098,7 @@ protected:
       result.GetOutputStream().Format("Dumping sections for {0} modules.\n",
                                       num_modules);
       for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-        if (INTERRUPT_REQUESTED(GetDebugger(), 
+        if (INTERRUPT_REQUESTED(GetDebugger(),
               "Interrupted in dump all sections with {0} of {1} dumped",
               image_idx, num_modules))
           break;
@@ -2118,7 +2119,7 @@ protected:
             FindModulesByName(target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (INTERRUPT_REQUESTED(GetDebugger(), 
+            if (INTERRUPT_REQUESTED(GetDebugger(),
                   "Interrupted in dump section list with {0} of {1} dumped.",
                   i, num_matches))
               break;
@@ -2263,7 +2264,7 @@ protected:
       }
 
       for (size_t i = 0; i < num_matches; ++i) {
-        if (INTERRUPT_REQUESTED(GetDebugger(), 
+        if (INTERRUPT_REQUESTED(GetDebugger(),
               "Interrupted in dump clang ast list with {0} of {1} dumped.",
               i, num_matches))
           break;
@@ -2404,9 +2405,9 @@ protected:
         if (num_modules > 0) {
           uint32_t num_dumped = 0;
           for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-            if (INTERRUPT_REQUESTED(GetDebugger(), 
+            if (INTERRUPT_REQUESTED(GetDebugger(),
                                     "Interrupted in dump all line tables with "
-                                    "{0} of {1} dumped", num_dumped, 
+                                    "{0} of {1} dumped", num_dumped,
                                     num_modules))
               break;
 

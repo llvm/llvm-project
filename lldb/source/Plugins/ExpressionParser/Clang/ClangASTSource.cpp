@@ -201,19 +201,17 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
       LLDB_LOG(log, "      CTD Searching namespace {0} in module {1}",
                item.second.GetName(), item.first->GetFileSpec().GetFilename());
 
-      TypeList types;
-
       ConstString name(decl->getName());
 
-      item.first->FindTypesInNamespace(name, item.second, UINT32_MAX, types);
+      // Create a type matcher using the CompilerDeclContext for the namespace
+      // as the context (item.second) and search for the name inside of this
+      // context.
+      TypeQuery query(item.second, name);
+      TypeResults results;
+      item.first->FindTypes(query, results);
 
-      for (uint32_t ti = 0, te = types.GetSize(); ti != te; ++ti) {
-        lldb::TypeSP type = types.GetTypeAtIndex(ti);
-
-        if (!type)
-          continue;
-
-        CompilerType clang_type(type->GetFullCompilerType());
+      for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types()) {
+        CompilerType clang_type(type_sp->GetFullCompilerType());
 
         if (!ClangUtil::IsClangType(clang_type))
           continue;
@@ -233,24 +231,15 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
       }
     }
   } else {
-    TypeList types;
-
-    ConstString name(decl->getName());
-
     const ModuleList &module_list = m_target->GetImages();
+    // Create a type matcher using a CompilerDecl. Each TypeSystem class knows
+    // how to fill out a CompilerContext array using a CompilerDecl.
+    TypeQuery query(CompilerDecl(m_clang_ast_context, (void *)decl));
+    TypeResults results;
+    module_list.FindTypes(nullptr, query, results);
+    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types()) {
 
-    bool exact_match = false;
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    module_list.FindTypes(nullptr, name, exact_match, UINT32_MAX,
-                          searched_symbol_files, types);
-
-    for (uint32_t ti = 0, te = types.GetSize(); ti != te; ++ti) {
-      lldb::TypeSP type = types.GetTypeAtIndex(ti);
-
-      if (!type)
-        continue;
-
-      CompilerType clang_type(type->GetFullCompilerType());
+      CompilerType clang_type(type_sp->GetFullCompilerType());
 
       if (!ClangUtil::IsClangType(clang_type))
         continue;
@@ -262,13 +251,6 @@ TagDecl *ClangASTSource::FindCompleteType(const TagDecl *decl) {
         continue;
 
       TagDecl *candidate_tag_decl = const_cast<TagDecl *>(tag_type->getDecl());
-
-      // We have found a type by basename and we need to make sure the decl
-      // contexts are the same before we can try to complete this type with
-      // another
-      if (!TypeSystemClang::DeclsAreEquivalent(const_cast<TagDecl *>(decl),
-                                               candidate_tag_decl))
-        continue;
 
       if (TypeSystemClang::GetCompleteDecl(&candidate_tag_decl->getASTContext(),
                                            candidate_tag_decl))
@@ -614,41 +596,40 @@ void ClangASTSource::FindExternalVisibleDecls(
   if (context.m_found_type)
     return;
 
-  TypeList types;
-  const bool exact_match = true;
-  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-  if (module_sp && namespace_decl)
-    module_sp->FindTypesInNamespace(name, namespace_decl, 1, types);
-  else {
-    m_target->GetImages().FindTypes(module_sp.get(), name, exact_match, 1,
-                                    searched_symbol_files, types);
+  lldb::TypeSP type_sp;
+  TypeResults results;
+  if (module_sp && namespace_decl) {
+    // Match the name in the specified decl context.
+    TypeQuery query(namespace_decl, name, TypeQueryOptions::e_find_one);
+    module_sp->FindTypes(query, results);
+    type_sp = results.GetFirstType();
+  } else {
+    // Match the exact name of the type at the root level.
+    TypeQuery query(name.GetStringRef(), TypeQueryOptions::e_exact_match |
+                                             TypeQueryOptions::e_find_one);
+    m_target->GetImages().FindTypes(nullptr, query, results);
+    type_sp = results.GetFirstType();
   }
 
-  if (size_t num_types = types.GetSize()) {
-    for (size_t ti = 0; ti < num_types; ++ti) {
-      lldb::TypeSP type_sp = types.GetTypeAtIndex(ti);
+  if (type_sp) {
+    if (log) {
+      const char *name_string = type_sp->GetName().GetCString();
 
-      if (log) {
-        const char *name_string = type_sp->GetName().GetCString();
+      LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\": {1}", name,
+               (name_string ? name_string : "<anonymous>"));
+    }
 
-        LLDB_LOG(log, "  CAS::FEVD Matching type found for \"{0}\": {1}", name,
-                 (name_string ? name_string : "<anonymous>"));
-      }
+    CompilerType full_type = type_sp->GetFullCompilerType();
 
-      CompilerType full_type = type_sp->GetFullCompilerType();
+    CompilerType copied_clang_type(GuardedCopyType(full_type));
 
-      CompilerType copied_clang_type(GuardedCopyType(full_type));
-
-      if (!copied_clang_type) {
-        LLDB_LOG(log, "  CAS::FEVD - Couldn't export a type");
-
-        continue;
-      }
+    if (!copied_clang_type) {
+      LLDB_LOG(log, "  CAS::FEVD - Couldn't export a type");
+    } else {
 
       context.AddTypeDecl(copied_clang_type);
 
       context.m_found_type = true;
-      break;
     }
   }
 

@@ -431,31 +431,14 @@ void SymbolFileOnDemand::GetMangledNamesForFunction(
                                                      mangled_names);
 }
 
-void SymbolFileOnDemand::FindTypes(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
-  if (!m_debug_info_enabled) {
-    Log *log = GetLog();
-    LLDB_LOG(log, "[{0}] {1}({2}) is skipped", GetSymbolFileName(),
-             __FUNCTION__, name);
-    return;
-  }
-  return m_sym_file_impl->FindTypes(name, parent_decl_ctx, max_matches,
-                                    searched_symbol_files, types);
-}
-
-void SymbolFileOnDemand::FindTypes(
-    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
+void SymbolFileOnDemand::FindTypes(const TypeQuery &match,
+                                   TypeResults &results) {
   if (!m_debug_info_enabled) {
     LLDB_LOG(GetLog(), "[{0}] {1} is skipped", GetSymbolFileName(),
              __FUNCTION__);
     return;
   }
-  return m_sym_file_impl->FindTypes(pattern, languages, searched_symbol_files,
-                                    types);
+  return m_sym_file_impl->FindTypes(match, results);
 }
 
 void SymbolFileOnDemand::GetTypes(SymbolContextScope *sc_scope,
