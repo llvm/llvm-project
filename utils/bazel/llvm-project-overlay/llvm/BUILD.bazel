@@ -1801,6 +1801,7 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
+        ":CFGuard",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2551,6 +2552,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":CFGuard",
         ":CodeGen",
         ":Core",
         ":Coroutines",
