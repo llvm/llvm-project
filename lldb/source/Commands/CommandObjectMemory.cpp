@@ -372,8 +372,6 @@ protected:
     if (view_as_type_cstr && view_as_type_cstr[0]) {
       // We are viewing memory as a type
 
-      const bool exact_match = false;
-      TypeList type_list;
       uint32_t reference_count = 0;
       uint32_t pointer_count = 0;
       size_t idx;
@@ -452,18 +450,18 @@ protected:
         }
       }
 
-      llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
       ConstString lookup_type_name(type_str.c_str());
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ModuleSP search_first;
-      if (frame) {
+      if (frame)
         search_first = frame->GetSymbolContext(eSymbolContextModule).module_sp;
-      }
-      target->GetImages().FindTypes(search_first.get(), lookup_type_name,
-                                    exact_match, 1, searched_symbol_files,
-                                    type_list);
+      TypeQuery query(lookup_type_name.GetStringRef(),
+                      TypeQueryOptions::e_find_one);
+      TypeResults results;
+      target->GetImages().FindTypes(search_first.get(), query, results);
+      TypeSP type_sp = results.GetFirstType();
 
-      if (type_list.GetSize() == 0 && lookup_type_name.GetCString()) {
+      if (!type_sp && lookup_type_name.GetCString()) {
         LanguageType language_for_type =
             m_memory_options.m_language_for_type.GetCurrentValue();
         std::set<LanguageType> languages_to_check;
@@ -499,15 +497,14 @@ protected:
       }
 
       if (!compiler_type.IsValid()) {
-        if (type_list.GetSize() == 0) {
+        if (type_sp) {
+          compiler_type = type_sp->GetFullCompilerType();
+        } else {
           result.AppendErrorWithFormat("unable to find any types that match "
                                        "the raw type '%s' for full type '%s'\n",
                                        lookup_type_name.GetCString(),
                                        view_as_type_cstr);
           return;
-        } else {
-          TypeSP type_sp(type_list.GetTypeAtIndex(0));
-          compiler_type = type_sp->GetFullCompilerType();
         }
       }
 
