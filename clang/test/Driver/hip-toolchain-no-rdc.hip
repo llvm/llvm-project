@@ -39,6 +39,11 @@
 // RUN:   %t/a.o %t/b.o \
 // RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 
+// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN:   --offload-arch=generic --offload-arch=gfx900 \
+// RUN:   %s -nogpuinc -nogpulib \
+// RUN: 2>&1 | FileCheck -check-prefixes=GENERIC %s
+
 //
 // Compile device code in a.cu to code object for gfx803.
 //
@@ -180,3 +185,15 @@
 // LKONLY-NOT: {{".*/llc"}}
 // LKONLY: [[LD:".*ld.*"]] {{.*}} "{{.*/a.o}}" "{{.*/b.o}}"
 // LKONLY-NOT: "-T" "{{.*}}.lk"
+
+//
+// Check mixed SPIRV and GPU arch.
+//
+
+// GENERIC: "-cc1" "-triple" "spirv64-unknown-unknown" {{.*}}"-emit-llvm-bc" {{.*}} "-o" "[[GEN_BC:.*bc]]"
+// GENERIC: {{".*llvm-spirv"}} "--spirv-max-version=1.1" "--spirv-ext=+all" "[[GEN_BC]]" "-o" "[[GEN_SPV:.*out]]"
+// GENERIC: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-obj" {{.*}}"-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_OBJ:.*o]]"
+// GENERIC: {{".*lld"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_OBJ]]"
+// GENERIC: {{".*clang-offload-bundler"}} "-type=o"
+// GENERIC-SAME: "-targets={{.*}}hipv4-amdgcn-amd-amdhsa--generic,hipv4-amdgcn-amd-amdhsa--gfx900"
+// GENERIC-SAME: "-input=[[GEN_SPV]]" "-input=[[GFX900_CO]]"

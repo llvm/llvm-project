@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "HIPUtility.h"
+#include "SPIRV.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Compilation.h"
@@ -208,6 +209,13 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (JA.getType() == types::TY_LLVM_BC)
     return constructLlvmLinkCommand(C, JA, Inputs, Output, Args);
+
+  if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "generic") {
+    llvm::opt::ArgStringList TrArgs{"--spirv-max-version=1.1",
+                                    "--spirv-ext=+all"};
+    return SPIRV::constructTranslateCommand(C, *this, JA, Output, Inputs[0],
+                                            TrArgs);
+  }
 
   return constructLldCommand(C, JA, Inputs, Output, Args);
 }

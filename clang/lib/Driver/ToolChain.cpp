@@ -1008,6 +1008,10 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     tools::arm::setFloatABIInTriple(getDriver(), Args, Triple);
     return Triple.getTriple();
   }
+  case llvm::Triple::amdgcn:
+    if (Args.getLastArgValue(options::OPT_mcpu_EQ) == "generic")
+      return "spirv64-unknown-unknown";
+    return getTripleString();
   }
 }
 

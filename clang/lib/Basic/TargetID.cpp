@@ -46,8 +46,11 @@ getAllPossibleTargetIDFeatures(const llvm::Triple &T,
 /// Returns canonical processor name or empty string if \p Processor is invalid.
 static llvm::StringRef getCanonicalProcessorName(const llvm::Triple &T,
                                                  llvm::StringRef Processor) {
-  if (T.isAMDGPU())
+  if (T.isAMDGPU()) {
+    if (Processor == "generic")
+      return Processor;
     return llvm::AMDGPU::getCanonicalArchName(T, Processor);
+  }
   return Processor;
 }
 

@@ -266,3 +266,31 @@ Example Usage
       Base* basePtr = &obj;
       basePtr->virtualFunction(); // Allowed since obj is constructed in device code
    }
+
+SPIRV Support on HIPAMD ToolChain
+=================================
+
+SPIRV is a target-neutral device executable format. The support for SPIRV in the ROCm and HIPAMD toolchain is under active development.
+
+Compilation Process
+-------------------
+
+When compiling HIP programs with the intent of utilizing SPIRV, the process diverges from the traditional compilation flow:
+
+Using ``--offload-arch=generic``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- **Target Triple**: The ``--offload-arch=generic`` flag instructs the compiler to use the target triple ``spirv64-unknown-unknown``. This approach does not generate ISA (Instruction Set Architecture) for a specific GPU architecture.
+
+- **LLVM IR Translation**: The program is compiled to LLVM Intermediate Representation (IR), which is subsequently translated into SPIRV.
+
+- **Clang Offload Bundler**: The resulting SPIRV is embedded in the Clang offload bundler with the bundle ID ``hipv4-hip-amdgcn-amd-amdhsa-generic``.
+
+Mixed with Normal ``--offload-arch``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- **ISA Generation**: Alongside SPIRV, the compiler can also generate ISA for specific GPU architectures when normal ``--offload-arch`` options are used.
+
+- **Runtime Behavior**: The HIP runtime prioritizes the use of ISA for a specific GPU if available. In its absence, and if SPIRV is available, the runtime will JIT (Just-In-Time) compile SPIRV into ISA.
+
+This approach allows for greater flexibility and portability in HIP programming, particularly in environments where the specific GPU architecture may vary or be unknown at compile time. The ability to mix SPIRV with specific ISA generation also provides a balanced solution for optimizing performance while maintaining portability.
