@@ -652,7 +652,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         Status deref_error;
         if (valobj_sp->GetCompilerType().IsReferenceType()) {
           valobj_sp = valobj_sp->GetSyntheticValue()->Dereference(deref_error);
-          if (error.Fail()) {
+          if (!valobj_sp || deref_error.Fail()) {
             error.SetErrorStringWithFormatv(
                 "Failed to dereference reference type: %s", deref_error);
             return ValueObjectSP();
@@ -660,7 +660,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         }
 
         valobj_sp = valobj_sp->Dereference(deref_error);
-        if (error.Fail()) {
+        if (!valobj_sp || deref_error.Fail()) {
           error.SetErrorStringWithFormatv(
               "Failed to dereference sythetic value: {0}", deref_error);
           return ValueObjectSP();
@@ -795,9 +795,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // what we have is *ptr[low]. the most similar C++ syntax is to deref
           // ptr and extract bit low out of it. reading array item low would be
           // done by saying ptr[low], without a deref * sign
-          Status error;
-          ValueObjectSP temp(valobj_sp->Dereference(error));
-          if (error.Fail()) {
+          Status deref_error;
+          ValueObjectSP temp(valobj_sp->Dereference(deref_error));
+          if (!temp || deref_error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "could not dereference \"(%s) %s\"",
@@ -813,9 +813,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // arr[0] (an operation that is equivalent to deref-ing arr) and
           // extract bit low out of it. reading array item low would be done by
           // saying arr[low], without a deref * sign
-          Status error;
           ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
-          if (error.Fail()) {
+          if (!temp) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "could not get item 0 for \"(%s) %s\"",
@@ -994,9 +993,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // deref ptr and extract bits low thru high out of it. reading array
         // items low thru high would be done by saying ptr[low-high], without a
         // deref * sign
-        Status error;
-        ValueObjectSP temp(valobj_sp->Dereference(error));
-        if (error.Fail()) {
+        Status deref_error;
+        ValueObjectSP temp(valobj_sp->Dereference(deref_error));
+        if (!temp || deref_error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm);
           error.SetErrorStringWithFormat(
               "could not dereference \"(%s) %s\"",
@@ -1011,9 +1010,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // get arr[0] (an operation that is equivalent to deref-ing arr) and
         // extract bits low thru high out of it. reading array items low thru
         // high would be done by saying arr[low-high], without a deref * sign
-        Status error;
         ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
-        if (error.Fail()) {
+        if (!temp) {
           valobj_sp->GetExpressionPath(var_expr_path_strm);
           error.SetErrorStringWithFormat(
               "could not get item 0 for \"(%s) %s\"",

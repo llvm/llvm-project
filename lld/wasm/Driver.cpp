@@ -606,7 +606,6 @@ static void setConfigs() {
       config->memoryImport =
           std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
     }
-    config->importUndefined = true;
   }
 
   // If neither export-memory nor import-memory is specified, default to

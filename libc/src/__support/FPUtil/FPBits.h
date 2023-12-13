@@ -44,8 +44,7 @@ template <typename T> struct FPBits {
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
   using FloatProp = FloatProperties<T>;
-  // TODO: Change UintType name to BitsType for consistency.
-  using UIntType = typename FloatProp::BitsType;
+  using UIntType = typename FloatProp::UIntType;
 
   UIntType bits;
 
