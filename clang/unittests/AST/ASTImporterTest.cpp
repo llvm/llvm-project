@@ -4557,7 +4557,7 @@ TEST_P(ImportFriendClasses,
 
 TEST_P(ImportFriendClasses,
        ImportFriendTemplatesInDependentContext_DefToFriend_NE) {
-  Decl *ToTU = getToTuDecl(
+  getToTuDecl(
       R"(
       template<class T1>
       struct X {
@@ -4566,8 +4566,6 @@ TEST_P(ImportFriendClasses,
       };
       )",
       Lang_CXX03);
-  auto *ToYFriend = FirstDeclMatcher<ClassTemplateDecl>().match(
-      ToTU, classTemplateDecl(hasName("Y")));
   Decl *FromTU = getTuDecl(
       R"(
       template<class T1, class T2>
@@ -4612,7 +4610,7 @@ TEST_P(ImportFriendClasses,
 
 TEST_P(ImportFriendClasses,
        ImportFriendTemplatesInDependentContext_FriendToFriend_NE) {
-  Decl *ToTU = getToTuDecl(
+  getToTuDecl(
       R"(
       template<class T1>
       struct X {
@@ -4621,8 +4619,6 @@ TEST_P(ImportFriendClasses,
       };
       )",
       Lang_CXX03);
-  auto *ToYFriend = FirstDeclMatcher<ClassTemplateDecl>().match(
-      ToTU, classTemplateDecl(hasName("Y")));
   Decl *FromTU = getTuDecl(
       R"(
       template<class T1>
@@ -4667,14 +4663,12 @@ TEST_P(ImportFriendClasses,
 
 TEST_P(ImportFriendClasses,
        ImportFriendTemplatesInDependentContext_FriendToDef_NE) {
-  Decl *ToTU = getToTuDecl(
+  getToTuDecl(
       R"(
       template<class T1>
       struct Y {};
       )",
       Lang_CXX03);
-  auto *ToYDef = FirstDeclMatcher<ClassTemplateDecl>().match(
-      ToTU, classTemplateDecl(hasName("Y")));
   Decl *FromTU = getTuDecl(
       R"(
       template<class T1>
