@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <iterator>
+#include <vector>
 
 #include "test_iterators.h"
-#include <vector>
 
 static void bm_contains_char(benchmark::State& state) {
   std::vector<char> a(state.range(), 'a');
