@@ -2878,7 +2878,7 @@ def Target : InheritableAttr {
 
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
-        if (Feature.startswith("arch="))
+        if (Feature.starts_with("arch="))
           return Feature.drop_front(sizeof("arch=") - 1);
       }
       return "";
@@ -2896,8 +2896,8 @@ def Target : InheritableAttr {
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
 
-        if (!Feature.startswith("no-") && !Feature.startswith("arch=") &&
-            !Feature.startswith("fpmath=") && !Feature.startswith("tune="))
+        if (!Feature.starts_with("no-") && !Feature.starts_with("arch=") &&
+            !Feature.starts_with("fpmath=") && !Feature.starts_with("tune="))
           Out.push_back(Feature);
       }
     }

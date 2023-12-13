@@ -84,7 +84,7 @@ TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
 
 /// Normalizes an attribute name by dropping prefixed and suffixed __.
 static StringRef normalizeAttrName(StringRef Name) {
-  if (Name.size() >= 4 && Name.startswith("__") && Name.endswith("__"))
+  if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
     return Name.drop_front(2).drop_back(2);
   return Name;
 }
@@ -7854,7 +7854,7 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
 
   bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
   const IdentifierInfo *II = Tok.getIdentifierInfo();
-  if (getLangOpts().C23 && !II->getName().startswith("__"))
+  if (getLangOpts().C23 && !II->getName().starts_with("__"))
     Diag(Tok.getLocation(), diag::warn_c23_compat_keyword) << Tok.getName();
 
   Token OpTok = Tok;

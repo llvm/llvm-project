@@ -4118,7 +4118,8 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP32: {
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32: {
     int32_t Trunc = static_cast<int32_t>(Imm);
     return AMDGPU::isInlinableLiteral32(Trunc, ST.hasInv2PiInlineImm());
   }
@@ -4559,6 +4560,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
       break;
     }
+    case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
+      if (!MI.getOperand(i).isImm() || !isInlineConstant(MI, i)) {
+        ErrInfo = "Expected inline constant for operand.";
+        return false;
+      }
+      break;
     case MCOI::OPERAND_IMMEDIATE:
     case AMDGPU::OPERAND_KIMM32:
       // Check if this operand is an immediate.
@@ -5255,11 +5262,15 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_SUB_F32: return AMDGPU::V_SUB_F32_e64;
   case AMDGPU::S_MIN_F32: return AMDGPU::V_MIN_F32_e64;
   case AMDGPU::S_MAX_F32: return AMDGPU::V_MAX_F32_e64;
+  case AMDGPU::S_MINIMUM_F32: return AMDGPU::V_MINIMUM_F32_e64;
+  case AMDGPU::S_MAXIMUM_F32: return AMDGPU::V_MAXIMUM_F32_e64;
   case AMDGPU::S_MUL_F32: return AMDGPU::V_MUL_F32_e64;
   case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_fake16_e64;
   case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_fake16_e64;
   case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_fake16_e64;
   case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_fake16_e64;
+  case AMDGPU::S_MINIMUM_F16: return AMDGPU::V_MINIMUM_F16_e64;
+  case AMDGPU::S_MAXIMUM_F16: return AMDGPU::V_MAXIMUM_F16_e64;
   case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_fake16_e64;
   case AMDGPU::S_CVT_PK_RTZ_F16_F32: return AMDGPU::V_CVT_PKRTZ_F16_F32_e64;
   case AMDGPU::S_FMAC_F32: return AMDGPU::V_FMAC_F32_e64;
@@ -7097,6 +7108,26 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
         .addImm(0); // omod
 
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+    Inst.eraseFromParent();
+    return;
+  }
+  case AMDGPU::S_MINIMUM_F32:
+  case AMDGPU::S_MAXIMUM_F32:
+  case AMDGPU::S_MINIMUM_F16:
+  case AMDGPU::S_MAXIMUM_F16: {
+    const DebugLoc &DL = Inst.getDebugLoc();
+    Register NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    MachineInstr *NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+                                 .addImm(0) // src0_modifiers
+                                 .add(Inst.getOperand(1))
+                                 .addImm(0) // src1_modifiers
+                                 .add(Inst.getOperand(2))
+                                 .addImm(0)  // clamp
+                                 .addImm(0); // omod
+    MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+
+    legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
     Inst.eraseFromParent();
     return;
