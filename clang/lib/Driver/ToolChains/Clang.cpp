@@ -223,7 +223,7 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
   for (unsigned i = 0; i != NumOptions; ++i) {
     StringRef Val = A->getValue(i);
 
-    bool IsDisabled = Val.startswith(DisabledPrefixIn);
+    bool IsDisabled = Val.starts_with(DisabledPrefixIn);
     // Ignore the disablement token for string matching.
     if (IsDisabled)
       Val = Val.substr(1);
@@ -433,7 +433,7 @@ static void addDebugObjectName(const ArgList &Args, ArgStringList &CmdArgs,
                                const char *OutputFileName) {
   // No need to generate a value for -object-file-name if it was provided.
   for (auto *Arg : Args.filtered(options::OPT_Xclang))
-    if (StringRef(Arg->getValue()).startswith("-object-file-name"))
+    if (StringRef(Arg->getValue()).starts_with("-object-file-name"))
       return;
 
   if (Args.hasArg(options::OPT_object_file_name_EQ))
@@ -940,7 +940,7 @@ static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
 static bool hasClangPchSignature(const Driver &D, StringRef Path) {
   if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MemBuf =
           D.getVFS().getBufferForFile(Path))
-    return (*MemBuf)->getBuffer().startswith("CPCH");
+    return (*MemBuf)->getBuffer().starts_with("CPCH");
   return false;
 }
 
@@ -1715,7 +1715,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.endswith("+"))
+      if (Val.ends_with("+"))
         Val = Val.substr(0, Val.size() - 1);
       else {
         bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
@@ -2503,7 +2503,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       case llvm::Triple::thumbeb:
       case llvm::Triple::arm:
       case llvm::Triple::armeb:
-        if (Value.startswith("-mimplicit-it=")) {
+        if (Value.starts_with("-mimplicit-it=")) {
           // Only store the value; the last value set takes effect.
           ImplicitIt = Value.split("=").second;
           if (CheckARMImplicitITArg(ImplicitIt))
@@ -2528,12 +2528,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           CmdArgs.push_back("-use-tcc-in-div");
           continue;
         }
-        if (Value.startswith("-msoft-float")) {
+        if (Value.starts_with("-msoft-float")) {
           CmdArgs.push_back("-target-feature");
           CmdArgs.push_back("+soft-float");
           continue;
         }
-        if (Value.startswith("-mhard-float")) {
+        if (Value.starts_with("-mhard-float")) {
           CmdArgs.push_back("-target-feature");
           CmdArgs.push_back("-soft-float");
           continue;
@@ -2570,8 +2570,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         CmdArgs.push_back("-massembler-no-warn");
       } else if (Value == "--noexecstack") {
         UseNoExecStack = true;
-      } else if (Value.startswith("-compress-debug-sections") ||
-                 Value.startswith("--compress-debug-sections") ||
+      } else if (Value.starts_with("-compress-debug-sections") ||
+                 Value.starts_with("--compress-debug-sections") ||
                  Value == "-nocompress-debug-sections" ||
                  Value == "--nocompress-debug-sections") {
         CmdArgs.push_back(Value.data());
@@ -2581,13 +2581,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value == "-mrelax-relocations=no" ||
                  Value == "--mrelax-relocations=no") {
         UseRelaxRelocations = false;
-      } else if (Value.startswith("-I")) {
+      } else if (Value.starts_with("-I")) {
         CmdArgs.push_back(Value.data());
         // We need to consume the next argument if the current arg is a plain
         // -I. The next arg will be the include directory.
         if (Value == "-I")
           TakeNextArg = true;
-      } else if (Value.startswith("-gdwarf-")) {
+      } else if (Value.starts_with("-gdwarf-")) {
         // "-gdwarf-N" options are not cc1as options.
         unsigned DwarfVersion = DwarfVersionNum(Value);
         if (DwarfVersion == 0) { // Send it onward, and let cc1as complain.
@@ -2597,30 +2597,30 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                   llvm::codegenoptions::DebugInfoConstructor,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
-      } else if (Value.startswith("-mcpu") || Value.startswith("-mfpu") ||
-                 Value.startswith("-mhwdiv") || Value.startswith("-march")) {
+      } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
+                 Value.starts_with("-mhwdiv") || Value.starts_with("-march")) {
         // Do nothing, we'll validate it later.
       } else if (Value == "-defsym") {
-          if (A->getNumValues() != 2) {
-            D.Diag(diag::err_drv_defsym_invalid_format) << Value;
-            break;
-          }
-          const char *S = A->getValue(1);
-          auto Pair = StringRef(S).split('=');
-          auto Sym = Pair.first;
-          auto SVal = Pair.second;
+        if (A->getNumValues() != 2) {
+          D.Diag(diag::err_drv_defsym_invalid_format) << Value;
+          break;
+        }
+        const char *S = A->getValue(1);
+        auto Pair = StringRef(S).split('=');
+        auto Sym = Pair.first;
+        auto SVal = Pair.second;
 
-          if (Sym.empty() || SVal.empty()) {
-            D.Diag(diag::err_drv_defsym_invalid_format) << S;
-            break;
-          }
-          int64_t IVal;
-          if (SVal.getAsInteger(0, IVal)) {
-            D.Diag(diag::err_drv_defsym_invalid_symval) << SVal;
-            break;
-          }
-          CmdArgs.push_back(Value.data());
-          TakeNextArg = true;
+        if (Sym.empty() || SVal.empty()) {
+          D.Diag(diag::err_drv_defsym_invalid_format) << S;
+          break;
+        }
+        int64_t IVal;
+        if (SVal.getAsInteger(0, IVal)) {
+          D.Diag(diag::err_drv_defsym_invalid_symval) << SVal;
+          break;
+        }
+        CmdArgs.push_back(Value.data());
+        TakeNextArg = true;
       } else if (Value == "-fdebug-compilation-dir") {
         CmdArgs.push_back("-fdebug-compilation-dir");
         TakeNextArg = true;
@@ -3331,7 +3331,7 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   // --param ssp-buffer-size=
   for (const Arg *A : Args.filtered(options::OPT__param)) {
     StringRef Str(A->getValue());
-    if (Str.startswith("ssp-buffer-size=")) {
+    if (Str.starts_with("ssp-buffer-size=")) {
       if (StackProtectorLevel) {
         CmdArgs.push_back("-stack-protector-buffer-size");
         // FIXME: Verify the argument is a valid integer.
@@ -5886,7 +5886,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef Val = A->getValue();
     if (Triple.isX86() && Triple.isOSBinFormatELF()) {
       if (Val != "all" && Val != "labels" && Val != "none" &&
-          !Val.startswith("list="))
+          !Val.starts_with("list="))
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
       else
@@ -8382,14 +8382,14 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
       continue;
     auto &JArgs = J.getArguments();
     for (unsigned I = 0; I < JArgs.size(); ++I) {
-      if (StringRef(JArgs[I]).startswith("-object-file-name=") &&
+      if (StringRef(JArgs[I]).starts_with("-object-file-name=") &&
           Output.isFilename()) {
-        ArgStringList NewArgs(JArgs.begin(), JArgs.begin() + I);
-        addDebugObjectName(Args, NewArgs, DebugCompilationDir,
-                           Output.getFilename());
-        NewArgs.append(JArgs.begin() + I + 1, JArgs.end());
-        J.replaceArguments(NewArgs);
-        break;
+       ArgStringList NewArgs(JArgs.begin(), JArgs.begin() + I);
+       addDebugObjectName(Args, NewArgs, DebugCompilationDir,
+                          Output.getFilename());
+       NewArgs.append(JArgs.begin() + I + 1, JArgs.end());
+       J.replaceArguments(NewArgs);
+       break;
       }
     }
   }
@@ -8653,7 +8653,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     getTargetFeatures(TC->getDriver(), TC->getTriple(), TCArgs, Features,
                       false);
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
-                  [](StringRef Arg) { return !Arg.startswith("-target"); });
+                  [](StringRef Arg) { return !Arg.starts_with("-target"); });
 
     if (TC->getTriple().isAMDGPU()) {
       for (StringRef Feature : llvm::split(Arch.split(':').second, ':')) {
