@@ -1109,6 +1109,7 @@ void State::addInfoFor(BasicBlock &BB) {
         CmpI->getOperand(1)));
 }
 
+#ifndef NDEBUG
 static void dumpUnpackedICmp(raw_ostream &OS, ICmpInst::Predicate Pred,
                              Value *LHS, Value *RHS) {
   OS << "icmp " << Pred << ' ';
@@ -1116,6 +1117,7 @@ static void dumpUnpackedICmp(raw_ostream &OS, ICmpInst::Predicate Pred,
   OS << ", ";
   RHS->printAsOperand(OS, /*PrintType=*/false);
 }
+#endif
 
 namespace {
 /// Helper to keep track of a condition and if it should be treated as negated
