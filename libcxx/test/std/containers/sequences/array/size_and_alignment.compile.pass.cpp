@@ -101,7 +101,7 @@ struct alignas(8) Overaligned4 {
 struct alignas(8) Overaligned5 {};
 #endif
 
-int main(int, char**) {
+void test() {
   test_type<char>();
   test_type<short>();
   test_type<int>();
@@ -125,6 +125,4 @@ int main(int, char**) {
   test_type<Overaligned4>();
   test_type<Overaligned5>();
 #endif
-
-  return 0;
 }
