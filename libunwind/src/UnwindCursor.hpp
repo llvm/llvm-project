@@ -559,26 +559,6 @@ private:
       _info.handler = 0;
     return UNW_STEP_SUCCESS;
   }
-  bool isReadableAddr(const void *addr) const {
-    // This code is heavily based on Abseil's 'address_is_readable.cc',
-    // which is Copyright Abseil Authors (2017), and provided under
-    // the Apache License 2.0.
-
-    // We have to check that addr is a nullptr because sigprocmask allows that
-    // as an argument without failure.
-    if (!addr)
-      return false;
-    // Align to 8-bytes.
-    const auto uintptr_addr = reinterpret_cast<uintptr_t>(addr) & ~uintptr_t{7};
-    const auto sigsetaddr = reinterpret_cast<sigset_t *>(uintptr_addr);
-    [[maybe_unused]] int Result = sigprocmask(/*how=*/-1, sigsetaddr, nullptr);
-    // Because our "how" is invalid, this syscall should always fail, and our
-    // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
-    // by the POSIX standard, so this is (for now) Linux specific.
-    assert(Result == -1);
-    assert(errno == EFAULT || errno == EINVAL);
-    return errno != EFAULT;
-  }
 
   A                   &_addressSpace;
   unw_proc_info_t      _info;
@@ -1012,6 +992,7 @@ private:
     R dummy;
     return stepThroughSigReturn(dummy);
   }
+  bool isReadableAddr(const pint_t addr) const;
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
@@ -2723,8 +2704,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(static_cast<const void *>(pc)) ||
-      !isReadableAddr(static_cast<const void *>(pc + 4)))
+  if (!isReadableAddr(pc) || !isReadableAddr(pc + 4))
     return false;
   auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
@@ -2779,8 +2759,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(static_cast<const void *>(pc)) ||
-      !isReadableAddr(static_cast<const void *>(pc + 4)))
+  if (!isReadableAddr(pc) || !isReadableAddr(pc + 4))
     return false;
   const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for the two instructions used in the sigreturn trampoline
@@ -2838,8 +2817,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(static_cast<const void *>(pc)) ||
-      !isReadableAddr(static_cast<const void *>(pc + 2)))
+  if (!isReadableAddr(pc) || !isReadableAddr(pc + 2))
     return false;
   const auto inst = *reinterpret_cast<const uint16_t *>(pc);
   if (inst == 0x0a77 || inst == 0x0aad) {
@@ -2987,6 +2965,30 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
   return _addressSpace.findFunctionName((pint_t)this->getReg(UNW_REG_IP),
                                          buf, bufLen, offset);
 }
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
+  // This code is heavily based on Abseil's 'address_is_readable.cc',
+  // which is Copyright Abseil Authors (2017), and provided under
+  // the Apache License 2.0.
+
+  // We have to check that addr is nullptr (0) because sigprocmask allows that
+  // as an argument without failure.
+  if (addr == 0)
+    return false;
+  // Align to 8-bytes.
+  const auto alignedAddr = addr & ~pint_t{7};
+  const auto sigsetAddr = reinterpret_cast<sigset_t *>(alignedAddr);
+  [[maybe_unused]] int Result = sigprocmask(/*how=*/-1, sigsetAddr, nullptr);
+  // Because our "how" is invalid, this syscall should always fail, and our
+  // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
+  // by the POSIX standard, so this is (for now) Linux specific.
+  assert(Result == -1);
+  assert(errno == EFAULT || errno == EINVAL);
+  return errno != EFAULT;
+}
+#endif
 
 #if defined(_LIBUNWIND_USE_CET)
 extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
