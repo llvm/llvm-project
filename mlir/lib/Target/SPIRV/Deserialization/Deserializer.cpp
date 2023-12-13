@@ -637,14 +637,21 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Initializer.
   FlatSymbolRefAttr initializer = nullptr;
+  
   if (wordIndex < operands.size()) {
-    auto initializerOp = getGlobalVariable(operands[wordIndex]);
-    if (!initializerOp) {
-      return emitError(unknownLoc, "unknown <id> ")
-             << operands[wordIndex] << "used as initializer";
-    }
+    Operation *op = nullptr;
+
+    if((op = getGlobalVariable(operands[wordIndex])))
+      initializer = SymbolRefAttr::get((dyn_cast<spirv::GlobalVariableOp>(op)).getOperation());
+    else if ((op  = getSpecConstant(operands[wordIndex])))
+      initializer = SymbolRefAttr::get((dyn_cast<spirv::SpecConstantOp>(op)).getOperation());
+    else if((op = getSpecConstantComposite(operands[wordIndex])))
+      initializer = SymbolRefAttr::get((dyn_cast<spirv::SpecConstantCompositeOp>(op)).getOperation());
+    else
+      return emitError(unknownLoc,
+                        "Unknown op used as initializer");
+
     wordIndex++;
-    initializer = SymbolRefAttr::get(initializerOp.getOperation());
   }
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,

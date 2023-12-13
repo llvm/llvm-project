@@ -383,12 +383,22 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   operands.push_back(static_cast<uint32_t>(varOp.storageClass()));
 
   // Encode initialization.
-  if (auto initializer = varOp.getInitializer()) {
-    auto initializerID = getVariableID(*initializer);
-    if (!initializerID) {
-      return emitError(varOp.getLoc(),
-                       "invalid usage of undefined variable as initializer");
-    }
+  if (auto initializerName = varOp.getInitializer()) {
+
+    uint32_t initializerID = 0;
+    auto init = varOp->getAttrOfType<FlatSymbolRefAttr>("initializer");
+    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(varOp->getParentOp(), init.getAttr());
+
+    // Check if initializer is GlobalVariable or SpecConstant/SpecConstantComposite
+    if(isa<spirv::GlobalVariableOp>(initOp))
+      initializerID = getVariableID(*initializerName);
+    else
+      initializerID = getSpecConstID(*initializerName);
+
+    if (!initializerID)
+        return emitError(varOp.getLoc(),
+                      "invalid usage of undefined variable as initializer");
+   
     operands.push_back(initializerID);
     elidedAttrs.push_back("initializer");
   }
