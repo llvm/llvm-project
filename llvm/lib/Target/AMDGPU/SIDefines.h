@@ -1136,8 +1136,6 @@ enum Register_Flag : uint8_t {
 #define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
 #define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
 
-// clang-format on
-
 // Helpers for setting FLOAT_MODE
 #define FP_ROUND_ROUND_TO_NEAREST 0
 #define FP_ROUND_ROUND_TO_INF 1
@@ -1179,6 +1177,9 @@ enum Register_Flag : uint8_t {
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8
+
+// clang-format on
+
 } // End namespace llvm
 
 #endif

@@ -8741,7 +8741,7 @@ public:
                              SourceLocation IILoc,
                              bool DeducedTSTContext = true);
 
-
+  bool RebuildingTypesInCurrentInstantiation = false;
   TypeSourceInfo *RebuildTypeInCurrentInstantiation(TypeSourceInfo *T,
                                                     SourceLocation Loc,
                                                     DeclarationName Name);

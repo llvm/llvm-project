@@ -356,7 +356,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-reductions",
       "indirectbr-expand",
       "generic-to-nvvm",
-      "expandmemcmp",
+      "expand-memcmp",
       "loop-reduce",
       "lower-amx-type",
       "lower-amx-intrinsics",
@@ -422,7 +422,7 @@ int main(int argc, char **argv) {
   // supported.
   initializeExpandLargeDivRemLegacyPassPass(Registry);
   initializeExpandLargeFpConvertLegacyPassPass(Registry);
-  initializeExpandMemCmpPassPass(Registry);
+  initializeExpandMemCmpLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeCallBrPreparePass(Registry);
@@ -434,7 +434,7 @@ int main(int argc, char **argv) {
   initializeSjLjEHPreparePass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeGlobalMergePass(Registry);
-  initializeIndirectBrExpandPassPass(Registry);
+  initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);

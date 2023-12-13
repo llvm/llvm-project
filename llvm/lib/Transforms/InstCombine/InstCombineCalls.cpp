@@ -1536,6 +1536,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   if (II->isCommutative()) {
+    if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
+      return I;
+
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
   }
@@ -4216,4 +4219,24 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // code sort out any function type mismatches.
   Call.setCalledFunction(FTy, NestF);
   return &Call;
+}
+
+// op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
+  assert(II.isCommutative());
+
+  Value *A, *B, *C;
+  bool LHSIsSelect =
+      match(II.getOperand(0), m_Select(m_Value(A), m_Value(B), m_Value(C)));
+  bool RHSIsSymmetricalSelect = match(
+      II.getOperand(1), m_Select(m_Specific(A), m_Specific(C), m_Specific(B)));
+
+  if (LHSIsSelect && RHSIsSymmetricalSelect) {
+    replaceOperand(II, 0, B);
+    replaceOperand(II, 1, C);
+    return &II;
+  }
+
+  return nullptr;
 }

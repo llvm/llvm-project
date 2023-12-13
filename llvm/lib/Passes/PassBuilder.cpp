@@ -76,8 +76,12 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
+#include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
+#include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -101,6 +105,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
+#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroConditionalWrapper.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
@@ -848,6 +853,26 @@ Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
 Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "skip-non-recursive-function-attrs",
                                "PostOrderFunctionAttrs");
+}
+
+Expected<CFGuardPass::Mechanism> parseCFGuardPassOptions(StringRef Params) {
+  if (Params.empty())
+    return CFGuardPass::Mechanism::Check;
+
+  auto [Param, RHS] = Params.split(';');
+  if (!RHS.empty())
+    return make_error<StringError>(
+        formatv("too many CFGuardPass parameters '{0}' ", Params).str(),
+        inconvertibleErrorCode());
+
+  if (Param == "check")
+    return CFGuardPass::Mechanism::Check;
+  if (Param == "dispatch")
+    return CFGuardPass::Mechanism::Dispatch;
+
+  return make_error<StringError>(
+      formatv("invalid CFGuardPass mechanism: '{0}' ", Param).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
