@@ -4488,7 +4488,7 @@ static void TryReferenceListInitialization(Sema &S,
       // Try to bind the reference here.
       TryReferenceInitializationCore(S, Entity, Kind, Initializer, cv1T1, T1,
                                      T1Quals, cv2T2, T2, T2Quals, Sequence,
-                                     true);
+                                     /*TopLevelOfInitList=*/true);
       if (Sequence)
         Sequence.RewrapReferenceInitList(cv1T1, InitList);
       return;
