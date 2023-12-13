@@ -242,6 +242,13 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   /// - Val(8) Expected integer
   GIM_CheckConstantInt,
+
+  /// Check the operand is a specific 8-bit signed integer
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - OpIdx(ULEB128) - Operand index
+  /// - Val(1) Expected integer
+  GIM_CheckConstantInt8,
+
   /// Check the operand is a specific literal integer (i.e. MO.isImm() or
   /// MO.isCImm() is true).
   /// - InsnID(ULEB128) - Instruction ID
@@ -399,6 +406,12 @@ enum {
   /// - TempRegFlags(2) - The register flags to set
   GIR_AddTempRegister,
 
+  /// Add a temporary register to the specified instruction without
+  /// setting any flags.
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - TempRegID(ULEB128) - The temporary register ID to add
+  GIR_AddSimpleTempRegister,
+
   /// Add a temporary register to the specified instruction
   /// - InsnID(ULEB128) - Instruction ID to modify
   /// - TempRegID(ULEB128) - The temporary register ID to add
@@ -410,6 +423,11 @@ enum {
   /// - InsnID(ULEB128) - Instruction ID to modify
   /// - Imm(8) - The immediate to add
   GIR_AddImm,
+
+  /// Add signed 8 bit immediate to the specified instruction
+  /// - InsnID(ULEB128) - Instruction ID to modify
+  /// - Imm(1) - The immediate to add
+  GIR_AddImm8,
 
   /// Add an CImm to the specified instruction
   /// - InsnID(ULEB128) - Instruction ID to modify

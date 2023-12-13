@@ -1240,10 +1240,12 @@ void ImmOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
 
 void ConstantIntOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                                      RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckConstantInt")
+  const bool IsInt8 = isInt<8>(Value);
+  Table << MatchTable::Opcode(IsInt8 ? "GIM_CheckConstantInt8"
+                                     : "GIM_CheckConstantInt")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::IntValue(8, Value) << MatchTable::LineBreak;
+        << MatchTable::IntValue(IsInt8 ? 1 : 8, Value) << MatchTable::LineBreak;
 }
 
 //===- LiteralIntOperandMatcher -------------------------------------------===//
@@ -1943,17 +1945,24 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
 
 void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
                                         RuleMatcher &Rule) const {
+  const bool NeedsFlags = (SubRegIdx || IsDef);
   if (SubRegIdx) {
     assert(!IsDef);
     Table << MatchTable::Opcode("GIR_AddTempSubRegister");
   } else
-    Table << MatchTable::Opcode("GIR_AddTempRegister");
+    Table << MatchTable::Opcode(NeedsFlags ? "GIR_AddTempRegister"
+                                           : "GIR_AddSimpleTempRegister");
 
   Table << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
         << MatchTable::Comment("TempRegID")
-        << MatchTable::ULEB128Value(TempRegID)
-        << MatchTable::Comment("TempRegFlags");
+        << MatchTable::ULEB128Value(TempRegID);
 
+  if (!NeedsFlags) {
+    Table << MatchTable::LineBreak;
+    return;
+  }
+
+  Table << MatchTable::Comment("TempRegFlags");
   if (IsDef) {
     SmallString<32> RegFlags;
     RegFlags += "RegState::Define";
@@ -1968,16 +1977,37 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   Table << MatchTable::LineBreak;
 }
 
+//===- ImmRenderer --------------------------------------------------------===//
+
+void ImmRenderer::emitAddImm(MatchTable &Table, RuleMatcher &RM,
+                             unsigned InsnID, int64_t Imm, StringRef ImmName) {
+  const bool IsInt8 = isInt<8>(Imm);
+
+  Table << MatchTable::Opcode(IsInt8 ? "GIR_AddImm8" : "GIR_AddImm")
+        << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+        << MatchTable::Comment(ImmName)
+        << MatchTable::IntValue(IsInt8 ? 1 : 8, Imm) << MatchTable::LineBreak;
+}
+
+void ImmRenderer::emitRenderOpcodes(MatchTable &Table,
+                                    RuleMatcher &Rule) const {
+  if (CImmLLT) {
+    assert(Table.isCombiner() &&
+           "ConstantInt immediate are only for combiners!");
+    Table << MatchTable::Opcode("GIR_AddCImm") << MatchTable::Comment("InsnID")
+          << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type")
+          << *CImmLLT << MatchTable::Comment("Imm")
+          << MatchTable::IntValue(8, Imm) << MatchTable::LineBreak;
+  } else
+    emitAddImm(Table, Rule, InsnID, Imm);
+}
+
 //===- SubRegIndexRenderer ------------------------------------------------===//
 
 void SubRegIndexRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
-  // TODO: Could use a shorter "AddImm16" opcode.
-  Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-        << MatchTable::ULEB128Value(InsnID)
-        << MatchTable::Comment("SubRegIndex")
-        << MatchTable::IntValue(8, SubRegIdx->EnumValue)
-        << MatchTable::LineBreak;
+  ImmRenderer::emitAddImm(Table, Rule, InsnID, SubRegIdx->EnumValue,
+                          "SubRegIndex");
 }
 
 //===- RenderComplexPatternOperand ----------------------------------------===//

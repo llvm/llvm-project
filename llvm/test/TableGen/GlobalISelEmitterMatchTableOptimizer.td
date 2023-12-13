@@ -57,7 +57,7 @@ def LOAD16Imm : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 // CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s16,
 // CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s16,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR16RegClassID),
-// CHECK-NEXT: GIM_CheckConstantInt, /*MI*/1, /*Op*/2, GIMT_Encode8(10),
+// CHECK-NEXT: GIM_CheckConstantInt8, /*MI*/1, /*Op*/2, 10,
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT: // (ld:{ *:[i16] } (add:{ *:[i16] } GPR16:{ *:[i16] }:$src, 10:{ *:[i16] }))<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD16Imm:{ *:[i16] } GPR16:{ *:[i16] }:$src)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD16Imm),

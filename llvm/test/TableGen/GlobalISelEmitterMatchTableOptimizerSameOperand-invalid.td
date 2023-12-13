@@ -6,15 +6,15 @@ include "GlobalISelEmitterCommon.td"
 def InstTwoOperands : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2), []>;
 def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:$src2), []>;
 
-// CHECK:         GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(269),
+// CHECK:      GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(255),
 // CHECK-NEXT:      GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SELECT),
 // CHECK-NEXT:      GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT:      GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:      GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT:      GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(231),
+// CHECK-NEXT:      GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(217),
 // CHECK-NEXT:        GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT:        GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/3, /*OtherMI*/2, /*OtherOpIdx*/2,
-// CHECK-NEXT:        GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(133), // Rule ID 1 //
+// CHECK-NEXT:        GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(126), // Rule ID 1 //
 // CHECK-NEXT:          GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
 // CHECK-NEXT:          GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_ICMP),
 // CHECK-NEXT:          GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
@@ -22,7 +22,7 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          // MIs[1] Operand 1
 // CHECK-NEXT:          GIM_CheckCmpPredicate, /*MI*/1, /*Op*/1, /*Predicate*/GIMT_Encode2(CmpInst::ICMP_EQ),
 // CHECK-NEXT:          GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// CHECK-NEXT:          GIM_CheckConstantInt, /*MI*/1, /*Op*/3, GIMT_Encode8(0),
+// CHECK-NEXT:          GIM_CheckConstantInt8, /*MI*/1, /*Op*/3, 0,
 // CHECK-NEXT:          GIM_RecordInsn, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
 // CHECK-NEXT:          GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:          GIM_CheckType, /*MI*/2, /*Op*/1, /*Type*/GILLT_s32,
@@ -41,8 +41,8 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:          // GIR_Coverage, 1,
 // CHECK-NEXT:          GIR_Done,
-// CHECK-NEXT:        // Label 2: @133
-// CHECK-NEXT:        GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(230), // Rule ID 2 //
+// CHECK-NEXT:        // Label 2: @126
+// CHECK-NEXT:        GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(216), // Rule ID 2 //
 // CHECK-NEXT:          GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
 // CHECK-NEXT:          GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_ICMP),
 // CHECK-NEXT:          GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
@@ -50,7 +50,7 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          // MIs[1] Operand 1
 // CHECK-NEXT:          GIM_CheckCmpPredicate, /*MI*/1, /*Op*/1, /*Predicate*/GIMT_Encode2(CmpInst::ICMP_NE),
 // CHECK-NEXT:          GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// CHECK-NEXT:          GIM_CheckConstantInt, /*MI*/1, /*Op*/3, GIMT_Encode8(0),
+// CHECK-NEXT:          GIM_CheckConstantInt8, /*MI*/1, /*Op*/3, 0,
 // CHECK-NEXT:          GIM_RecordInsn, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
 // CHECK-NEXT:          GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:          GIM_CheckType, /*MI*/2, /*Op*/1, /*Type*/GILLT_s32,
@@ -69,10 +69,10 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:          // GIR_Coverage, 2,
 // CHECK-NEXT:          GIR_Done,
-// CHECK-NEXT:        // Label 3: @230
+// CHECK-NEXT:        // Label 3: @216
 // CHECK-NEXT:        GIM_Reject,
-// CHECK-NEXT:      // Label 1: @231
-// CHECK-NEXT:      GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(268), // Rule ID 0 //
+// CHECK-NEXT:      // Label 1: @217
+// CHECK-NEXT:      GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(254), // Rule ID 0 //
 // CHECK-NEXT:        GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT:        GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT:        GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
@@ -83,11 +83,10 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:        GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:        // GIR_Coverage, 0,
 // CHECK-NEXT:        GIR_Done,
-// CHECK-NEXT:      // Label 4: @268
+// CHECK-NEXT:      // Label 4: @254
 // CHECK-NEXT:      GIM_Reject,
-// CHECK-NEXT:    // Label 0: @269
+// CHECK-NEXT:    // Label 0: @255
 // CHECK-NEXT:    GIM_Reject,
-// CHECK-NEXT:    }
 def : Pat<(i32 (select GPR32:$cond, GPR32:$src1, GPR32:$src2)),
           (InstThreeOperands GPR32:$cond, GPR32:$src1, GPR32:$src2)>;
 
