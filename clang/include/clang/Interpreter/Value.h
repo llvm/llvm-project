@@ -52,7 +52,7 @@ class ASTContext;
 class Interpreter;
 class QualType;
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__CYGWIN__)
 // REPL_EXTERNAL_VISIBILITY are symbols that we need to be able to locate
 // at runtime. On Windows, this requires them to be exported from any of the
 // modules loaded at runtime. Marking them as dllexport achieves this; both
