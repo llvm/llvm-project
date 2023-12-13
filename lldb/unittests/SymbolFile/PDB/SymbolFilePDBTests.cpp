@@ -414,8 +414,9 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
 
   auto ClassCompilerDeclCtx = CompilerDeclContext(clang_ast_ctx, ClassDeclCtx);
   TypeResults query_results_nested;
-  symfile->FindTypes(TypeQuery(ClassCompilerDeclCtx, "NestedClass"),
-                     query_results_nested);
+  symfile->FindTypes(
+      TypeQuery(ClassCompilerDeclCtx, ConstString("NestedClass")),
+      query_results_nested);
   TypeMap &more_results = query_results_nested.GetTypeMap();
   EXPECT_LE(1u, more_results.GetSize());
 
@@ -458,7 +459,7 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   EXPECT_TRUE(ns_namespace_decl_ctx.IsValid());
 
   TypeResults query_results;
-  symfile->FindTypes(TypeQuery(ns_namespace_decl_ctx, "NSClass"),
+  symfile->FindTypes(TypeQuery(ns_namespace_decl_ctx, ConstString("NSClass")),
                      query_results);
   TypeMap &results = query_results.GetTypeMap();
   EXPECT_EQ(1u, results.GetSize());
