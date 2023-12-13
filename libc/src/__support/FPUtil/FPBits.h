@@ -36,74 +36,71 @@ template <typename T> struct ExponentWidth {
 // floating numbers. On x86 platforms however, the 'long double' type maps to
 // an x87 floating point format. This format is an IEEE 754 extension format.
 // It is handled as an explicit specialization of this class.
-template <typename T> struct FPBits : private FloatProperties<T> {
+template <typename T> struct FPBits {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
-  using typename FloatProperties<T>::UIntType;
-  using FloatProperties<T>::BIT_WIDTH;
-  using FloatProperties<T>::EXP_MANT_MASK;
-  using FloatProperties<T>::EXPONENT_MASK;
-  using FloatProperties<T>::EXPONENT_BIAS;
-  using FloatProperties<T>::EXPONENT_WIDTH;
-  using FloatProperties<T>::MANTISSA_MASK;
-  using FloatProperties<T>::MANTISSA_WIDTH;
-  using FloatProperties<T>::QUIET_NAN_MASK;
-  using FloatProperties<T>::SIGN_MASK;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
+  using FloatProp = FloatProperties<T>;
+  using UIntType = typename FloatProp::UIntType;
+
   UIntType bits;
 
   LIBC_INLINE constexpr void set_mantissa(UIntType mantVal) {
-    mantVal &= MANTISSA_MASK;
-    bits &= ~MANTISSA_MASK;
+    mantVal &= (FloatProp::MANTISSA_MASK);
+    bits &= ~(FloatProp::MANTISSA_MASK);
     bits |= mantVal;
   }
 
   LIBC_INLINE constexpr UIntType get_mantissa() const {
-    return bits & MANTISSA_MASK;
+    return bits & FloatProp::MANTISSA_MASK;
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
-    expVal = (expVal << MANTISSA_WIDTH) & EXPONENT_MASK;
-    bits &= ~EXPONENT_MASK;
+    expVal = (expVal << (FloatProp::MANTISSA_WIDTH)) & FloatProp::EXPONENT_MASK;
+    bits &= ~(FloatProp::EXPONENT_MASK);
     bits |= expVal;
   }
 
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXPONENT_MASK) >> MANTISSA_WIDTH);
+    return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
+                    (FloatProp::MANTISSA_WIDTH));
   }
 
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr UIntType get_explicit_mantissa() {
     return ((get_biased_exponent() > 0 && !is_inf_or_nan())
-                ? (MANTISSA_MASK + 1)
+                ? (FloatProp::MANTISSA_MASK + 1)
                 : 0) |
-           (MANTISSA_MASK & bits);
+           (FloatProp::MANTISSA_MASK & bits);
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {
-    bits |= SIGN_MASK;
+    bits |= FloatProp::SIGN_MASK;
     if (!signVal)
-      bits -= SIGN_MASK;
+      bits -= FloatProp::SIGN_MASK;
   }
 
   LIBC_INLINE constexpr bool get_sign() const {
-    return (bits & SIGN_MASK) != 0;
+    return (bits & FloatProp::SIGN_MASK) != 0;
   }
 
   static_assert(sizeof(T) == sizeof(UIntType),
                 "Data type and integral representation have different sizes.");
 
-  static constexpr int MAX_EXPONENT = (1 << EXPONENT_WIDTH) - 1;
+  static constexpr int EXPONENT_BIAS = (1 << (ExponentWidth<T>::VALUE - 1)) - 1;
+  static constexpr int MAX_EXPONENT = (1 << ExponentWidth<T>::VALUE) - 1;
 
   static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
-  static constexpr UIntType MAX_SUBNORMAL = (UIntType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr UIntType MIN_NORMAL = (UIntType(1) << MANTISSA_WIDTH);
+  static constexpr UIntType MAX_SUBNORMAL =
+      (UIntType(1) << MantissaWidth<T>::VALUE) - 1;
+  static constexpr UIntType MIN_NORMAL =
+      (UIntType(1) << MantissaWidth<T>::VALUE);
   static constexpr UIntType MAX_NORMAL =
-      ((UIntType(MAX_EXPONENT) - 1) << MANTISSA_WIDTH) | MAX_SUBNORMAL;
+      ((UIntType(MAX_EXPONENT) - 1) << MantissaWidth<T>::VALUE) | MAX_SUBNORMAL;
 
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
@@ -154,29 +151,32 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
-    return (bits & EXP_MANT_MASK) == EXPONENT_MASK;
+    return (bits & FloatProp::EXP_MANT_MASK) == FloatProp::EXPONENT_MASK;
   }
 
   LIBC_INLINE constexpr bool is_nan() const {
-    return (bits & EXP_MANT_MASK) > EXPONENT_MASK;
+    return (bits & FloatProp::EXP_MANT_MASK) > FloatProp::EXPONENT_MASK;
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_MANT_MASK) == (EXPONENT_MASK | QUIET_NAN_MASK);
+    return (bits & FloatProp::EXP_MANT_MASK) ==
+           (FloatProp::EXPONENT_MASK | FloatProp::QUIET_NAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
-    return (bits & EXPONENT_MASK) == EXPONENT_MASK;
+    return (bits & FloatProp::EXPONENT_MASK) == FloatProp::EXPONENT_MASK;
   }
 
   LIBC_INLINE static constexpr T zero(bool sign = false) {
-    return FPBits(sign ? SIGN_MASK : UIntType(0)).get_val();
+    return FPBits(sign ? FloatProp::SIGN_MASK : UIntType(0)).get_val();
   }
 
   LIBC_INLINE static constexpr T neg_zero() { return zero(true); }
 
   LIBC_INLINE static constexpr T inf(bool sign = false) {
-    return FPBits((sign ? SIGN_MASK : UIntType(0)) | EXPONENT_MASK).get_val();
+    return FPBits((sign ? FloatProp::SIGN_MASK : UIntType(0)) |
+                  FloatProp::EXPONENT_MASK)
+        .get_val();
   }
 
   LIBC_INLINE static constexpr T neg_inf() { return inf(true); }
@@ -204,7 +204,7 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE static constexpr T build_quiet_nan(UIntType v) {
-    return build_nan(QUIET_NAN_MASK | v);
+    return build_nan(FloatProp::QUIET_NAN_MASK | v);
   }
 
   // The function convert integer number and unbiased exponent to proper float
@@ -220,7 +220,7 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   LIBC_INLINE static constexpr FPBits<T> make_value(UIntType number, int ep) {
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = cpp::countl_zero(number) - EXPONENT_WIDTH;
+    int lz = cpp::countl_zero(number) - FloatProp::EXPONENT_WIDTH;
     number <<= lz;
     ep -= lz;
 

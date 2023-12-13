@@ -123,9 +123,9 @@ template <typename T> struct FModExceptionalInputHandler {
                 "FModCStandardWrapper instantiated with invalid type.");
 
   LIBC_INLINE static bool pre_check(T x, T y, T &out) {
-    using FPBits = fputil::FPBits<T>;
-    const T quiet_nan = FPBits::build_quiet_nan(0);
-    FPBits sx(x), sy(y);
+    using FPB = fputil::FPBits<T>;
+    const T quiet_nan = FPB::build_quiet_nan(0);
+    FPB sx(x), sy(y);
     if (LIBC_LIKELY(!sy.is_zero() && !sy.is_inf_or_nan() &&
                     !sx.is_inf_or_nan())) {
       return false;
@@ -167,11 +167,11 @@ template <typename T> struct FModFastMathWrapper {
 
 template <typename T> class FModDivisionSimpleHelper {
 private:
-  using UIntType = typename FPBits<T>::UIntType;
+  using intU_t = typename FPBits<T>::UIntType;
 
 public:
-  LIBC_INLINE constexpr static UIntType
-  execute(int exp_diff, int sides_zeroes_count, UIntType m_x, UIntType m_y) {
+  LIBC_INLINE constexpr static intU_t
+  execute(int exp_diff, int sides_zeroes_count, intU_t m_x, intU_t m_y) {
     while (exp_diff > sides_zeroes_count) {
       exp_diff -= sides_zeroes_count;
       m_x <<= sides_zeroes_count;
@@ -185,24 +185,24 @@ public:
 
 template <typename T> class FModDivisionInvMultHelper {
 private:
-  using FPBits = FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using FPB = FPBits<T>;
+  using intU_t = typename FPB::UIntType;
 
 public:
-  LIBC_INLINE constexpr static UIntType
-  execute(int exp_diff, int sides_zeroes_count, UIntType m_x, UIntType m_y) {
+  LIBC_INLINE constexpr static intU_t
+  execute(int exp_diff, int sides_zeroes_count, intU_t m_x, intU_t m_y) {
     if (exp_diff > sides_zeroes_count) {
-      UIntType inv_hy = (cpp::numeric_limits<UIntType>::max() / m_y);
+      intU_t inv_hy = (cpp::numeric_limits<intU_t>::max() / m_y);
       while (exp_diff > sides_zeroes_count) {
         exp_diff -= sides_zeroes_count;
-        UIntType hd =
-            (m_x * inv_hy) >> (FPBits::BIT_WIDTH - sides_zeroes_count);
+        intU_t hd =
+            (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - sides_zeroes_count);
         m_x <<= sides_zeroes_count;
         m_x -= hd * m_y;
         while (LIBC_UNLIKELY(m_x > m_y))
           m_x -= m_y;
       }
-      UIntType hd = (m_x * inv_hy) >> (FPBits::BIT_WIDTH - exp_diff);
+      intU_t hd = (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - exp_diff);
       m_x <<= exp_diff;
       m_x -= hd * m_y;
       while (LIBC_UNLIKELY(m_x > m_y))
@@ -222,44 +222,44 @@ class FMod {
                 "FMod instantiated with invalid type.");
 
 private:
-  using FPBits = FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using FPB = FPBits<T>;
+  using intU_t = typename FPB::UIntType;
 
-  LIBC_INLINE static constexpr FPBits eval_internal(FPBits sx, FPBits sy) {
+  LIBC_INLINE static constexpr FPB eval_internal(FPB sx, FPB sy) {
 
     if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
-        return sx;                   // |x|<|y| return x
-      return FPBits(FPBits::zero()); // |x|=|y| return 0.0
+        return sx;             // |x|<|y| return x
+      return FPB(FPB::zero()); // |x|=|y| return 0.0
     }
 
     int e_x = sx.get_biased_exponent();
     int e_y = sy.get_biased_exponent();
 
     // Most common case where |y| is "very normal" and |x/y| < 2^EXPONENT_WIDTH
-    if (LIBC_LIKELY(e_y > int(FPBits::MANTISSA_WIDTH) &&
-                    e_x - e_y <= int(FPBits::EXPONENT_WIDTH))) {
-      UIntType m_x = sx.get_explicit_mantissa();
-      UIntType m_y = sy.get_explicit_mantissa();
-      UIntType d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
+    if (LIBC_LIKELY(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&
+                    e_x - e_y <= int(FPB::FloatProp::EXPONENT_WIDTH))) {
+      intU_t m_x = sx.get_explicit_mantissa();
+      intU_t m_y = sy.get_explicit_mantissa();
+      intU_t d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
       if (d == 0)
-        return FPBits(FPBits::zero());
+        return FPB(FPB::zero());
       // iy - 1 because of "zero power" for number with power 1
-      return FPBits::make_value(d, e_y - 1);
+      return FPB::make_value(d, e_y - 1);
     }
     /* Both subnormal special case. */
     if (LIBC_UNLIKELY(e_x == 0 && e_y == 0)) {
-      FPBits d;
+      FPB d;
       d.set_mantissa(sx.uintval() % sy.uintval());
       return d;
     }
 
     // Note that hx is not subnormal by conditions above.
-    UIntType m_x = sx.get_explicit_mantissa();
+    intU_t m_x = sx.get_explicit_mantissa();
     e_x--;
 
-    UIntType m_y = sy.get_explicit_mantissa();
-    int lead_zeros_m_y = FPBits::EXPONENT_WIDTH;
+    intU_t m_y = sy.get_explicit_mantissa();
+    int lead_zeros_m_y = FPB::FloatProp::EXPONENT_WIDTH;
     if (LIBC_LIKELY(e_y > 0)) {
       e_y--;
     } else {
@@ -282,34 +282,34 @@ private:
 
     {
       // Shift hx left until the end or n = 0
-      int left_shift = exp_diff < int(FPBits::EXPONENT_WIDTH)
+      int left_shift = exp_diff < int(FPB::FloatProp::EXPONENT_WIDTH)
                            ? exp_diff
-                           : FPBits::EXPONENT_WIDTH;
+                           : FPB::FloatProp::EXPONENT_WIDTH;
       m_x <<= left_shift;
       exp_diff -= left_shift;
     }
 
     m_x %= m_y;
     if (LIBC_UNLIKELY(m_x == 0))
-      return FPBits(FPBits::zero());
+      return FPB(FPB::zero());
 
     if (exp_diff == 0)
-      return FPBits::make_value(m_x, e_y);
+      return FPB::make_value(m_x, e_y);
 
     /* hx next can't be 0, because hx < hy, hy % 2 == 1 hx * 2^i % hy != 0 */
     m_x = DivisionHelper::execute(exp_diff, sides_zeroes_count, m_x, m_y);
-    return FPBits::make_value(m_x, e_y);
+    return FPB::make_value(m_x, e_y);
   }
 
 public:
   LIBC_INLINE static T eval(T x, T y) {
     if (T out; Wrapper::pre_check(x, y, out))
       return out;
-    FPBits sx(x), sy(y);
+    FPB sx(x), sy(y);
     bool sign = sx.get_sign();
     sx.set_sign(false);
     sy.set_sign(false);
-    FPBits result = eval_internal(sx, sy);
+    FPB result = eval_internal(sx, sy);
     result.set_sign(sign);
     return result.get_val();
   }
