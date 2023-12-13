@@ -19,8 +19,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
-  using FPBits_t = typename fputil::FPBits<float>;
-  FPBits_t xbits(x);
+  using FPBits = typename fputil::FPBits<float>;
+  FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
   if (LIBC_UNLIKELY(x <= 1.0f)) {
@@ -29,12 +29,12 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
     // x < 1.
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
-    return FPBits_t::build_quiet_nan(0);
+    return FPBits::build_quiet_nan(0);
   }
 
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
     // Check for exceptional values.
-    uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
+    uint32_t x_abs = x_u & FPBits::EXP_MANT_MASK;
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       // x is +inf or NaN.
       return x;
