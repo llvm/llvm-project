@@ -868,7 +868,7 @@ void TargetPassConfig::addIRPasses() {
     // target lowering hook.
     if (!DisableMergeICmps)
       addPass(createMergeICmpsLegacyPass());
-    addPass(createExpandMemCmpPass());
+    addPass(createExpandMemCmpLegacyPass());
   }
 
   // Run GC lowering passes for builtin collectors
