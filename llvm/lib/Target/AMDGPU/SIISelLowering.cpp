@@ -15063,7 +15063,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         RC = &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
-        RC = Subtarget->has512AddressableVGPRs()
+        RC = Subtarget->has1024AddressableVGPRs()
                  ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
                  : TRI->getVGPRClassForBitWidth(BitWidth);
         if (!RC)
@@ -15115,7 +15115,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
           uint32_t Width = (End - Idx + 1) * 32;
           MCRegister Reg = RC->getRegister(Idx);
           if (SIRegisterInfo::isVGPRClass(RC))
-            RC = Subtarget->has512AddressableVGPRs()
+            RC = Subtarget->has1024AddressableVGPRs()
                      ? TRI->getAlignedLo256VGPRClassForBitWidth(Width)
                      : TRI->getVGPRClassForBitWidth(Width);
           else if (SIRegisterInfo::isSGPRClass(RC))
@@ -15138,7 +15138,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (Ret.first) {
     Ret.second = TRI->getPhysRegBaseClass(Ret.first);
-    if (Subtarget->has512AddressableVGPRs() && TRI->isVGPRClass(Ret.second))
+    if (Subtarget->has1024AddressableVGPRs() && TRI->isVGPRClass(Ret.second))
       Ret.second = TRI->getAlignedLo256VGPRClassForBitWidth(
           Ret.second->MC->getSizeInBits());
   }

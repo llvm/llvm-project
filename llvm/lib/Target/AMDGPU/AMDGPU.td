@@ -894,10 +894,10 @@ def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Can use 64-bit literals with single DWORD instructions"
 >;
 
-def Feature512AddressableVGPRs : SubtargetFeature<"512-addressable-vgprs",
-  "Has512AddressableVGPRs",
+def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
+  "Has1024AddressableVGPRs",
   "true",
-  "Has 512 addressable VGPRs"
+  "Has 1024 addressable VGPRs"
 >;
 
 def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
@@ -1580,7 +1580,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureGFX12_10Insts,
    FeatureLocalMemorySize393216,
    FeatureCuMode,
-   Feature512AddressableVGPRs,
+   Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32, // TODO-GFX1210: redefine
    FeatureDLInsts,
@@ -2220,8 +2220,8 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
   AssemblerPredicate<(all_of Feature64BitLiterals)>;
 
-def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
-  AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;
+def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
+  AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 

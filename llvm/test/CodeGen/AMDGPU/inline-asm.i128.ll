@@ -34,9 +34,9 @@ define amdgpu_kernel void @v_input_output_i128() {
   ;
   ; GFX90A-LABEL: name: v_input_output_i128
   ; GFX90A: bb.0 (%ir-block.0):
-  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7536650 /* regdef:VReg_128_Align2 */, def %4
+  ; GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 7405578 /* regdef:VReg_128_Align2 */, def %4
   ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:vreg_128_align2 = COPY %4
-  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 7536649 /* reguse:VReg_128_Align2 */, [[COPY]]
+  ; GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 7405577 /* reguse:VReg_128_Align2 */, [[COPY]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   %val = tail call i128 asm sideeffect "; def $0", "=v"()
   call void asm sideeffect "; use $0", "v"(i128 %val)

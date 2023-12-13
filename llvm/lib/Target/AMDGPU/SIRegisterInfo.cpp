@@ -668,7 +668,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
   unsigned MaxNumAGPRs = MaxNumVGPRs;
-  unsigned NumArchVGPRs = ST.has512AddressableVGPRs() ? 512 : 256;
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both

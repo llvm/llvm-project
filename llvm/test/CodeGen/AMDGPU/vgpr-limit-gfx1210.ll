@@ -569,4 +569,16 @@ define amdgpu_kernel void @use512vgprs_codegen(ptr %p) #2561 {
   ret void
 }
 
+; GCN-LABEL: {{^}}use1024vgprs_codegen:
+; W32: NumVgprs: 1024
+; W32: VGPRBlocks: 63
+; W64: NumVgprs: 512
+; W64: VGPRBlocks: 63
+define amdgpu_kernel void @use1024vgprs_codegen(ptr %p) #1281 {
+  %r0 = load volatile <1024 x float>, ptr %p, align 1
+  store volatile <1024 x float> %r0, ptr %p
+  ret void
+}
+
 attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" }
+attributes #1281 = { nounwind "amdgpu-flat-work-group-size"="128,128" "amdgpu-waves-per-eu"="1" }

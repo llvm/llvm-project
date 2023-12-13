@@ -205,7 +205,7 @@ protected:
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
-  bool Has512AddressableVGPRs = false;
+  bool Has1024AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasPrngInst = false;
@@ -1235,7 +1235,7 @@ public:
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }
 
-  bool has512AddressableVGPRs() const { return Has512AddressableVGPRs; }
+  bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

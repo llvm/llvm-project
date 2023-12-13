@@ -1796,7 +1796,7 @@ let SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_asynccnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1
 
-let SubtargetPredicate = Has512AddressableVGPRs in {
+let SubtargetPredicate = Has1024AddressableVGPRs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
     let Defs = [MODE];

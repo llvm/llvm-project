@@ -277,7 +277,7 @@ AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
 
 bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.has512AddressableVGPRs())
+  if (!ST.has1024AddressableVGPRs())
     return false;
 
   TII = ST.getInstrInfo();
