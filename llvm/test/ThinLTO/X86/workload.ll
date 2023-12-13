@@ -44,12 +44,12 @@ define dso_local void @m2_f1() {
 
 @m2_f1_alias = alias void (...), ptr @m2_f1
 
-define linkonce void @interposable_f() {
+define weak void @interposable_f() {
   call void @m2_variant() 
   ret void
 }
 
-define external void @noninterposable_f() {
+define linkonce_odr void @noninterposable_f() {
   call void @m2_variant()
   ret void
 }
@@ -94,15 +94,17 @@ define dso_local void @m3_f1() {
 ;
 ; The run with workload definitions - same other options.
 ;
-; RUN: echo '{"m1_f1":["m1_f1", "m2_f1", "m2_f1_alias", "interposable_f", "noninterposable_f"], \
-; RUN:  "m2_f1":["m1_f1", "m1_f2", "interposable_f"]}' > %t_exp/workload_defs.json
+; RUN: echo '{ \
+; RUN:    "m1_f1": ["m1_f1", "m2_f1", "m2_f1_alias", "interposable_f", "noninterposable_f"], \
+; RUN:    "m2_f1": ["m1_f1", "m1_f2", "interposable_f"] \
+; RUN:  }' > %t_exp/workload_defs.json
 ;
 ; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc %t/m3.bc \
 ; RUN:  -o %t_exp/result.o -save-temps \
 ; RUN:  -thinlto-workload-def=%t_exp/workload_defs.json \
 ; RUN:  -r %t/m1.bc,m1_f1,plx \
 ; RUN:  -r %t/m1.bc,interposable_f,p \
-; RUN:  -r %t/m1.bc,noninterposable_f,p \
+; RUN:  -r %t/m1.bc,noninterposable_f \
 ; RUN:  -r %t/m1.bc,m1_variant \
 ; RUN:  -r %t/m1.bc,m2_f1_alias \
 ; RUN:  -r %t/m2.bc,m2_f1,plx \
@@ -126,15 +128,26 @@ define dso_local void @m3_f1() {
 ;
 ; FIRST-LABEL:  @m1_f1
 ; FIRST-LABEL:  @m1_f2.llvm.0
+;
+; @interposable_f is prevailing in m1, so it won't be imported
 ; FIRST-LABEL:  define void @interposable_f
 ; FIRST-NEXT:   call void @m1_variant
+;
 ; FIRST-LABEL:  @m2_f1
+;
+; @noninterposable_f is prevailing in m2 so it will be imported from there. 
 ; FIRST-LABEL:  define available_externally void @noninterposable_f
 ; FIRST-NEXT:   call void @m2_variant
+;
 ; FIRST-LABEL:  define available_externally void @m2_f1_alias
 ; SECOND-LABEL: @m2_f1
+;
+; SECOND-LABEL: define weak_odr void @noninterposable_f
+; SECOND-NEXT:  call void @m2_variant()
 ; SECOND-LABEL: @m1_f1
 ; SECOND-LABEL: define available_externally hidden void @m1_f2.llvm.0
+;
+; we import @interposable_f from m1, the prevailing variant.
 ; SECOND-LABEL: define available_externally void @interposable_f
 ; SECOND-NEXT:  call void @m1_variant
 ; THIRD-LABEL: define available_externally void @m1_f1

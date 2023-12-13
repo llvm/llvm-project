@@ -468,6 +468,10 @@ class WorkloadImportsManager : public ModuleImportsManager {
           llvm::make_filter_range(
               Candidates,
               [&](const auto &Candidate) {
+                LLVM_DEBUG(dbgs() << "[Workflow] Candidate for " << VI.name()
+                                  << " from " << Candidate.second->modulePath()
+                                  << " ImportFailureReason: "
+                                  << getFailureName(Candidate.first) << "\n");
                 return Candidate.first ==
                        FunctionImporter::ImportFailureReason::None;
               }),
