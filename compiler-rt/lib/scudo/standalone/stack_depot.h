@@ -138,12 +138,12 @@ public:
     u32 Hash = B.get();
 
     u32 Pos = Hash & TabMask;
-   atomic_u32 *Tab = getTab(RawStackDepot);
-   atomic_u64 *Ring = getRing(RawStackDepot);
-   u32 RingPos = atomic_load_relaxed(&Tab[Pos]);
-   u64 Entry = atomic_load_relaxed(&Ring[RingPos]);
-   
-   // And the following uses of Tab/Ring
+    atomic_u32 *Tab = getTab(RawStackDepot);
+    atomic_u64 *Ring = getRing(RawStackDepot);
+    u32 RingPos = atomic_load_relaxed(&Tab[Pos]);
+    u64 Entry = atomic_load_relaxed(&Ring[RingPos]);
+
+    // And the following uses of Tab/Ring
     u64 Id = (u64(End - Begin) << 33) | (u64(Hash) << 1) | 1;
     if (Entry == Id)
       return Hash;
