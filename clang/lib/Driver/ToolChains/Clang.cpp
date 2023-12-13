@@ -5615,6 +5615,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_auto_import);
   }
 
+  if (Args.hasFlag(options::OPT_fms_volatile, options::OPT_fno_ms_volatile,
+                   Triple.isX86() && D.IsCLMode()))
+    CmdArgs.push_back("-fms-volatile");
+
   // Non-PIC code defaults to -fdirect-access-external-data while PIC code
   // defaults to -fno-direct-access-external-data. Pass the option if different
   // from the default.
@@ -7946,18 +7950,6 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("-E");
     CmdArgs.push_back("-P");
   }
-
-  unsigned VolatileOptionID;
-  if (getToolChain().getTriple().isX86())
-    VolatileOptionID = options::OPT__SLASH_volatile_ms;
-  else
-    VolatileOptionID = options::OPT__SLASH_volatile_iso;
-
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_volatile_Group))
-    VolatileOptionID = A->getOption().getID();
-
-  if (VolatileOptionID == options::OPT__SLASH_volatile_ms)
-    CmdArgs.push_back("-fms-volatile");
 
  if (Args.hasFlag(options::OPT__SLASH_Zc_dllexportInlines_,
                   options::OPT__SLASH_Zc_dllexportInlines,
