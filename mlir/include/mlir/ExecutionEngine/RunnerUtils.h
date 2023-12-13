@@ -31,13 +31,14 @@
 #define MLIR_RUNNERUTILS_EXPORT __attribute__((visibility("default")))
 #endif // _WIN32
 
-#include "mlir/ExecutionEngine/CRunnerUtils.h"
-#include "mlir/ExecutionEngine/Float16bits.h"
 #include <assert.h>
 #include <cmath>
 #include <complex>
 #include <iomanip>
 #include <iostream>
+
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "mlir/ExecutionEngine/Float16bits.h"
 
 template <typename T, typename StreamType>
 void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &v) {
