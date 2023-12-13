@@ -1917,8 +1917,9 @@ private:
         {return __is_long() ? __get_long_pointer() : __get_short_pointer();}
 
     // The following functions are no-ops outside of AddressSanitizer mode.
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_contiguous_container(
-        [[__maybe_unused__]] const void* __old_mid, [[__maybe_unused__]] const void* __new_mid) const {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
+        (void)__old_mid;
+        (void)__new_mid;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
         const void* __begin = data();
         const void* __end = data() + capacity() + 1;
