@@ -127,11 +127,11 @@ exit:
 ; CHECK-NEXT:            %ld.i64 = load i64, ptr %gep.iv, align 8 ->
 ; CHECK-NEXT:		         store i32 %ld.i64.i32, ptr %gep.iv.n.i64, align 8
 ; CHECK-EMPTY:
-; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %ld.f64 = load double, ptr %gep.iv, align 8 ->
 ; CHECK-NEXT:            store double %val, ptr %gep.iv.101.i64, align 8
 ; CHECK-EMPTY:
-; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store double %val, ptr %gep.iv.101.i64, align 8 ->
 ; CHECK-NEXT:            %ld.i64 = load i64, ptr %gep.iv, align 8
 ; CHECK-EMPTY:
