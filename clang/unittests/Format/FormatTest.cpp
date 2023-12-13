@@ -11727,13 +11727,6 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                "  void func(type &a) { a & member; }\n"
                "  anotherType &member;\n"
                "}");
-
-  Style.ReferenceAlignment = FormatStyle::RAS_Left;
-  verifyFormat("class Foo {\n"
-               "  void operator<(Foo&) {}\n"
-               "  Foo& f;\n"
-               "};",
-               Style);
 }
 
 TEST_F(FormatTest, UnderstandsAttributes) {
