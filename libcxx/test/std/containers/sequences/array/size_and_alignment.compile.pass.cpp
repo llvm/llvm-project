@@ -21,6 +21,7 @@
 
 #include <array>
 #include <cstddef>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -32,43 +33,56 @@ struct MyArray {
 template <class T>
 void test_type() {
   {
-    static_assert(sizeof(std::array<T, 0>) == sizeof(T), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 0>) == TEST_ALIGNOF(T), "");
-    static_assert(sizeof(std::array<T, 0>) == sizeof(T[1]), "");
-    static_assert(sizeof(std::array<T, 0>) == sizeof(MyArray<T, 1>), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 0>) == TEST_ALIGNOF(MyArray<T, 1>), "");
+    using Array = std::array<T, 0>;
+    static_assert(sizeof(Array) == sizeof(T), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
+    static_assert(sizeof(Array) == sizeof(T[1]), "");
+    static_assert(sizeof(Array) == sizeof(MyArray<T, 1>), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 1>), "");
+    static_assert(!std::is_empty<Array>::value, "");
+
+    // Make sure empty arrays don't have padding bytes
+    LIBCPP_STATIC_ASSERT(std::__libcpp_datasizeof<Array>::value == sizeof(Array));
   }
 
   {
-    static_assert(sizeof(std::array<T, 1>) == sizeof(T), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 1>) == TEST_ALIGNOF(T), "");
-    static_assert(sizeof(std::array<T, 1>) == sizeof(T[1]), "");
-    static_assert(sizeof(std::array<T, 1>) == sizeof(MyArray<T, 1>), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 1>) == TEST_ALIGNOF(MyArray<T, 1>), "");
+    using Array = std::array<T, 1>;
+    static_assert(sizeof(Array) == sizeof(T), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
+    static_assert(sizeof(Array) == sizeof(T[1]), "");
+    static_assert(sizeof(Array) == sizeof(MyArray<T, 1>), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 1>), "");
+    static_assert(!std::is_empty<Array>::value, "");
   }
 
   {
-    static_assert(sizeof(std::array<T, 2>) == sizeof(T) * 2, "");
-    static_assert(TEST_ALIGNOF(std::array<T, 2>) == TEST_ALIGNOF(T), "");
-    static_assert(sizeof(std::array<T, 2>) == sizeof(T[2]), "");
-    static_assert(sizeof(std::array<T, 2>) == sizeof(MyArray<T, 2>), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 2>) == TEST_ALIGNOF(MyArray<T, 2>), "");
+    using Array = std::array<T, 2>;
+    static_assert(sizeof(Array) == sizeof(T) * 2, "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
+    static_assert(sizeof(Array) == sizeof(T[2]), "");
+    static_assert(sizeof(Array) == sizeof(MyArray<T, 2>), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 2>), "");
+    static_assert(!std::is_empty<Array>::value, "");
   }
 
   {
-    static_assert(sizeof(std::array<T, 3>) == sizeof(T) * 3, "");
-    static_assert(TEST_ALIGNOF(std::array<T, 3>) == TEST_ALIGNOF(T), "");
-    static_assert(sizeof(std::array<T, 3>) == sizeof(T[3]), "");
-    static_assert(sizeof(std::array<T, 3>) == sizeof(MyArray<T, 3>), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 3>) == TEST_ALIGNOF(MyArray<T, 3>), "");
+    using Array = std::array<T, 3>;
+    static_assert(sizeof(Array) == sizeof(T) * 3, "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
+    static_assert(sizeof(Array) == sizeof(T[3]), "");
+    static_assert(sizeof(Array) == sizeof(MyArray<T, 3>), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 3>), "");
+    static_assert(!std::is_empty<Array>::value, "");
   }
 
   {
-    static_assert(sizeof(std::array<T, 444>) == sizeof(T) * 444, "");
-    static_assert(TEST_ALIGNOF(std::array<T, 444>) == TEST_ALIGNOF(T), "");
-    static_assert(sizeof(std::array<T, 444>) == sizeof(T[444]), "");
-    static_assert(sizeof(std::array<T, 444>) == sizeof(MyArray<T, 444>), "");
-    static_assert(TEST_ALIGNOF(std::array<T, 444>) == TEST_ALIGNOF(MyArray<T, 444>), "");
+    using Array = std::array<T, 444>;
+    static_assert(sizeof(Array) == sizeof(T) * 444, "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
+    static_assert(sizeof(Array) == sizeof(T[444]), "");
+    static_assert(sizeof(Array) == sizeof(MyArray<T, 444>), "");
+    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 444>), "");
+    static_assert(!std::is_empty<Array>::value, "");
   }
 }
 
