@@ -58,9 +58,10 @@ class OpHandle(Handle):
         | Sequence[str | ir.OpView],
     ) -> OpHandle:
         """
-        Returns a handle to ops that match the given names, types, or interface.
-        If only a single type is given, the value wrapped by the resulting
-        handle is populated with the respective type.
+        Emits a `transform.structured.MatchOp`.
+        Returns a handle to payload ops that match the given names, types, or
+        interface. If only a single type is given, the value wrapped by the
+        resulting handle is populated with the respective type.
         """
         # Handle interface.
         if isinstance(ops, structured.MatchInterfaceEnum) or (
