@@ -309,20 +309,16 @@ func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_and_tile_dims(%arg0: 
 
 // -----
 
-func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_sizes(%arg0: tensor<?x?x?x?xf32>, %tile_p : index, %tile_q : index, %tile_r : index) -> tensor<?x?x?x?x?x?x?xf32> {
-  %0 = tensor.empty() : tensor<56x9x12x4x8x2x32xf32>
-  %cast1 = tensor.cast %0 : tensor<56x9x12x4x8x2x32xf32> to tensor<?x?x?x?x?x?x?xf32>
+func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_sizes(%arg0: tensor<?x?x?x?xf32>, %pack_dest: tensor<?x?x?x?x?x?x?xf32>, %transpose_dest: tensor<?x?x?x?x?x?x?xf32>, %tile_p : index, %tile_q : index, %tile_r : index) -> tensor<?x?x?x?x?x?x?xf32> {
   %pack = tensor.pack %arg0
     outer_dims_perm = [3, 0, 2, 1]
     inner_dims_pos = [1, 2, 3]
     inner_tiles = [%tile_p, %tile_q, %tile_r]
-    into %cast1 : tensor<?x?x?x?xf32> -> tensor<?x?x?x?x?x?x?xf32>
+    into %pack_dest : tensor<?x?x?x?xf32> -> tensor<?x?x?x?x?x?x?xf32>
 
-  %1 = tensor.empty() : tensor<9x12x56x4x32x8x2xf32>
-  %cast2 = tensor.cast %1 : tensor<9x12x56x4x32x8x2xf32> to tensor<?x?x?x?x?x?x?xf32>
   %transposed = linalg.transpose
     ins(%pack : tensor<?x?x?x?x?x?x?xf32>)
-    outs(%cast2 : tensor<?x?x?x?x?x?x?xf32>)
+    outs(%transpose_dest : tensor<?x?x?x?x?x?x?xf32>)
     permutation = [2, 3, 0, 1, 6, 4, 5]
 
   return %transposed : tensor<?x?x?x?x?x?x?xf32>
@@ -331,6 +327,7 @@ func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_s
 //      CHECK: module {
 //      CHECK:   func.func @tensor_pack_linalg_transpose_fold_dynamic_outer_dims_tile_dims_tile_sizes(
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?x?xf32>,
+// CHECK-SAME:   %[[PACK_DEST:.+]]: tensor<?x?x?x?x?x?x?xf32>, %[[TRANSPOSE_DEST:.+]]: tensor<?x?x?x?x?x?x?xf32>,
 // CHECK-SAME:   %[[ARG1:.+]]: index, %[[ARG2:.+]]: index,
 // CHECK-SAME:   %[[ARG3:.+]]: index) 
 //      CHECK:     %[[c0:.+]] = arith.constant 0 : index

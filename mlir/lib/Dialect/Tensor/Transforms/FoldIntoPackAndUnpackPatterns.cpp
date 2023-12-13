@@ -107,24 +107,18 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
 
     // Process transpose operation for non-tiled outer dimensions
     for (unsigned int i = 0; i < srcRank; ++i) {
-      // Variable for storing remapped position after considering original
-      // outer_dims_perm and permutation attributes of tensor.pack and
-      // linalg.transpose.
-      int64_t remappedPosition;
+      int64_t remappedPosition = transposePerm[i];
 
       // If tensor.pack has outer_dims_perm attribute, then consider it during
       // index remapping.
       if (!outerDimsPerm.empty()) {
-        if (transposePerm[i] < srcRank) {
-          remappedPosition = outerDimsPerm[transposePerm[i]];
-        } else {
+        if (transposePerm[i] >= srcRank) {
           return rewriter.notifyMatchFailure(
               transposeOp,
               "Cannot fold in tensor.pack if a tile dimension was transposed "
               "with a non-tile dimension in linalg.transpose.");
         }
-      } else {
-        remappedPosition = transposePerm[i];
+        remappedPosition = outerDimsPerm[remappedPosition];
       }
 
       newOuterDimsPermVec.push_back(remappedPosition);
