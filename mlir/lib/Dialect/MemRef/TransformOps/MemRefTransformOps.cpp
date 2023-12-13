@@ -42,7 +42,6 @@ transform::MemrefToLLVMTypeConverterOp::getTypeConverter() {
       (getUseAlignedAlloc() ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
                             : LowerToLLVMOptions::AllocLowering::Malloc);
   options.useGenericFunctions = getUseGenericFunctions();
-  options.useOpaquePointers = getUseOpaquePointers();
 
   if (getIndexBitwidth() != kDeriveIndexBitwidthFromDataLayout)
     options.overrideIndexBitwidth(getIndexBitwidth());

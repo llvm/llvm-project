@@ -43,7 +43,7 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      Element correction; // Use Kahan summation for greater precision.
+      Element correction{}; // Use Kahan summation for greater precision.
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         auto next{correction.Add(x, rounding)};
@@ -80,7 +80,7 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      Element correction; // Use Kahan summation for greater precision.
+      Element correction{}; // Use Kahan summation for greater precision.
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         auto next{correction.Add(x, rounding)};

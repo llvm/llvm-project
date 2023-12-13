@@ -52,12 +52,17 @@ llvm::StringRef GetAsString(const llvm::json::Value &value);
 /// \param[in] key
 ///     The key to use when extracting the value
 ///
+/// \param[in] defaultValue
+///     The default value to return if the key is not present
+///
 /// \return
 ///     A llvm::StringRef that contains the string value for the
-///     specified \a key, or an empty string if there is no key that
+///     specified \a key, or the default value if there is no key that
 ///     matches or if the value is not a string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key);
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key);
+llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
+                          llvm::StringRef defaultValue = {});
+llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
+                          llvm::StringRef defaultValue = {});
 
 /// Extract the unsigned integer value for the specified key from
 /// the specified object.
@@ -161,6 +166,9 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 ///     in as noted in description.
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
+
+/// Utility function to convert SBValue \v into a string.
+std::string ValueToString(lldb::SBValue v);
 
 /// Emplace the string value from an SBValue into the supplied object
 /// using \a key as the key that will contain the value.

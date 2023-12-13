@@ -12,4 +12,6 @@ add_mlir_conversion_library(MLIRIndexToSPIRV
 
   LINK_LIBS PUBLIC
   MLIRIndexDialect
+  MLIRSPIRVConversion
+  MLIRSPIRVDialect
   )

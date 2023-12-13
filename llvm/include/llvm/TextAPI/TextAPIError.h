@@ -21,14 +21,18 @@ enum class TextAPIErrorCode {
   NoSuchArchitecture,
   EmptyResults,
   GenericFrontendError,
+  InvalidInputFormat
 };
 
 class TextAPIError : public llvm::ErrorInfo<TextAPIError> {
 public:
   static char ID;
   TextAPIErrorCode EC;
+  std::string Msg;
 
   TextAPIError(TextAPIErrorCode EC) : EC(EC) {}
+  TextAPIError(TextAPIErrorCode EC, std::string Msg)
+      : EC(EC), Msg(std::move(Msg)) {}
 
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;

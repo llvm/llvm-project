@@ -34,13 +34,13 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
       !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
-      !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
+      !Common.SymbolsToLocalize.empty() ||
       !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
       !Common.UnneededSymbolsToRemove.empty() ||
       !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
       !Common.SetSectionType.empty() || Common.ExtractDWO ||
       Common.PreserveDates || Common.StripAllGNU || Common.StripDWO ||
-      Common.StripNonAlloc || Common.StripSections || Common.Weaken ||
+      Common.StripNonAlloc || Common.StripSections ||
       Common.DecompressDebugSections || Common.StripUnneeded ||
       Common.DiscardMode == DiscardType::Locals || !Common.SymbolsToAdd.empty())
     return createStringError(llvm::errc::invalid_argument,

@@ -52,61 +52,61 @@ constexpr void test() {
   // Test with a single satisfied value
   {
     std::array<int, 5> array{0, 1, 2, 3, 4};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
     FilterIterator it = std::ranges::next(view.begin(), view.end());
-    assert(base(it.base()) == array.end()); // test the test
+    assert(base(it.base()) == array.data() + array.size()); // test the test
 
     FilterIterator& result = --it;
     ASSERT_SAME_TYPE(FilterIterator&, decltype(--it));
     assert(&result == &it);
-    assert(base(result.base()) == array.begin() + 1);
+    assert(base(result.base()) == array.data() + 1);
   }
 
   // Test with more than one satisfied value
   {
     std::array<int, 6> array{0, 1, 2, 3, 1, 4};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
     FilterIterator it = std::ranges::next(view.begin(), view.end());
-    assert(base(it.base()) == array.end()); // test the test
+    assert(base(it.base()) == array.data() + array.size()); // test the test
 
     FilterIterator& result = --it;
     assert(&result == &it);
-    assert(base(result.base()) == array.begin() + 4);
+    assert(base(result.base()) == array.data() + 4);
 
     --it;
-    assert(base(it.base()) == array.begin() + 1);
+    assert(base(it.base()) == array.data() + 1);
   }
 
   // Test going forward and then backward on the same iterator
   {
     std::array<int, 10> array{0, 1, 2, 3, 1, 1, 4, 5, 1, 6};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
     FilterIterator it = view.begin();
     ++it;
-    --it; assert(base(it.base()) == array.begin() + 1);
+    --it; assert(base(it.base()) == array.data() + 1);
     ++it; ++it;
-    --it; assert(base(it.base()) == array.begin() + 4);
+    --it; assert(base(it.base()) == array.data() + 4);
     ++it; ++it;
-    --it; assert(base(it.base()) == array.begin() + 5);
+    --it; assert(base(it.base()) == array.data() + 5);
     ++it; ++it;
-    --it; assert(base(it.base()) == array.begin() + 8);
+    --it; assert(base(it.base()) == array.data() + 8);
   }
 
   // Test post-decrement
   {
     std::array<int, 6> array{0, 1, 2, 3, 1, 4};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
     FilterIterator it = std::ranges::next(view.begin(), view.end());
-    assert(base(it.base()) == array.end()); // test the test
+    assert(base(it.base()) == array.data() + array.size()); // test the test
 
     FilterIterator result = it--;
     ASSERT_SAME_TYPE(FilterIterator, decltype(it--));
-    assert(base(result.base()) == array.end());
-    assert(base(it.base()) == array.begin() + 4);
+    assert(base(result.base()) == array.data() + array.size());
+    assert(base(it.base()) == array.data() + 4);
 
     result = it--;
-    assert(base(result.base()) == array.begin() + 4);
-    assert(base(it.base()) == array.begin() + 1);
+    assert(base(result.base()) == array.data() + 4);
+    assert(base(it.base()) == array.data() + 1);
   }
 }
 

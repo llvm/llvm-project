@@ -1101,21 +1101,20 @@ define void @urem_v2i64(ptr %x, ptr %y) {
 define void @mulhu_v16i8(ptr %x) {
 ; CHECK-LABEL: mulhu_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 3
 ; CHECK-NEXT:    addi a1, a1, -2044
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    li a1, -128
 ; CHECK-NEXT:    vmerge.vxm v10, v9, a1, v0
 ; CHECK-NEXT:    lui a1, 1
 ; CHECK-NEXT:    addi a2, a1, 32
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a2
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    lui a2, %hi(.LCPI65_0)
 ; CHECK-NEXT:    addi a2, a2, %lo(.LCPI65_0)
 ; CHECK-NEXT:    vle8.v v11, (a2)
@@ -1126,21 +1125,21 @@ define void @mulhu_v16i8(ptr %x) {
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    li a2, 513
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a2
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 4
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    addi a1, a1, 78
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 3, v0
 ; CHECK-NEXT:    lui a1, 8
 ; CHECK-NEXT:    addi a1, a1, 304
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse8.v v8, (a0)
@@ -1204,9 +1203,9 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK-NEXT:    vdivu.vv v9, v10, v9
 ; CHECK-NEXT:    lui a1, 45217
 ; CHECK-NEXT:    addi a1, a1, -1785
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v11, v10
 ; CHECK-NEXT:    vdivu.vv v8, v8, v11
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -1309,10 +1308,10 @@ define void @mulhs_v16i8(ptr %x) {
 ; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    lui a1, 5
 ; CHECK-NEXT:    addi a1, a1, -1452
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    li a1, 57
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vxm v9, v9, a1, v0
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v9
 ; CHECK-NEXT:    vmv.v.i v9, 7
@@ -1367,9 +1366,9 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vdiv.vv v9, v9, v10
 ; CHECK-NEXT:    lui a1, 1020016
 ; CHECK-NEXT:    addi a1, a1, 2041
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v11, v10
 ; CHECK-NEXT:    vdiv.vv v8, v8, v11
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -4872,21 +4871,21 @@ define void @mulhu_v32i8(ptr %x) {
 ; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-NEXT:    vle8.v v8, (a0)
 ; LMULMAX2-NEXT:    vmv.v.i v10, 0
-; LMULMAX2-NEXT:    lui a2, 163907
-; LMULMAX2-NEXT:    addi a2, a2, -2044
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-NEXT:    li a2, -128
-; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-NEXT:    vmerge.vxm v12, v10, a2, v0
-; LMULMAX2-NEXT:    lui a2, 66049
-; LMULMAX2-NEXT:    addi a2, a2, 32
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; LMULMAX2-NEXT:    lui a2, %hi(.LCPI181_0)
-; LMULMAX2-NEXT:    addi a2, a2, %lo(.LCPI181_0)
-; LMULMAX2-NEXT:    vle8.v v14, (a2)
+; LMULMAX2-NEXT:    lui a1, 163907
+; LMULMAX2-NEXT:    addi a1, a1, -2044
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    li a1, -128
+; LMULMAX2-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; LMULMAX2-NEXT:    vmerge.vxm v12, v10, a1, v0
+; LMULMAX2-NEXT:    lui a1, 66049
+; LMULMAX2-NEXT:    addi a1, a1, 32
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; LMULMAX2-NEXT:    lui a1, %hi(.LCPI181_0)
+; LMULMAX2-NEXT:    addi a1, a1, %lo(.LCPI181_0)
+; LMULMAX2-NEXT:    vle8.v v14, (a1)
 ; LMULMAX2-NEXT:    vmerge.vim v10, v10, 1, v0
 ; LMULMAX2-NEXT:    vsrl.vv v10, v8, v10
 ; LMULMAX2-NEXT:    vmulhu.vv v10, v10, v14
@@ -4894,23 +4893,23 @@ define void @mulhu_v32i8(ptr %x) {
 ; LMULMAX2-NEXT:    vmulhu.vv v8, v8, v12
 ; LMULMAX2-NEXT:    vadd.vv v8, v8, v10
 ; LMULMAX2-NEXT:    vmv.v.i v10, 4
-; LMULMAX2-NEXT:    lui a2, 8208
-; LMULMAX2-NEXT:    addi a2, a2, 513
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; LMULMAX2-NEXT:    lui a1, 8208
+; LMULMAX2-NEXT:    addi a1, a1, 513
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; LMULMAX2-NEXT:    vmerge.vim v10, v10, 1, v0
-; LMULMAX2-NEXT:    lui a2, 66785
-; LMULMAX2-NEXT:    addi a2, a2, 78
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; LMULMAX2-NEXT:    lui a1, 66785
+; LMULMAX2-NEXT:    addi a1, a1, 78
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; LMULMAX2-NEXT:    vmerge.vim v10, v10, 3, v0
-; LMULMAX2-NEXT:    lui a2, 529160
-; LMULMAX2-NEXT:    addi a2, a2, 304
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; LMULMAX2-NEXT:    lui a1, 529160
+; LMULMAX2-NEXT:    addi a1, a1, 304
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; LMULMAX2-NEXT:    vmerge.vim v10, v10, 2, v0
 ; LMULMAX2-NEXT:    vsrl.vv v8, v8, v10
 ; LMULMAX2-NEXT:    vse8.v v8, (a0)
@@ -5250,11 +5249,11 @@ define void @mulhs_v32i8(ptr %x) {
 ; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; LMULMAX2-NEXT:    vle8.v v8, (a0)
 ; LMULMAX2-NEXT:    vmv.v.i v10, 7
-; LMULMAX2-NEXT:    lui a2, 304453
-; LMULMAX2-NEXT:    addi a2, a2, -1452
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; LMULMAX2-NEXT:    vmv.s.x v0, a2
-; LMULMAX2-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; LMULMAX2-NEXT:    lui a1, 304453
+; LMULMAX2-NEXT:    addi a1, a1, -1452
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; LMULMAX2-NEXT:    vmv.s.x v0, a1
+; LMULMAX2-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; LMULMAX2-NEXT:    vmerge.vim v10, v10, 1, v0
 ; LMULMAX2-NEXT:    li a1, -123
 ; LMULMAX2-NEXT:    vmv.v.x v12, a1
@@ -5267,15 +5266,14 @@ define void @mulhs_v32i8(ptr %x) {
 ;
 ; LMULMAX1-LABEL: mulhs_v32i8:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; LMULMAX1-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; LMULMAX1-NEXT:    vle8.v v8, (a0)
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle8.v v9, (a1)
 ; LMULMAX1-NEXT:    lui a2, 5
 ; LMULMAX1-NEXT:    addi a2, a2, -1452
-; LMULMAX1-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; LMULMAX1-NEXT:    vmv.s.x v0, a2
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; LMULMAX1-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmv.v.i v10, -9
 ; LMULMAX1-NEXT:    vmerge.vim v10, v10, 9, v0
 ; LMULMAX1-NEXT:    vdivu.vv v9, v9, v10
@@ -8237,5 +8235,65 @@ define void @mulhs_vx_v2i64(ptr %x) {
   %a = load <2 x i64>, ptr %x
   %b = sdiv <2 x i64> %a, <i64 3, i64 3>
   store <2 x i64> %b, ptr %x
+  ret void
+}
+
+define void @madd_vv_v2i64(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: madd_vv_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vmadd.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = add <2 x i64> %a, <i64 1, i64 1>
+  %c = mul <2 x i64> %b, %y
+  store <2 x i64> %c, ptr %x
+  ret void
+}
+
+define void @madd_vv_v2i64_2(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: madd_vv_v2i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vmadd.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = add <2 x i64> %a, <i64 1, i64 1>
+  %c = mul <2 x i64> %y, %b
+  store <2 x i64> %c, ptr %x
+  ret void
+}
+
+define void @msub_vv_v2i64(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: msub_vv_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vnmsub.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = sub <2 x i64> <i64 1, i64 1>, %a
+  %c = mul <2 x i64> %b, %y
+  store <2 x i64> %c, ptr %x
+  ret void
+}
+
+define void @msub_vv_v2i64_2(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: msub_vv_v2i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vnmsub.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = sub <2 x i64> <i64 1, i64 1>, %a
+  %c = mul <2 x i64> %y, %b
+  store <2 x i64> %c, ptr %x
   ret void
 }

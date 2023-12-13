@@ -454,11 +454,11 @@ int main(int argc, char **argv) {
   /// extension. Returns true if Lib is in a recognized format.
   auto GetComponentLibraryNameSlice = [&](const StringRef &Lib,
                                           StringRef &Out) {
-    if (Lib.startswith("lib")) {
+    if (Lib.starts_with("lib")) {
       unsigned FromEnd;
-      if (Lib.endswith(StaticExt)) {
+      if (Lib.ends_with(StaticExt)) {
         FromEnd = StaticExt.size() + 1;
-      } else if (Lib.endswith(SharedExt)) {
+      } else if (Lib.ends_with(SharedExt)) {
         FromEnd = SharedExt.size() + 1;
       } else {
         FromEnd = 0;
@@ -481,7 +481,7 @@ int main(int argc, char **argv) {
         // Treat the DyLibName specially. It is not a component library and
         // already has the necessary prefix and suffix (e.g. `.so`) added so
         // just return it unmodified.
-        assert(Lib.endswith(SharedExt) && "DyLib is missing suffix");
+        assert(Lib.ends_with(SharedExt) && "DyLib is missing suffix");
         LibFileName = std::string(Lib);
       } else {
         LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
@@ -507,7 +507,7 @@ int main(int argc, char **argv) {
   for (int i = 1; i != argc; ++i) {
     StringRef Arg = argv[i];
 
-    if (Arg.startswith("-")) {
+    if (Arg.starts_with("-")) {
       HasAnyOption = true;
       if (Arg == "--version") {
         OS << PACKAGE_VERSION << '\n';

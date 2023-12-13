@@ -101,6 +101,7 @@ enum RelExpr {
   R_PPC64_TOCBASE,
   R_PPC64_RELAX_GOT_PC,
   R_RISCV_ADD,
+  R_RISCV_LEB128,
   R_RISCV_PC_INDIRECT,
   // Same as R_PC but with page-aligned semantics.
   R_LOONGARCH_PAGE_PC,

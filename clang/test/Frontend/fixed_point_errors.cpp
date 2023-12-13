@@ -2,12 +2,10 @@
 // RUN: %clang_cc1 -x c++ %s -verify -ffixed-point
 
 #ifdef WITHOUT_FIXED_POINT
-_Accum accum;                           // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-                                        // expected-error@-1{{a type specifier is required for all declarations}}
-_Fract fract;                           // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-                                        // expected-error@-1{{a type specifier is required for all declarations}}
-_Sat _Accum sat_accum;                  // expected-error 2{{compile with '-ffixed-point' to enable fixed point types}}
-                                        // expected-error@-1{{a type specifier is required for all declarations}}
+_Accum accum;                           // expected-error{{unknown type name '_Accum'}}
+_Fract fract;                           // expected-error{{unknown type name '_Fract'}}
+_Sat _Accum sat_accum;                  // expected-error{{unknown type name '_Sat'}}
+                                        // expected-error@-1{{expected ';' after top level declarator}}
 #endif
 
 int accum_int = 10k;     // expected-error{{invalid suffix 'k' on integer constant}}

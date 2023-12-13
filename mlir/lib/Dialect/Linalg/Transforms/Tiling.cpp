@@ -553,7 +553,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     if (!options.interchangeVector.empty()) {
       for (AffineExpr result : invPermutationMap.getResults())
         interchangedIvs.push_back(
-            ivs[result.cast<AffineDimExpr>().getPosition()]);
+            ivs[cast<AffineDimExpr>(result).getPosition()]);
     } else {
       interchangedIvs.assign(ivs.begin(), ivs.end());
     }

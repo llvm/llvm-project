@@ -41,7 +41,7 @@ The core impact on lowering will be:
     relevant.
 
 
-## Variable and Expression value concepts in HLFIR
+# Variable and Expression value concepts in HLFIR
 
 ## Strengthening the variable concept
 
@@ -1035,7 +1035,7 @@ HLFIR array assignment lowering pass:
     associated variables that are neither target nor pointers.
 -   Lower to assignment to loop:
 
-```HFLIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1320,7 +1320,7 @@ Lowering of vector subscripted entities would happen as follow:
   input IO) by inlining the elemental body into the created loops, and
   identifying the hlfir.designate producing the result.
 
-```HFLFIR
+```
 func.func @_QPfoo(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array<?xf32>>, %arg2: !fir.box<<!fir.array<?xi32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>

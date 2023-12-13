@@ -93,6 +93,8 @@ set(hlsl_files
 
 set(loongarch_files
   larchintrin.h
+  lasxintrin.h
+  lsxintrin.h
   )
 
 set(mips_msa_files
@@ -114,6 +116,8 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  riscv_bitmanip.h
+  riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
   )
@@ -384,7 +388,7 @@ if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
   # Generate arm_cde.h
   clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
   # Generate arm_vector_types.h
-  clang_generate_header(-gen-arm-vector-type arm_vector_types.td arm_vector_types.h)
+  clang_generate_header(-gen-arm-vector-type arm_neon.td arm_vector_types.h)
 
   # Add headers to target specific lists
   list(APPEND arm_common_generated_files

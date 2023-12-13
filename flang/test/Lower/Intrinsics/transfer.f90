@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 subroutine trans_test(store, word)
     ! CHECK-LABEL: func @_QPtrans_test(
@@ -9,7 +9,7 @@ subroutine trans_test(store, word)
     ! CHECK:         %[[VAL_5:.*]] = fir.zero_bits !fir.heap<i32>
     ! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
     ! CHECK:         fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-    ! CHECK:         %[[VAL_7:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+    ! CHECK:         %[[VAL_7:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
     ! CHECK:         %[[VAL_8:.*]] = arith.constant {{.*}} : i32
     ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
     ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_3]] : (!fir.box<f32>) -> !fir.box<none>
@@ -43,7 +43,7 @@ subroutine trans_test(store, word)
   ! CHECK:         %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
   ! CHECK:         %[[VAL_13:.*]] = fir.embox %[[VAL_10]](%[[VAL_12]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   ! CHECK:         fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  ! CHECK:         %[[VAL_14:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+  ! CHECK:         %[[VAL_14:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
   ! CHECK:         %[[VAL_15:.*]] = arith.constant {{.*}} : i32
   ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_7]] : (!fir.box<f32>) -> !fir.box<none>
@@ -88,7 +88,7 @@ subroutine trans_test(store, word)
     ! CHECK:         %[[VAL_7:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>
     ! CHECK:         %[[VAL_8:.*]] = fir.embox %[[VAL_7]] : (!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>
     ! CHECK:         fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>>
-    ! CHECK:         %[[VAL_9:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+    ! CHECK:         %[[VAL_9:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
     ! CHECK:         %[[VAL_10:.*]] = arith.constant {{.*}} : i32
     ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>>) -> !fir.ref<!fir.box<none>>
     ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_5]] : (!fir.box<i32>) -> !fir.box<none>
@@ -99,7 +99,7 @@ subroutine trans_test(store, word)
     ! CHECK:         %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>) -> !fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>
     ! CHECK:         %[[VAL_18:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>
     ! CHECK:         fir.store %[[VAL_18]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>>
-    ! CHECK:         %[[VAL_19:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+    ! CHECK:         %[[VAL_19:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
     ! CHECK:         %[[VAL_20:.*]] = arith.constant {{.*}} : i32
     ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>>) -> !fir.ref<!fir.box<none>>
     ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>) -> !fir.box<none>

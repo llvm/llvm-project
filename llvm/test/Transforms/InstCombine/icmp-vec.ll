@@ -649,9 +649,8 @@ define i1 @eq_cast_zext(<5 x i3> %b) {
 
 define i1 @sgt_cast_zext(<5 x i3> %b) {
 ; CHECK-LABEL: @sgt_cast_zext(
-; CHECK-NEXT:    [[E:%.*]] = zext <5 x i3> [[B:%.*]] to <5 x i7>
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <5 x i7> [[E]] to i35
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i35 [[BC]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <5 x i3> [[B:%.*]] to i15
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i15 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = zext <5 x i3> %b to <5 x i7>

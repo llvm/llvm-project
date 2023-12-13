@@ -193,6 +193,9 @@ def growable_table: FF<"growable-table">,
 def global_base: JJ<"global-base=">,
   HelpText<"Memory offset at which to place global data (Defaults to 1024)">;
 
+defm keep_section: Eq<"keep-section",
+     "Preserve a section even when --strip-all is given. This is useful for compiler drivers such as clang or emcc that, for example, depend on the features section for post-link processing. Can be specified multiple times to keep multiple sections">;
+
 def import_memory: FF<"import-memory">,
   HelpText<"Import the module's memory from the default module of \"env\" with the name \"memory\".">;
 def import_memory_with_name: JJ<"import-memory=">,

@@ -529,13 +529,20 @@ void CoroCloner::handleFinalSuspend() {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
-    auto *GepIndex = Builder.CreateStructGEP(Shape.FrameTy, NewFramePtr,
-                                       coro::Shape::SwitchFieldIndex::Resume,
-                                             "ResumeFn.addr");
-    auto *Load = Builder.CreateLoad(Shape.getSwitchResumePointerType(),
-                                    GepIndex);
-    auto *Cond = Builder.CreateIsNull(Load);
-    Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+
+    if (NewF->isCoroOnlyDestroyWhenComplete()) {
+      // When the coroutine can only be destroyed when complete, we don't need
+      // to generate code for other cases.
+      Builder.CreateBr(ResumeBB);
+    } else {
+      auto *GepIndex = Builder.CreateStructGEP(
+          Shape.FrameTy, NewFramePtr, coro::Shape::SwitchFieldIndex::Resume,
+          "ResumeFn.addr");
+      auto *Load =
+          Builder.CreateLoad(Shape.getSwitchResumePointerType(), GepIndex);
+      auto *Cond = Builder.CreateIsNull(Load);
+      Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+    }
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
 }
@@ -1096,7 +1103,7 @@ void CoroCloner::create() {
 
   // Remap vFrame pointer.
   auto *NewVFrame = Builder.CreateBitCast(
-      NewFramePtr, Type::getInt8PtrTy(Builder.getContext()), "vFrame");
+      NewFramePtr, PointerType::getUnqual(Builder.getContext()), "vFrame");
   Value *OldVFrame = cast<Value>(VMap[Shape.CoroBegin]);
   if (OldVFrame != NewVFrame)
     OldVFrame->replaceAllUsesWith(NewVFrame);
@@ -1227,7 +1234,7 @@ static void setCoroInfo(Function &F, coro::Shape &Shape,
 
   // Update coro.begin instruction to refer to this constant.
   LLVMContext &C = F.getContext();
-  auto *BC = ConstantExpr::getPointerCast(GV, Type::getInt8PtrTy(C));
+  auto *BC = ConstantExpr::getPointerCast(GV, PointerType::getUnqual(C));
   Shape.getSwitchCoroId()->setInfo(BC);
 }
 
@@ -1474,10 +1481,9 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
       IRBuilder<> Builder(AllocInst);
       auto *Frame = Builder.CreateAlloca(Shape.FrameTy);
       Frame->setAlignment(Shape.FrameAlign);
-      auto *VFrame = Builder.CreateBitCast(Frame, Builder.getInt8PtrTy());
       AllocInst->replaceAllUsesWith(Builder.getFalse());
       AllocInst->eraseFromParent();
-      CoroBegin->replaceAllUsesWith(VFrame);
+      CoroBegin->replaceAllUsesWith(Frame);
     } else {
       CoroBegin->replaceAllUsesWith(CoroBegin->getMem());
     }
@@ -1707,7 +1713,7 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
                                        Value *Continuation) {
   auto *ResumeIntrinsic = Suspend->getResumeFunction();
   auto &Context = Suspend->getParent()->getParent()->getContext();
-  auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+  auto *Int8PtrTy = PointerType::getUnqual(Context);
 
   IRBuilder<> Builder(ResumeIntrinsic);
   auto *Val = Builder.CreateBitOrPointerCast(Continuation, Int8PtrTy);
@@ -1760,7 +1766,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   F.removeRetAttr(Attribute::NonNull);
 
   auto &Context = F.getContext();
-  auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+  auto *Int8PtrTy = PointerType::getUnqual(Context);
 
   auto *Id = cast<CoroIdAsyncInst>(Shape.CoroBegin->getId());
   IRBuilder<> Builder(Id);

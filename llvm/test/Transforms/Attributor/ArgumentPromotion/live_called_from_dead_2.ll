@@ -54,6 +54,8 @@ define internal i32 @caller(ptr %B) {
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CGSCC-NEXT:    [[A2:%.*]] = alloca i8, i32 0, align 4
+; CGSCC-NEXT:    [[A1:%.*]] = alloca i8, i32 0, align 4
 ; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 0
 ;

@@ -105,7 +105,7 @@ constexpr bool test() {
   { // test with a range
     std::array<int, 5> a = {1, 2, 3, 4, 5};
     std::array<int, 5> b = {1, 2, 3, 5, 4};
-    using Expected = std::ranges::mismatch_result<int*, int*>;
+    using Expected = std::ranges::mismatch_result<std::array<int, 5>::iterator, std::array<int, 5>::iterator>;
     std::same_as<Expected> auto ret = std::ranges::mismatch(a, b);
     assert(ret.in1 == a.begin() + 3);
     assert(ret.in2 == b.begin() + 3);

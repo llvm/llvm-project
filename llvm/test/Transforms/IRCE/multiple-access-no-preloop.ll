@@ -69,7 +69,7 @@ define void @multiple_access_no_preloop(
 ; CHECK-NEXT:    [[ADDR_B_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR_B]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 -1, ptr [[ADDR_B_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[N]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]], !irce.loop.clone [[META7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]], !loop_constrainer.loop.clone [[META7:![0-9]+]]
 ;
   ptr %arr_a, ptr %a_len_ptr, ptr %arr_b, ptr %b_len_ptr, i32 %n) {
 

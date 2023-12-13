@@ -23,7 +23,6 @@
 
 namespace llvm {
 
-/// Container class for subtarget features.
 /// This is a constexpr reimplementation of a subset of std::bitset. It would be
 /// nice to use std::bitset directly, but it doesn't support constant
 /// initialization.

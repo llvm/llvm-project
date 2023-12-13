@@ -70,3 +70,15 @@ int test_for_loop() {
   return flag_d / num; // no-crash expected-warning {{Division by zero}} 
                        // expected-note@-1 {{Division by zero}}
 }
+
+int test_for_range_loop() {
+  int arr[10] = {0};
+  for(auto x : arr) { // expected-note {{Assigning value}} 
+    ++x;
+  }
+  if (arr[0] == 0)   // expected-note {{Assuming the condition is true}} 
+                     // expected-note@-1 {{Taking true branch}}
+    return 1/arr[0]; // expected-warning {{Division by zero}}
+                     // expected-note@-1 {{Division by zero}}
+  return 0;
+}

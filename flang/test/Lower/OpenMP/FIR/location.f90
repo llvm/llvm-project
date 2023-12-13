@@ -17,7 +17,7 @@ end
 !CHECK-LABEL: sub_target
 subroutine sub_target()
   print *, x
-!CHECK: omp.target  {
+!CHECK: omp.target {{.*}} {
   !$omp target
     print *, x
 !CHECK:   omp.terminator loc(#[[TAR_LOC:.*]])

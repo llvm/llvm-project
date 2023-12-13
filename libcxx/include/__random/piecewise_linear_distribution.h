@@ -13,8 +13,8 @@
 #include <__config>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
+#include <cmath>
 #include <iosfwd>
-#include <numeric>
 #include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -29,6 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS piecewise_linear_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
@@ -55,15 +58,15 @@ public:
         _LIBCPP_HIDE_FROM_ABI param_type(param_type const&) = default;
         _LIBCPP_HIDE_FROM_ABI param_type & operator=(const param_type& __rhs);
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         vector<result_type> intervals() const {return __b_;}
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         vector<result_type> densities() const {return __densities_;}
 
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__densities_ == __y.__densities_ && __x.__b_ == __y.__b_;}
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
 
@@ -90,10 +93,10 @@ private:
 
 public:
     // constructor and reset functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     piecewise_linear_distribution() {}
     template<class _InputIteratorB, class _InputIteratorW>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         piecewise_linear_distribution(_InputIteratorB __f_b,
                                       _InputIteratorB __l_b,
                                       _InputIteratorW __f_w)
@@ -101,54 +104,54 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         piecewise_linear_distribution(initializer_list<result_type> __bl,
                                       _UnaryOperation __fw)
         : __p_(__bl, __fw) {}
 #endif // _LIBCPP_CXX03_LANG
 
     template<class _UnaryOperation>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         piecewise_linear_distribution(size_t __nw, result_type __xmin,
                                       result_type __xmax, _UnaryOperation __fw)
         : __p_(__nw, __xmin, __xmax, __fw) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit piecewise_linear_distribution(const param_type& __p)
         : __p_(__p) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reset() {}
 
     // generating functions
     template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
     template<class _URNG>
     _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     vector<result_type> intervals() const {return __p_.intervals();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     vector<result_type> densities() const {return __p_.densities();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void param(const param_type& __p) {__p_ = __p;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type min() const {return __p_.__b_.front();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type max() const {return __p_.__b_.back();}
 
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator==(const piecewise_linear_distribution& __x,
                         const piecewise_linear_distribution& __y)
         {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator!=(const piecewise_linear_distribution& __x,
                         const piecewise_linear_distribution& __y)
         {return !(__x == __y);}
@@ -294,7 +297,7 @@ piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const param_typ
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     typedef uniform_real_distribution<result_type> _Gen;
     result_type __u = _Gen()(__g);
-    ptrdiff_t __k = _VSTD::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),
+    ptrdiff_t __k = std::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),
                                       __u) - __p.__areas_.begin() - 1;
     __u -= __p.__areas_[__k];
     const result_type __dk = __p.__densities_[__k];
@@ -306,7 +309,7 @@ piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const param_typ
     const result_type __bk1 = __p.__b_[__k+1];
     const result_type __deltab = __bk1 - __bk;
     return (__bk * __dk1 - __bk1 * __dk +
-        _VSTD::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) /
+        std::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) /
         __deltad;
 }
 

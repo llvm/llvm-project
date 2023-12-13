@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-scf-to-openmp='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-scf-to-openmp -split-input-file %s | FileCheck %s
 
 // CHECK: omp.reduction.declare @[[$REDF:.*]] : f32
 

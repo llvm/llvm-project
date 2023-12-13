@@ -45,8 +45,8 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:      .csect [PR],5
-; CHECK-NEXT:  .file
+; CHECK:  .file
+; CHECK-NEXT:      .csect ..text..[PR],5
 
 ; CHECK:      .csect .data[RW],5
 ; CHECK-NEXT: .globl  ivar

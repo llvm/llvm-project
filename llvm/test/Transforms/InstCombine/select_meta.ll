@@ -64,7 +64,7 @@ define i32 @foo2(i32, i32) local_unnamed_addr #0  {
 define i64 @test43(i32 %a) nounwind {
 ; CHECK-LABEL: @test43(
 ; CHECK-NEXT:    [[NARROW:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 0)
-; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[MAX:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = sext i32 %a to i64

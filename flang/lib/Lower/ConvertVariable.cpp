@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
+#include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -479,7 +480,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (global && globalIsInitialized(global))
     return global;
 
-  if (Fortran::semantics::IsProcedurePointer(sym))
+  if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+      Fortran::semantics::IsProcedurePointer(sym))
     TODO(loc, "procedure pointer globals");
 
   // If this is an array, check to see if we can use a dense attribute
@@ -507,7 +509,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (!global)
     global = builder.createGlobal(loc, symTy, globalName, linkage,
                                   mlir::Attribute{}, isConst, var.isTarget());
-  if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+  if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
+      !Fortran::semantics::IsProcedure(sym)) {
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init()) {
@@ -527,7 +530,6 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             b.create<fir::HasValueOp>(loc, box);
           });
     }
-
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
@@ -552,10 +554,39 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder.create<fir::HasValueOp>(loc, castTo);
           });
     }
+  } else if (Fortran::semantics::IsProcedurePointer(sym)) {
+    const auto *details{sym.detailsIf<Fortran::semantics::ProcEntityDetails>()};
+    if (details && details->init()) {
+      auto sym{*details->init()};
+      if (sym) // Has a procedure target.
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &b) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
+                  converter, loc, *sym)};
+              auto castTo{builder.createConvert(loc, symTy, box)};
+              b.create<fir::HasValueOp>(loc, castTo);
+            });
+      else { // Has NULL() target.
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &b) {
+              auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+              b.create<fir::HasValueOp>(loc, box);
+            });
+      }
+    } else {
+      // No initialization.
+      Fortran::lower::createGlobalInitialization(
+          builder, global, [&](fir::FirOpBuilder &b) {
+            auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+            b.create<fir::HasValueOp>(loc, box);
+          });
+    }
   } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
     mlir::emitError(loc, "COMMON symbol processed elsewhere");
   } else {
-    TODO(loc, "global"); // Procedure pointer or something else
+    TODO(loc, "global"); // Something else
   }
   // Creates zero initializer for globals without initializers, this is a common
   // and expected behavior (although not required by the standard)
@@ -608,11 +639,11 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(sym);
   mlir::Location loc = genLocation(converter, sym);
-  fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  fir::GlobalOp global;
   if (var.isModuleOrSubmoduleVariable()) {
-    // A module global was or will be defined when lowering the module. Emit
-    // only a declaration if the global does not exist at that point.
+    // A non-intrinsic module global is defined when lowering the module.
+    // Emit only a declaration if the global does not exist.
     global = declareGlobal(converter, var, globalName, linkage);
   } else {
     global = defineGlobal(converter, var, globalName, linkage);
@@ -645,8 +676,16 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
   bool isTarg = var.isTarget();
+
   // Let the builder do all the heavy lifting.
-  return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
+    return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+
+  // Local procedure pointer.
+  auto res{builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg)};
+  auto box{fir::factory::createNullBoxProc(builder, loc, ty)};
+  builder.create<fir::StoreOp>(loc, box, res);
+  return res;
 }
 
 /// Must \p var be default initialized at runtime when entering its scope.
@@ -1292,6 +1331,28 @@ void Fortran::lower::defineCommonBlocks(
     finalizeCommonBlockDefinition(loc, converter, global, cmnBlkMems);
 }
 
+mlir::Value Fortran::lower::genCommonBlockMember(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Value commonValue) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  std::size_t byteOffset = sym.GetUltimate().offset();
+  mlir::IntegerType i8Ty = builder.getIntegerType(8);
+  mlir::Type i8Ptr = builder.getRefType(i8Ty);
+  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
+  mlir::Value base = builder.createConvert(loc, seqTy, commonValue);
+
+  mlir::Value offs =
+      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
+  mlir::Value varAddr = builder.create<fir::CoordinateOp>(
+      loc, i8Ptr, base, mlir::ValueRange{offs});
+  mlir::Type symType = converter.genType(sym);
+
+  return Fortran::semantics::FindEquivalenceSet(sym) != nullptr
+             ? castAliasToPointer(builder, loc, symType, varAddr)
+             : builder.createConvert(loc, builder.getRefType(symType), varAddr);
+}
+
 /// The COMMON block is a global structure. `var` will be at some offset
 /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
 /// the symbol map.
@@ -1314,21 +1375,8 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 
     symMap.addSymbol(common, commonAddr);
   }
-  std::size_t byteOffset = varSym.GetUltimate().offset();
-  mlir::IntegerType i8Ty = builder.getIntegerType(8);
-  mlir::Type i8Ptr = builder.getRefType(i8Ty);
-  mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
-  mlir::Value base = builder.createConvert(loc, seqTy, commonAddr);
-  mlir::Value offs =
-      builder.createIntegerConstant(loc, builder.getIndexType(), byteOffset);
-  auto varAddr = builder.create<fir::CoordinateOp>(loc, i8Ptr, base,
-                                                   mlir::ValueRange{offs});
-  mlir::Type symType = converter.genType(var.getSymbol());
-  mlir::Value local;
-  if (Fortran::semantics::FindEquivalenceSet(var.getSymbol()) != nullptr)
-    local = castAliasToPointer(builder, loc, symType, varAddr);
-  else
-    local = builder.createConvert(loc, builder.getRefType(symType), varAddr);
+
+  mlir::Value local = genCommonBlockMember(converter, loc, varSym, commonAddr);
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, local);
 }
@@ -1542,7 +1590,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   // is useful to maintain the address of the commonblock in an MLIR value and
   // query it. hlfir.declare need not be created for these.
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      !Fortran::semantics::IsProcedure(sym) &&
+      (!Fortran::semantics::IsProcedure(sym) ||
+       Fortran::semantics::IsPointer(sym)) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     bool isCrayPointee =
         sym.test(Fortran::semantics::Symbol::Flag::CrayPointee);
@@ -1645,9 +1694,13 @@ void Fortran::lower::genDeclareSymbol(
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
+    // FIXME: Using the ultimate symbol for translating symbol attributes will
+    // lead to situations where the VOLATILE/ASYNCHRONOUS attributes are not
+    // propagated to the hlfir.declare (these attributes can be added when
+    // using module variables).
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
-                                                  extraFlags);
+        Fortran::lower::translateSymbolAttributes(
+            builder.getContext(), sym.GetUltimate(), extraFlags);
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes);
@@ -1679,6 +1732,16 @@ genAllocatableOrPointerDeclare(Fortran::lower::AbstractConverter &converter,
     explictLength = box.nonDeferredLenParams()[0];
   }
   genDeclareSymbol(converter, symMap, sym, base, explictLength,
+                   /*shape=*/std::nullopt,
+                   /*lbounds=*/std::nullopt, force);
+}
+
+/// Map a procedure pointer
+static void genProcPointer(Fortran::lower::AbstractConverter &converter,
+                           Fortran::lower::SymMap &symMap,
+                           const Fortran::semantics::Symbol &sym,
+                           mlir::Value addr, bool force = false) {
+  genDeclareSymbol(converter, symMap, sym, addr, mlir::Value{},
                    /*shape=*/std::nullopt,
                    /*lbounds=*/std::nullopt, force);
 }
@@ -1734,8 +1797,20 @@ void Fortran::lower::mapSymbolAttributes(
 
       Fortran::lower::genDeclareSymbol(converter, symMap, sym, undefOp);
     }
-    if (Fortran::semantics::IsPointer(sym))
-      TODO(loc, "procedure pointers");
+
+    // Procedure pointer.
+    if (Fortran::semantics::IsPointer(sym)) {
+      // global
+      mlir::Value boxAlloc = preAlloc;
+      // dummy or passed result
+      if (!boxAlloc)
+        if (Fortran::lower::SymbolBox symbox = symMap.lookupSymbol(sym))
+          boxAlloc = symbox.getAddr();
+      // local
+      if (!boxAlloc)
+        boxAlloc = createNewLocal(converter, loc, var, preAlloc);
+      genProcPointer(converter, symMap, sym, boxAlloc, replace);
+    }
     return;
   }
 
@@ -2063,8 +2138,6 @@ void Fortran::lower::mapSymbolAttributes(
       if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        if (argType.isa<fir::RecordType>())
-          TODO(loc, "derived type argument passed by value");
         mlir::Type symType = converter.genType(sym);
         addr = builder.create<fir::AllocaOp>(loc, symType);
         if (isCptrByVal) {
@@ -2208,8 +2281,14 @@ void Fortran::lower::mapSymbolAttributes(
                       preAlloc);
 }
 
+void Fortran::lower::createIntrinsicModuleGlobal(
+    Fortran::lower::AbstractConverter &converter, const pft::Variable &var) {
+  defineGlobal(converter, var, converter.mangleName(var.getSymbol()),
+               converter.getFirOpBuilder().createLinkOnceODRLinkage());
+}
+
 void Fortran::lower::createRuntimeTypeInfoGlobal(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &typeInfoSym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(typeInfoSym);

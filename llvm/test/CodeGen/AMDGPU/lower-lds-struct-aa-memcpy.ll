@@ -69,7 +69,7 @@ declare void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noalias nocapture writeonly
 ; CHECK: attributes #[[ATTR0]] = { "amdgpu-lds-size"="7" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{i64 0, i64 1}
+; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 1}
 ; CHECK: [[META1:![0-9]+]] = !{!2}
 ; CHECK: [[META2:![0-9]+]] = distinct !{!2, !3}
 ; CHECK: [[META3:![0-9]+]] = distinct !{!3}

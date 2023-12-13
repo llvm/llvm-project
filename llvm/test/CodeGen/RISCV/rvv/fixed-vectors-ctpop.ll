@@ -629,10 +629,8 @@ define <8 x i1> @ctpop_v8i32_eq_one(ptr %x, ptr %y) {
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-NEXT:    vadd.vi v10, v8, -1
-; LMULMAX2-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-NEXT:    vmseq.vi v12, v10, 0
-; LMULMAX2-NEXT:    vmsne.vi v10, v8, 0
-; LMULMAX2-NEXT:    vmand.mm v0, v10, v12
+; LMULMAX2-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX2-NEXT:    vmsltu.vv v0, v10, v8
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: ctpop_v8i32_eq_one:
@@ -641,34 +639,22 @@ define <8 x i1> @ctpop_v8i32_eq_one(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vmsne.vi v0, v8, 0
+; LMULMAX1-NEXT:    vadd.vi v10, v8, -1
+; LMULMAX1-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX1-NEXT:    vmsltu.vv v0, v10, v8
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v10, 0
-; LMULMAX1-NEXT:    vmerge.vim v11, v10, 1, v0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vmsne.vi v0, v9, 0
-; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v12, 0
-; LMULMAX1-NEXT:    vmerge.vim v13, v12, 1, v0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; LMULMAX1-NEXT:    vslideup.vi v11, v13, 4
-; LMULMAX1-NEXT:    vmsne.vi v11, v11, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vadd.vi v13, v8, -1
-; LMULMAX1-NEXT:    vand.vv v8, v8, v13
-; LMULMAX1-NEXT:    vmseq.vi v0, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; LMULMAX1-NEXT:    vmerge.vim v8, v10, 1, v0
+; LMULMAX1-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vadd.vi v10, v9, -1
-; LMULMAX1-NEXT:    vand.vv v9, v9, v10
-; LMULMAX1-NEXT:    vmseq.vi v0, v9, 0
+; LMULMAX1-NEXT:    vxor.vv v9, v9, v10
+; LMULMAX1-NEXT:    vmsltu.vv v0, v10, v9
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; LMULMAX1-NEXT:    vmerge.vim v9, v12, 1, v0
+; LMULMAX1-NEXT:    vmv.v.i v9, 0
+; LMULMAX1-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
-; LMULMAX1-NEXT:    vmsne.vi v8, v8, 0
-; LMULMAX1-NEXT:    vmand.mm v0, v11, v8
+; LMULMAX1-NEXT:    vmsne.vi v0, v8, 0
 ; LMULMAX1-NEXT:    ret
 ;
 ; ZVBB-LABEL: ctpop_v8i32_eq_one:
@@ -690,10 +676,8 @@ define <8 x i1> @ctpop_v8i32_ne_one(ptr %x, ptr %y) {
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-NEXT:    vadd.vi v10, v8, -1
-; LMULMAX2-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-NEXT:    vmsne.vi v12, v10, 0
-; LMULMAX2-NEXT:    vmseq.vi v10, v8, 0
-; LMULMAX2-NEXT:    vmor.mm v0, v10, v12
+; LMULMAX2-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX2-NEXT:    vmsleu.vv v0, v8, v10
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: ctpop_v8i32_ne_one:
@@ -702,34 +686,22 @@ define <8 x i1> @ctpop_v8i32_ne_one(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vmseq.vi v0, v8, 0
+; LMULMAX1-NEXT:    vadd.vi v10, v8, -1
+; LMULMAX1-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX1-NEXT:    vmsleu.vv v0, v8, v10
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v10, 0
-; LMULMAX1-NEXT:    vmerge.vim v11, v10, 1, v0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vmseq.vi v0, v9, 0
-; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v12, 0
-; LMULMAX1-NEXT:    vmerge.vim v13, v12, 1, v0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; LMULMAX1-NEXT:    vslideup.vi v11, v13, 4
-; LMULMAX1-NEXT:    vmsne.vi v11, v11, 0
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vadd.vi v13, v8, -1
-; LMULMAX1-NEXT:    vand.vv v8, v8, v13
-; LMULMAX1-NEXT:    vmsne.vi v0, v8, 0
-; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; LMULMAX1-NEXT:    vmerge.vim v8, v10, 1, v0
+; LMULMAX1-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vadd.vi v10, v9, -1
-; LMULMAX1-NEXT:    vand.vv v9, v9, v10
-; LMULMAX1-NEXT:    vmsne.vi v0, v9, 0
+; LMULMAX1-NEXT:    vxor.vv v9, v9, v10
+; LMULMAX1-NEXT:    vmsleu.vv v0, v9, v10
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; LMULMAX1-NEXT:    vmerge.vim v9, v12, 1, v0
+; LMULMAX1-NEXT:    vmv.v.i v9, 0
+; LMULMAX1-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
-; LMULMAX1-NEXT:    vmsne.vi v8, v8, 0
-; LMULMAX1-NEXT:    vmor.mm v0, v11, v8
+; LMULMAX1-NEXT:    vmsne.vi v0, v8, 0
 ; LMULMAX1-NEXT:    ret
 ;
 ; ZVBB-LABEL: ctpop_v8i32_ne_one:
@@ -1103,10 +1075,8 @@ define <4 x i1> @ctpop_v4i64_eq_one(ptr %x, ptr %y) {
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-NEXT:    vadd.vi v10, v8, -1
-; LMULMAX2-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-NEXT:    vmseq.vi v12, v10, 0
-; LMULMAX2-NEXT:    vmsne.vi v10, v8, 0
-; LMULMAX2-NEXT:    vmand.mm v0, v10, v12
+; LMULMAX2-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX2-NEXT:    vmsltu.vv v0, v10, v8
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-RV32-LABEL: ctpop_v4i64_eq_one:
@@ -1116,38 +1086,24 @@ define <4 x i1> @ctpop_v4i64_eq_one(ptr %x, ptr %y) {
 ; LMULMAX1-RV32-NEXT:    vle64.v v8, (a1)
 ; LMULMAX1-RV32-NEXT:    vle64.v v9, (a0)
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v10, 0
+; LMULMAX1-RV32-NEXT:    vmv.v.i v10, -1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmsne.vv v0, v9, v10
+; LMULMAX1-RV32-NEXT:    vadd.vv v11, v9, v10
+; LMULMAX1-RV32-NEXT:    vxor.vv v9, v9, v11
+; LMULMAX1-RV32-NEXT:    vmsltu.vv v0, v11, v9
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v11, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v12, v11, 1, v0
+; LMULMAX1-RV32-NEXT:    vmv.v.i v9, 0
+; LMULMAX1-RV32-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmsne.vv v0, v8, v10
+; LMULMAX1-RV32-NEXT:    vadd.vv v10, v8, v10
+; LMULMAX1-RV32-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX1-RV32-NEXT:    vmsltu.vv v0, v10, v8
 ; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v13, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v14, v13, 1, v0
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vslideup.vi v12, v14, 2
-; LMULMAX1-RV32-NEXT:    vmsne.vi v12, v12, 0
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v14, -1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vadd.vv v15, v9, v14
-; LMULMAX1-RV32-NEXT:    vand.vv v9, v9, v15
-; LMULMAX1-RV32-NEXT:    vmseq.vv v0, v9, v10
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vmerge.vim v9, v11, 1, v0
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vadd.vv v11, v8, v14
-; LMULMAX1-RV32-NEXT:    vand.vv v8, v8, v11
-; LMULMAX1-RV32-NEXT:    vmseq.vv v0, v8, v10
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v13, 1, v0
+; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; LMULMAX1-RV32-NEXT:    vslideup.vi v9, v8, 2
-; LMULMAX1-RV32-NEXT:    vmsne.vi v8, v9, 0
-; LMULMAX1-RV32-NEXT:    vmand.mm v0, v12, v8
+; LMULMAX1-RV32-NEXT:    vmsne.vi v0, v9, 0
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: ctpop_v4i64_eq_one:
@@ -1156,34 +1112,22 @@ define <4 x i1> @ctpop_v4i64_eq_one(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vle64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v9, (a0)
-; LMULMAX1-RV64-NEXT:    vmsne.vi v0, v8, 0
+; LMULMAX1-RV64-NEXT:    vadd.vi v10, v8, -1
+; LMULMAX1-RV64-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX1-RV64-NEXT:    vmsltu.vv v0, v10, v8
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v10, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v11, v10, 1, v0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV64-NEXT:    vmsne.vi v0, v9, 0
-; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v12, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v13, v12, 1, v0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vslideup.vi v11, v13, 2
-; LMULMAX1-RV64-NEXT:    vmsne.vi v11, v11, 0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV64-NEXT:    vadd.vi v13, v8, -1
-; LMULMAX1-RV64-NEXT:    vand.vv v8, v8, v13
-; LMULMAX1-RV64-NEXT:    vmseq.vi v0, v8, 0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v10, 1, v0
+; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vadd.vi v10, v9, -1
-; LMULMAX1-RV64-NEXT:    vand.vv v9, v9, v10
-; LMULMAX1-RV64-NEXT:    vmseq.vi v0, v9, 0
+; LMULMAX1-RV64-NEXT:    vxor.vv v9, v9, v10
+; LMULMAX1-RV64-NEXT:    vmsltu.vv v0, v10, v9
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmerge.vim v9, v12, 1, v0
+; LMULMAX1-RV64-NEXT:    vmv.v.i v9, 0
+; LMULMAX1-RV64-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; LMULMAX1-RV64-NEXT:    vslideup.vi v8, v9, 2
-; LMULMAX1-RV64-NEXT:    vmsne.vi v8, v8, 0
-; LMULMAX1-RV64-NEXT:    vmand.mm v0, v11, v8
+; LMULMAX1-RV64-NEXT:    vmsne.vi v0, v8, 0
 ; LMULMAX1-RV64-NEXT:    ret
 ;
 ; ZVBB-LABEL: ctpop_v4i64_eq_one:
@@ -1205,10 +1149,8 @@ define <4 x i1> @ctpop_v4i64_ne_one(ptr %x, ptr %y) {
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; LMULMAX2-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-NEXT:    vadd.vi v10, v8, -1
-; LMULMAX2-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-NEXT:    vmsne.vi v12, v10, 0
-; LMULMAX2-NEXT:    vmseq.vi v10, v8, 0
-; LMULMAX2-NEXT:    vmor.mm v0, v10, v12
+; LMULMAX2-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX2-NEXT:    vmsleu.vv v0, v8, v10
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-RV32-LABEL: ctpop_v4i64_ne_one:
@@ -1218,38 +1160,24 @@ define <4 x i1> @ctpop_v4i64_ne_one(ptr %x, ptr %y) {
 ; LMULMAX1-RV32-NEXT:    vle64.v v8, (a1)
 ; LMULMAX1-RV32-NEXT:    vle64.v v9, (a0)
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v10, 0
+; LMULMAX1-RV32-NEXT:    vmv.v.i v10, -1
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmseq.vv v0, v9, v10
+; LMULMAX1-RV32-NEXT:    vadd.vv v11, v9, v10
+; LMULMAX1-RV32-NEXT:    vxor.vv v9, v9, v11
+; LMULMAX1-RV32-NEXT:    vmsleu.vv v0, v9, v11
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v11, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v12, v11, 1, v0
+; LMULMAX1-RV32-NEXT:    vmv.v.i v9, 0
+; LMULMAX1-RV32-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmseq.vv v0, v8, v10
+; LMULMAX1-RV32-NEXT:    vadd.vv v10, v8, v10
+; LMULMAX1-RV32-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX1-RV32-NEXT:    vmsleu.vv v0, v8, v10
 ; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v13, 0
-; LMULMAX1-RV32-NEXT:    vmerge.vim v14, v13, 1, v0
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vslideup.vi v12, v14, 2
-; LMULMAX1-RV32-NEXT:    vmsne.vi v12, v12, 0
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vmv.v.i v14, -1
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vadd.vv v15, v9, v14
-; LMULMAX1-RV32-NEXT:    vand.vv v9, v9, v15
-; LMULMAX1-RV32-NEXT:    vmsne.vv v0, v9, v10
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV32-NEXT:    vmerge.vim v9, v11, 1, v0
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV32-NEXT:    vadd.vv v11, v8, v14
-; LMULMAX1-RV32-NEXT:    vand.vv v8, v8, v11
-; LMULMAX1-RV32-NEXT:    vmsne.vv v0, v8, v10
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v13, 1, v0
+; LMULMAX1-RV32-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; LMULMAX1-RV32-NEXT:    vslideup.vi v9, v8, 2
-; LMULMAX1-RV32-NEXT:    vmsne.vi v8, v9, 0
-; LMULMAX1-RV32-NEXT:    vmor.mm v0, v12, v8
+; LMULMAX1-RV32-NEXT:    vmsne.vi v0, v9, 0
 ; LMULMAX1-RV32-NEXT:    ret
 ;
 ; LMULMAX1-RV64-LABEL: ctpop_v4i64_ne_one:
@@ -1258,34 +1186,22 @@ define <4 x i1> @ctpop_v4i64_ne_one(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vle64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV64-NEXT:    vle64.v v9, (a0)
-; LMULMAX1-RV64-NEXT:    vmseq.vi v0, v8, 0
+; LMULMAX1-RV64-NEXT:    vadd.vi v10, v8, -1
+; LMULMAX1-RV64-NEXT:    vxor.vv v8, v8, v10
+; LMULMAX1-RV64-NEXT:    vmsleu.vv v0, v8, v10
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v10, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v11, v10, 1, v0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV64-NEXT:    vmseq.vi v0, v9, 0
-; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmv.v.i v12, 0
-; LMULMAX1-RV64-NEXT:    vmerge.vim v13, v12, 1, v0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vslideup.vi v11, v13, 2
-; LMULMAX1-RV64-NEXT:    vmsne.vi v11, v11, 0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-RV64-NEXT:    vadd.vi v13, v8, -1
-; LMULMAX1-RV64-NEXT:    vand.vv v8, v8, v13
-; LMULMAX1-RV64-NEXT:    vmsne.vi v0, v8, 0
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v10, 1, v0
+; LMULMAX1-RV64-NEXT:    vmv.v.i v8, 0
+; LMULMAX1-RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vadd.vi v10, v9, -1
-; LMULMAX1-RV64-NEXT:    vand.vv v9, v9, v10
-; LMULMAX1-RV64-NEXT:    vmsne.vi v0, v9, 0
+; LMULMAX1-RV64-NEXT:    vxor.vv v9, v9, v10
+; LMULMAX1-RV64-NEXT:    vmsleu.vv v0, v9, v10
 ; LMULMAX1-RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; LMULMAX1-RV64-NEXT:    vmerge.vim v9, v12, 1, v0
+; LMULMAX1-RV64-NEXT:    vmv.v.i v9, 0
+; LMULMAX1-RV64-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; LMULMAX1-RV64-NEXT:    vslideup.vi v8, v9, 2
-; LMULMAX1-RV64-NEXT:    vmsne.vi v8, v8, 0
-; LMULMAX1-RV64-NEXT:    vmor.mm v0, v11, v8
+; LMULMAX1-RV64-NEXT:    vmsne.vi v0, v8, 0
 ; LMULMAX1-RV64-NEXT:    ret
 ;
 ; ZVBB-LABEL: ctpop_v4i64_ne_one:

@@ -100,6 +100,7 @@ TEST(TBDv4, ReadFile) {
   EXPECT_EQ(5U, File->getSwiftABIVersion());
   EXPECT_FALSE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
+  EXPECT_FALSE(File->isOSLibNotForSharedCache());
   InterfaceFileRef client("ClientA", Targets);
   InterfaceFileRef reexport("/System/Library/Frameworks/A.framework/A",
                             {Targets[0]});
@@ -542,6 +543,22 @@ TEST(TBDv4, Target_maccatalyst) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, Target_maccatalyst2) {
+  static const char TBDv4TargetMacCatalyst[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [  x86_64-maccatalyst ]\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4TargetMacCatalyst, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(getPlatformFromName("ios-macabi"), *File->getPlatforms().begin());
+}
+
 TEST(TBDv4, Target_x86_ios) {
   static const char TBDv4Targetx86iOS[] = "--- !tapi-tbd\n"
                                           "tbd-version: 4\n"
@@ -814,6 +831,29 @@ TEST(TBDv4, Swift_99) {
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4SwiftVersion99),
             stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv4, NotForSharedCache) {
+
+  static const char TBDv4NotForSharedCache[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [  arm64-macos ]\n"
+      "flags: [ not_for_dyld_shared_cache ]\n"
+      "install-name: /S/L/F/Foo.framework/Foo\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4NotForSharedCache, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS);
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
 }
 
 TEST(TBDv4, InvalidArchitecture) {

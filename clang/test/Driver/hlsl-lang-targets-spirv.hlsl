@@ -2,8 +2,8 @@
 
 // Supported targets
 //
-// RUN: %clang -target dxil-unknown-shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target spirv-unknown-shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxil-unknown-shadermodel6.2-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
+// RUN: %clang -target spirv-unknown-shadermodel6.2-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
 
 // Empty shader model
 //
@@ -27,5 +27,5 @@
 // CHECK-NO-ENV: error: shader stage is required in target '{{.*}}' for HLSL code generation
 // CHECK-BAD-ENV: error: shader stage '{{.*}}' in target '{{.*}}' is invalid for HLSL code generation
 
-[shader("pixel")]
+[shader("compute"), numthreads(1,1,1)]
 void main() {}

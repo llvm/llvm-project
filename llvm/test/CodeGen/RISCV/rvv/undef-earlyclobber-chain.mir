@@ -76,9 +76,9 @@ machineFunctionInfo:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: undef_early_clobber_chain
-    ; CHECK: [[PseudoRVVInitUndefM1_:%[0-9]+]]:vr = PseudoRVVInitUndefM1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 0, 208 /* e32, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: [[PseudoRVVInitUndefM1_:%[0-9]+]]:vr = PseudoRVVInitUndefM1
     ; CHECK-NEXT: early-clobber %1:vr = PseudoVRGATHER_VI_M1 undef [[DEF]], [[PseudoRVVInitUndefM1_]], 0, 0, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v8 = COPY %1
     ; CHECK-NEXT: PseudoRET implicit $v8

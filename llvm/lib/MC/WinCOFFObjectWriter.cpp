@@ -241,7 +241,7 @@ public:
 } // end anonymous namespace
 
 static bool isDwoSection(const MCSection &Sec) {
-  return Sec.getName().endswith(".dwo");
+  return Sec.getName().ends_with(".dwo");
 }
 
 //------------------------------------------------------------------------------

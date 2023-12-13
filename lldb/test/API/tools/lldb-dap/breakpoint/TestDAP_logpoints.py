@@ -48,7 +48,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         # 1. First at the loop line with logMessage
         # 2. Second guard breakpoint at a line after loop
         logMessage_prefix = "This is log message for { -- "
-        logMessage = logMessage_prefix + "{i + 3}"
+        logMessage = logMessage_prefix + "{i + 3}, {message}"
         [loop_breakpoint_id, post_loop_breakpoint_id] = self.set_source_breakpoints(
             self.main_path,
             [loop_line, after_loop_line],
@@ -72,10 +72,13 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         loop_count = 10
         self.assertEqual(len(logMessage_output), loop_count)
 
+        message_addr_pattern = r"\b0x[0-9A-Fa-f]+\b"
+        message_content = '"Hello from main!"'
         # Verify log message match
         for idx, logMessage_line in enumerate(logMessage_output):
             result = idx + 3
-            self.assertEqual(logMessage_line, logMessage_prefix + str(result))
+            reg_str = f"{logMessage_prefix}{result}, {message_addr_pattern} {message_content}"
+            self.assertRegex(logMessage_line, reg_str)
 
     @skipIfWindows
     @skipIfRemote

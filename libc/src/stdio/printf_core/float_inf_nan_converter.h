@@ -34,13 +34,13 @@ LIBC_INLINE int convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
     fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     is_negative = float_bits.get_sign();
-    mantissa = float_bits.get_explicit_mantissa();
+    mantissa = float_bits.get_mantissa();
   } else {
     fputil::FPBits<double>::UIntType float_raw =
         static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     is_negative = float_bits.get_sign();
-    mantissa = float_bits.get_explicit_mantissa();
+    mantissa = float_bits.get_mantissa();
   }
 
   char sign_char = 0;

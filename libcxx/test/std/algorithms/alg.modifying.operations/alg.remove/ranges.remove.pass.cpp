@@ -25,7 +25,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
@@ -36,7 +35,7 @@ static_assert(!HasRemoveIt<PermutableNotForwardIterator>);
 static_assert(!HasRemoveIt<PermutableNotSwappable>);
 static_assert(!HasRemoveIt<int*, SentinelForNotSemiregular>);
 static_assert(!HasRemoveIt<int*, SentinelForNotWeaklyEqualityComparableWith>);
-static_assert(!HasRemoveIt<int**>); // not indirect_binary_prediacte
+static_assert(!HasRemoveIt<int**>); // not indirect_binary_predicate
 
 template <class Range>
 concept HasRemoveR = requires(Range range) { std::ranges::remove(range, 0); };
@@ -46,7 +45,7 @@ static_assert(!HasRemoveR<PermutableRangeNotForwardIterator>);
 static_assert(!HasRemoveR<PermutableRangeNotSwappable>);
 static_assert(!HasRemoveR<SentinelForNotSemiregular>);
 static_assert(!HasRemoveR<SentinelForNotWeaklyEqualityComparableWith>);
-static_assert(!HasRemoveR<UncheckedRange<int**>>); // not indirect_binary_prediacte
+static_assert(!HasRemoveR<UncheckedRange<int**>>); // not indirect_binary_predicate
 
 template <int N, int M>
 struct Data {
@@ -65,7 +64,7 @@ constexpr void test(Data<N, M> d) {
 
     assert(base(ret.begin()) == input.data() + M);
     assert(base(ret.end()) == input.data() + N);
-    assert(std::ranges::equal(input.begin(), base(ret.begin()), d.expected.begin(), d.expected.end()));
+    assert(std::ranges::equal(input.data(), base(ret.begin()), d.expected.begin(), d.expected.end()));
   }
 
   { // range overload
@@ -76,7 +75,7 @@ constexpr void test(Data<N, M> d) {
 
     assert(base(ret.begin()) == input.data() + M);
     assert(base(ret.end()) == input.data() + N);
-    assert(std::ranges::equal(base(input.begin()), base(ret.begin()), d.expected.begin(), d.expected.end()));
+    assert(std::ranges::equal(input.data(), base(ret.begin()), d.expected.begin(), d.expected.end()));
   }
 }
 
@@ -178,20 +177,6 @@ constexpr bool test() {
       auto ret = std::ranges::remove(a, S{}, &S::identity);
       assert(ret.begin() == std::begin(a));
       assert(ret.end() == std::end(a));
-    }
-  }
-
-  {
-    // check that the implicit conversion to bool works
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret                  = std::ranges::remove(a, a + 4, StrictComparable<int>{2});
-      assert(ret.begin() == a + 3);
-    }
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret                  = std::ranges::remove(a, StrictComparable<int>{2});
-      assert(ret.begin() == a + 3);
     }
   }
 

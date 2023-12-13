@@ -9,9 +9,9 @@
 
 #include "fp_test.h"
 
-COMPILER_RT_ABI long double __trunctfxf2(__float128 a);
+COMPILER_RT_ABI long double __trunctfxf2(tf_float a);
 
-int test__trunctfxf2(__float128 a, uint64_t expectedHi, uint64_t expectedLo) {
+int test__trunctfxf2(tf_float a, uint64_t expectedHi, uint64_t expectedLo) {
   long double x = __trunctfxf2(a);
   int ret = compareResultF80(x, expectedHi, expectedLo);
   ;
@@ -59,24 +59,24 @@ int main() {
     return 1;
 
   // Test rounding near halfway.
-  __float128 halfwayPlus =
+  tf_float halfwayPlus =
       fromRep128(UINT64_C(0x7ffa000000000000),
                  ((UINT64_C(1) << (112 - 63 - 1)) + UINT64_C(1)));
   if (test__trunctfxf2(halfwayPlus, UINT64_C(0x7ffa),
                        UINT64_C(0x8000000000000001)))
     return 1;
-  __float128 halfwayExactOdd = fromRep128(
+  tf_float halfwayExactOdd = fromRep128(
       UINT64_C(0x7ffa000000000000),
       ((UINT64_C(1) << (112 - 63)) + (UINT64_C(1) << (112 - 63 - 1))));
   if (test__trunctfxf2(halfwayExactOdd, UINT64_C(0x7ffa),
                        UINT64_C(0x8000000000000002)))
     return 1;
-  __float128 halfwayExactEven =
+  tf_float halfwayExactEven =
       fromRep128(UINT64_C(0x7ffa000000000000), (UINT64_C(1) << (112 - 63 - 1)));
   if (test__trunctfxf2(halfwayExactEven, UINT64_C(0x7ffa),
                        UINT64_C(0x8000000000000000)))
     return 1;
-  __float128 halfwayRoundingWillChangeExponent =
+  tf_float halfwayRoundingWillChangeExponent =
       fromRep128(UINT64_C(0x7ffaffffffffffff), UINT64_C(0xffff000000000001));
   if (test__trunctfxf2(halfwayRoundingWillChangeExponent, UINT64_C(0x7ffb),
                        UINT64_C(0x8000000000000000)))

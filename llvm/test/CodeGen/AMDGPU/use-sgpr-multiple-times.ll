@@ -257,11 +257,10 @@ define amdgpu_kernel void @test_s0_s1_k_f32(ptr addrspace(1) %out, float %a, flo
 
 ; GCN-DAG: v_mov_b32_e32 v[[VS1_SUB0:[0-9]+]], s[[SGPR1_SUB0]]
 ; GCN-DAG: v_mov_b32_e32 v[[VS1_SUB1:[0-9]+]], s[[SGPR1_SUB1]]
-; GCN: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[SGPR0]], v[[[VS1_SUB0]]:[[VS1_SUB1]]], v[[[VZERO]]:[[VK0_SUB1]]]
+; GCN-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[SGPR0]], v[[[VS1_SUB0]]:[[VS1_SUB1]]], v[[[VZERO]]:[[VK0_SUB1]]]
 
-; Same zero component is re-used for half of each immediate.
-; GCN: v_mov_b32_e32 v[[VK1_SUB1:[0-9]+]], 0x40b00000
-; GCN: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], [[SGPR0]], v[[[VS1_SUB0]]:[[VS1_SUB1]]], v[[[VZERO]]:[[VK1_SUB1]]]
+; GCN-DAG: v_mov_b32_e32 v[[VK1_SUB1:[0-9]+]], 0x40b00000
+; GCN-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], [[SGPR0]], v[[[VS1_SUB0]]:[[VS1_SUB1]]], v[{{[0-9]+}}:[[VK1_SUB1]]]
 
 ; GCN: buffer_store_dwordx2 [[RESULT0]]
 ; GCN: buffer_store_dwordx2 [[RESULT1]]

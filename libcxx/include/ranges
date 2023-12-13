@@ -437,6 +437,7 @@ namespace std {
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cstdlib>
+#  include <iosfwd>
 #  include <type_traits>
 #endif
 

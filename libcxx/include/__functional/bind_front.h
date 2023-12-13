@@ -32,9 +32,9 @@ struct __bind_front_op {
     template <class ..._Args>
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto operator()(_Args&& ...__args) const
-        noexcept(noexcept(_VSTD::invoke(_VSTD::forward<_Args>(__args)...)))
-        -> decltype(      _VSTD::invoke(_VSTD::forward<_Args>(__args)...))
-        { return          _VSTD::invoke(_VSTD::forward<_Args>(__args)...); }
+        noexcept(noexcept(std::invoke(std::forward<_Args>(__args)...)))
+        -> decltype(      std::invoke(std::forward<_Args>(__args)...))
+        { return          std::invoke(std::forward<_Args>(__args)...); }
 };
 
 template <class _Fn, class ..._BoundArgs>
@@ -47,7 +47,7 @@ template <class _Fn, class... _Args>
            (is_constructible_v<decay_t<_Args>, _Args> && ...) && (is_move_constructible_v<decay_t<_Args>> && ...)
 _LIBCPP_HIDE_FROM_ABI
 constexpr auto bind_front(_Fn&& __f, _Args&&... __args) {
-    return __bind_front_t<decay_t<_Fn>, decay_t<_Args>...>(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
+    return __bind_front_t<decay_t<_Fn>, decay_t<_Args>...>(std::forward<_Fn>(__f), std::forward<_Args>(__args)...);
 }
 
 #endif // _LIBCPP_STD_VER >= 20

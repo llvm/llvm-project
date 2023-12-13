@@ -259,7 +259,7 @@ define i32 @PR44028(i32 %x) {
 
 define i64 @lshr_mul(i64 %0) {
 ; CHECK-LABEL: @lshr_mul(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0:%.*]], 13
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i64 [[TMP0:%.*]], 13
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = mul nuw i64 %0, 52
@@ -279,7 +279,7 @@ define i64 @lshr_mul_nuw_nsw(i64 %0) {
 
 define <4 x i32> @lshr_mul_vector(<4 x i32> %0) {
 ; CHECK-LABEL: @lshr_mul_vector(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <4 x i32> [[TMP0:%.*]], <i32 13, i32 13, i32 13, i32 13>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <4 x i32> [[TMP0:%.*]], <i32 13, i32 13, i32 13, i32 13>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %2 = mul nuw <4 x i32> %0, <i32 52, i32 52, i32 52, i32 52>

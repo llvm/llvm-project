@@ -17,6 +17,9 @@ Number,Name,Standard,Assignee,Status,First released version
 "`P2510R3 <https://wg21.link/P2510R3>`__","Formatting pointers","C++26","Mark de Wever","|Complete|",17.0
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","C++26","","",
 "`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","C++26","","",
+"`P2905R2 <https://wg21.link/P2905R2>`__","Runtime format strings","C++26 DR","Mark de Wever","|Complete|",18.0
+"`P2918R2 <https://wg21.link/P2918R2>`__","Runtime format strings II","C++26","Mark de Wever","|Complete|",18.0
+"`P2909R4 <https://wg21.link/P2909R4>`__","Fix formatting of code units as integers (Dude, where’s my ``char``?)","C++26 DR","Mark de Wever","|Complete|",18.0
 `P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting","C++20",Mark de Wever,|In Progress|,
 `P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters","C++20",Mark de Wever,|In Progress|,
 "`P2419R2 <https://wg21.link/P2419R2>`__","Clarify handling of encodings in localized formatting of chrono types","C++23",

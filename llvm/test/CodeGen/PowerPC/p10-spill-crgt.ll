@@ -75,11 +75,11 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    li r4, 16
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_6: # %bb22
+; CHECK-NEXT:  .LBB0_6: # %bb28
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_7: # %bb28
+; CHECK-NEXT:  .LBB0_7: # %bb22
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:    .p2align 4
@@ -103,39 +103,39 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_12
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_13: # %bb61
+; CHECK-NEXT:  .LBB0_13: # %bb49
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_13
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_14: # %bb47
+; CHECK-NEXT:  .LBB0_14: # %bb59
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_14
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_15: # %bb24
+; CHECK-NEXT:  .LBB0_15: # %bb57
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_15
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_16: # %bb19
+; CHECK-NEXT:  .LBB0_16: # %bb18
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_16
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_17: # %bb59
+; CHECK-NEXT:  .LBB0_17: # %bb46
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_17
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_18: # %bb46
+; CHECK-NEXT:  .LBB0_18: # %bb19
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_18
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_19: # %bb49
+; CHECK-NEXT:  .LBB0_19: # %bb61
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_19
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_20: # %bb57
+; CHECK-NEXT:  .LBB0_20: # %bb24
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_20
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_21: # %bb18
+; CHECK-NEXT:  .LBB0_21: # %bb47
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_21
 ; CHECK-NEXT:    .p2align 4
@@ -143,19 +143,19 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_22
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_23: # %bb23
+; CHECK-NEXT:  .LBB0_23: # %bb48
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_23
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_24: # %bb60
+; CHECK-NEXT:  .LBB0_24: # %bb55
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_24
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_25: # %bb55
+; CHECK-NEXT:  .LBB0_25: # %bb20
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_25
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_26: # %bb62
+; CHECK-NEXT:  .LBB0_26: # %bb60
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_26
 ; CHECK-NEXT:    .p2align 4
@@ -163,15 +163,15 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_27
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_28: # %bb20
+; CHECK-NEXT:  .LBB0_28: # %bb50
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_28
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_29: # %bb50
+; CHECK-NEXT:  .LBB0_29: # %bb23
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_29
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_30: # %bb48
+; CHECK-NEXT:  .LBB0_30: # %bb62
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    b .LBB0_30
 ; CHECK-NEXT:  .LBB0_31: # %bb9
@@ -268,11 +268,11 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    li r4, 16
 ; CHECK-BE-NEXT:    b .LBB0_2
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_6: # %bb22
+; CHECK-BE-NEXT:  .LBB0_6: # %bb28
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_6
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_7: # %bb28
+; CHECK-BE-NEXT:  .LBB0_7: # %bb22
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_7
 ; CHECK-BE-NEXT:    .p2align 4
@@ -296,39 +296,39 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_12
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_13: # %bb61
+; CHECK-BE-NEXT:  .LBB0_13: # %bb49
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_13
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_14: # %bb47
+; CHECK-BE-NEXT:  .LBB0_14: # %bb59
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_14
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_15: # %bb24
+; CHECK-BE-NEXT:  .LBB0_15: # %bb57
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_15
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_16: # %bb19
+; CHECK-BE-NEXT:  .LBB0_16: # %bb18
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_16
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_17: # %bb59
+; CHECK-BE-NEXT:  .LBB0_17: # %bb46
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_17
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_18: # %bb46
+; CHECK-BE-NEXT:  .LBB0_18: # %bb19
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_18
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_19: # %bb49
+; CHECK-BE-NEXT:  .LBB0_19: # %bb61
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_19
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_20: # %bb57
+; CHECK-BE-NEXT:  .LBB0_20: # %bb24
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_20
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_21: # %bb18
+; CHECK-BE-NEXT:  .LBB0_21: # %bb47
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_21
 ; CHECK-BE-NEXT:    .p2align 4
@@ -336,19 +336,19 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_22
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_23: # %bb23
+; CHECK-BE-NEXT:  .LBB0_23: # %bb48
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_23
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_24: # %bb60
+; CHECK-BE-NEXT:  .LBB0_24: # %bb55
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_24
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_25: # %bb55
+; CHECK-BE-NEXT:  .LBB0_25: # %bb20
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_25
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_26: # %bb62
+; CHECK-BE-NEXT:  .LBB0_26: # %bb60
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_26
 ; CHECK-BE-NEXT:    .p2align 4
@@ -356,15 +356,15 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_27
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_28: # %bb20
+; CHECK-BE-NEXT:  .LBB0_28: # %bb50
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_28
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_29: # %bb50
+; CHECK-BE-NEXT:  .LBB0_29: # %bb23
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_29
 ; CHECK-BE-NEXT:    .p2align 4
-; CHECK-BE-NEXT:  .LBB0_30: # %bb48
+; CHECK-BE-NEXT:  .LBB0_30: # %bb62
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    b .LBB0_30
 ; CHECK-BE-NEXT:  .LBB0_31: # %bb9

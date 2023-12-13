@@ -240,10 +240,10 @@ define void @freeze_dominated_uses_catchswitch(i1 %c, i32 %x) personality ptr @_
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    invoke void @use_i32(i32 0)
-; CHECK-NEXT:    to label [[CLEANUP:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[CLEANUP:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    invoke void @use_i32(i32 1)
-; CHECK-NEXT:    to label [[CLEANUP]] unwind label [[CATCH_DISPATCH]]
+; CHECK-NEXT:            to label [[CLEANUP]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[IF_THEN]] ], [ [[X:%.*]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label [[CATCH:%.*]], label %catch2] unwind to caller
@@ -384,7 +384,7 @@ define i32 @freeze_invoke_use_in_phi(i1 %c) personality ptr undef {
 ; CHECK-LABEL: @freeze_invoke_use_in_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @get_i32()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[INVOKE_UNWIND:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[INVOKE_UNWIND:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT]] ]
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X]]
@@ -393,7 +393,7 @@ define i32 @freeze_invoke_use_in_phi(i1 %c) personality ptr undef {
 ; CHECK-NEXT:    br label [[INVOKE_CONT]]
 ; CHECK:       invoke.unwind:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -416,7 +416,7 @@ define i32 @freeze_invoke_use_after_phi(i1 %c) personality ptr undef {
 ; CHECK-LABEL: @freeze_invoke_use_after_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @get_i32()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[INVOKE_UNWIND:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[INVOKE_UNWIND:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[INVOKE_CONT]] ]
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[X]]
@@ -426,7 +426,7 @@ define i32 @freeze_invoke_use_after_phi(i1 %c) personality ptr undef {
 ; CHECK-NEXT:    br label [[INVOKE_CONT]]
 ; CHECK:       invoke.unwind:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -450,7 +450,7 @@ define i32 @freeze_callbr_use_after_phi(i1 %c) {
 ; CHECK-LABEL: @freeze_callbr_use_after_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    to label [[CALLBR_CONT:%.*]] []
+; CHECK-NEXT:            to label [[CALLBR_CONT:%.*]] []
 ; CHECK:       callbr.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[CALLBR_CONT]] ]
 ; CHECK-NEXT:    call void @use_i32(i32 [[X]])
@@ -493,10 +493,10 @@ define i1 @fully_propagate_freeze(i32 %0, i32 noundef %1) {
 ; CHECK-LABEL: @fully_propagate_freeze(
 ; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i32 [[TMP0:%.*]]
 ; CHECK-NEXT:    [[DR:%.*]] = lshr i32 [[DOTFR]], 2
-; CHECK-NEXT:    [[IDX1:%.*]] = zext i32 [[DR]] to i64
+; CHECK-NEXT:    [[IDX1:%.*]] = zext nneg i32 [[DR]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[DR]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[IDX2:%.*]] = zext i32 [[DR]] to i64
+; CHECK-NEXT:    [[IDX2:%.*]] = zext nneg i32 [[DR]] to i64
 ; CHECK-NEXT:    [[V:%.*]] = call i1 @mock_use(i64 [[IDX1]], i64 [[IDX2]])
 ; CHECK-NEXT:    [[RET:%.*]] = and i1 [[V]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[RET]]
@@ -978,7 +978,7 @@ define void @fold_phi_invoke_start_value(i32 %n) personality ptr undef {
 ; CHECK-LABEL: @fold_phi_invoke_start_value(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INIT:%.*]] = invoke i32 @get_i32()
-; CHECK-NEXT:    to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK-NEXT:            to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
@@ -987,7 +987,7 @@ define void @fold_phi_invoke_start_value(i32 %n) personality ptr undef {
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1015,7 +1015,7 @@ define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
 ; CHECK-LABEL: @fold_phi_invoke_noundef_start_value(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INIT:%.*]] = invoke noundef i32 @get_i32()
-; CHECK-NEXT:    to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK-NEXT:            to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
@@ -1023,7 +1023,7 @@ define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1114,6 +1114,28 @@ define i32 @freeze_ctpop(i32 %x) {
   %ctpop = call i32 @llvm.ctpop.i32(i32 %y)
   %fr = freeze i32 %ctpop
   ret i32 %fr
+}
+
+define i32 @freeze_zext_nneg(i8 %x) {
+; CHECK-LABEL: @freeze_zext_nneg(
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i8 [[X:%.*]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X_FR]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %zext = zext nneg i8 %x to i32
+  %fr = freeze i32 %zext
+  ret i32 %fr
+}
+
+define i32 @propagate_drop_flags_or(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_or(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = or i32 [[ARG_FR]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = or disjoint i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
 }
 
 !0 = !{}

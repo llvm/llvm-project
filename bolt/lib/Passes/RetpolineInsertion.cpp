@@ -52,9 +52,9 @@ cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
     cl::values(clEnumValN(RetpolineInsertion::AvailabilityOptions::NEVER,
                           "never", "r11 not available"),
                clEnumValN(RetpolineInsertion::AvailabilityOptions::ALWAYS,
-                          "always", "r11 avaialable before calls and jumps"),
+                          "always", "r11 available before calls and jumps"),
                clEnumValN(RetpolineInsertion::AvailabilityOptions::ABI, "abi",
-                          "r11 avaialable before calls but not before jumps")),
+                          "r11 available before calls but not before jumps")),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
 } // namespace opts

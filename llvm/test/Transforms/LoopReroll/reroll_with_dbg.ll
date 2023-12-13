@@ -46,17 +46,17 @@ for.body:                                         ; preds = %for.body.preheader,
   %0 = load i32, ptr %arrayidx, align 4, !dbg !30, !tbaa !33
   %arrayidx1 = getelementptr inbounds float, ptr %a, i32 %i.031, !dbg !37
   store i32 %0, ptr %arrayidx1, align 4, !dbg !38, !tbaa !33
-  %add = or i32 %i.031, 1, !dbg !39
+  %add = or disjoint i32 %i.031, 1, !dbg !39
   %arrayidx2 = getelementptr inbounds float, ptr %b, i32 %add, !dbg !40
   %1 = load i32, ptr %arrayidx2, align 4, !dbg !40, !tbaa !33
   %arrayidx4 = getelementptr inbounds float, ptr %a, i32 %add, !dbg !41
   store i32 %1, ptr %arrayidx4, align 4, !dbg !42, !tbaa !33
-  %add5 = or i32 %i.031, 2, !dbg !43
+  %add5 = or disjoint i32 %i.031, 2, !dbg !43
   %arrayidx6 = getelementptr inbounds float, ptr %b, i32 %add5, !dbg !44
   %2 = load i32, ptr %arrayidx6, align 4, !dbg !44, !tbaa !33
   %arrayidx8 = getelementptr inbounds float, ptr %a, i32 %add5, !dbg !45
   store i32 %2, ptr %arrayidx8, align 4, !dbg !46, !tbaa !33
-  %add9 = or i32 %i.031, 3, !dbg !47
+  %add9 = or disjoint i32 %i.031, 3, !dbg !47
   %arrayidx10 = getelementptr inbounds float, ptr %b, i32 %add9, !dbg !48
   %3 = load i32, ptr %arrayidx10, align 4, !dbg !48, !tbaa !33
   %arrayidx12 = getelementptr inbounds float, ptr %a, i32 %add9, !dbg !49

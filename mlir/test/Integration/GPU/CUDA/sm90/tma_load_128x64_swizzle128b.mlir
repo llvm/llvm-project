@@ -31,7 +31,7 @@
 module @mymod {
   func.func private @printMemrefF32(memref<*xf32>)
   memref.global "private" @bufferLhsGlobal : !shmemlhs
-  llvm.func @printf(!llvm.ptr<i8>, ...) -> i32
+  llvm.func @printf(!llvm.ptr, ...) -> i32
   func.func @main() {
     %c8192 = arith.constant 8192 : index
     %c-1_i32 = arith.constant -1 : i32

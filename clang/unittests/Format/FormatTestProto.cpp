@@ -201,7 +201,7 @@ TEST_F(FormatTestProto, DoesntWrapFileOptions) {
 }
 
 TEST_F(FormatTestProto, TrailingCommentAfterFileOption) {
-  verifyFormat("option java_package = \"foo.pkg\";  // comment\n");
+  verifyFormat("option java_package = \"foo.pkg\";  // comment");
 }
 
 TEST_F(FormatTestProto, FormatsOptions) {
@@ -411,7 +411,7 @@ TEST_F(FormatTestProto, DoesntWrapPackageStatements) {
 }
 
 TEST_F(FormatTestProto, TrailingCommentAfterPackage) {
-  verifyFormat("package foo.pkg;  // comment\n");
+  verifyFormat("package foo.pkg;  // comment");
 }
 
 TEST_F(FormatTestProto, FormatsService) {

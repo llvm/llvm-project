@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.13.99 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=UNALIGNED %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ALIGNED %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.13.99 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,UNALIGNED,THROWEND %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,ALIGNED,THROWEND %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple x86_64-apple-macosx10.14 -std=c++11 -emit-llvm -o - %s -fassume-nothrow-exception-dtor -DNOTHROWEND | FileCheck --check-prefixes=CHECK,ALIGNED,NOTHROWEND %s
 
 struct test1_D {
   double d;
@@ -218,13 +219,16 @@ namespace test10 {
     } catch (B a) {
     // CHECK:      call ptr @__cxa_begin_catch
     // CHECK-NEXT: call void @llvm.memcpy
-    // CHECK-NEXT: invoke void @__cxa_end_catch()
+    // THROWEND-NEXT:   invoke void @__cxa_end_catch()
+    // NOTHROWEND-NEXT: call void @__cxa_end_catch() [[NUW]]
     } catch (...) {
     // CHECK:      call ptr @__cxa_begin_catch
-    // CHECK-NEXT: invoke void @__cxa_end_catch()
+    // THROWEND-NEXT:   invoke void @__cxa_end_catch()
+    // NOTHROWEND-NEXT: call void @__cxa_end_catch() [[NUW]]
     }
 
-    // CHECK: call void @_ZN6test101AD1Ev(
+    // THROWEND:       call void @_ZN6test101AD1Ev(
+    // NOTHROWEND-NOT: call void @_ZN6test101AD1Ev(
   }
 }
 
@@ -391,40 +395,42 @@ namespace test16 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN6test163barEv()
   void bar() {
-    // CHECK:      [[EXN_SAVE:%.*]] = alloca ptr
-    // CHECK-NEXT: [[EXN_ACTIVE:%.*]] = alloca i1
-    // CHECK-NEXT: [[TEMP:%.*]] = alloca [[A:%.*]],
-    // CHECK-NEXT: [[EXNSLOT:%.*]] = alloca ptr
-    // CHECK-NEXT: [[SELECTORSLOT:%.*]] = alloca i32
-    // CHECK-NEXT: [[TEMP_ACTIVE:%.*]] = alloca i1
+    // THROWEND:      [[EXN_SAVE:%.*]] = alloca ptr
+    // THROWEND-NEXT: [[EXN_ACTIVE:%.*]] = alloca i1
+    // THROWEND-NEXT: [[TEMP:%.*]] = alloca [[A:%.*]],
+    // THROWEND-NEXT: [[EXNSLOT:%.*]] = alloca ptr
+    // THROWEND-NEXT: [[SELECTORSLOT:%.*]] = alloca i32
+    // THROWEND-NEXT: [[TEMP_ACTIVE:%.*]] = alloca i1
 
+#ifndef NOTHROWEND
     cond() ? throw B(A()) : foo();
+#endif
 
-    // CHECK-NEXT: [[COND:%.*]] = call noundef zeroext i1 @_ZN6test164condEv()
-    // CHECK-NEXT: store i1 false, ptr [[EXN_ACTIVE]]
-    // CHECK-NEXT: store i1 false, ptr [[TEMP_ACTIVE]]
-    // CHECK-NEXT: br i1 [[COND]],
+    // THROWEND-NEXT: [[COND:%.*]] = call noundef zeroext i1 @_ZN6test164condEv()
+    // THROWEND-NEXT: store i1 false, ptr [[EXN_ACTIVE]]
+    // THROWEND-NEXT: store i1 false, ptr [[TEMP_ACTIVE]]
+    // THROWEND-NEXT: br i1 [[COND]],
 
-    // CHECK:      [[EXN:%.*]] = call ptr @__cxa_allocate_exception(i64 4)
-    // CHECK-NEXT: store ptr [[EXN]], ptr [[EXN_SAVE]]
-    // CHECK-NEXT: store i1 true, ptr [[EXN_ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev(ptr {{[^,]*}} [[TEMP]])
-    // CHECK:      store i1 true, ptr [[TEMP_ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE(ptr {{[^,]*}} [[EXN]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
-    // CHECK:      store i1 false, ptr [[EXN_ACTIVE]]
-    // CHECK-NEXT: invoke void @__cxa_throw(ptr [[EXN]],
+    // THROWEND:      [[EXN:%.*]] = call ptr @__cxa_allocate_exception(i64 4)
+    // THROWEND-NEXT: store ptr [[EXN]], ptr [[EXN_SAVE]]
+    // THROWEND-NEXT: store i1 true, ptr [[EXN_ACTIVE]]
+    // THROWEND-NEXT: invoke void @_ZN6test161AC1Ev(ptr {{[^,]*}} [[TEMP]])
+    // THROWEND:      store i1 true, ptr [[TEMP_ACTIVE]]
+    // THROWEND-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE(ptr {{[^,]*}} [[EXN]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
+    // THROWEND:      store i1 false, ptr [[EXN_ACTIVE]]
+    // THROWEND-NEXT: invoke void @__cxa_throw(ptr [[EXN]],
 
-    // CHECK:      invoke void @_ZN6test163fooEv()
-    // CHECK:      br label
+    // THROWEND:      invoke void @_ZN6test163fooEv()
+    // THROWEND:      br label
 
-    // CHECK:      invoke void @_ZN6test161AD1Ev(ptr {{[^,]*}} [[TEMP]])
-    // CHECK:      ret void
+    // THROWEND:      invoke void @_ZN6test161AD1Ev(ptr {{[^,]*}} [[TEMP]])
+    // THROWEND:      ret void
 
-    // CHECK:      [[T0:%.*]] = load i1, ptr [[EXN_ACTIVE]]
-    // CHECK-NEXT: br i1 [[T0]]
-    // CHECK:      [[T1:%.*]] = load ptr, ptr [[EXN_SAVE]]
-    // CHECK-NEXT: call void @__cxa_free_exception(ptr [[T1]])
-    // CHECK-NEXT: br label
+    // THROWEND:      [[T0:%.*]] = load i1, ptr [[EXN_ACTIVE]]
+    // THROWEND-NEXT: br i1 [[T0]]
+    // THROWEND:      [[T1:%.*]] = load ptr, ptr [[EXN_SAVE]]
+    // THROWEND-NEXT: call void @__cxa_free_exception(ptr [[T1]])
+    // THROWEND-NEXT: br label
   }
 }
 

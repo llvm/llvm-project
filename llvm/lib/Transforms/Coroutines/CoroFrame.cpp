@@ -963,7 +963,8 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    auto DDIs = FindDbgDeclareUses(V);
+    SmallVector<DbgDeclareInst *, 1> DDIs;
+    findDbgDeclares(DDIs, V);
     auto *I = llvm::find_if(DDIs, [](DbgDeclareInst *DDI) {
       return DDI->getExpression()->getNumElements() == 0;
     });
@@ -1075,7 +1076,7 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
       RetType = CharSizeType;
     else {
       if (Size % 8 != 0)
-        Size = TypeSize::Fixed(Size + 8 - (Size % 8));
+        Size = TypeSize::getFixed(Size + 8 - (Size % 8));
 
       RetType = Builder.createArrayType(
           Size, Layout.getPrefTypeAlign(Ty).value(), CharSizeType,
@@ -1119,7 +1120,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   assert(PromiseAlloca &&
          "Coroutine with switch ABI should own Promise alloca");
 
-  TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(PromiseAlloca);
+  SmallVector<DbgDeclareInst *, 1> DIs;
+  findDbgDeclares(DIs, PromiseAlloca);
   if (DIs.empty())
     return;
 
@@ -1840,7 +1842,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
 
-        TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(Def);
+        SmallVector<DbgDeclareInst *, 1> DIs;
+        findDbgDeclares(DIs, Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
         // be a direct dbg.declare. Walk up the load chain to find one from an
         // alias.
@@ -1854,7 +1857,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             CurDef = LdInst->getPointerOperand();
             if (!isa<AllocaInst, LoadInst>(CurDef))
               break;
-            DIs = FindDbgDeclareUses(CurDef);
+            DIs.clear();
+            findDbgDeclares(DIs, CurDef);
           }
         }
 
@@ -2886,13 +2890,13 @@ void coro::salvageDebugInfo(
   // dbg.value since it does not have the same function wide guarantees that
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
-    Instruction *InsertPt = nullptr;
+    std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage))
       InsertPt = I->getInsertionPointAfterDef();
     else if (isa<Argument>(Storage))
-      InsertPt = &*F->getEntryBlock().begin();
+      InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
-      DVI->moveBefore(InsertPt);
+      DVI->moveBefore(*(*InsertPt)->getParent(), *InsertPt);
   }
 }
 

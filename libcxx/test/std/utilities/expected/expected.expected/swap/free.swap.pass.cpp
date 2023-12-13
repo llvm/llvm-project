@@ -31,16 +31,16 @@ static_assert(!std::is_swappable_v<std::expected<NotSwappable, int>>);
 // !is_swappable_v<E>
 static_assert(!std::is_swappable_v<std::expected<int, NotSwappable>>);
 
-struct NotMoveContructible {
-  NotMoveContructible(NotMoveContructible&&) = delete;
-  friend void swap(NotMoveContructible&, NotMoveContructible&) {}
+struct NotMoveConstructible {
+  NotMoveConstructible(NotMoveConstructible&&) = delete;
+  friend void swap(NotMoveConstructible&, NotMoveConstructible&) {}
 };
 
 // !is_move_constructible_v<T>
-static_assert(!std::is_swappable_v<std::expected<NotMoveContructible, int>>);
+static_assert(!std::is_swappable_v<std::expected<NotMoveConstructible, int>>);
 
 // !is_move_constructible_v<E>
-static_assert(!std::is_swappable_v<std::expected<int, NotMoveContructible>>);
+static_assert(!std::is_swappable_v<std::expected<int, NotMoveConstructible>>);
 
 struct MoveMayThrow {
   MoveMayThrow(MoveMayThrow&&) noexcept(false);
@@ -129,7 +129,7 @@ constexpr bool test() {
     std::expected<TrackedMove<true>, TrackedMove<false>> e1(std::in_place, 5);
     std::expected<TrackedMove<true>, TrackedMove<false>> e2(std::unexpect, 10);
 
-    e1.swap(e2);
+    swap(e1, e2);
 
     assert(!e1.has_value());
     assert(e1.error().i == 10);
@@ -180,6 +180,35 @@ constexpr bool test() {
     assert(!e2.error().swapCalled);
   }
 
+  // TailClobberer
+  {
+    // is_nothrow_move_constructible_v<E>
+    {
+      std::expected<TailClobbererNonTrivialMove<0, true>, TailClobbererNonTrivialMove<1, true>> x(std::in_place);
+      std::expected<TailClobbererNonTrivialMove<0, true>, TailClobbererNonTrivialMove<1, true>> y(std::unexpect);
+
+      swap(x, y);
+
+      // Both of these would fail if adjusting the "has value" flags happened
+      // _before_ constructing the member objects inside the `swap`.
+      assert(!x.has_value());
+      assert(y.has_value());
+    }
+
+    // !is_nothrow_move_constructible_v<E>
+    {
+      std::expected<TailClobbererNonTrivialMove<0, true>, TailClobbererNonTrivialMove<1, false>> x(std::in_place);
+      std::expected<TailClobbererNonTrivialMove<0, true>, TailClobbererNonTrivialMove<1, false>> y(std::unexpect);
+
+      swap(x, y);
+
+      // Both of these would fail if adjusting the "has value" flags happened
+      // _before_ constructing the member objects inside the `swap`.
+      assert(!x.has_value());
+      assert(y.has_value());
+    }
+  }
+
   return true;
 }
 
@@ -208,6 +237,39 @@ void testException() {
     } catch (Except) {
       assert(e1.has_value());
       assert(*e1 == 5);
+    }
+  }
+
+  // TailClobberer
+  {
+    // is_nothrow_move_constructible_v<E>
+    {
+      std::expected<TailClobbererNonTrivialMove<0, false, true>, TailClobbererNonTrivialMove<1>> x(std::in_place);
+      std::expected<TailClobbererNonTrivialMove<0, false, true>, TailClobbererNonTrivialMove<1>> y(std::unexpect);
+      try {
+        swap(x, y);
+        assert(false);
+      } catch (Except) {
+        assert(x.has_value());
+        // This would fail if `TailClobbererNonTrivialMove<1>` clobbered the
+        // flag when rolling back the swap.
+        assert(!y.has_value());
+      }
+    }
+
+    // !is_nothrow_move_constructible_v<E>
+    {
+      std::expected<TailClobbererNonTrivialMove<0>, TailClobbererNonTrivialMove<1, false, true>> x(std::in_place);
+      std::expected<TailClobbererNonTrivialMove<0>, TailClobbererNonTrivialMove<1, false, true>> y(std::unexpect);
+      try {
+        swap(x, y);
+        assert(false);
+      } catch (Except) {
+        // This would fail if `TailClobbererNonTrivialMove<0>` clobbered the
+        // flag when rolling back the swap.
+        assert(x.has_value());
+        assert(!y.has_value());
+      }
     }
   }
 #endif // TEST_HAS_NO_EXCEPTIONS

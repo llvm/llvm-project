@@ -31,12 +31,14 @@ namespace IllegalSyntax {
 namespace VariableLengthArrays {
   template<typename Z> using T = int[42]; // ok
 
-  int n = 32;
-  template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}}
+  int n = 32; // expected-note {{declared here}}
+  template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}} \
+                                            expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                                            expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
 
   const int m = 42;
   template<typename Z> using U = int[m];
-  template<typename Z> using U = int[42]; // expected-note {{previous definition}} 
+  template<typename Z> using U = int[42]; // expected-note {{previous definition}}
   template<typename Z> using U = int; // expected-error {{type alias template redefinition with different types ('int' vs 'int[42]')}}
 }
 
@@ -189,4 +191,69 @@ int g = sfinae_me<int>(); // expected-error{{no matching function for call to 's
 
 namespace NullExceptionDecl {
 template<int... I> auto get = []() { try { } catch(...) {}; return I; }; // expected-error{{initializer contains unexpanded parameter pack 'I'}}
+}
+
+namespace GH41693 {
+// No errors when a type alias defined in a class or a friend of a class
+// accesses private members of the same class.
+struct S {
+private:
+  template <typename> static constexpr void Impl() {}
+
+public:
+  template <typename X> using U = decltype(Impl<X>());
+};
+
+using X = S::U<void>;
+struct Y {
+private:
+  static constexpr int x=0;
+
+  template <typename>
+  static constexpr int y=0;
+
+  template <typename>
+  static constexpr int foo();
+
+public:
+  template <typename U>
+  using bar1 = decltype(foo<U>());
+  using bar2 = decltype(x);
+  template <typename U>
+  using bar3 = decltype(y<U>);
+};
+
+
+using type1 = Y::bar1<float>;
+using type2 = Y::bar2;
+using type3 = Y::bar3<float>;
+
+struct theFriend{
+  template<class T>
+  using theAlias = decltype(&T::i);
+};
+
+class theC{
+  int i;
+  public:
+  friend struct theFriend;
+};
+
+int foo(){
+  (void)sizeof(theFriend::theAlias<theC>);
+}
+
+// Test case that regressed with the first iteration of the fix for GH41693.
+template <typename T> class SP {
+    T* data;
+};
+
+template <typename T> class A {
+    static SP<A> foo();
+};
+
+template<typename T> using TRet = SP<A<T>>;
+
+template<typename T> TRet<T> A<T>::foo() { return TRet<T>{};};
+
 }

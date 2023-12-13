@@ -1195,7 +1195,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
         /*isPropertyAccessor=*/false,
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-        ObjCMethodDecl::Required, false);
+        ObjCImplementationControl::Required, false);
     ParmVarDecl *Argument = ParmVarDecl::Create(S.Context, AtIndexGetter,
                                                 SourceLocation(), SourceLocation(),
                                                 arrayRef ? &S.Context.Idents.get("index")
@@ -1301,7 +1301,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
         /*isPropertyAccessor=*/false,
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-        ObjCMethodDecl::Required, false);
+        ObjCImplementationControl::Required, false);
     SmallVector<ParmVarDecl *, 2> Params;
     ParmVarDecl *object = ParmVarDecl::Create(S.Context, AtIndexSetter,
                                                 SourceLocation(), SourceLocation(),

@@ -762,7 +762,7 @@ their patch with every possible configuration.
 
 *If someone else broke the build and this blocks your work*
 
-* Comment on the code review in `Phabricator <https://reviews.llvm.org/>`_
+* Comment on the code review in `GitHub <https://github.com/llvm/llvm-project/pulls>`_
   (if available) or email the author, explain the problem and how this impacts
   you. Add a link to the broken build and the error message so folks can
   understand the problem.

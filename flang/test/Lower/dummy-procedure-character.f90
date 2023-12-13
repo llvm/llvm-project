@@ -1,6 +1,6 @@
 ! Test lowering of character function dummy procedure. The length must be
 ! passed along the function address.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! -----------------------------------------------------------------------------
 !     Test passing a character function as dummy procedure

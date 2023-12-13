@@ -15,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   CodeGen
   LTO
+  FrontendOffloading
   )
 
 set(LLVM_TARGET_DEFINITIONS LinkerWrapperOpts.td)

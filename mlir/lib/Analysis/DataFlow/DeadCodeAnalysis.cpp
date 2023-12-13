@@ -8,9 +8,22 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/Casting.h"
+#include <cassert>
 #include <optional>
 
 using namespace mlir;
@@ -259,8 +272,7 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (isRegionOrCallableReturn(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a region.
-      visitRegionTerminator(cast<RegionBranchTerminatorOpInterface>(op),
-                            branch);
+      visitRegionTerminator(op, branch);
     } else if (auto callable =
                    dyn_cast<CallableOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a callable.
@@ -379,14 +391,17 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   }
 }
 
-void DeadCodeAnalysis::visitRegionTerminator(
-    RegionBranchTerminatorOpInterface op, RegionBranchOpInterface branch) {
+void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
+                                             RegionBranchOpInterface branch) {
   std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
     return;
 
   SmallVector<RegionSuccessor> successors;
-  op.getSuccessorRegions(*operands, successors);
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
+    terminator.getSuccessorRegions(*operands, successors);
+  else
+    branch.getSuccessorRegions(op->getParentRegion(), successors);
 
   // Mark successor region entry blocks as executable and add this op to the
   // list of predecessors.

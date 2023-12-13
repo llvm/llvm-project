@@ -456,7 +456,7 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     EmitFP16(Records, OS);
     break;
   case GenArmVectorType:
-    EmitVectorType(Records, OS);
+    EmitVectorTypes(Records, OS);
     break;
   case GenArmBF16:
     EmitBF16(Records, OS);

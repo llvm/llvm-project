@@ -3094,6 +3094,12 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
+    if (reg_info->flags_type) {
+      response.IndentMore();
+      reg_info->flags_type->ToXML(response);
+      response.IndentLess();
+    }
+
     response.Indent();
     response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
                     "\" regnum=\"%d\" ",
@@ -3112,6 +3118,9 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     llvm::StringRef format = GetFormatNameOrEmpty(*reg_info);
     if (!format.empty())
       response << "format=\"" << format << "\" ";
+
+    if (reg_info->flags_type)
+      response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);

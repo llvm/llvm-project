@@ -5,7 +5,7 @@
 // - constant integer size for buffer
 void test1(int x) {
   int *buf = new int[100];
-  buf[100] = 1; // expected-warning{{Out of bound memory access}}
+  buf[100] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 void test1_ok(int x) {
@@ -20,7 +20,7 @@ void test1_ok(int x) {
 void test1_ptr(int x) {
   int *buf = new int[100];
   int *p = buf;
-  p[101] = 1; // expected-warning{{Out of bound memory access}}
+  p[101] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 void test1_ptr_ok(int x) {
@@ -37,7 +37,7 @@ void test1_ptr_arith(int x) {
   int *buf = new int[100];
   int *p = buf;
   p = p + 100;
-  p[0] = 1; // expected-warning{{Out of bound memory access}}
+  p[0] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 void test1_ptr_arith_ok(int x) {
@@ -51,7 +51,7 @@ void test1_ptr_arith_bad(int x) {
   int *buf = new int[100];
   int *p = buf;
   p = p + 99;
-  p[1] = 1; // expected-warning{{Out of bound memory access}}
+  p[1] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 void test1_ptr_arith_ok2(int x) {
@@ -66,7 +66,7 @@ void test1_ptr_arith_ok2(int x) {
 // - constant integer size for buffer
 void test2(int x) {
   int *buf = new int[100];
-  buf[-1] = 1; // expected-warning{{Out of bound memory access}}
+  buf[-1] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests doing an out-of-bounds access before the start of an array using:
@@ -76,7 +76,7 @@ void test2(int x) {
 void test2_ptr(int x) {
   int *buf = new int[100];
   int *p = buf;
-  p[-1] = 1; // expected-warning{{Out of bound memory access}}
+  p[-1] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests doing an out-of-bounds access before the start of an array using:
@@ -87,35 +87,35 @@ void test2_ptr_arith(int x) {
   int *buf = new int[100];
   int *p = buf;
   --p;
-  p[0] = 1; // expected-warning {{Out of bound memory access (accessed memory precedes memory block)}}
+  p[0] = 1; // expected-warning {{Out of bound access to memory preceding}}
 }
 
 // Tests under-indexing
 // of a multi-dimensional array
 void test2_multi(int x) {
   auto buf = new int[100][100];
-  buf[0][-1] = 1; // expected-warning{{Out of bound memory access}}
+  buf[0][-1] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests under-indexing
 // of a multi-dimensional array
 void test2_multi_b(int x) {
   auto buf = new int[100][100];
-  buf[-1][0] = 1; // expected-warning{{Out of bound memory access}}
+  buf[-1][0] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests over-indexing
 // of a multi-dimensional array
 void test2_multi_c(int x) {
   auto buf = new int[100][100];
-  buf[100][0] = 1; // expected-warning{{Out of bound memory access}}
+  buf[100][0] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests over-indexing
 // of a multi-dimensional array
 void test2_multi_2(int x) {
   auto buf = new int[100][100];
-  buf[99][100] = 1; // expected-warning{{Out of bound memory access}}
+  buf[99][100] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests normal access of
@@ -131,7 +131,7 @@ void test_diff_types(int x) {
   int *buf = new int[10]; //10*sizeof(int) Bytes allocated
   char *cptr = (char *)buf;
   cptr[sizeof(int) * 9] = 1;  // no-warning
-  cptr[sizeof(int) * 10] = 1; // expected-warning{{Out of bound memory access}}
+  cptr[sizeof(int) * 10] = 1; // expected-warning{{Out of bound access to memory}}
 }
 
 // Tests over-indexing
@@ -139,7 +139,7 @@ void test_diff_types(int x) {
 void test_non_array(int x) {
   int *ip = new int;
   ip[0] = 1; // no-warning
-  ip[1] = 2; // expected-warning{{Out of bound memory access}}
+  ip[1] = 2; // expected-warning{{Out of bound access to memory}}
 }
 
 //Tests over-indexing
@@ -154,3 +154,29 @@ void test_dynamic_size2(unsigned m,unsigned n){
   unsigned *U = nullptr;
   U = new unsigned[m + n + 1];
 }
+
+//Test creating invalid references, which break the invariant that a reference
+//is always holding a value, and could lead to nasty runtime errors.
+//(This is not related to operator new, but placed in this file because the
+//other test files are not C++.)
+int array[10] = {0};
+
+void test_after_the_end_reference() {
+  int &ref = array[10]; // expected-warning{{Out of bound access to memory}}
+}
+
+void test_after_after_the_end_reference() {
+  int &ref = array[11]; // expected-warning{{Out of bound access to memory}}
+}
+
+int test_reference_that_might_be_after_the_end(int idx) {
+  // This TC produces no warning because separate analysis of (idx == 10) is
+  // only introduced _after_ the creation of the reference ref.
+  if (idx < 0 || idx > 10)
+    return -2;
+  int &ref = array[idx];
+  if (idx == 10)
+    return -1;
+  return ref;
+}
+

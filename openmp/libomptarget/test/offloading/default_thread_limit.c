@@ -48,8 +48,7 @@ int main() {
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// FIXME: Use the attribute value to imply a thread_limit
-// DEFAULT: {{(128|256)}} (MaxFlatWorkGroupSize: 42
+// DEFAULT: 42 (MaxFlatWorkGroupSize: 42
 #pragma omp target ompx_attribute(__attribute__((amdgpu_flat_work_group_size(42, 42))))
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {

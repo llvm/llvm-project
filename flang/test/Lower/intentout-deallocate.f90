@@ -1,5 +1,5 @@
 ! Test correct deallocation of intent(out) allocatables.
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -polymorphic-type %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false -polymorphic-type %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -emit-hlfir -polymorphic-type %s -o - -I nw | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 module mod1

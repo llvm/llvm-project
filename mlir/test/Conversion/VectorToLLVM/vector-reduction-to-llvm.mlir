@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm='use-opaque-pointers=1' -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-vector-to-llvm='reassociate-fp-reductions use-opaque-pointers=1' -split-input-file | FileCheck %s --check-prefix=REASSOC
+// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-llvm='reassociate-fp-reductions' -split-input-file | FileCheck %s --check-prefix=REASSOC
 
 // CHECK-LABEL: @reduce_add_f32(
 // CHECK-SAME: %[[A:.*]]: vector<16xf32>)

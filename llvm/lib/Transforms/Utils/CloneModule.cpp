@@ -34,6 +34,8 @@ static void copyComdat(GlobalObject *Dst, const GlobalObject *Src) {
 /// copies of global variables and functions, and making their (initializers and
 /// references, respectively) refer to the right globals.
 ///
+/// Cloning un-materialized modules is not currently supported, so any
+/// modules initialized via lazy loading should be materialized before cloning
 std::unique_ptr<Module> llvm::CloneModule(const Module &M) {
   // Create the value map that maps things from the old module over to the new
   // module.
@@ -49,6 +51,9 @@ std::unique_ptr<Module> llvm::CloneModule(const Module &M,
 std::unique_ptr<Module> llvm::CloneModule(
     const Module &M, ValueToValueMapTy &VMap,
     function_ref<bool(const GlobalValue *)> ShouldCloneDefinition) {
+
+  assert(M.isMaterialized() && "Module must be materialized before cloning!");
+
   // First off, we need to create the new module.
   std::unique_ptr<Module> New =
       std::make_unique<Module>(M.getModuleIdentifier(), M.getContext());
@@ -56,6 +61,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   New->setDataLayout(M.getDataLayout());
   New->setTargetTriple(M.getTargetTriple());
   New->setModuleInlineAsm(M.getModuleInlineAsm());
+  New->IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
 
   // Loop over all of the global variables, making corresponding globals in the
   // new module.  Here we add them to the VMap and to the new Module.  We

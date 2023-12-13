@@ -62,14 +62,6 @@ TEST(ConstantsTest, Integer_i1) {
   // @i = constant i1 true
   EXPECT_EQ(One, ConstantExpr::getShl(One, Zero));
 
-  // @j = constant i1 lshr(i1 1, i1 1)  ; poison
-  // @j = constant i1 poison
-  EXPECT_EQ(Poison, ConstantExpr::getLShr(One, One));
-
-  // @m = constant i1 ashr(i1 1, i1 1)  ; poison
-  // @m = constant i1 poison
-  EXPECT_EQ(Poison, ConstantExpr::getAShr(One, One));
-
   // @n = constant i1 mul(i1 -1, i1 1)
   // @n = constant i1 true
   EXPECT_EQ(One, ConstantExpr::getMul(NegOne, One));
@@ -113,16 +105,6 @@ TEST(ConstantsTest, IntSigns) {
 
   // Overflow is handled by truncation.
   EXPECT_EQ(0x3b, ConstantInt::get(Int8Ty, 0x13b)->getSExtValue());
-}
-
-TEST(ConstantsTest, FP128Test) {
-  LLVMContext Context;
-  Type *FP128Ty = Type::getFP128Ty(Context);
-
-  IntegerType *Int128Ty = Type::getIntNTy(Context, 128);
-  Constant *Zero128 = Constant::getNullValue(Int128Ty);
-  Constant *X = ConstantExpr::getUIToFP(Zero128, FP128Ty);
-  EXPECT_TRUE(isa<ConstantFP>(X));
 }
 
 TEST(ConstantsTest, PointerCast) {
@@ -201,8 +183,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Type *Int64Ty = Type::getInt64Ty(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
   Type *Int16Ty = Type::getInt16Ty(Context);
-  Type *FloatTy = Type::getFloatTy(Context);
-  Type *DoubleTy = Type::getDoubleTy(Context);
 
   Constant *Global =
       M->getOrInsertGlobal("dummy", PointerType::getUnqual(Int32Ty));
@@ -210,10 +190,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
       M->getOrInsertGlobal("dummy2", PointerType::getUnqual(Int32Ty));
 
   Constant *P0 = ConstantExpr::getPtrToInt(Global, Int32Ty);
-  Constant *P1 = ConstantExpr::getUIToFP(P0, FloatTy);
-  Constant *P2 = ConstantExpr::getUIToFP(P0, DoubleTy);
   Constant *P4 = ConstantExpr::getPtrToInt(Global2, Int32Ty);
-  Constant *P5 = ConstantExpr::getUIToFP(P4, FloatTy);
   Constant *P6 = ConstantExpr::getBitCast(P4, FixedVectorType::get(Int16Ty, 2));
 
   Constant *One = ConstantInt::get(Int32Ty, 1);
@@ -225,11 +202,8 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Constant *PoisonV16 = PoisonValue::get(P6->getType());
 
 #define P0STR "ptrtoint (ptr @dummy to i32)"
-#define P1STR "uitofp (i32 ptrtoint (ptr @dummy to i32) to float)"
-#define P2STR "uitofp (i32 ptrtoint (ptr @dummy to i32) to double)"
 #define P3STR "ptrtoint (ptr @dummy to i1)"
 #define P4STR "ptrtoint (ptr @dummy2 to i32)"
-#define P5STR "uitofp (i32 ptrtoint (ptr @dummy2 to i32) to float)"
 #define P6STR "bitcast (i32 ptrtoint (ptr @dummy2 to i32) to <2 x i16>)"
 
   CHECK(ConstantExpr::getNeg(P0), "sub i32 0, " P0STR);
@@ -246,24 +220,9 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getShl(P0, P0, true), "shl nuw i32 " P0STR ", " P0STR);
   CHECK(ConstantExpr::getShl(P0, P0, false, true),
         "shl nsw i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getLShr(P0, P0, false), "lshr i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getLShr(P0, P0, true),
-        "lshr exact i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getAShr(P0, P0, false), "ashr i32 " P0STR ", " P0STR);
-  CHECK(ConstantExpr::getAShr(P0, P0, true),
-        "ashr exact i32 " P0STR ", " P0STR);
-
-  CHECK(ConstantExpr::getSExt(P0, Int64Ty), "sext i32 " P0STR " to i64");
-  CHECK(ConstantExpr::getZExt(P0, Int64Ty), "zext i32 " P0STR " to i64");
-  CHECK(ConstantExpr::getFPTrunc(P2, FloatTy),
-        "fptrunc double " P2STR " to float");
-  CHECK(ConstantExpr::getFPExtend(P1, DoubleTy),
-        "fpext float " P1STR " to double");
 
   CHECK(ConstantExpr::getICmp(CmpInst::ICMP_EQ, P0, P4),
         "icmp eq i32 " P0STR ", " P4STR);
-  CHECK(ConstantExpr::getFCmp(CmpInst::FCMP_ULT, P1, P5),
-        "fcmp ult float " P1STR ", " P5STR);
 
   std::vector<Constant *> V;
   V.push_back(One);

@@ -4369,6 +4369,7 @@ _func:
 	mrs x9, ID_AA64PFR2_EL1
 	mrs x9, ID_AA64DFR0_EL1
 	mrs x9, ID_AA64DFR1_EL1
+	mrs x9, ID_AA64DFR2_EL1
 	mrs x9, ID_AA64AFR0_EL1
 	mrs x9, ID_AA64AFR1_EL1
 	mrs x9, ID_AA64ISAR0_EL1
@@ -4706,6 +4707,7 @@ _func:
 // CHECK: mrs      x9, {{id_aa64pfr2_el1|ID_AA64PFR2_EL1}}        // encoding: [0x49,0x04,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64dfr0_el1|ID_AA64DFR0_EL1}}        // encoding: [0x09,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64dfr1_el1|ID_AA64DFR1_EL1}}        // encoding: [0x29,0x05,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64dfr2_el1|ID_AA64DFR2_EL1}}        // encoding: [0x49,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64afr0_el1|ID_AA64AFR0_EL1}}        // encoding: [0x89,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64afr1_el1|ID_AA64AFR1_EL1}}        // encoding: [0xa9,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64isar0_el1|ID_AA64ISAR0_EL1}}       // encoding: [0x09,0x06,0x38,0xd5]

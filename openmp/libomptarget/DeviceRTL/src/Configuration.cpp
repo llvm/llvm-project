@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Configuration.h"
-#include "Environment.h"
 #include "State.h"
 #include "Types.h"
 
@@ -32,7 +31,7 @@ using namespace ompx;
     CONSTANT(__omp_rtl_device_environment);
 
 uint32_t config::getDebugKind() {
-  return __omp_rtl_debug_kind & __omp_rtl_device_environment.DebugKind;
+  return __omp_rtl_debug_kind & __omp_rtl_device_environment.DeviceDebugKind;
 }
 
 uint32_t config::getNumDevices() {
@@ -64,8 +63,8 @@ uint64_t config::getIndirectCallTableSize() {
   return __omp_rtl_device_environment.IndirectCallTableSize;
 }
 
-bool config::isDebugMode(config::DebugKind Kind) {
-  return config::getDebugKind() & Kind;
+bool config::isDebugMode(DeviceDebugKind Kind) {
+  return config::getDebugKind() & uint32_t(Kind);
 }
 
 bool config::mayUseThreadStates() { return !__omp_rtl_assume_no_thread_state; }

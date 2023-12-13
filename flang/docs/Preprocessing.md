@@ -228,5 +228,5 @@ E . . E E .   pp125.F90  #DEFINE works in free form
 . . E . E E   pp127.F90  FLM call with closing ')' on next line (not a continuation)
 E . E . E E   pp128.F90  FLM call with '(' on next line (not a continuation)
 . . N . . N   pp129.F90  #define KWM !, then KWM works as comment line initiator
-E . E . . E   pp130.F90  #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)
+. . E . . E   pp130.F90  #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)
 ```

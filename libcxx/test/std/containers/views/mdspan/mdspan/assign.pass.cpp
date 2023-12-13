@@ -57,24 +57,23 @@ template <class H, class L, class A>
 constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int>()), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D>(7)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D>(7)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<unsigned, 7>()), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<size_t, D, 4, D>(2, 3)), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D, 7, D>(0, 3)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D, 7, D>(0, 3)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int64_t, D, 7, D, 4, D, D>(1, 2, 3, 2)), acc);
 }
 
 template <class H, class A>
 constexpr void mixin_layout(const H& handle, const A& acc) {
   // make sure we test a trivially assignable mapping
-  static_assert(std::is_trivially_assignable_v<typename std::layout_left::template mapping<std::extents<int>>,
-                                               const typename std::layout_left::template mapping<std::extents<int>>&>);
+  static_assert(std::is_trivially_assignable_v<std::layout_left::mapping<std::extents<int>>,
+                                               const std::layout_left::mapping<std::extents<int>>&>);
   mixin_extents(handle, std::layout_left(), acc);
   mixin_extents(handle, std::layout_right(), acc);
   // make sure we test a not trivially assignable mapping
-  static_assert(!std::is_trivially_assignable_v<
-                typename layout_wrapping_integral<4>::template mapping<std::extents<int>>,
-                const typename layout_wrapping_integral<4>::template mapping<std::extents<int>>&>);
+  static_assert(!std::is_trivially_assignable_v< layout_wrapping_integral<4>::mapping<std::extents<int>>,
+                                                 const layout_wrapping_integral<4>::mapping<std::extents<int>>&>);
   mixin_extents(handle, layout_wrapping_integral<4>(), acc);
 }
 

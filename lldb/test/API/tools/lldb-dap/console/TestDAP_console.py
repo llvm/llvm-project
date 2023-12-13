@@ -3,16 +3,18 @@ Test lldb-dap setBreakpoints request
 """
 
 import dap_server
+import lldbdap_testcase
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
 
 
 class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
-    def check_lldb_command(self, lldb_command, contains_string, assert_msg):
+    def check_lldb_command(
+        self, lldb_command, contains_string, assert_msg, command_escape_prefix="`"
+    ):
         response = self.dap_server.request_evaluate(
-            "`%s" % (lldb_command), context="repl"
+            f"{command_escape_prefix}{lldb_command}", context="repl"
         )
         output = response["body"]["result"]
         self.assertIn(
@@ -68,3 +70,37 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         # currently selected frame.
 
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_custom_escape_prefix(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, commandEscapePrefix="::")
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        self.check_lldb_command(
+            "help",
+            "For more information on any command",
+            "Help can be invoked",
+            command_escape_prefix="::",
+        )
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_empty_escape_prefix(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, commandEscapePrefix="")
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        self.check_lldb_command(
+            "help",
+            "For more information on any command",
+            "Help can be invoked",
+            command_escape_prefix="",
+        )

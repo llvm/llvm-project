@@ -39,10 +39,17 @@ static cl::opt<unsigned> MaxClones(
     "The maximum number of clones allowed for a single function "
     "specialization"));
 
+static cl::opt<unsigned>
+    MaxDiscoveryIterations("funcspec-max-discovery-iterations", cl::init(100),
+                           cl::Hidden,
+                           cl::desc("The maximum number of iterations allowed "
+                                    "when searching for transitive "
+                                    "phis"));
+
 static cl::opt<unsigned> MaxIncomingPhiValues(
-    "funcspec-max-incoming-phi-values", cl::init(4), cl::Hidden, cl::desc(
-    "The maximum number of incoming values a PHI node can have to be "
-    "considered during the specialization bonus estimation"));
+    "funcspec-max-incoming-phi-values", cl::init(8), cl::Hidden,
+    cl::desc("The maximum number of incoming values a PHI node can have to be "
+             "considered during the specialization bonus estimation"));
 
 static cl::opt<unsigned> MaxBlockPredecessors(
     "funcspec-max-block-predecessors", cl::init(2), cl::Hidden, cl::desc(
@@ -64,9 +71,9 @@ static cl::opt<unsigned> MinCodeSizeSavings(
     "much percent of the original function size"));
 
 static cl::opt<unsigned> MinLatencySavings(
-    "funcspec-min-latency-savings", cl::init(70), cl::Hidden, cl::desc(
-    "Reject specializations whose latency savings are less than this"
-    "much percent of the original function size"));
+    "funcspec-min-latency-savings", cl::init(40), cl::Hidden,
+    cl::desc("Reject specializations whose latency savings are less than this"
+             "much percent of the original function size"));
 
 static cl::opt<unsigned> MinInliningBonus(
     "funcspec-min-inlining-bonus", cl::init(300), cl::Hidden, cl::desc(
@@ -262,29 +269,102 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
   return estimateBasicBlocks(WorkList);
 }
 
+bool InstCostVisitor::discoverTransitivelyIncomingValues(
+    Constant *Const, PHINode *Root, DenseSet<PHINode *> &TransitivePHIs) {
+
+  SmallVector<PHINode *, 64> WorkList;
+  WorkList.push_back(Root);
+  unsigned Iter = 0;
+
+  while (!WorkList.empty()) {
+    PHINode *PN = WorkList.pop_back_val();
+
+    if (++Iter > MaxDiscoveryIterations ||
+        PN->getNumIncomingValues() > MaxIncomingPhiValues)
+      return false;
+
+    if (!TransitivePHIs.insert(PN).second)
+      continue;
+
+    for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+      Value *V = PN->getIncomingValue(I);
+
+      // Disregard self-references and dead incoming values.
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst == PN || DeadBlocks.contains(PN->getIncomingBlock(I)))
+          continue;
+
+      if (Constant *C = findConstantFor(V, KnownConstants)) {
+        // Not all incoming values are the same constant. Bail immediately.
+        if (C != Const)
+          return false;
+        continue;
+      }
+
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        WorkList.push_back(Phi);
+        continue;
+      }
+
+      // We can't reason about anything else.
+      return false;
+    }
+  }
+  return true;
+}
+
 Constant *InstCostVisitor::visitPHINode(PHINode &I) {
   if (I.getNumIncomingValues() > MaxIncomingPhiValues)
     return nullptr;
 
   bool Inserted = VisitedPHIs.insert(&I).second;
   Constant *Const = nullptr;
+  bool HaveSeenIncomingPHI = false;
 
   for (unsigned Idx = 0, E = I.getNumIncomingValues(); Idx != E; ++Idx) {
     Value *V = I.getIncomingValue(Idx);
+
+    // Disregard self-references and dead incoming values.
     if (auto *Inst = dyn_cast<Instruction>(V))
       if (Inst == &I || DeadBlocks.contains(I.getIncomingBlock(Idx)))
         continue;
-    Constant *C = findConstantFor(V, KnownConstants);
-    if (!C) {
-      if (Inserted)
-        PendingPHIs.push_back(&I);
+
+    if (Constant *C = findConstantFor(V, KnownConstants)) {
+      if (!Const)
+        Const = C;
+      // Not all incoming values are the same constant. Bail immediately.
+      if (C != Const)
+        return nullptr;
+      continue;
+    }
+
+    if (Inserted) {
+      // First time we are seeing this phi. We will retry later, after
+      // all the constant arguments have been propagated. Bail for now.
+      PendingPHIs.push_back(&I);
       return nullptr;
     }
-    if (!Const)
-      Const = C;
-    else if (C != Const)
-      return nullptr;
+
+    if (isa<PHINode>(V)) {
+      // Perhaps it is a Transitive Phi. We will confirm later.
+      HaveSeenIncomingPHI = true;
+      continue;
+    }
+
+    // We can't reason about anything else.
+    return nullptr;
   }
+
+  if (!Const)
+    return nullptr;
+
+  if (!HaveSeenIncomingPHI)
+    return Const;
+
+  DenseSet<PHINode *> TransitivePHIs;
+  if (!discoverTransitivelyIncomingValues(Const, &I, TransitivePHIs))
+    return nullptr;
+
   return Const;
 }
 
@@ -488,9 +568,6 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
       Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
                                      GlobalValue::InternalLinkage, ConstVal,
                                      "specialized.arg." + Twine(++NGlobals));
-      if (ArgOpType != ConstVal->getType())
-        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
-
       Call->setArgOperand(Idx, GV);
     }
   }

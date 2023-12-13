@@ -911,15 +911,23 @@ bool llvm::isNotVisibleOnUnwind(const Value *Object,
 
 // We don't consider globals as writable: While the physical memory is writable,
 // we may not have provenance to perform the write.
-bool llvm::isWritableObject(const Value *Object) {
+bool llvm::isWritableObject(const Value *Object,
+                            bool &ExplicitlyDereferenceableOnly) {
+  ExplicitlyDereferenceableOnly = false;
+
   // TODO: Alloca might not be writable after its lifetime ends.
   // See https://github.com/llvm/llvm-project/issues/51838.
   if (isa<AllocaInst>(Object))
     return true;
 
-  // TODO: Also handle sret.
-  if (auto *A = dyn_cast<Argument>(Object))
+  if (auto *A = dyn_cast<Argument>(Object)) {
+    if (A->hasAttribute(Attribute::Writable)) {
+      ExplicitlyDereferenceableOnly = true;
+      return true;
+    }
+
     return A->hasByValAttr();
+  }
 
   // TODO: Noalias shouldn't imply writability, this should check for an
   // allocator function instead.

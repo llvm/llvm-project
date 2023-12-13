@@ -117,7 +117,7 @@ func.func @test_copy_in_poly(%poly : !fir.class<!fir.array<?x!fir.type<test_copy
 // CHECK:             %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_5]](%[[VAL_7]]) : (!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>
 // CHECK:             fir.store %[[VAL_8]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>
-// CHECK:             %[[VAL_9:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:             %[[VAL_9:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:             %[[VAL_10:.*]] = arith.constant {{.*}} : index
 // CHECK:             %[[VAL_11:.*]] = arith.constant {{.*}} : i32
 // CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>) -> !fir.ref<!fir.box<none>>

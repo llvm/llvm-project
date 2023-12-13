@@ -704,16 +704,22 @@ R"(All available -march extensions for RISC-V
     zvl8192b            1.0
     zhinx               1.0
     zhinxmin            1.0
+    smaia               1.0
+    ssaia               1.0
     svinval             1.0
     svnapot             1.0
     svpbmt              1.0
     xcvalu              1.0
     xcvbi               1.0
     xcvbitmanip         1.0
+    xcvelw              1.0
     xcvmac              1.0
+    xcvmem              1.0
     xcvsimd             1.0
     xsfcie              1.0
     xsfvcp              1.0
+    xsfvfnrclipxfqf     1.0
+    xsfvfwmaccqqq       1.0
     xsfvqmaccdod        1.0
     xsfvqmaccqoq        1.0
     xtheadba            1.0
@@ -730,7 +736,7 @@ R"(All available -march extensions for RISC-V
     xventanacondops     1.0
 
 Experimental extensions
-    zicfilp             0.2       This is a long dummy description
+    zicfilp             0.4       This is a long dummy description
     zicond              1.0
     zacas               1.0
     zfbfmin             0.8
@@ -753,8 +759,6 @@ Experimental extensions
     zvksg               1.0
     zvksh               1.0
     zvkt                1.0
-    smaia               1.0
-    ssaia               1.0
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";

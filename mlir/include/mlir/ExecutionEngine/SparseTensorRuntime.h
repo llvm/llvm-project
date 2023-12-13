@@ -24,8 +24,6 @@
 
 using namespace mlir::sparse_tensor;
 
-using SparseTensorWriter = std::ostream;
-
 extern "C" {
 
 //===----------------------------------------------------------------------===//
@@ -47,13 +45,14 @@ extern "C" {
 /// kEmpty          -               STS, empty
 /// kEmptyForward   -               STS, empty, with forwarding COO
 /// kFromCOO        COO             STS, copied from the COO source
+/// kFromReader     reader          STS, input from reader
 /// kToCOO          STS             COO, copied from the STS source
 /// kPack           buffers         STS, from level buffers
 /// kSortCOOInPlace STS             STS, sorted in place
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<LevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr);
@@ -120,15 +119,16 @@ MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
     StridedMemRefType<index_type, 1> *out, void *p);
 
 /// Reads the sparse tensor, stores the coordinates and values to the given
-/// memrefs. Returns a boolean to indicate whether the COO elements are sorted.
-#define DECL_GETNEXT(VNAME, V, CNAME, C)                                       \
+/// memrefs of a COO in AoS format. Returns a boolean to indicate whether
+/// the COO elements are sorted.
+#define DECL_READTOBUFFERS(VNAME, V, CNAME, C)                                 \
   MLIR_CRUNNERUTILS_EXPORT bool                                                \
       _mlir_ciface_getSparseTensorReaderReadToBuffers##CNAME##VNAME(           \
           void *p, StridedMemRefType<index_type, 1> *dim2lvlRef,               \
           StridedMemRefType<index_type, 1> *lvl2dimRef,                        \
           StridedMemRefType<C, 1> *cref, StridedMemRefType<V, 1> *vref)        \
-          MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_GETNEXT)
-#undef DECL_GETNEXT
+          MLIR_SPARSETENSOR_FOREVERY_V_O(DECL_READTOBUFFERS)
+#undef DECL_READTOBUFFERS
 
 /// Outputs the sparse tensor dim-rank, nse, and dim-shape.
 MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_outSparseTensorWriterMetaData(
@@ -165,13 +165,6 @@ MLIR_CRUNNERUTILS_EXPORT void endForwardingInsert(void *tensor);
 
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endLexInsert(void *tensor);
-
-/// Coordinate-scheme method to write to file in extended FROSTT format.
-#define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
-  MLIR_CRUNNERUTILS_EXPORT void outSparseTensor##VNAME(void *coo, void *dest,  \
-                                                       bool sort);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_OUTSPARSETENSOR)
-#undef DECL_OUTSPARSETENSOR
 
 /// Releases the memory for the tensor-storage object.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);

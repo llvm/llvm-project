@@ -4,6 +4,9 @@ on:
     paths:
       - 'libcxx/**'
 
+permissions:
+  contents: read
+
 jobs:
   check_generated_files:
     runs-on: ubuntu-latest

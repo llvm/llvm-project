@@ -365,6 +365,10 @@ the above example could be rewritten into:
 
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
 
+When there are multiple ``-fmodule-file=<module-name>=`` options for the same
+``<module-name>``, the last ``-fmodule-file=<module-name>=`` will override the previous
+``-fmodule-file=<module-name>=`` options.
+
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
 it saves time for file lookup.
 

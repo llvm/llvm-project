@@ -28,10 +28,10 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; GENERIC-NEXT:    movzbl %r8b, %r14d
 ; GENERIC-NEXT:    ## kill: def $r8d killed $r8d def $r8
 ; GENERIC-NEXT:    shrl $24, %r8d
-; GENERIC-NEXT:    movl %ebx, %ebp
-; GENERIC-NEXT:    shrl $16, %ebp
-; GENERIC-NEXT:    movzbl %bpl, %r15d
-; GENERIC-NEXT:    movl (%rax,%r15,4), %ebp
+; GENERIC-NEXT:    movl %ebx, %r15d
+; GENERIC-NEXT:    shrl $14, %r15d
+; GENERIC-NEXT:    andl $1020, %r15d ## imm = 0x3FC
+; GENERIC-NEXT:    movl (%rax,%r15), %ebp
 ; GENERIC-NEXT:    xorl (%rdi,%r8,4), %ebp
 ; GENERIC-NEXT:    xorl -12(%r9), %ebp
 ; GENERIC-NEXT:    shrl $24, %ebx
@@ -46,9 +46,9 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; GENERIC-NEXT:  ## %bb.2: ## %bb1
 ; GENERIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; GENERIC-NEXT:    movl %r14d, %ebx
-; GENERIC-NEXT:    shrl $16, %ebx
-; GENERIC-NEXT:    movzbl %bl, %ebx
-; GENERIC-NEXT:    xorl (%rax,%rbx,4), %r8d
+; GENERIC-NEXT:    shrl $14, %ebx
+; GENERIC-NEXT:    andl $1020, %ebx ## imm = 0x3FC
+; GENERIC-NEXT:    xorl (%rax,%rbx), %r8d
 ; GENERIC-NEXT:    xorl -4(%r9), %r8d
 ; GENERIC-NEXT:    shrl $24, %r14d
 ; GENERIC-NEXT:    movzbl %bpl, %ebx
@@ -61,9 +61,9 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; GENERIC-NEXT:    shlq $4, %rcx
 ; GENERIC-NEXT:    andl $-16777216, %r8d ## imm = 0xFF000000
 ; GENERIC-NEXT:    movl %r14d, %r9d
-; GENERIC-NEXT:    shrl $16, %r9d
-; GENERIC-NEXT:    movzbl %r9b, %r9d
-; GENERIC-NEXT:    movzbl 2(%rax,%r9,4), %r9d
+; GENERIC-NEXT:    shrl $14, %r9d
+; GENERIC-NEXT:    andl $1020, %r9d ## imm = 0x3FC
+; GENERIC-NEXT:    movzbl 2(%rax,%r9), %r9d
 ; GENERIC-NEXT:    shll $16, %r9d
 ; GENERIC-NEXT:    orl %r8d, %r9d
 ; GENERIC-NEXT:    xorl 16(%rcx,%rdx), %r9d
@@ -93,7 +93,6 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ;
 ; ATOM-LABEL: t:
 ; ATOM:       ## %bb.0: ## %entry
-; ATOM-NEXT:    pushq %rbp
 ; ATOM-NEXT:    pushq %r15
 ; ATOM-NEXT:    pushq %r14
 ; ATOM-NEXT:    pushq %rbx
@@ -113,10 +112,10 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    movl %r8d, %r14d
 ; ATOM-NEXT:    movzbl %r8b, %r8d
 ; ATOM-NEXT:    shrl $24, %r15d
-; ATOM-NEXT:    shrl $16, %ebx
+; ATOM-NEXT:    shrl $14, %ebx
 ; ATOM-NEXT:    shrl $24, %r14d
-; ATOM-NEXT:    movzbl %bl, %ebx
-; ATOM-NEXT:    movl (%rax,%rbx,4), %ebx
+; ATOM-NEXT:    andl $1020, %ebx ## imm = 0x3FC
+; ATOM-NEXT:    movl (%rax,%rbx), %ebx
 ; ATOM-NEXT:    xorl (%rdi,%r14,4), %ebx
 ; ATOM-NEXT:    movl (%r10,%r8,4), %r14d
 ; ATOM-NEXT:    xorl -12(%r9), %ebx
@@ -129,12 +128,12 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    jb LBB0_3
 ; ATOM-NEXT:  ## %bb.2: ## %bb1
 ; ATOM-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; ATOM-NEXT:    movl %r14d, %ebp
+; ATOM-NEXT:    movl %r14d, %r15d
 ; ATOM-NEXT:    movzbl %bl, %ebx
 ; ATOM-NEXT:    shrl $24, %r14d
-; ATOM-NEXT:    shrl $16, %ebp
-; ATOM-NEXT:    movzbl %bpl, %r15d
-; ATOM-NEXT:    xorl (%rax,%r15,4), %r8d
+; ATOM-NEXT:    shrl $14, %r15d
+; ATOM-NEXT:    andl $1020, %r15d ## imm = 0x3FC
+; ATOM-NEXT:    xorl (%rax,%r15), %r8d
 ; ATOM-NEXT:    movl (%r10,%rbx,4), %r15d
 ; ATOM-NEXT:    xorl (%rdi,%r14,4), %r15d
 ; ATOM-NEXT:    xorl -4(%r9), %r8d
@@ -146,11 +145,11 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    andl $-16777216, %r8d ## imm = 0xFF000000
 ; ATOM-NEXT:    shrl $8, %r14d
 ; ATOM-NEXT:    shlq $4, %rcx
-; ATOM-NEXT:    shrl $16, %r9d
+; ATOM-NEXT:    shrl $14, %r9d
 ; ATOM-NEXT:    movzbl 3(%rdi,%r14,4), %edi
-; ATOM-NEXT:    movzbl %r9b, %r9d
+; ATOM-NEXT:    andl $1020, %r9d ## imm = 0x3FC
 ; ATOM-NEXT:    shll $24, %edi
-; ATOM-NEXT:    movzbl 2(%rax,%r9,4), %r9d
+; ATOM-NEXT:    movzbl 2(%rax,%r9), %r9d
 ; ATOM-NEXT:    shll $16, %r9d
 ; ATOM-NEXT:    orl %r8d, %r9d
 ; ATOM-NEXT:    movzbl %bl, %r8d
@@ -172,7 +171,6 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    popq %rbx
 ; ATOM-NEXT:    popq %r14
 ; ATOM-NEXT:    popq %r15
-; ATOM-NEXT:    popq %rbp
 ; ATOM-NEXT:    retq
 entry:
 	%0 = load i32, i32* %rk, align 4		; <i32> [#uses=1]
@@ -197,7 +195,7 @@ bb:		; preds = %bb1, %entry
 	%9 = zext i32 %8 to i64		; <i64> [#uses=1]
 	%10 = getelementptr [256 x i32], [256 x i32]* @Te1, i64 0, i64 %9		; <i32*> [#uses=1]
 	%11 = load i32, i32* %10, align 4		; <i32> [#uses=1]
-	%ctg2.sum2728 = or i64 %tmp18, 8		; <i64> [#uses=1]
+	%ctg2.sum2728 = or disjoint i64 %tmp18, 8		; <i64> [#uses=1]
 	%12 = getelementptr i8, i8* %rk26, i64 %ctg2.sum2728		; <i8*> [#uses=1]
 	%13 = bitcast i8* %12 to i32*		; <i32*> [#uses=1]
 	%14 = load i32, i32* %13, align 4		; <i32> [#uses=1]
@@ -211,7 +209,7 @@ bb:		; preds = %bb1, %entry
 	%22 = zext i32 %21 to i64		; <i64> [#uses=1]
 	%23 = getelementptr [256 x i32], [256 x i32]* @Te3, i64 0, i64 %22		; <i32*> [#uses=1]
 	%24 = load i32, i32* %23, align 4		; <i32> [#uses=1]
-	%ctg2.sum2930 = or i64 %tmp18, 12		; <i64> [#uses=1]
+	%ctg2.sum2930 = or disjoint i64 %tmp18, 12		; <i64> [#uses=1]
 	%25 = getelementptr i8, i8* %rk26, i64 %ctg2.sum2930		; <i8*> [#uses=1]
 	%26 = bitcast i8* %25 to i32*		; <i32*> [#uses=1]
 	%27 = load i32, i32* %26, align 4		; <i32> [#uses=1]

@@ -118,12 +118,12 @@ define void @f2() {
 ; OPT-NEXT:    [[V22:%.*]] = getelementptr inbounds [3 x [4 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 2
 ; OPT-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[V22]], align 4
 ; OPT-NEXT:    [[V23:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
-; OPT-NEXT:    [[LD:%.*]] = load i64, ptr addrspace(3) [[V23]], align 4
+; OPT-NEXT:    [[LD:%.*]] = load i64, ptr addrspace(3) [[V23]], align 8
 ; OPT-NEXT:    [[MUL:%.*]] = mul i64 [[LD]], 4
 ; OPT-NEXT:    [[V2:%.*]] = getelementptr inbounds [3 x [4 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 2
 ; OPT-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[V2]], align 4
 ; OPT-NEXT:    [[V21:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
-; OPT-NEXT:    store i64 [[MUL]], ptr addrspace(3) [[V21]], align 4
+; OPT-NEXT:    store i64 [[MUL]], ptr addrspace(3) [[V21]], align 8
 ; OPT-NEXT:    ret void
 ;
 ; GCN-LABEL: f2:
@@ -300,7 +300,7 @@ define amdgpu_kernel void @k23() {
 ; Access and allocate three variables
 define amdgpu_kernel void @k123() {
 ; OPT-LABEL: define amdgpu_kernel void @k123(
-; OPT-SAME: ) #[[ATTR2:[0-9]+]] !llvm.amdgcn.lds.kernel.id !13 {
+; OPT-SAME: ) #[[ATTR1]] !llvm.amdgcn.lds.kernel.id !13 {
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope !14, !noalias !17
 ; OPT-NEXT:    call void @f1()
 ; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope !20, !noalias !21
@@ -352,8 +352,7 @@ define amdgpu_kernel void @k123() {
 ; OPT: declare i32 @llvm.amdgcn.lds.kernel.id()
 
 ; OPT: attributes #0 = { "amdgpu-lds-size"="8" }
-; OPT: attributes #1 = { "amdgpu-lds-size"="12" }
-; OPT: attributes #2 = { "amdgpu-lds-size"="16" }
+; OPT: attributes #1 = { "amdgpu-lds-size"="16" }
 
 !0 = !{i64 0, i64 1}
 !1 = !{i32 0}

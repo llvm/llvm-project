@@ -73,6 +73,44 @@ def R12B : X86Reg<"r12b", 12>;
 def R13B : X86Reg<"r13b", 13>;
 def R14B : X86Reg<"r14b", 14>;
 def R15B : X86Reg<"r15b", 15>;
+// RAGreedy prefers to select a cheaper register
+// For x86,
+//   Cost(caller-save reg) < Cost(callee-save reg)
+// b/c callee-save register needs push/pop in prolog/epilog.
+// If both registers are callee-saved or caller-saved,
+//   Cost(short-encoding reg) < Cost(long-encoding reg)
+//
+// To achieve this, we do the following things:
+//   1. Set CostPerUse=1 for registers that need prefix
+//   2. Consider callee-save register is never cheaper than a register w/ cost 1
+//   3. List caller-save register before callee-save regsiter in RegisterClass
+//      or AllocationOrder
+//
+// NOTE:
+//   D133902 stopped assigning register costs for R8-R15, which brought gain
+//   and regression. We don't know if we should assign cost to R16-R31 w/o
+//   performance data.
+// TODO:
+//   Update the comment/cost after tuning.
+// APX only, requires REX2 or EVEX.
+let PositionOrder = 4 in {
+def R16B : X86Reg<"r16b", 16>;
+def R17B : X86Reg<"r17b", 17>;
+def R18B : X86Reg<"r18b", 18>;
+def R19B : X86Reg<"r19b", 19>;
+def R20B : X86Reg<"r20b", 20>;
+def R21B : X86Reg<"r21b", 21>;
+def R22B : X86Reg<"r22b", 22>;
+def R23B : X86Reg<"r23b", 23>;
+def R24B : X86Reg<"r24b", 24>;
+def R25B : X86Reg<"r25b", 25>;
+def R26B : X86Reg<"r26b", 26>;
+def R27B : X86Reg<"r27b", 27>;
+def R28B : X86Reg<"r28b", 28>;
+def R29B : X86Reg<"r29b", 29>;
+def R30B : X86Reg<"r30b", 30>;
+def R31B : X86Reg<"r31b", 31>;
+}
 
 let isArtificial = 1 in {
 // High byte of the low 16 bits of the super-register:
@@ -88,6 +126,24 @@ def R12BH : X86Reg<"", -1>;
 def R13BH : X86Reg<"", -1>;
 def R14BH : X86Reg<"", -1>;
 def R15BH : X86Reg<"", -1>;
+let PositionOrder = 4 in {
+def R16BH : X86Reg<"", -1>;
+def R17BH : X86Reg<"", -1>;
+def R18BH : X86Reg<"", -1>;
+def R19BH : X86Reg<"", -1>;
+def R20BH : X86Reg<"", -1>;
+def R21BH : X86Reg<"", -1>;
+def R22BH : X86Reg<"", -1>;
+def R23BH : X86Reg<"", -1>;
+def R24BH : X86Reg<"", -1>;
+def R25BH : X86Reg<"", -1>;
+def R26BH : X86Reg<"", -1>;
+def R27BH : X86Reg<"", -1>;
+def R28BH : X86Reg<"", -1>;
+def R29BH : X86Reg<"", -1>;
+def R30BH : X86Reg<"", -1>;
+def R31BH : X86Reg<"", -1>;
+}
 // High word of the low 32 bits of the super-register:
 def HAX   : X86Reg<"", -1>;
 def HDX   : X86Reg<"", -1>;
@@ -106,6 +162,24 @@ def R12WH : X86Reg<"", -1>;
 def R13WH : X86Reg<"", -1>;
 def R14WH : X86Reg<"", -1>;
 def R15WH : X86Reg<"", -1>;
+let PositionOrder = 4 in {
+def R16WH : X86Reg<"", -1>;
+def R17WH : X86Reg<"", -1>;
+def R18WH : X86Reg<"", -1>;
+def R19WH : X86Reg<"", -1>;
+def R20WH : X86Reg<"", -1>;
+def R21WH : X86Reg<"", -1>;
+def R22WH : X86Reg<"", -1>;
+def R23WH : X86Reg<"", -1>;
+def R24WH : X86Reg<"", -1>;
+def R25WH : X86Reg<"", -1>;
+def R26WH : X86Reg<"", -1>;
+def R27WH : X86Reg<"", -1>;
+def R28WH : X86Reg<"", -1>;
+def R29WH : X86Reg<"", -1>;
+def R30WH : X86Reg<"", -1>;
+def R31WH : X86Reg<"", -1>;
+}
 }
 
 // 16-bit registers
@@ -134,6 +208,27 @@ def R13W : X86Reg<"r13w", 13, [R13B,R13BH]>;
 def R14W : X86Reg<"r14w", 14, [R14B,R14BH]>;
 def R15W : X86Reg<"r15w", 15, [R15B,R15BH]>;
 }
+// APX only, requires REX2 or EVEX.
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
+let PositionOrder = 4 in {
+def R16W : X86Reg<"r16w", 16, [R16B,R16BH]>;
+def R17W : X86Reg<"r17w", 17, [R17B,R17BH]>;
+def R18W : X86Reg<"r18w", 18, [R18B,R18BH]>;
+def R19W : X86Reg<"r19w", 19, [R19B,R19BH]>;
+def R20W : X86Reg<"r20w", 20, [R20B,R20BH]>;
+def R21W : X86Reg<"r21w", 21, [R21B,R21BH]>;
+def R22W : X86Reg<"r22w", 22, [R22B,R22BH]>;
+def R23W : X86Reg<"r23w", 23, [R23B,R23BH]>;
+def R24W : X86Reg<"r24w", 24, [R24B,R24BH]>;
+def R25W : X86Reg<"r25w", 25, [R25B,R25BH]>;
+def R26W : X86Reg<"r26w", 26, [R26B,R26BH]>;
+def R27W : X86Reg<"r27w", 27, [R27B,R27BH]>;
+def R28W : X86Reg<"r28w", 28, [R28B,R28BH]>;
+def R29W : X86Reg<"r29w", 29, [R29B,R29BH]>;
+def R30W : X86Reg<"r30w", 30, [R30B,R30BH]>;
+def R31W : X86Reg<"r31w", 31, [R31B,R31BH]>;
+}
+}
 
 // 32-bit registers
 let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
@@ -160,6 +255,27 @@ def R14D : X86Reg<"r14d", 14, [R14W,R14WH]>;
 def R15D : X86Reg<"r15d", 15, [R15W,R15WH]>;
 }
 
+// APX only, requires REX2 or EVEX.
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
+let PositionOrder = 4 in {
+def R16D : X86Reg<"r16d", 16, [R16W,R16WH]>;
+def R17D : X86Reg<"r17d", 17, [R17W,R17WH]>;
+def R18D : X86Reg<"r18d", 18, [R18W,R18WH]>;
+def R19D : X86Reg<"r19d", 19, [R19W,R19WH]>;
+def R20D : X86Reg<"r20d", 20, [R20W,R20WH]>;
+def R21D : X86Reg<"r21d", 21, [R21W,R21WH]>;
+def R22D : X86Reg<"r22d", 22, [R22W,R22WH]>;
+def R23D : X86Reg<"r23d", 23, [R23W,R23WH]>;
+def R24D : X86Reg<"r24d", 24, [R24W,R24WH]>;
+def R25D : X86Reg<"r25d", 25, [R25W,R25WH]>;
+def R26D : X86Reg<"r26d", 26, [R26W,R26WH]>;
+def R27D : X86Reg<"r27d", 27, [R27W,R27WH]>;
+def R28D : X86Reg<"r28d", 28, [R28W,R28WH]>;
+def R29D : X86Reg<"r29d", 29, [R29W,R29WH]>;
+def R30D : X86Reg<"r30d", 30, [R30W,R30WH]>;
+def R31D : X86Reg<"r31d", 31, [R31W,R31WH]>;
+}
+}
 // 64-bit registers, X86-64 only
 let SubRegIndices = [sub_32bit] in {
 def RAX : X86Reg<"rax", 0, [EAX]>, DwarfRegNum<[0, -2, -2]>;
@@ -181,6 +297,25 @@ def R13 : X86Reg<"r13", 13, [R13D]>, DwarfRegNum<[13, -2, -2]>;
 def R14 : X86Reg<"r14", 14, [R14D]>, DwarfRegNum<[14, -2, -2]>;
 def R15 : X86Reg<"r15", 15, [R15D]>, DwarfRegNum<[15, -2, -2]>;
 def RIP : X86Reg<"rip",  0, [EIP]>,  DwarfRegNum<[16, -2, -2]>;
+// APX only, requires REX2 or EVEX.
+let PositionOrder = 4 in {
+def R16 : X86Reg<"r16", 16, [R16D]>, DwarfRegNum<[130, -2, -2]>;
+def R17 : X86Reg<"r17", 17, [R17D]>, DwarfRegNum<[131, -2, -2]>;
+def R18 : X86Reg<"r18", 18, [R18D]>, DwarfRegNum<[132, -2, -2]>;
+def R19 : X86Reg<"r19", 19, [R19D]>, DwarfRegNum<[133, -2, -2]>;
+def R20 : X86Reg<"r20", 20, [R20D]>, DwarfRegNum<[134, -2, -2]>;
+def R21 : X86Reg<"r21", 21, [R21D]>, DwarfRegNum<[135, -2, -2]>;
+def R22 : X86Reg<"r22", 22, [R22D]>, DwarfRegNum<[136, -2, -2]>;
+def R23 : X86Reg<"r23", 23, [R23D]>, DwarfRegNum<[137, -2, -2]>;
+def R24 : X86Reg<"r24", 24, [R24D]>, DwarfRegNum<[138, -2, -2]>;
+def R25 : X86Reg<"r25", 25, [R25D]>, DwarfRegNum<[139, -2, -2]>;
+def R26 : X86Reg<"r26", 26, [R26D]>, DwarfRegNum<[140, -2, -2]>;
+def R27 : X86Reg<"r27", 27, [R27D]>, DwarfRegNum<[141, -2, -2]>;
+def R28 : X86Reg<"r28", 28, [R28D]>, DwarfRegNum<[142, -2, -2]>;
+def R29 : X86Reg<"r29", 29, [R29D]>, DwarfRegNum<[143, -2, -2]>;
+def R30 : X86Reg<"r30", 30, [R30D]>, DwarfRegNum<[144, -2, -2]>;
+def R31 : X86Reg<"r31", 31, [R31D]>, DwarfRegNum<[145, -2, -2]>;
+}
 }
 
 // MMX Registers. These are actually aliased to ST0 .. ST7
@@ -223,6 +358,8 @@ def XMM13: X86Reg<"xmm13", 13>, DwarfRegNum<[30, -2, -2]>;
 def XMM14: X86Reg<"xmm14", 14>, DwarfRegNum<[31, -2, -2]>;
 def XMM15: X86Reg<"xmm15", 15>, DwarfRegNum<[32, -2, -2]>;
 
+let PositionOrder = 2 in {
+// XMM16-31 registers, used by AVX-512 instructions.
 def XMM16:  X86Reg<"xmm16", 16>, DwarfRegNum<[67, -2, -2]>;
 def XMM17:  X86Reg<"xmm17", 17>, DwarfRegNum<[68, -2, -2]>;
 def XMM18:  X86Reg<"xmm18", 18>, DwarfRegNum<[69, -2, -2]>;
@@ -239,37 +376,33 @@ def XMM28:  X86Reg<"xmm28", 28>, DwarfRegNum<[79, -2, -2]>;
 def XMM29:  X86Reg<"xmm29", 29>, DwarfRegNum<[80, -2, -2]>;
 def XMM30:  X86Reg<"xmm30", 30>, DwarfRegNum<[81, -2, -2]>;
 def XMM31:  X86Reg<"xmm31", 31>, DwarfRegNum<[82, -2, -2]>;
+}
 
 // YMM0-15 registers, used by AVX instructions and
 // YMM16-31 registers, used by AVX-512 instructions.
-let SubRegIndices = [sub_xmm] in {
-  foreach  Index = 0-31 in {
+let SubRegIndices = [sub_xmm], PositionOrder = 1 in {
+  foreach  Index = 0-15 in {
+    def YMM#Index : X86Reg<"ymm"#Index, Index, [!cast<X86Reg>("XMM"#Index)]>,
+                    DwarfRegAlias<!cast<X86Reg>("XMM"#Index)>;
+  }
+}
+let SubRegIndices = [sub_xmm], PositionOrder = 2 in {
+  foreach  Index = 16-31 in {
     def YMM#Index : X86Reg<"ymm"#Index, Index, [!cast<X86Reg>("XMM"#Index)]>,
                     DwarfRegAlias<!cast<X86Reg>("XMM"#Index)>;
   }
 }
 
+
 // ZMM Registers, used by AVX-512 instructions.
-let SubRegIndices = [sub_ymm] in {
+let SubRegIndices = [sub_ymm], PositionOrder = 2 in {
   foreach  Index = 0-31 in {
     def ZMM#Index : X86Reg<"zmm"#Index, Index, [!cast<X86Reg>("YMM"#Index)]>,
                     DwarfRegAlias<!cast<X86Reg>("XMM"#Index)>;
   }
 }
 
-// Tile config registers.
-def TMMCFG: X86Reg<"tmmcfg", 0>;
-
-// Tile "registers".
-def TMM0:  X86Reg<"tmm0",   0>;
-def TMM1:  X86Reg<"tmm1",   1>;
-def TMM2:  X86Reg<"tmm2",   2>;
-def TMM3:  X86Reg<"tmm3",   3>;
-def TMM4:  X86Reg<"tmm4",   4>;
-def TMM5:  X86Reg<"tmm5",   5>;
-def TMM6:  X86Reg<"tmm6",   6>;
-def TMM7:  X86Reg<"tmm7",   7>;
-
+let PositionOrder = 2 in {
 // Mask Registers, used by AVX-512 instructions.
 def K0 : X86Reg<"k0", 0>, DwarfRegNum<[118,  93,  93]>;
 def K1 : X86Reg<"k1", 1>, DwarfRegNum<[119,  94,  94]>;
@@ -279,6 +412,25 @@ def K4 : X86Reg<"k4", 4>, DwarfRegNum<[122,  97,  97]>;
 def K5 : X86Reg<"k5", 5>, DwarfRegNum<[123,  98,  98]>;
 def K6 : X86Reg<"k6", 6>, DwarfRegNum<[124,  99,  99]>;
 def K7 : X86Reg<"k7", 7>, DwarfRegNum<[125, 100, 100]>;
+// Mask register pairs
+def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
+                             [(add K0, K2, K4, K6), (add K1, K3, K5, K7)]>;
+}
+
+// TMM registers, used by AMX instructions.
+let PositionOrder = 3 in {
+// Tile config registers.
+def TMMCFG: X86Reg<"tmmcfg", 0>;
+// Tile "registers".
+def TMM0:  X86Reg<"tmm0",   0>;
+def TMM1:  X86Reg<"tmm1",   1>;
+def TMM2:  X86Reg<"tmm2",   2>;
+def TMM3:  X86Reg<"tmm3",   3>;
+def TMM4:  X86Reg<"tmm4",   4>;
+def TMM5:  X86Reg<"tmm5",   5>;
+def TMM6:  X86Reg<"tmm6",   6>;
+def TMM7:  X86Reg<"tmm7",   7>;
+}
 
 // Floating point stack registers. These don't map one-to-one to the FP
 // pseudo registers, but we still mark them as aliasing FP registers. That
@@ -390,9 +542,11 @@ def SSP : X86Reg<"ssp", 0>;
 // instruction requiring a REX prefix, while SIL, DIL, BPL, R8D, etc.
 // require a REX prefix. For example, "addb %ah, %dil" and "movzbl %ah, %r8d"
 // cannot be encoded.
-def GR8 : RegisterClass<"X86", [i8],  8,
+def GR8 : RegisterClass<"X86", [i8], 8,
                         (add AL, CL, DL, AH, CH, DH, BL, BH, SIL, DIL, BPL, SPL,
-                             R8B, R9B, R10B, R11B, R14B, R15B, R12B, R13B)> {
+                             R8B, R9B, R10B, R11B, R16B, R17B, R18B, R19B, R20B,
+                             R21B, R22B, R23B, R24B, R25B, R26B, R27B, R28B, R29B,
+                             R30B, R31B, R14B, R15B, R12B, R13B)> {
   let AltOrders = [(sub GR8, AH, BH, CH, DH)];
   let AltOrderSelect = [{
     return MF.getSubtarget<X86Subtarget>().is64Bit();
@@ -400,23 +554,28 @@ def GR8 : RegisterClass<"X86", [i8],  8,
 }
 
 let isAllocatable = 0 in
-def GRH8 : RegisterClass<"X86", [i8],  8,
+def GRH8 : RegisterClass<"X86", [i8], 8,
                          (add SIH, DIH, BPH, SPH, R8BH, R9BH, R10BH, R11BH,
-                              R12BH, R13BH, R14BH, R15BH)>;
-
+                              R12BH, R13BH, R14BH, R15BH, R16BH, R17BH, R18BH,
+                              R19BH, R20BH, R21BH, R22BH, R23BH, R24BH, R25BH,
+                              R26BH, R27BH, R28BH, R29BH, R30BH, R31BH)>;
 def GR16 : RegisterClass<"X86", [i16], 16,
-                         (add AX, CX, DX, SI, DI, BX, BP, SP,
-                              R8W, R9W, R10W, R11W, R14W, R15W, R12W, R13W)>;
+                         (add AX, CX, DX, SI, DI, BX, BP, SP, R8W, R9W, R10W,
+                              R11W, R16W, R17W, R18W, R19W, R20W, R21W, R22W, R23W,
+                              R24W, R25W, R26W, R27W, R28W, R29W, R30W, R31W, R14W,
+                              R15W, R12W, R13W)>;
 
 let isAllocatable = 0 in
 def GRH16 : RegisterClass<"X86", [i16], 16,
-                          (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP,
-                               R8WH, R9WH, R10WH, R11WH, R12WH, R13WH, R14WH,
-                               R15WH)>;
-
+                    (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP, R8WH,
+                         R9WH, R10WH, R11WH, R12WH, R13WH, R14WH, R15WH, R16WH,
+                         R17WH, R18WH, R19WH, R20WH, R21WH, R22WH, R23WH, R24WH,
+                         R25WH, R26WH, R27WH, R28WH, R29WH, R30WH, R31WH)>;
 def GR32 : RegisterClass<"X86", [i32], 32,
-                         (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP,
-                              R8D, R9D, R10D, R11D, R14D, R15D, R12D, R13D)>;
+                         (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP, R8D, R9D,
+                              R10D, R11D, R16D, R17D, R18D, R19D, R20D, R21D, R22D,
+                              R23D, R24D, R25D, R26D, R27D, R28D, R29D, R30D, R31D,
+                              R14D, R15D, R12D, R13D)>;
 
 // GR64 - 64-bit GPRs. This oddly includes RIP, which isn't accurate, since
 // RIP isn't really a register and it can't be used anywhere except in an
@@ -424,8 +583,9 @@ def GR32 : RegisterClass<"X86", [i32], 32,
 // FIXME: it *does* cause trouble - CheckBaseRegAndIndexReg() has extra
 // tests because of the inclusion of RIP in this register class.
 def GR64 : RegisterClass<"X86", [i64], 64,
-                         (add RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
-                              RBX, R14, R15, R12, R13, RBP, RSP, RIP)>;
+                    (add RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R16, R17,
+                         R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29,
+                         R30, R31, RBX, R14, R15, R12, R13, RBP, RSP, RIP)>;
 
 // GR64PLTSafe - 64-bit GPRs without R10, R11, RSP and RIP. Could be used when
 // emitting code for intrinsics, which use implict input registers.
@@ -491,6 +651,27 @@ def GR32_NOREX : RegisterClass<"X86", [i32], 32,
 // GR64_NOREX - GR64 registers which do not require a REX prefix.
 def GR64_NOREX : RegisterClass<"X86", [i64], 64,
                             (add RAX, RCX, RDX, RSI, RDI, RBX, RBP, RSP, RIP)>;
+// GeneratePressureSet = 0 here is a temporary workaround for lots of
+// LIT fail. Whether enabling in the future still needs discussion.
+let GeneratePressureSet = 0 in {
+// GR8_NOREX2 - GR8 registers which do not require a REX2 prefix.
+def GR8_NOREX2 : RegisterClass<"X86", [i8], 8,
+                               (sub GR8,  (sequence "R%uB", 16, 31))> {
+  let AltOrders = [(sub GR8_NOREX2, AH, BH, CH, DH)];
+  let AltOrderSelect = [{
+    return MF.getSubtarget<X86Subtarget>().is64Bit();
+  }];
+}
+// GR16_NOREX2 - GR16 registers which do not require a REX2 prefix.
+def GR16_NOREX2 : RegisterClass<"X86", [i16], 16,
+                               (sub GR16,  (sequence "R%uW", 16, 31))>;
+// GR32_NOREX2 - GR32 registers which do not require a REX2 prefix.
+def GR32_NOREX2 : RegisterClass<"X86", [i32], 32,
+                               (sub GR32,  (sequence "R%uD", 16, 31))>;
+// GR64_NOREX2 - GR64 registers which do not require a REX2 prefix.
+def GR64_NOREX2 : RegisterClass<"X86", [i64], 64,
+                               (sub GR64,  (sequence "R%u", 16, 31))>;
+}
 
 // GR32_NOSP - GR32 registers except ESP.
 def GR32_NOSP : RegisterClass<"X86", [i32], 32, (sub GR32, ESP)>;
@@ -506,6 +687,15 @@ def GR32_NOREX_NOSP : RegisterClass<"X86", [i32], 32,
 // GR64_NOREX_NOSP - GR64_NOREX registers except RSP.
 def GR64_NOREX_NOSP : RegisterClass<"X86", [i64], 64,
                                     (and GR64_NOREX, GR64_NOSP)>;
+let GeneratePressureSet = 0 in {
+// GR32_NOREX2_NOSP - GR32_NOREX2 registers except ESP.
+def GR32_NOREX2_NOSP : RegisterClass<"X86", [i32], 32,
+                                    (sub GR32_NOREX2, ESP)>;
+
+// GR64_NOREX2_NOSP - GR64_NOREX2 registers except RSP, RIP.
+def GR64_NOREX2_NOSP : RegisterClass<"X86", [i64], 64,
+                                    (sub GR64_NOREX2, RSP, RIP)>;
+}
 
 // Register classes used for ABIs that use 32-bit address accesses,
 // while using the whole x86_64 ISA.
@@ -626,10 +816,6 @@ def VK8     : RegisterClass<"X86", [v8i1],  16,  (add VK4)> {let Size = 16;}
 def VK16    : RegisterClass<"X86", [v16i1], 16, (add VK8)> {let Size = 16;}
 def VK32    : RegisterClass<"X86", [v32i1], 32, (add VK16)> {let Size = 32;}
 def VK64    : RegisterClass<"X86", [v64i1], 64, (add VK32)> {let Size = 64;}
-
-// Mask register pairs
-def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
-                             [(add K0, K2, K4, K6), (add K1, K3, K5, K7)]>;
 
 def VK1PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
 def VK2PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}

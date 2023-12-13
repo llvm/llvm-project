@@ -501,7 +501,6 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
                                   SRE->getLoc());
   }
   const MCConstantExpr *MCOffset = MCConstantExpr::create(Offset, getContext());
-  MCObjectStreamer::visitUsedExpr(*SRE);
   if (std::optional<std::pair<bool, std::string>> Err =
           MCObjectStreamer::emitRelocDirective(
               *MCOffset, "BFD_RELOC_NONE", SRE, SRE->getLoc(),

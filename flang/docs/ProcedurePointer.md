@@ -280,7 +280,7 @@ due to C721 and C723.
 Initially the current plan is to implement pointers to internal procedures
 using the LLVM Trampoline intrinsics. This has the drawback of requiring the
 stack to be executable, which is a security hole. To avoid this, we will need
-improve the implementation to use heap-resident thunks.
+[improve the implementation](InternalProcedureTrampolines.md) to use heap-resident thunks.
 
 ### Procedure pointer assignment `p => proc`
 

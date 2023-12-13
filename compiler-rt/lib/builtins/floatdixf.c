@@ -23,7 +23,7 @@
 // eeee | 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
-COMPILER_RT_ABI long double __floatdixf(di_int a) {
+COMPILER_RT_ABI xf_float __floatdixf(di_int a) {
   if (a == 0)
     return 0.0;
   const unsigned N = sizeof(di_int) * CHAR_BIT;
@@ -31,7 +31,7 @@ COMPILER_RT_ABI long double __floatdixf(di_int a) {
   a = (a ^ s) - s;
   int clz = __builtin_clzll(a);
   int e = (N - 1) - clz; // exponent
-  long_double_bits fb;
+  xf_bits fb;
   fb.u.high.s.low = ((su_int)s & 0x00008000) | // sign
                     (e + 16383);               // exponent
   fb.u.low.all = a << clz;                     // mantissa

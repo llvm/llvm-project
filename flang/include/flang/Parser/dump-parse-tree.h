@@ -101,6 +101,7 @@ public:
   NODE(parser, AccSelfClause)
   NODE(parser, AccStandaloneDirective)
   NODE(parser, AccDeviceTypeExpr)
+  NODE_ENUM(parser::AccDeviceTypeExpr, Device)
   NODE(parser, AccDeviceTypeExprList)
   NODE(parser, AccTileExpr)
   NODE(parser, AccTileExprList)

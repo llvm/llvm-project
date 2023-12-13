@@ -1,6 +1,6 @@
 ! Test that temps are always created of parenthesized arguments in
 ! calls.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPfoo_num_scalar(
 ! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}) {

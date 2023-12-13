@@ -20,7 +20,7 @@ if(CUDAToolkit_FOUND)
          "SHELL:-Xclang -mlink-builtin-bitcode -Xclang ${libdevice_path}")
   endif()
 else()
-  message(STATUS "Could not find the ROCm device library. Unimplemented "
+  message(STATUS "Could not find the CUDA device library. Unimplemented "
                  "functions will be an external reference to the vendor libraries.")
 endif()
 

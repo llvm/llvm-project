@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP Threadprivate Directive.
 ! Test for real, logical, complex, and derived type.
 
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 module test
   type my_type

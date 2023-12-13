@@ -4,7 +4,6 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   BufferDeallocationOpInterface.cpp
   BufferizationOps.cpp
   BufferizationDialect.cpp
-  SubsetInsertionOpInterface.cpp
   UnstructuredControlFlow.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -24,6 +23,7 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRFunctionInterfaces
   MLIRIR
   MLIRSparseTensorDialect
+  MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRMemRefDialect
   )

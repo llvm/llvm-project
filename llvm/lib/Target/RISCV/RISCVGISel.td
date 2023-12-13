@@ -1,4 +1,4 @@
-//===-- RISCVGIsel.td - RISCV GlobalISel Patterns ----------*- tablegen -*-===//
+//===-- RISCVGIsel.td - RISC-V GlobalISel Patterns ---------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,10 +21,6 @@ def simm12Plus1 : ImmLeaf<XLenVT, [{
 def simm12Plus1i32 : ImmLeaf<i32, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
-def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
-
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
 // FIXME: This doesn't check that the G_CONSTANT we're deriving the immediate
 // from is only used once
 def simm12Minus1Nonzero : ImmLeaf<XLenVT, [{
@@ -41,6 +37,11 @@ def ImmPlus1 : SDNodeXForm<imm, [{
 def GINegImm : GICustomOperandRenderer<"renderNegImm">,
   GISDNodeXFormEquiv<NegImm>;
 
+def GIImmSubFromXLen : GICustomOperandRenderer<"renderImmSubFromXLen">,
+  GISDNodeXFormEquiv<ImmSubFromXLen>;
+def GIImmSubFrom32 : GICustomOperandRenderer<"renderImmSubFrom32">,
+  GISDNodeXFormEquiv<ImmSubFrom32>;
+
 def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
   GISDNodeXFormEquiv<ImmPlus1>;
@@ -49,22 +50,23 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
-// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
-// checking happy so we can use ADDIW which expects an XLen immediate.
-def as_i64imm : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
-}]>;
 def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
   GISDNodeXFormEquiv<as_i64imm>;
+
+def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
+  GISDNodeXFormEquiv<TrailingZeros>;
 
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
 // should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
 // here.
-def ShiftMaskGI :
+def GIShiftMaskXLen :
     GIComplexOperandMatcher<s32, "selectShiftMask">,
     GIComplexPatternEquiv<shiftMaskXLen>;
+def GIShiftMask32 :
+    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexPatternEquiv<shiftMask32>;
 
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
                    GIComplexPatternEquiv<sh1add_op>;
@@ -73,49 +75,25 @@ def gi_sh2add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<2>">,
 def gi_sh3add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<3>">,
                    GIComplexPatternEquiv<sh3add_op>;
 
+def gi_sh1add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<1>">,
+                      GIComplexPatternEquiv<sh1add_uw_op>;
+def gi_sh2add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<2>">,
+                      GIComplexPatternEquiv<sh2add_uw_op>;
+def gi_sh3add_uw_op : GIComplexOperandMatcher<s32, "selectSHXADD_UWOp<3>">,
+                      GIComplexPatternEquiv<sh3add_uw_op>;
+
 // FIXME: Canonicalize (sub X, C) -> (add X, -C) earlier.
 def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
           (ADDI GPR:$rs1, (NegImm simm12Plus1:$imm))>;
 
 let Predicates = [IsRV64] in {
-def : Pat<(i32 (add GPR:$rs1, GPR:$rs2)), (ADDW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sub GPR:$rs1, GPR:$rs2)), (SUBW GPR:$rs1, GPR:$rs2)>;
-
-def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
-          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
 
 def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-
-def : Pat<(i64 (sext i32:$rs)), (ADDIW GPR:$rs, 0)>;
 }
-
-let Predicates = [HasStdExtMOrZmmul, IsRV64] in {
-def : Pat<(i32 (mul GPR:$rs1, GPR:$rs2)), (MULW GPR:$rs1, GPR:$rs2)>;
-}
-
-let Predicates = [HasStdExtM, IsRV64] in {
-def : Pat<(i32 (sdiv GPR:$rs1, GPR:$rs2)), (DIVW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (srem GPR:$rs1, GPR:$rs2)), (REMW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (udiv GPR:$rs1, GPR:$rs2)), (DIVUW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (urem GPR:$rs1, GPR:$rs2)), (REMUW GPR:$rs1, GPR:$rs2)>;
-}
-
-let Predicates = [HasStdExtZba, IsRV64] in
-def : Pat<(i64 (zext i32:$rs)), (ADD_UW GPR:$rs, (XLenVT X0))>;
-
-let Predicates = [IsRV64, NotHasStdExtZba] in
-def: Pat<(i64 (zext i32:$rs)), (SRLI (SLLI GPR:$rs, 32), 32)>;
 
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;
@@ -170,8 +148,6 @@ def : Pat<(XLenVT (setle (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 }
 
-// Define pattern expansions for load/extload and store/truncstore operations
-// for ptr return type
 let Predicates = [IsRV32] in {
 def : LdPat<load, LW, PtrVT>;
 def : StPat<store, SW, GPR, PtrVT>;
@@ -180,18 +156,4 @@ def : StPat<store, SW, GPR, PtrVT>;
 let Predicates = [IsRV64] in {
 def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
-
-// Define pattern expansions for rv64 load/extloads and store/truncstore
-// operations for i32 return type
-def : LdPat<sextloadi8, LB, i32>;
-def : LdPat<extloadi8, LBU, i32>;
-def : LdPat<zextloadi8, LBU, i32>;
-def : LdPat<sextloadi16, LH, i32>;
-def : LdPat<extloadi16, LH, i32>;
-def : LdPat<zextloadi16, LHU, i32>;
-def : LdPat<load, LW, i32>;
-
-def : StPat<truncstorei8, SB, GPR, i32>;
-def : StPat<truncstorei16, SH, GPR, i32>;
-def : StPat<store, SW, GPR, i32>;
-} // Predicates = [IsRV64]
+}

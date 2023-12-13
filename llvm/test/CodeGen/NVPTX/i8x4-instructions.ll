@@ -14,10 +14,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <4 x i8> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.u32 %r1, -66911489;
+; CHECK-NEXT:    mov.b32 %r1, -66911489;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
 ; CHECK-NEXT:    ret;
   ret <4 x i8> <i8 -1, i8 2, i8 3, i8 -4>
@@ -1110,40 +1110,71 @@ define <4 x i64> @test_zext_2xi64(<4 x i8> %a) #0 {
   ret <4 x i64> %r
 }
 
-define <4 x i8> @test_bitcast_i32_to_2xi8(i32 %a) #0 {
-; CHECK-LABEL: test_bitcast_i32_to_2xi8(
+define <4 x i8> @test_bitcast_i32_to_4xi8(i32 %a) #0 {
+; CHECK-LABEL: test_bitcast_i32_to_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_i32_to_2xi8_param_0];
+; CHECK-NEXT:    ld.param.u32 %r1, [test_bitcast_i32_to_4xi8_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast i32 %a to <4 x i8>
   ret <4 x i8> %r
 }
 
-define i32 @test_bitcast_2xi8_to_i32(<4 x i8> %a) #0 {
-; CHECK-LABEL: test_bitcast_2xi8_to_i32(
+define <4 x i8> @test_bitcast_float_to_4xi8(float %a) #0 {
+; CHECK-LABEL: test_bitcast_float_to_4xi8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.f32 %f1, [test_bitcast_float_to_4xi8_param_0];
+; CHECK-NEXT:    mov.b32 %r1, %f1;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r1;
+; CHECK-NEXT:    ret;
+  %r = bitcast float %a to <4 x i8>
+  ret <4 x i8> %r
+}
+
+define i32 @test_bitcast_4xi8_to_i32(<4 x i8> %a) #0 {
+; CHECK-LABEL: test_bitcast_4xi8_to_i32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r2, [test_bitcast_2xi8_to_i32_param_0];
+; CHECK-NEXT:    ld.param.u32 %r2, [test_bitcast_4xi8_to_i32_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r2;
 ; CHECK-NEXT:    ret;
   %r = bitcast <4 x i8> %a to i32
   ret i32 %r
 }
 
-define <2 x half> @test_bitcast_2xi8_to_2xhalf(i8 %a) #0 {
-; CHECK-LABEL: test_bitcast_2xi8_to_2xhalf(
+define float @test_bitcast_4xi8_to_float(<4 x i8> %a) #0 {
+; CHECK-LABEL: test_bitcast_4xi8_to_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u32 %r2, [test_bitcast_4xi8_to_float_param_0];
+; CHECK-NEXT:    mov.b32 %f1, %r2;
+; CHECK-NEXT:    st.param.f32 [func_retval0+0], %f1;
+; CHECK-NEXT:    ret;
+  %r = bitcast <4 x i8> %a to float
+  ret float %r
+}
+
+
+define <2 x half> @test_bitcast_4xi8_to_2xhalf(i8 %a) #0 {
+; CHECK-LABEL: test_bitcast_4xi8_to_2xhalf(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %rs1, [test_bitcast_2xi8_to_2xhalf_param_0];
+; CHECK-NEXT:    ld.param.u8 %rs1, [test_bitcast_4xi8_to_2xhalf_param_0];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; CHECK-NEXT:    bfi.b32 %r2, 5, %r1, 8, 8;
 ; CHECK-NEXT:    bfi.b32 %r3, 6, %r2, 16, 8;
@@ -1207,14 +1238,14 @@ define <4 x i8> @test_insertelement(<4 x i8> %a, i8 %x) #0 {
   ret <4 x i8> %i
 }
 
-define <4 x i8> @test_fptosi_2xhalf_to_2xi8(<4 x half> %a) #0 {
-; CHECK-LABEL: test_fptosi_2xhalf_to_2xi8(
+define <4 x i8> @test_fptosi_4xhalf_to_4xi8(<4 x half> %a) #0 {
+; CHECK-LABEL: test_fptosi_4xhalf_to_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<13>;
 ; CHECK-NEXT:    .reg .b32 %r<15>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u32 {%r3, %r4}, [test_fptosi_2xhalf_to_2xi8_param_0];
+; CHECK-NEXT:    ld.param.v2.u32 {%r3, %r4}, [test_fptosi_4xhalf_to_4xi8_param_0];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-NEXT:    cvt.rzi.s16.f16 %rs3, %rs2;
 ; CHECK-NEXT:    cvt.rzi.s16.f16 %rs4, %rs1;
@@ -1238,14 +1269,14 @@ define <4 x i8> @test_fptosi_2xhalf_to_2xi8(<4 x half> %a) #0 {
   ret <4 x i8> %r
 }
 
-define <4 x i8> @test_fptoui_2xhalf_to_2xi8(<4 x half> %a) #0 {
-; CHECK-LABEL: test_fptoui_2xhalf_to_2xi8(
+define <4 x i8> @test_fptoui_4xhalf_to_4xi8(<4 x half> %a) #0 {
+; CHECK-LABEL: test_fptoui_4xhalf_to_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<13>;
 ; CHECK-NEXT:    .reg .b32 %r<15>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.u32 {%r3, %r4}, [test_fptoui_2xhalf_to_2xi8_param_0];
+; CHECK-NEXT:    ld.param.v2.u32 {%r3, %r4}, [test_fptoui_4xhalf_to_4xi8_param_0];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-NEXT:    cvt.rzi.u16.f16 %rs3, %rs2;
 ; CHECK-NEXT:    cvt.rzi.u16.f16 %rs4, %rs1;

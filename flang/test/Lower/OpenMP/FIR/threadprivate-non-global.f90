@@ -2,7 +2,7 @@
 ! Test for non-character non-SAVEd non-initialized scalars with or without
 ! allocatable or pointer attribute in main program.
 
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 program test
   integer :: x

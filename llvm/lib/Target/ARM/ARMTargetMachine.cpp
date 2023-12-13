@@ -130,9 +130,9 @@ computeTargetABI(const Triple &TT, StringRef CPU,
 
   if (ABIName == "aapcs16")
     return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (ABIName.startswith("aapcs"))
+  else if (ABIName.starts_with("aapcs"))
     return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (ABIName.startswith("apcs"))
+  else if (ABIName.starts_with("apcs"))
     return ARMBaseTargetMachine::ARM_ABI_APCS;
 
   llvm_unreachable("Unhandled/unknown ABI Name!");

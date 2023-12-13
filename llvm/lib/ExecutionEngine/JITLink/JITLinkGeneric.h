@@ -13,7 +13,6 @@
 #ifndef LIB_EXECUTIONENGINE_JITLINK_JITLINKGENERIC_H
 #define LIB_EXECUTIONENGINE_JITLINK_JITLINKGENERIC_H
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #define DEBUG_TYPE "jitlink"

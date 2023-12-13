@@ -29,7 +29,7 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.chdir
     libc.src.unistd.close
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -48,7 +48,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -67,7 +67,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -86,7 +86,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -102,7 +102,7 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.fchdir
     libc.src.unistd.close
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -141,7 +141,7 @@ add_libc_unittest(
     libc.src.unistd.pwrite
     libc.src.unistd.unlink
     libc.src.unistd.write
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -159,7 +159,7 @@ add_libc_unittest(
     libc.src.unistd.fsync
     libc.src.unistd.read
     libc.src.unistd.write
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -208,7 +208,7 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.lseek
     libc.src.unistd.read
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -415,7 +415,7 @@ add_libc_unittest(
     libc.include.fcntl
     libc.include.sys_syscall
     libc.src.unistd.__llvm_libc_syscall
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 

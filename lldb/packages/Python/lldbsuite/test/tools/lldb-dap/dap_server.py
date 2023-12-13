@@ -731,6 +731,9 @@ class DebugCommunication(object):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
+        commandEscapePrefix=None,
+        customFrameFormat=None,
+        customThreadFormat=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -772,8 +775,14 @@ class DebugCommunication(object):
             args_dict["runInTerminal"] = runInTerminal
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
+        if customFrameFormat:
+            args_dict["customFrameFormat"] = customFrameFormat
+        if customThreadFormat:
+            args_dict["customThreadFormat"] = customThreadFormat
+
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
+        args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
 
@@ -1015,7 +1024,12 @@ class DebugCommunication(object):
 
 class DebugAdaptorServer(DebugCommunication):
     def __init__(
-        self, executable=None, port=None, init_commands=[], log_file=None, env=None
+        self,
+        executable=None,
+        port=None,
+        init_commands=[],
+        log_file=None,
+        env=None,
     ):
         self.process = None
         if executable is not None:

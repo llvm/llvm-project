@@ -15,7 +15,7 @@ define void @_Z3foov() {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[I_0]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[I_0]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1000 x float], ptr @a, i64 0, i64 [[TMP0]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [1000 x float], ptr @b, i64 0, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4

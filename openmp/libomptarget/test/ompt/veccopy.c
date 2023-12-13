@@ -2,6 +2,8 @@
 // REQUIRES: ompt
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
+// UNSUPPORTED: x86_64-pc-linux-gnu
+// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 /*
  * Example OpenMP program that registers non-EMI callbacks

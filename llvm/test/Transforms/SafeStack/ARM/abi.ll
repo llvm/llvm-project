@@ -1,4 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=arm-linux-android < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=arm-linux-android < %s -o - | FileCheck %s
 
 
 define void @foo() nounwind uwtable safestack {

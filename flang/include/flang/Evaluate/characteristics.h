@@ -54,7 +54,8 @@ bool DistinguishableOpOrAssign(const common::LanguageFeatureControl &,
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-bool ShapesAreCompatible(const Shape &, const Shape &);
+bool ShapesAreCompatible(
+    const Shape &, const Shape &, bool *possibleWarning = nullptr);
 
 class TypeAndShape {
 public:
@@ -222,8 +223,8 @@ struct DummyDataObject {
   bool operator!=(const DummyDataObject &that) const {
     return !(*this == that);
   }
-  bool IsCompatibleWith(
-      const DummyDataObject &, std::string *whyNot = nullptr) const;
+  bool IsCompatibleWith(const DummyDataObject &, std::string *whyNot = nullptr,
+      std::optional<std::string> *warning = nullptr) const;
   static std::optional<DummyDataObject> Characterize(
       const semantics::Symbol &, FoldingContext &);
   bool CanBePassedViaImplicitInterface() const;
@@ -273,18 +274,18 @@ struct DummyArgument {
   ~DummyArgument();
   bool operator==(const DummyArgument &) const;
   bool operator!=(const DummyArgument &that) const { return !(*this == that); }
-  static std::optional<DummyArgument> FromActual(
-      std::string &&, const Expr<SomeType> &, FoldingContext &);
-  static std::optional<DummyArgument> FromActual(
-      std::string &&, const ActualArgument &, FoldingContext &);
+  static std::optional<DummyArgument> FromActual(std::string &&,
+      const Expr<SomeType> &, FoldingContext &, bool forImplicitInterface);
+  static std::optional<DummyArgument> FromActual(std::string &&,
+      const ActualArgument &, FoldingContext &, bool forImplicitInterface);
   bool IsOptional() const;
   void SetOptional(bool = true);
   common::Intent GetIntent() const;
   void SetIntent(common::Intent);
   bool CanBePassedViaImplicitInterface() const;
   bool IsTypelessIntrinsicDummy() const;
-  bool IsCompatibleWith(
-      const DummyArgument &, std::string *whyNot = nullptr) const;
+  bool IsCompatibleWith(const DummyArgument &, std::string *whyNot = nullptr,
+      std::optional<std::string> *warning = nullptr) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
   // name and pass are not characteristics and so do not participate in
@@ -379,7 +380,8 @@ struct Procedure {
   bool CanBeCalledViaImplicitInterface() const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
   bool IsCompatibleWith(const Procedure &, std::string *whyNot = nullptr,
-      const SpecificIntrinsic * = nullptr) const;
+      const SpecificIntrinsic * = nullptr,
+      std::optional<std::string> *warning = nullptr) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

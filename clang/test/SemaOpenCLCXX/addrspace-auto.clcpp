@@ -1,18 +1,18 @@
 //RUN: %clang_cc1 %s -pedantic -ast-dump -verify | FileCheck %s
 
 __constant int i = 1;
-//CHECK: |-VarDecl {{.*}} ai '__global int':'__global int'
+//CHECK: |-VarDecl {{.*}} ai '__global int'
 auto ai = i;
 
 kernel void test() {
   int i;
-  //CHECK: VarDecl {{.*}} ai '__private int':'__private int'
+  //CHECK: VarDecl {{.*}} ai '__private int'
   auto ai = i;
 
   constexpr int c = 1;
-  //CHECK: VarDecl {{.*}} used cai '__constant int':'__constant int'
+  //CHECK: VarDecl {{.*}} used cai '__constant int'
   __constant auto cai = c;
-  //CHECK: VarDecl {{.*}} aii '__private int':'__private int'
+  //CHECK: VarDecl {{.*}} aii '__private int'
   auto aii = cai;
 
   //CHECK: VarDecl {{.*}} ref '__private int &__private'

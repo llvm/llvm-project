@@ -29,14 +29,6 @@ def SPIRV_BranchOp : SPIRV_Op<"Branch", [
   let description = [{
     This instruction must be the last instruction in a block.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    branch-op ::= `spirv.Branch` successor
-    successor ::= bb-id branch-use-list?
-    branch-use-list ::= `(` ssa-use-list `:` type-list-no-parens `)`
-    ```
-
     #### Example:
 
     ```mlir
@@ -212,13 +204,6 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
     information: Result Type must match the Return Type of the function, and
     the calling argument types must match the formal parameter types.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    function-call-op ::= `spirv.FunctionCall` function-id `(` ssa-use-list `)`
-                     `:` function-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -344,10 +329,10 @@ def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, Pure,
   let description = [{
     This instruction must be the last instruction in a block.
 
-    <!-- End of AutoGen section -->
+    #### Example:
 
-    ```
-    return-op ::= `spirv.Return`
+    ```mlir
+    spirv.Return
     ```
   }];
 
@@ -365,12 +350,6 @@ def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]>
 
   let description = [{
     This instruction must be the last instruction in a block.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    unreachable-op ::= `spirv.Unreachable`
-    ```
   }];
 
   let arguments = (ins);
@@ -392,12 +371,6 @@ def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, Pure,
     instruction is in.
 
     This instruction must be the last instruction in a block.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    return-value-op ::= `spirv.ReturnValue` ssa-use `:` spirv-type
-    ```
 
     #### Example:
 

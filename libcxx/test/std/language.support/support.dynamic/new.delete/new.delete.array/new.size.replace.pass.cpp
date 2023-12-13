@@ -27,7 +27,9 @@ int delete_called = 0;
 void* operator new[](std::size_t s) TEST_THROW_SPEC(std::bad_alloc) {
     ++new_called;
     void* ret = std::malloc(s);
-    if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
+    if (!ret) {
+      std::abort(); // placate MSVC's unchecked malloc warning (assert() won't silence it)
+    }
     return  ret;
 }
 

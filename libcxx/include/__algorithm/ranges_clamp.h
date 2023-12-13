@@ -37,9 +37,10 @@ struct __fn {
     _LIBCPP_ASSERT_UNCATEGORIZED(!bool(std::invoke(__comp, std::invoke(__proj, __high), std::invoke(__proj, __low))),
                                  "Bad bounds passed to std::ranges::clamp");
 
-    if (std::invoke(__comp, std::invoke(__proj, __value), std::invoke(__proj, __low)))
+    auto&& __projected = std::invoke(__proj, __value);
+    if (std::invoke(__comp, std::forward<decltype(__projected)>(__projected), std::invoke(__proj, __low)))
       return __low;
-    else if (std::invoke(__comp, std::invoke(__proj, __high), std::invoke(__proj, __value)))
+    else if (std::invoke(__comp, std::invoke(__proj, __high), std::forward<decltype(__projected)>(__projected)))
       return __high;
     else
       return __value;

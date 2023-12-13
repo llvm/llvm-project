@@ -163,7 +163,7 @@ lookupBuiltin(StringRef DemangledCall,
   // the information after angle brackets and return type removed.
   if (BuiltinName.find('<') && BuiltinName.back() == '>') {
     BuiltinName = BuiltinName.substr(0, BuiltinName.find('<'));
-    BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(" ") + 1);
+    BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(' ') + 1);
   }
 
   // Check if the extracted name begins with "__spirv_ImageSampleExplicitLod"

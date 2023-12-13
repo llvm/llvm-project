@@ -84,9 +84,7 @@ struct RISCVMakeCompressibleOpt : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
-  RISCVMakeCompressibleOpt() : MachineFunctionPass(ID) {
-    initializeRISCVMakeCompressibleOptPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVMakeCompressibleOpt() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return RISCV_COMPRESS_INSTRS_NAME; }
 };
@@ -271,7 +269,7 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
 
   RegScavenger RS;
   RS.enterBasicBlockEnd(MBB);
-  RS.backward(MIs.back()->getIterator());
+  RS.backward(std::next(MIs.back()->getIterator()));
   return RS.scavengeRegisterBackwards(*RCToScavenge, FirstMI.getIterator(),
                                       /*RestoreAfter=*/false, /*SPAdj=*/0,
                                       /*AllowSpill=*/false);

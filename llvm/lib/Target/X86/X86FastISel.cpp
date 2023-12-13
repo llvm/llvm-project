@@ -714,6 +714,12 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
     if (TM.getCodeModel() != CodeModel::Small)
       return false;
 
+    // Can't handle large objects yet.
+    if (auto *GO = dyn_cast<GlobalObject>(GV)) {
+      if (TM.isLargeGlobalObject(GO))
+        return false;
+    }
+
     // Can't handle TLS yet.
     if (GV->isThreadLocal())
       return false;
@@ -3231,13 +3237,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (Subtarget->useIndirectThunkCalls())
     return false;
 
-  // Handle only C, fastcc, and webkit_js calling conventions for now.
+  // Handle only C and fastcc calling conventions for now.
   switch (CC) {
   default: return false;
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::Tail:
-  case CallingConv::WebKit_JS:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::X86_FastCall:

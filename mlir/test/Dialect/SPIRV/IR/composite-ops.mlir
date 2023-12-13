@@ -338,8 +338,8 @@ func.func @vector_dynamic_insert(%val: f32, %vec: vector<4xf32>, %id : i32) -> v
 //===----------------------------------------------------------------------===//
 
 func.func @vector_shuffle(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> vector<3xf32> {
-  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}} : vector<4xf32>, %arg1 : vector<2xf32> -> vector<3xf32>
-  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1: vector<4xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  // CHECK: %{{.+}} = spirv.VectorShuffle [1 : i32, 3 : i32, -1 : i32] %{{.+}}, %arg1 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 0xffffffff: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
@@ -347,7 +347,7 @@ func.func @vector_shuffle(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> v
 
 func.func @vector_shuffle_extra_selector(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> vector<3xf32> {
   // expected-error @+1 {{result type element count (3) mismatch with the number of component selectors (4)}}
-  %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32, 2: i32] %vector1: vector<4xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32, 2: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
@@ -355,6 +355,6 @@ func.func @vector_shuffle_extra_selector(%vector1: vector<4xf32>, %vector2: vect
 
 func.func @vector_shuffle_extra_selector(%vector1: vector<4xf32>, %vector2: vector<2xf32>) -> vector<3xf32> {
   // expected-error @+1 {{component selector 7 out of range: expected to be in [0, 6) or 0xffffffff}}
-  %0 = spirv.VectorShuffle [1: i32, 7: i32, 5: i32] %vector1: vector<4xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [1: i32, 7: i32, 5: i32] %vector1, %vector2 : vector<4xf32>, vector<2xf32> -> vector<3xf32>
   return %0: vector<3xf32>
 }

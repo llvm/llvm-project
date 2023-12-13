@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | fir-opt --canonicalize --cse | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | fir-opt --canonicalize --cse | FileCheck %s
 
 ! CHECK-LABEL: func @_QPissue(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<1>{{.*}}, %[[VAL_1:.*]]: !fir.boxchar<1>{{.*}}) {
@@ -60,7 +60,7 @@ program p
   ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant -1 : i32
   ! CHECK: %[[VAL_5:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> {bindc_name = "c1", uniq_name = "_QFEc1"}
   ! CHECK: %[[VAL_6:.*]] = fir.address_of(@_QFEc2) : !fir.ref<!fir.array<3x!fir.char<1,4>>>
-  ! CHECK: %[[VAL_7:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+  ! CHECK: %[[VAL_7:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
   ! CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_9:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_2]], %[[VAL_8]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_10:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
@@ -97,7 +97,7 @@ subroutine charlit
   ! CHECK-DAG: %[[VAL_5:.*]] = arith.constant 4 : index
   ! CHECK-DAG: %[[VAL_6:.*]] = arith.constant 0 : index
   ! CHECK-DAG: %[[VAL_7:.*]] = arith.constant 1 : index
-  ! CHECK: %[[VAL_8:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
+  ! CHECK: %[[VAL_8:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
   ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_10:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_0]], %[[VAL_9]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   ! CHECK: %[[VAL_11:.*]] = fir.address_of(@_QQro.4x3xc1.0) : !fir.ref<!fir.array<4x!fir.char<1,3>>>

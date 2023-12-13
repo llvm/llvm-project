@@ -467,6 +467,13 @@ def FPR128_lo : RegisterClass<"AArch64",
                                v8bf16],
                               128, (trunc FPR128, 16)>;
 
+// The lower 8 vector registers.  Some instructions can only take registers
+// in this range.
+def FPR128_0to7 : RegisterClass<"AArch64",
+                                [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, v8f16,
+                                 v8bf16],
+                                128, (trunc FPR128, 8)>;
+
 // Pairs, triples, and quads of 64-bit vector registers.
 def DSeqPairs : RegisterTuples<[dsub0, dsub1], [(rotl FPR64, 0), (rotl FPR64, 1)]>;
 def DSeqTriples : RegisterTuples<[dsub0, dsub1, dsub2],
@@ -532,6 +539,15 @@ def V64_lo : RegisterOperand<FPR64_lo, "printVRegOperand"> {
 }
 def V128_lo : RegisterOperand<FPR128_lo, "printVRegOperand"> {
   let ParserMatchClass = VectorRegLoAsmOperand;
+}
+
+def VectorReg0to7AsmOperand : AsmOperandClass {
+  let Name = "VectorReg0to7";
+  let PredicateMethod = "isNeonVectorReg0to7";
+}
+
+def V128_0to7 : RegisterOperand<FPR128_0to7, "printVRegOperand"> {
+  let ParserMatchClass = VectorReg0to7AsmOperand;
 }
 
 class TypedVecListAsmOperand<int count, string vecty, int lanes, int eltsize>
@@ -1252,6 +1268,10 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs> : ZPRVectorList<ElementWid
 
 let EncoderMethod = "EncodeRegAsMultipleOf<2>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+  def ZZ_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,0>"> {
+    let ParserMatchClass = ZPRVectorListMul<0, 2>;
+  }
+
   def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
     let ParserMatchClass = ZPRVectorListMul<8, 2>;
   }

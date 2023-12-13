@@ -1,5 +1,5 @@
 ! Test for PassBy::Value
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QQmain()
 !CHECK: %[[LOGICAL:.*]] = fir.alloca !fir.logical<1>

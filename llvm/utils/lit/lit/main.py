@@ -311,6 +311,7 @@ def print_histogram(tests):
 
 def print_results(tests, elapsed, opts):
     tests_by_code = {code: [] for code in lit.Test.ResultCode.all_codes()}
+    total_tests = len(tests)
     for test in tests:
         tests_by_code[test.result.code].append(test)
 
@@ -321,7 +322,7 @@ def print_results(tests, elapsed, opts):
             opts.shown_codes,
         )
 
-    print_summary(tests_by_code, opts.quiet, elapsed)
+    print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
 
 
 def print_group(tests, code, shown_codes):
@@ -336,10 +337,11 @@ def print_group(tests, code, shown_codes):
     sys.stdout.write("\n")
 
 
-def print_summary(tests_by_code, quiet, elapsed):
+def print_summary(total_tests, tests_by_code, quiet, elapsed):
     if not quiet:
         print("\nTesting Time: %.2fs" % elapsed)
 
+    print("\nTotal Discovered Tests: %s" % (total_tests))
     codes = [c for c in lit.Test.ResultCode.all_codes() if not quiet or c.isFailure]
     groups = [(c.label, len(tests_by_code[c])) for c in codes]
     groups = [(label, count) for label, count in groups if count]
@@ -352,4 +354,4 @@ def print_summary(tests_by_code, quiet, elapsed):
     for (label, count) in groups:
         label = label.ljust(max_label_len)
         count = str(count).rjust(max_count_len)
-        print("  %s: %s" % (label, count))
+        print("  %s: %s (%.2f%%)" % (label, count, float(count) / total_tests * 100))

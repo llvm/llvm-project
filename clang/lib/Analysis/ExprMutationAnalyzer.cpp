@@ -296,9 +296,9 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
       // resolved and modelled as `binaryOperator` on a dependent type.
       // Such instances are considered a modification, because they can modify
       // in different instantiations of the template.
-      binaryOperator(hasEitherOperand(
-          allOf(ignoringImpCasts(canResolveToExpr(equalsNode(Exp))),
-                isTypeDependent()))),
+      binaryOperator(
+          hasEitherOperand(ignoringImpCasts(canResolveToExpr(equalsNode(Exp)))),
+          isTypeDependent()),
       // Within class templates and member functions the member expression might
       // not be resolved. In that case, the `callExpr` is considered to be a
       // modification.

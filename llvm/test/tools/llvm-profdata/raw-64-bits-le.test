@@ -1,35 +1,44 @@
 RUN: printf '\201rforpl\377' > %t
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t
+RUN: printf '\11\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\3\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\4\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\20\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t
+RUN: printf '\0\0\4\0\3\0\0\0' >> %t
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t
+RUN: printf '\0\0\4\0\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t
+RUN: printf '\3\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t
-RUN: printf '\xd8\xff\3\0\1\0\0\0' >> %t
+RUN: printf '\xc8\xff\3\0\1\0\0\0' >> %t
+RUN: printf '\xc3\xff\3\0\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t
+RUN: printf '\125\125\125\052' >> %t
 RUN: printf '\7\0foo\1bar\0\0\0\0\0\0\0' >> %t
 
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s
+RUN: llvm-profdata show %t -all-functions -text | FileCheck %s -check-prefix=MCDC
 
 CHECK: Counters:
 CHECK:   foo:
@@ -46,3 +55,14 @@ CHECK: Functions shown: 2
 CHECK: Total functions: 2
 CHECK: Maximum function count: 55
 CHECK: Maximum internal block count: 65
+
+MCDC: Num Bitmap Bytes:
+MCDC-NEXT: $3
+MCDC-NEXT: Bitmap Byte Values:
+MCDC-NEXT: 55
+MCDC-NEXT: 55
+MCDC-NEXT: 55
+MCDC: Num Bitmap Bytes:
+MCDC-NEXT: $1
+MCDC-NEXT: Bitmap Byte Values:
+MCDC-NEXT: 0x2a

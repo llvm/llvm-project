@@ -403,6 +403,94 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
+
+  if (llvm_build_AArch64) {
+    values += [ "LLVM_HAS_AARCH64_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AARCH64_TARGET=" ]
+  }
+
+  if (llvm_build_AMDGPU) {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_AMDGPU_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_ARC_TARGET=" ]
+
+  if (llvm_build_ARM) {
+    values += [ "LLVM_HAS_ARM_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_ARM_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_AVR_TARGET=" ]
+
+  if (llvm_build_BPF) {
+    values += [ "LLVM_HAS_BPF_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_BPF_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_CSKY_TARGET=" ]
+  values += [ "LLVM_HAS_DIRECTX_TARGET=" ]
+  values += [ "LLVM_HAS_HEXAGON_TARGET=" ]
+  values += [ "LLVM_HAS_LANAI_TARGET=" ]
+
+  if (llvm_build_LoongArch) {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_LOONGARCH_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_M68K_TARGET=" ]
+
+  if (llvm_build_Mips) {
+    values += [ "LLVM_HAS_MIPS_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_MIPS_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_MSP430_TARGET=" ]
+  values += [ "LLVM_HAS_NVPTX_TARGET=" ]
+
+  if (llvm_build_PowerPC) {
+    values += [ "LLVM_HAS_POWERPC_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_POWERPC_TARGET=" ]
+  }
+
+  if (llvm_build_RISCV) {
+    values += [ "LLVM_HAS_RISCV_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_RISCV_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_SPARC_TARGET=" ]
+  values += [ "LLVM_HAS_SPIRV_TARGET=" ]
+
+  if (llvm_build_SystemZ) {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_SYSTEMZ_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_VE_TARGET=" ]
+
+  if (llvm_build_WebAssembly) {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_WEBASSEMBLY_TARGET=" ]
+  }
+
+  if (llvm_build_X86) {
+    values += [ "LLVM_HAS_X86_TARGET=1" ]
+  } else {
+    values += [ "LLVM_HAS_X86_TARGET=" ]
+  }
+
+  values += [ "LLVM_HAS_XCORE_TARGET=" ]
+  values += [ "LLVM_HAS_XTENSA_TARGET=" ]
 }
 
 ##############################################################################

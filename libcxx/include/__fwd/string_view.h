@@ -11,7 +11,7 @@
 #define _LIBCPP___FWD_STRING_VIEW_H
 
 #include <__config>
-#include <iosfwd> // char_traits
+#include <__fwd/string.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

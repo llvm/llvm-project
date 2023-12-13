@@ -348,8 +348,8 @@ bool ModuleMap::resolveAsBuiltinHeader(
   if (!File)
     return false;
 
+  Module::Header H = {Header.FileName, Header.FileName, *File};
   auto Role = headerKindToRole(Header.Kind);
-  Module::Header H = {Header.FileName, std::string(Path.str()), *File};
   addHeader(Mod, H, Role);
   return true;
 }
@@ -415,6 +415,13 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
 bool ModuleMap::isBuiltinHeader(FileEntryRef File) {
   return File.getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
          isBuiltinHeaderName(llvm::sys::path::filename(File.getName()));
+}
+
+bool ModuleMap::shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
+                                                        Module *Module) const {
+  return LangOpts.BuiltinHeadersInSystemModules && BuiltinIncludeDir &&
+         Module->IsSystem && !Module->isPartOfFramework() &&
+         isBuiltinHeaderName(FileName);
 }
 
 ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
@@ -874,17 +881,17 @@ Module *ModuleMap::createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
   return Result;
 }
 
-Module *ModuleMap::createImplicitGlobalModuleFragmentForModuleUnit(
-    SourceLocation Loc, bool IsExported, Module *Parent) {
+Module *
+ModuleMap::createImplicitGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                           Module *Parent) {
   assert(Parent && "We should only create an implicit global module fragment "
                    "in a module purview");
   // Note: Here the `IsExplicit` parameter refers to the semantics in clang
   // modules. All the non-explicit submodules in clang modules will be exported
   // too. Here we simplify the implementation by using the concept.
-  auto *Result = new Module(IsExported ? "<exported implicit global>"
-                                       : "<implicit global>",
-                            Loc, Parent, /*IsFramework*/ false,
-                            /*IsExplicit*/ !IsExported, NumCreatedModules++);
+  auto *Result =
+      new Module("<implicit global>", Loc, Parent, /*IsFramework=*/false,
+                 /*IsExplicit=*/false, NumCreatedModules++);
   Result->Kind = Module::ImplicitGlobalModuleFragment;
   return Result;
 }
@@ -1060,9 +1067,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
     if (!canInfer)
       return nullptr;
   } else {
-    OptionalFileEntryRefDegradesToFileEntryPtr ModuleMapRef =
-        getModuleMapFileForUniquing(Parent);
-    ModuleMapFile = ModuleMapRef;
+    ModuleMapFile = getModuleMapFileForUniquing(Parent);
   }
 
   // Look for an umbrella header.
@@ -1398,16 +1403,17 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
 }
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
-  auto Unresolved = std::move(Mod->UnresolvedDirectUses);
-  Mod->UnresolvedDirectUses.clear();
+  auto *Top = Mod->getTopLevelModule();
+  auto Unresolved = std::move(Top->UnresolvedDirectUses);
+  Top->UnresolvedDirectUses.clear();
   for (auto &UDU : Unresolved) {
-    Module *DirectUse = resolveModuleId(UDU, Mod, Complain);
+    Module *DirectUse = resolveModuleId(UDU, Top, Complain);
     if (DirectUse)
-      Mod->DirectUses.push_back(DirectUse);
+      Top->DirectUses.push_back(DirectUse);
     else
-      Mod->UnresolvedDirectUses.push_back(UDU);
+      Top->UnresolvedDirectUses.push_back(UDU);
   }
-  return !Mod->UnresolvedDirectUses.empty();
+  return !Top->UnresolvedDirectUses.empty();
 }
 
 bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
@@ -1858,7 +1864,7 @@ void ModuleMapParser::diagnosePrivateModules(SourceLocation ExplicitLoc,
       continue;
 
     SmallString<128> FullName(ActiveModule->getFullModuleName());
-    if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
+    if (!FullName.starts_with(M->Name) && !FullName.ends_with("Private"))
       continue;
     SmallString<128> FixedPrivModDecl;
     SmallString<128> Canonical(M->Name);
@@ -2426,7 +2432,8 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   Header.Kind = Map.headerRoleToKind(Role);
 
   // Check whether we already have an umbrella.
-  if (Header.IsUmbrella && ActiveModule->Umbrella) {
+  if (Header.IsUmbrella &&
+      !std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
     Diags.Report(Header.FileNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;
@@ -2500,9 +2507,9 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
       << FixItHint::CreateReplacement(CurrModuleDeclLoc, "framework module");
 }
 
-static int compareModuleHeaders(const Module::Header *A,
-                                const Module::Header *B) {
-  return A->NameAsWritten.compare(B->NameAsWritten);
+static bool compareModuleHeaders(const Module::Header &A,
+                                 const Module::Header &B) {
+  return A.NameAsWritten < B.NameAsWritten;
 }
 
 /// Parse an umbrella directory declaration.
@@ -2523,7 +2530,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   SourceLocation DirNameLoc = consumeToken();
 
   // Check whether we already have an umbrella.
-  if (ActiveModule->Umbrella) {
+  if (!std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
     Diags.Report(DirNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;
@@ -2565,7 +2572,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    llvm::array_pod_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);
