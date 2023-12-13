@@ -77,8 +77,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::spirv_object;
     break;
 
-  case 0x07:
-    // SPIR-V format in big-endian mode.
+  case 0x07: // SPIR-V format in big-endian mode.
     if (startswith(Magic, "\x07\x23\x02\x03"))
       return file_magic::spirv_object;
     break;
