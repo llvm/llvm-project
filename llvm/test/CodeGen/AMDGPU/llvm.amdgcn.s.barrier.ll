@@ -102,7 +102,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT4-NEXT:    s_barrier_wait -1
 ; VARIANT4-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; VARIANT4-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; VARIANT4-NEXT:    v_lshlrev_b64 v[1:2], 2, v[1:2]
+; VARIANT4-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
 ; VARIANT4-NEXT:    v_add_co_u32 v1, vcc_lo, s0, v1
 ; VARIANT4-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; VARIANT4-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, s1, v2, vcc_lo
@@ -126,7 +126,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT5-NEXT:    s_barrier_wait -1
 ; VARIANT5-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; VARIANT5-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; VARIANT5-NEXT:    v_lshlrev_b64 v[1:2], 2, v[1:2]
+; VARIANT5-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
 ; VARIANT5-NEXT:    v_add_co_u32 v1, vcc_lo, s0, v1
 ; VARIANT5-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; VARIANT5-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, s1, v2, vcc_lo
@@ -152,7 +152,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6-NEXT:    s_barrier_wait -1
 ; VARIANT6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; VARIANT6-NEXT:    v_lshlrev_b64 v[1:2], 2, v[1:2]
+; VARIANT6-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
 ; VARIANT6-NEXT:    v_add_co_u32 v1, vcc_lo, v3, v1
 ; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; VARIANT6-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v4, v2, vcc_lo
