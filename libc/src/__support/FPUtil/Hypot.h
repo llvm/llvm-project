@@ -104,14 +104,14 @@ template <> struct DoubleLength<uint64_t> {
 //
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T hypot(T x, T y) {
-  using FPBits = FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using FPBits_t = FPBits<T>;
+  using UIntType = typename FPBits<T>::UIntType;
   using DUIntType = typename DoubleLength<UIntType>::Type;
 
-  FPBits x_bits(x), y_bits(y);
+  FPBits_t x_bits(x), y_bits(y);
 
   if (x_bits.is_inf() || y_bits.is_inf()) {
-    return T(FPBits::inf());
+    return T(FPBits_t::inf());
   }
   if (x_bits.is_nan()) {
     return x;
@@ -193,11 +193,11 @@ LIBC_INLINE T hypot(T x, T y) {
       sticky_bits = sticky_bits || ((sum & 0x3U) != 0);
       sum >>= 2;
       ++out_exp;
-      if (out_exp >= FPBits::MAX_EXPONENT) {
+      if (out_exp >= FPBits_t::MAX_EXPONENT) {
         if (int round_mode = quick_get_round();
             round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
-          return T(FPBits::inf());
-        return T(FPBits(FPBits::MAX_NORMAL));
+          return T(FPBits_t::inf());
+        return T(FPBits_t(FPBits_t::MAX_NORMAL));
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -251,10 +251,10 @@ LIBC_INLINE T hypot(T x, T y) {
   if (y_new >= (ONE >> 1)) {
     y_new -= ONE >> 1;
     ++out_exp;
-    if (out_exp >= FPBits::MAX_EXPONENT) {
+    if (out_exp >= FPBits_t::MAX_EXPONENT) {
       if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
-        return T(FPBits::inf());
-      return T(FPBits(FPBits::MAX_NORMAL));
+        return T(FPBits_t::inf());
+      return T(FPBits_t(FPBits_t::MAX_NORMAL));
     }
   }
 
