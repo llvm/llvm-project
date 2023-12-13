@@ -2871,7 +2871,7 @@ salvageDebugInfoImpl(SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
       Storage = StInst->getValueOperand();
     } else if (auto *Phi = dyn_cast<PHINode>(Inst)) {
       if (Phi->getNumIncomingValues() != 1)
-        return;
+        return std::nullopt;
       Storage = Phi->getIncomingValue(0);
     } else {
       SmallVector<uint64_t, 16> Ops;
