@@ -1494,7 +1494,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
   [FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8VOP1Bug,
-   FeatureGFX950Insts
+   FeatureGFX950Insts,
+   FeatureAddressableLocalMemorySize163840
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
