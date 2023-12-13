@@ -558,6 +558,26 @@ private:
       _info.handler = 0;
     return UNW_STEP_SUCCESS;
   }
+  bool isReadableAddr(const void *addr) const {
+    // This code is heavily based on Abseil's 'address_is_readable.cc',
+    // which is Copyright Abseil Authors (2017), and provided under
+    // the Apache License 2.0.
+
+    // We have to check that addr is a nullptr because sigprocmask allows that
+    // as an argument without failure.
+    if (!addr)
+      return false;
+    // Align to 8-bytes.
+    const auto uintptr_addr = reinterpret_cast<uintptr_t>(addr) & ~uintptr_t{7};
+    const auto sigsetaddr = reinterpret_cast<sigset_t *>(uintptr_addr);
+    [[maybe_unused]] int Result = sigprocmask(/*how=*/-1, sigsetaddr, nullptr);
+    // Because our "how" is invalid, this syscall should always fail, and our
+    // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
+    // by the POSIX standard, so this is (for now) Linux specific.
+    assert(Result == -1);
+    assert(errno == EFAULT || errno == EINVAL);
+    return errno != EFAULT;
+  }
 
   A                   &_addressSpace;
   unw_proc_info_t      _info;
@@ -2701,19 +2721,13 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // [1] https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/vdso/sigreturn.S
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use pipe/write/read to read
-  // the memory safely instead.
-  int pipefd[2];
-  if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(static_cast<void *>(pc)) ||
+      !isReadableAddr(static_cast<void *>(pc + 4)))
     return false;
-  uint32_t instructions[2];
-  const auto bufferSize = sizeof instructions;
-  if (write(pipefd[1], reinterpret_cast<void *>(pc), bufferSize) != bufferSize)
-    return false;
-  const auto bytesRead = read(pipefd[0], instructions, bufferSize);
+  auto *instructions = static_cast<uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (bytesRead != bufferSize || instructions[0] != 0xd2801168 ||
-      instructions[1] != 0xd4000001)
+  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
     return false;
 
   _info = {};
@@ -2762,21 +2776,18 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
-  int pipefd[2];
-  if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(static_cast<void *>(pc)) ||
+      !isReadableAddr(static_cast<void *>(pc + 4)))
     return false;
-  uint32_t instructions[2];
-  const auto bufferSize = sizeof instructions;
-  if (write(pipefd[1], reinterpret_cast<void *>(pc), bufferSize) != bufferSize)
-    return false;
-  const auto bytesRead = read(pipefd[0], instructions, bufferSize);
+  const auto *instructions = static_cast<uint32_t *>(pc);
   // Look for the two instructions used in the sigreturn trampoline
   // __vdso_rt_sigreturn:
   //
   // 0x08b00893 li a7,0x8b
   // 0x00000073 ecall
-  if (bytesRead != bufferSize || instructions[0] != 0x08b00893 ||
-      instructions[1] != 0x00000073)
+  if (instructions[0] != 0x08b00893 || instructions[1] != 0x00000073)
     return false;
 
   _info = {};
@@ -2825,17 +2836,12 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // onto the stack.
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
-  // directly accessing it could cause a segfault. Use pipe/write/read to
-  // read the memory safely instead.
-  int pipefd[2];
-  if (pipe2(pipefd, O_CLOEXEC | O_NONBLOCK) == -1)
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(static_cast<void *>(pc)) ||
+      !isReadableAddr(static_cast<void *>(pc + 2)))
     return false;
-  uint16_t inst;
-  const auto bufferSize = sizeof inst;
-  if (write(pipefd[1], reinterpret_cast<void *>(pc), bufferSize) != bufferSize)
-    return false;
-  const auto bytesRead = read(pipefd[0], &inst, bufferSize);
-  if (bytesRead == bufferSize && (inst == 0x0a77 || inst == 0x0aad)) {
+  const auto inst = *reinterpret_cast<uint16_t *>(pc);
+  if (inst == 0x0a77 || inst == 0x0aad) {
     _info = {};
     _info.start_ip = pc;
     _info.end_ip = pc + 2;
