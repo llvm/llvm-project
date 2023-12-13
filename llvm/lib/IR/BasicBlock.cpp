@@ -73,7 +73,10 @@ void BasicBlock::convertToNewDbgValues() {
   SmallVector<DPValue *, 4> DPVals;
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
-    if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
+    if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+      if (isa<DbgAssignIntrinsic>(DVI))
+        continue;
+
       // Convert this dbg.value to a DPValue.
       DPValue *Value = new DPValue(DVI);
       DPVals.push_back(Value);
