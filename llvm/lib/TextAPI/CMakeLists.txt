@@ -21,4 +21,5 @@ add_llvm_component_library(LLVMTextAPI
   Support
   BinaryFormat
   TargetParser
+  Object
 )
