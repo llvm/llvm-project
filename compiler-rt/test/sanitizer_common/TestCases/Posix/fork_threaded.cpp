@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 #include "sanitizer_common/sanitizer_specific.h"
 
@@ -38,8 +37,6 @@ void ShouldNotDeadlock() {
 #define NOSAN __attribute__((no_sanitize("address", "hwaddress", "memory")))
 
 NOSAN static void *inparent(void *arg) {
-  fprintf(stderr, "inparent %d\n", gettid());
-
   char t[kBufferSize];
   make_mem_bad(t, sizeof(t));
 
@@ -77,7 +74,6 @@ int main(void) {
     }
     break;
   default: {
-    fprintf(stderr, "fork %d\n", pid);
     int status;
     while (waitpid(-1, &status, __WALL) != pid) {
     }
