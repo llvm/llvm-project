@@ -31,19 +31,6 @@ static void make_mem_good(void *p, size_t s) {
 static void make_mem_bad(void *p, size_t s) {
   __asan_poison_memory_region(p, s);
 }
-#elif __has_feature(hwaddress_sanitizer)
-#  include <sanitizer/hwasan_interface.h>
-#  include <stdlib.h>
-static void check_mem_is_good(void *p, size_t s) {
-  if (__hwasan_test_shadow(p, s) != -1)
-    abort();
-}
-static void make_mem_good(void *p, size_t s) {
-  __hwasan_tag_memory(p, __hwasan_get_tag_from_pointer(p), s);
-}
-static void make_mem_bad(void *p, size_t s) {
-  __hwasan_tag_memory(p, ~__hwasan_get_tag_from_pointer(p), s);
-}
 #else
 static void check_mem_is_good(void *p, size_t s) {}
 static void make_mem_good(void *p, size_t s) {}
