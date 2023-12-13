@@ -51,6 +51,7 @@ add_libc_test(
   SRCS
     str_to_float_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.float_properties
     libc.src.__support.str_to_float
     libc.src.__support.uint128
     libc.src.errno.errno
