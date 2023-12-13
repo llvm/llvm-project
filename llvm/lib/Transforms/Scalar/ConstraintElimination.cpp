@@ -1109,6 +1109,14 @@ void State::addInfoFor(BasicBlock &BB) {
         CmpI->getOperand(1)));
 }
 
+static void dumpUnpackedICmp(raw_ostream &OS, ICmpInst::Predicate Pred,
+                             Value *LHS, Value *RHS) {
+  OS << "icmp " << Pred << ' ';
+  LHS->printAsOperand(OS, /*PrintType=*/true);
+  OS << ", ";
+  RHS->printAsOperand(OS, /*PrintType=*/false);
+}
+
 namespace {
 /// Helper to keep track of a condition and if it should be treated as negated
 /// for reproducer construction.
@@ -1241,10 +1249,9 @@ static void generateReproducer(CmpInst *Cond, Module *M,
     if (Entry.Pred == ICmpInst::BAD_ICMP_PREDICATE)
       continue;
 
-    LLVM_DEBUG(
-        dbgs() << "  Materializing assumption icmp " << Entry.Pred << ' ';
-        Entry.LHS->printAsOperand(dbgs(), /*PrintType=*/true); dbgs() << ", ";
-        Entry.RHS->printAsOperand(dbgs(), /*PrintType=*/false); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "  Materializing assumption ";
+               dumpUnpackedICmp(dbgs(), Entry.Pred, Entry.LHS, Entry.RHS);
+               dbgs() << "\n");
     CloneInstructions({Entry.LHS, Entry.RHS}, CmpInst::isSigned(Entry.Pred));
 
     auto *Cmp = Builder.CreateICmp(Entry.Pred, Entry.LHS, Entry.RHS);
@@ -1260,14 +1267,12 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   assert(!verifyFunction(*F, &dbgs()));
 }
 
-static std::optional<bool> checkCondition(CmpInst *Cmp, ConstraintInfo &Info,
-                                          unsigned NumIn, unsigned NumOut,
+static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
+                                          Value *B, Instruction *CheckInst,
+                                          ConstraintInfo &Info, unsigned NumIn,
+                                          unsigned NumOut,
                                           Instruction *ContextInst) {
-  LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
-
-  CmpInst::Predicate Pred = Cmp->getPredicate();
-  Value *A = Cmp->getOperand(0);
-  Value *B = Cmp->getOperand(1);
+  LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)){
@@ -1292,13 +1297,10 @@ static std::optional<bool> checkCondition(CmpInst *Cmp, ConstraintInfo &Info,
       return std::nullopt;
 
     LLVM_DEBUG({
-      if (*ImpliedCondition) {
-        dbgs() << "Condition " << *Cmp;
-      } else {
-        auto InversePred = Cmp->getInversePredicate();
-        dbgs() << "Condition " << CmpInst::getPredicateName(InversePred) << " "
-               << *A << ", " << *B;
-      }
+      dbgs() << "Condition ";
+      dumpUnpackedICmp(
+          dbgs(), *ImpliedCondition ? Pred : CmpInst::getInversePredicate(Pred),
+          A, B);
       dbgs() << " implied by dominating constraints\n";
       CSToUse.dump();
     });
@@ -1338,8 +1340,9 @@ static bool checkAndReplaceCondition(
     return true;
   };
 
-  if (auto ImpliedCondition =
-          checkCondition(Cmp, Info, NumIn, NumOut, ContextInst))
+  if (auto ImpliedCondition = checkCondition(
+          Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1), Cmp,
+          Info, NumIn, NumOut, ContextInst))
     return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
   return false;
 }
@@ -1380,9 +1383,10 @@ static bool checkAndSecondOpImpliedByFirst(
 
   bool Changed = false;
   // Check if the second condition can be simplified now.
-  if (auto ImpliedCondition =
-          checkCondition(cast<ICmpInst>(And->getOperand(1)), Info, CB.NumIn,
-                         CB.NumOut, CB.getContextInst())) {
+  ICmpInst *Cmp = cast<ICmpInst>(And->getOperand(1));
+  if (auto ImpliedCondition = checkCondition(
+          Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1), Cmp,
+          Info, CB.NumIn, CB.NumOut, CB.getContextInst())) {
     And->setOperand(1, ConstantInt::getBool(And->getType(), *ImpliedCondition));
     Changed = true;
   }
@@ -1408,9 +1412,8 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   if (!R.isValid(*this) || R.isNe())
     return;
 
-  LLVM_DEBUG(dbgs() << "Adding '" << Pred << " ";
-             A->printAsOperand(dbgs(), false); dbgs() << ", ";
-             B->printAsOperand(dbgs(), false); dbgs() << "'\n");
+  LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
+             dbgs() << "'\n");
   bool Added = false;
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
@@ -1616,10 +1619,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     }
 
     auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B) {
-      LLVM_DEBUG(dbgs() << "fact to add to the system: "
-                        << CmpInst::getPredicateName(Pred) << " ";
-                 A->printAsOperand(dbgs()); dbgs() << ", ";
-                 B->printAsOperand(dbgs(), false); dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "fact to add to the system: ";
+                 dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
         LLVM_DEBUG(
             dbgs()
