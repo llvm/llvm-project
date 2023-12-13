@@ -1089,15 +1089,6 @@ bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   return false;
 }
 
-static MCSymbolRefExpr::VariantKind
-getModifierVariantKind(RISCVCP::RISCVCPModifier Modifier) {
-  switch (Modifier) {
-  case RISCVCP::None:
-    return MCSymbolRefExpr::VK_None;
-  }
-  llvm_unreachable("Invalid RISCVCPModifier!");
-}
-
 void RISCVAsmPrinter::emitMachineConstantPoolValue(
     MachineConstantPoolValue *MCPV) {
   auto *RCPV = static_cast<RISCVConstantPoolValue *>(MCPV);
@@ -1116,7 +1107,7 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(
-      MCSym, getModifierVariantKind(RCPV->getModifier()), OutContext);
+      MCSym, MCSymbolRefExpr::VK_None, OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
 }

@@ -22,37 +22,22 @@
 using namespace llvm;
 
 RISCVConstantPoolValue::RISCVConstantPoolValue(
-    LLVMContext &C, RISCVCP::RISCVCPKind Kind,
-    RISCVCP::RISCVCPModifier Modifier)
-    : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), Kind(Kind),
-      Modifier(Modifier) {}
+    LLVMContext &C, RISCVCP::RISCVCPKind Kind)
+    : MachineConstantPoolValue((Type *)Type::getInt64Ty(C)), Kind(Kind) {}
 
 RISCVConstantPoolValue::RISCVConstantPoolValue(
-    Type *Ty, RISCVCP::RISCVCPKind Kind, RISCVCP::RISCVCPModifier Modifier)
-    : MachineConstantPoolValue(Ty), Kind(Kind), Modifier(Modifier) {}
+    Type *Ty, RISCVCP::RISCVCPKind Kind)
+    : MachineConstantPoolValue(Ty), Kind(Kind) {}
 
 int RISCVConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
                                                       Align Alignment) {
   llvm_unreachable("Shouldn't be calling this directly!");
 }
 
-StringRef RISCVConstantPoolValue::getModifierText() const {
-  switch (Modifier) {
-  case RISCVCP::None:
-    return "";
-  }
-  llvm_unreachable("Unknown modifier!");
-}
-
-void RISCVConstantPoolValue::print(raw_ostream &O) const {
-  if (hasModifier())
-    O << "@" << getModifierText();
-}
-
 RISCVConstantPoolConstant::RISCVConstantPoolConstant(Type *Ty,
                                                      const Constant *GV,
                                                      RISCVCP::RISCVCPKind Kind)
-    : RISCVConstantPoolValue(Ty, Kind, RISCVCP::None), CVal(GV) {}
+    : RISCVConstantPoolValue(Ty, Kind), CVal(GV) {}
 
 RISCVConstantPoolConstant *
 RISCVConstantPoolConstant::Create(const GlobalValue *GV,
@@ -78,7 +63,6 @@ void RISCVConstantPoolConstant::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
 
 void RISCVConstantPoolConstant::print(raw_ostream &O) const {
   O << CVal->getName();
-  RISCVConstantPoolValue::print(O);
 }
 
 const GlobalValue *RISCVConstantPoolConstant::getGlobalValue() const {
@@ -90,13 +74,12 @@ const BlockAddress *RISCVConstantPoolConstant::getBlockAddress() const {
 }
 
 RISCVConstantPoolSymbol::RISCVConstantPoolSymbol(
-    LLVMContext &C, StringRef s, RISCVCP::RISCVCPModifier Modifier)
-    : RISCVConstantPoolValue(C, RISCVCP::ExtSymbol, Modifier), S(s) {}
+    LLVMContext &C, StringRef s)
+    : RISCVConstantPoolValue(C, RISCVCP::ExtSymbol), S(s) {}
 
 RISCVConstantPoolSymbol *
-RISCVConstantPoolSymbol::Create(LLVMContext &C, StringRef s,
-                                RISCVCP::RISCVCPModifier Modifier) {
-  return new RISCVConstantPoolSymbol(C, s, Modifier);
+RISCVConstantPoolSymbol::Create(LLVMContext &C, StringRef s) {
+  return new RISCVConstantPoolSymbol(C, s);
 }
 
 int RISCVConstantPoolSymbol::getExistingMachineCPValue(MachineConstantPool *CP,
@@ -110,5 +93,4 @@ void RISCVConstantPoolSymbol::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
 
 void RISCVConstantPoolSymbol::print(raw_ostream &O) const {
   O << S;
-  RISCVConstantPoolValue::print(O);
 }

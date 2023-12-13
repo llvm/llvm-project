@@ -26,23 +26,16 @@ class LLVMContext;
 namespace RISCVCP {
 
 enum RISCVCPKind { ExtSymbol, GlobalValue, BlockAddress };
-
-enum RISCVCPModifier {
-  None,
-};
 } // end namespace RISCVCP
 
 /// A RISCV-specific constant pool value.
 class RISCVConstantPoolValue : public MachineConstantPoolValue {
   RISCVCP::RISCVCPKind Kind;
-  RISCVCP::RISCVCPModifier Modifier;
 
 protected:
-  RISCVConstantPoolValue(LLVMContext &C, RISCVCP::RISCVCPKind Kind,
-                         RISCVCP::RISCVCPModifier Modifier);
+  RISCVConstantPoolValue(LLVMContext &C, RISCVCP::RISCVCPKind Kind);
 
-  RISCVConstantPoolValue(Type *Ty, RISCVCP::RISCVCPKind Kind,
-                         RISCVCP::RISCVCPModifier Modifier);
+  RISCVConstantPoolValue(Type *Ty, RISCVCP::RISCVCPKind Kind);
 
   template <typename Derived>
   int getExistingMachineCPValueImpl(MachineConstantPool *CP, Align Alignment) {
@@ -64,10 +57,6 @@ protected:
 public:
   ~RISCVConstantPoolValue() = default;
 
-  RISCVCP::RISCVCPModifier getModifier() const { return Modifier; }
-  StringRef getModifierText() const;
-  bool hasModifier() const { return Modifier != RISCVCP::None; }
-
   bool isExtSymbol() const { return Kind == RISCVCP::ExtSymbol; }
   bool isGlobalValue() const { return Kind == RISCVCP::GlobalValue; }
   bool isBlockAddress() const { return Kind == RISCVCP::BlockAddress; }
@@ -76,12 +65,6 @@ public:
                                 Align Alignment) override;
 
   void addSelectionDAGCSEId(FoldingSetNodeID &ID) override {}
-
-  bool equals(const RISCVConstantPoolValue *A) const {
-    return this->Modifier == A->Modifier;
-  }
-
-  void print(raw_ostream &O) const override;
 };
 
 class RISCVConstantPoolConstant : public RISCVConstantPoolValue {
@@ -107,7 +90,7 @@ public:
   void print(raw_ostream &O) const override;
 
   bool equals(const RISCVConstantPoolConstant *A) const {
-    return CVal == A->CVal && RISCVConstantPoolValue::equals(A);
+    return CVal == A->CVal;
   }
 
   static bool classof(const RISCVConstantPoolValue *RCPV) {
@@ -118,12 +101,10 @@ public:
 class RISCVConstantPoolSymbol : public RISCVConstantPoolValue {
   const std::string S;
 
-  RISCVConstantPoolSymbol(LLVMContext &C, StringRef s,
-                          RISCVCP::RISCVCPModifier Modifier);
+  RISCVConstantPoolSymbol(LLVMContext &C, StringRef s);
 
 public:
-  static RISCVConstantPoolSymbol *Create(LLVMContext &C, StringRef s,
-                                         RISCVCP ::RISCVCPModifier Modifier);
+  static RISCVConstantPoolSymbol *Create(LLVMContext &C, StringRef s);
 
   std::string getSymbol() const { return S; }
 
@@ -135,7 +116,7 @@ public:
   void print(raw_ostream &O) const override;
 
   bool equals(const RISCVConstantPoolSymbol *A) const {
-    return S == A->S && RISCVConstantPoolValue::equals(A);
+    return S == A->S;
   }
   static bool classof(const RISCVConstantPoolValue *RCPV) {
     return RCPV->isExtSymbol();
