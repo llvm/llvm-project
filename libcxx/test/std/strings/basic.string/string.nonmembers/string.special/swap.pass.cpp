@@ -49,6 +49,10 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("abcdefghijklmnopqrst"), S("12345"));
   test(S("abcdefghijklmnopqrst"), S("1234567890"));
   test(S("abcdefghijklmnopqrst"), S("12345678901234567890"));
+  test(S("abcdefghijklmnopqrst123456LONG1234567890"), S(""));
+  test(S("abcdefghijklmnopqrst123456LONG1234567890"), S("12345"));
+  test(S("abcdefghijklmnopqrst123456LONG1234567890"), S("1234567890"));
+  test(S("abcdefghijklmnopqrst123456LONG1234567890"), S("12345678901234567890"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

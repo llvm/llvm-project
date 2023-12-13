@@ -38,6 +38,7 @@ FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
 #define FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 FUNCTION_PASS("callbrprepare", CallBrPreparePass, ())
+FUNCTION_PASS("cfguard", CFGuardPass, ())
 FUNCTION_PASS("consthoist", ConstantHoistingPass, ())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass, (TM))
 FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass, (false))
@@ -54,6 +55,8 @@ FUNCTION_PASS("post-inline-ee-instrument", EntryExitInstrumenterPass, (true))
 FUNCTION_PASS("replace-with-veclib", ReplaceWithVeclib, ())
 FUNCTION_PASS("safe-stack", SafeStackPass, (TM))
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
+FUNCTION_PASS("select-optimize", SelectOptimizePass, (TM))
+FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass, (TM))
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
@@ -122,15 +125,11 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
-DUMMY_FUNCTION_PASS("cfguard-check", CFGuardCheckPass, ())
-DUMMY_FUNCTION_PASS("cfguard-dispatch", CFGuardDispatchPass, ())
 DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
 DUMMY_FUNCTION_PASS("expandmemcmp", ExpandMemCmpPass, ())
 DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 DUMMY_FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, ())
-DUMMY_FUNCTION_PASS("select-optimize", SelectOptimizePass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
-DUMMY_FUNCTION_PASS("sjljehprepare", SjLjEHPreparePass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 #undef DUMMY_FUNCTION_PASS
 
