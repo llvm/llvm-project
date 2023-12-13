@@ -12,6 +12,8 @@
 #define __UNWINDCURSOR_HPP__
 
 #include "cet_unwind.h"
+#include <errno.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +35,6 @@
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
     (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
      defined(_LIBUNWIND_TARGET_S390X))
-#include <fcntl.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -2725,7 +2726,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   if (!isReadableAddr(static_cast<void *>(pc)) ||
       !isReadableAddr(static_cast<void *>(pc + 4)))
     return false;
-  auto *instructions = static_cast<uint32_t *>(pc);
+  auto *instructions = reinterpret_cast<uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
   if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
     return false;
@@ -2781,7 +2782,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   if (!isReadableAddr(static_cast<void *>(pc)) ||
       !isReadableAddr(static_cast<void *>(pc + 4)))
     return false;
-  const auto *instructions = static_cast<uint32_t *>(pc);
+  const auto *instructions = reinterpret_cast<uint32_t *>(pc);
   // Look for the two instructions used in the sigreturn trampoline
   // __vdso_rt_sigreturn:
   //
