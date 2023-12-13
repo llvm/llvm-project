@@ -221,7 +221,7 @@ COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
                    NameValue.size()))
 #endif
 #ifdef COVMAP_V2_OR_V3
-COVMAP_FUNC_RECORD(const int64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
+COVMAP_FUNC_RECORD(const uint64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
                    llvm::ConstantInt::get( \
                      llvm::Type::getInt64Ty(Ctx), NameHash))
 #endif

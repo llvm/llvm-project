@@ -157,7 +157,7 @@ void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
   }
   if (CounterValues.empty())
     return;
-  Expected<int64_t> Value = evaluate(C);
+  Expected<uint64_t> Value = evaluate(C);
   if (auto E = Value.takeError()) {
     consumeError(std::move(E));
     return;
@@ -165,10 +165,10 @@ void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
   OS << '[' << *Value << ']';
 }
 
-Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
+Expected<uint64_t> CounterMappingContext::evaluate(const Counter &C) const {
   struct StackElem {
     Counter ICounter;
-    int64_t LHS = 0;
+    uint64_t LHS = 0;
     enum {
       KNeverVisited = 0,
       KVisitedOnce = 1,
@@ -179,7 +179,7 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
   std::stack<StackElem> CounterStack;
   CounterStack.push({C});
 
-  int64_t LastPoppedValue;
+  uint64_t LastPoppedValue;
 
   while (!CounterStack.empty()) {
     StackElem &Current = CounterStack.top();
@@ -207,8 +207,8 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
         CounterStack.push(StackElem{E.RHS});
         Current.VisitCount = StackElem::KVisitedTwice;
       } else {
-        int64_t LHS = Current.LHS;
-        int64_t RHS = LastPoppedValue;
+        uint64_t LHS = Current.LHS;
+        uint64_t RHS = LastPoppedValue;
         LastPoppedValue =
             E.Kind == CounterExpression::Subtract ? LHS - RHS : LHS + RHS;
         CounterStack.pop();
@@ -224,7 +224,7 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
 unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
   struct StackElem {
     Counter ICounter;
-    int64_t LHS = 0;
+    uint64_t LHS = 0;
     enum {
       KNeverVisited = 0,
       KVisitedOnce = 1,
@@ -235,7 +235,7 @@ unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
   std::stack<StackElem> CounterStack;
   CounterStack.push({C});
 
-  int64_t LastPoppedValue;
+  uint64_t LastPoppedValue;
 
   while (!CounterStack.empty()) {
     StackElem &Current = CounterStack.top();
@@ -263,8 +263,8 @@ unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
           CounterStack.push(StackElem{E.RHS});
           Current.VisitCount = StackElem::KVisitedTwice;
         } else {
-          int64_t LHS = Current.LHS;
-          int64_t RHS = LastPoppedValue;
+          uint64_t LHS = Current.LHS;
+          uint64_t RHS = LastPoppedValue;
           LastPoppedValue = std::max(LHS, RHS);
           CounterStack.pop();
         }
@@ -345,12 +345,12 @@ Error CoverageMapping::loadFunctionRecord(
 
   FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
-    Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
+    Expected<uint64_t> ExecutionCount = Ctx.evaluate(Region.Count);
     if (auto E = ExecutionCount.takeError()) {
       consumeError(std::move(E));
       return Error::success();
     }
-    Expected<int64_t> AltExecutionCount = Ctx.evaluate(Region.FalseCount);
+    Expected<uint64_t> AltExecutionCount = Ctx.evaluate(Region.FalseCount);
     if (auto E = AltExecutionCount.takeError()) {
       consumeError(std::move(E));
       return Error::success();
