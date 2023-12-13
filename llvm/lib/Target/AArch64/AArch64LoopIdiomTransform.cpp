@@ -96,11 +96,11 @@ private:
 
   bool recognizeByteCompare();
   Value *expandFindMismatch(IRBuilder<> &Builder, GetElementPtrInst *GEPA,
-                            GetElementPtrInst *GEPB, Value *Start,
-                            Value *MaxLen);
+                            GetElementPtrInst *GEPB, Instruction *Index,
+                            Value *Start, Value *MaxLen);
   void transformByteCompare(GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
-                            Value *MaxLen, Value *Index, Value *Start,
-                            bool IncIdx, BasicBlock *FoundBB,
+                            PHINode *IndPhi, Value *MaxLen, Instruction *Index,
+                            Value *Start, bool IncIdx, BasicBlock *FoundBB,
                             BasicBlock *EndBB);
   /// @}
 };
@@ -202,24 +202,6 @@ bool AArch64LoopIdiomTransform::run(Loop *L) {
   return recognizeByteCompare();
 }
 
-/// Match loop-invariant value.
-template <typename SubPattern_t> struct match_LoopInvariant {
-  SubPattern_t SubPattern;
-  const Loop *L;
-
-  match_LoopInvariant(const SubPattern_t &SP, const Loop *L)
-      : SubPattern(SP), L(L) {}
-
-  template <typename ITy> bool match(ITy *V) {
-    return L->isLoopInvariant(V) && SubPattern.match(V);
-  }
-};
-
-/// Matches if the value is loop-invariant.
-template <typename Ty>
-inline match_LoopInvariant<Ty> m_LoopInvariant(const Ty &M, const Loop *L) {
-  return match_LoopInvariant<Ty>(M, L);
-}
 
 bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   // Currently the transformation only works on scalable vector types, although
@@ -295,14 +277,9 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   for (BasicBlock *BB : LoopBlocks)
     for (Instruction &I : *BB)
       if (&I != PN && &I != Index)
-        for (User *U : I.users()) {
+        for (User *U : I.users())
           if (!CurLoop->contains(cast<Instruction>(U)))
             return false;
-        }
-
-  // Don't replace the loop if the add has a wrap flag.
-  if (Index->hasNoSignedWrap() || Index->hasNoUnsignedWrap())
-    return false;
 
   // Match the branch instruction for the header
   ICmpInst::Predicate Pred;
@@ -395,16 +372,14 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
 
   // The index is incremented before the GEP/Load pair so we need to
   // add 1 to the start value.
-  transformByteCompare(GEPA, GEPB, MaxLen, Index, StartIdx, /*IncIdx=*/true,
+  transformByteCompare(GEPA, GEPB, PN, MaxLen, Index, StartIdx, /*IncIdx=*/true,
                        FoundBB, EndBB);
   return true;
 }
 
-Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
-                                                     GetElementPtrInst *GEPA,
-                                                     GetElementPtrInst *GEPB,
-                                                     Value *Start,
-                                                     Value *MaxLen) {
+Value *AArch64LoopIdiomTransform::expandFindMismatch(
+    IRBuilder<> &Builder, GetElementPtrInst *GEPA, GetElementPtrInst *GEPB,
+    Instruction *Index, Value *Start, Value *MaxLen) {
   Value *PtrA = GEPA->getPointerOperand();
   Value *PtrB = GEPB->getPointerOperand();
 
@@ -701,7 +676,9 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
 
   // Have we reached the maximum permitted length for the loop?
   Builder.SetInsertPoint(LoopIncBlock);
-  Value *PhiInc = Builder.CreateAdd(IndexPhi, ConstantInt::get(ResType, 1));
+  Value *PhiInc = Builder.CreateAdd(IndexPhi, ConstantInt::get(ResType, 1), "",
+                                    /*HasNUW=*/Index->hasNoUnsignedWrap(),
+                                    /*HasNSW=*/Index->hasNoSignedWrap());
   IndexPhi->addIncoming(PhiInc, LoopIncBlock);
   Value *IVCmp = Builder.CreateICmpEQ(PhiInc, MaxLen);
   BranchInst *IVCmpBr = BranchInst::Create(EndBlock, LoopStartBlock, IVCmp);
@@ -739,9 +716,9 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
 }
 
 void AArch64LoopIdiomTransform::transformByteCompare(
-    GetElementPtrInst *GEPA, GetElementPtrInst *GEPB, Value *MaxLen,
-    Value *Index, Value *Start, bool IncIdx, BasicBlock *FoundBB,
-    BasicBlock *EndBB) {
+    GetElementPtrInst *GEPA, GetElementPtrInst *GEPB, PHINode *IndPhi,
+    Value *MaxLen, Instruction *Index, Value *Start, bool IncIdx,
+    BasicBlock *FoundBB, BasicBlock *EndBB) {
 
   // Insert the byte compare code at the end of the preheader block
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
@@ -754,11 +731,11 @@ void AArch64LoopIdiomTransform::transformByteCompare(
   if (IncIdx)
     Start = Builder.CreateAdd(Start, ConstantInt::get(Start->getType(), 1));
 
-  Value *ByteCmpRes = expandFindMismatch(Builder, GEPA, GEPB, Start, MaxLen);
+  Value *ByteCmpRes =
+      expandFindMismatch(Builder, GEPA, GEPB, Index, Start, MaxLen);
 
   // Replaces uses of index & induction Phi with intrinsic (we already
   // checked that the the first instruction of Header is the Phi above).
-  auto IndPhi = &Header->front();
   IndPhi->replaceAllUsesWith(ByteCmpRes);
   Index->replaceAllUsesWith(ByteCmpRes);
 
