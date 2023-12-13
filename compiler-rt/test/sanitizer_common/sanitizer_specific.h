@@ -48,7 +48,7 @@ static void make_mem_bad(void *p, size_t s) {
     // tagged memory.
     tag = 1;
   }
-  __hwasan_tag_memory(p, , s);
+  __hwasan_tag_memory(p, tag, s);
   // With misaligned `p` or short granules we can't guarantee tag mismatch.
   if (__hwasan_test_shadow(p, s) != 0)
     abort();
