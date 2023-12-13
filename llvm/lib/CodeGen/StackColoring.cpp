@@ -1355,7 +1355,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Scan the entire function and update all machine operands that use frame
   // indices to use the remapped frame index.
-  if (!SlotRemap.empty()) {
+  if (RemovedSlots > 0) {
     expungeSlotMap(SlotRemap, NumSlots);
     remapInstructions(SlotRemap);
   }
