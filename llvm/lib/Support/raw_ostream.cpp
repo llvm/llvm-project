@@ -1036,8 +1036,7 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 #else
   UnixSocket = MaybeWinsocket;
 #endif // _WIN32
-  ListeningSocket ListenSocket(UnixSocket, SocketPath);
-  return ListenSocket;
+  return ListeningSocket{UnixSocket, SocketPath};
 }
 
 Expected<std::unique_ptr<raw_socket_stream>> ListeningSocket::accept() {
