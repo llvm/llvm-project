@@ -49,7 +49,7 @@ std::optional<BlockFrequency> BlockFrequency::mul(uint64_t Factor) const {
 }
 
 void llvm::printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
-                              BlockFrequency Freq) {
+                                  BlockFrequency Freq) {
   if (Freq == BlockFrequency(0)) {
     OS << "0";
     return;
@@ -62,4 +62,3 @@ void llvm::printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
   ScaledNumber<uint64_t> Entry(EntryFreq.getFrequency(), 0);
   OS << Block / Entry;
 }
-
