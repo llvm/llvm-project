@@ -379,6 +379,9 @@ public:
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createSMECodeGenMap(raw_ostream &o);
 
+  /// Create a table for a builtin's requirement for PSTATE.SM.
+  void createStreamingAttrs(raw_ostream &o, ACLEKind Kind);
+
   /// Emit all the range checks for the immediates.
   void createSMERangeChecks(raw_ostream &o);
 
@@ -1702,6 +1705,58 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
+void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  // The mappings must be sorted based on BuiltinID.
+  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                      const std::unique_ptr<Intrinsic> &B) {
+    return A->getMangledName() < B->getMangledName();
+  });
+
+  StringRef ExtensionKind;
+  switch (Kind) {
+  case ACLEKind::SME:
+    ExtensionKind = "SME";
+    break;
+  case ACLEKind::SVE:
+    ExtensionKind = "SVE";
+    break;
+  }
+
+  OS << "#ifdef GET_" << ExtensionKind << "_STREAMING_ATTRS\n";
+
+  // Ensure these are only emitted once.
+  std::set<std::string> Emitted;
+
+  uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
+  uint64_t IsStreamingCompatibleFlag =
+      getEnumValueForFlag("IsStreamingCompatible");
+  for (auto &Def : Defs) {
+    if (Emitted.find(Def->getMangledName()) != Emitted.end())
+      continue;
+
+    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower()
+       << "_";
+    OS << Def->getMangledName() << ":\n";
+
+    if (Def->isFlagSet(IsStreamingFlag))
+      OS << "  BuiltinType = ArmStreaming;\n";
+    else if (Def->isFlagSet(IsStreamingCompatibleFlag))
+      OS << "  BuiltinType = ArmStreamingCompatible;\n";
+    else
+      OS << "  BuiltinType = ArmNonStreaming;\n";
+    OS << "  break;\n";
+
+    Emitted.insert(Def->getMangledName());
+  }
+
+  OS << "#endif\n\n";
+}
+
 namespace clang {
 void EmitSveHeader(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createHeader(OS);
@@ -1723,6 +1778,10 @@ void EmitSveTypeFlags(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createTypeFlags(OS);
 }
 
+void EmitSveStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SVE);
+}
+
 void EmitSmeHeader(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMEHeader(OS);
 }
@@ -1739,4 +1798,7 @@ void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMERangeChecks(OS);
 }
 
+void EmitSmeStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SME);
+}
 } // End namespace clang
