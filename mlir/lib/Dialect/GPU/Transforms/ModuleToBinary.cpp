@@ -101,6 +101,9 @@ LogicalResult moduleSerializer(GPUModuleOp op,
                                const TargetOptions &targetOptions) {
   OpBuilder builder(op->getContext());
   SmallVector<Attribute> objects;
+  // Fail if there are no target attributes
+  if (!op.getTargetsAttr())
+    return op.emitError("the module has no target attributes");
   // Serialize all targets.
   for (auto targetAttr : op.getTargetsAttr()) {
     assert(targetAttr && "Target attribute cannot be null.");
