@@ -40,19 +40,14 @@ endfunction()
 function(add_startup_object name)
   cmake_parse_arguments(
     "ADD_STARTUP_OBJECT"
-    "ALIAS" # Option argument
+    "" # Option argument
     "SRC"   # Single value arguments
     "DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
 
   get_fq_target_name(${name} fq_target_name)
-  if(ADD_STARTUP_OBJECT_ALIAS)
-    get_fq_deps_list(fq_dep_list ${ADD_STARTUP_OBJECT_DEPENDS})
-    add_library(${fq_target_name} ALIAS ${fq_dep_list})
-    return()
-  endif()
-
+  
   add_object_library(
     ${name}
     SRCS ${ADD_STARTUP_OBJECT_SRC}
