@@ -154,15 +154,10 @@ static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
                               forOp.getLowerBound(), forOp.getUpperBound());
   auto ifOp = b.create<scf::IfOp>(loc, forOp->getResultTypes(), cond, true);
   // then branch
-  ifOp->moveBefore(forOp);
-  // Replace block arguments with lower bound (replacement for IV) and
-  // iter_args.
-  SmallVector<Value> bbArgReplacements;
-  bbArgReplacements.push_back(forOp.getLowerBound());
-  llvm::append_range(bbArgReplacements, forOp.getInitArgs());
-
-  b.inlineBlockBefore(forOp.getBody(), ifOp.thenBlock(),
-                      ifOp.thenBlock()->begin(), bbArgReplacements);
+  b.setInsertionPointToStart(ifOp.thenBlock());
+  for (Operation &op : forOp.getBody()->getOperations()) {
+    b.clone(op, mapping);
+  }
   // else branch
   b.setInsertionPointToStart(ifOp.elseBlock());
   if (!forOp->getResultTypes().empty()) {
@@ -225,11 +220,20 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
     // they are then replaced by the current step size.
     // TODO: Alternative method - update affine map to reflect the loop step
     // Example: min(ub - iv, 8) -> min(ub - iv, 4)
-    currentLoop.walk([&](Operation *affineOp) {
-      if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
-        return WalkResult::advance();
+    currentLoop.walk([&](affine::AffineMinOp affineOp) {
       b.setInsertionPoint(affineOp);
-      auto clonedOp = b.clone(*affineOp);
+      auto clonedOp = cast<affine::AffineMinOp>(b.clone(*affineOp));
+      LogicalResult result = scf::rewritePeeledMinMaxOp(
+          b, clonedOp, currentLoop.getInductionVar(), initialUb, initialStep,
+          /*insideLoop=*/true);
+      if (result.succeeded())
+        b.replaceOp(affineOp, currentLoop.getStep());
+      else
+        b.eraseOp(clonedOp); // to avoid infinite walk
+    });
+    currentLoop.walk([&](affine::AffineMaxOp affineOp) {
+      b.setInsertionPoint(affineOp);
+      auto clonedOp = cast<affine::AffineMaxOp>(b.clone(*affineOp));
       LogicalResult result = scf::rewritePeeledMinMaxOp(
           b, clonedOp, currentLoop.getInductionVar(), initialUb, initialStep,
           /*insideLoop=*/true);
