@@ -448,6 +448,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     // pos is the index of the current 64-bit chunk that we are processing.
     size_t pos = WORDCOUNT;
 
+    // TODO: look into if constexpr(Bits > 256) skip leading zeroes.
+
     for (size_t q_pos = WORDCOUNT - lower_pos; q_pos > 0; --q_pos) {
       // q_pos is 1 + the index of the current 64-bit chunk of the quotient
       // being processed.
