@@ -29,5 +29,28 @@ static_assert(__real(I1) == 1, "");
 static_assert(__imag(I1) == 2, "");
 
 
+constexpr _Complex double D1 = {};
+static_assert(__real(D1) == 0, "");
+static_assert(__imag(D1) == 0, "");
+
+constexpr _Complex int I2 = {};
+static_assert(__real(I2) == 0, "");
+static_assert(__imag(I2) == 0, "");
+
+
+#if 0
+/// FIXME: This should work in the new interpreter.
+constexpr _Complex double D2 = {12};
+static_assert(__real(D2) == 12, "");
+static_assert(__imag(D2) == 12, "");
+
+constexpr _Complex int I3 = {15};
+static_assert(__real(I3) == 15, "");
+static_assert(__imag(I3) == 15, "");
+#endif
+
+
+
+
 /// FIXME: This should work in the new interpreter as well.
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
