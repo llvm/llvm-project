@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff %s -filetype=obj -o %t
-; RUN: llvm-objdump %t -d --symbolize-operands --no-show-raw-insn \
+; RUN: llvm-objdump %t -r -d --symbolize-operands --no-show-raw-insn \
 ; RUN:   | FileCheck %s
 
 ; CHECK-LABEL: <.a>:
@@ -7,12 +7,14 @@
 ; CHECK-NEXT:       0:      	mflr 0
 ; CHECK-NEXT:       4:      	stwu 1, -64(1)
 ; CHECK-NEXT:       8:      	lwz 3, 0(2)
+; CHECK-NEXT:0000000a:  R_TOC        var
 ; CHECK-NEXT:       c:      	stw 0, 72(1)
 ; CHECK-NEXT:      10:      	lwz 3, 0(3)
 ; CHECK-NEXT:      14:      	bl 0x4c <.b>
 ; CHECK-NEXT:      18:      	nop
 ; CHECK-NEXT:      1c:      	li 3, 1
 ; CHECK-NEXT:      20:      	bl 0x0 <.c>
+; CHECK-NEXT:00000020:  R_RBR        .c
 
 ; CHECK-LABEL: <.b>:
 ; CHECK-NEXT:      4c:      	mflr 0
@@ -26,6 +28,7 @@
 ; CHECK-NEXT:<L0>:
 ; CHECK-NEXT:      6c:      	li 3, 2
 ; CHECK-NEXT:      70:      	bl 0x0 <.c>
+; CHECK-NEXT:00000070:  R_RBR        .c
 
 target triple = "powerpc-ibm-aix7.2.0.0"
 
