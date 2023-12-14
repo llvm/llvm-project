@@ -78,3 +78,49 @@ namespace CastToBool {
   constexpr _Complex double F9 = {0, 0};
   static_assert(!F9, "");
 }
+
+namespace BinOps {
+namespace Add {
+  constexpr _Complex float A = { 13.0, 2.0 };
+  constexpr _Complex float B = { 2.0, 1.0  };
+  constexpr _Complex float C = A + B;
+  static_assert(__real(C) == 15.0, "");
+  static_assert(__imag(C) == 3.0, "");
+
+  constexpr _Complex float D = B + A;
+  static_assert(__real(D) == 15.0, "");
+  static_assert(__imag(D) == 3.0, "");
+
+  constexpr _Complex unsigned int I1 = { 5,  10 };
+  constexpr _Complex unsigned int I2 = { 40, 2  };
+  constexpr _Complex unsigned int I3 = I1 + I2;
+  static_assert(__real(I3) == 45, "");
+  static_assert(__imag(I3) == 12, "");
+}
+
+namespace Sub {
+  constexpr _Complex float A = { 13.0, 2.0 };
+  constexpr _Complex float B = { 2.0, 1.0  };
+  constexpr _Complex float C = A - B;
+  static_assert(__real(C) == 11.0, "");
+  static_assert(__imag(C) == 1.0, "");
+
+  constexpr _Complex float D = B - A;
+  static_assert(__real(D) == -11.0, "");
+  static_assert(__imag(D) == -1.0, "");
+
+  constexpr _Complex unsigned int I1 = { 5,  10 };
+  constexpr _Complex unsigned int I2 = { 40, 2  };
+  constexpr _Complex unsigned int I3 = I1 - I2;
+  static_assert(__real(I3) == -35, "");
+  static_assert(__imag(I3) == 8, "");
+
+  using Bobble = _Complex float;
+  constexpr _Complex float A_ = { 13.0, 2.0 };
+  constexpr Bobble B_ = { 2.0, 1.0  };
+  constexpr _Complex float D_ = A_ - B_;
+  static_assert(__real(D_) == 11.0, "");
+  static_assert(__imag(D_) == 1.0, "");
+}
+
+}

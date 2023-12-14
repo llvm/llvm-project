@@ -49951,6 +49951,18 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           Extract = DAG.getBitcast(RegVT, Extract);
           return DCI.CombineTo(N, Extract, SDValue(User, 1));
         }
+        auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
+                               ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
+          if (!UserUndefs.isSubsetOf(Undefs))
+            return false;
+          for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
+            if (Undefs[I])
+              continue;
+            if (Bits[I] != UserBits[I])
+              return false;
+          }
+          return true;
+        };
         if (User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
             getTargetConstantFromBasePtr(Ptr)) {
           // See if we are loading a constant that has also been broadcast.
@@ -49961,7 +49973,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                                             UserBits)) {
             UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
             UserBits.truncate(Bits.size());
-            if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
+            if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
               SDValue Extract = extractSubVector(
                   SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
@@ -49985,7 +49997,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                                               UserBits)) {
               UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
               UserBits.truncate(Bits.size());
-              if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
+              if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
                 SDValue Extract = extractSubVector(
                     SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
                 Extract = DAG.getBitcast(RegVT, Extract);
