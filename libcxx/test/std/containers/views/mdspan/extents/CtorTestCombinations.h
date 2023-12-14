@@ -45,7 +45,7 @@ constexpr void test_construction(AllExtents all_ext) {
 
   // test construction from just dynamic extents
   // create an array of just the extents corresponding to dynamic values
-  std::array<typename AllExtents::value_type, E::rank_dynamic()> dyn_ext{0};
+  std::array<typename AllExtents::value_type, E::rank_dynamic()> dyn_ext{};
   size_t dynamic_idx = 0;
   for (size_t r = 0; r < E::rank(); r++) {
     if (E::static_extent(r) == std::dynamic_extent) {

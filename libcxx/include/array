@@ -263,6 +263,8 @@ struct _LIBCPP_TEMPLATE_VIS array
     const value_type* data() const _NOEXCEPT {return __elems_;}
 };
 
+struct _EmptyAggregateType {};
+
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
 {
@@ -280,15 +282,41 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     typedef _VSTD::reverse_iterator<iterator>       reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    typedef __conditional_t<is_const<_Tp>::value, const char, char> _CharType;
+    typedef __conditional_t<is_const<_Tp>::value, const _EmptyAggregateType, _EmptyAggregateType> _EmptyType;
 
     struct  _ArrayInStructT { _Tp __data_[1]; };
-    _ALIGNAS_TYPE(_ArrayInStructT) _CharType __elems_[sizeof(_ArrayInStructT)];
+#if _LIBCPP_STD_VER < 17
+    _ALIGNAS_TYPE(_ArrayInStructT) _EmptyType __elems_[sizeof(_ArrayInStructT)];
+#else
+    union _EmptyUnion
+    {
+        _EmptyType __empty = {};
+        _Tp _FakeVal;
+    };
+
+    _ALIGNAS_TYPE(_ArrayInStructT) _EmptyUnion __elms_union = {};
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
-    value_type* data() _NOEXCEPT {return nullptr;}
+    value_type* data() _NOEXCEPT {
+#if _LIBCPP_STD_VER < 17
+        // Not required to be constexpr
+        return reinterpret_cast<value_type*>(this);
+#else
+        // Constexpr as of C++17
+        return &__elms_union._FakeVal;
+#endif
+    }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
-    const value_type* data() const _NOEXCEPT {return nullptr;}
+    const value_type* data() const _NOEXCEPT {
+#if _LIBCPP_STD_VER < 17
+        // Not required to be constexpr
+        return reinterpret_cast<value_type*>(this);
+#else
+        // Constexpr as of C++17
+        return &__elms_union._FakeVal;
+#endif
+    }
 
     // No explicit construct/copy/destroy for aggregate type
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
