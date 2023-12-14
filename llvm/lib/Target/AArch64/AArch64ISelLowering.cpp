@@ -26817,7 +26817,7 @@ static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
   // TBL mask element needs adjustment.
   SmallVector<SDValue, 8> MaskNormalized;
 
-  // Bail out for 8-bits element types, because with 2048-bit SVE register
+  // Avoid if 8-bits element types, since with 2048-bit SVE register
   // size we could not repersent index correctly.
   if (!IsSingleOp && !MinMaxEqual && BitsPerElt == 8)
     return SDValue();
