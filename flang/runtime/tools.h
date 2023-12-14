@@ -10,6 +10,7 @@
 #define FORTRAN_RUNTIME_TOOLS_H_
 
 #include "freestanding-tools.h"
+#include "stat.h"
 #include "terminator.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -411,17 +412,44 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
-inline RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, size_t length, Terminator &terminator) {
-  if (length <= std::strlen(str)) {
-    char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
-    std::memcpy(newCmd, str, length);
-    newCmd[length] = '\0';
-    return newCmd;
-  } else {
-    return str;
-  }
-}
+RT_API_ATTRS const char *EnsureNullTerminated(
+    const char *str, size_t length, Terminator &terminator);
+
+RT_API_ATTRS std::size_t LengthWithoutTrailingSpaces(const Descriptor &d);
+
+// Returns the length of the \p string. Assumes \p string is valid.
+RT_API_ATTRS std::int64_t StringLength(const char *string);
+
+RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
+
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *length);
+
+RT_API_ATTRS void FillWithSpaces(
+    const Descriptor &value, std::size_t offset = 0);
+
+RT_API_ATTRS std::int32_t CopyToDescriptor(const Descriptor &value,
+    const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
+    std::size_t offset = 0);
+
+void CopyCharToDescriptor(
+    const Descriptor &value, const char *rawValue, std::size_t offset = 0);
+
+RT_API_ATTRS std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
+    const char *rawValue, const Descriptor *errmsg, std::size_t &offset);
+
+RT_API_ATTRS void CheckAndCopyCharToDescriptor(
+    const Descriptor *value, const char *rawValue, std::size_t offset = 0);
+
+RT_API_ATTRS void StoreIntToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator);
+
+RT_API_ATTRS void CheckAndStoreIntToDescriptor(
+    const Descriptor *intVal, std::int64_t value, Terminator &terminator);
+
+template <int KIND> struct FitsInIntegerKind;
+
+RT_API_ATTRS bool FitsInDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

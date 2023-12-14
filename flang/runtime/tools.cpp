@@ -173,5 +173,145 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
   ShallowCopy(to, from, to.IsContiguous(), from.IsContiguous());
 }
 
+RT_API_ATTRS const char *EnsureNullTerminated(
+    const char *str, size_t length, Terminator &terminator) {
+  if (length <= std::strlen(str)) {
+    char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
+    std::memcpy(newCmd, str, length);
+    newCmd[length] = '\0';
+    return newCmd;
+  } else {
+    return str;
+  }
+}
+
+RT_API_ATTRS std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
+  std::size_t s{d.ElementBytes() - 1};
+  while (*d.OffsetElement(s) == ' ') {
+    --s;
+  }
+  return s + 1;
+}
+
+// Returns the length of the \p string. Assumes \p string is valid.
+RT_API_ATTRS std::int64_t StringLength(const char *string) {
+  std::size_t length{std::strlen(string)};
+  if constexpr (sizeof(std::size_t) < sizeof(std::int64_t)) {
+    return static_cast<std::int64_t>(length);
+  } else {
+    std::size_t max{std::numeric_limits<std::int64_t>::max()};
+    return length > max ? 0 // Just fail.
+                        : static_cast<std::int64_t>(length);
+  }
+}
+
+RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value) {
+  return value && value->IsAllocated() &&
+      value->type() == TypeCode(TypeCategory::Character, 1) &&
+      value->rank() == 0;
+}
+
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *length) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  // Check that our descriptor is allocated and is a scalar integer with
+  // kind != 1 (i.e. with a large enough decimal exponent range).
+  return length->IsAllocated() && length->rank() == 0 &&
+      length->type().IsInteger() && typeCode && typeCode->second != 1;
+}
+
+RT_API_ATTRS void FillWithSpaces(const Descriptor &value, std::size_t offset) {
+  if (offset < value.ElementBytes()) {
+    std::memset(
+        value.OffsetElement(offset), ' ', value.ElementBytes() - offset);
+  }
+}
+
+RT_API_ATTRS std::int32_t CopyToDescriptor(const Descriptor &value,
+    const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
+    std::size_t offset) {
+
+  std::int64_t toCopy{std::min(rawValueLength,
+      static_cast<std::int64_t>(value.ElementBytes() - offset))};
+  if (toCopy < 0) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+
+  if (rawValueLength > toCopy) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  return StatOk;
+}
+
+RT_API_ATTRS void CopyCharToDescriptor(
+    const Descriptor &value, const char *rawValue, std::size_t offset) {
+  auto toCopy{std::min(std::strlen(rawValue), value.ElementBytes() - offset)};
+  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+}
+
+RT_API_ATTRS std::int32_t CheckAndCopyToDescriptor(const Descriptor *value,
+    const char *rawValue, const Descriptor *errmsg, std::size_t &offset) {
+  bool haveValue{IsValidCharDescriptor(value)};
+
+  std::int64_t len{StringLength(rawValue)};
+  if (len <= 0) {
+    if (haveValue) {
+      FillWithSpaces(*value);
+    }
+    return ToErrmsg(errmsg, StatMissingArgument);
+  }
+
+  std::int32_t stat{StatOk};
+  if (haveValue) {
+    stat = CopyToDescriptor(*value, rawValue, len, errmsg, offset);
+  }
+
+  offset += len;
+  return stat;
+}
+
+RT_API_ATTRS void CheckAndCopyCharToDescriptor(
+    const Descriptor *value, const char *rawValue, std::size_t offset) {
+  if (value) {
+    CopyCharToDescriptor(*value, rawValue, offset);
+  }
+}
+
+RT_API_ATTRS void StoreIntToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  int kind{typeCode->second};
+  ApplyIntegerKind<StoreIntegerAt, void>(
+      kind, terminator, *length, /* atIndex = */ 0, value);
+}
+
+RT_API_ATTRS void CheckAndStoreIntToDescriptor(
+    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
+  if (intVal) {
+    StoreIntToDescriptor(intVal, value, terminator);
+  }
+}
+
+template <int KIND> struct FitsInIntegerKind {
+  RT_API_ATTRS bool operator()([[maybe_unused]] std::int64_t value) {
+    if constexpr (KIND >= 8) {
+      return true;
+    } else {
+      return value <=
+          std::numeric_limits<
+              CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>>::max();
+    }
+  }
+};
+
+RT_API_ATTRS bool FitsInDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  int kind{typeCode->second};
+  return ApplyIntegerKind<FitsInIntegerKind, bool>(kind, terminator, value);
+}
+
 RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

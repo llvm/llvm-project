@@ -43,59 +43,6 @@ enum CMD_STAT {
   SIGNAL_ERR = 4
 };
 
-static bool IsValidCharDescriptor(const Descriptor *value) {
-  return value && value->IsAllocated() &&
-      value->type() == TypeCode(TypeCategory::Character, 1) &&
-      value->rank() == 0;
-}
-
-static bool IsValidIntDescriptor(const Descriptor *length) {
-  auto typeCode{length->type().GetCategoryAndKind()};
-  // Check that our descriptor is allocated and is a scalar integer with
-  // kind != 1 (i.e. with a large enough decimal exponent range).
-  return length->IsAllocated() && length->rank() == 0 &&
-      length->type().IsInteger() && typeCode && typeCode->second != 1;
-}
-
-void CopyToDescriptor(
-    const Descriptor &value, const char *rawValue, std::size_t offset = 0) {
-  auto toCopy{std::min(std::strlen(rawValue), value.ElementBytes() - offset)};
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
-}
-
-void CheckAndCopyToDescriptor(
-    const Descriptor *value, const char *rawValue, std::size_t offset = 0) {
-  if (value) {
-    CopyToDescriptor(*value, rawValue, offset);
-  }
-}
-
-static void StoreIntToDescriptor(
-    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
-  auto typeCode{intVal->type().GetCategoryAndKind()};
-  int kind{typeCode->second};
-  Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt, void>(
-      kind, terminator, *intVal, /* atIndex = */ 0, value);
-}
-
-static void CheckAndStoreIntToDescriptor(
-    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
-  if (intVal) {
-    StoreIntToDescriptor(intVal, value, terminator);
-  }
-}
-
-template <int KIND> struct FitsInIntegerKind {
-  bool operator()([[maybe_unused]] std::int64_t value) {
-    if constexpr (KIND >= 8) {
-      return true;
-    } else {
-      return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
-                          Fortran::common::TypeCategory::Integer, KIND>>::max();
-    }
-  }
-};
-
 // If a condition occurs that would assign a nonzero value to CMDSTAT but
 // the CMDSTAT variable is not present, error termination is initiated.
 int TerminationCheck(int status, const Descriptor *cmdstat,
@@ -105,7 +52,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("Execution error with system status code: %d", status);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CopyToDescriptor(*cmdmsg, "Execution error");
+      CopyCharToDescriptor(*cmdmsg, "Execution error");
     }
   }
 #ifdef _WIN32
@@ -121,7 +68,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
           "Invalid command quit with exit status code: %d", exitStatusVal);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CopyToDescriptor(*cmdmsg, "Invalid command line");
+      CopyCharToDescriptor(*cmdmsg, "Invalid command line");
     }
   }
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
@@ -130,7 +77,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("killed by signal: %d", WTERMSIG(status));
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyToDescriptor(*cmdmsg, "killed by signal");
+      CopyCharToDescriptor(*cmdmsg, "killed by signal");
     }
   }
 #endif
@@ -140,7 +87,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyToDescriptor(*cmdmsg, "stopped by signal");
+      CopyCharToDescriptor(*cmdmsg, "stopped by signal");
     }
   }
 #endif
@@ -209,7 +156,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
         StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
-        CheckAndCopyToDescriptor(cmdmsg, "CreateProcess failed.");
+        CheckAndCopyCharToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
     FreeMemory((void *)wcmd);
@@ -222,7 +169,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         terminator.Crash("Fork failed with pid: %d.", pid);
       } else {
         StoreIntToDescriptor(cmdstat, FORK_ERR, terminator);
-        CheckAndCopyToDescriptor(cmdmsg, "Fork failed");
+        CheckAndCopyCharToDescriptor(cmdmsg, "Fork failed");
       }
     } else if (pid == 0) {
       int status{std::system(newCmd)};
