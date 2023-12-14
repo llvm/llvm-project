@@ -963,7 +963,7 @@ typedef struct __ifunc_arg_t {
 
 #if __has_include(<asm/hwcap.h>)
 #include <asm/hwcap.h>
-#include HAVE_SYS_HWCAP
+#define HAVE_SYS_HWCAP
 #endif
 
 #if defined(__ANDROID__)
