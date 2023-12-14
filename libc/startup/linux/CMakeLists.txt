@@ -15,14 +15,26 @@ function(merge_relocatable_object name)
     get_target_property(libs ${target} DEPS)
     list(APPEND fq_link_libraries "${libs}")
   endforeach()
+  list(REMOVE_DUPLICATES obj_list)
+  list(REMOVE_DUPLICATES fq_link_libraries)
   get_fq_target_name(${name} fq_name)
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.o
-    COMMAND ${CMAKE_CXX_COMPILER} -r ${obj_list} -o ${CMAKE_CURRENT_BINARY_DIR}/${name}.o
-    DEPENDS ${obj_list}
-    COMMAND_EXPAND_LISTS
+  add_executable(
+    ${fq_name}.relocatable
+    ${obj_list}
   )
-  add_custom_target(${fq_name}.relocatable DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o)
+  target_link_options(
+    ${fq_name}.relocatable
+    PRIVATE
+      -nostdlib
+      -ffreestanding
+      -no-pie
+      -nostartfiles
+      -Wl,-r)
+  set_target_properties(
+    ${fq_name}.relocatable
+    PROPERTIES
+      OUTPUT_NAME ${name}.o
+  )
   add_library(${fq_name} OBJECT IMPORTED GLOBAL)
   add_dependencies(${fq_name} ${fq_name}.relocatable)
   target_link_libraries(${fq_name} INTERFACE ${fq_link_libraries})
@@ -30,7 +42,6 @@ function(merge_relocatable_object name)
     ${fq_name} 
     PROPERTIES
       LINKER_LANGUAGE CXX
-      OBJECT_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.o
       IMPORTED_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/${name}.o
       TARGET_TYPE ${OBJECT_LIBRARY_TARGET_TYPE}
       DEPS "${fq_link_libraries}"
