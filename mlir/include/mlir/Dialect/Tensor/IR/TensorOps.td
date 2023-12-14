@@ -1822,13 +1822,10 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     and optionally transposes the tiled source tensor dimensions.
 
     `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`. The order of the dimensions matters: the
-    tiled dimensions (of size `inner_tiles`) are added to the end of the result
+    being tiled, where `0 < k <= n`. The order of the dimensions matters: 
+     - The tiled dimensions (of size `inner_tiles`) are added to the end of the result
     tensor in the order in which they appear in `inner_dims_pos`.
-
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`. The order of the dimensions matters:
-    `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
     `inner_tiles[i]`.
 
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
