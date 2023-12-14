@@ -211,7 +211,7 @@ TEST_F(X86SnippetFileTest, MemoryMappingNoDefinition) {
 
 TEST_F(X86SnippetFileTest, SnippetAddress) {
   auto Snippets = TestCommon(R"(
-    # LLVM-EXEGESIS-SNIPPET-ADDRESS 0x10000
+    # LLVM-EXEGESIS-SNIPPET-ADDRESS 10000
   )");
   ASSERT_TRUE(static_cast<bool>(Snippets));
   EXPECT_THAT(*Snippets, SizeIs(1));

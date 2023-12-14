@@ -1,16 +1,16 @@
 ; Intel chips with slow unaligned memory accesses
 
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium3      2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium3m     2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium-m     2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4      2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4m     2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=yonah         2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=prescott      2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=nocona        2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=core2         2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=penryn        2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bonnell       2>&1 | FileCheck %s --check-prefixes=SLOW
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium3      2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SCALAR
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium3m     2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SCALAR
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium-m     2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4      2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=pentium4m     2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=yonah         2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=prescott      2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=nocona        2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=core2         2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=penryn        2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=bonnell       2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
 
 ; Intel chips with fast unaligned memory accesses
 
@@ -26,15 +26,15 @@
 
 ; AMD chips with slow unaligned memory accesses
 
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon-4      2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon-xp     2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=k8            2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=opteron       2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon64      2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon-fx     2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=k8-sse3       2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=opteron-sse3  2>&1 | FileCheck %s --check-prefixes=SLOW
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon64-sse3 2>&1 | FileCheck %s --check-prefixes=SLOW
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon-4      2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SCALAR
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon-xp     2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SCALAR
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=k8            2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=opteron       2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon64      2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon-fx     2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=k8-sse3       2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=opteron-sse3  2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=athlon64-sse3 2>&1 | FileCheck %s --check-prefixes=SLOW,SLOW-SSE
 
 ; AMD chips with fast unaligned memory accesses
 
@@ -67,26 +67,40 @@
 ; SLOW-NOT: not a recognized processor
 ; FAST-NOT: not a recognized processor
 define void @store_zeros(ptr %a) {
-; SLOW-LABEL: store_zeros:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NEXT:    movl $0
-; SLOW-NOT:     movl
+; SLOW-SCALAR-LABEL: store_zeros:
+; SLOW-SCALAR:       # %bb.0:
+; SLOW-SCALAR-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NEXT:    movl $0
+; SLOW-SCALAR-NOT:     movl
+;
+; SLOW-SSE-LABEL: store_zeros:
+; SLOW-SSE:       # %bb.0:
+; SLOW-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SLOW-SSE-NEXT:    xorps %xmm0, %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NEXT:    movsd %xmm0
+; SLOW-SSE-NOT:     movsd
 ;
 ; FAST-SSE-LABEL: store_zeros:
 ; FAST-SSE:       # %bb.0:

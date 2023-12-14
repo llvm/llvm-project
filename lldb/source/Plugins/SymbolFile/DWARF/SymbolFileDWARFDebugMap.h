@@ -118,13 +118,8 @@ public:
                      bool include_inlines, SymbolContextList &sc_list) override;
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
-  void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
-                 uint32_t max_matches,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeMap &types) override;
-  void FindTypes(llvm::ArrayRef<CompilerContext> context, LanguageSet languages,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeMap &types) override;
+  void FindTypes(const lldb_private::TypeQuery &match,
+                 lldb_private::TypeResults &results) override;
   CompilerDeclContext FindNamespace(ConstString name,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     bool only_root_namespaces) override;

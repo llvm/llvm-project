@@ -105,10 +105,10 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
       // Special case Apple .sdk folders since the search path is typically a
       // symlink like `iPhoneSimulator14.5.sdk` while the file is instead
       // located in `iPhoneSimulator.sdk` (the real folder).
-      if (NI->endswith(".sdk") && DI->endswith(".sdk")) {
+      if (NI->ends_with(".sdk") && DI->ends_with(".sdk")) {
         StringRef NBasename = path::stem(*NI);
         StringRef DBasename = path::stem(*DI);
-        if (DBasename.startswith(NBasename))
+        if (DBasename.starts_with(NBasename))
           continue;
       }
 

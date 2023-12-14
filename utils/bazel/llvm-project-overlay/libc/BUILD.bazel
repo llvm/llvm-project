@@ -664,6 +664,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_properties_float",
+        ":__support_math_extras",
         ":__support_uint128",
     ],
 )
@@ -2265,6 +2266,19 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    features = no_sanitize_features,
+    weak = True,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "mempcpy",
+    srcs = ["src/string/mempcpy.cpp"],
+    hdrs = ["src/string/mempcpy.h"],
+    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [

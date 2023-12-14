@@ -2773,28 +2773,15 @@ cc_library(
 
 td_library(
     name = "SparseTensorTdFiles",
-    srcs = [
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorBase.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td",
-    ],
+    srcs = glob([
+        "include/mlir/Dialect/SparseTensor/IR/*.td",
+    ]),
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
-)
-
-td_library(
-    name = "SparseTensorInterfacesTdFiles",
-    srcs = [
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-    ],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
 )
 
 gentbl_cc_library(
@@ -2918,7 +2905,37 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-    deps = [":SparseTensorInterfacesTdFiles"],
+    deps = [":SparseTensorTdFiles"],
+)
+
+td_library(
+    name = "SparseTensorTransformOpsTdFiles",
+    srcs = glob([
+        "include/mlir/Dialect/SparseTensor/TransformOps/*.td",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SparseTensorTransformOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.td",
+    deps = [
+        ":SparseTensorTransformOpsTdFiles",
+    ],
 )
 
 # This library is shared by both SparseTensorDialect and
@@ -2932,19 +2949,11 @@ cc_library(
 
 cc_library(
     name = "SparseTensorDialect",
-    srcs = [
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMap.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMap.h",
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMapParser.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMapParser.h",
-        "lib/Dialect/SparseTensor/IR/Detail/LvlTypeParser.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/LvlTypeParser.h",
-        "lib/Dialect/SparseTensor/IR/Detail/TemplateExtras.h",
-        "lib/Dialect/SparseTensor/IR/Detail/Var.cpp",
-        "lib/Dialect/SparseTensor/IR/Detail/Var.h",
-        "lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp",
-        "lib/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp",
-    ],
+    srcs = glob([
+        "lib/Dialect/SparseTensor/IR/*.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/*.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/*.h",
+    ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensor.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h",
@@ -2987,40 +2996,14 @@ cc_library(
     ],
 )
 
-td_library(
-    name = "SparseTensorTransformOpsTdFiles",
-    srcs = glob([
-        "include/mlir/Dialect/SparseTensor/TransformOps/*.td",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":TransformDialectTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "SparseTensorTransformOpsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.td",
-    deps = [
-        ":SparseTensorTransformOpsTdFiles",
-    ],
-)
-
 cc_library(
     name = "SparseTensorUtils",
-    srcs = glob(["lib/Dialect/SparseTensor/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/SparseTensor/Utils/*.h"]),
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Utils/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/SparseTensor/Utils/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -3039,6 +3022,8 @@ cc_library(
     srcs = glob([
         "lib/Dialect/SparseTensor/Transforms/*.cpp",
         "lib/Dialect/SparseTensor/Transforms/*.h",
+        "lib/Dialect/SparseTensor/Transforms/Utils/*.cpp",
+        "lib/Dialect/SparseTensor/Transforms/Utils/*.h",
     ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h",
@@ -3081,8 +3066,12 @@ cc_library(
 
 cc_library(
     name = "SparseTensorPipelines",
-    srcs = glob(["lib/Dialect/SparseTensor/Pipelines/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/SparseTensor/Pipelines/Passes.h"],
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Pipelines/*.cpp",
+    ]),
+    hdrs = [
+        "include/mlir/Dialect/SparseTensor/Pipelines/Passes.h",
+    ],
     includes = ["include"],
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
@@ -3267,11 +3256,14 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/Mesh/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":FuncDialect",
+        ":IR",
         ":MeshDialect",
         ":MeshShardingInterface",
         ":MeshTransformsPassIncGen",
         ":Pass",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -3994,7 +3986,6 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
-        ":BufferizationDialect",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
         ":DestinationStyleOpInterface",
@@ -6143,6 +6134,32 @@ gentbl_cc_library(
         (
             ["-gen-llvmir-conversions"],
             "include/mlir/Dialect/LLVMIR/NVVMConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
+    deps = [":NVVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVVMFromLLVMIRConversionsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-intr-from-llvmir-conversions"],
+            "include/mlir/Dialect/LLVMIR/NVVMFromLLVMIRConversions.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
+    deps = [":NVVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVVMConvertibleLLVMIRIntrinsicsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-convertible-llvmir-intrinsics"],
+            "include/mlir/Dialect/LLVMIR/NVVMConvertibleLLVMIRIntrinsics.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -8351,8 +8368,8 @@ cc_library(
 
 cc_library(
     name = "NVVMToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/NVVM/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/NVVM/*.h"]),
+    srcs = ["lib/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
         ":DialectUtils",
@@ -8470,6 +8487,23 @@ cc_library(
 )
 
 cc_library(
+    name = "LLVMIRToNVVMTranslation",
+    srcs = ["lib/Target/LLVMIR/Dialect/NVVM/LLVMIRToNVVMTranslation.cpp"],
+    hdrs = ["include/mlir/Target/LLVMIR/Dialect/NVVM/LLVMIRToNVVMTranslation.h"],
+    includes = ["include"],
+    deps = [
+        ":FromLLVMIRTranslation",
+        ":IR",
+        ":NVVMConvertibleLLVMIRIntrinsicsIncGen",
+        ":NVVMDialect",
+        ":NVVMFromLLVMIRConversionsIncGen",
+        ":Support",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenACCToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenACC/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
@@ -8522,6 +8556,7 @@ cc_library(
         ":BuiltinToLLVMIRTranslation",
         ":GPUToLLVMIRTranslation",
         ":LLVMIRToLLVMTranslation",
+        ":LLVMIRToNVVMTranslation",
         ":LLVMToLLVMIRTranslation",
         ":NVVMTarget",
         ":NVVMToLLVMIRTranslation",
@@ -8925,6 +8960,7 @@ cc_binary(
         "//mlir/test:TestLoopLikeInterface",
         "//mlir/test:TestMath",
         "//mlir/test:TestMemRef",
+        "//mlir/test:TestMesh",
         "//mlir/test:TestNVGPU",
         "//mlir/test:TestOneToNTypeConversion",
         "//mlir/test:TestPDLL",

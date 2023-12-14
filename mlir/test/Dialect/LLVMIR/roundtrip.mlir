@@ -34,6 +34,16 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr>
   %typecheck_vptrcmp = llvm.add %vptrcmp, %vptrcmp : vector<2 x i1>
 
+// Integer overflow flags
+// CHECK: {{.*}} = llvm.add %[[I32]], %[[I32]] overflow<nsw> : i32
+// CHECK: {{.*}} = llvm.sub %[[I32]], %[[I32]] overflow<nuw> : i32
+// CHECK: {{.*}} = llvm.mul %[[I32]], %[[I32]] overflow<nsw, nuw> : i32
+// CHECK: {{.*}} = llvm.shl %[[I32]], %[[I32]] overflow<nsw, nuw> : i32
+  %add_flag = llvm.add %arg0, %arg0 overflow<nsw> : i32
+  %sub_flag = llvm.sub %arg0, %arg0 overflow<nuw> : i32
+  %mul_flag = llvm.mul %arg0, %arg0 overflow<nsw, nuw> : i32
+  %shl_flag = llvm.shl %arg0, %arg0 overflow<nuw, nsw> : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32

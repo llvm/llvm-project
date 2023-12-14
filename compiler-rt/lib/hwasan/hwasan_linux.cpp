@@ -106,8 +106,12 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  __hwasan_shadow_memory_dynamic_address =
-      FindDynamicShadowStart(shadow_size_bytes);
+  if (flags()->fixed_shadow_base != (uptr)-1) {
+    __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
+  } else {
+    __hwasan_shadow_memory_dynamic_address =
+        FindDynamicShadowStart(shadow_size_bytes);
+  }
 }
 
 static void MaybeDieIfNoTaggingAbi(const char *message) {
@@ -519,12 +523,24 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
 
 void HwasanInstallAtForkHandler() {
   auto before = []() {
-    HwasanAllocatorLock();
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::LockGlobal();
+    }
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+    // stuff we need.
+    __lsan::LockThreads();
+    __lsan::LockAllocator();
     StackDepotLockAll();
   };
   auto after = []() {
     StackDepotUnlockAll();
-    HwasanAllocatorUnlock();
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+    // the stuff we need.
+    __lsan::UnlockAllocator();
+    __lsan::UnlockThreads();
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::UnlockGlobal();
+    }
   };
   pthread_atfork(before, after, after);
 }

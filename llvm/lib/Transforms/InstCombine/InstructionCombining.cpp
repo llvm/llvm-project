@@ -356,6 +356,7 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
+  BinOp1->dropPoisonGeneratingFlags();
   Cast->dropPoisonGeneratingFlags();
   return true;
 }
@@ -1131,6 +1132,14 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
+    // op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
+    if (I.isCommutative() && B == F && C == E) {
+      Value *BI = Builder.CreateBinOp(I.getOpcode(), B, E);
+      if (auto *BO = dyn_cast<BinaryOperator>(BI))
+        BO->copyIRFlags(&I);
+      return BI;
+    }
+
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
     True = simplifyBinOp(Opcode, B, E, FMF, Q);

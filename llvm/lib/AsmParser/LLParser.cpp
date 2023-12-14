@@ -3981,6 +3981,21 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return false;
   }
 
+  case lltok::kw_splat: {
+    Lex.Lex();
+    if (parseToken(lltok::lparen, "expected '(' after vector splat"))
+      return true;
+    Constant *C;
+    if (parseGlobalTypeAndValue(C))
+      return true;
+    if (parseToken(lltok::rparen, "expected ')' at end of vector splat"))
+      return true;
+
+    ID.ConstantVal = C;
+    ID.Kind = ValID::t_ConstantSplat;
+    return false;
+  }
+
   case lltok::kw_getelementptr:
   case lltok::kw_shufflevector:
   case lltok::kw_insertelement:
@@ -5824,6 +5839,17 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
                                "' but expected '" + getTypeString(Ty) + "'");
     V = ID.ConstantVal;
     return false;
+  case ValID::t_ConstantSplat:
+    if (!Ty->isVectorTy())
+      return error(ID.Loc, "vector constant must have vector type");
+    if (ID.ConstantVal->getType() != Ty->getScalarType())
+      return error(ID.Loc, "constant expression type mismatch: got type '" +
+                               getTypeString(ID.ConstantVal->getType()) +
+                               "' but expected '" +
+                               getTypeString(Ty->getScalarType()) + "'");
+    V = ConstantVector::getSplat(cast<VectorType>(Ty)->getElementCount(),
+                                 ID.ConstantVal);
+    return false;
   case ValID::t_ConstantStruct:
   case ValID::t_PackedConstantStruct:
     if (StructType *ST = dyn_cast<StructType>(Ty)) {
@@ -5861,6 +5887,7 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   case ValID::t_APFloat:
   case ValID::t_Undef:
   case ValID::t_Constant:
+  case ValID::t_ConstantSplat:
   case ValID::t_ConstantStruct:
   case ValID::t_PackedConstantStruct: {
     Value *V;
@@ -8622,9 +8649,9 @@ static void resolveFwdRef(ValueInfo *Fwd, ValueInfo &Resolved) {
 
 /// Stores the given Name/GUID and associated summary into the Index.
 /// Also updates any forward references to the associated entry ID.
-void LLParser::addGlobalValueToIndex(
+bool LLParser::addGlobalValueToIndex(
     std::string Name, GlobalValue::GUID GUID, GlobalValue::LinkageTypes Linkage,
-    unsigned ID, std::unique_ptr<GlobalValueSummary> Summary) {
+    unsigned ID, std::unique_ptr<GlobalValueSummary> Summary, LocTy Loc) {
   // First create the ValueInfo utilizing the Name or GUID.
   ValueInfo VI;
   if (GUID != 0) {
@@ -8634,7 +8661,9 @@ void LLParser::addGlobalValueToIndex(
     assert(!Name.empty());
     if (M) {
       auto *GV = M->getNamedValue(Name);
-      assert(GV);
+      if (!GV)
+        return error(Loc, "Reference to undefined global \"" + Name + "\"");
+
       VI = Index->getOrInsertValueInfo(GV);
     } else {
       assert(
@@ -8682,6 +8711,8 @@ void LLParser::addGlobalValueToIndex(
       NumberedValueInfos.resize(ID + 1);
     NumberedValueInfos[ID] = VI;
   }
+
+  return false;
 }
 
 /// parseSummaryIndexFlags
@@ -8728,6 +8759,7 @@ bool LLParser::parseGVEntry(unsigned ID) {
       parseToken(lltok::lparen, "expected '(' here"))
     return true;
 
+  LocTy Loc = Lex.getLoc();
   std::string Name;
   GlobalValue::GUID GUID = 0;
   switch (Lex.getKind()) {
@@ -8757,9 +8789,8 @@ bool LLParser::parseGVEntry(unsigned ID) {
     // an external definition. We pass ExternalLinkage since that is only
     // used when the GUID must be computed from Name, and in that case
     // the symbol must have external linkage.
-    addGlobalValueToIndex(Name, GUID, GlobalValue::ExternalLinkage, ID,
-                          nullptr);
-    return false;
+    return addGlobalValueToIndex(Name, GUID, GlobalValue::ExternalLinkage, ID,
+                                 nullptr, Loc);
   }
 
   // Have a list of summaries
@@ -8800,6 +8831,7 @@ bool LLParser::parseGVEntry(unsigned ID) {
 ///         [',' OptionalRefs]? ')'
 bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
                                     unsigned ID) {
+  LocTy Loc = Lex.getLoc();
   assert(Lex.getKind() == lltok::kw_function);
   Lex.Lex();
 
@@ -8876,10 +8908,9 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
 
   FS->setModulePath(ModulePath);
 
-  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
-                        ID, std::move(FS));
-
-  return false;
+  return addGlobalValueToIndex(Name, GUID,
+                               (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
+                               std::move(FS), Loc);
 }
 
 /// VariableSummary
@@ -8887,6 +8918,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
 ///         [',' OptionalRefs]? ')'
 bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
                                     unsigned ID) {
+  LocTy Loc = Lex.getLoc();
   assert(Lex.getKind() == lltok::kw_variable);
   Lex.Lex();
 
@@ -8934,10 +8966,9 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   GS->setModulePath(ModulePath);
   GS->setVTableFuncs(std::move(VTableFuncs));
 
-  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
-                        ID, std::move(GS));
-
-  return false;
+  return addGlobalValueToIndex(Name, GUID,
+                               (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
+                               std::move(GS), Loc);
 }
 
 /// AliasSummary
@@ -8984,10 +9015,9 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
     AS->setAliasee(AliaseeVI, Summary);
   }
 
-  addGlobalValueToIndex(Name, GUID, (GlobalValue::LinkageTypes)GVFlags.Linkage,
-                        ID, std::move(AS));
-
-  return false;
+  return addGlobalValueToIndex(Name, GUID,
+                               (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
+                               std::move(AS), Loc);
 }
 
 /// Flag

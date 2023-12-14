@@ -16,6 +16,10 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Error.h"
+
+#include <cstdint>
 #include <cstring>
 
 using namespace llvm;
@@ -53,9 +57,15 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromELF(
     const ELF64LE::Shdr &Section, GlobalTy &ImageGlobal) {
 
   // The global's address is computed as the image begin + the ELF section
-  // offset + the ELF symbol value.
-  ImageGlobal.setPtr(advanceVoidPtr(
-      Image.getStart(), Section.sh_offset - Section.sh_addr + Symbol.st_value));
+  // offset + the ELF symbol value except for NOBITS sections that, as the name
+  // suggests, have no bits in the image. We still record the size and use
+  // nullptr to indicate there is no location.
+  if (Section.sh_type == ELF::SHT_NOBITS)
+    ImageGlobal.setPtr(nullptr);
+  else
+    ImageGlobal.setPtr(
+        advanceVoidPtr(Image.getStart(),
+                       Section.sh_offset - Section.sh_addr + Symbol.st_value));
 
   // Set the global's size.
   ImageGlobal.setSize(Symbol.st_size);
@@ -170,11 +180,20 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
                          "%u bytes in the ELF image but %u bytes on the host",
                          HostGlobal.getName().data(), ImageGlobal.getSize(),
                          HostGlobal.getSize());
+  if (ImageGlobal.getPtr() == nullptr)
+    return Plugin::error("Transfer impossible because global symbol '%s' has "
+                         "no representation in the image (NOBITS sections)",
+                         HostGlobal.getName().data());
 
   DP("Global symbol '%s' was found in the ELF image and %u bytes will copied "
      "from %p to %p.\n",
      HostGlobal.getName().data(), HostGlobal.getSize(), ImageGlobal.getPtr(),
      HostGlobal.getPtr());
+
+  assert(Image.getStart() <= ImageGlobal.getPtr() &&
+         advanceVoidPtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
+             advanceVoidPtr(Image.getStart(), Image.getSize()) &&
+         "Attempting to read outside the image!");
 
   // Perform the copy from the image to the host memory.
   std::memcpy(HostGlobal.getPtr(), ImageGlobal.getPtr(), HostGlobal.getSize());

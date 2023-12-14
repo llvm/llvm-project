@@ -1132,8 +1132,13 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
   std::optional<int> toKindCharConvert;
   if (auto toCharTy = mlir::dyn_cast<fir::CharacterType>(toType)) {
     if (auto fromCharTy = mlir::dyn_cast<fir::CharacterType>(fromType))
-      if (toCharTy.getFKind() != fromCharTy.getFKind())
+      if (toCharTy.getFKind() != fromCharTy.getFKind()) {
         toKindCharConvert = toCharTy.getFKind();
+        // Preserve source length (padding/truncation will occur in assignment
+        // if needed).
+        toType = fir::CharacterType::get(
+            fromType.getContext(), toCharTy.getFKind(), fromCharTy.getLen());
+      }
     // Do not convert in case of character length mismatch only, hlfir.assign
     // deals with it.
     if (!toKindCharConvert)

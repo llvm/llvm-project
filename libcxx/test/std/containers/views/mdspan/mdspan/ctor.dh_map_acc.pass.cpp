@@ -43,7 +43,7 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
       assert((H::move_counter() == 1));
     }
   }
-  static_assert(!noexcept(MDS(handle, map, acc)));
+  LIBCPP_STATIC_ASSERT(!noexcept(MDS(handle, map, acc)));
   assert(m.extents() == map.extents());
   if constexpr (std::equality_comparable<H>)
     assert(m.data_handle() == handle);
