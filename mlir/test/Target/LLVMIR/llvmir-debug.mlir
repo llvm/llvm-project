@@ -292,6 +292,24 @@ llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr 
 
 // -----
 
+// Nameless and scopeless global constant.
+
+// CHECK-LABEL: @.str.1 = external constant [10 x i8]
+// CHECK-SAME: !dbg ![[GLOBAL_VAR_EXPR:.*]]
+// CHECK-DAG: ![[GLOBAL_VAR_EXPR]] = !DIGlobalVariableExpression(var: ![[GLOBAL_VAR:.*]], expr: !DIExpression())
+// CHECK-DAG: ![[GLOBAL_VAR]] = distinct !DIGlobalVariable(scope: null, file: !{{[0-9]+}}, line: 268, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
+
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "char", sizeInBits = 8, encoding = DW_ATE_signed_char>
+#di_file = #llvm.di_file<"file.c" in "/path/to/file">
+#di_derived_type = #llvm.di_derived_type<tag = DW_TAG_const_type, baseType = #di_basic_type>
+#di_composite_type = #llvm.di_composite_type<tag = DW_TAG_array_type, baseType = #di_derived_type, sizeInBits = 80>
+#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 268, type = #di_composite_type, isLocalToUnit = true, isDefined = true>
+#di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable, expr = <>>
+
+llvm.mlir.global external constant @".str.1"() {addr_space = 0 : i32, dbg_expr = #di_global_variable_expression} : !llvm.array<10 x i8>
+
+// -----
+
 // CHECK-DAG: ![[FILE1:.*]] = !DIFile(filename: "foo1.mlir", directory: "/test/")
 #di_file_1 = #llvm.di_file<"foo1.mlir" in "/test/">
 // CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: "foo2.mlir", directory: "/test/")

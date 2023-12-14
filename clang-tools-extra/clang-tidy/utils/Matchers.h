@@ -120,7 +120,7 @@ private:
 
   private:
     MatchMode determineMatchMode(llvm::StringRef Regex) {
-      if (Regex.startswith(":") || Regex.startswith("^:")) {
+      if (Regex.starts_with(":") || Regex.starts_with("^:")) {
         return MatchMode::MatchFullyQualified;
       }
       return Regex.contains(":") ? MatchMode::MatchQualified

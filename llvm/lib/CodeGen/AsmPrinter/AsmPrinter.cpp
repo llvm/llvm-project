@@ -2173,61 +2173,58 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     return;
   }
 
-  if (TM.getTargetTriple().isOSBinFormatMachO() && getIFuncMCSubtargetInfo()) {
-    // On Darwin platforms, emit a manually-constructed .symbol_resolver that
-    // implements the symbol resolution duties of the IFunc.
-    //
-    // Normally, this would be handled by linker magic, but unfortunately there
-    // are a few limitations in ld64 and ld-prime's implementation of
-    // .symbol_resolver that mean we can't always use them:
-    //
-    //    *  resolvers cannot be the target of an alias
-    //    *  resolvers cannot have private linkage
-    //    *  resolvers cannot have linkonce linkage
-    //    *  resolvers cannot appear in executables
-    //    *  resolvers cannot appear in bundles
-    //
-    // This works around that by emitting a close approximation of what the
-    // linker would have done.
+  if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
+    llvm::report_fatal_error("IFuncs are not supported on this platform");
 
-    MCSymbol *LazyPointer =
-        GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
-    MCSymbol *StubHelper =
-        GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
+  // On Darwin platforms, emit a manually-constructed .symbol_resolver that
+  // implements the symbol resolution duties of the IFunc.
+  //
+  // Normally, this would be handled by linker magic, but unfortunately there
+  // are a few limitations in ld64 and ld-prime's implementation of
+  // .symbol_resolver that mean we can't always use them:
+  //
+  //    *  resolvers cannot be the target of an alias
+  //    *  resolvers cannot have private linkage
+  //    *  resolvers cannot have linkonce linkage
+  //    *  resolvers cannot appear in executables
+  //    *  resolvers cannot appear in bundles
+  //
+  // This works around that by emitting a close approximation of what the
+  // linker would have done.
 
-    OutStreamer->switchSection(
-        OutContext.getObjectFileInfo()->getDataSection());
+  MCSymbol *LazyPointer =
+      GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
+  MCSymbol *StubHelper =
+      GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
 
-    const DataLayout &DL = M.getDataLayout();
-    emitAlignment(Align(DL.getPointerSize()));
-    OutStreamer->emitLabel(LazyPointer);
-    emitVisibility(LazyPointer, GI.getVisibility());
-    OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
+  OutStreamer->switchSection(
+      OutContext.getObjectFileInfo()->getDataSection());
 
-    OutStreamer->switchSection(
-        OutContext.getObjectFileInfo()->getTextSection());
+  const DataLayout &DL = M.getDataLayout();
+  emitAlignment(Align(DL.getPointerSize()));
+  OutStreamer->emitLabel(LazyPointer);
+  emitVisibility(LazyPointer, GI.getVisibility());
+  OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
 
-    const TargetSubtargetInfo *STI =
-        TM.getSubtargetImpl(*GI.getResolverFunction());
-    const TargetLowering *TLI = STI->getTargetLowering();
-    Align TextAlign(TLI->getMinFunctionAlignment());
+  OutStreamer->switchSection(
+      OutContext.getObjectFileInfo()->getTextSection());
 
-    MCSymbol *Stub = getSymbol(&GI);
-    EmitLinkage(Stub);
-    OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
-    OutStreamer->emitLabel(Stub);
-    emitVisibility(Stub, GI.getVisibility());
-    emitMachOIFuncStubBody(M, GI, LazyPointer);
+  const TargetSubtargetInfo *STI =
+      TM.getSubtargetImpl(*GI.getResolverFunction());
+  const TargetLowering *TLI = STI->getTargetLowering();
+  Align TextAlign(TLI->getMinFunctionAlignment());
 
-    OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
-    OutStreamer->emitLabel(StubHelper);
-    emitVisibility(StubHelper, GI.getVisibility());
-    emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
+  MCSymbol *Stub = getSymbol(&GI);
+  EmitLinkage(Stub);
+  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitLabel(Stub);
+  emitVisibility(Stub, GI.getVisibility());
+  emitMachOIFuncStubBody(M, GI, LazyPointer);
 
-    return;
-  }
-
-  llvm::report_fatal_error("IFuncs are not supported on this platform");
+  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitLabel(StubHelper);
+  emitVisibility(StubHelper, GI.getVisibility());
+  emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
 }
 
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
