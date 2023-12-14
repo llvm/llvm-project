@@ -34,11 +34,11 @@ template <class T>
 void test_type() {
   {
     using Array = std::array<T, 0>;
-    static_assert(sizeof(Array) == sizeof(T), "");
-    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
-    static_assert(sizeof(Array) == sizeof(T[1]), "");
-    static_assert(sizeof(Array) == sizeof(MyArray<T, 1>), "");
-    static_assert(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 1>), "");
+    LIBCPP_STATIC_ASSERT(sizeof(Array) == sizeof(T), "");
+    LIBCPP_STATIC_ASSERT(TEST_ALIGNOF(Array) == TEST_ALIGNOF(T), "");
+    LIBCPP_STATIC_ASSERT(sizeof(Array) == sizeof(T[1]), "");
+    LIBCPP_STATIC_ASSERT(sizeof(Array) == sizeof(MyArray<T, 1>), "");
+    LIBCPP_STATIC_ASSERT(TEST_ALIGNOF(Array) == TEST_ALIGNOF(MyArray<T, 1>), "");
     static_assert(!std::is_empty<Array>::value, "");
 
     // Make sure empty arrays don't have padding bytes
