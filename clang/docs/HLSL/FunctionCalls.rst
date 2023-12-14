@@ -37,11 +37,11 @@ passed by value.
 
 For parameters that are output (or input and output), a temporary value is
 created in the caller. The temporary value is then passed by-address. For
-output-only parameters, the temporary is uninitialized when passed (it is
-undefined behavior to not explicitly initialize an ``out`` parameter inside a
-function). For input and output parameters, the temporary is initialized from
-the lvalue argument expression through implicit or explicit casting from the
-lvalue argument type to the parameter type.
+output-only parameters, the temporary is uninitialized when passed (if the
+parameter is not explicitly initialized inside the function an undefined value
+is stored back to the argument expression). For input and output parameters, the
+temporary is initialized from  the lvalue argument expression through implicit
+or explicit casting from the lvalue argument type to the parameter type.
 
 On return of the function, the values of any parameter temporaries are written
 back to the argument expression through an inverted conversion sequence (if an
@@ -69,11 +69,11 @@ Given the following example:
   float4 main() : SV_Target {
     float arr[4] = {1, 1, 1, 1};
     fn(arr);
-    return float4(a[0], a[1], a[2], a[3]);
+    return float4(arr[0], arr[1], arr[2], arr[3]);
   }
 
 In C or C++, the array parameter decays to a pointer, so after the call to
-``fn``, the value of ``a[0]`` is ``3``. In HLSL, the array is passed by value,
+``fn``, the value of ``arr[0]`` is ``3``. In HLSL, the array is passed by value,
 so modifications inside ``fn`` do not propagate out.
 
 .. note::
