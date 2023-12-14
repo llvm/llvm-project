@@ -134,3 +134,23 @@ function(builtin_check_c_compiler_source output source)
     endif()
   endif()
 endfunction()
+
+function(builtin_check_host_cpu_feature feature output)
+  if(NOT DEFINED ${output})
+    message(STATUS "Performing Test ${output}")
+    execute_process(COMMAND echo ""
+                    COMMAND ${CMAKE_C_COMPILER} -march=native -dM -E -P -
+                    COMMAND grep -q __${feature}__
+                    RESULT_VARIABLE result)
+    if(${result} EQUAL 0)
+      set(${output} True CACHE INTERNAL "Compiler supports ${feature}")
+    else()
+      set(${output} False CACHE INTERNAL "Compiler supports ${feature}")
+    endif()
+    if(${${output}})
+      message(STATUS "Performing Test ${output} - Success")
+    else()
+      message(STATUS "Performing Test ${output} - Failed")
+    endif()
+  endif()
+endfunction()
