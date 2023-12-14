@@ -39,8 +39,7 @@ define <4 x i32> @insertelt_v4i32_idx(<4 x i32> %a, i32 %y, i32 zeroext %idx) {
 define <32 x i32> @insertelt_v32i32_0(<32 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v32i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <32 x i32> %a, i32 %y, i32 0
@@ -89,8 +88,7 @@ define <32 x i32> @insertelt_v32i32_idx(<32 x i32> %a, i32 %y, i32 zeroext %idx)
 define <64 x i32> @insertelt_v64i32_0(<64 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v64i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <64 x i32> %a, i32 %y, i32 0
@@ -388,7 +386,7 @@ define <8 x i64> @insertelt_v8i64_0(<8 x i64> %a, ptr %x) {
 ; CHECK-LABEL: insertelt_v8i64_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <8 x i64> %a, i64 -1, i32 0
@@ -466,7 +464,7 @@ define <8 x i64> @insertelt_c6_v8i64_0(<8 x i64> %a, ptr %x) {
 ; CHECK-LABEL: insertelt_c6_v8i64_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 6
-; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <8 x i64> %a, i64 6, i32 0
@@ -569,7 +567,7 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 define <16 x i32> @insertelt_c0_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_range(2,2) {
 ; CHECK-LABEL: insertelt_c0_v16xi32_exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 0
@@ -612,7 +610,7 @@ define <16 x i32> @insertelt_c3_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_ra
 define <16 x i32> @insertelt_c12_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_range(2,2) {
 ; CHECK-LABEL: insertelt_c12_v16xi32_exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v11, a0
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 12
@@ -662,7 +660,7 @@ define <8 x i64> @insertelt_c4_v8xi64_exact(<8 x i64> %vin, i64 %a) vscale_range
 ;
 ; RV64-LABEL: insertelt_c4_v8xi64_exact:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, tu, ma
 ; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    ret
   %v = insertelement <8 x i64> %vin, i64 %a, i32 4
