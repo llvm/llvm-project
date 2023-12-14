@@ -1261,6 +1261,9 @@ struct OperationEquivalence {
   ///   value or this callback must return `success`.
   /// * `markEquivalent` is a callback to inform the caller that the analysis
   ///   determined that two values are equivalent.
+  /// * `checkCommutativeEquivalent` is an optional callback to check for
+  ///   equivalence across two ranges for a commutative operation. If not passed
+  ///   in, then equivalence is checked pairwise.
   ///
   /// Note: Additional information regarding value equivalence can be injected
   /// into the analysis via `checkEquivalent`. Typically, callers may want
