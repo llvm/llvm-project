@@ -1143,6 +1143,7 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
         }
       }
 
+      // TODO: Find an equivalent of `--whole-archive` for Darwin.
       if (!WholeArchiveActive && !TC.getTriple().isMacOSX()) {
         CmdArgs.push_back("--whole-archive");
         CmdArgs.push_back("-lFortran_main");
