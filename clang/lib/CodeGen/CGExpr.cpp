@@ -1041,11 +1041,7 @@ public:
     return Visit(E->getBase());
   }
   Expr *VisitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitParenExpr(ParenExpr *E) {
-    if (IsExpectedRecordDecl(E))
-      return E;
-    return Visit(E->getSubExpr());
-  }
+  Expr *VisitParenExpr(ParenExpr *E) { return Visit(E->getSubExpr()); }
   Expr *VisitUnaryAddrOf(UnaryOperator *E) {
     if (IsExpectedRecordDecl(E))
       return E;
@@ -4237,11 +4233,19 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                 StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
             StructBase && StructBase->getType()->isPointerType()) {
           if (const ValueDecl *VD = FindCountedByField(Array)) {
+            llvm::Type *StructBaseTy =
+                ConvertType(StructBase->getType()->getPointeeType());
             llvm::Value *Res = ArrayLV.getPointer(*this);
 
-            while (auto *GEP = dyn_cast<llvm::GetElementPtrInst>(Res))
+            while (auto *GEP = dyn_cast<llvm::GetElementPtrInst>(Res)) {
               // Look through the GEPs to find the base pointer.
+              if (GEP->getSourceElementType() == StructBaseTy) {
+                Res = GEP->getPointerOperand();
+                break;
+              }
+
               Res = GEP->getPointerOperand();
+            }
 
             Res = EmitCountedByFieldExprImpl(Res, RD, VD);
             EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
