@@ -124,7 +124,7 @@ LIBC_INLINE T hypot(T x, T y) {
   uint16_t y_exp = y_bits.get_biased_exponent();
   uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
 
-  if ((exp_diff >= MantissaWidth<T>::VALUE + 2) || (x == 0) || (y == 0)) {
+  if ((exp_diff >= FPBits_t::MANTISSA_WIDTH + 2) || (x == 0) || (y == 0)) {
     return abs(x) + abs(y);
   }
 
@@ -148,7 +148,7 @@ LIBC_INLINE T hypot(T x, T y) {
   out_exp = a_exp;
 
   // Add an extra bit to simplify the final rounding bit computation.
-  constexpr UIntType ONE = UIntType(1) << (MantissaWidth<T>::VALUE + 1);
+  constexpr UIntType ONE = UIntType(1) << (FPBits_t::MANTISSA_WIDTH + 1);
 
   a_mant <<= 1;
   b_mant <<= 1;
@@ -158,7 +158,7 @@ LIBC_INLINE T hypot(T x, T y) {
   if (a_exp != 0) {
     leading_one = ONE;
     a_mant |= ONE;
-    y_mant_width = MantissaWidth<T>::VALUE + 1;
+    y_mant_width = FPBits_t::MANTISSA_WIDTH + 1;
   } else {
     leading_one = internal::find_leading_one(a_mant, y_mant_width);
     a_exp = 1;
@@ -258,7 +258,7 @@ LIBC_INLINE T hypot(T x, T y) {
     }
   }
 
-  y_new |= static_cast<UIntType>(out_exp) << MantissaWidth<T>::VALUE;
+  y_new |= static_cast<UIntType>(out_exp) << FPBits_t::MANTISSA_WIDTH;
   return cpp::bit_cast<T>(y_new);
 }
 

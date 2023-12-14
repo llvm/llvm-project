@@ -339,9 +339,12 @@ static omp::ReductionDeclareOp declareReduction(PatternRewriter &builder,
 namespace {
 
 struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
+  static constexpr unsigned kUseOpenMPDefaultNumThreads = 0;
+  unsigned numThreads;
 
-  ParallelOpLowering(MLIRContext *context)
-      : OpRewritePattern<scf::ParallelOp>(context) {}
+  ParallelOpLowering(MLIRContext *context,
+                     unsigned numThreads = kUseOpenMPDefaultNumThreads)
+      : OpRewritePattern<scf::ParallelOp>(context), numThreads(numThreads) {}
 
   LogicalResult matchAndRewrite(scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override {
@@ -388,8 +391,21 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
           reduceOp, reduceOp.getOperand(), std::get<1>(pair));
     }
 
+    Value numThreadsVar;
+    if (numThreads > 0) {
+      numThreadsVar = rewriter.create<LLVM::ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(numThreads));
+    }
     // Create the parallel wrapper.
-    auto ompParallel = rewriter.create<omp::ParallelOp>(loc);
+    auto ompParallel = rewriter.create<omp::ParallelOp>(
+        loc,
+        /* if_expr_var = */ Value{},
+        /* num_threads_var = */ numThreadsVar,
+        /* allocate_vars = */ llvm::SmallVector<Value>{},
+        /* allocators_vars = */ llvm::SmallVector<Value>{},
+        /* reduction_vars = */ llvm::SmallVector<Value>{},
+        /* reductions = */ ArrayAttr{},
+        /* proc_bind_val = */ omp::ClauseProcBindKindAttr{});
     {
 
       OpBuilder::InsertionGuard guard(rewriter);
@@ -443,14 +459,14 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 };
 
 /// Applies the conversion patterns in the given function.
-static LogicalResult applyPatterns(ModuleOp module) {
+static LogicalResult applyPatterns(ModuleOp module, unsigned numThreads) {
   ConversionTarget target(*module.getContext());
   target.addIllegalOp<scf::ReduceOp, scf::ReduceReturnOp, scf::ParallelOp>();
   target.addLegalDialect<omp::OpenMPDialect, LLVM::LLVMDialect,
                          memref::MemRefDialect>();
 
   RewritePatternSet patterns(module.getContext());
-  patterns.add<ParallelOpLowering>(module.getContext());
+  patterns.add<ParallelOpLowering>(module.getContext(), numThreads);
   FrozenRewritePatternSet frozen(std::move(patterns));
   return applyPartialConversion(module, target, frozen);
 }
@@ -463,7 +479,7 @@ struct SCFToOpenMPPass
 
   /// Pass entry point.
   void runOnOperation() override {
-    if (failed(applyPatterns(getOperation())))
+    if (failed(applyPatterns(getOperation(), numThreads)))
       signalPassFailure();
   }
 };

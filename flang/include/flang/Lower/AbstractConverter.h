@@ -280,6 +280,10 @@ public:
   // Miscellaneous
   //===--------------------------------------------------------------------===//
 
+  /// Generate IR for Evaluation \p eval.
+  virtual void genEval(pft::Evaluation &eval,
+                       bool unstructuredContext = true) = 0;
+
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
     return loweringOptions;
