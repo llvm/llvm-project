@@ -411,11 +411,9 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
-} // namespace Fortran::runtime
-
 // Defines a utility function for copying and padding characters
 template <typename TO, typename FROM>
-void CopyAndPad(
+inline RT_API_ATTRS void CopyAndPad(
     TO *to, const FROM *from, std::size_t toChars, std::size_t fromChars) {
   if constexpr (sizeof(TO) != sizeof(FROM)) {
     std::size_t copyChars{std::min(toChars, fromChars)};
@@ -435,4 +433,5 @@ void CopyAndPad(
   }
 }
 
+} // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_
