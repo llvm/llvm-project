@@ -5017,8 +5017,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX10-GFX11
-     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table
+  .. table:: compute_pgm_rsrc3 for GFX10-GFX12
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description

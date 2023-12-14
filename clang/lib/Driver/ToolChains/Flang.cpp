@@ -182,7 +182,7 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.endswith("+"))
+      if (Val.ends_with("+"))
         Val = Val.substr(0, Val.size() - 1);
       else {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
