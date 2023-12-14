@@ -1623,7 +1623,6 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   bool DashDashFound = false; // Have we read '--'?
   for (int i = FirstArg; i < argc; ++i) {
     Option *Handler = nullptr;
-    Option *NearestHandler = nullptr;
     std::string NearestHandlerString;
     StringRef Value;
     StringRef ArgName = "";
@@ -1703,8 +1702,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // Otherwise, look for the closest available option to report to the user
       // in the upcoming error.
       if (!Handler && SinkOpts.empty())
-        NearestHandler =
-            LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
+        LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
     }
 
     if (!Handler) {
