@@ -10437,7 +10437,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                                         : diag::warn_init_list_type_narrowing)
         << PostInit->getSourceRange()
         << PreNarrowingType.getLocalUnqualifiedType()
-        << EntityType.getLocalUnqualifiedType().getNonReferenceType();
+        << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
 
   case NK_Constant_Narrowing:
@@ -10448,7 +10448,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                : diag::warn_init_list_constant_narrowing)
         << PostInit->getSourceRange()
         << ConstantValue.getAsString(S.getASTContext(), ConstantType)
-        << EntityType.getLocalUnqualifiedType().getNonReferenceType();
+        << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
 
   case NK_Variable_Narrowing:
@@ -10459,7 +10459,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                : diag::warn_init_list_variable_narrowing)
         << PostInit->getSourceRange()
         << PreNarrowingType.getLocalUnqualifiedType()
-        << EntityType.getLocalUnqualifiedType().getNonReferenceType();
+        << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
   }
 
