@@ -1132,24 +1132,30 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
       // --whole-archive flag to the link line.  If it's not, add a proper
       // --whole-archive/--no-whole-archive bracket to the link line.
       bool WholeArchiveActive = false;
-      for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA))
-        if (Arg)
+      for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
+        if (Arg) {
           for (StringRef ArgValue : Arg->getValues()) {
             if (ArgValue == "--whole-archive")
               WholeArchiveActive = true;
             if (ArgValue == "--no-whole-archive")
               WholeArchiveActive = false;
           }
+        }
+      }
 
-      if (!WholeArchiveActive)
+      // TODO: Find an equivalent of `--whole-archive` for Darwin.
+      if (!WholeArchiveActive && !TC.getTriple().isMacOSX()) {
         CmdArgs.push_back("--whole-archive");
-      CmdArgs.push_back("-lFortran_main");
-      if (!WholeArchiveActive)
+        CmdArgs.push_back("-lFortran_main");
         CmdArgs.push_back("--no-whole-archive");
+      } else {
+        CmdArgs.push_back("-lFortran_main");
+      }
+
+      // Perform regular linkage of the remaining runtime libraries.
+      CmdArgs.push_back("-lFortranRuntime");
+      CmdArgs.push_back("-lFortranDecimal");
     }
-    // Perform regular linkage of the remaining runtime libraries.
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
   } else {
     if (LinkFortranMain) {
       unsigned RTOptionID = options::OPT__SLASH_MT;
