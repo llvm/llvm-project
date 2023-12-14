@@ -22,6 +22,7 @@
 #include <array>
 #include <cstddef>
 #include <type_traits>
+#include <__type_traits/datasizeof.h>
 
 #include "test_macros.h"
 
