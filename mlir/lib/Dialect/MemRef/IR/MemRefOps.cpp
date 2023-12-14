@@ -1615,8 +1615,10 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult LoadOp::verify() {
-  if (getNumOperands() != 1 + getMemRefType().getRank())
-    return emitOpError("incorrect number of indices for load");
+  if (getNumOperands() - 1 != getMemRefType().getRank()) {
+    return emitOpError("incorrect number of indices for load, expected ")
+           << getMemRefType().getRank() << " but got " << getNumOperands() - 1;
+  }
   return success();
 }
 
