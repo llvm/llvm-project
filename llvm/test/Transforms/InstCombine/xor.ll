@@ -1399,9 +1399,7 @@ define i32 @ctlz_pow2_wrong_const(i32 %x) {
 ; Tests from PR70582
 define i32 @tryFactorization_xor_ashr_lshr(i32 %a) {
 ; CHECK-LABEL: @tryFactorization_xor_ashr_lshr(
-; CHECK-NEXT:    [[NOT:%.*]] = ashr i32 -3, [[A:%.*]]
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 5, [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NOT]], [[SHR1]]
+; CHECK-NEXT:    [[XOR:%.*]] = ashr i32 -8, [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %not = ashr i32 -3, %a
@@ -1412,9 +1410,7 @@ define i32 @tryFactorization_xor_ashr_lshr(i32 %a) {
 
 define i32 @tryFactorization_xor_lshr_ashr(i32 %a) {
 ; CHECK-LABEL: @tryFactorization_xor_lshr_ashr(
-; CHECK-NEXT:    [[NOT:%.*]] = ashr i32 -3, [[A:%.*]]
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 5, [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[SHR1]], [[NOT]]
+; CHECK-NEXT:    [[XOR:%.*]] = ashr i32 -8, [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %not = ashr i32 -3, %a
