@@ -102,6 +102,15 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("ktsrmnqagdecfhijpobl"), 19, 1);
   test(S("lsaijeqhtrbgcdmpfkno"), 20, 0);
   test(S("dplqartnfgejichmoskb"), 21, 0);
+  test(S("gbmetiprqdoasckjfhlnxx"), 0, 22);
+  test(S("gbmetiprqdoasckjfhlnxa"), 0, 8);
+  test(S("gbmetiprqdoasckjfhlnxb"), 1, 0);
+  test(S("LONGtiprqdoasckjfhlnxxo"), 0, 23);
+  test(S("LONGtiprqdoasckjfhlnxap"), 0, 8);
+  test(S("LONGtiprqdoasckjfhlnxbl"), 1, 0);
+  test(S("LONGtiprqdoasckjfhlnxxyy"), 0, 24);
+  test(S("LONGtiprqdoasckjfhlnxxyr"), 0, 8);
+  test(S("LONGtiprqdoasckjfhlnxxyz"), 1, 0);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

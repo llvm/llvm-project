@@ -262,11 +262,14 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::SM_89:
         return "890";
       case CudaArch::SM_90:
+      case CudaArch::SM_90a:
         return "900";
       }
       llvm_unreachable("unhandled CudaArch");
     }();
     Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
+    if (GPU == CudaArch::SM_90a)
+      Builder.defineMacro("__CUDA_ARCH_FEAT_SM90_ALL", "1");
   }
 }
 

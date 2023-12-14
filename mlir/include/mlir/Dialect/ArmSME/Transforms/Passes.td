@@ -87,8 +87,9 @@ def TileAllocation
   let summary = "Allocate SME tiles";
   let description = [{
     This pass does tile allocation for SME "virtual tiles". It is run at the
-    'func.func' op level, replacing 'arm_sme.get_tile_id' ops with (i32) tile
-    ids. An error will be emitted when there's no tiles left.
+    'func.func' op level, and assigns tile IDs (via an attribute) to all ops
+    that implement the `ArmSMETileOpInterface`. An error will be emitted when
+    there's no tiles left.
   }];
   let constructor = "mlir::arm_sme::createTileAllocationPass()";
   let dependentDialects = ["func::FuncDialect"];

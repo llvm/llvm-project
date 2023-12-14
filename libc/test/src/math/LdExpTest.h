@@ -132,7 +132,7 @@ public:
     FPBits result_bits(result);
     ASSERT_FALSE(result_bits.is_zero());
     // Verify that the result is indeed subnormal.
-    ASSERT_EQ(result_bits.get_unbiased_exponent(), uint16_t(0));
+    ASSERT_EQ(result_bits.get_biased_exponent(), uint16_t(0));
     // But if the exp is so less that normalization leads to zero, then
     // the result should be zero.
     result = func(x, -FPBits::MAX_EXPONENT - int(MANTISSA_WIDTH) - 5);
