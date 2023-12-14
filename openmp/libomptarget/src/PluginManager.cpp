@@ -47,7 +47,9 @@ PluginAdaptorTy::create(const std::string &Name) {
       new PluginAdaptorTy(Name, std::move(LibraryHandler)));
   if (auto Err = PluginAdaptor->init())
     return Err;
-  return PluginAdaptor;
+  Expected<std::unique_ptr<PluginAdaptorTy>> ExpPluginAdaptor(
+      std::move(PluginAdaptor));
+  return ExpPluginAdaptor;
 }
 
 PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
