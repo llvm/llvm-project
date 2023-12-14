@@ -138,6 +138,12 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     Obj.addSectionWithOwnedContents(Sec, std::move(BufferCopy));
   }
 
+  if (!Config.AdjustSectionVMA.empty()) {
+    return createStringError(
+        errc::invalid_argument,
+        "Adjustment of VMA and LMA addresses not supported!");
+  }
+
   return Error::success();
 }
 

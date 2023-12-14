@@ -230,3 +230,11 @@ defm add_symbol
 defm update_section
     : Eq<"update-section", "Replace the contents of section <name> with contents from a file <file>">,
       MetaVarName<"name=file">;
+
+defm adjust_section_vma
+    : Eq<"adjust-section-vma",
+         "Adjust VMA and LMA of section <name> by <value>">,
+      MetaVarName<"name{=|+|-}value">;
+
+defm adjust_vma : Eq<"adjust-vma", "Add <incr> to the vma and lma address.">,
+                  MetaVarName<"incr">;

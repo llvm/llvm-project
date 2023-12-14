@@ -442,6 +442,12 @@ static Error handleArgs(const CommonConfig &Config,
   if (Error E = processLoadCommands(MachOConfig, Obj))
     return E;
 
+  if (!Config.AdjustSectionVMA.empty()) {
+    return createStringError(
+        errc::invalid_argument,
+        "Adjustment of VMA and LMA addresses not supported!");
+  }
+
   return Error::success();
 }
 
