@@ -96,7 +96,7 @@ protected:
 
     while (*EnvP != nullptr) {
       auto S = prepareEnvVar(*EnvP);
-      if (!StringRef(S).startswith("GTEST_"))
+      if (!StringRef(S).starts_with("GTEST_"))
         EnvTable.emplace_back(S);
       ++EnvP;
     }
