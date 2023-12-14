@@ -327,9 +327,6 @@ bool CompilerType::IsIntegerOrUnscopedEnumerationType() const {
 }
 
 bool CompilerType::IsSigned() const {
-  if (IsEnumerationType())
-    return IsEnumerationIntegerTypeSigned();
-
   return GetTypeInfo() & lldb::eTypeIsSigned;
 }
 
