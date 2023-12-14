@@ -598,11 +598,11 @@ bb:
 define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
 ; CHECK-LABEL: add_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vle8.v v16, (a1)
+; CHECK-NEXT:    vl8r.v v8, (a0)
+; CHECK-NEXT:    vl8r.v v16, (a1)
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = load <128 x i8>, ptr %y
@@ -614,11 +614,11 @@ define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
 define void @add_v16i64(ptr %x, ptr %y) vscale_range(2,2) {
 ; CHECK-LABEL: add_v16i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    vl8re64.v v16, (a1)
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle64.v v16, (a1)
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i64>, ptr %x
   %b = load <16 x i64>, ptr %y
