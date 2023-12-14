@@ -276,6 +276,10 @@ int main(int argc, char **argv) {
   DialectRegistry registry;
   registerAllDialects(registry);
   registerAllExtensions(registry);
+
+  // TODO: Remove this and the corresponding MLIRToLLVMIRTranslationRegistration
+  // cmake dependency when a safe dialect interface registration mechanism is
+  // implemented, see D157703 (and corresponding note on the declaration).
   registerAllGPUToLLVMIRTranslations(registry);
 
 #ifdef MLIR_INCLUDE_TESTS

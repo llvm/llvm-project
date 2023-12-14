@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
 
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
     // Check for exceptional values.
-    uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
+    uint32_t x_abs = x_u & FPBits_t::EXP_MANT_MASK;
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       // x is +inf or NaN.
       return x;

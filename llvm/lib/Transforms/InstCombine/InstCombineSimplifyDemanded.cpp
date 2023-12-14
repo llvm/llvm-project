@@ -552,6 +552,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
+    // (add X, C) --> (xor X, C) IFF C is equal to the top bit of the DemandMask
+    {
+      const APInt *C;
+      if (match(I->getOperand(1), m_APInt(C)) &&
+          C->isOneBitSet(DemandedMask.getActiveBits() - 1)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
+        return Builder.CreateXor(I->getOperand(0), ConstantInt::get(VTy, *C));
+      }
+    }
+
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     Known = KnownBits::computeForAddSub(true, NSW, LHSKnown, RHSKnown);
