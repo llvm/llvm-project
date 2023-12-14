@@ -922,7 +922,7 @@ raw_fd_ostream &llvm::outs() {
 raw_fd_ostream &llvm::errs() {
   // Set standard error to be unbuffered and tied to outs() by default.
 #ifdef __MVS__
-  std::error_code EC = enableAutoConversion(STDOUT_FILENO);
+  std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);
 #endif
   static raw_fd_ostream S(STDERR_FILENO, false, true);
