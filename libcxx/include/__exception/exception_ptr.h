@@ -74,7 +74,7 @@ public:
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && _LIBCPP_STD_VER >= 11
   using _Ep2 = __decay_t<_Ep>;
 
   void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
