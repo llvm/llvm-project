@@ -685,11 +685,10 @@ llvm::hash_code OperationEquivalence::computeHash(
   //   - Operands
   if (op->hasTrait<mlir::OpTrait::IsCommutative>() &&
       op->getNumOperands() > 0) {
-    // If commutative, don't hash the operands as hash is not order independent
-    // and even if it were would not be sufficient for CSE usage.
-    // FIXME: This has the effect of resulting in more hash collisions
-    // for the sake of CSE, this could be improved.
-    hash = llvm::hash_combine(hash, op->getNumOperands());
+    size_t operandHash = hashOperands(op->getOperand(0));
+    for (auto operand : op->getOperands().drop_front())
+      operandHash += hashOperands(operand);
+    hash = llvm::hash_combine(hash, operandHash);
   } else {
     for (Value operand : op->getOperands())
       hash = llvm::hash_combine(hash, hashOperands(operand));
