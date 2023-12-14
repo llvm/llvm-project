@@ -561,7 +561,6 @@ llvm::Error DeviceTy::init() {
 
 // Load binary to device.
 __tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
-  std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);
   return RTL->load_binary(RTLDeviceID, Img);
 }
 

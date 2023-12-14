@@ -37,6 +37,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 
   test(S(), SV("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
   test(S("123456789"), SV("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
+  test(S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"), SV("123456789"));
   test(S("1234567890123456789012345678901234567890123456789012345678901234567890"),
        SV("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
   test(S("1234567890123456789012345678901234567890123456789012345678901234567890"

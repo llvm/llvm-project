@@ -32,7 +32,7 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 
 // CHECK: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SEXT,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
 // CHECK-NEXT: // MIs[0] src
@@ -50,7 +50,7 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::REG_SEQUENCE,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*SubRegIndex*/1,
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/1, /*TempRegFlags*/0,

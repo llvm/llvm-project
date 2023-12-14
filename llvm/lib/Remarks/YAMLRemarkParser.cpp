@@ -136,7 +136,7 @@ Expected<std::unique_ptr<YAMLRemarkParser>> remarks::createYAMLParserFromMeta(
       StrTab = std::move(*MaybeStrTab);
     }
     // If it starts with "---", there is no external file.
-    if (!Buf.startswith("---")) {
+    if (!Buf.starts_with("---")) {
       // At this point, we expect Buf to contain the external file path.
       StringRef ExternalFilePath = Buf;
       SmallString<80> FullPath;

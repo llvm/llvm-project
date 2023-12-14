@@ -1352,6 +1352,14 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
+void Sema::ActOnPragmaCXLimitedRange(SourceLocation Loc,
+                                     LangOptions::ComplexRangeKind Range) {
+  FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
+  NewFPFeatures.setComplexRangeOverride(Range);
+  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
+}
+
 void Sema::ActOnPragmaFPExceptions(SourceLocation Loc,
                                    LangOptions::FPExceptionModeKind FPE) {
   setExceptionMode(Loc, FPE);
