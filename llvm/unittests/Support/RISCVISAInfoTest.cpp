@@ -776,7 +776,6 @@ For example, clang -march=rv32i_v1p0)";
   outs().flush();
 
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
-  dbgs() << CapturedOutput << "\n";
   EXPECT_TRUE([](std::string &Captured, std::string &Expected) {
                 return Captured.find(Expected) != std::string::npos;
               }(CapturedOutput, ExpectedOutput));
