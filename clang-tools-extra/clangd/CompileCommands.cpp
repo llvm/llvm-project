@@ -338,7 +338,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   };
 
   llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
-    return Elem.startswith("--save-temps") || Elem.startswith("-save-temps");
+    return Elem.starts_with("--save-temps") || Elem.starts_with("-save-temps");
   });
 
   std::vector<std::string> ToAppend;
@@ -587,7 +587,7 @@ const ArgStripper::Rule *ArgStripper::matchingRule(llvm::StringRef Arg,
       continue; // not applicable to current driver mode
     if (BestRule && BestRule->Priority < R.Priority)
       continue; // lower-priority than best candidate.
-    if (!Arg.startswith(R.Text))
+    if (!Arg.starts_with(R.Text))
       continue; // current arg doesn't match the prefix string
     bool PrefixMatch = Arg.size() > R.Text.size();
     // Can rule apply as an exact/prefix match?
