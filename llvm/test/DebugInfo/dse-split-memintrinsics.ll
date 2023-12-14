@@ -10,11 +10,14 @@ define void @_Z22overwrite_middle_localv() !dbg !23 {
 ; CHECK-NEXT:    [[BLOB:%.*]] = alloca [1000 x i8], align 16, !DIAssignID [[DIASSIGNID33:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28:![0-9]+]], metadata !DIExpression(), metadata [[DIASSIGNID33]], metadata ptr [[BLOB]], metadata !DIExpression()), !dbg [[DBG34:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1000, ptr nonnull [[BLOB]]), !dbg [[DBG34]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(1000) [[BLOB]], i8 5, i64 1000, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID35:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[BLOB]], i64 976
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) [[TMP0]], i8 5, i64 24, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID35:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(10) [[BLOB]], i8 5, i64 10, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID35]]
 ; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28]], metadata !DIExpression(), metadata [[DIASSIGNID35]], metadata ptr [[BLOB]], metadata !DIExpression()), !dbg [[DBG34]]
+; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28]], metadata !DIExpression(DW_OP_LLVM_fragment, 80, 7920), metadata [[META36:![0-9]+]], metadata ptr undef, metadata !DIExpression()), !dbg [[DBG34]]
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[BLOB]], i64 10, !dbg [[DBG34]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 2 dereferenceable(980) [[ADD_PTR]], i8 3, i64 980, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID36:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28]], metadata !DIExpression(DW_OP_LLVM_fragment, 80, 7840), metadata [[DIASSIGNID36]], metadata ptr [[ADD_PTR]], metadata !DIExpression()), !dbg [[DBG34]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 2 dereferenceable(980) [[ADD_PTR]], i8 3, i64 980, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID37:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28]], metadata !DIExpression(DW_OP_LLVM_fragment, 80, 7840), metadata [[DIASSIGNID37]], metadata ptr [[ADD_PTR]], metadata !DIExpression()), !dbg [[DBG34]]
 ; CHECK-NEXT:    call void @_Z3escPc(ptr noundef nonnull [[BLOB]]), !dbg [[DBG34]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1000, ptr nonnull [[BLOB]]), !dbg [[DBG34]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG34]]
@@ -113,5 +116,6 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 ; CHECK: [[DIASSIGNID33]] = distinct !DIAssignID()
 ; CHECK: [[DBG34]] = !DILocation(line: 0, scope: [[DBG23]])
 ; CHECK: [[DIASSIGNID35]] = distinct !DIAssignID()
-; CHECK: [[DIASSIGNID36]] = distinct !DIAssignID()
+; CHECK: [[META36]] = distinct !DIAssignID()
+; CHECK: [[DIASSIGNID37]] = distinct !DIAssignID()
 ;.

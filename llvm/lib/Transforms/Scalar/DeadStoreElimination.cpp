@@ -48,6 +48,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -554,6 +555,80 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   }
 }
 
+static bool tryToSplitMiddle(Instruction *DeadI,
+                             OverlapIntervalsTy &IntervalMap,
+                             int64_t &DeadStart, uint64_t &DeadSize,
+                             const TargetTransformInfo &TTI) {
+  if (IntervalMap.empty() || !isShortenableAtTheEnd(DeadI))
+    return false;
+
+  OverlapIntervalsTy::iterator OII = IntervalMap.begin();
+  int64_t KillingStart = OII->second;
+  uint64_t KillingSize = OII->first - KillingStart;
+
+  assert(OII->first - KillingStart >= 0 && "Size expected to be positive");
+
+  uint64_t Threshold = TTI.getMaxMemIntrinsicInlineSizeThreshold();
+
+  // __Front__                 ___Rear___
+  // | ------------- Dead ------------- |
+  //         | --- Killing --- |
+
+  if (KillingStart < DeadStart ||
+      uint64_t(KillingStart + KillingSize) > uint64_t(DeadStart + DeadSize))
+    return false;
+
+  auto *DeadIntrinsic = cast<AnyMemIntrinsic>(DeadI);
+  Align PrefAlign = DeadIntrinsic->getDestAlign().valueOrOne();
+
+  // Assume Front is already correctly aligned.
+  uint64_t FrontSize = KillingStart - DeadStart;
+
+  int64_t RearStart =
+      alignDown(uint64_t(KillingStart + KillingSize), PrefAlign.value());
+  uint64_t RearSize = (DeadStart + DeadSize) - RearStart;
+
+  // If Front and Rear are both bigger than the threshold they won't be inlined
+  // so this seems like a bad idea. If Dead is smaller than the threshold it
+  // will be inlined so this isn't a good idea.
+  if ((FrontSize > Threshold && RearSize > Threshold) || DeadSize < Threshold)
+    return false;
+
+  Value *DeadWriteLength = DeadIntrinsic->getLength();
+  Value *DeadDest = DeadIntrinsic->getRawDest();
+
+  LLVM_DEBUG(dbgs() << "DSE: Split and shortened partially dead store: ["
+                    << DeadStart << ", " << DeadSize + DeadStart
+                    << "]\nInto: Front: [" << DeadStart << ", "
+                    << DeadStart + FrontSize << "], Rear: [" << RearStart
+                    << ", " << RearStart + RearSize << "]\n"
+                    << "Killer: [" << KillingStart << ", "
+                    << KillingSize + KillingStart << "]\n");
+
+  // Dead is now Front.
+  DeadIntrinsic->setLength(
+      ConstantInt::get(DeadWriteLength->getType(), FrontSize));
+  DeadIntrinsic->addDereferenceableParamAttr(0, FrontSize);
+
+  Value *Indices[1] = {ConstantInt::get(DeadWriteLength->getType(), RearStart)};
+  Instruction *RearDestGEP = GetElementPtrInst::CreateInBounds(
+      Type::getInt8Ty(DeadIntrinsic->getContext()), DeadDest, Indices, "",
+      DeadI);
+  auto *Rear = cast<AnyMemIntrinsic>(DeadIntrinsic->clone());
+  Rear->setDest(RearDestGEP);
+  Rear->setLength(ConstantInt::get(DeadWriteLength->getType(), RearSize));
+  Rear->insertAfter(RearDestGEP);
+  Rear->setDestAlignment(PrefAlign);
+  Rear->addDereferenceableParamAttr(0, RearSize);
+
+  shortenAssignment(DeadI, DeadDest, DeadStart * 8, DeadSize * 8, FrontSize * 8,
+                    true);
+
+  IntervalMap.erase(OII);
+  DeadSize = FrontSize;
+  return true;
+}
+
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                          uint64_t &DeadSize, int64_t KillingStart,
                          uint64_t KillingSize, bool IsOverwriteEnd) {
@@ -821,6 +896,7 @@ struct DSEState {
   const TargetLibraryInfo &TLI;
   const DataLayout &DL;
   const LoopInfo &LI;
+  const TargetTransformInfo &TTI;
 
   // Whether the function contains any irreducible control flow, useful for
   // being accurately able to detect loops.
@@ -860,9 +936,10 @@ struct DSEState {
 
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
-           const LoopInfo &LI)
+           const LoopInfo &LI, const TargetTransformInfo &TTI)
       : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
-        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI) {
+        PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI),
+        TTI(TTI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
@@ -1978,7 +2055,7 @@ struct DSEState {
     return false;
   }
 
-  bool removePartiallyOverlappedStores(InstOverlapIntervalsTy &IOL) {
+  bool removePartiallyOverlappedIntrinsicStores(InstOverlapIntervalsTy &IOL) {
     bool Changed = false;
     for (auto OI : IOL) {
       Instruction *DeadI = OI.first;
@@ -1994,6 +2071,9 @@ struct DSEState {
       if (IntervalMap.empty())
         continue;
       Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize);
+      if (IntervalMap.empty())
+        continue;
+      Changed |= tryToSplitMiddle(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
     }
     return Changed;
   }
@@ -2059,10 +2139,11 @@ struct DSEState {
 static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
-                                const LoopInfo &LI) {
+                                const LoopInfo &LI,
+                                const TargetTransformInfo &TTI) {
   bool MadeChange = false;
 
-  DSEState State(F, AA, MSSA, DT, PDT, TLI, LI);
+  DSEState State(F, AA, MSSA, DT, PDT, TLI, LI, TTI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {
     MemoryDef *KillingDef = State.MemDefs[I];
@@ -2226,7 +2307,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   if (EnablePartialOverwriteTracking)
     for (auto &KV : State.IOLs)
-      MadeChange |= State.removePartiallyOverlappedStores(KV.second);
+      MadeChange |= State.removePartiallyOverlappedIntrinsicStores(KV.second);
 
   MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
@@ -2244,8 +2325,9 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, LI);
+  bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, LI, TTI);
 
 #ifdef LLVM_ENABLE_STATS
   if (AreStatisticsEnabled())

@@ -6,7 +6,9 @@ define dso_local void @overwrite_middle(ptr nocapture noundef writeonly %X) loca
 ; CHECK-LABEL: define dso_local void @overwrite_middle(
 ; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(1000) [[X]], i8 5, i64 1000, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 976
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) [[TMP0]], i8 5, i64 24, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(10) [[X]], i8 5, i64 10, i1 false)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 10
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(980) [[ARRAYIDX]], i8 3, i64 980, i1 false)
 ; CHECK-NEXT:    ret void
@@ -22,7 +24,9 @@ define dso_local void @overwrite_middle2(ptr nocapture noundef writeonly %X) loc
 ; CHECK-LABEL: define dso_local void @overwrite_middle2(
 ; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(1000) [[X]], i8 5, i64 1000, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 990
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(10) [[TMP0]], i8 5, i64 10, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(10) [[X]], i8 5, i64 10, i1 false)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 10
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(980) [[ARRAYIDX]], i8 3, i64 980, i1 false)
 ; CHECK-NEXT:    ret void
