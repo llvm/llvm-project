@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
@@ -189,16 +188,17 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
 /// * Inside the peeled loop: min(step, ub - iv) == step
 /// * Inside the partial iteration: min(step, ub - iv) == ub - iv
 ///
-/// Returns `success` if the given operation was replaced by a new operation;
+/// Returns the new Affine op if the operation was replaced by a new operation;
 /// `failure` otherwise.
 ///
 /// Note: `ub` is the previous upper bound of the loop (before peeling).
 /// `insideLoop` must be true for min/max ops inside the loop and false for
 /// affine.min ops inside the partial iteration. For an explanation of the other
 /// parameters, see comment of `canonicalizeMinMaxOpInLoop`.
-LogicalResult scf::rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
-                                         Value iv, Value ub, Value step,
-                                         bool insideLoop) {
+FailureOr<AffineApplyOp> scf::rewritePeeledMinMaxOp(RewriterBase &rewriter,
+                                                    Operation *op, Value iv,
+                                                    Value ub, Value step,
+                                                    bool insideLoop) {
   FlatAffineValueConstraints constraints;
   constraints.appendDimVar({iv});
   constraints.appendSymbolVar({ub, step});

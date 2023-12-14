@@ -220,27 +220,16 @@ static LogicalResult continuousPeelForLoop(RewriterBase &b, ForOp forOp,
     // they are then replaced by the current step size.
     // TODO: Alternative method - update affine map to reflect the loop step
     // Example: min(ub - iv, 8) -> min(ub - iv, 4)
-    currentLoop.walk([&](affine::AffineMinOp affineOp) {
-      b.setInsertionPoint(affineOp);
-      auto clonedOp = cast<affine::AffineMinOp>(b.clone(*affineOp));
-      LogicalResult result = scf::rewritePeeledMinMaxOp(
-          b, clonedOp, currentLoop.getInductionVar(), initialUb, initialStep,
-          /*insideLoop=*/true);
-      if (result.succeeded())
-        b.replaceOp(affineOp, currentLoop.getStep());
-      else
-        b.eraseOp(clonedOp); // to avoid infinite walk
-    });
-    currentLoop.walk([&](affine::AffineMaxOp affineOp) {
-      b.setInsertionPoint(affineOp);
-      auto clonedOp = cast<affine::AffineMaxOp>(b.clone(*affineOp));
-      LogicalResult result = scf::rewritePeeledMinMaxOp(
-          b, clonedOp, currentLoop.getInductionVar(), initialUb, initialStep,
-          /*insideLoop=*/true);
-      if (result.succeeded())
-        b.replaceOp(affineOp, currentLoop.getStep());
-      else
-        b.eraseOp(clonedOp); // to avoid infinite walk
+    currentLoop.walk([&](Operation *affineOp) {
+      if (isa<AffineMinOp, AffineMaxOp>(affineOp)) {
+        FailureOr<AffineApplyOp> result = scf::rewritePeeledMinMaxOp(
+            b, affineOp, currentLoop.getInductionVar(), initialUb, initialStep,
+            /*insideLoop=*/true);
+        // correct the step of the newly created affine op
+        if (!failed(result))
+          b.replaceOp(result.value(), currentLoop.getStep());
+      }
+      return WalkResult::advance();
     });
 
     // Prepare for the next iteration

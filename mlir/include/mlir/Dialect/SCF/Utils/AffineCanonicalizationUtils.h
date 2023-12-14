@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_SCF_UTILS_AFFINECANONICALIZATIONUTILS_H_
 #define MLIR_DIALECT_SCF_UTILS_AFFINECANONICALIZATIONUTILS_H_
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -75,9 +76,9 @@ LogicalResult canonicalizeMinMaxOpInLoop(RewriterBase &rewriter, Operation *op,
 /// ```
 /// min/max operations inside the partial iteration are rewritten in a similar
 /// way.
-LogicalResult rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
-                                    Value iv, Value ub, Value step,
-                                    bool insideLoop);
+FailureOr<mlir::affine::AffineApplyOp>
+rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op, Value iv, Value ub,
+                      Value step, bool insideLoop);
 
 } // namespace scf
 } // namespace mlir
