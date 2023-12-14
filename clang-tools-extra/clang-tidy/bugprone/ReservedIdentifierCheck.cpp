@@ -81,7 +81,7 @@ static bool hasReservedDoubleUnderscore(StringRef Name,
                                         const LangOptions &LangOpts) {
   if (LangOpts.CPlusPlus)
     return Name.contains("__");
-  return Name.startswith("__");
+  return Name.starts_with("__");
 }
 
 static std::optional<std::string>
