@@ -2192,8 +2192,9 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
 
   // Treat lshr with non-negative operand as ashr.
   if (match(V, m_LShr(m_Value(A), m_Value(B))) &&
-      isKnownNonNegative(A, SQ.getWithInstruction(cast<Instruction>(V)),
-                         Depth)) {
+      isKnownNonNegative(
+          A, SQ.getWithInstruction(cast<Instruction>(V)).getWithDeterministic(),
+          Depth)) {
     if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
                                          DoesConsume, Depth))
       return Builder ? Builder->CreateAShr(AV, B) : NonNull;

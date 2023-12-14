@@ -811,8 +811,11 @@ bool isAssumeLikeIntrinsic(const Instruction *I);
 /// Return true if it is valid to use the assumptions provided by an
 /// assume intrinsic, I, at the point in the control-flow identified by the
 /// context instruction, CxtI.
+/// If \p Deterministic is true, the result is guaranteed to be deterministic
+/// regardless of the size of a basic block.
 bool isValidAssumeForContext(const Instruction *I, const Instruction *CxtI,
-                             const DominatorTree *DT = nullptr);
+                             const DominatorTree *DT = nullptr,
+                             bool Deterministic = false);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.

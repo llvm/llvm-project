@@ -75,6 +75,10 @@ struct SimplifyQuery {
   /// allowed to assume a particular value for a use of undef for example.
   bool CanUseUndef = true;
 
+  /// Controls whether the result of query is guaranteed to be deterministic.
+  /// If it is false, the result may change during instruction construction.
+  bool Deterministic = false;
+
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
       : DL(DL), CxtI(CXTI) {}
 
@@ -82,20 +86,26 @@ struct SimplifyQuery {
                 const DominatorTree *DT = nullptr,
                 AssumptionCache *AC = nullptr,
                 const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
-                bool CanUseUndef = true, const DomConditionCache *DC = nullptr)
+                bool CanUseUndef = true, const DomConditionCache *DC = nullptr,
+                bool Deterministic = false)
       : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), DC(DC), IIQ(UseInstrInfo),
-        CanUseUndef(CanUseUndef) {}
+        CanUseUndef(CanUseUndef), Deterministic(Deterministic) {}
 
   SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
                 AssumptionCache *AC = nullptr,
                 const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
-                bool CanUseUndef = true)
+                bool CanUseUndef = true, bool Deterministic = false)
       : DL(DL), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
-        CanUseUndef(CanUseUndef) {}
+        CanUseUndef(CanUseUndef), Deterministic(Deterministic) {}
 
   SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
+    return Copy;
+  }
+  SimplifyQuery getWithDeterministic() const {
+    SimplifyQuery Copy(*this);
+    Copy.Deterministic = true;
     return Copy;
   }
   SimplifyQuery getWithoutUndef() const {

@@ -485,7 +485,8 @@ bool llvm::isAssumeLikeIntrinsic(const Instruction *I) {
 
 bool llvm::isValidAssumeForContext(const Instruction *Inv,
                                    const Instruction *CxtI,
-                                   const DominatorTree *DT) {
+                                   const DominatorTree *DT,
+                                   bool Deterministic) {
   // There are two restrictions on the use of an assume:
   //  1. The assume must dominate the context (or the control flow must
   //     reach the assume whenever it reaches the context).
@@ -513,7 +514,7 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
     // to avoid a compile-time explosion. This limit is chosen arbitrarily, so
     // it can be adjusted if needed (could be turned into a cl::opt).
     auto Range = make_range(CxtI->getIterator(), Inv->getIterator());
-    if (!isGuaranteedToTransferExecutionToSuccessor(Range, 15))
+    if (Deterministic || !isGuaranteedToTransferExecutionToSuccessor(Range, 15))
       return false;
 
     return !isEphemeralValueOf(Inv, CxtI);
@@ -591,7 +592,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
              (RK.AttrKind == Attribute::Dereferenceable &&
               !NullPointerIsDefined(Q.CxtI->getFunction(),
                                     V->getType()->getPointerAddressSpace()))) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+            isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic))
           return true;
       }
       continue;
@@ -607,7 +608,8 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
       return false;
 
-    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (cmpExcludesZero(Pred, RHS) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic))
       return true;
   }
 
@@ -756,7 +758,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
               *I, I->bundle_op_info_begin()[Elem.Index])) {
         if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
             isPowerOf2_64(RK.ArgValue) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+            isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic))
           Known.Zero.setLowBits(Log2_64(RK.ArgValue));
       }
       continue;
@@ -768,14 +770,14 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
     Value *Arg = I->getArgOperand(0);
 
-    if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+    if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllOnes();
       return;
     }
     if (match(Arg, m_Not(m_Specific(V))) &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllZero();
@@ -790,7 +792,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (!Cmp)
       continue;
 
-    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic))
       continue;
 
     computeKnownBitsFromCmp(V, Cmp->getPredicate(), Cmp->getOperand(0),
@@ -4213,7 +4215,7 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
     assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
-    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.Deterministic))
       continue;
 
     CmpInst::Predicate Pred;
