@@ -1480,7 +1480,7 @@ void Writer::sortECChunks() {
       llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
         std::optional<chpe_range_type> aType = a->getArm64ECRangeType(),
                                        bType = b->getArm64ECRangeType();
-        return !aType || (bType && *aType < *bType);
+        return bType && (!aType || *aType < *bType);
       });
   }
 }
