@@ -3179,9 +3179,6 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     ArmStreamingType BuiltinType;
 
     switch (BuiltinID) {
-    default:
-      BuiltinType = ArmNonStreaming;
-      break;
 #define GET_SME_STREAMING_ATTRS
 #include "clang/Basic/arm_sme_streaming_attrs.inc"
 #undef GET_SME_STREAMING_ATTRS
@@ -3210,8 +3207,6 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
-    default:
-      break;
 #define GET_SVE_STREAMING_ATTRS
 #include "clang/Basic/arm_sve_streaming_attrs.inc"
 #undef GET_SVE_STREAMING_ATTRS

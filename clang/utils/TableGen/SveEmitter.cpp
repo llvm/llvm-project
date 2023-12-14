@@ -1731,6 +1731,7 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 
   // Ensure these are only emitted once.
   std::set<std::string> Emitted;
+  llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
   uint64_t IsStreamingCompatibleFlag =
@@ -1738,20 +1739,38 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   for (auto &Def : Defs) {
     if (Emitted.find(Def->getMangledName()) != Emitted.end())
       continue;
-
-    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower()
-       << "_";
-    OS << Def->getMangledName() << ":\n";
-
     if (Def->isFlagSet(IsStreamingFlag))
-      OS << "  BuiltinType = ArmStreaming;\n";
+      StreamingMap["ArmStreaming"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
-      OS << "  BuiltinType = ArmStreamingCompatible;\n";
+      StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else
-      OS << "  BuiltinType = ArmNonStreaming;\n";
-    OS << "  break;\n";
-
+      StreamingMap["ArmNonStreaming"].insert(Def->getMangledName());
     Emitted.insert(Def->getMangledName());
+  }
+
+  for (auto BuiltinType : StreamingMap.keys()) {
+    // We can ignore ArmStreamingCompatible for SVE and ArmNonStreaming for SME
+    // as those are the defaults.
+    if (BuiltinType == "ArmNonStreaming" && ExtensionKind == "SME")
+      continue;
+    if (BuiltinType == "ArmStreamingCompatible" && ExtensionKind == "SVE")
+      continue;
+    for (auto Name : StreamingMap[BuiltinType]) {
+      OS << "case " << ExtensionKind << "::BI__builtin_"
+         << ExtensionKind.lower() << "_";
+      OS << Name << ":\n";
+    }
+    OS << "  BuiltinType = " << BuiltinType << ";\n";
+    OS << "  break;\n";
+  }
+  if (ExtensionKind == "SME") {
+    OS << "default:\n";
+    OS << "  BuiltinType = ArmNonStreaming;\n";
+    OS << "  break;\n";
+  } else if (ExtensionKind == "SVE") {
+    OS << "default:\n";
+    OS << "  BuiltinType = ArmStreamingCompatible;\n";
+    OS << "  break;\n";
   }
 
   OS << "#endif\n\n";
