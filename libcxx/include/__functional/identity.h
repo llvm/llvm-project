@@ -36,9 +36,9 @@ struct __identity {
 template <>
 struct __is_identity<__identity> : true_type {};
 template <>
-struct __is_identity<reference_wrapper<__identity>> : true_type {};
+struct __is_identity<reference_wrapper<__identity> > : true_type {};
 template <>
-struct __is_identity<reference_wrapper<const __identity>> : true_type {};
+struct __is_identity<reference_wrapper<const __identity> > : true_type {};
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -55,9 +55,9 @@ struct identity {
 template <>
 struct __is_identity<identity> : true_type {};
 template <>
-struct __is_identity<reference_wrapper<identity>> : true_type {};
+struct __is_identity<reference_wrapper<identity> > : true_type {};
 template <>
-struct __is_identity<reference_wrapper<const identity>> : true_type {};
+struct __is_identity<reference_wrapper<const identity> > : true_type {};
 
 #endif // _LIBCPP_STD_VER >= 20
 
