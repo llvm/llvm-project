@@ -60,12 +60,13 @@ class LDSDIR_getIns<bit direct> {
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
     (ins wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc)
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst,
+         wait_va_vsrc:$waitvsrc)
   );
 }
 
-class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> : InstSI<
-    (outs VGPR_32:$vdst), ins, asm> {
+class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> :
+  InstSI<(outs VGPR_32:$vdst), ins, asm> {
   let LDSDIR = 1;
   let EXP_CNT = 1;
 
@@ -157,9 +158,11 @@ def : GCNPat <
 // GFX11
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx11<bits<2> op, DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx11<bits<2> op,
+                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
   def _gfx11 : DSDIR_Real<lds, lds.InOperandList,
-                           LDSDIR_getAsm<lds.is_direct>.ret, SIEncodingFamily.GFX11>,
+                          LDSDIR_getAsm<lds.is_direct>.ret,
+                          SIEncodingFamily.GFX11>,
                LDSDIRe<op, lds.is_direct> {
     let AssemblerPredicate = isGFX11Only;
     let DecoderNamespace = "GFX11";
@@ -173,9 +176,11 @@ defm LDS_DIRECT_LOAD : DSDIR_Real_gfx11<0x1>;
 // GFX12+
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx12<bits<2> op, DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx12<bits<2> op,
+                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
   def _gfx12 : DSDIR_Real<lds, lds.InOperandList,
-                           VDSDIR_getAsm<lds.is_direct>.ret, SIEncodingFamily.GFX12>,
+                          VDSDIR_getAsm<lds.is_direct>.ret,
+                          SIEncodingFamily.GFX12>,
                VDSDIRe<op, lds.is_direct> {
     let AssemblerPredicate = isGFX12Plus;
     let DecoderNamespace = "GFX12";
