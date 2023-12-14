@@ -154,10 +154,12 @@ static scf::IfOp convertSingleIterFor(RewriterBase &b, scf::ForOp &forOp) {
                               forOp.getLowerBound(), forOp.getUpperBound());
   auto ifOp = b.create<scf::IfOp>(loc, forOp->getResultTypes(), cond, true);
   // then branch
-  b.setInsertionPointToStart(ifOp.thenBlock());
-  for (Operation &op : forOp.getBody()->getOperations()) {
-    b.clone(op, mapping);
-  }
+  SmallVector<Value> bbArgReplacements;
+  bbArgReplacements.push_back(forOp.getLowerBound());
+  llvm::append_range(bbArgReplacements, forOp.getInitArgs());
+
+  b.inlineBlockBefore(forOp.getBody(), ifOp.thenBlock(),
+                      ifOp.thenBlock()->begin(), bbArgReplacements);
   // else branch
   b.setInsertionPointToStart(ifOp.elseBlock());
   if (!forOp->getResultTypes().empty()) {
