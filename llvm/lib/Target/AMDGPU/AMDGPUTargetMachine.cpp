@@ -352,7 +352,7 @@ static cl::opt<bool> EnableMaxIlpSchedStrategy(
 
 static cl::opt<bool> EnableRewritePartialRegUses(
     "amdgpu-enable-rewrite-partial-reg-uses",
-    cl::desc("Enable rewrite partial reg uses pass"), cl::init(false),
+    cl::desc("Enable rewrite partial reg uses pass"), cl::init(true),
     cl::Hidden);
 
 static cl::opt<bool> EnableHipStdPar(

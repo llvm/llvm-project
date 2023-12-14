@@ -32,11 +32,11 @@ private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using UIntType = typename FPBits::UIntType;
 
-  const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
-  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
-  const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf());
-  const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_inf());
-  const F nan = F(LIBC_NAMESPACE::fputil::FPBits<F>::build_quiet_nan(1));
+  const F zero = F(FPBits::zero());
+  const F neg_zero = F(FPBits::neg_zero());
+  const F inf = F(FPBits::inf());
+  const F neg_inf = F(FPBits::neg_inf());
+  const F nan = F(FPBits::build_quiet_nan(1));
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
 
@@ -192,8 +192,7 @@ public:
     FPBits bits(F(1.0));
     bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
     bits.set_sign(1);
-    bits.set_mantissa(UIntType(0x1)
-                      << (LIBC_NAMESPACE::fputil::MantissaWidth<F>::VALUE - 1));
+    bits.set_mantissa(UIntType(0x1) << (FPBits::MANTISSA_WIDTH - 1));
 
     F x = F(bits);
     if (TestModes) {
