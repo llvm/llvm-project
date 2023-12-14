@@ -6140,9 +6140,9 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
 namespace {
 /// A 'teams loop' with a nested 'loop bind(parallel)' or generic function
 /// call in the associated loop-nest cannot be a 'parallel for'.
-class TeamsLoopChecker final
-    : public ConstStmtVisitor<TeamsLoopChecker> {
+class TeamsLoopChecker final : public ConstStmtVisitor<TeamsLoopChecker> {
   Sema &SemaRef;
+
 public:
   bool teamsLoopCanBeParallelFor() const { return TeamsLoopCanBeParallelFor; }
 
@@ -6198,15 +6198,16 @@ public:
   }
   explicit TeamsLoopChecker(Sema &SemaRef)
       : SemaRef(SemaRef), TeamsLoopCanBeParallelFor(true) {}
+
 private:
   bool TeamsLoopCanBeParallelFor;
 };
 } // namespace
 
 bool Sema::teamsLoopCanBeParallelFor(Stmt *AStmt) {
-    TeamsLoopChecker Checker(*this);
-    Checker.Visit(AStmt);
-    return Checker.teamsLoopCanBeParallelFor();
+  TeamsLoopChecker Checker(*this);
+  Checker.Visit(AStmt);
+  return Checker.teamsLoopCanBeParallelFor();
 }
 
 bool Sema::mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
