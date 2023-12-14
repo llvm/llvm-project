@@ -52,3 +52,46 @@ define i32 @cse_gep(ptr %ptr, i32 %idx) {
   %res = add i32 %v1, %v2
   ret i32 %res
 }
+
+; OSS Fuzz https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=65052
+define void @ossfuzz65052() {
+  ; O0-LABEL: name: ossfuzz65052
+  ; O0: bb.1 (%ir-block.0):
+  ; O0-NEXT:   successors: %bb.2(0x80000000)
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; O0-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -170141183460469231731687303715884105728
+  ; O0-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[C]](s128)
+  ; O0-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; O0-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[TRUNC]], [[C1]]
+  ; O0-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[MUL]](s64)
+  ; O0-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; O0-NEXT:   G_BR %bb.2
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT: bb.2.BB:
+  ; O0-NEXT:   successors: %bb.2(0x80000000)
+  ; O0-NEXT: {{  $}}
+  ; O0-NEXT:   G_BR %bb.2
+  ;
+  ; O3-LABEL: name: ossfuzz65052
+  ; O3: bb.1 (%ir-block.0):
+  ; O3-NEXT:   successors: %bb.2(0x80000000)
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; O3-NEXT:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 -170141183460469231731687303715884105728
+  ; O3-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[C]](s128)
+  ; O3-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; O3-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[TRUNC]], [[C1]]
+  ; O3-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[DEF]], [[MUL]](s64)
+  ; O3-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT: bb.2.BB:
+  ; O3-NEXT:   successors: %bb.2(0x80000000)
+  ; O3-NEXT: {{  $}}
+  ; O3-NEXT:   G_BR %bb.2
+  %G15 = getelementptr i128, ptr poison, i128 -170141183460469231731687303715884105728
+  br label %BB
+
+BB:                                               ; preds = %BB, %0
+  br label %BB
+}
