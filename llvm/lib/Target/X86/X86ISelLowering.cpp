@@ -49963,33 +49963,15 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           }
           return true;
         };
-        if (User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
-            getTargetConstantFromBasePtr(Ptr)) {
-          // See if we are loading a constant that has also been broadcast.
-          APInt Undefs, UserUndefs;
-          SmallVector<APInt> Bits, UserBits;
-          if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-              getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                            UserBits)) {
-            UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-            UserBits.truncate(Bits.size());
-            if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
-              SDValue Extract = extractSubVector(
-                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
-              Extract = DAG.getBitcast(RegVT, Extract);
-              return DCI.CombineTo(N, Extract, SDValue(User, 1));
-            }
-          }
-        }
-        if (ISD::isNormalLoad(User)) {
-          // See if we are loading a constant that matches in the lower
-          // bits of a longer constant (but from a different constant pool ptr).
-          SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
-          const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
-          const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
-          if (LdC && UserC && UserPtr != Ptr &&
-              LdC->getType()->getPrimitiveSizeInBits() <
-                  UserC->getType()->getPrimitiveSizeInBits()) {
+        // See if we are loading a constant that matches in the lower
+        // bits of a longer constant (but from a different constant pool ptr).
+        SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
+        const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+        const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
+        if (LdC && UserC && UserPtr != Ptr) {
+          unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
+          unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
+          if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
             APInt Undefs, UserUndefs;
             SmallVector<APInt> Bits, UserBits;
             if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
