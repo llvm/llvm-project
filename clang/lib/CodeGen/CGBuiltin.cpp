@@ -3414,8 +3414,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Linux PPC will not be adding additional PPCDoubleDouble support.
     // WIP to switch default to IEEE long double. Will emit libcall for
     // frexpl instead of legalizing this type in the BE.
-    if (getTarget().getTriple().isPPC() &&
-        &getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
+    if (&getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
       break;
     LLVM_FALLTHROUGH;
   }
