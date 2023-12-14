@@ -736,7 +736,8 @@ llvm::hash_code OperationEquivalence::computeHash(
     auto opsEquivalent = [&](Operation &lOp, Operation &rOp) {
       // Check for op equality (recursively).
       if (!OperationEquivalence::isEquivalentTo(&lOp, &rOp, checkEquivalent,
-                                                markEquivalent, flags))
+                                                markEquivalent, flags,
+                                                checkCommutativeEquivalent))
         return false;
       // Check successor mapping.
       for (auto successorsPair :
