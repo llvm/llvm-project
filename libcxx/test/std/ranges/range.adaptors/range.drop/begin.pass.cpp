@@ -84,7 +84,7 @@ constexpr bool test() {
   {
     // non-common non-simple view,
     // The wording of the standard is:
-    // Returns: ranges​::​next(ranges​::​begin(base_), count_, ranges​::​end(base_))
+    // Returns: ranges::next(ranges::begin(base_), count_, ranges::end(base_))
     // Note that "Returns" is used here, meaning that we don't have to do it this way.
     // In fact, this will use ranges::advance that has O(n) on non-common range.
     // but [range.range] requires "amortized constant time" for ranges::begin and ranges::end
