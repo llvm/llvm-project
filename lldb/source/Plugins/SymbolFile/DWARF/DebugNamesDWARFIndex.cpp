@@ -37,19 +37,29 @@ llvm::DenseSet<dw_offset_t>
 DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   llvm::DenseSet<dw_offset_t> result;
   for (const DebugNames::NameIndex &ni : debug_names) {
-    for (uint32_t cu = 0; cu < ni.getCUCount(); ++cu)
+    const uint32_t num_cus = ni.getCUCount();
+    for (uint32_t cu = 0; cu < num_cus; ++cu)
       result.insert(ni.getCUOffset(cu));
+    const uint32_t num_tus = ni.getLocalTUCount();
+    for (uint32_t tu = 0; tu < num_tus; ++tu)
+      result.insert(ni.getLocalTUOffset(tu));
   }
   return result;
 }
 
 std::optional<DIERef>
 DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
-  std::optional<uint64_t> cu_offset = entry.getCUOffset();
-  if (!cu_offset)
-    return std::nullopt;
+  // Look for a DWARF unit offset (CU offset or local TU offset) as they are
+  // both offsets into the .debug_info section.
+  std::optional<uint64_t> unit_offset = entry.getCUOffset();
+  if (!unit_offset) {
+    unit_offset = entry.getLocalTUOffset();
+    if (!unit_offset)
+      return std::nullopt;
+  }
 
-  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
+  DWARFUnit *cu =
+      m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
   if (!cu)
     return std::nullopt;
 

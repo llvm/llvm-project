@@ -554,14 +554,16 @@ void CGDebugInfo::CreateCompileUnit() {
     // If the main file name provided is identical to the input file name, and
     // if the input file is a preprocessed source, use the module name for
     // debug info. The module name comes from the name specified in the first
-    // linemarker if the input is a preprocessed source.
+    // linemarker if the input is a preprocessed source. In this case we don't
+    // know the content to compute a checksum.
     if (MainFile->getName() == MainFileName &&
         FrontendOptions::getInputKindForExtension(
             MainFile->getName().rsplit('.').second)
-            .isPreprocessed())
+            .isPreprocessed()) {
       MainFileName = CGM.getModule().getName().str();
-
-    CSKind = computeChecksum(SM.getMainFileID(), Checksum);
+    } else {
+      CSKind = computeChecksum(SM.getMainFileID(), Checksum);
+    }
   }
 
   llvm::dwarf::SourceLanguage LangTag;
@@ -1680,16 +1682,27 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   unsigned LineNumber = getLineNumber(Var->getLocation());
   StringRef VName = Var->getName();
 
+  // FIXME: to avoid complications with type merging we should
+  // emit the constant on the definition instead of the declaration.
+  llvm::Constant *C = nullptr;
+  if (Var->getInit()) {
+    const APValue *Value = Var->evaluateValue();
+    if (Value) {
+      if (Value->isInt())
+        C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
+      if (Value->isFloat())
+        C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+    }
+  }
+
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
                  ? llvm::dwarf::DW_TAG_variable
                  : llvm::dwarf::DW_TAG_member;
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
-  llvm::DIDerivedType *GV =
-      DBuilder.createStaticMemberType(RecordTy, VName, VUnit, LineNumber, VTy,
-                                      Flags, /* Val */ nullptr, Tag, Align);
+  llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Tag, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
-  StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
 }
 
@@ -5593,44 +5606,6 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       TemplateParameters, Align));
 }
 
-void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
-  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  if (VD->hasAttr<NoDebugAttr>())
-    return;
-
-  if (!VD->hasInit())
-    return;
-
-  const auto CacheIt = DeclCache.find(VD);
-  if (CacheIt != DeclCache.end())
-    return;
-
-  auto const *InitVal = VD->evaluateValue();
-  if (!InitVal)
-    return;
-
-  llvm::DIFile *Unit = nullptr;
-  llvm::DIScope *DContext = nullptr;
-  unsigned LineNo;
-  StringRef DeclName, LinkageName;
-  QualType T;
-  llvm::MDTuple *TemplateParameters = nullptr;
-  collectVarDeclProps(VD, Unit, LineNo, T, DeclName, LinkageName,
-                      TemplateParameters, DContext);
-
-  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(VD);
-  llvm::DIExpression *InitExpr = createConstantValueExpression(VD, *InitVal);
-
-  // Omit linkage name for variable definitions that represent constants.
-  // There hasn't been a need from consumers yet to have it attached.
-  DeclCache[VD].reset(DBuilder.createGlobalVariableExpression(
-      TheCU, DeclName, /* LinkageName */ {}, Unit, LineNo,
-      getOrCreateType(T, Unit), true, true, InitExpr,
-      getOrCreateStaticDataMemberDeclarationOrNull(VD), TemplateParameters,
-      Align, Annotations));
-}
-
 void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
                                        const VarDecl *D) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
@@ -5835,20 +5810,6 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
-  // We can't use a for-each here because `EmitGlobalVariable`
-  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
-  // which would invalidate any iterator.
-  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
-    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
-
-    assert(VD && VD->isStaticDataMember());
-
-    if (DeclCache.contains(VD))
-      continue;
-
-    EmitGlobalVariable(VD);
-  }
-
   // Creating types might create further types - invalidating the current
   // element and the size(), so don't cache/reference them.
   for (size_t i = 0; i != ObjCInterfaceCache.size(); ++i) {

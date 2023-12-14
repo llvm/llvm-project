@@ -144,4 +144,17 @@ program openacc_kernels_validity
   end do
   !$acc end kernels
 
+  do i = 1, 100
+    !$acc kernels
+    !ERROR: CYCLE to construct outside of KERNELS construct is not allowed
+    if (i == 10) cycle
+    !$acc end kernels
+  end do
+
+  !$acc kernels
+  do i = 1, 100
+    if (i == 10) cycle
+  end do
+  !$acc end kernels
+
 end program openacc_kernels_validity

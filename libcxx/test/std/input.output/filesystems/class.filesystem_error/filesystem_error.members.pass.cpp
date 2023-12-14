@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: availability-filesystem-missing
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -21,14 +21,14 @@
 // const path& path1() const noexcept;
 // const path& path2() const noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <string>
 #include <system_error>
 #include <type_traits>
 
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 
 void test_constructors() {
   using namespace fs;

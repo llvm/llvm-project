@@ -202,10 +202,10 @@ class LvlSpec final {
   /// The level-expression.
   LvlExpr expr;
   /// The level-type (== level-format + lvl-properties).
-  DimLevelType type;
+  LevelType type;
 
 public:
-  LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type);
+  LvlSpec(LvlVar var, LvlExpr expr, LevelType type);
 
   MLIRContext *getContext() const {
     MLIRContext *ctx = expr.tryGetContext();
@@ -217,7 +217,7 @@ public:
   constexpr bool canElideVar() const { return elideVar; }
   void setElideVar(bool b) { elideVar = b; }
   constexpr LvlExpr getExpr() const { return expr; }
-  constexpr DimLevelType getType() const { return type; }
+  constexpr LevelType getType() const { return type; }
 
   /// Checks whether the variables bound/used by this spec are valid
   /// with respect to the given ranks.
@@ -246,7 +246,7 @@ public:
 
   ArrayRef<LvlSpec> getLvls() const { return lvlSpecs; }
   const LvlSpec &getLvl(Level lvl) const { return lvlSpecs[lvl]; }
-  DimLevelType getLvlType(Level lvl) const { return getLvl(lvl).getType(); }
+  LevelType getLvlType(Level lvl) const { return getLvl(lvl).getType(); }
 
   AffineMap getDimToLvlMap(MLIRContext *context) const;
   AffineMap getLvlToDimMap(MLIRContext *context) const;

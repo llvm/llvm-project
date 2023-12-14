@@ -25,6 +25,7 @@ from tools import sparsifier
 
 # ===----------------------------------------------------------------------=== #
 
+
 class TypeConverter:
     """Converter between NumPy types and MLIR types."""
 
@@ -204,9 +205,7 @@ def main():
         # All combinations.
         levels = list(
             itertools.product(
-                *itertools.repeat(
-                    [st.DimLevelType.dense, st.DimLevelType.compressed], rank
-                )
+                *itertools.repeat([st.LevelType.dense, st.LevelType.compressed], rank)
             )
         )
         # All permutations.

@@ -15,7 +15,6 @@
 #include "Function.h"
 #include "PrimType.h"
 #include "Program.h"
-#include "State.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -75,7 +74,7 @@ private:
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
-  auto *SubExpr = CE->getSubExpr();
+  const Expr *SubExpr = CE->getSubExpr();
   switch (CE->getCastKind()) {
 
   case CK_LValueToRValue: {

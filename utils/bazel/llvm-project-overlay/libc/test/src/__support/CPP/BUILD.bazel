@@ -23,6 +23,15 @@ libc_test(
 )
 
 libc_test(
+    name = "bit_test",
+    srcs = ["bit_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_bit",
+        "//libc:__support_uint",
+    ],
+)
+
+libc_test(
     name = "cstddef_test",
     srcs = ["cstddef_test.cpp"],
     deps = ["//libc:__support_cpp_cstddef"],

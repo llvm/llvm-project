@@ -37,7 +37,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld r30, 272(r1)
 ; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xvf16ger2pp acc0, v28, v30
+; CHECK-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxvp vsp0, 64(r1)
 ; CHECK-NEXT:    stxvp vsp2, 32(r1)
@@ -88,7 +88,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    std r30, 240(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    ld r30, 368(r1)
 ; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xvf16ger2pp acc0, v28, v30
+; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxvp vsp0, 112(r1)
 ; CHECK-BE-NEXT:    stxvp vsp2, 144(r1)

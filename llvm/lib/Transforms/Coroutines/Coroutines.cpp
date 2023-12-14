@@ -42,11 +42,10 @@ coro::LowererBase::LowererBase(Module &M)
                                      /*isVarArg=*/false)),
       NullPtr(ConstantPointerNull::get(Int8Ptr)) {}
 
-// Creates a sequence of instructions to obtain a resume function address using
-// llvm.coro.subfn.addr. It generates the following sequence:
+// Creates a call to llvm.coro.subfn.addr to obtain a resume function address.
+// It generates the following:
 //
-//    call i8* @llvm.coro.subfn.addr(i8* %Arg, i8 %index)
-//    bitcast i8* %2 to void(i8*)*
+//    call ptr @llvm.coro.subfn.addr(ptr %Arg, i8 %index)
 
 Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
                                         Instruction *InsertPt) {
@@ -56,11 +55,7 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
          "makeSubFnCall: Index value out of range");
-  auto *Call = CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt);
-
-  auto *Bitcast =
-      new BitCastInst(Call, ResumeFnType->getPointerTo(), "", InsertPt);
-  return Bitcast;
+  return CallInst::Create(Fn, {Arg, IndexVal}, "", InsertPt);
 }
 
 // NOTE: Must be sorted!

@@ -57,9 +57,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   if (Triple.isArm64e())
     return "apple-a12";
 
-  // Make sure we pick the appropriate Apple CPU if -arch is used or when
-  // targetting a Darwin OS.
-  if (Args.getLastArg(options::OPT_arch) || Triple.isOSDarwin())
+  // Make sure we pick the appropriate Apple CPU when targetting a Darwin OS.
+  if (Triple.isOSDarwin())
     return Triple.getArch() == llvm::Triple::aarch64_32 ? "apple-s4"
                                                         : "apple-a7";
 
@@ -274,7 +273,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple))
+  else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
   else
@@ -287,8 +286,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (success &&
-           (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple)))
+  else if (success && isCPUDeterminedByTriple(Triple))
     success = getAArch64MicroArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 

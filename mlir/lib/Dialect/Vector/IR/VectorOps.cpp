@@ -3754,12 +3754,8 @@ void TransferReadOp::print(OpAsmPrinter &p) {
   p << " : " << getShapedType() << ", " << getVectorType();
 }
 
-/// Infers the mask type for a transfer op given its vector type and
-/// permutation map. The mask in a transfer op operation applies to the
-/// tensor/buffer part of it and its type should match the vector shape
-/// *before* any permutation or broadcasting.
-static VectorType inferTransferOpMaskType(VectorType vecType,
-                                          AffineMap permMap) {
+VectorType mlir::vector::inferTransferOpMaskType(VectorType vecType,
+                                                 AffineMap permMap) {
   auto i1Type = IntegerType::get(permMap.getContext(), 1);
   AffineMap invPermMap = inversePermutation(compressUnusedDims(permMap));
   assert(invPermMap && "Inversed permutation map couldn't be computed");
@@ -3819,6 +3815,11 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
     if (llvm::dyn_cast<VectorType>(shapedType.getElementType()))
       return parser.emitError(
           maskInfo.location, "does not support masks with vector element type");
+    if (vectorType.getRank() != permMap.getNumResults()) {
+      return parser.emitError(typesLoc,
+                              "expected the same rank for the vector and the "
+                              "results of the permutation map");
+    }
     // Instead of adding the mask type as an op type, compute it based on the
     // vector type and the permutation map (to keep the type signature small).
     auto maskType = inferTransferOpMaskType(vectorType, permMap);
@@ -4185,6 +4186,11 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     if (llvm::dyn_cast<VectorType>(shapedType.getElementType()))
       return parser.emitError(
           maskInfo.location, "does not support masks with vector element type");
+    if (vectorType.getRank() != permMap.getNumResults()) {
+      return parser.emitError(typesLoc,
+                              "expected the same rank for the vector and the "
+                              "results of the permutation map");
+    }
     auto maskType = inferTransferOpMaskType(vectorType, permMap);
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();

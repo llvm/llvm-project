@@ -2558,8 +2558,8 @@ void mlir::python::populateIRCore(py::module &m) {
           [](py::object & /*class*/) {
             auto *context = PyThreadContextEntry::getDefaultContext();
             if (!context)
-              throw py::value_error("No current Context");
-            return context;
+              return py::none().cast<py::object>();
+            return py::cast(context);
           },
           "Gets the Context bound to the current thread or raises ValueError")
       .def_property_readonly(

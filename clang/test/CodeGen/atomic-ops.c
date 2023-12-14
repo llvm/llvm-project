@@ -697,9 +697,9 @@ void test_underaligned(void) {
   __atomic_load(&aligned_a, &aligned_b, memory_order_seq_cst);
   // CHECK: store atomic i64 {{.*}}, align 16
   __atomic_store(&aligned_a, &aligned_b, memory_order_seq_cst);
-  // CHECK: atomicrmw xchg ptr {{.*}}, align 8
+  // CHECK: atomicrmw xchg ptr {{.*}}, align 16
   __atomic_exchange(&aligned_a, &aligned_b, &aligned_c, memory_order_seq_cst);
-  // CHECK: cmpxchg weak ptr {{.*}}, align 8
+  // CHECK: cmpxchg weak ptr {{.*}}, align 16
   __atomic_compare_exchange(&aligned_a, &aligned_b, &aligned_c, 1, memory_order_seq_cst, memory_order_seq_cst);
 }
 

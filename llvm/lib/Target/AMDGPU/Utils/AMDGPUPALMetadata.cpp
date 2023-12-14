@@ -83,7 +83,6 @@ bool AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
 
 // Set PAL metadata from msgpack blob.
 bool AMDGPUPALMetadata::setFromMsgPackBlob(StringRef Blob) {
-  msgpack::Reader Reader(Blob);
   return MsgPackDoc.readFromBlob(Blob, /*Multi=*/false);
 }
 

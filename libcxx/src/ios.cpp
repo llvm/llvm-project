@@ -152,7 +152,7 @@ static size_t __ios_new_cap(size_t __req_size, size_t __current_cap)
 { // Precondition: __req_size > __current_cap
     const size_t mx = std::numeric_limits<size_t>::max() / sizeof(_Tp);
     if (__req_size < mx/2)
-        return _VSTD::max(2 * __current_cap, __req_size);
+        return std::max(2 * __current_cap, __req_size);
     else
         return mx;
 }
@@ -394,24 +394,24 @@ ios_base::move(ios_base& rhs)
 void
 ios_base::swap(ios_base& rhs) noexcept
 {
-    _VSTD::swap(__fmtflags_, rhs.__fmtflags_);
-    _VSTD::swap(__precision_, rhs.__precision_);
-    _VSTD::swap(__width_, rhs.__width_);
-    _VSTD::swap(__rdstate_, rhs.__rdstate_);
-    _VSTD::swap(__exceptions_, rhs.__exceptions_);
+    std::swap(__fmtflags_, rhs.__fmtflags_);
+    std::swap(__precision_, rhs.__precision_);
+    std::swap(__width_, rhs.__width_);
+    std::swap(__rdstate_, rhs.__rdstate_);
+    std::swap(__exceptions_, rhs.__exceptions_);
     locale& lhs_loc = *reinterpret_cast<locale*>(&__loc_);
     locale& rhs_loc = *reinterpret_cast<locale*>(&rhs.__loc_);
-    _VSTD::swap(lhs_loc, rhs_loc);
-    _VSTD::swap(__fn_, rhs.__fn_);
-    _VSTD::swap(__index_, rhs.__index_);
-    _VSTD::swap(__event_size_, rhs.__event_size_);
-    _VSTD::swap(__event_cap_, rhs.__event_cap_);
-    _VSTD::swap(__iarray_, rhs.__iarray_);
-    _VSTD::swap(__iarray_size_, rhs.__iarray_size_);
-    _VSTD::swap(__iarray_cap_, rhs.__iarray_cap_);
-    _VSTD::swap(__parray_, rhs.__parray_);
-    _VSTD::swap(__parray_size_, rhs.__parray_size_);
-    _VSTD::swap(__parray_cap_, rhs.__parray_cap_);
+    std::swap(lhs_loc, rhs_loc);
+    std::swap(__fn_, rhs.__fn_);
+    std::swap(__index_, rhs.__index_);
+    std::swap(__event_size_, rhs.__event_size_);
+    std::swap(__event_cap_, rhs.__event_cap_);
+    std::swap(__iarray_, rhs.__iarray_);
+    std::swap(__iarray_size_, rhs.__iarray_size_);
+    std::swap(__iarray_cap_, rhs.__iarray_cap_);
+    std::swap(__parray_, rhs.__parray_);
+    std::swap(__parray_size_, rhs.__parray_size_);
+    std::swap(__parray_cap_, rhs.__parray_cap_);
 }
 
 void

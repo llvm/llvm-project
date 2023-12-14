@@ -17,7 +17,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -52,40 +52,40 @@ enum class perms : unsigned {
   unknown = 0xFFFF,
 };
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr perms operator&(perms __lhs, perms __rhs) {
   return static_cast<perms>(static_cast<unsigned>(__lhs) &
                             static_cast<unsigned>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr perms operator|(perms __lhs, perms __rhs) {
   return static_cast<perms>(static_cast<unsigned>(__lhs) |
                             static_cast<unsigned>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr perms operator^(perms __lhs, perms __rhs) {
   return static_cast<perms>(static_cast<unsigned>(__lhs) ^
                             static_cast<unsigned>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr perms operator~(perms __lhs) {
   return static_cast<perms>(~static_cast<unsigned>(__lhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline perms& operator&=(perms& __lhs, perms __rhs) { return __lhs = __lhs & __rhs; }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline perms& operator|=(perms& __lhs, perms __rhs) { return __lhs = __lhs | __rhs; }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline perms& operator^=(perms& __lhs, perms __rhs) { return __lhs = __lhs ^ __rhs; }
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_PERMS_H

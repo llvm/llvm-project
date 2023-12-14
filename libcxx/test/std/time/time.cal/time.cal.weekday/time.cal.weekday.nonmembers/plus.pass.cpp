@@ -30,40 +30,33 @@
 #include "test_macros.h"
 #include "../../euclidian.h"
 
-template <typename M, typename Ms>
-constexpr bool testConstexpr()
-{
-    M m{1};
-    Ms offset{4};
-    assert(m + offset == M{5});
-    assert(offset + m == M{5});
-    //  Check the example
-    assert(M{1} + Ms{6} == M{0});
-    return true;
+using weekday = std::chrono::weekday;
+using days    = std::chrono::days;
+
+constexpr bool test() {
+  for (unsigned i = 0; i <= 6; ++i)
+    for (unsigned j = 0; j <= 6; ++j) {
+      weekday wd1 = weekday{i} + days{j};
+      weekday wd2 = days{j} + weekday{i};
+      assert(wd1 == wd2);
+      assert((wd1.c_encoding() == euclidian_addition<unsigned, 0, 6>(i, j)));
+      assert((wd2.c_encoding() == euclidian_addition<unsigned, 0, 6>(i, j)));
+    }
+
+  //  Check the example
+  assert(weekday{1} + days{6} == weekday{0});
+  return true;
 }
 
-int main(int, char**)
-{
-    using weekday = std::chrono::weekday;
-    using days    = std::chrono::days;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<weekday>() + std::declval<days>());
+  ASSERT_SAME_TYPE(weekday, decltype(std::declval<weekday>() + std::declval<days>()));
 
-    ASSERT_NOEXCEPT(                   std::declval<weekday>() + std::declval<days>());
-    ASSERT_SAME_TYPE(weekday, decltype(std::declval<weekday>() + std::declval<days>()));
+  ASSERT_NOEXCEPT(std::declval<days>() + std::declval<weekday>());
+  ASSERT_SAME_TYPE(weekday, decltype(std::declval<days>() + std::declval<weekday>()));
 
-    ASSERT_NOEXCEPT(                   std::declval<days>() + std::declval<weekday>());
-    ASSERT_SAME_TYPE(weekday, decltype(std::declval<days>() + std::declval<weekday>()));
+  test();
+  static_assert(test());
 
-    static_assert(testConstexpr<weekday, days>(), "");
-
-    for (unsigned i = 0; i <= 6; ++i)
-        for (unsigned j = 0; j <= 6; ++j)
-        {
-            weekday wd1 = weekday{i} + days{j};
-            weekday wd2 = days{j} + weekday{i};
-            assert(wd1 == wd2);
-            assert((wd1.c_encoding() == euclidian_addition<unsigned, 0, 6>(i, j)));
-            assert((wd2.c_encoding() == euclidian_addition<unsigned, 0, 6>(i, j)));
-        }
-
-    return 0;
+  return 0;
 }

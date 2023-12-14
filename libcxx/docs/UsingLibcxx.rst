@@ -50,7 +50,6 @@ when ``-fexperimental-library`` is passed:
 * ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
 * ``std::jthread``
 * ``std::chrono::tzdb`` and related time zone functionality
-* ``std::ranges::join_view``
 
 .. warning::
   Experimental libraries are experimental.
@@ -335,6 +334,9 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
   This macro is used to re-enable all named declarations in ``<codecvt>``.
 
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**
+  This macro is used to re-enable the function
+  ``std::basic_string<...>::reserve()``.
 
 Libc++ Extensions
 =================

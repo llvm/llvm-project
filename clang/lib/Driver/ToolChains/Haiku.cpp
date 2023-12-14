@@ -118,7 +118,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
     }
 
     CmdArgs.push_back("-lgcc");

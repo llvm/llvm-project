@@ -1105,14 +1105,11 @@ Function *GCOVProfiler::insertCounterWriteout(
   StructType *EmitFunctionCallArgsTy = StructType::create(
       {Builder.getInt32Ty(), Builder.getInt32Ty(), Builder.getInt32Ty()},
       "emit_function_args_ty");
-  StructType *EmitArcsCallArgsTy = StructType::create(
-      {Builder.getInt32Ty(), Builder.getInt64Ty()->getPointerTo()},
-      "emit_arcs_args_ty");
-  StructType *FileInfoTy =
-      StructType::create({StartFileCallArgsTy, Builder.getInt32Ty(),
-                          EmitFunctionCallArgsTy->getPointerTo(),
-                          EmitArcsCallArgsTy->getPointerTo()},
-                         "file_info");
+  auto *PtrTy = Builder.getPtrTy();
+  StructType *EmitArcsCallArgsTy =
+      StructType::create({Builder.getInt32Ty(), PtrTy}, "emit_arcs_args_ty");
+  StructType *FileInfoTy = StructType::create(
+      {StartFileCallArgsTy, Builder.getInt32Ty(), PtrTy, PtrTy}, "file_info");
 
   Constant *Zero32 = Builder.getInt32(0);
   // Build an explicit array of two zeros for use in ConstantExpr GEP building.

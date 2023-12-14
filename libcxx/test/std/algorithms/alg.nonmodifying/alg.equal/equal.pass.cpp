@@ -18,7 +18,7 @@
 //   constexpr bool     // constexpr after c++17
 //   equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2);
 
-// We test the cartesian product, so we somethimes compare differently signed types
+// We test the cartesian product, so we sometimes compare differently signed types
 // ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
 
 #include <algorithm>

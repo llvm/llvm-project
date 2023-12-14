@@ -90,6 +90,14 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = LoongArch::FMOV_S;
   } else if (LoongArch::FPR64RegClass.contains(DstReg, SrcReg)) {
     Opc = LoongArch::FMOV_D;
+  } else if (LoongArch::GPRRegClass.contains(DstReg) &&
+             LoongArch::FPR32RegClass.contains(SrcReg)) {
+    // FPR32 -> GPR copies
+    Opc = LoongArch::MOVFR2GR_S;
+  } else if (LoongArch::GPRRegClass.contains(DstReg) &&
+             LoongArch::FPR64RegClass.contains(SrcReg)) {
+    // FPR64 -> GPR copies
+    Opc = LoongArch::MOVFR2GR_D;
   } else {
     // TODO: support other copies.
     llvm_unreachable("Impossible reg-to-reg copy");

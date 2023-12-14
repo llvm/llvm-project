@@ -1941,9 +1941,9 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Type *StackPtrTy = PointerType::getUnqual(M->getContext());
-  FunctionCallee Fn = M->getOrInsertFunction("__safestack_pointer_address",
-                                             StackPtrTy->getPointerTo(0));
+  auto *PtrTy = PointerType::getUnqual(M->getContext());
+  FunctionCallee Fn =
+      M->getOrInsertFunction("__safestack_pointer_address", PtrTy);
   return IRB.CreateCall(Fn);
 }
 

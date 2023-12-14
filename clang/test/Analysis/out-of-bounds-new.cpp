@@ -154,3 +154,29 @@ void test_dynamic_size2(unsigned m,unsigned n){
   unsigned *U = nullptr;
   U = new unsigned[m + n + 1];
 }
+
+//Test creating invalid references, which break the invariant that a reference
+//is always holding a value, and could lead to nasty runtime errors.
+//(This is not related to operator new, but placed in this file because the
+//other test files are not C++.)
+int array[10] = {0};
+
+void test_after_the_end_reference() {
+  int &ref = array[10]; // expected-warning{{Out of bound access to memory}}
+}
+
+void test_after_after_the_end_reference() {
+  int &ref = array[11]; // expected-warning{{Out of bound access to memory}}
+}
+
+int test_reference_that_might_be_after_the_end(int idx) {
+  // This TC produces no warning because separate analysis of (idx == 10) is
+  // only introduced _after_ the creation of the reference ref.
+  if (idx < 0 || idx > 10)
+    return -2;
+  int &ref = array[idx];
+  if (idx == 10)
+    return -1;
+  return ref;
+}
+

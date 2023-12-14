@@ -52,7 +52,7 @@ extern "C" {
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<LevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr);

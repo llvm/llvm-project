@@ -8,9 +8,9 @@
 
 // <string>
 
-// void reserve(); // Deprecated in C++20.
+// void reserve(); // Deprecated in C++20, removed in C++26.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE
 
 #include <string>
 #include <stdexcept>
@@ -39,6 +39,7 @@ template <class S>
 void test_string() {
   test<S>(0, 0);
   test<S>(10, 5);
+  test<S>(100, 5);
   test<S>(100, 50);
 }
 

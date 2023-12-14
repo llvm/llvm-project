@@ -681,6 +681,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "unsupported load/store as aggregate");
       assert(!AccessTy->isAggregateType() || AccessTy->isArrayTy());
 
+      // Check that this is a simple access of a vector element.
+      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
+                                          : cast<StoreInst>(Inst)->isSimple();
+      if (!IsSimple)
+        return RejectUser(Inst, "not a simple load or store");
+
       Ptr = Ptr->stripPointerCasts();
 
       // Alloca already accessed as vector.
@@ -690,11 +696,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         continue;
       }
 
-      // Check that this is a simple access of a vector element.
-      bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
-                                          : cast<StoreInst>(Inst)->isSimple();
-      if (!IsSimple)
-        return RejectUser(Inst, "not a simple load or store");
       if (!isSupportedAccessType(VectorTy, AccessTy, *DL))
         return RejectUser(Inst, "not a supported access type");
 

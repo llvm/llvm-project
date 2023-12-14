@@ -44,30 +44,10 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
-TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
-  // This function is hot. Check whether the value has any metadata to avoid a
-  // DenseMap lookup.
-  if (!V->isUsedByMetadata())
-    return {};
-  auto *L = LocalAsMetadata::getIfExists(V);
-  if (!L)
-    return {};
-  auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
-  if (!MDV)
-    return {};
-
-  TinyPtrVector<DbgDeclareInst *> Declares;
-  for (User *U : MDV->users()) {
-    if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
-      Declares.push_back(DDI);
-  }
-
-  return Declares;
-}
-
-template <typename IntrinsicT>
-static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result,
-                              Value *V, SmallVectorImpl<DPValue *> *DPValues) {
+template <typename IntrinsicT,
+          DPValue::LocationType Type = DPValue::LocationType::Any>
+static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
+                              SmallVectorImpl<DPValue *> *DPValues) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
   if (!V->isUsedByMetadata())
@@ -96,7 +76,7 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result,
     // Get DPValues that use this as a single value.
     if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
       for (DPValue *DPV : L->getAllDPValueUsers()) {
-        if (DPV->getType() == DPValue::LocationType::Value)
+        if (Type == DPValue::LocationType::Any || DPV->getType() == Type)
           DPValues->push_back(DPV);
       }
     }
@@ -110,21 +90,29 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result,
         continue;
       DIArgList *DI = cast<DIArgList>(AL);
       for (DPValue *DPV : DI->getAllDPValueUsers())
-        if (DPV->getType() == DPValue::LocationType::Value)
+        if (Type == DPValue::LocationType::Any || DPV->getType() == Type)
           if (EncounteredDPValues.insert(DPV).second)
             DPValues->push_back(DPV);
     }
   }
 }
 
+void llvm::findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers,
+                           Value *V, SmallVectorImpl<DPValue *> *DPValues) {
+  findDbgIntrinsics<DbgDeclareInst, DPValue::LocationType::Declare>(DbgUsers, V,
+                                                                    DPValues);
+}
+
 void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
                          Value *V, SmallVectorImpl<DPValue *> *DPValues) {
-  findDbgIntrinsics<DbgValueInst>(DbgValues, V, DPValues);
+  findDbgIntrinsics<DbgValueInst, DPValue::LocationType::Value>(DbgValues, V,
+                                                                DPValues);
 }
 
 void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
                         Value *V, SmallVectorImpl<DPValue *> *DPValues) {
-  findDbgIntrinsics<DbgVariableIntrinsic>(DbgUsers, V, DPValues);
+  findDbgIntrinsics<DbgVariableIntrinsic, DPValue::LocationType::Any>(
+      DbgUsers, V, DPValues);
 }
 
 DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
@@ -205,10 +193,13 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(M, *DVI);
+    processVariable(M, DVI->getVariable());
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
+
+  for (const DPValue &DPV : I.getDbgValueRange())
+    processDPValue(M, DPV);
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
@@ -216,6 +207,11 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
     return;
   processScope(Loc->getScope());
   processLocation(M, Loc->getInlinedAt());
+}
+
+void DebugInfoFinder::processDPValue(const Module &M, const DPValue &DPV) {
+  processVariable(M, DPV.getVariable());
+  processLocation(M, DPV.getDebugLoc().get());
 }
 
 void DebugInfoFinder::processType(DIType *DT) {
@@ -292,15 +288,7 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
 }
 
 void DebugInfoFinder::processVariable(const Module &M,
-                                      const DbgVariableIntrinsic &DVI) {
-  auto *N = dyn_cast<MDNode>(DVI.getVariable());
-  if (!N)
-    return;
-
-  auto *DV = dyn_cast<DILocalVariable>(N);
-  if (!DV)
-    return;
-
+                                      const DILocalVariable *DV) {
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
@@ -559,7 +547,7 @@ bool llvm::StripDebugInfo(Module &M) {
   for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {
     // We're stripping debug info, and without them, coverage information
     // doesn't quite make sense.
-    if (NMD.getName().startswith("llvm.dbg.") ||
+    if (NMD.getName().starts_with("llvm.dbg.") ||
         NMD.getName() == "llvm.gcov") {
       NMD.eraseFromParent();
       Changed = true;

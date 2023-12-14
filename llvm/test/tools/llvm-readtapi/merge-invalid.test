@@ -1,6 +1,8 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
+// Check invalid tbd file contents was propagated as error.
 ; RUN: not llvm-readtapi -merge %t/libfoo.tbd %t/libbar.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix DIFF
+// Check missing input.
 ; RUN: not llvm-readtapi -merge %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix INPUT
 
 ; DIFF: install names do not match

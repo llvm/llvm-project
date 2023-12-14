@@ -63,7 +63,7 @@ define i8 @test3(ptr %a) nounwind {
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret i8 0
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[SHOULD_BE_CONST:%.*]] = load i8, ptr @gv, align 1
+; CHECK-NEXT:    [[SHOULD_BE_CONST:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[SHOULD_BE_CONST]]
 ;
 entry:

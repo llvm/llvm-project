@@ -34,6 +34,15 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
       },
       py::arg("context"), py::arg("load") = true);
 
+  m.def(
+      "register_dialect",
+      [](MlirDialectRegistry registry) {
+        MlirDialectHandle pythonTestDialect =
+            mlirGetDialectHandle__python_test__();
+        mlirDialectHandleInsertDialect(pythonTestDialect, registry);
+      },
+      py::arg("registry"));
+
   mlir_attribute_subclass(m, "TestAttr",
                           mlirAttributeIsAPythonTestTestAttribute)
       .def_classmethod(

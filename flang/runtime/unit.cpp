@@ -20,6 +20,7 @@ namespace Fortran::runtime::io {
 // The per-unit data structures are created on demand so that Fortran I/O
 // should work without a Fortran main program.
 static Lock unitMapLock;
+static Lock createOpenLock;
 static UnitMap *unitMap{nullptr};
 static ExternalFileUnit *defaultInput{nullptr}; // unit 5
 static ExternalFileUnit *defaultOutput{nullptr}; // unit 6
@@ -52,6 +53,9 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction dir, std::optional<bool> isUnformatted,
     const Terminator &terminator) {
+  // Make sure that the returned anonymous unit has been opened
+  // not just created in the unitMap.
+  CriticalSection critical{createOpenLock};
   bool exists{false};
   ExternalFileUnit *result{
       GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
@@ -351,6 +355,7 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   }
   positionInRecord += bytes;
   furthestPositionInRecord = furthestAfter;
+  anyWriteSinceLastPositioning_ = true;
   return true;
 }
 
@@ -436,6 +441,14 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input);
   if (!beganReadingRecord_) {
     beganReadingRecord_ = true;
+    // Don't use IsAtEOF() to check for an EOF condition here, just detect
+    // it from a failed or short read from the file.  IsAtEOF() could be
+    // wrong for formatted input if actual newline characters had been
+    // written in-band by previous WRITEs before a REWIND.  In fact,
+    // now that we know that the unit is being used for input (again),
+    // it's best to reset endfileRecordNumber and ensure IsAtEOF() will
+    // now be true on return only if it gets set by HitEndOnRead().
+    endfileRecordNumber.reset();
     if (access == Access::Direct) {
       CheckDirectAccess(handler);
       auto need{static_cast<std::size_t>(recordOffsetInFrame_ + *openRecl)};
@@ -447,18 +460,19 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
         HitEndOnRead(handler);
       }
     } else {
+      if (anyWriteSinceLastPositioning_ && access == Access::Sequential) {
+        // Most Fortran implementations allow a READ after a WRITE;
+        // the read then just hits an EOF.
+        DoEndfile(handler);
+      }
       recordLength.reset();
-      if (IsAtEOF()) {
-        handler.SignalEnd();
-      } else {
-        RUNTIME_CHECK(handler, isUnformatted.has_value());
-        if (*isUnformatted) {
-          if (access == Access::Sequential) {
-            BeginSequentialVariableUnformattedInputRecord(handler);
-          }
-        } else { // formatted sequential or stream
-          BeginVariableFormattedInputRecord(handler);
+      RUNTIME_CHECK(handler, isUnformatted.has_value());
+      if (*isUnformatted) {
+        if (access == Access::Sequential) {
+          BeginSequentialVariableUnformattedInputRecord(handler);
         }
+      } else { // formatted sequential or stream
+        BeginVariableFormattedInputRecord(handler);
       }
     }
   }
@@ -591,8 +605,8 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
     if (IsAfterEndfile()) {
       // BACKSPACE after explicit ENDFILE
       currentRecordNumber = *endfileRecordNumber;
-    } else if (leftTabLimit) {
-      // BACKSPACE after non-advancing I/O
+    } else if (leftTabLimit && direction_ == Direction::Input) {
+      // BACKSPACE after non-advancing input
       leftTabLimit.reset();
     } else {
       DoImpliedEndfile(handler);
@@ -611,6 +625,7 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
       }
     }
     BeginRecord();
+    anyWriteSinceLastPositioning_ = false;
   }
 }
 
@@ -663,6 +678,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
     SetPosition(0, handler);
     currentRecordNumber = 1;
     leftTabLimit.reset();
+    anyWriteSinceLastPositioning_ = false;
   }
 }
 
@@ -723,6 +739,7 @@ void ExternalFileUnit::EndIoStatement() {
 
 void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     IoErrorHandler &handler) {
+  RUNTIME_CHECK(handler, access == Access::Sequential);
   std::int32_t header{0}, footer{0};
   std::size_t need{recordOffsetInFrame_ + sizeof header};
   std::size_t got{ReadFrame(frameOffsetInFile_, need, handler)};
@@ -825,10 +842,6 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     return;
   }
   frameOffsetInFile_ -= *recordLength + 2 * headerBytes;
-  if (frameOffsetInFile_ >= headerBytes) {
-    frameOffsetInFile_ -= headerBytes;
-    recordOffsetInFrame_ = headerBytes;
-  }
   auto need{static_cast<std::size_t>(
       recordOffsetInFrame_ + sizeof header + *recordLength)};
   got = ReadFrame(frameOffsetInFile_, need, handler);
@@ -896,28 +909,29 @@ void ExternalFileUnit::BackspaceVariableFormattedRecord(
 }
 
 void ExternalFileUnit::DoImpliedEndfile(IoErrorHandler &handler) {
-  if (!impliedEndfile_ && direction_ == Direction::Output && IsRecordFile() &&
-      access != Access::Direct && leftTabLimit) {
-    // Complete partial record after non-advancing write before
-    // positioning or closing the unit.  Usually sets impliedEndfile_.
-    AdvanceRecord(handler);
-  }
-  if (impliedEndfile_) {
-    impliedEndfile_ = false;
-    if (access != Access::Direct && IsRecordFile() && mayPosition()) {
+  if (access != Access::Direct) {
+    if (!impliedEndfile_ && leftTabLimit && direction_ == Direction::Output) {
+      // Flush a partial record after non-advancing output
+      impliedEndfile_ = true;
+    }
+    if (impliedEndfile_ && mayPosition()) {
       DoEndfile(handler);
     }
   }
+  impliedEndfile_ = false;
 }
 
 void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   if (IsRecordFile() && access != Access::Direct) {
     furthestPositionInRecord =
         std::max(positionInRecord, furthestPositionInRecord);
-    if (leftTabLimit) {
-      // Last read/write was non-advancing, so AdvanceRecord() was not called.
-      leftTabLimit.reset();
-      ++currentRecordNumber;
+    if (leftTabLimit) { // last I/O was non-advancing
+      if (access == Access::Sequential && direction_ == Direction::Output) {
+        AdvanceRecord(handler);
+      } else { // Access::Stream or input
+        leftTabLimit.reset();
+        ++currentRecordNumber;
+      }
     }
     endfileRecordNumber = currentRecordNumber;
   }
@@ -928,6 +942,7 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   TruncateFrame(frameOffsetInFile_, handler);
   BeginRecord();
   impliedEndfile_ = false;
+  anyWriteSinceLastPositioning_ = false;
 }
 
 void ExternalFileUnit::CommitWrites() {

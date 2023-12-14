@@ -31,7 +31,7 @@
 using namespace __asan;
 
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
-  static bool UseImpl() { return AsanInitIsRunning(); }
+  static bool UseImpl() { return !TryAsanInitFromRtl(); }
   static void OnAllocate(const void *ptr, uptr size) {
 #  if CAN_SANITIZE_LEAKS
     // Suppress leaks from dlerror(). Previously dlsym hack on global array was
@@ -65,7 +65,6 @@ INTERCEPTOR(void, cfree, void *ptr) {
 INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
-  ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);
 }
@@ -73,7 +72,6 @@ INTERCEPTOR(void*, malloc, uptr size) {
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size);
-  ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
 }
@@ -81,14 +79,13 @@ INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size);
-  ENSURE_ASAN_INITED();
   GET_STACK_TRACE_MALLOC;
   return asan_realloc(ptr, size, &stack);
 }
 
 #if SANITIZER_INTERCEPT_REALLOCARRAY
 INTERCEPTOR(void*, reallocarray, void *ptr, uptr nmemb, uptr size) {
-  ENSURE_ASAN_INITED();
+  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
   return asan_reallocarray(ptr, nmemb, size, &stack);
 }

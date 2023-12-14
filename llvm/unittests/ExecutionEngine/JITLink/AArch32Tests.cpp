@@ -133,11 +133,9 @@ TEST(AArch32_Relocations, Thumb_Call_J1J2) {
   constexpr HalfWords ImmMask = FixupInfo<Thumb_Call>::ImmMask;
 
   static std::array<HalfWords, 3> MemPresets{
-      makeHalfWords<llvm::endianness::little>(
-          {0xff, 0xf7, 0xfe, 0xef}), // common
-      makeHalfWords<llvm::endianness::little>(
-          {0x00, 0x00, 0x00, 0x00}), // zeros
-      makeHalfWords<llvm::endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
+      makeHalfWords<endianness::little>({0xff, 0xf7, 0xfe, 0xef}), // common
+      makeHalfWords<endianness::little>({0x00, 0x00, 0x00, 0x00}), // zeros
+      makeHalfWords<endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
   };
 
   auto EncodeDecode = [ImmMask](int64_t In, MutableHalfWords &Mem) {
@@ -171,11 +169,9 @@ TEST(AArch32_Relocations, Thumb_Call_Bare) {
   constexpr HalfWords ImmMask = FixupInfo<Thumb_Call>::ImmMask;
 
   static std::array<HalfWords, 3> MemPresets{
-      makeHalfWords<llvm::endianness::little>(
-          {0xff, 0xf7, 0xfe, 0xef}), // common
-      makeHalfWords<llvm::endianness::little>(
-          {0x00, 0x00, 0x00, 0x00}), // zeros
-      makeHalfWords<llvm::endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
+      makeHalfWords<endianness::little>({0xff, 0xf7, 0xfe, 0xef}), // common
+      makeHalfWords<endianness::little>({0x00, 0x00, 0x00, 0x00}), // zeros
+      makeHalfWords<endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
   };
 
   auto EncodeDecode = [ImmMask](int64_t In, MutableHalfWords &Mem) {
@@ -244,11 +240,9 @@ TEST(AArch32_Relocations, Thumb_MovtAbs) {
 
   static std::array<uint8_t, 3> Registers{0, 5, 12};
   static std::array<HalfWords, 3> MemPresets{
-      makeHalfWords<llvm::endianness::little>(
-          {0xff, 0xf7, 0xfe, 0xef}), // common
-      makeHalfWords<llvm::endianness::little>(
-          {0x00, 0x00, 0x00, 0x00}), // zeros
-      makeHalfWords<llvm::endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
+      makeHalfWords<endianness::little>({0xff, 0xf7, 0xfe, 0xef}), // common
+      makeHalfWords<endianness::little>({0x00, 0x00, 0x00, 0x00}), // zeros
+      makeHalfWords<endianness::little>({0xff, 0xff, 0xff, 0xff}), // ones
   };
 
   auto EncodeDecode = [ImmMask](uint32_t In, MutableHalfWords &Mem) {
