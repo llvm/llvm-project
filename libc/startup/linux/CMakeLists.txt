@@ -3,7 +3,7 @@
 # A relocatable object is an object file that is not fully linked into an
 # executable or a shared library. It is an intermediate file format that can
 # be passed into the linker.
-# A crt object have arch-specific code and arch-agnostic code. To reduce code
+# A crt object has arch-specific code and arch-agnostic code. To reduce code
 # cohesion, the implementation is splitted into multiple units. As a result,
 # we need to merge them into a single relocatable object.
 function(merge_relocatable_object name)
