@@ -1645,9 +1645,21 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
         // Fold the return instruction into the LDM.
         DeleteRet = true;
         LdmOpc = AFI->isThumbFunction() ? ARM::t2LDMIA_RET : ARM::LDMIA_RET;
-        // We 'restore' LR into PC so it is not live out of the return block:
-        // Clear Restored bit.
-        Info.setRestored(false);
+        // Check if all terminators do not implicitly use LR. Then we can
+        // 'restore' LR into PC so it is not live out of the return block: Clear
+        // Restored bit.
+        if (all_of(MF, [MI](const MachineBasicBlock &MBB) {
+              return all_of(MBB.terminators(), [MI](const MachineInstr &Term) {
+                //  MI's terminator is to be re-written, don't check the old
+                //  opcode.
+                if (&*MI == &Term)
+                  return true;
+                return Term.getOpcode() == ARM::LDMIA_RET ||
+                       Term.getOpcode() == ARM::t2LDMIA_RET ||
+                       Term.getOpcode() == ARM::tPOP_RET;
+              });
+            }))
+          Info.setRestored(false);
       }
 
       // If NoGap is true, pop consecutive registers and then leave the rest
