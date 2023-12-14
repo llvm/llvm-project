@@ -844,7 +844,7 @@ static void test_valid_values_date_time() {
       SV("%c='ven. 13 févr. 2009 23:31:30 UTC'\t%Ec='ven. 13 févr. 2009 23:31:30 UTC'\n"),
 #elif defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 29
       SV("%c='ven. 13 févr. 2009 23:31:30 GMT'\t%Ec='ven. 13 févr. 2009 23:31:30 GMT'\n"),
-#elif defined(_AIX) || (defined(__powerpc__) && defined(__linux__))
+#elif defined(_AIX)
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),
 #elif defined(__APPLE__)
       SV("%c='Ven 13 fév 23:31:30 2009'\t%Ec='Ven 13 fév 23:31:30 2009'\n"),
