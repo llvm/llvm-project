@@ -200,8 +200,8 @@ void getVectorVariantNames(const CallInst &CI,
 /// TargetLibraryInfo. It uses \p ScalarFTy for the types, and \p Info to get
 /// the vectorization factor and whether a particular parameter is indeed a
 /// vector, since some of them may be scalars.
-std::optional<FunctionType *> createFunctionType(const VFInfo &Info,
-                                                 const FunctionType *ScalarFTy);
+FunctionType *createFunctionType(const VFInfo &Info,
+                                 const FunctionType *ScalarFTy);
 } // end namespace VFABI
 
 /// The Vector Function Database.

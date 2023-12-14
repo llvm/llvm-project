@@ -1480,8 +1480,8 @@ void VFABI::getVectorVariantNames(
   }
 }
 
-std::optional<FunctionType *>
-VFABI::createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy) {
+FunctionType *VFABI::createFunctionType(const VFInfo &Info,
+                                        const FunctionType *ScalarFTy) {
   ElementCount VF = Info.Shape.VF;
   // Create vector parameter types
   SmallVector<Type *, 8> VecTypes;
@@ -1493,22 +1493,17 @@ VFABI::createFunctionType(const VFInfo &Info, const FunctionType *ScalarFTy) {
   }
 
   // Get mask's position mask and append one if not present in the Instruction.
-  int MaskPos = -1;
-  if (Info.isMasked()) {
-    auto OptMaskPos = Info.getParamIndexForOptionalMask();
+  if (auto OptMaskPos = Info.getParamIndexForOptionalMask()) {
     if (!OptMaskPos)
-      return std::nullopt;
-
-    MaskPos = OptMaskPos.value();
+      return nullptr;
     VectorType *MaskTy =
         VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
-    VecTypes.insert(VecTypes.begin() + MaskPos, MaskTy);
+    VecTypes.insert(VecTypes.begin() + OptMaskPos.value(), MaskTy);
   }
   auto *RetTy = ScalarFTy->getReturnType();
   if (!RetTy->isVoidTy())
     RetTy = VectorType::get(ScalarFTy->getReturnType(), VF);
-  FunctionType *VecFTy = FunctionType::get(RetTy, VecTypes, false);
-  return VecFTy;
+  return FunctionType::get(RetTy, VecTypes, false);
 }
 
 bool VFShape::hasValidParameterList() const {
