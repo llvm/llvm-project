@@ -2755,3 +2755,16 @@ define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_fail2(i32 %x) {
   %and = and i32 %add, 24
   ret i32 %and
 }
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 16
+  %or = or i32 %add, %y
+  %and = and i32 %or, 24
+  ret i32 %and
+}

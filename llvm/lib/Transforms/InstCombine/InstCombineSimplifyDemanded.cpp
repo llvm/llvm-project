@@ -556,8 +556,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     {
       const APInt *C;
       if (match(I->getOperand(1), m_APInt(C)) &&
-          C->isOneBitSet(DemandedMask.getActiveBits() - 1))
+          C->isOneBitSet(DemandedMask.getActiveBits() - 1)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
         return Builder.CreateXor(I->getOperand(0), ConstantInt::get(VTy, *C));
+      }
     }
 
     // Otherwise just compute the known bits of the result.
