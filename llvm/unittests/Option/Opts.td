@@ -53,13 +53,12 @@ def R : Flag<["-"], "R">, Visibility<[DefaultVis, SubtoolVis]>;
 
 def multiline_help : Flag<["-"], "multiline-help">, HelpText<"This a help text that has\nmultiple lines in it">, Visibility<[MultiLineVis]>;
 
-def multiline_help_long : 
-  Flag<["-"], "multiline-help-with-long-name">, 
+def multiline_help_long :
+  Flag<["-"], "multiline-help-with-long-name">,
   HelpText<"This a help text that has\n"
            "multiple lines in it\n"
            "and a long name">,
   Visibility<[MultiLineVis]>;
-
 
 class XOpts<string base> : KeyPathAndMacro<"X->", base> {}
 
