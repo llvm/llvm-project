@@ -506,6 +506,47 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
     return true;
   }
 
+  // Try to use unmerge for irregular vector split where possible
+  if (RegTy.isVector() && MainTy.isVector()) {
+    unsigned RegNumElts = RegTy.getNumElements();
+    unsigned MainNumElts = MainTy.getNumElements();
+    unsigned LeftoverNumElts = RegNumElts % MainNumElts;
+    // If can unmerge to LeftoverTy, do it
+    if (MainNumElts % LeftoverNumElts == 0 &&
+        RegNumElts % LeftoverNumElts == 0 &&
+        RegTy.getScalarSizeInBits() == MainTy.getScalarSizeInBits() &&
+        LeftoverNumElts > 1) {
+      LeftoverTy =
+          LLT::fixed_vector(LeftoverNumElts, RegTy.getScalarSizeInBits());
+
+      // Unmerge the SrcReg to LeftoverTy vectors
+      SmallVector<Register, 4> UnmergeValues;
+      extractParts(Reg, LeftoverTy, RegNumElts / LeftoverNumElts, UnmergeValues,
+                   MIRBuilder, MRI);
+
+      // Find how many LeftoverTy makes one MainTy
+      unsigned LeftoverPerMain = MainNumElts / LeftoverNumElts;
+      unsigned NumOfLeftoverVal =
+          ((RegNumElts % MainNumElts) / LeftoverNumElts);
+
+      // Create as many MainTy as possible using unmerged value
+      SmallVector<Register, 4> MergeValues;
+      for (unsigned I = 0; I < UnmergeValues.size() - NumOfLeftoverVal; I++) {
+        MergeValues.push_back(UnmergeValues[I]);
+        if (MergeValues.size() == LeftoverPerMain) {
+          VRegs.push_back(
+              MIRBuilder.buildMergeLikeInstr(MainTy, MergeValues).getReg(0));
+          MergeValues.clear();
+        }
+      }
+      // Populate LeftoverRegs with the leftovers
+      for (unsigned I = UnmergeValues.size() - NumOfLeftoverVal;
+           I < UnmergeValues.size(); I++) {
+        LeftoverRegs.push_back(UnmergeValues[I]);
+      }
+      return true;
+    }
+  }
   // Perform irregular split. Leftover is last element of RegPieces.
   if (MainTy.isVector()) {
     SmallVector<Register, 8> RegPieces;
