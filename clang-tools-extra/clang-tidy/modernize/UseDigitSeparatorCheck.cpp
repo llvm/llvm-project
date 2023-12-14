@@ -32,6 +32,52 @@ splitStringByGroupSize(const std::basic_string<char> &String, size_t GroupSize) 
 
   return Result;
 }
+
+std::string getFormatedLiteralString(const llvm::StringRef OriginalLiteralString, const llvm::APInt IntegerValue) {
+  // Configure formatting
+  unsigned int Radix;
+  size_t GroupSize;
+  std::string Prefix;
+  std::string Postfix;
+  if (OriginalLiteralString.starts_with("0b")) {
+    Radix = 2;
+    GroupSize = 4;
+    Prefix = "0b";
+  } else if (OriginalLiteralString.starts_with("0x")) {
+    Radix = 16;
+    GroupSize = 4;
+    Prefix = "0x";
+  } else if (OriginalLiteralString.starts_with("0") &&
+             OriginalLiteralString != "0") {
+    Radix = 8;
+    GroupSize = 3;
+    Prefix = "0";
+  } else {
+    Radix = 10;
+    GroupSize = 3;
+  }
+
+  for (const char &Character : OriginalLiteralString) {
+    if (!std::isdigit(Character)) {
+      Postfix += Character;
+    }
+  }
+
+  // Get formatting literal text
+  const std::vector<std::string> SplittedIntegerLiteral =
+      splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+  const std::string FormatedLiteralString =
+      Prefix +
+      std::accumulate(
+          SplittedIntegerLiteral.begin(), SplittedIntegerLiteral.end(),
+          std::string(""),
+          [](std::basic_string<char> S1, std::basic_string<char> S2) {
+            return S1 + "\'" + S2;
+          })
+          .erase(0, 1) + Postfix;
+
+  return FormatedLiteralString;
+}
 } // namespace
 
 namespace clang::tidy::modernize {
@@ -53,48 +99,9 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
         CharSourceRange::getTokenRange(MatchedInteger->getSourceRange()),
         Source, Context.getLangOpts());
 
-    // Configure formatting
-    unsigned int Radix;
-    size_t GroupSize;
-    std::string Prefix;
-    std::string Postfix;
-    if (OriginalLiteralString.starts_with("0b")) {
-      Radix = 2;
-      GroupSize = 4;
-      Prefix = "0b";
-    } else if (OriginalLiteralString.starts_with("0x")) {
-      Radix = 16;
-      GroupSize = 4;
-      Prefix = "0x";
-    } else if (OriginalLiteralString.starts_with("0") &&
-               OriginalLiteralString != "0") {
-      Radix = 8;
-      GroupSize = 3;
-      Prefix = "0";
-    } else {
-      Radix = 10;
-      GroupSize = 3;
-    }
-
-    for (const char &Character : OriginalLiteralString) {
-      if (!std::isdigit(Character)) {
-        Postfix += Character;
-      }
-    }
-
     // Get formatting literal text
     const llvm::APInt IntegerValue = MatchedInteger->getValue();
-    const std::vector<std::string> SplittedIntegerLiteral =
-        splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
-    const std::string FormatedLiteralString =
-        Prefix +
-        std::accumulate(
-            SplittedIntegerLiteral.begin(), SplittedIntegerLiteral.end(),
-            std::string(""),
-            [](std::basic_string<char> S1, std::basic_string<char> S2) {
-              return S1 + "\'" + S2;
-            })
-            .erase(0, 1) + Postfix;
+    const std::string FormatedLiteralString = getFormatedLiteralString(OriginalLiteralString, IntegerValue);
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
