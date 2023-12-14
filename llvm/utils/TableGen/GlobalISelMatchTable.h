@@ -59,6 +59,9 @@ using GISelFlags = std::uint16_t;
 
 //===- Helper functions ---------------------------------------------------===//
 
+void emitEncodingMacrosDef(raw_ostream &OS);
+void emitEncodingMacrosUndef(raw_ostream &OS);
+
 std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
                                     int HwModeIdx);
 
@@ -119,6 +122,9 @@ struct MatchTableRecord {
     /// Causes the formatter to remove a level of indentation after emitting the
     /// record.
     MTRF_Outdent = 0x40,
+    /// Causes the formatter to not use encoding macros to emit this multi-byte
+    /// value.
+    MTRF_PreEncoded = 0x80,
   };
 
   /// When MTRF_Label or MTRF_JumpTarget is used, indicates a label id to
@@ -194,12 +200,15 @@ public:
   static MatchTableRecord LineBreak;
   static MatchTableRecord Comment(StringRef Comment);
   static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0);
-  static MatchTableRecord NamedValue(StringRef NamedValue);
-  static MatchTableRecord NamedValue(StringRef NamedValue, int64_t RawValue);
-  static MatchTableRecord NamedValue(StringRef Namespace, StringRef NamedValue);
-  static MatchTableRecord NamedValue(StringRef Namespace, StringRef NamedValue,
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue);
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue,
                                      int64_t RawValue);
-  static MatchTableRecord IntValue(int64_t IntValue);
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
+                                     StringRef NamedValue);
+  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
+                                     StringRef NamedValue, int64_t RawValue);
+  static MatchTableRecord IntValue(unsigned NumBytes, int64_t IntValue);
+  static MatchTableRecord ULEB128Value(uint64_t IntValue);
   static MatchTableRecord Label(unsigned LabelID);
   static MatchTableRecord JumpTarget(unsigned LabelID);
 
@@ -301,9 +310,9 @@ private:
 inline MatchTable &operator<<(MatchTable &Table,
                               const LLTCodeGenOrTempType &Ty) {
   if (Ty.isLLTCodeGen())
-    Table << MatchTable::NamedValue(Ty.getLLTCodeGen().getCxxEnumValue());
+    Table << MatchTable::NamedValue(1, Ty.getLLTCodeGen().getCxxEnumValue());
   else
-    Table << MatchTable::IntValue(Ty.getTempTypeIdx());
+    Table << MatchTable::IntValue(1, Ty.getTempTypeIdx());
   return Table;
 }
 
@@ -1669,7 +1678,7 @@ public:
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIM_CheckHasNoUse")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
           << MatchTable::LineBreak;
   }
 };
@@ -2066,21 +2075,10 @@ public:
     return R->getKind() == OR_Imm;
   }
 
-  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    if (CImmLLT) {
-      assert(Table.isCombiner() &&
-             "ConstantInt immediate are only for combiners!");
-      Table << MatchTable::Opcode("GIR_AddCImm")
-            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
-            << MatchTable::Comment("Type") << *CImmLLT
-            << MatchTable::Comment("Imm") << MatchTable::IntValue(Imm)
-            << MatchTable::LineBreak;
-    } else {
-      Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-            << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
-            << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
-    }
-  }
+  static void emitAddImm(MatchTable &Table, RuleMatcher &RM, unsigned InsnID,
+                         int64_t Imm, StringRef ImmName = "Imm");
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Adds an enum value for a subreg index to the instruction being built.
@@ -2366,7 +2364,7 @@ public:
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
           << MatchTable::LineBreak;
   }
 };

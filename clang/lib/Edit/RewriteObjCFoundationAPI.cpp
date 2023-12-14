@@ -697,7 +697,7 @@ static bool getLiteralInfo(SourceRange literalRange,
 
   struct Suff {
     static bool has(StringRef suff, StringRef &text) {
-      if (text.endswith(suff)) {
+      if (text.ends_with(suff)) {
         text = text.substr(0, text.size()-suff.size());
         return true;
       }
@@ -739,9 +739,9 @@ static bool getLiteralInfo(SourceRange literalRange,
   Info.F = UpperF ? "F" : "f";
 
   Info.Hex = Info.Octal = false;
-  if (text.startswith("0x"))
+  if (text.starts_with("0x"))
     Info.Hex = true;
-  else if (!isFloat && !isIntZero && text.startswith("0"))
+  else if (!isFloat && !isIntZero && text.starts_with("0"))
     Info.Octal = true;
 
   SourceLocation B = literalRange.getBegin();

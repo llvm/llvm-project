@@ -430,7 +430,7 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
   std::string InputString;
   while (std::getline(std::cin, InputString)) {
     InputString += '\n';
-    Filter.filter(InputString);
+    Filter.filter(std::move(InputString));
   }
   Filter.finish();
 }

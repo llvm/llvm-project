@@ -389,22 +389,24 @@ static constexpr DoubleDouble LOG2_R2_DD[] = {
 LIBC_INLINE bool is_odd_integer(float x) {
   using FloatProp = typename fputil::FloatProperties<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int x_e = static_cast<int>((x_u & FloatProp::EXPONENT_MASK) >>
-                             FloatProp::MANTISSA_WIDTH);
-  int lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
-  constexpr int UNIT_EXPONENT =
-      static_cast<int>(FloatProp::EXPONENT_BIAS + FloatProp::MANTISSA_WIDTH);
+  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
+                                     FloatProp::MANTISSA_WIDTH);
+  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  constexpr int32_t UNIT_EXPONENT =
+      FloatProp::EXPONENT_BIAS +
+      static_cast<int32_t>(FloatProp::MANTISSA_WIDTH);
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
 LIBC_INLINE bool is_integer(float x) {
   using FloatProp = typename fputil::FloatProperties<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int x_e = static_cast<int>((x_u & FloatProp::EXPONENT_MASK) >>
-                             FloatProp::MANTISSA_WIDTH);
-  int lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
-  constexpr int UNIT_EXPONENT =
-      static_cast<int>(FloatProp::EXPONENT_BIAS + FloatProp::MANTISSA_WIDTH);
+  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
+                                     FloatProp::MANTISSA_WIDTH);
+  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  constexpr int32_t UNIT_EXPONENT =
+      FloatProp::EXPONENT_BIAS +
+      static_cast<int32_t>(FloatProp::MANTISSA_WIDTH);
   return (x_e + lsb >= UNIT_EXPONENT);
 }
 

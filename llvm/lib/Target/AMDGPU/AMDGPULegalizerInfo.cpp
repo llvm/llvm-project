@@ -681,13 +681,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    getActionDefinitionsBuilder({G_ADD, G_SUB})
-      .legalFor({S32, S16, V2S16})
-      .clampMaxNumElementsStrict(0, S16, 2)
-      .scalarize(0)
-      .minScalar(0, S16)
-      .widenScalarToNextMultipleOf(0, 32)
-      .maxScalar(0, S32);
+    if (ST.hasScalarAddSub64()) {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S64, S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    } else {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    }
 
     getActionDefinitionsBuilder(G_MUL)
       .legalFor({S32, S16, V2S16})
@@ -1949,20 +1959,25 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0)
       .scalarize(0);
 
-  getActionDefinitionsBuilder({
-      // TODO: Verify V_BFI_B32 is generated from expanded bit ops
-      G_FCOPYSIGN,
+  getActionDefinitionsBuilder(
+      {// TODO: Verify V_BFI_B32 is generated from expanded bit ops
+       G_FCOPYSIGN,
 
-      G_ATOMIC_CMPXCHG_WITH_SUCCESS,
-      G_ATOMICRMW_NAND,
-      G_ATOMICRMW_FSUB,
-      G_READ_REGISTER,
-      G_WRITE_REGISTER,
+       G_ATOMIC_CMPXCHG_WITH_SUCCESS, G_ATOMICRMW_NAND, G_ATOMICRMW_FSUB,
+       G_READ_REGISTER, G_WRITE_REGISTER,
 
-      G_SADDO, G_SSUBO,
+       G_SADDO, G_SSUBO})
+      .lower();
 
-       // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM}).lower();
+  if (ST.hasIEEEMinMax()) {
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .legalFor(FPTypesPK16)
+        .clampMaxNumElements(0, S16, 2)
+        .scalarize(0);
+  } else {
+    // TODO: Implement
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
+  }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();
