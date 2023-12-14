@@ -107,6 +107,6 @@ as int arrays with the following extents to allow build time validation of
 these sizes in cross compilation environments.
 #endif
 #define _FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT 2
-#define _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT 50
+#define _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT 8
 
 #endif
