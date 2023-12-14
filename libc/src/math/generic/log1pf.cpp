@@ -60,7 +60,7 @@ LIBC_INLINE float log(double x) {
       xbits.get_mantissa() >> 45); // fputil::MantissaWidth<double>::VALUE - 7
 
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x3FF);
+  xbits.set_biased_exponent(0x3FF);
   FPBits f = xbits;
 
   // Clear the lowest 45 bits.

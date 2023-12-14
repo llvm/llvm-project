@@ -502,7 +502,7 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
       SmallString<128> NativeFilename;
       sys::path::native(Filename, NativeFilename);
       sys::path::remove_dots(NativeFilename, true);
-      if (NativeFilename.startswith(RemapFrom)) {
+      if (NativeFilename.starts_with(RemapFrom)) {
         RemappedFilenames[Filename] =
             RemapTo + NativeFilename.substr(RemapFrom.size()).str();
       }

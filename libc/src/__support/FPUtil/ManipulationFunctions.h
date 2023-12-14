@@ -144,10 +144,11 @@ LIBC_INLINE T ldexp(T x, int exp) {
   return normal;
 }
 
-template <
-    typename T, typename U,
-    cpp::enable_if_t<cpp::is_floating_point_v<T> && cpp::is_floating_point_v<U>,
-                     int> = 0>
+template <typename T, typename U,
+          cpp::enable_if_t<cpp::is_floating_point_v<T> &&
+                               cpp::is_floating_point_v<U> &&
+                               (sizeof(T) <= sizeof(U)),
+                           int> = 0>
 LIBC_INLINE T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
@@ -157,6 +158,9 @@ LIBC_INLINE T nextafter(T from, U to) {
   if (to_bits.is_nan())
     return static_cast<T>(to);
 
+  // NOTE: This would work only if `U` has a greater or equal precision than
+  // `T`. Otherwise `from` could loose its precision and the following statement
+  // could incorrectly evaluate to `true`.
   if (static_cast<U>(from) == to)
     return static_cast<T>(to);
 

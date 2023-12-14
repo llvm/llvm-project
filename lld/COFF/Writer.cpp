@@ -560,7 +560,7 @@ void Writer::createECCodeMap() {
   codeMap.clear();
 
   std::optional<chpe_range_type> lastType;
-  Chunk *first, *last;
+  Chunk *first = nullptr, *last = nullptr;
 
   auto closeRange = [&]() {
     if (lastType) {

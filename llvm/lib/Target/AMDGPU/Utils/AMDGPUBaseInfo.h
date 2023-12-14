@@ -505,6 +505,10 @@ struct CanBeVOPD {
   bool Y;
 };
 
+/// \returns SIEncodingFamily used for VOPD encoding on a \p ST.
+LLVM_READONLY
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
+
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc);
 
@@ -524,7 +528,7 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
@@ -747,15 +751,20 @@ public:
   // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
   // for the specified component and MC operand. The callback must return 0
   // if the operand is not a register or not a VGPR.
-  bool hasInvalidOperand(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-    return getInvalidCompOperandIndex(GetRegIdx).has_value();
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
+  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         bool SkipSrc = false) const {
+    return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      bool SkipSrc = false) const;
 
 private:
   RegIndices
