@@ -25,10 +25,10 @@
 namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-using MantissaInt = fputil::FPBits<long double>::UIntType;
-
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
+  using LDBits = fputil::FPBits<long double>;
+  using MantissaInt = LDBits::UIntType;
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the name of the conversion. This converts any
   // conversion name into the letter 'a' with the appropriate case.
@@ -40,18 +40,19 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   bool is_inf_or_nan;
   uint32_t mantissa_width;
   if (to_conv.length_modifier == LengthModifier::L) {
-    mantissa_width = fputil::MantissaWidth<long double>::VALUE;
-    fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
-    fputil::FPBits<long double> float_bits(float_raw);
+    mantissa_width = LDBits::MANTISSA_WIDTH;
+    LDBits::UIntType float_raw = to_conv.conv_val_raw;
+    LDBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
   } else {
-    mantissa_width = fputil::MantissaWidth<double>::VALUE;
-    fputil::FPBits<double>::UIntType float_raw =
-        static_cast<fputil::FPBits<double>::UIntType>(to_conv.conv_val_raw);
-    fputil::FPBits<double> float_bits(float_raw);
+    using LBits = fputil::FPBits<double>;
+    mantissa_width = LBits::MANTISSA_WIDTH;
+    LBits::UIntType float_raw =
+        static_cast<LBits::UIntType>(to_conv.conv_val_raw);
+    LBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
@@ -157,8 +158,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // 15 -> 5
   // 11 -> 4
   // 8  -> 3
-  constexpr size_t EXP_LEN =
-      (((fputil::ExponentWidth<long double>::VALUE * 5) + 15) / 16) + 1;
+  constexpr size_t EXP_LEN = (((LDBits::EXPONENT_WIDTH * 5) + 15) / 16) + 1;
   char exp_buffer[EXP_LEN];
 
   bool exp_is_negative = false;
