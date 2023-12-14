@@ -22,9 +22,13 @@ struct UnimplementedFeature {
   static bool buildTypeCheck() { return false; }
   static bool tbaa() { return false; }
   static bool cleanups() { return false; }
-  // This is for whether or not we've implemented a cir::VectorType
-  // corresponding to `llvm::VectorType`
+
+  // cir::VectorType is in progress, so cirVectorType() will go away soon.
+  // Start adding feature flags for more advanced vector types and operations
+  // that will take longer to implement.
   static bool cirVectorType() { return false; }
+  static bool scalableVectors() { return false; }
+  static bool vectorConstants() { return false; }
 
   // Address space related
   static bool addressSpace() { return false; }

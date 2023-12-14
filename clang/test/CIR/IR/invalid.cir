@@ -419,6 +419,35 @@ module {
 
 // -----
 
+!s32i = !cir.int<s, 32>
+cir.func @vec_op_size() {
+  %0 = cir.const(#cir.int<1> : !s32i) : !s32i
+  %1 = cir.vec.create(%0 : !s32i) : <!s32i x 2> // expected-error {{'cir.vec.create' op operand count of 1 doesn't match vector type '!cir.vector<!cir.int<s, 32> x 2>' element count of 2}}
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+cir.func @vec_op_type() {
+  %0 = cir.const(#cir.int<1> : !s32i) : !s32i
+  %1 = cir.const(#cir.int<2> : !u32i) : !u32i
+  %2 = cir.vec.create(%0, %1 : !s32i, !u32i) : <!s32i x 2> // expected-error {{'cir.vec.create' op operand type '!cir.int<u, 32>' doesn't match vector element type '!cir.int<s, 32>'}}
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+cir.func @vec_extract_type() {
+  %0 = cir.const(#cir.int<1> : !s32i) : !s32i
+  %1 = cir.const(#cir.int<2> : !s32i) : !s32i
+  %2 = cir.vec.create(%0, %1 : !s32i, !s32i) : <!s32i x 2>
+  %3 = cir.vec.extract %2[%0 : !s32i] <!s32i x 2> -> !u32i // expected-error {{'cir.vec.extract' op failed to verify that type of 'result' matches element type of 'vec'}}
+}
+
+// -----
+
 cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at least one cir.await op}}
   cir.return
 }

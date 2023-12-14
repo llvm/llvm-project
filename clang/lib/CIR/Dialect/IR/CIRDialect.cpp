@@ -423,6 +423,31 @@ LogicalResult CastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// VecCreateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult VecCreateOp::verify() {
+  // Verify that the number of arguments matches the number of elements in the
+  // vector, and that the type of all the arguments matches the type of the
+  // elements in the vector.
+  auto VecTy = getResult().getType();
+  if (getElements().size() != VecTy.getSize()) {
+    return emitOpError() << "operand count of " << getElements().size()
+                         << " doesn't match vector type " << VecTy
+                         << " element count of " << VecTy.getSize();
+  }
+  auto ElementType = VecTy.getEltType();
+  for (auto Element : getElements()) {
+    if (Element.getType() != ElementType) {
+      return emitOpError() << "operand type " << Element.getType()
+                           << " doesn't match vector element type "
+                           << ElementType;
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 

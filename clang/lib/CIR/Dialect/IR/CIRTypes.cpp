@@ -411,6 +411,25 @@ ArrayType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
   return dataLayout.getTypePreferredAlignment(getEltType());
 }
 
+llvm::TypeSize cir::VectorType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getSize() *
+                                  dataLayout.getTypeSizeInBits(getEltType()));
+}
+
+uint64_t
+cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return getSize() * dataLayout.getTypeABIAlignment(getEltType());
+}
+
+uint64_t cir::VectorType::getPreferredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return getSize() * dataLayout.getTypePreferredAlignment(getEltType());
+}
+
 llvm::TypeSize
 StructType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                               ::mlir::DataLayoutEntryListRef params) const {
@@ -605,9 +624,9 @@ FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   return get(llvm::to_vector(inputs), results[0], isVarArg());
 }
 
-mlir::ParseResult
-parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
-                  bool &isVarArg) {
+mlir::ParseResult parseFuncTypeArgs(mlir::AsmParser &p,
+                                    llvm::SmallVector<mlir::Type> &params,
+                                    bool &isVarArg) {
   isVarArg = false;
   // `(` `)`
   if (succeeded(p.parseOptionalRParen()))
@@ -637,9 +656,8 @@ parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
   return p.parseRParen();
 }
 
-void printFuncTypeArgs(mlir::AsmPrinter &p,
-                              mlir::ArrayRef<mlir::Type> params,
-                              bool isVarArg) {
+void printFuncTypeArgs(mlir::AsmPrinter &p, mlir::ArrayRef<mlir::Type> params,
+                       bool isVarArg) {
   llvm::interleaveComma(params, p,
                         [&p](mlir::Type type) { p.printType(type); });
   if (isVarArg) {

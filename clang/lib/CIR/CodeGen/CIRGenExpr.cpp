@@ -545,11 +545,9 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
                                         bool Volatile, QualType Ty,
                                         LValueBaseInfo BaseInfo, bool isInit,
                                         bool isNontemporal) {
-  if (!CGM.getCodeGenOpts().PreserveVec3Type) {
-    if (Ty->isVectorType()) {
-      llvm_unreachable("NYI");
-    }
-  }
+  if (!CGM.getCodeGenOpts().PreserveVec3Type && Ty->isVectorType() &&
+      Ty->castAs<clang::VectorType>()->getNumElements() == 3)
+    llvm_unreachable("NYI: Special treatment of 3-element vectors");
 
   Value = buildToMemory(Value, Ty);
 
@@ -2360,11 +2358,9 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
                                               QualType Ty, mlir::Location Loc,
                                               LValueBaseInfo BaseInfo,
                                               bool isNontemporal) {
-  if (!CGM.getCodeGenOpts().PreserveVec3Type) {
-    if (Ty->isVectorType()) {
-      llvm_unreachable("NYI");
-    }
-  }
+  if (!CGM.getCodeGenOpts().PreserveVec3Type && Ty->isVectorType() &&
+      Ty->castAs<clang::VectorType>()->getNumElements() == 3)
+    llvm_unreachable("NYI: Special treatment of 3-element vectors");
 
   // Atomic operations have to be done on integral types
   LValue AtomicLValue = LValue::makeAddr(Addr, Ty, getContext(), BaseInfo);

@@ -73,13 +73,18 @@ def CastOp : CIR_Op<"cast", [Pure]> {
   let description = [{
     Apply C/C++ usual conversions rules between values. Currently supported kinds:
 
-    - `int_to_bool`
-    - `ptr_to_bool`
     - `array_to_ptrdecay`
-    - `integral`
     - `bitcast`
+    - `integral`
+    - `int_to_bool`
+    - `int_to_float`
     - `floating`
     - `float_to_int`
+    - `float_to_bool`
+    - `ptr_to_int`
+    - `ptr_to_bool`
+    - `bool_to_int`
+    - `bool_to_float`
 
     This is effectively a subset of the rules from
     `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some
@@ -1643,6 +1648,54 @@ def GetMemberOp : CIR_Op<"get_member"> {
     mlir::cir::PointerType getResultTy() {
       return getResult().getType().cast<mlir::cir::PointerType>();
     }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecExtractOp
+//===----------------------------------------------------------------------===//
+
+def VecExtractOp : CIR_Op<"vec.extract", [Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'vec'",
+                 "vec", "result",
+                 "$_self.cast<VectorType>().getEltType()">]> {
+
+  let summary = "Extract one element from a vector object";
+  let description = [{
+    The `cir.vec.extract` operation extracts the element at the given index
+    from a vector object.
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, CIR_IntType:$index);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = [{
+    $vec `[` $index `:` type($index) `]` type($vec) `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// VecCreate
+//===----------------------------------------------------------------------===//
+
+def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
+
+  let summary = "Create a vector value";
+  let description = [{
+    The `cir.vec.create` operation creates a vector value with the given element
+    values. The number of element arguments must match the number of elements
+    in the vector type.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` ($elements^ `:` type($elements))? `)` `:` type($result) attr-dict
   }];
 
   let hasVerifier = 1;
