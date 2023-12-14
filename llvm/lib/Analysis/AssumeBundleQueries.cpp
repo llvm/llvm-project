@@ -21,10 +21,9 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-STATISTIC(NumAssumeQueries, "Number of Queries into an assume assume bundles");
-STATISTIC(
-    NumUsefullAssumeQueries,
-    "Number of Queries into an assume assume bundles that were satisfied");
+STATISTIC(NumAssumeQueries, "Number of Queries into an assume bundles");
+STATISTIC(NumUsefullAssumeQueries,
+          "Number of Queries into an assume bundles that were satisfied");
 
 DEBUG_COUNTER(AssumeQueryCounter, "assume-queries-counter",
               "Controls which assumes gets created");
