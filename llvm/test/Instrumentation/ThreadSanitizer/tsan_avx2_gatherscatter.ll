@@ -15,6 +15,7 @@ entry:
   tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %a, <4 x ptr> %p, i32 8, <4 x i1> %m)
   ret void
 }
+; CHECK: define void @scatter_4_double_mask(
 ; CHECK: %1 = bitcast <4 x i1> %m to i4
 ; CHECK-NEXT: call void @__tsan_scatter_vector4(<4 x ptr> %p, i32 8, i4 %1)
 
@@ -23,6 +24,7 @@ entry:
   tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %a, <4 x ptr> %p, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
+; CHECK: define void @scatter_4_double(
 ; CHECK: call void @__tsan_scatter_vector4(<4 x ptr> %p, i32 8, i4 bitcast (<4 x i1> <i1 true, i1 true, i1 true, i1 true> to i4))
 
 define void @gather_4_double(<4 x double> %a, <4 x ptr> %p) #0 #1 {
@@ -30,6 +32,7 @@ entry:
   tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %p, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> %a)
   ret void
 }
+; CHECK: define void @gather_4_double(
 ; CHECK: call void @__tsan_gather_vector4(<4 x ptr> %p, i32 8, i4 bitcast (<4 x i1> <i1 true, i1 true, i1 true, i1 true> to i4))
 
 define void @scatter_4_double_noavx(<4 x double> %a, <4 x ptr> %p, <4 x i1> %m) #0 {
@@ -37,6 +40,7 @@ entry:
   tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %a, <4 x ptr> %p, i32 8, <4 x i1> %m)
   ret void
 }
+; CHECK: define void @scatter_4_double_noavx(
 ; CHECK-NOT: call void @__tsan_scatter_vector
 
 define void @scatter_4_double_avx512f(<4 x double> %a, <4 x ptr> %p, <4 x i1> %m) #0 #2 {
@@ -44,5 +48,6 @@ entry:
   tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %a, <4 x ptr> %p, i32 8, <4 x i1> %m)
   ret void
 }
+; CHECK: define void @scatter_4_double_avx512f(
 ; CHECK: %1 = bitcast <4 x i1> %m to i4
 ; CHECK-NEXT: call void @__tsan_scatter_vector4(<4 x ptr> %p, i32 8, i4 %1)

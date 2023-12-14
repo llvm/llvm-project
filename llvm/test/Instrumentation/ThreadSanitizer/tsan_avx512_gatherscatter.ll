@@ -17,6 +17,7 @@ entry:
   tail call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %a, <8 x ptr> %p, i32 8, <8 x i1> %m)
   ret void
 }
+; CHECK: define void @scatter_8_double_mask(
 ; CHECK: %1 = bitcast <8 x i1> %m to i8
 ; CHECK-NEXT: call void @__tsan_scatter_vector8(<8 x ptr> %p, i32 8, i8 %1)
 
@@ -25,6 +26,7 @@ entry:
   tail call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %a, <8 x ptr> %p, i32 4, <8 x i1> %m)
   ret void
 }
+; CHECK: define void @scatter_8_float_mask(
 ; CHECK: %1 = bitcast <8 x i1> %m to i8
 ; CHECK-NEXT: call void @__tsan_scatter_vector8(<8 x ptr> %p, i32 4, i8 %1)
 
@@ -33,6 +35,7 @@ entry:
   tail call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %a, <8 x ptr> %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
+; CHECK: define void @scatter_8_double(
 ; CHECK: call void @__tsan_scatter_vector8(<8 x ptr> %p, i32 8, i8 bitcast (<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true> to i8))
 
 define void @gather_8_double_mask(<8 x double> %a, <8 x ptr> %p, <8 x i1> %m) #0 #2 {
@@ -40,6 +43,7 @@ entry:
   tail call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> %p, i32 8, <8 x i1> %m, <8 x double> %a)
   ret void
 }
+; CHECK: define void @gather_8_double_mask(
 ; CHECK: %1 = bitcast <8 x i1> %m to i8
 ; CHECK-NEXT: call void @__tsan_gather_vector8(<8 x ptr> %p, i32 8, i8 %1)
 
@@ -48,6 +52,7 @@ entry:
   tail call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %p, i32 4, <8 x i1> %m, <8 x float> %a)
   ret void
 }
+; CHECK: define void @gather_8_float_mask(
 ; CHECK: %1 = bitcast <8 x i1> %m to i8
 ; CHECK-NEXT: call void @__tsan_gather_vector8(<8 x ptr> %p, i32 4, i8 %1)
 
@@ -56,6 +61,7 @@ entry:
   tail call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x double> %a)
   ret void
 }
+; CHECK: define void @gather_8_double(
 ; CHECK: call void @__tsan_gather_vector8(<8 x ptr> %p, i32 8, i8 bitcast (<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true> to i8))
 
 define void @gather_8_float_avx2(<8 x float> %a, <8 x ptr> %p, <8 x i1> %m) #0 #1 {
@@ -63,6 +69,7 @@ entry:
   tail call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %p, i32 4, <8 x i1> %m, <8 x float> %a)
   ret void
 }
+; CHECK: define void @gather_8_float_avx2(
 ; CHECK-NOT: call void @__tsan_gather_vector
 
 define void @gather_8_float_noavx(<8 x float> %a, <8 x ptr> %p, <8 x i1> %m) #0 {
@@ -70,4 +77,5 @@ entry:
   tail call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %p, i32 4, <8 x i1> %m, <8 x float> %a)
   ret void
 }
+; CHECK: define void @gather_8_float_noavx(
 ; CHECK-NOT: call void @__tsan_gather_vector
