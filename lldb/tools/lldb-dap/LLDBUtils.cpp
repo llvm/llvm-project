@@ -81,7 +81,7 @@ std::string RunLLDBCommands(llvm::StringRef prefix,
 std::string
 RunLLDBCommandsVerbatim(llvm::StringRef prefix,
                         const llvm::ArrayRef<std::string> &commands) {
-  bool required_command_failed;
+  bool required_command_failed = false;
   return RunLLDBCommands(prefix, commands, required_command_failed,
                          /*parse_command_directives=*/false);
 }
