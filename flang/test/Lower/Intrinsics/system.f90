@@ -1,35 +1,37 @@
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK-LABEL: func.func @_QPall_args() {
-! CHECK:         %0 = fir.alloca !fir.char<1,30> {bindc_name = "command", uniq_name = "_QFall_argsEcommand"}
-! CHECK-NEXT:    %1:2 = hlfir.declare %0 typeparams %c30 {uniq_name = "_QFall_argsEcommand"} : (!fir.ref<!fir.char<1,30>>, index) -> (!fir.ref<!fir.char<1,30>>, !fir.ref<!fir.char<1,30>>)
-! CHECK-NEXT:    %2 = fir.alloca i32 {bindc_name = "exitval", uniq_name = "_QFall_argsEexitval"}
-! CHECK-NEXT:    %3:2 = hlfir.declare %2 {uniq_name = "_QFall_argsEexitval"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK-NEXT:    %4 = fir.embox %1#1 : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
-! CHECK-NEXT:    %5 = fir.embox %3#1 : (!fir.ref<i32>) -> !fir.box<i32>
-! CHECK:         %c19_i32 = arith.constant 19 : i32
-! CHECK-NEXT:    %7 = fir.convert %4 : (!fir.box<!fir.char<1,30>>) -> !fir.box<none>
-! CHECK-NEXT:    %8 = fir.convert %5 : (!fir.box<i32>) -> !fir.box<none>
-! CHECK:         %10 = fir.call @_FortranASystem(%7, %8, %9, %c19_i32) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
-! CHECK-NEXT:    return
-! CHECK-NEXT:    }
-subroutine all_args()
-CHARACTER(30) :: command
+! CHECK-LABEL: func.func @_QPall_args(
+! CHECK-SAME:    %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "command"}, 
+! CHECK-SAME:    %[[exitvalArg:.*]]: !fir.ref<i32> {fir.bindc_name = "exitval"}) { 
+subroutine all_args(command, exitVal)
+CHARACTER(*) :: command
 INTEGER :: exitVal
 call system(command, exitVal)
+! CHECK-NEXT:    %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index) 
+! CHECK-NEXT:    %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 {uniq_name = "_QFall_argsEcommand"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NEXT:    %[[exitvalDeclare:.*]]:2 = hlfir.declare %[[exitvalArg]] {uniq_name = "_QFall_argsEexitval"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-NEXT:    %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT:    %[[exitvalBox:.*]] = fir.embox %[[exitvalDeclare]]#1 : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK:         %c9_i32 = arith.constant 9 : i32
+! CHECK-NEXT:    %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none> 
+! CHECK-NEXT:    %[[exitval:.*]] = fir.convert %[[exitvalBox]] : (!fir.box<i32>) -> !fir.box<none>
+! CHECK:         %[[VAL_9:.*]] = fir.call @_FortranASystem(%[[command]], %[[exitval]], %[[VAL_8:.*]], %c9_i32) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK-NEXT:    return
+! CHECK-NEXT:    }
 end subroutine all_args
 
-! CHECK-LABEL: func.func @_QPonly_command() {
-! CHECK:         %0 = fir.alloca !fir.char<1,30> {bindc_name = "command", uniq_name = "_QFonly_commandEcommand"}
-! CHECK-NEXT:    %1:2 = hlfir.declare %0 typeparams %c30 {uniq_name = "_QFonly_commandEcommand"} : (!fir.ref<!fir.char<1,30>>, index) -> (!fir.ref<!fir.char<1,30>>, !fir.ref<!fir.char<1,30>>)
-! CHECK-NEXT:    %2 = fir.embox %1#1 : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
-! CHECK-NEXT:    %3 = fir.absent !fir.box<none>
-! CHECK:         %c34_i32 = arith.constant 34 : i32
-! CHECK-NEXT:    %5 = fir.convert %2 : (!fir.box<!fir.char<1,30>>) -> !fir.box<none> 
-! CHECK:         %7 = fir.call @_FortranASystem(%5, %3, %6, %c34_i32) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK-LABEL: func.func @_QPonly_command(
+! CHECK-SAME:    %[[commandArg:.*]]: !fir.boxchar<1> {fir.bindc_name = "command"}) {
+subroutine only_command(command)
+CHARACTER(*) :: command
+call system(command)
+! CHECK-NEXT:    %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NEXT:    %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 {uniq_name = "_QFonly_commandEcommand"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NEXT:    %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
+! CHECK-NEXT:    %[[absentBox:.*]] = fir.absent !fir.box<none>
+! CHECK:         %c27_i32 = arith.constant 27 : i32
+! CHECK-NEXT:    %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK:         %[[VAL_7:.*]] = fir.call @_FortranASystem(%[[command]], %[[absentBox]], %[[VAL_6:.*]], %c27_i32) fastmath<contract> : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:   }
-subroutine only_command()
-CHARACTER(30) :: command
-call system(command)
 end subroutine only_command
