@@ -8,9 +8,24 @@ else
   CLANG=$1
 fi
 
-OUTDIR=$(dirname $(realpath -s $0))
 
-cat > ${OUTDIR}/vtable_prof.cc << EOF
+# Remember current directory.
+CURDIR=$PWD
+
+# Allows the script to be invoked from other directories.
+OUTDIR=$(dirname $(realpath -s $0))
+echo $OUTDIR
+
+cd $OUTDIR
+
+# vtable_prof.cc has the following class hierarchy:
+# class Base
+# ├── class Derived1
+# └── class Derived2
+# Derived1 is a class in the global namespace and Derived2 is in anonymous
+# namespace for test coverage. Overridden virtual methods are annotated as
+# `noinline` so the callsite remains indirect calls for testing purposes.
+cat > vtable_prof.cc << EOF
 #include <cstdlib>
 #include <cstdio>
 
@@ -72,11 +87,16 @@ int main(int argc, char** argv) {
 }
 EOF
 
+
+# Clean up temporary files on exit and return to original directory.
+cleanup() {
+  rm -f vtable_prof
+  rm -f vtable_prof.cc
+  cd $CURDIR
+}
+trap cleanup EXIT
+
 FLAGS="-fuse-ld=lld -O2 -g -fprofile-generate=. -mllvm -enable-vtable-value-profiling"
 
-${CLANG} ${FLAGS} ${OUTDIR}/vtable_prof.cc -o ${OUTDIR}/vtable_prof
-env LLVM_PROFILE_FILE=${OUTDIR}/vtable_prof.profraw ${OUTDIR}/vtable_prof
-
-rm ${OUTDIR}/vtable_prof
-rm ${OUTDIR}/vtable_prof.cc
-
+${CLANG} ${FLAGS} vtable_prof.cc -o vtable_prof
+env LLVM_PROFILE_FILE=vtable-value-prof-basic.profraw ./vtable_prof
