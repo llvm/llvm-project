@@ -1,5 +1,5 @@
-; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasm-eh-prepare -S | FileCheck %s
-; RUN: opt < %s -winehprepare -demote-catchswitch-only -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
+; RUN: opt < %s -win-eh-prepare -demote-catchswitch-only -wasm-eh-prepare -S | FileCheck %s
+; RUN: opt < %s -win-eh-prepare -demote-catchswitch-only -wasm-eh-prepare -S --mattr=+atomics,+bulk-memory | FileCheck %s
 ; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S | FileCheck %s
 ; RUN: opt < %s -passes='win-eh-prepare<demote-catchswitch-only>,wasm-eh-prepare' -S --mattr=+atomics,+bulk-memory | FileCheck %s
 

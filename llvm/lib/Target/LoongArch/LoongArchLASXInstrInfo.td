@@ -1455,6 +1455,32 @@ def : Pat<(fma v8f32:$xj, v8f32:$xk, v8f32:$xa),
 def : Pat<(fma v4f64:$xj, v4f64:$xk, v4f64:$xa),
           (XVFMADD_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
 
+// XVFMSUB_{S/D}
+def : Pat<(fma v8f32:$xj, v8f32:$xk, (fneg v8f32:$xa)),
+          (XVFMSUB_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
+def : Pat<(fma v4f64:$xj, v4f64:$xk, (fneg v4f64:$xa)),
+          (XVFMSUB_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
+
+// XVFNMADD_{S/D}
+def : Pat<(fneg (fma v8f32:$xj, v8f32:$xk, v8f32:$xa)),
+          (XVFNMADD_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
+def : Pat<(fneg (fma v4f64:$xj, v4f64:$xk, v4f64:$xa)),
+          (XVFNMADD_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
+def : Pat<(fma_nsz (fneg v8f32:$xj), v8f32:$xk, (fneg v8f32:$xa)),
+          (XVFNMADD_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
+def : Pat<(fma_nsz (fneg v4f64:$xj), v4f64:$xk, (fneg v4f64:$xa)),
+          (XVFNMADD_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
+
+// XVFNMSUB_{S/D}
+def : Pat<(fneg (fma v8f32:$xj, v8f32:$xk, (fneg v8f32:$xa))),
+          (XVFNMSUB_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
+def : Pat<(fneg (fma v4f64:$xj, v4f64:$xk, (fneg v4f64:$xa))),
+          (XVFNMSUB_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
+def : Pat<(fma_nsz (fneg v8f32:$xj), v8f32:$xk, v8f32:$xa),
+          (XVFNMSUB_S v8f32:$xj, v8f32:$xk, v8f32:$xa)>;
+def : Pat<(fma_nsz (fneg v4f64:$xj), v4f64:$xk, v4f64:$xa),
+          (XVFNMSUB_D v4f64:$xj, v4f64:$xk, v4f64:$xa)>;
+
 // XVFSQRT_{S/D}
 defm : PatXrF<fsqrt, "XVFSQRT">;
 

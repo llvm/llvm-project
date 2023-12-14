@@ -2169,8 +2169,11 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     MCSymbol *LocalAlias = getSymbolPreferLocal(GI);
     if (LocalAlias != Name)
       OutStreamer->emitAssignment(LocalAlias, Expr);
-  } else if (TM.getTargetTriple().isOSBinFormatMachO() &&
-             getIFuncMCSubtargetInfo()) {
+
+    return;
+  }
+
+  if (TM.getTargetTriple().isOSBinFormatMachO() && getIFuncMCSubtargetInfo()) {
     // On Darwin platforms, emit a manually-constructed .symbol_resolver that
     // implements the symbol resolution duties of the IFunc.
     //
@@ -2220,8 +2223,11 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     OutStreamer->emitLabel(StubHelper);
     emitVisibility(StubHelper, GI.getVisibility());
     emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
-  } else
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+
+    return;
+  }
+
+  llvm::report_fatal_error("IFuncs are not supported on this platform");
 }
 
 void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {

@@ -44,17 +44,6 @@ void RTNAME(CharacterConcatenate)(Descriptor &accumulator,
 void RTNAME(CharacterConcatenateScalar1)(
     Descriptor &accumulator, const char *from, std::size_t chars);
 
-// Copies the value(s) of 'rhs' to 'lhs'.  Handles reallocation,
-// truncation, or padding ss necessary.  Crashes when not conforming and
-// the LHS is not allocatable.  Assumes independence of data.
-// The LHS and RHS need not have the same kind of character;
-// so when the LHS is a deallocated allocatable temporary result, this
-// function can be used as a simple conversion routine.
-// Call MoveAlloc() instead as an optimization when a temporary value is
-// being assigned to a deferred-length allocatable.
-void RTNAME(CharacterAssign)(Descriptor &lhs, const Descriptor &rhs,
-    const char *sourceFile = nullptr, int sourceLine = 0);
-
 // CHARACTER comparisons.  The kinds must match.  Like std::memcmp(),
 // the result is less than zero, zero, or greater than zero if the first
 // argument is less than the second, equal to the second, or greater than

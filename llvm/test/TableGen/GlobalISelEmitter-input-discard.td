@@ -21,7 +21,7 @@ def FOO : I<(outs GPR32:$dst), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/RegState::Define,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FOO,
-// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, // src1
 // GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
