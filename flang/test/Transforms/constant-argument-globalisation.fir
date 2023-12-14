@@ -1,4 +1,5 @@
 // RUN: fir-opt --constant-argument-globalisation-opt < %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm -flang-deprecated-no-hlfir -O2 -mllvm --disable-constant-argument-globalisation -o - %s | FileCheck --check-prefix=DISABLE %s
 module {
   func.func @sub1(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "y"}) {
     %0 = fir.alloca i32 {adapt.valuebyref}
@@ -19,8 +20,8 @@ module {
     return
   }
   func.func private @sub2(!fir.ref<f64>, !fir.ref<f64>, !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>)
-}
-// CHECK-LABEL: func.func @sub1
+
+// CHECK-LABEL: func.func @sub1(
 // CHECK-SAME: [[ARG0:%.*]]: !fir.ref<i32> {{{.*}}},
 // CHECK-SAME: [[ARG1:%.*]]: !fir.ref<i32> {{{.*}}}) {
 // CHECK: [[X:%.*]] = fir.declare [[ARG0]] {{.*}}
@@ -43,3 +44,23 @@ module {
 // CHECK: %{{.*}} = arith.constant 1 : i32
 // CHECK: fir.has_value %{{.*}} : i32
 // CHECK: }
+
+// DISABLE-LABEL: ; ModuleID =
+// DISABLE-NOT: @_extruded
+// DISABLE:  define void @sub1(
+// DISABLE-SAME: ptr [[ARG0:%.*]],
+// DISABLE-SAME: ptr [[ARG1:%.*]])
+// DISABLE-SMAE: {
+// DISABLE: [[CONST_I:%.*]] = alloca i32
+// DISABLE: [[CONST_R1:%.*]] = alloca double
+// DISABLE: [[CONST_R0:%.*]] = alloca double
+// DISABLE: store double 0.0{{.*}}+00, ptr [[CONST_R0]]
+// DISABLE: store double 1.0{{.*}}+00, ptr [[CONST_R1]]
+// DISABLE: store i32 1, ptr [[CONST_I]]
+// DISABLE: call void @sub2(ptr nonnull [[CONST_R0]],
+// DISABLE-SAME: ptr nonnull [[CONST_R1]], 
+// DISABLE-SAME: ptr [[ARG0]], ptr [[ARG1]],
+// DISABLE-SAME: ptr nonnull [[CONST_I]])
+// DISABLE: ret void
+// DISABLE: }
+}
