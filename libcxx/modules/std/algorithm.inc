@@ -52,6 +52,7 @@ export namespace std {
   namespace ranges {
     using std::ranges::fold_left;
     using std::ranges::fold_left_with_iter;
+    using std::ranges::fold_left_with_iter_result;
   } // namespace ranges
 
   // [alg.foreach], for each
