@@ -520,3 +520,14 @@ func.func @cse_recursive_effects_failure() -> (i32, i32, i32) {
   %2 = "test.op_with_memread"() : () -> (i32)
   return %0, %2, %1 : i32, i32, i32
 }
+
+func.func @cse_test_dialect_interface() -> (i32, i32, i32) {
+  %0 = "test.always_speculatable_op"() {test.non_essential = "b"} : () -> i32
+  %1 = "test.always_speculatable_op"() {test.non_essential = "a"} : () -> i32
+  %2 = "test.always_speculatable_op"() {test.non_essential = "c"} : () -> i32
+  return %0, %1, %2 : i32, i32, i32
+}
+
+// CHECK-LABEL: @cse_test_dialect_interface
+// CHECK-NEXT: %[[result:.+]] = "test.always_speculatable_op"() {test.non_essential = "a"} : () -> i32
+// CHECK-NEXT: return %[[result]], %[[result]], %[[result]]
