@@ -299,23 +299,33 @@ void error_fseek_0(void) {
   fclose(F);
 }
 
-void error_fflush_0(void) {
+void error_fflush_after_fclose(void) {
   FILE *F = tmpfile();
   int Ret;
   fflush(NULL);                      // no-warning
-  if (!F) {
-    if ((Ret = fflush(F)) != EOF)
-      clang_analyzer_eval(Ret == 0); // expected-warning {{TRUE}}
+  if (!F)
     return;
-  }
   if ((Ret = fflush(F)) != 0)
     clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
   fclose(F);
   fflush(F);                         // expected-warning {{Stream might be already closed}}
 }
 
-void error_fflush_1(void) {
-  FILE *F0 = tmpfile(), *F1 = tmpfile(), *F2 = tmpfile(), *F3 = tmpfile();
+void error_fflush_on_open_failed_stream(void) {
+  FILE *F = tmpfile();
+  if (!F) {
+    fflush(F); // no-warning
+    return;
+  }
+  fclose(F);
+}
+
+void error_fflush_on_unknown_stream(FILE *F) {
+  fflush(F);   // no-warning
+}
+
+void error_fflush_on_non_null_stream_clear_error_states(void) {
+  FILE *F0 = tmpfile(), *F1 = tmpfile();
   // `fflush` clears a non-EOF stream's error state.
   if (F0) {
     StreamTesterChecker_make_ferror_stream(F0);
@@ -335,22 +345,26 @@ void error_fflush_1(void) {
     }
     fclose(F1);
   }
+}
+
+void error_fflush_on_null_stream_clear_error_states(void) {
+  FILE *F0 = tmpfile(), *F1 = tmpfile();
   // `fflush` clears all stream's error states, while retains their EOF states.
-  if (F2 && F3) {
-    StreamTesterChecker_make_ferror_stream(F2);
-    StreamTesterChecker_make_ferror_stream(F3);
-    StreamTesterChecker_make_feof_stream(F3);
+  if (F0 && F1) {
+    StreamTesterChecker_make_ferror_stream(F0);
+    StreamTesterChecker_make_ferror_stream(F1);
+    StreamTesterChecker_make_feof_stream(F1);
     if (fflush(NULL) == 0) {           // no-warning
-      clang_analyzer_eval(ferror(F2)); // expected-warning {{FALSE}}
-      clang_analyzer_eval(feof(F2));   // expected-warning {{FALSE}}
-      clang_analyzer_eval(ferror(F3)); // expected-warning {{FALSE}}
-      clang_analyzer_eval(feof(F3));   // expected-warning {{TRUE}}
+      clang_analyzer_eval(ferror(F0)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(feof(F0));   // expected-warning {{FALSE}}
+      clang_analyzer_eval(ferror(F1)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(feof(F1));   // expected-warning {{TRUE}}
     }
   }
-  if (F2)
-    fclose(F2);
-  if (F3)
-    fclose(F3);
+  if (F0)
+    fclose(F0);
+  if (F1)
+    fclose(F1);
 }
 
 void error_indeterminate(void) {
