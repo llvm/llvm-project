@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LINUX,CHECK
+// RUN: %clang_cc1 -triple x86_64-apple-macos -emit-llvm %s -o - | FileCheck %s --check-prefixes=DARWIN,CHECK
 // RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=WINDOWS,CHECK
 
 // LINUX: $foo.resolver = comdat any
@@ -6,6 +7,8 @@
 // LINUX: $unused.resolver = comdat any
 // LINUX: $foo_inline.resolver = comdat any
 // LINUX: $foo_inline2.resolver = comdat any
+
+// DARWIN-NOT: comdat any
 
 // WINDOWS: $foo = comdat any
 // WINDOWS: $foo_dupes = comdat any
@@ -27,6 +30,12 @@ int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 // LINUX: ret ptr @foo.sse4.2.0
 // LINUX: ret ptr @foo.default.1
 
+// DARWIN: define {{.*}}i32 @foo.sse4.2.0()
+// DARWIN: define {{.*}}i32 @foo.default.1()
+// DARWIN: define weak_odr ptr @foo.resolver() {
+// DARWIN: ret ptr @foo.sse4.2.0
+// DARWIN: ret ptr @foo.default.1
+
 // WINDOWS: define dso_local i32 @foo.sse4.2.0()
 // WINDOWS: define dso_local i32 @foo.default.1()
 // WINDOWS: define weak_odr dso_local i32 @foo() comdat
@@ -40,6 +49,12 @@ __attribute__((target_clones("default,default ,sse4.2"))) void foo_dupes(void) {
 // LINUX: ret ptr @foo_dupes.sse4.2.0
 // LINUX: ret ptr @foo_dupes.default.1
 
+// DARWIN: define {{.*}}void @foo_dupes.default.1()
+// DARWIN: define {{.*}}void @foo_dupes.sse4.2.0()
+// DARWIN: define weak_odr ptr @foo_dupes.resolver() {
+// DARWIN: ret ptr @foo_dupes.sse4.2.0
+// DARWIN: ret ptr @foo_dupes.default.1
+
 // WINDOWS: define dso_local void @foo_dupes.default.1()
 // WINDOWS: define dso_local void @foo_dupes.sse4.2.0()
 // WINDOWS: define weak_odr dso_local void @foo_dupes() comdat
@@ -48,17 +63,21 @@ __attribute__((target_clones("default,default ,sse4.2"))) void foo_dupes(void) {
 
 void bar2(void) {
   // LINUX: define {{.*}}void @bar2()
+  // DARWIN: define {{.*}}void @bar2()
   // WINDOWS: define dso_local void @bar2()
   foo_dupes();
   // LINUX: call void @foo_dupes.ifunc()
+  // DARWIN: call void @foo_dupes.ifunc()
   // WINDOWS: call void @foo_dupes()
 }
 
 int bar(void) {
   // LINUX: define {{.*}}i32 @bar() #[[DEF:[0-9]+]]
+  // DARWIN: define {{.*}}i32 @bar() #[[DEF:[0-9]+]]
   // WINDOWS: define dso_local i32 @bar() #[[DEF:[0-9]+]]
   return foo();
   // LINUX: call i32 @foo.ifunc()
+  // DARWIN: call i32 @foo.ifunc()
   // WINDOWS: call i32 @foo()
 }
 
@@ -68,6 +87,12 @@ void __attribute__((target_clones("default, arch=ivybridge"))) unused(void) {}
 // LINUX: define weak_odr ptr @unused.resolver() comdat
 // LINUX: ret ptr @unused.arch_ivybridge.0
 // LINUX: ret ptr @unused.default.1
+
+// DARWIN: define {{.*}}void @unused.default.1()
+// DARWIN: define {{.*}}void @unused.arch_ivybridge.0()
+// DARWIN: define weak_odr ptr @unused.resolver() {
+// DARWIN: ret ptr @unused.arch_ivybridge.0
+// DARWIN: ret ptr @unused.default.1
 
 // WINDOWS: define dso_local void @unused.default.1()
 // WINDOWS: define dso_local void @unused.arch_ivybridge.0()
@@ -83,10 +108,13 @@ foo_inline2(void);
 
 int bar3(void) {
   // LINUX: define {{.*}}i32 @bar3()
+  // DARWIN: define {{.*}}i32 @bar3()
   // WINDOWS: define dso_local i32 @bar3()
   return foo_inline() + foo_inline2();
   // LINUX: call i32 @foo_inline.ifunc()
   // LINUX: call i32 @foo_inline2.ifunc()
+  // DARWIN: call i32 @foo_inline.ifunc()
+  // DARWIN: call i32 @foo_inline2.ifunc()
   // WINDOWS: call i32 @foo_inline()
   // WINDOWS: call i32 @foo_inline2()
 }
@@ -95,6 +123,11 @@ int bar3(void) {
 // LINUX: ret ptr @foo_inline.arch_sandybridge.0
 // LINUX: ret ptr @foo_inline.sse4.2.1
 // LINUX: ret ptr @foo_inline.default.2
+
+// DARWIN: define weak_odr ptr @foo_inline.resolver() {
+// DARWIN: ret ptr @foo_inline.arch_sandybridge.0
+// DARWIN: ret ptr @foo_inline.sse4.2.1
+// DARWIN: ret ptr @foo_inline.default.2
 
 // WINDOWS: define weak_odr dso_local i32 @foo_inline() comdat
 // WINDOWS: musttail call i32 @foo_inline.arch_sandybridge.0
@@ -107,6 +140,11 @@ foo_inline2(void){ return 0; }
 // LINUX: ret ptr @foo_inline2.arch_sandybridge.0
 // LINUX: ret ptr @foo_inline2.sse4.2.1
 // LINUX: ret ptr @foo_inline2.default.2
+
+// DARWIN: define weak_odr ptr @foo_inline2.resolver() {
+// DARWIN: ret ptr @foo_inline2.arch_sandybridge.0
+// DARWIN: ret ptr @foo_inline2.sse4.2.1
+// DARWIN: ret ptr @foo_inline2.default.2
 
 // WINDOWS: define weak_odr dso_local i32 @foo_inline2() comdat
 // WINDOWS: musttail call i32 @foo_inline2.arch_sandybridge.0
@@ -122,9 +160,11 @@ foo_used_no_defn(void);
 
 int test_foo_used_no_defn(void) {
   // LINUX: define {{.*}}i32 @test_foo_used_no_defn()
+  // DARWIN: define {{.*}}i32 @test_foo_used_no_defn()
   // WINDOWS: define dso_local i32 @test_foo_used_no_defn()
   return foo_used_no_defn();
   // LINUX: call i32 @foo_used_no_defn.ifunc()
+  // DARWIN: call i32 @foo_used_no_defn.ifunc()
   // WINDOWS: call i32 @foo_used_no_defn()
 }
 
@@ -132,6 +172,10 @@ int test_foo_used_no_defn(void) {
 // LINUX: define weak_odr ptr @foo_used_no_defn.resolver() comdat
 // LINUX: ret ptr @foo_used_no_defn.sse4.2.0
 // LINUX: ret ptr @foo_used_no_defn.default.1
+
+// DARWIN: define weak_odr ptr @foo_used_no_defn.resolver() {
+// DARWIN: ret ptr @foo_used_no_defn.sse4.2.0
+// DARWIN: ret ptr @foo_used_no_defn.default.1
 
 // WINDOWS: define weak_odr dso_local i32 @foo_used_no_defn() comdat
 // WINDOWS: musttail call i32 @foo_used_no_defn.sse4.2.0
@@ -144,6 +188,10 @@ int test_foo_used_no_defn(void) {
 // LINUX: define linkonce i32 @foo_inline.default.2() #[[DEF:[0-9]+]]
 // LINUX: define linkonce i32 @foo_inline.sse4.2.1() #[[SSE42:[0-9]+]]
 
+// DARWIN: define linkonce i32 @foo_inline.arch_sandybridge.0() #[[SB:[0-9]+]]
+// DARWIN: define linkonce i32 @foo_inline.default.2() #[[DEF:[0-9]+]]
+// DARWIN: define linkonce i32 @foo_inline.sse4.2.1() #[[SSE42:[0-9]+]]
+
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.arch_sandybridge.0() #[[SB:[0-9]+]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.default.2() #[[DEF]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.sse4.2.1() #[[SSE42:[0-9]+]]
@@ -153,6 +201,10 @@ int test_foo_used_no_defn(void) {
 // LINUX: define linkonce i32 @foo_inline2.default.2() #[[DEF]]
 // LINUX: define linkonce i32 @foo_inline2.sse4.2.1() #[[SSE42]]
 
+// DARWIN: define linkonce i32 @foo_inline2.arch_sandybridge.0() #[[SB]]
+// DARWIN: define linkonce i32 @foo_inline2.default.2() #[[DEF]]
+// DARWIN: define linkonce i32 @foo_inline2.sse4.2.1() #[[SSE42]]
+
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.arch_sandybridge.0() #[[SB]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.default.2() #[[DEF]]
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline2.sse4.2.1() #[[SSE42]]
@@ -160,6 +212,9 @@ int test_foo_used_no_defn(void) {
 
 // LINUX: declare i32 @foo_used_no_defn.default.1()
 // LINUX: declare i32 @foo_used_no_defn.sse4.2.0()
+
+// DARWIN: declare i32 @foo_used_no_defn.default.1()
+// DARWIN: declare i32 @foo_used_no_defn.sse4.2.0()
 
 // WINDOWS: declare dso_local i32 @foo_used_no_defn.default.1()
 // WINDOWS: declare dso_local i32 @foo_used_no_defn.sse4.2.0()
