@@ -1487,17 +1487,10 @@ struct DropUnitDimFromElementwiseOps final
     if (!resultVectorType)
       return failure();
 
-    if (llvm::any_of(op->getOperands(), [](auto operand) {
-          return !isa<VectorType>(operand.getType());
-        })) {
-      return failure();
-    }
-
     // Check the pre-conditions. For `Elementwise` Ops all operands are
     // guaranteed to have identical shapes and it suffices to only check the
     // first one.
     auto sourceVectorType = cast<VectorType>(op->getOperands()[0].getType());
-
     if (sourceVectorType.getRank() < 2)
       return failure();
 
