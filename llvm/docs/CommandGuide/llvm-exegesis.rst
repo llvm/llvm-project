@@ -86,7 +86,9 @@ properly.
   be mapped in at. The address is given in hexadecimal. Note that the snippet
   also includes setup code, so the instruction exactly at the specified
   address will not be the first instruction in the snippet. Using this
-  annotation requires the subprocess execution mode.
+  annotation requires the subprocess execution mode. This is useful in
+  cases where the memory accessed by the snippet depends on the location
+  of the snippet, like RIP-relative addressing.
 
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
@@ -433,9 +435,9 @@ OPTIONS
 
 .. option:: --benchmark-repeat-count=<repeat-count>
 
-  This option enables specifying the number of times to repeat the benchmark
-  when performing latency benchmarks. By default, llvm-exegesis will repeat
-  a latency measurement 30 times and then aggregate the results.
+  This option enables specifying the number of times to repeat the measurement
+  when performing latency measurements. By default, llvm-exegesis will repeat
+  a latency measurement enough times to balance run-time and noise reduction.
 
 EXIT STATUS
 -----------
