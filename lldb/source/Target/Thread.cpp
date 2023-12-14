@@ -831,6 +831,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
             do {
               if (should_stop)
                 current_plan->WillStop();
+              assert(!current_plan->IsBasePlan() && "Cannot pop base plan!");
               PopPlan();
             } while ((current_plan = GetCurrentPlan()) != prev_plan_ptr);
             // Now, if the responsible plan was not "Okay to discard" then
