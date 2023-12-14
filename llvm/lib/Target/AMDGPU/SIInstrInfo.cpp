@@ -6600,7 +6600,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::soffset);
   if (SoffsetIdx != -1) {
     MachineOperand *Soffset = &MI.getOperand(SoffsetIdx);
-    if (Soffset->isReg() &&
+    if (Soffset->isReg() && Soffset->getReg().isVirtual() &&
         !RI.isSGPRClass(MRI.getRegClass(Soffset->getReg()))) {
       isSoffsetLegal = false;
     }
@@ -8559,7 +8559,16 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   }
 }
 
-unsigned SIInstrInfo::getMaxMUBUFImmOffset() { return (1 << 12) - 1; }
+bool SIInstrInfo::isLegalMUBUFImmOffset(unsigned Imm) const {
+  return Imm <= getMaxMUBUFImmOffset(ST);
+}
+
+unsigned SIInstrInfo::getMaxMUBUFImmOffset(const GCNSubtarget &ST) {
+  // GFX12 field is non-negative 24-bit signed byte offset.
+  const unsigned OffsetBits =
+      ST.getGeneration() >= AMDGPUSubtarget::GFX12 ? 23 : 12;
+  return (1 << OffsetBits) - 1;
+}
 
 void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (!ST.isWave32())
@@ -8596,7 +8605,7 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // offsets within the given alignment can be added to the resulting ImmOffset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
                                    uint32_t &ImmOffset, Align Alignment) const {
-  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
   uint32_t Overflow = 0;
 
@@ -8622,11 +8631,17 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
     }
   }
 
-  // There is a hardware bug in SI and CI which prevents address clamping in
-  // MUBUF instructions from working correctly with SOffsets. The immediate
-  // offset is unaffected.
-  if (Overflow > 0 && ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
+  if (Overflow > 0) {
+    // There is a hardware bug in SI and CI which prevents address clamping in
+    // MUBUF instructions from working correctly with SOffsets. The immediate
+    // offset is unaffected.
+    if (ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+      return false;
+
+    // It is not possible to set immediate in SOffset field on some targets.
+    if (ST.hasRestrictedSOffset())
+      return false;
+  }
 
   ImmOffset = Imm;
   SOffset = Overflow;
