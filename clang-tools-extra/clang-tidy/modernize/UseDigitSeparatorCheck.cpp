@@ -76,11 +76,10 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
       GroupSize = 3;
     }
 
-    if (OriginalLiteralString.ends_with("L") ||
-        OriginalLiteralString.ends_with("l") ||
-        OriginalLiteralString.ends_with("U") ||
-        OriginalLiteralString.ends_with("u")) {
-      Postfix = OriginalLiteralString.back();
+    for (const char& Character : OriginalLiteralString) {
+      if (!std::isdigit(Character)) {
+        Postfix += Character;
+      }
     }
 
     // Get formatting literal text
@@ -113,11 +112,10 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Configure formatting
     std::string Postfix;
-    if (OriginalLiteralString.ends_with("L") ||
-        OriginalLiteralString.ends_with("l") ||
-        OriginalLiteralString.ends_with("F") ||
-        OriginalLiteralString.ends_with("f")) {
-      Postfix = OriginalLiteralString.back();
+    for (const char& Character : OriginalLiteralString) {
+      if (!std::isdigit(Character) && Character != '.') {
+        Postfix += Character;
+      }
     }
 
     // Get formatting literal text

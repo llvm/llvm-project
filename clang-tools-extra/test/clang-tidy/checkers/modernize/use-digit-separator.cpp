@@ -64,6 +64,14 @@ long MinusLongNotFormattedInteger1 = -12345678910111213l;
 // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of integer literal '12345678910111213l' [modernize-use-digit-separator]
 // CHECK-FIXES: 12'345'678'910'111'213l
 
+unsigned long UnsignedLongNotFormattedInteger1 = 12345678910111213Ul;
+// CHECK-MESSAGES: :[[@LINE-1]]:50: warning: unformatted representation of integer literal '12345678910111213Ul' [modernize-use-digit-separator]
+// CHECK-FIXES: 12'345'678'910'111'213Ul
+
+unsigned long MinusUnsignedLongNotFormattedInteger1 = -12345678910111213Ul;
+// CHECK-MESSAGES: :[[@LINE-1]]:56: warning: unformatted representation of integer literal '12345678910111213Ul' [modernize-use-digit-separator]
+// CHECK-FIXES: 12'345'678'910'111'213Ul
+
 float NotFormattedFloat = 1234.56789;
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: unformatted representation of integer literal '1234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.567'89
