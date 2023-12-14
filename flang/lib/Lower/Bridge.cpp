@@ -4244,13 +4244,7 @@ private:
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
     if (var.hasSymbol()) {
-      if (var.getSymbol().test(
-              Fortran::semantics::Symbol::Flag::OmpThreadprivate))
-        Fortran::lower::genThreadprivateOp(*this, var);
-
-      if (var.getSymbol().test(
-              Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
-        Fortran::lower::genDeclareTargetIntGlobal(*this, var);
+      handleOpenMPSymbolProperties(*this, var);
     }
   }
 

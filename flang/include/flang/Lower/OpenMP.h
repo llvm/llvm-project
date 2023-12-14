@@ -56,6 +56,8 @@ void genOpenMPConstruct(AbstractConverter &, semantics::SemanticsContext &,
                         pft::Evaluation &, const parser::OpenMPConstruct &);
 void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
+void handleOpenMPSymbolProperties(AbstractConverter &converter,
+                                  const pft::Variable &var);
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
