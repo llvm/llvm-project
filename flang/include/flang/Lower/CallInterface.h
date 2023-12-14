@@ -314,8 +314,8 @@ public:
                                   mlir::Value addr, mlir::Value len);
 
   /// If this is a call to a procedure pointer or dummy, returns the related
-  /// symbol. Nullptr otherwise.
-  const Fortran::semantics::Symbol *getIfIndirectCallSymbol() const;
+  /// procedure designator. Nullptr otherwise.
+  const Fortran::evaluate::ProcedureDesignator *getIfIndirectCall() const;
 
   /// Get the input vector once it is complete.
   llvm::ArrayRef<mlir::Value> getInputs() const {
