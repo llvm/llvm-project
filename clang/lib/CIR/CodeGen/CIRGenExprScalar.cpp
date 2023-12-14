@@ -213,7 +213,7 @@ public:
   mlir::Value buildLoadOfLValue(const Expr *E) {
     LValue LV = CGF.buildLValue(E);
     // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
-    return CGF.buildLoadOfLValue(LV, E->getExprLoc()).getScalarVal();    
+    return CGF.buildLoadOfLValue(LV, E->getExprLoc()).getScalarVal();
   }
 
   mlir::Value buildLoadOfLValue(LValue LV, SourceLocation Loc) {
@@ -1054,7 +1054,7 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
     std::swap(pointerOperand, indexOperand);
   }
 
-  bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();  
+  bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
 
   // Some versions of glibc and gcc use idioms (particularly in their malloc
   // routines) that add a pointer-sized integer (known to be a pointer value)

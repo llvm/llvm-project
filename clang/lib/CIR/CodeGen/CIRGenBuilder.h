@@ -10,8 +10,8 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
 #include "Address.h"
-#include "CIRGenRecordLayout.h"
 #include "CIRDataLayout.h"
+#include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
 #include "UnimplementedFeatureGuarding.h"
 
@@ -465,12 +465,11 @@ public:
   mlir::cir::ArrayType getArrayType(mlir::Type eltType, unsigned size) {
     return mlir::cir::ArrayType::get(getContext(), eltType, size);
   }
-  
+
   bool isSized(mlir::Type ty) {
     if (ty.isIntOrFloat() ||
         ty.isa<mlir::cir::PointerType, mlir::cir::StructType,
-                mlir::cir::ArrayType, mlir::cir::BoolType,
-                mlir::cir::IntType>())
+               mlir::cir::ArrayType, mlir::cir::BoolType, mlir::cir::IntType>())
       return true;
     assert(0 && "Unimplemented size for type");
     return false;
@@ -668,8 +667,8 @@ public:
                                 bool useVolatile) {
     auto offset = useVolatile ? info.VolatileOffset : info.Offset;
     return create<mlir::cir::GetBitfieldOp>(loc, resultType, addr, storageType,
-                                            info.Name, info.Size,
-                                            offset, info.IsSigned);
+                                            info.Name, info.Size, offset,
+                                            info.IsSigned);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
@@ -677,9 +676,9 @@ public:
                                 mlir::Value src, const CIRGenBitFieldInfo &info,
                                 bool useVolatile) {
     auto offset = useVolatile ? info.VolatileOffset : info.Offset;
-    return create<mlir::cir::SetBitfieldOp>(
-        loc, resultType, dstAddr, storageType, src, info.Name,
-        info.Size, offset, info.IsSigned);
+    return create<mlir::cir::SetBitfieldOp>(loc, resultType, dstAddr,
+                                            storageType, src, info.Name,
+                                            info.Size, offset, info.IsSigned);
   }
 
   /// Create a pointer to a record member.
