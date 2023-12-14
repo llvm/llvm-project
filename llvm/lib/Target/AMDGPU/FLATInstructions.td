@@ -1072,18 +1072,42 @@ class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node,
   (inst $vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)
 >;
 
-multiclass FlatAtomicPat <string inst, string node, ValueType vt,
-                          ValueType data_vt = vt> {
-  defvar rtnNode = !cast<PatFrags>(node#"_"#vt.Size);
-  defvar noRtnNode = !cast<PatFrags>(node#"_noret_"#vt.Size);
-
-  def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
-    (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+multiclass FlatAtomicNoRtnPat <string inst, string node, ValueType vt,
+                          ValueType data_vt = vt, bit isIntr = 0> {
+  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_"#vt.Size));
 
   let AddedComplexity = 1 in
   def : GCNPat <(vt (noRtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
     (!cast<FLAT_Pseudo>(inst) VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
 }
+
+multiclass FlatAtomicRtnPat <string inst, string node, ValueType vt,
+                             ValueType data_vt = vt, bit isIntr = 0> {
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_"#vt.Size));
+
+  def : GCNPat <(vt (rtnNode (FlatOffset i64:$vaddr, i32:$offset), data_vt:$data)),
+    (!cast<FLAT_Pseudo>(inst#"_RTN") VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)>;
+}
+
+multiclass FlatAtomicPat <string inst, string node, ValueType vt,
+                          ValueType data_vt = vt, bit isIntr = 0> :
+  FlatAtomicRtnPat<inst, node, vt, data_vt, isIntr>,
+  FlatAtomicNoRtnPat<inst, node, vt, data_vt, isIntr>;
+
+multiclass FlatAtomicIntrNoRtnPat <string inst, string node, ValueType vt,
+                                 ValueType data_vt = vt> {
+  defm : FlatAtomicNoRtnPat<inst, node, vt, data_vt, /* isIntr */ 1>;
+}
+
+multiclass FlatAtomicIntrRtnPat <string inst, string node, ValueType vt,
+                                ValueType data_vt = vt> {
+  defm : FlatAtomicRtnPat<inst, node, vt, data_vt, /* isIntr */ 1>;
+}
+
+multiclass FlatAtomicIntrPat <string inst, string node, ValueType vt,
+                              ValueType data_vt = vt> :
+  FlatAtomicRtnPat<inst, node, vt, data_vt, /* isIntr */ 1>,
+  FlatAtomicNoRtnPat<inst, node, vt, data_vt, /* isIntr */ 1>;
 
 class FlatSignedAtomicPatBase <FLAT_Pseudo inst, SDPatternOperator node,
                                ValueType vt, ValueType data_vt = vt> : GCNPat <
@@ -1305,10 +1329,10 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
 multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
                                          ValueType data_vt = vt> {
   let AddedComplexity = 11 in
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<PatFrags>(node), vt, data_vt>;
+  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
 
   let AddedComplexity = 13 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<PatFrags>(node), vt, data_vt>;
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
 }
 
 multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
@@ -1508,10 +1532,14 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i
 let OtherPredicates = [isGFX10Plus] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX", "atomic_load_fmax_global", f32>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMIN", "int_amdgcn_global_atomic_fmin", f32>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMAX", "int_amdgcn_global_atomic_fmax", f32>;
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_flat", f32>;
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_flat", f32>;
+}
+
+let OtherPredicates = [isGFX10GFX11] in {
+defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMIN", "int_amdgcn_global_atomic_fmin", f32>;
+defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMAX", "int_amdgcn_global_atomic_fmax", f32>;
+
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_FMIN", "int_amdgcn_flat_atomic_fmin", f32>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_FMAX", "int_amdgcn_flat_atomic_fmax", f32>;
 }
@@ -1525,6 +1553,13 @@ defm : FlatSignedAtomicPat <"FLAT_ATOMIC_FMIN_X2", "atomic_load_fmin_flat", f64>
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_FMAX_X2", "atomic_load_fmax_flat", f64>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_FMIN_X2", "int_amdgcn_flat_atomic_fmin", f64>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_FMAX_X2", "int_amdgcn_flat_atomic_fmax", f64>;
+}
+
+let OtherPredicates = [isGFX12Only] in {
+  defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMIN", "int_amdgcn_global_atomic_fmin_num", f32>;
+  defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMAX", "int_amdgcn_global_atomic_fmax_num", f32>;
+  defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_FMIN", "int_amdgcn_flat_atomic_fmin_num", f32>;
+  defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_FMAX", "int_amdgcn_flat_atomic_fmax_num", f32>;
 }
 
 let OtherPredicates = [HasAtomicFaddNoRtnInsts] in {
