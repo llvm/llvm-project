@@ -436,7 +436,7 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<std::string> commands) {
-  bool required_command_failed;
+  bool required_command_failed = false;
   std::string output =
       ::RunLLDBCommands(prefix, commands, required_command_failed);
   SendOutput(OutputType::Console, output);
