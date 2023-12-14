@@ -28,10 +28,10 @@ define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 entry:
-  br label %for.body14.i.i
+  br label %for.body
 
-for.body14.i.i:
-  %iv = phi i32 [ %iv.next, %for.body14.i.i ], [ 0, %entry ]
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %next19.i.i = getelementptr inbounds %struct.foo, ptr %src, i32 %iv, i32 0
   %load_p1 = load ptr, ptr %next19.i.i, align 4
   %arrayidx15.i.i1427 = getelementptr inbounds %struct.foo, ptr %src, i32 %iv
@@ -39,8 +39,8 @@ for.body14.i.i:
   %load_p2 = load ptr, ptr %val.i.i, align 4
   %iv.next = add nuw nsw i32 %iv, 1
   %cond = icmp eq i32 %iv.next, %length
-  br i1 %cond, label %for.end22.i.i, label %for.body14.i.i
+  br i1 %cond, label %for.end, label %for.body
 
-for.end22.i.i:
+for.end:
   ret void
 }
