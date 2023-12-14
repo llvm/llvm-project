@@ -960,7 +960,7 @@ std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
 }
 
 bool isParagraphBreak(llvm::StringRef Rest) {
-  return Rest.ltrim(" \t").startswith("\n");
+  return Rest.ltrim(" \t").starts_with("\n");
 }
 
 bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
@@ -984,7 +984,7 @@ bool isHardLineBreakIndicator(llvm::StringRef Rest) {
 
   if (llvm::isDigit(Rest.front())) {
     llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
-    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+    if (AfterDigit.starts_with(".") || AfterDigit.starts_with(")"))
       return true;
   }
   return false;
