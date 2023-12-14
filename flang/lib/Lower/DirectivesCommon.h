@@ -54,7 +54,6 @@ struct AddrAndBoundsInfo {
   explicit AddrAndBoundsInfo(mlir::Value addr) : addr(addr) {}
   explicit AddrAndBoundsInfo(mlir::Value addr, mlir::Value isPresent)
       : addr(addr), isPresent(isPresent) {}
-  // const Fortran::semantics::Symbol *sym;
   mlir::Value addr = nullptr;
   mlir::Value isPresent = nullptr;
 };
