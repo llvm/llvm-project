@@ -270,6 +270,9 @@ Changes to the LLVM tools
 
 * llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
 
+* llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
+  ELF input and binary output files only.
+
 Changes to LLDB
 ---------------------------------
 
