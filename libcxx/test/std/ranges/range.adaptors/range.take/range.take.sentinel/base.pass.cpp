@@ -8,10 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// sentinel() = default;
-// constexpr explicit sentinel(sentinel_t<Base> end);
-// constexpr sentinel(sentinel<!Const> s)
-//   requires Const && convertible_to<sentinel_t<V>, sentinel_t<Base>>;
+// constexpr sentinel_t<Base> base() const;
 
 #include <ranges>
 #include <cassert>

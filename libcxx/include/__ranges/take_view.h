@@ -180,10 +180,9 @@ public:
     return __lhs.count() == 0 || __lhs.base() == __rhs.__end_;
   }
 
-  template<bool _OtherConst = !_Const>
+  template <bool _OtherConst = !_Const>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI
-  friend constexpr bool operator==(const _Iter<_Const>& __lhs, const __sentinel& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const _Iter<_OtherConst>& __lhs, const __sentinel& __rhs) {
     return __lhs.count() == 0 || __lhs.base() == __rhs.__end_;
   }
 };
