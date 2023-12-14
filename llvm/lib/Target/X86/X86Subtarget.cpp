@@ -267,8 +267,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (CPU == "generic" || CPU == "pentium4" || CPU == "x86-64") {
     size_t posNoEVEX512 = FS.rfind("-evex512");
     // Make sure we won't be cheated by "-avx512fp16".
-    size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
-                                                  : FS.rfind("-avx512f,");
+    size_t posNoAVX512F =
+        FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
     size_t posEVEX512 = FS.rfind("+evex512");
     // Any AVX512XXX will enable AVX512F.
     size_t posAVX512F = FS.rfind("+avx512");

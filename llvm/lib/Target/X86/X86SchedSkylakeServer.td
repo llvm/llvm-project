@@ -1254,8 +1254,8 @@ def SKXWriteResGroup89 : SchedWriteRes<[SKXPort23]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup89], (instregex "LD_F(32|64|80)m")>;
-def: InstRW<[SKXWriteResGroup89], (instrs VBROADCASTF128,
-                                          VBROADCASTI128,
+def: InstRW<[SKXWriteResGroup89], (instrs VBROADCASTF128rm,
+                                          VBROADCASTI128rm,
                                           VBROADCASTSDYrm,
                                           VBROADCASTSSYrm,
                                           VMOVDDUPYrm,
