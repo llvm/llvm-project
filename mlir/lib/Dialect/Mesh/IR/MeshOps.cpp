@@ -720,7 +720,7 @@ LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void ShiftOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                           MLIRContext *context) {
   // TODO: remove op when offset is 0 or if it is a rotate with and
-  // offset % sift_axis_mesh_dim_size == 0.
+  // offset % shift_axis_mesh_dim_size == 0.
 }
 
 //===----------------------------------------------------------------------===//

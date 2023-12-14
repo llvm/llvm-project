@@ -680,7 +680,7 @@ def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
     SameOperandsAndResultElementType,
     SameOperandsAndResultShape
   ]> {
-  let summary = "Sift over a device mesh.";
+  let summary = "Shift over a device mesh.";
   let description = [{
     Within each device group shift along mesh axis `shift_axis` by an offset
     `offset`.
