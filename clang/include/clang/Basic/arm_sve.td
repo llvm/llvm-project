@@ -2193,6 +2193,15 @@ let TargetGuard = "sme2" in {
   def SVSQDMULH_X4        : SInst<"svqdmulh[_{d}_x4]",        "444", "csil", MergeNone, "aarch64_sve_sqdmulh_vgx4",        [IsStreaming], []>;
 }
 
+let TargetGuard = "sve2p1|sme2" in {
+  // SQRSHRN / UQRSHRN
+  def SVQRSHRN_X2   : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "h2i", "i",    MergeNone, "aarch64_sve_sqrshrn_x2", [IsStreamingCompatible], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVUQRSHRN_X2  : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "e2i", "Ui",   MergeNone, "aarch64_sve_uqrshrn_x2", [IsStreamingCompatible], [ImmCheck<1, ImmCheck1_16>]>;
+
+  // SQRSHRUN
+  def SVSQRSHRUN_X2 : SInst<"svqrshrun[_n]_{0}[_{d}_x2]", "e2i", "i",  MergeNone, "aarch64_sve_sqrshrun_x2", [IsStreamingCompatible], [ImmCheck<1, ImmCheck1_16>]>;
+}
+
 let TargetGuard = "sve2p1" in {
   // ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
   def SVZIPQ1 : SInst<"svzipq1[_{d}]", "ddd", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq1", [], []>;
