@@ -728,7 +728,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
                            *Diags);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
-  if (!C)
+  if (!C || C->getJobs().empty())
     return nullptr;
 
   auto Cmd = C->getJobs().begin();
