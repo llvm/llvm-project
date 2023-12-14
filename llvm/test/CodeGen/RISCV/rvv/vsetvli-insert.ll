@@ -598,8 +598,7 @@ bb:
 define void @add_v128i8(ptr %x, ptr %y) vscale_range(2,2) {
 ; CHECK-LABEL: add_v128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v16, (a1)
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
