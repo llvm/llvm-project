@@ -704,6 +704,7 @@ FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
   else
     rewriter.eraseOp(forOp);
 
+  llvm::errs() << *newForOp->getParentOp() << "\n";
   return newForOp;
 }
 
