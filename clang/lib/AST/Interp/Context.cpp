@@ -168,7 +168,7 @@ bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
     }
 
     // State gets destroyed here, so the Stk.clear() below doesn't accidentally
-    // remove values the State's destructor might accedd.
+    // remove values the State's destructor might access.
   }
 
   Stk.clear();

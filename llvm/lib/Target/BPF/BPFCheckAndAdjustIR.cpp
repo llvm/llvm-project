@@ -119,7 +119,7 @@ bool BPFCheckAndAdjustIR::removePassThroughBuiltin(Module &M) {
         auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
         if (!GV)
           continue;
-        if (!GV->getName().startswith("llvm.bpf.passthrough"))
+        if (!GV->getName().starts_with("llvm.bpf.passthrough"))
           continue;
         Changed = true;
         Value *Arg = Call->getArgOperand(1);
@@ -149,7 +149,7 @@ bool BPFCheckAndAdjustIR::removeCompareBuiltin(Module &M) {
         auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
         if (!GV)
           continue;
-        if (!GV->getName().startswith("llvm.bpf.compare"))
+        if (!GV->getName().starts_with("llvm.bpf.compare"))
           continue;
 
         Changed = true;

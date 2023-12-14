@@ -44,9 +44,10 @@ protected:
   unsigned maxStage = 0;
   DenseMap<Operation *, unsigned> stages;
   std::vector<Operation *> opOrder;
-  int64_t ub;
-  int64_t lb;
-  int64_t step;
+  Value ub;
+  Value lb;
+  Value step;
+  bool dynamicLoop;
   PipeliningOption::AnnotationlFnType annotateFn = nullptr;
   bool peelEpilogue;
   PipeliningOption::PredicateOpFn predicateFn = nullptr;
@@ -96,25 +97,41 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     ForOp op, const PipeliningOption &options) {
   LDBG("Start initializeLoopInfo");
   forOp = op;
-  auto upperBoundCst =
-      forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto lowerBoundCst =
-      forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCst = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
+  ub = forOp.getUpperBound();
+  lb = forOp.getLowerBound();
+  step = forOp.getStep();
+
+  dynamicLoop = true;
+  auto upperBoundCst = getConstantIntValue(ub);
+  auto lowerBoundCst = getConstantIntValue(lb);
+  auto stepCst = getConstantIntValue(step);
   if (!upperBoundCst || !lowerBoundCst || !stepCst) {
-    LDBG("--no constant bounds or step -> BAIL");
-    return false;
+    if (!options.supportDynamicLoops) {
+      LDBG("--dynamic loop not supported -> BAIL");
+      return false;
+    }
+  } else {
+    int64_t ubImm = upperBoundCst.value();
+    int64_t lbImm = lowerBoundCst.value();
+    int64_t stepImm = stepCst.value();
+    int64_t numIteration = ceilDiv(ubImm - lbImm, stepImm);
+    if (numIteration > maxStage) {
+      dynamicLoop = false;
+    } else if (!options.supportDynamicLoops) {
+      LDBG("--fewer loop iterations than pipeline stages -> BAIL");
+      return false;
+    }
   }
-  ub = upperBoundCst.value();
-  lb = lowerBoundCst.value();
-  step = stepCst.value();
   peelEpilogue = options.peelEpilogue;
   predicateFn = options.predicateFn;
-  if (!peelEpilogue && predicateFn == nullptr) {
+  if ((!peelEpilogue || dynamicLoop) && predicateFn == nullptr) {
     LDBG("--no epilogue or predicate set -> BAIL");
     return false;
   }
-  int64_t numIteration = ceilDiv(ub - lb, step);
+  if (dynamicLoop && peelEpilogue) {
+    LDBG("--dynamic loop doesn't support epilogue yet -> BAIL");
+    return false;
+  }
   std::vector<std::pair<Operation *, unsigned>> schedule;
   options.getScheduleFn(forOp, schedule);
   if (schedule.empty()) {
@@ -127,10 +144,6 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     maxStage = std::max(maxStage, opSchedule.second);
     stages[opSchedule.first] = opSchedule.second;
     opOrder.push_back(opSchedule.first);
-  }
-  if (numIteration <= maxStage) {
-    LDBG("--fewer loop iterations than pipeline stages -> BAIL");
-    return false;
   }
 
   // All operations need to have a stage.
@@ -204,10 +217,31 @@ void LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
     setValueMapping(arg, operand.get(), 0);
   }
   auto yield = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+  Location loc = forOp.getLoc();
+  SmallVector<Value> predicates(maxStage);
   for (int64_t i = 0; i < maxStage; i++) {
+    if (dynamicLoop) {
+      Type t = ub.getType();
+      // pred = ub > lb + (i * step)
+      Value iv = rewriter.create<arith::AddIOp>(
+          loc, lb,
+          rewriter.create<arith::MulIOp>(
+              loc, step,
+              rewriter.create<arith::ConstantOp>(
+                  loc, rewriter.getIntegerAttr(t, i))));
+      predicates[i] = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::slt, iv, ub);
+    }
+
     // special handling for induction variable as the increment is implicit.
-    Value iv =
-        rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(), lb + i * step);
+    // iv = lb + i * step
+    Type t = lb.getType();
+    Value iv = rewriter.create<arith::AddIOp>(
+        loc, lb,
+        rewriter.create<arith::MulIOp>(
+            loc, step,
+            rewriter.create<arith::ConstantOp>(loc,
+                                               rewriter.getIntegerAttr(t, i))));
     setValueMapping(forOp.getInductionVar(), iv, i);
     for (Operation *op : opOrder) {
       if (stages[op] > i)
@@ -220,6 +254,12 @@ void LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
               newOperand->set(replacement);
             }
           });
+      int predicateIdx = i - stages[op];
+      if (predicates[predicateIdx]) {
+        newOp = predicateFn(rewriter, newOp, predicates[predicateIdx]);
+        assert(newOp && "failed to predicate op.");
+      }
+      rewriter.setInsertionPointAfter(newOp);
       if (annotateFn)
         annotateFn(newOp, PipeliningOption::PipelinerPart::Prologue, i);
       for (unsigned destId : llvm::seq(unsigned(0), op->getNumResults())) {
@@ -326,9 +366,16 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   // `numStages - 1` iterations. Then we adjust the upper bound to remove those
   // iterations.
   Value newUb = forOp.getUpperBound();
-  if (peelEpilogue)
-    newUb = rewriter.create<arith::ConstantIndexOp>(forOp.getLoc(),
-                                                    ub - maxStage * step);
+  if (peelEpilogue) {
+    Type t = ub.getType();
+    Location loc = forOp.getLoc();
+    // newUb = ub - maxStage * step
+    Value maxStageValue = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(t, maxStage));
+    Value maxStageByStep =
+        rewriter.create<arith::MulIOp>(loc, step, maxStageValue);
+    newUb = rewriter.create<arith::SubIOp>(loc, ub, maxStageByStep);
+  }
   auto newForOp =
       rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.getLowerBound(), newUb,
                                   forOp.getStep(), newLoopArg);
@@ -358,9 +405,17 @@ LogicalResult LoopPipelinerInternal::createKernel(
   SmallVector<Value> predicates(maxStage + 1, nullptr);
   if (!peelEpilogue) {
     // Create a predicate for each stage except the last stage.
+    Location loc = newForOp.getLoc();
+    Type t = ub.getType();
     for (unsigned i = 0; i < maxStage; i++) {
-      Value c = rewriter.create<arith::ConstantIndexOp>(
-          newForOp.getLoc(), ub - (maxStage - i) * step);
+      // c = ub - (maxStage - i) * step
+      Value c = rewriter.create<arith::SubIOp>(
+          loc, ub,
+          rewriter.create<arith::MulIOp>(
+              loc, step,
+              rewriter.create<arith::ConstantOp>(
+                  loc, rewriter.getIntegerAttr(t, int64_t(maxStage - i)))));
+
       Value pred = rewriter.create<arith::CmpIOp>(
           newForOp.getLoc(), arith::CmpIPredicate::slt,
           newForOp.getInductionVar(), c);
@@ -383,8 +438,14 @@ LogicalResult LoopPipelinerInternal::createKernel(
       // version incremented based on the stage where it is used.
       if (operand->get() == forOp.getInductionVar()) {
         rewriter.setInsertionPoint(newOp);
-        Value offset = rewriter.create<arith::ConstantIndexOp>(
-            forOp.getLoc(), (maxStage - stages[op]) * step);
+
+        // offset = (maxStage - stages[op]) * step
+        Type t = step.getType();
+        Value offset = rewriter.create<arith::MulIOp>(
+            forOp.getLoc(), step,
+            rewriter.create<arith::ConstantOp>(
+                forOp.getLoc(),
+                rewriter.getIntegerAttr(t, maxStage - stages[op])));
         Value iv = rewriter.create<arith::AddIOp>(
             forOp.getLoc(), newForOp.getInductionVar(), offset);
         nestedNewOp->setOperand(operand->getOperandNumber(), iv);
@@ -508,8 +569,24 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter) {
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
   for (int64_t i = 0; i < maxStage; i++) {
-    Value newlastIter = rewriter.create<arith::ConstantIndexOp>(
-        forOp.getLoc(), lb + step * ((((ub - 1) - lb) / step) - i));
+    Location loc = forOp.getLoc();
+    Type t = lb.getType();
+    Value minusOne =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, -1));
+    // number of iterations = ((ub - 1) - lb) / step
+    Value totalNumIteration = rewriter.create<arith::DivUIOp>(
+        loc,
+        rewriter.create<arith::SubIOp>(
+            loc, rewriter.create<arith::AddIOp>(loc, ub, minusOne), lb),
+        step);
+    // newLastIter = lb + step * ((((ub - 1) - lb) / step) - i)
+    Value minusI =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIntegerAttr(t, -i));
+    Value newlastIter = rewriter.create<arith::AddIOp>(
+        loc, lb,
+        rewriter.create<arith::MulIOp>(
+            loc, step,
+            rewriter.create<arith::AddIOp>(loc, totalNumIteration, minusI)));
     setValueMapping(forOp.getInductionVar(), newlastIter, maxStage - i);
   }
   // Emit `maxStage - 1` epilogue part that includes operations from stages

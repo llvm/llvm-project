@@ -58,7 +58,7 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     // bit of sum, so that the sticky bits used when rounding sum to float are
     // correct (when it matters).
     fputil::FPBits<double> t(
-        (bit_prod.get_unbiased_exponent() >= bitz.get_unbiased_exponent())
+        (bit_prod.get_biased_exponent() >= bitz.get_biased_exponent())
             ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
             : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
 
@@ -106,15 +106,15 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   int z_exp = 0;
 
   // Normalize denormal inputs.
-  if (LIBC_UNLIKELY(FPBits(x).get_unbiased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(x).get_biased_exponent() == 0)) {
     x_exp -= 52;
     x *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(y).get_unbiased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(y).get_biased_exponent() == 0)) {
     y_exp -= 52;
     y *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(z).get_unbiased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(z).get_biased_exponent() == 0)) {
     z_exp -= 52;
     z *= 0x1.0p+52;
   }
@@ -124,9 +124,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   bool y_sign = y_bits.get_sign();
   bool z_sign = z_bits.get_sign();
   bool prod_sign = x_sign != y_sign;
-  x_exp += x_bits.get_unbiased_exponent();
-  y_exp += y_bits.get_unbiased_exponent();
-  z_exp += z_bits.get_unbiased_exponent();
+  x_exp += x_bits.get_biased_exponent();
+  y_exp += y_bits.get_biased_exponent();
+  z_exp += z_bits.get_biased_exponent();
 
   if (LIBC_UNLIKELY(x_exp == FPBits::MAX_EXPONENT ||
                     y_exp == FPBits::MAX_EXPONENT ||

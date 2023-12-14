@@ -282,6 +282,10 @@ static std::string getScopedName(unsigned Scope, const std::string &Name) {
   return ("pred:" + Twine(Scope) + ":" + Name).str();
 }
 
+static std::string getMangledRootDefName(StringRef DefOperandName) {
+  return ("DstI[" + DefOperandName + "]").str();
+}
+
 //===- GlobalISelEmitter class --------------------------------------------===//
 
 static Expected<LLTCodeGen> getInstResultType(const TreePatternNode *Dst) {
@@ -1499,8 +1503,13 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
   if (DstNumDefs == 0)
     return InsertPt;
 
-  for (unsigned I = 0; I < SrcNumDefs; ++I)
-    DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[I].Name);
+  for (unsigned I = 0; I < SrcNumDefs; ++I) {
+    std::string OpName = getMangledRootDefName(DstI->Operands[I].Name);
+    // CopyRenderer saves a StringRef, so cannot pass OpName itself -
+    // let's use a string with an appropriate lifetime.
+    StringRef PermanentRef = M.getOperandMatcher(OpName).getSymbolicName();
+    DstMIBuilder.addRenderer<CopyRenderer>(PermanentRef);
+  }
 
   // Some instructions have multiple defs, but are missing a type entry
   // (e.g. s_cc_out operands).
@@ -2013,16 +2022,17 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     const TypeSetByHwMode &VTy = Src->getExtType(I);
 
     const auto &DstIOperand = DstI.Operands[OpIdx];
-    Record *DstIOpRec = DstIOperand.Rec;
+    PointerUnion<Record *, const CodeGenRegisterClass *> MatchedRC =
+        DstIOperand.Rec;
     if (DstIName == "COPY_TO_REGCLASS") {
-      DstIOpRec = getInitValueAsRegClass(Dst->getChild(1)->getLeafValue());
+      MatchedRC = getInitValueAsRegClass(Dst->getChild(1)->getLeafValue());
 
-      if (DstIOpRec == nullptr)
+      if (MatchedRC.isNull())
         return failedImport(
             "COPY_TO_REGCLASS operand #1 isn't a register class");
     } else if (DstIName == "REG_SEQUENCE") {
-      DstIOpRec = getInitValueAsRegClass(Dst->getChild(0)->getLeafValue());
-      if (DstIOpRec == nullptr)
+      MatchedRC = getInitValueAsRegClass(Dst->getChild(0)->getLeafValue());
+      if (MatchedRC.isNull())
         return failedImport("REG_SEQUENCE operand #0 isn't a register class");
     } else if (DstIName == "EXTRACT_SUBREG") {
       auto InferredClass = inferRegClassFromPattern(Dst->getChild(0));
@@ -2032,7 +2042,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
       // We can assume that a subregister is in the same bank as it's super
       // register.
-      DstIOpRec = (*InferredClass)->getDef();
+      MatchedRC = (*InferredClass)->getDef();
     } else if (DstIName == "INSERT_SUBREG") {
       auto MaybeSuperClass = inferSuperRegisterClassForNode(
           VTy, Dst->getChild(0), Dst->getChild(2));
@@ -2042,34 +2052,30 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       // Move to the next pattern here, because the register class we found
       // doesn't necessarily have a record associated with it. So, we can't
       // set DstIOpRec using this.
-      OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
-      OM.setSymbolicName(DstIOperand.Name);
-      M.defineOperand(OM.getSymbolicName(), OM);
-      OM.addPredicate<RegisterBankOperandMatcher>(**MaybeSuperClass);
-      ++OpIdx;
-      continue;
+      MatchedRC = *MaybeSuperClass;
     } else if (DstIName == "SUBREG_TO_REG") {
       auto MaybeRegClass = inferSuperRegisterClass(VTy, Dst->getChild(2));
       if (!MaybeRegClass)
         return failedImport(
             "Cannot infer register class for SUBREG_TO_REG operand #0");
-      OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
-      OM.setSymbolicName(DstIOperand.Name);
-      M.defineOperand(OM.getSymbolicName(), OM);
-      OM.addPredicate<RegisterBankOperandMatcher>(**MaybeRegClass);
-      ++OpIdx;
-      continue;
-    } else if (DstIOpRec->isSubClassOf("RegisterOperand"))
-      DstIOpRec = DstIOpRec->getValueAsDef("RegClass");
-    else if (!DstIOpRec->isSubClassOf("RegisterClass"))
+      MatchedRC = *MaybeRegClass;
+    } else if (MatchedRC.get<Record *>()->isSubClassOf("RegisterOperand"))
+      MatchedRC = MatchedRC.get<Record *>()->getValueAsDef("RegClass");
+    else if (!MatchedRC.get<Record *>()->isSubClassOf("RegisterClass"))
       return failedImport("Dst MI def isn't a register class" +
                           to_string(*Dst));
 
     OperandMatcher &OM = InsnMatcher.getOperand(OpIdx);
-    OM.setSymbolicName(DstIOperand.Name);
+    // The operand names declared in the DstI instruction are unrelated to
+    // those used in pattern's source and destination DAGs, so mangle the
+    // former to prevent implicitly adding unexpected
+    // GIM_CheckIsSameOperand predicates by the defineOperand method.
+    OM.setSymbolicName(getMangledRootDefName(DstIOperand.Name));
     M.defineOperand(OM.getSymbolicName(), OM);
+    if (MatchedRC.is<Record *>())
+      MatchedRC = &Target.getRegisterClass(MatchedRC.get<Record *>());
     OM.addPredicate<RegisterBankOperandMatcher>(
-        Target.getRegisterClass(DstIOpRec));
+        *MatchedRC.get<const CodeGenRegisterClass *>());
     ++OpIdx;
   }
 

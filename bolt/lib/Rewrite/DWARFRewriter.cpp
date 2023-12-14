@@ -696,8 +696,9 @@ void DWARFRewriter::updateDebugInfo() {
     std::optional<DWARFUnit *> SplitCU;
     std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
-    StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
-                                Unit->getStringOffsetsTableContribution());
+    if (Unit->getVersion() >= 5)
+      StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
+                                  Unit->getStringOffsetsTableContribution());
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
     DebugLocWriter *DebugLocWriter = createRangeLocList(*Unit);
