@@ -100,8 +100,6 @@ check_cxx_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR
 check_cxx_compiler_flag(-fno-coverage-mapping COMPILER_RT_HAS_FNO_COVERAGE_MAPPING_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc32"    COMPILER_RT_HAS_MCRC32_FLAG)
 check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
-check_cxx_compiler_flag("-Werror -mavx2"   COMPILER_RT_HAS_MAVX2_FLAG)
-check_cxx_compiler_flag("-Werror -mavx512f"   COMPILER_RT_HAS_MAVX512F_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
