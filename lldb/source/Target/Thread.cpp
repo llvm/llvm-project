@@ -717,6 +717,16 @@ void Thread::DidResume() {
 
 void Thread::DidStop() { SetState(eStateStopped); }
 
+#define CHECK_BEFORE_POP_PLAN                                                  \
+  {                                                                            \
+    uint32_t i = 0;                                                            \
+    ThreadPlanSP p;                                                            \
+    while ((p = GetPlans().GetPlanByIndex(i, false)))                          \
+      i++;                                                                     \
+    (void)i;
+assert(i != 1 && "Cannot pop plan when there is only one plan (the base plan)");
+}
+
 bool Thread::ShouldStop(Event *event_ptr) {
   ThreadPlan *current_plan = GetCurrentPlan();
 
@@ -831,7 +841,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
             do {
               if (should_stop)
                 current_plan->WillStop();
-              assert(!current_plan->IsBasePlan() && "Cannot pop base plan!");
+              CHECK_BEFORE_POP_PLAN;
               PopPlan();
             } while ((current_plan = GetCurrentPlan()) != prev_plan_ptr);
             // Now, if the responsible plan was not "Okay to discard" then
@@ -884,6 +894,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
           // If a Controlling Plan wants to stop, we let it. Otherwise, see if
           // the plan's parent wants to stop.
 
+          CHECK_BEFORE_POP_PLAN;
           PopPlan();
           if (should_stop && current_plan->IsControllingPlan() &&
               !current_plan->OkayToDiscard()) {
@@ -932,6 +943,7 @@ bool Thread::ShouldStop(Event *event_ptr) {
           // plan is complete but does not explain the stop (example: step to a
           // line with breakpoint), let us move the plan to
           // completed_plan_stack anyway
+          CHECK_BEFORE_POP_PLAN;
           PopPlan();
         } else
           DiscardPlan();
