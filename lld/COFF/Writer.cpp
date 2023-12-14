@@ -1121,6 +1121,9 @@ void Writer::createMiscChunks() {
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>(ctx);
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
+    if (Symbol *buildidSym = ctx.symtab.findUnderscore("__buildid"))
+      replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
+                                      buildId, 4);
   }
 
   if (config->cetCompat) {
