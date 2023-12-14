@@ -76,7 +76,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
       GroupSize = 3;
     }
 
-    for (const char& Character : OriginalLiteralString) {
+    for (const char &Character : OriginalLiteralString) {
       if (!std::isdigit(Character)) {
         Postfix += Character;
       }
@@ -112,7 +112,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Configure formatting
     std::string Postfix;
-    for (const char& Character : OriginalLiteralString) {
+    for (const char &Character : OriginalLiteralString) {
       if (!std::isdigit(Character) && Character != '.') {
         Postfix += Character;
       }
