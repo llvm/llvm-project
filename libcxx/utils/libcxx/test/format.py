@@ -151,8 +151,9 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     """
     Lit test format for the C++ Standard Library conformance test suite.
 
-    Lit tests are contained in files that follow a certain pattern. That
-    pattern determines the semantics of the test. See
+    Lit tests are contained in files that follow a certain pattern, which determines the semantics of the test.
+    Under the hood, we basically generate a builtin Lit shell test that follows the ShTest format, and perform
+    the appropriate operations (compile/link/run). See
     https://libcxx.llvm.org/TestingLibcxx.html#test-names
     for a complete description of those semantics.
 
