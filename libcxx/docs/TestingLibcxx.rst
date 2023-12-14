@@ -378,6 +378,36 @@ determining the names for new test files.
        of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
        in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
 
+
+libc++-Specific Lit Features
+----------------------------
+
+Custom Directives
+~~~~~~~~~~~~~~~~~
+
+Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libcxx adds two additional libc++-specific directives that makes
+writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES`` and ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific directives.
+
+.. _libc++-specific Lit Directives:
+.. list-table:: libc++-specific Lit Directives
+   :widths: 20 35 45
+   :header-rows: 1
+
+   * - Directive
+     - Parameters
+     - Usage
+   * - ``FILE_DEPENDENCIES``
+     - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
+     - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. Copies of the files individually specified and
+       *all* the files in any specified directories will be placed in the *current working directory* of the test when it executes. All dependency directories and files
+       specified using relative paths will be anchored to the directory specified by the ``%S`` substitution (i.e., the source directory of the test being executed.).
+   * - ``ADDITIONAL_COMPILE_FLAGS``
+     - ``// ADDITIONAL_COMPILE_FLAGS: flag1, flag2, ...``
+     - The additional compiler flags specified using the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the invocation of ``clang`` used to build
+       the test executables. ``ADDITIONAL_COMPILE_FLAGS`` are only used with tests that must be built from source using clang. In other words, ``FOO.sh.<anything>`` tests will not use
+       the value of this directive. The clang compiler flags specified in the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive are added *after* the compiler flags
+       specified in the ``%{compile_flags}`` substitution.
+
 Benchmarks
 ==========
 
