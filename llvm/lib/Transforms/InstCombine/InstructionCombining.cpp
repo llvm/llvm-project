@@ -1132,6 +1132,14 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
+    // op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
+    if (I.isCommutative() && B == F && C == E) {
+      Value *BI = Builder.CreateBinOp(I.getOpcode(), B, E);
+      if (auto *BO = dyn_cast<BinaryOperator>(BI))
+        BO->copyIRFlags(&I);
+      return BI;
+    }
+
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
@@ -2176,16 +2184,6 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   // If `V` is of the form `(~A) s>> B` then `~((~A) s>> B)` can be folded
   // into `A s>> B` if we are willing to invert all of the uses.
   if (match(V, m_AShr(m_Value(A), m_Value(B)))) {
-    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
-                                         DoesConsume, Depth))
-      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
-    return nullptr;
-  }
-
-  // Treat lshr with non-negative operand as ashr.
-  if (match(V, m_LShr(m_Value(A), m_Value(B))) &&
-      isKnownNonNegative(A, SQ.getWithInstruction(cast<Instruction>(V)),
-                         Depth)) {
     if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
                                          DoesConsume, Depth))
       return Builder ? Builder->CreateAShr(AV, B) : NonNull;

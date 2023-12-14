@@ -55,7 +55,7 @@ std::string FormatExtensionFlags(int64_t Flags) {
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
   Features.erase(std::remove_if(Features.begin(), Features.end(),
                                 [](StringRef extension) {
-                                  return extension.startswith("-");
+                                  return extension.starts_with("-");
                                 }),
                  Features.end());
 
@@ -75,7 +75,7 @@ std::string FormatExtensionFlags(AArch64::ExtensionBitset Flags) {
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
   Features.erase(std::remove_if(Features.begin(), Features.end(),
                                 [](StringRef extension) {
-                                  return extension.startswith("-");
+                                  return extension.starts_with("-");
                                 }),
                  Features.end());
 

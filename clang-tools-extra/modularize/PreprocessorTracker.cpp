@@ -883,7 +883,7 @@ public:
   // Handle entering a header source file.
   void handleHeaderEntry(clang::Preprocessor &PP, llvm::StringRef HeaderPath) {
     // Ignore <built-in> and <command-line> to reduce message clutter.
-    if (HeaderPath.startswith("<"))
+    if (HeaderPath.starts_with("<"))
       return;
     HeaderHandle H = addHeader(HeaderPath);
     if (H != getCurrentHeaderHandle())
@@ -896,7 +896,7 @@ public:
   // Handle exiting a header source file.
   void handleHeaderExit(llvm::StringRef HeaderPath) {
     // Ignore <built-in> and <command-line> to reduce message clutter.
-    if (HeaderPath.startswith("<"))
+    if (HeaderPath.starts_with("<"))
       return;
     HeaderHandle H = findHeaderHandle(HeaderPath);
     HeaderHandle TH;
