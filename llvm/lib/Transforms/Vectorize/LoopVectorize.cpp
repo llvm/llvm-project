@@ -408,6 +408,10 @@ static constexpr uint32_t MemCheckBypassWeights[] = {1, 127};
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
 
+static cl::opt<bool> EnableShufflePadding(
+    "enable-shuffle-padding", cl::init(true), cl::Hidden,
+    cl::desc("Enable shuffle padding to generate structure store."));
+
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type.
@@ -796,6 +800,11 @@ protected:
   // correct start value of reduction PHIs when vectorizing the epilogue.
   SmallMapVector<const RecurrenceDescriptor *, PHINode *, 4>
       ReductionResumeValues;
+
+  /// The map stores shuffles which are used to pad the gap of the interleaved
+  /// store groups. The key for the map is the entry of the load group who is
+  /// matched to the related store group.
+  MapVector<Value *, SmallVector<SmallVector<Value *, 4>, 4>> PaddedShufflesMap;
 };
 
 class InnerLoopUnroller : public InnerLoopVectorizer {
@@ -1702,6 +1711,11 @@ public:
   /// \p VF is the vectorization factor chosen for the original loop.
   bool isEpilogueVectorizationProfitable(const ElementCount VF) const;
 
+  Value *hasMatchedLoadGroupForStore(Instruction *Inst, BasicBlock *BB,
+                                     Value *Ptr) const {
+    return InterleaveInfo.hasMatchedLoadGroupForStore(Inst, BB, Ptr);
+  }
+
 private:
   unsigned NumPredStores = 0;
 
@@ -2557,6 +2571,16 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
                        : ShuffledMask;
   };
 
+  Value *MatchedLoad = nullptr;
+  bool IsShufflePadding = false;
+  if (EnableShufflePadding && useMaskedInterleavedAccesses(*TTI) &&
+      TTI->enableScalableVectorization()) {
+    IsShufflePadding = true;
+    if (isa<StoreInst>(Instr) && (Group->getNumMembers() != Group->getFactor()))
+      MatchedLoad = Cost->hasMatchedLoadGroupForStore(
+          Instr, Instr->getParent(), getUnderlyingObject(Instr->getOperand(1)));
+  }
+
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
     Value *MaskForGaps = nullptr;
@@ -2626,8 +2650,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     for (unsigned I = 0; I < InterleaveFactor; ++I) {
       Instruction *Member = Group->getMember(I);
 
-      // Skip the gaps in the group.
-      if (!Member)
+      SmallVector<Value *, 4> Shuffles;
+      // Skip the gaps in the group if there are no paddings.
+      if (!Member && !IsShufflePadding)
         continue;
 
       auto StrideMask =
@@ -2636,6 +2661,12 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         Value *StridedVec = Builder.CreateShuffleVector(
             NewLoads[Part], StrideMask, "strided.vec");
 
+        if (!Member) {
+          if (Group->isReverse())
+            StridedVec = Builder.CreateVectorReverse(StridedVec, "reverse");
+          Shuffles.push_back(StridedVec);
+          continue;
+        }
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
           assert(!VF.isScalable() && "VF is assumed to be non scalable.");
@@ -2646,9 +2677,13 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         if (Group->isReverse())
           StridedVec = Builder.CreateVectorReverse(StridedVec, "reverse");
 
+        Shuffles.push_back(StridedVec);
+
         State.set(VPDefs[J], StridedVec, Part);
       }
-      ++J;
+      PaddedShufflesMap[Instr].push_back(Shuffles);
+      if (Member)
+        ++J;
     }
     return;
   }
@@ -2671,6 +2706,24 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       assert((Group->getMember(i) || MaskForGaps) &&
              "Fail to get a member from an interleaved store group");
       Instruction *Member = Group->getMember(i);
+
+      if (!Member && MatchedLoad) {
+        // %wide.vec = load <12 x float>; 0,1,2,3,...,11
+        // %shuffle1 = shuffle %wide.vec, poison, <0, 3, 6, 9> ; 0,3,6,9
+        // %shuffle2 = shuffle %wide.vec, poison, <1, 4, 7, 10> ; 1,4,7,10
+        // %padded = shuffle %wide.vec, poison, <2, 5, 8, 11> ; 2,5,8,11
+        //
+        // %concate1 = shuffle %op1, %op2, <0, 1, ..., 7> ; 0,3,6,9,1,4,7,10
+        // %concate2 = shuffle %padded, poison,
+        //    <0, 1, ..., 3, undef, undef, undef, undef>
+        //    ; 2,5,8,11,poison,...,poison
+        // %concateFinal = shuffle %concate1, %concate2,
+        //    <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11> ; 0,1,2,3,...,11
+        // store <12 x float> %concateFinal
+        Value *PaddedShuffle = PaddedShufflesMap[MatchedLoad][i][Part];
+        StoredVecs.push_back(PaddedShuffle);
+        continue;
+      }
 
       // Skip the gaps in the group.
       if (!Member) {
@@ -2696,7 +2749,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     // Interleave all the smaller vectors into one wider vector.
     Value *IVec = interleaveVectors(Builder, StoredVecs, "interleaved.vec");
     Instruction *NewStoreInstr;
-    if (BlockInMask || MaskForGaps) {
+    if ((BlockInMask || MaskForGaps) && !MatchedLoad) {
       Value *GroupMask = CreateGroupMask(Part, MaskForGaps);
       NewStoreInstr = Builder.CreateMaskedStore(IVec, AddrParts[Part],
                                                 Group->getAlign(), GroupMask);
@@ -6325,10 +6378,19 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     if (Group->getMember(IF))
       Indices.push_back(IF);
 
+  bool IsShufflePaddingStore = false;
+  if (EnableShufflePadding && useMaskedInterleavedAccesses(TTI) &&
+      TTI.enableScalableVectorization() && !VF.isScalable())
+    IsShufflePaddingStore = true;
+
   // Calculate the cost of the whole interleaved group.
+  // If shuffle padding is enabled, ignore gaps.
   bool UseMaskForGaps =
       (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
-      (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
+      (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()) &&
+       (!IsShufflePaddingStore ||
+        !hasMatchedLoadGroupForStore(I, I->getParent(),
+                                     getUnderlyingObject(I->getOperand(1)))));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
       AS, CostKind, Legal->isMaskRequired(I), UseMaskForGaps);
