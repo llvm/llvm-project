@@ -50,9 +50,9 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ptrue p0.b, vl32
 ; SVE2_MIN_256_NOMAX-NEXT:    adrp x8, .LCPI0_0
 ; SVE2_MIN_256_NOMAX-NEXT:    add x8, x8, :lo12:.LCPI0_0
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x0]
-; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z0.b }, p0/z, [x8]
-; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z1.b }, z0.b
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x0]
+; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z1.b }, p0/z, [x8]
+; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
@@ -105,9 +105,9 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ptrue p0.b, vl32
 ; SVE2_MIN_256_NOMAX-NEXT:    adrp x8, .LCPI1_0
 ; SVE2_MIN_256_NOMAX-NEXT:    add x8, x8, :lo12:.LCPI1_0
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x1]
-; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z0.b }, p0/z, [x8]
-; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z1.b }, z0.b
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x1]
+; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z1.b }, p0/z, [x8]
+; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
@@ -386,9 +386,9 @@ define <8 x i8> @shuffle_op1_poison(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX-NEXT:    ptrue p0.b, vl32
 ; SVE2_MIN_256_NOMAX-NEXT:    adrp x8, .LCPI4_0
 ; SVE2_MIN_256_NOMAX-NEXT:    add x8, x8, :lo12:.LCPI4_0
-; SVE2_MIN_256_NOMAX-NEXT:    ldr d1, [x1]
-; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z0.b }, p0/z, [x8]
-; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z1.b }, z0.b
+; SVE2_MIN_256_NOMAX-NEXT:    ldr d0, [x1]
+; SVE2_MIN_256_NOMAX-NEXT:    ld1b { z1.b }, p0/z, [x8]
+; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op2 = load <8 x i8>, ptr %b
@@ -453,9 +453,9 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI6_0
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x8]
-; CHECK-NEXT:    tbl z0.b, { z1.b }, z0.b
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x8]
+; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
@@ -597,19 +597,19 @@ define <8 x i16> @shuffle_index_indices_from_both_ops_i16(ptr %a, ptr %b) {
 ; SVE2_MIN_256_NOMAX:       // %bb.0:
 ; SVE2_MIN_256_NOMAX-NEXT:    ptrue p0.h, vl16
 ; SVE2_MIN_256_NOMAX-NEXT:    rdvl x8, #1
+; SVE2_MIN_256_NOMAX-NEXT:    ldr q0, [x0]
+; SVE2_MIN_256_NOMAX-NEXT:    lsr x8, x8, #4
 ; SVE2_MIN_256_NOMAX-NEXT:    adrp x9, .LCPI7_0
 ; SVE2_MIN_256_NOMAX-NEXT:    add x9, x9, :lo12:.LCPI7_0
-; SVE2_MIN_256_NOMAX-NEXT:    lsr x8, x8, #4
 ; SVE2_MIN_256_NOMAX-NEXT:    adrp x10, .LCPI7_1
 ; SVE2_MIN_256_NOMAX-NEXT:    add x10, x10, :lo12:.LCPI7_1
+; SVE2_MIN_256_NOMAX-NEXT:    ldr q1, [x1]
 ; SVE2_MIN_256_NOMAX-NEXT:    lsl w8, w8, #3
-; SVE2_MIN_256_NOMAX-NEXT:    mov z2.h, w8
-; SVE2_MIN_256_NOMAX-NEXT:    ld1h { z0.h }, p0/z, [x9]
-; SVE2_MIN_256_NOMAX-NEXT:    ld1h { z1.h }, p0/z, [x10]
-; SVE2_MIN_256_NOMAX-NEXT:    mad z0.h, p0/m, z2.h, z1.h
-; SVE2_MIN_256_NOMAX-NEXT:    ldr q1, [x0]
-; SVE2_MIN_256_NOMAX-NEXT:    ldr q2, [x1]
-; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.h, { z1.h, z2.h }, z0.h
+; SVE2_MIN_256_NOMAX-NEXT:    mov z4.h, w8
+; SVE2_MIN_256_NOMAX-NEXT:    ld1h { z2.h }, p0/z, [x9]
+; SVE2_MIN_256_NOMAX-NEXT:    ld1h { z3.h }, p0/z, [x10]
+; SVE2_MIN_256_NOMAX-NEXT:    mad z2.h, p0/m, z4.h, z3.h
+; SVE2_MIN_256_NOMAX-NEXT:    tbl z0.h, { z0.h, z1.h }, z2.h
 ; SVE2_MIN_256_NOMAX-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2_MIN_256_NOMAX-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
