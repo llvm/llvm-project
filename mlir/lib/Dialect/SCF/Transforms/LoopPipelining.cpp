@@ -563,14 +563,15 @@ LogicalResult LoopPipelinerInternal::createKernel(
     assert(def && "Only support loop carried dependencies of distance of 1 or "
                   "defined outside the loop");
     auto defStage = stages.find(def);
-    if (defStage == stages.end())
+    if (defStage == stages.end()) {
       for (unsigned int stage = 1; stage <= maxStage; stage++)
         setValueMapping(forOp.getRegionIterArgs()[retVal.index()],
                         retVal.value(), stage);
-    else if (defStage->second > 0)
+    } else if (defStage->second > 0) {
       setValueMapping(forOp.getRegionIterArgs()[retVal.index()],
                       newForOp->getResult(retVal.index()),
                       maxStage - defStage->second + 1);
+    }
   }
   rewriter.create<scf::YieldOp>(forOp.getLoc(), yieldOperands);
   return success();
