@@ -2194,11 +2194,9 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   MCSymbol *LazyPointer =
       GetExternalSymbolSymbol(GI.getName() + ".lazy_pointer");
-  MCSymbol *StubHelper =
-      GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
+  MCSymbol *StubHelper = GetExternalSymbolSymbol(GI.getName() + ".stub_helper");
 
-  OutStreamer->switchSection(
-      OutContext.getObjectFileInfo()->getDataSection());
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
 
   const DataLayout &DL = M.getDataLayout();
   emitAlignment(Align(DL.getPointerSize()));
@@ -2206,8 +2204,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   emitVisibility(LazyPointer, GI.getVisibility());
   OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
 
-  OutStreamer->switchSection(
-      OutContext.getObjectFileInfo()->getTextSection());
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
 
   const TargetSubtargetInfo *STI =
       TM.getSubtargetImpl(*GI.getResolverFunction());
