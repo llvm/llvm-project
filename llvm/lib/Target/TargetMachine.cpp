@@ -39,15 +39,9 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
 
 TargetMachine::~TargetMachine() = default;
 
-bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
+bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
-
-  auto *GO = GVal->getAliaseeObject();
-
-  // Be conservative if we can't find an underlying GlobalObject.
-  if (!GO)
-    return true;
 
   auto *GV = dyn_cast<GlobalVariable>(GO);
 

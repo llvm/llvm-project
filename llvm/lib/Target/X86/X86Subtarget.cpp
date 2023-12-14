@@ -86,16 +86,16 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
       CodeModel::Model CM = TM.getCodeModel();
       assert(CM != CodeModel::Tiny &&
              "Tiny codesize model not supported on X86");
-      // In the large code model, all text is far from any global data, so we
-      // use GOTOFF.
+      // In the large code model, even referencing a global under the large data
+      // threshold which is considered "small", we need to use GOTOFF.
       if (CM == CodeModel::Large)
         return X86II::MO_GOTOFF;
-      // Large GlobalValues use GOTOFF, otherwise use RIP-rel access.
-      if (GV)
-        return TM.isLargeGlobalValue(GV) ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
-      // GV == nullptr is for all other non-GlobalValue global data like the
-      // constant pool, jump tables, labels, etc. The small and medium code
-      // models treat these as accessible with a RIP-rel access.
+      // Large objects use GOTOFF, otherwise use RIP-rel access.
+      if (auto *GO = dyn_cast_or_null<GlobalObject>(GV))
+        return TM.isLargeGlobalObject(GO) ? X86II::MO_GOTOFF
+                                          : X86II::MO_NO_FLAG;
+      // For non-GlobalObjects, the small and medium code models treat them as
+      // accessible with a RIP-rel access.
       return X86II::MO_NO_FLAG;
     }
 
