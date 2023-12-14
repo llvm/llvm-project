@@ -1470,7 +1470,7 @@ Relaxed constexpr                      __cpp_constexpr                  C++14   
 ``if constexpr``                       __cpp_if_constexpr               C++17         C++11
 fold expressions                       __cpp_fold_expressions           C++17         C++03
 Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++11
+Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
 Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
 Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
 ``inline`` variables                   __cpp_inline_variables           C++17         C++03

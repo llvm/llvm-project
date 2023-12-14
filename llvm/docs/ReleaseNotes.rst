@@ -94,6 +94,13 @@ Changes to the AArch64 Backend
 
 * Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
 
+* Neoverse-N2 was incorrectly marked as an Armv8.5a core. This has been
+  changed to an Armv9.0a core. However, crypto options are not enabled
+  by default for Armv9 cores, so `-mcpu=neoverse-n2+crypto` is now required
+  to enable crypto for this core. As far as the compiler is concerned,
+  Armv9.0a has the same features enabled as Armv8.5a, with the exception
+  of crypto.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -205,6 +212,23 @@ Changes to the C API
 * Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for getting/setting the new nneg flag
   on zext instructions, and ``LLVMGetIsDisjoint`` and ``LLVMSetIsDisjoint``
   for getting/setting the new disjoint flag on or instructions.
+
+* Added the following functions for manipulating operand bundles, as well as
+  building ``call`` and ``invoke`` instructions that use operand bundles:
+
+  * ``LLVMBuildCallWithOperandBundles``
+  * ``LLVMBuildInvokeWithOperandBundles``
+  * ``LLVMCreateOperandBundle``
+  * ``LLVMDisposeOperandBundle``
+  * ``LLVMGetNumOperandBundles``
+  * ``LLVMGetOperandBundleAtIndex``
+  * ``LLVMGetNumOperandBundleArgs``
+  * ``LLVMGetOperandBundleArgAtIndex``
+  * ``LLVMGetOperandBundleTag``
+
+* Added ``LLVMGetFastMathFlags`` and ``LLVMSetFastMathFlags`` for getting/setting
+  the fast-math flags of an instruction, as well as ``LLVMCanValueUseFastMathFlags``
+  for checking if an instruction can use such flags
 
 Changes to the CodeGen infrastructure
 -------------------------------------

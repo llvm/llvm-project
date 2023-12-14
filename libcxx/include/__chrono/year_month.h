@@ -36,10 +36,10 @@ public:
         : __y_{__yval}, __m_{__mval} {}
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::year  year()  const noexcept { return __y_; }
     _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const months& __dm) noexcept { this->__m_ += __dm; return *this; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const months& __dm) noexcept { this->__m_ -= __dm; return *this; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const years& __dy)  noexcept { this->__y_ += __dy; return *this; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const years& __dy)  noexcept { this->__y_ -= __dy; return *this; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const months& __dm) noexcept;
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const months& __dm) noexcept;
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator+=(const years& __dy) noexcept;
+    _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& operator-=(const years& __dy) noexcept;
     _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept { return __y_.ok() && __m_.ok(); }
 };
 
@@ -91,6 +91,26 @@ year_month operator-(const year_month& __lhs, const months& __rhs) noexcept
 _LIBCPP_HIDE_FROM_ABI constexpr
 year_month operator-(const year_month& __lhs, const years& __rhs) noexcept
 { return __lhs + -__rhs; }
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator+=(const months& __dm) noexcept {
+  *this = *this + __dm;
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator-=(const months& __dm) noexcept {
+  *this = *this - __dm;
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator+=(const years& __dy) noexcept {
+  *this = *this + __dy;
+  return *this;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator-=(const years& __dy) noexcept {
+  *this = *this - __dy;
+  return *this;
+}
 
 } // namespace chrono
 

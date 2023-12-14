@@ -116,11 +116,11 @@ struct BuiltinTypeDeclBuilder {
   }
 
   BuiltinTypeDeclBuilder &annotateResourceClass(ResourceClass RC,
-                                                ResourceKind RK) {
+                                                ResourceKind RK, bool IsROV) {
     if (Record->isCompleteDefinition())
       return *this;
-    Record->addAttr(
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RC, RK));
+    Record->addAttr(HLSLResourceAttr::CreateImplicit(Record->getASTContext(),
+                                                     RC, RK, IsROV));
     return *this;
   }
 
@@ -478,12 +478,12 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
-                                              ResourceClass RC,
-                                              ResourceKind RK) {
+                                              ResourceClass RC, ResourceKind RK,
+                                              bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
       .addDefaultHandleConstructor(S, RC)
-      .annotateResourceClass(RC, RK);
+      .annotateResourceClass(RC, RK, IsROV);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
@@ -493,7 +493,18 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer)
+                    ResourceKind::TypedBuffer, /*IsROV=*/false)
+        .addArraySubscriptOperators()
+        .completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
+          .addSimpleTemplateParams({"element_type"})
+          .Record;
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
+                    ResourceKind::TypedBuffer, /*IsROV=*/true)
         .addArraySubscriptOperators()
         .completeDefinition();
   });
