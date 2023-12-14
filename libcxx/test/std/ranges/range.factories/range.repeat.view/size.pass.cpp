@@ -31,8 +31,9 @@ constexpr bool test() {
   }
 
   {
-    std::ranges::repeat_view<int, int> rv(10, std::numeric_limits<int>::max());
-    assert(rv.size() == std::numeric_limits<int>::max());
+    constexpr int int_max = std::numeric_limits<int>::max();
+    std::ranges::repeat_view<int, int> rv(10, int_max);
+    assert(rv.size() == int_max);
   }
 
   return true;

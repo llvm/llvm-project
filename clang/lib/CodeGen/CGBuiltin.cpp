@@ -9985,6 +9985,10 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
   if (TypeFlags.isOverloadCvt())
     return {Ops[0]->getType(), Ops.back()->getType()};
 
+  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
+      ResultType->isVectorTy())
+    return {ResultType, Ops[1]->getType()};
+
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
 }
@@ -10211,6 +10215,22 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   default:
     return nullptr;
+
+  case SVE::BI__builtin_sve_svreinterpret_b: {
+    auto SVCountTy =
+        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    Function *CastFromSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
+    return Builder.CreateCall(CastFromSVCountF, Ops[0]);
+  }
+  case SVE::BI__builtin_sve_svreinterpret_c: {
+    auto SVCountTy =
+        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    Function *CastToSVCountF =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
+    return Builder.CreateCall(CastToSVCountF, Ops[0]);
+  }
+
   case SVE::BI__builtin_sve_svpsel_lane_b8:
   case SVE::BI__builtin_sve_svpsel_lane_b16:
   case SVE::BI__builtin_sve_svpsel_lane_b32:

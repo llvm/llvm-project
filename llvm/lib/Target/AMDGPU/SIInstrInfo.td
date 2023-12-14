@@ -919,6 +919,13 @@ def InterpAttr : CustomOperand<i32>;
 
 def InterpAttrChan : ImmOperand<i32>;
 
+def SplitBarrier : ImmOperand<i32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
+  let DecoderMethod = "decodeSplitBarrier";
+  let PrintMethod = "printOperand";
+}
+
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -2898,14 +2905,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY"];
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-  let Key = ["OpX", "OpY"];
+  let Key = ["OpX", "OpY", "SubTgt"];
 }
 
 include "SIInstructions.td"

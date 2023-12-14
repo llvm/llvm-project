@@ -118,12 +118,19 @@ DebugImporter::translateImpl(llvm::DILexicalBlockFile *node) {
 
 DIGlobalVariableAttr
 DebugImporter::translateImpl(llvm::DIGlobalVariable *node) {
+  // Names of DIGlobalVariables can be empty. MLIR models them as null, instead
+  // of empty strings, so this special handling is necessary.
+  auto convertToStringAttr = [&](StringRef name) -> StringAttr {
+    if (name.empty())
+      return {};
+    return StringAttr::get(context, node->getName());
+  };
   return DIGlobalVariableAttr::get(
       context, translate(node->getScope()),
-      StringAttr::get(context, node->getName()),
-      StringAttr::get(context, node->getLinkageName()),
-      translate(node->getFile()), node->getLine(), translate(node->getType()),
-      node->isLocalToUnit(), node->isDefinition(), node->getAlignInBits());
+      convertToStringAttr(node->getName()),
+      convertToStringAttr(node->getLinkageName()), translate(node->getFile()),
+      node->getLine(), translate(node->getType()), node->isLocalToUnit(),
+      node->isDefinition(), node->getAlignInBits());
 }
 
 DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
@@ -282,14 +289,15 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   Location result = FileLineColLoc::get(context, loc->getFilename(),
                                         loc->getLine(), loc->getColumn());
 
-  // Add call site information, if available.
-  if (llvm::DILocation *inlinedAt = loc->getInlinedAt())
-    result = CallSiteLoc::get(result, translateLoc(inlinedAt));
-
   // Add scope information.
   assert(loc->getScope() && "expected non-null scope");
   result = FusedLocWith<DIScopeAttr>::get({result}, translate(loc->getScope()),
                                           context);
+
+  // Add call site information, if available.
+  if (llvm::DILocation *inlinedAt = loc->getInlinedAt())
+    result = CallSiteLoc::get(result, translateLoc(inlinedAt));
+
   return result;
 }
 

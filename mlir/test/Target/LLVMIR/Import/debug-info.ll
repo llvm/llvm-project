@@ -33,11 +33,11 @@ define i32 @instruction_loc(i32 %arg1) {
 ; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
 ; CHECK-DAG: #[[CALLEE:.+]] =  #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
 ; CHECK-DAG: #[[FILE_LOC]] = loc(fused<#[[SP]]>[#[[RAW_FILE_LOC]]])
-; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
+; CHECK-DAG: #[[RAW_CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
+; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLEE_LOC]]])
 ; CHECK-DAG: #[[RAW_CALLER_LOC:.+]] = loc("debug-info.ll":2:2)
 ; CHECK-DAG: #[[CALLER_LOC:.+]] = loc(fused<#[[SP]]>[#[[RAW_CALLER_LOC]]])
-; CHECK-DAG: #[[RAW_CALLSITE_LOC:.+]] = loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
-; CHECK-DAG: #[[CALLSITE_LOC]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLSITE_LOC]]])
+; CHECK-DAG: #[[CALLSITE_LOC:.+]] = loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}

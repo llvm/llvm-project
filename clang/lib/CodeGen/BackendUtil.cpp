@@ -982,7 +982,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             getInstrProfOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
           [Options](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(InstrProfiling(*Options, false));
+            MPM.addPass(InstrProfilingLoweringPass(*Options, false));
           });
 
     // TODO: Consider passing the MemoryProfileOutput to the pass builder via

@@ -5,3 +5,6 @@
 /// -arch is unsupported for non-Darwin targets.
 // RUN: not %clang --target=armv7m -arch armv7m -mcpu=cortex-m4 -### -c %s 2>&1 | FileCheck -check-prefix=ERR %s
 // ERR: unsupported option '-arch' for target 'armv7m'
+
+// RUN: not %clang --target=aarch64-linux-gnu -arch arm64 -### -c %s 2>&1 | FileCheck -check-prefix=ERR2 %s
+// ERR2: unsupported option '-arch' for target 'aarch64-linux-gnu'

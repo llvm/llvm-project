@@ -16,6 +16,7 @@
 #ifndef MODULE_ANALYSIS
 #define MODULE_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis, ())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #undef MODULE_ANALYSIS
 
@@ -23,11 +24,13 @@ MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #define MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass, ())
+MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass, ())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_ANALYSIS
 #define FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis, ())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
                   (std::move(TM.getTargetIRAnalysis())))
@@ -37,12 +40,18 @@ FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
 #define FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 FUNCTION_PASS("callbrprepare", CallBrPreparePass, ())
+FUNCTION_PASS("cfguard", CFGuardPass, ())
 FUNCTION_PASS("consthoist", ConstantHoistingPass, ())
+FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass, (TM))
 FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass, (false))
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass, ())
 FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass, ())
+FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass, (TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
+FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, (TM))
+FUNCTION_PASS("interleaved-access", InterleavedAccessPass, (TM))
+FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass, (TM))
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass, ())
 FUNCTION_PASS("lowerinvoke", LowerInvokePass, ())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass, ())
@@ -51,9 +60,12 @@ FUNCTION_PASS("post-inline-ee-instrument", EntryExitInstrumenterPass, (true))
 FUNCTION_PASS("replace-with-veclib", ReplaceWithVeclib, ())
 FUNCTION_PASS("safe-stack", SafeStackPass, (TM))
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
+FUNCTION_PASS("select-optimize", SelectOptimizePass, (TM))
+FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass, (TM))
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
+FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass, ())
 FUNCTION_PASS("win-eh-prepare", WinEHPreparePass, ())
 #undef FUNCTION_PASS
 
@@ -118,20 +130,10 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
-DUMMY_FUNCTION_PASS("cfguard-check", CFGuardCheckPass, ())
-DUMMY_FUNCTION_PASS("cfguard-dispatch", CFGuardDispatchPass, ())
 DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
-DUMMY_FUNCTION_PASS("dwarfehprepare", DwarfEHPass, ())
-DUMMY_FUNCTION_PASS("expandmemcmp", ExpandMemCmpPass, ())
-DUMMY_FUNCTION_PASS("gc-info-printer", GCInfoPrinterPass, ())
 DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
-DUMMY_FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, ())
-DUMMY_FUNCTION_PASS("interleaved-access", InterleavedAccessPass, ())
-DUMMY_FUNCTION_PASS("select-optimize", SelectOptimizePass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
-DUMMY_FUNCTION_PASS("sjljehprepare", SjLjEHPreparePass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
-DUMMY_FUNCTION_PASS("wasmehprepare", WasmEHPass, ())
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MODULE_PASS

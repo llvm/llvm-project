@@ -1576,6 +1576,20 @@ Currently, only the following parameter attributes are defined:
     ``readonly`` or a ``memory`` attribute that does not contain
     ``argmem: write``.
 
+``dead_on_unwind``
+    At a high level, this attribute indicates that the pointer argument is dead
+    if the call unwinds, in the sense that the caller will not depend on the
+    contents of the memory. Stores that would only be visible on the unwind
+    path can be elided.
+
+    More precisely, the behavior is as-if any memory written through the
+    pointer during the execution of the function is overwritten with a poison
+    value on unwind. This includes memory written by the implicit write implied
+    by the ``writable`` attribute. The caller is allowed to access the affected
+    memory, but all loads that are not preceded by a store will return poison.
+
+    This attribute cannot be applied to return values.
+
 .. _gc:
 
 Garbage Collector Strategy Names
@@ -4299,6 +4313,11 @@ constants and smaller complex constants.
     "``< i32 42, i32 11, i32 74, i32 100 >``". Vector constants
     must have :ref:`vector type <t_vector>`, and the number and types of
     elements must match those specified by the type.
+
+    When creating a vector whose elements have the same constant value, the
+    preferred syntax is ``splat (<Ty> Val)``. For example: "``splat (i32 11)``".
+    These vector constants must have ::ref:`vector type <t_vector>` with an
+    element type that matches the ``splat`` operand.
 **Zero initialization**
     The string '``zeroinitializer``' can be used to zero initialize a
     value to zero of *any* type, including scalar and

@@ -68,7 +68,8 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
   bool isMicroMips(const MCSymbol *Sym) const override;
 }; // class MipsAsmBackend

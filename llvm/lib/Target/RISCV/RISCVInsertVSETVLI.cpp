@@ -742,9 +742,7 @@ class RISCVInsertVSETVLI : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertVSETVLI() : MachineFunctionPass(ID) {
-    initializeRISCVInsertVSETVLIPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVInsertVSETVLI() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1042,9 +1040,23 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   return true;
 }
 
+// If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
+// maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
+// places.
 static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
-                                  DemandedFields &Demanded,
-                                  const MachineRegisterInfo *MRI);
+                                  DemandedFields &Demanded) {
+  VSETVLIInfo Info = NewInfo;
+
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
+      !PrevInfo.isUnknown()) {
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
+            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+      Info.setVLMul(*NewVLMul);
+    Demanded.LMUL = true;
+  }
+
+  return Info;
+}
 
 // Given an incoming state reaching MI, minimally modifies that state so that it
 // is compatible with MI. The resulting state is guaranteed to be semantically
@@ -1061,19 +1073,22 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     return;
 
   const VSETVLIInfo PrevInfo = Info;
-  if (Info.hasSEWLMULRatioOnly() || !Info.isValid() || Info.isUnknown())
+  if (!Info.isValid() || Info.isUnknown())
     Info = NewInfo;
-
-  if (!RISCVII::hasVLOp(TSFlags)) {
-    Info = NewInfo;
-    return;
-  }
 
   DemandedFields Demanded = getDemanded(MI, MRI, ST);
-  const VSETVLIInfo IncomingInfo =
-      adjustIncoming(PrevInfo, NewInfo, Demanded, MRI);
+  const VSETVLIInfo IncomingInfo = adjustIncoming(PrevInfo, NewInfo, Demanded);
 
-  if (Demanded.usedVL())
+  // If MI only demands that VL has the same zeroness, we only need to set the
+  // AVL if the zeroness differs.  This removes a vsetvli entirely if the types
+  // match or allows use of cheaper avl preserving variant if VLMAX doesn't
+  // change. If VLMAX might change, we couldn't use the 'vsetvli x0, x0, vtype"
+  // variant, so we avoid the transform to prevent extending live range of an
+  // avl register operand.
+  // TODO: We can probably relax this for immediates.
+  bool EquallyZero = IncomingInfo.hasEquallyZeroAVL(PrevInfo, *MRI) &&
+                     IncomingInfo.hasSameVLMAX(PrevInfo);
+  if (Demanded.VLAny || (Demanded.VLZeroness && !EquallyZero))
     Info.setAVL(IncomingInfo);
 
   Info.setVTYPE(
@@ -1086,39 +1101,14 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
           IncomingInfo.getTailAgnostic(),
       (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
           IncomingInfo.getMaskAgnostic());
-}
 
-static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
-                                  DemandedFields &Demanded,
-                                  const MachineRegisterInfo *MRI) {
-  VSETVLIInfo Info = NewInfo;
-
-  // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
-  // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
-  // places.
-  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
-      !PrevInfo.isUnknown()) {
-    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
-            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
-      Info.setVLMul(*NewVLMul);
-    Demanded.LMUL = true;
+  // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
+  // the AVL.
+  if (Info.hasSEWLMULRatioOnly()) {
+    VSETVLIInfo RatiolessInfo = IncomingInfo;
+    RatiolessInfo.setAVL(Info);
+    Info = RatiolessInfo;
   }
-
-  // If we only demand VL zeroness (i.e. vmv.s.x and vmv.x.s), then there are
-  // only two behaviors, VL = 0 and VL > 0. We can discard the user requested
-  // AVL and just use the last one if we can prove it equally zero. This
-  // removes a vsetvli entirely if the types match or allows use of cheaper avl
-  // preserving variant if VLMAX doesn't change. If VLMAX might change, we
-  // couldn't use the 'vsetvli x0, x0, vtype" variant, so we avoid the transform
-  // to prevent extending live range of an avl register operand.
-  // TODO: We can probably relax this for immediates.
-  if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo)) {
-    Info.setAVL(PrevInfo);
-    Demanded.demandVL();
-  }
-
-  return Info;
 }
 
 // Given a state with which we evaluated MI (see transferBefore above for why
@@ -1301,9 +1291,20 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       if (RISCVII::hasVLOp(TSFlags)) {
         MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
         if (VLOp.isReg()) {
+          Register Reg = VLOp.getReg();
+          MachineInstr *VLOpDef = MRI->getVRegDef(Reg);
+
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);
           VLOp.setIsKill(false);
+
+          // If the AVL was an immediate > 31, then it would have been emitted
+          // as an ADDI. However, the ADDI might not have been used in the
+          // vsetvli, or a vsetvli might not have been emitted, so it may be
+          // dead now.
+          if (VLOpDef && TII->isAddImmediate(*VLOpDef, Reg) &&
+              MRI->use_nodbg_empty(Reg))
+            VLOpDef->eraseFromParent();
         }
         MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
                                                 /*isImp*/ true));

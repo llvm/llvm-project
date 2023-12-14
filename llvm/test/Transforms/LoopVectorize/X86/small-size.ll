@@ -75,9 +75,9 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       .lr.ph5.preheader:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i64 [[TMP2]], 3
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 8589934588
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], 4294967292
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i64 [[TMP2]], -1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -126,7 +126,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH5:%.*]]
 ; CHECK:       ..preheader_crit_edge:
-; CHECK-NEXT:    [[PHITMP:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[DOTPREHEADER]]
 ; CHECK:       .preheader:
 ; CHECK-NEXT:    [[I_0_LCSSA:%.*]] = phi i64 [ [[PHITMP]], [[DOT_PREHEADER_CRIT_EDGE]] ], [ 0, [[TMP0:%.*]] ]

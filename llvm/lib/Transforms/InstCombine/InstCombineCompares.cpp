@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -22,7 +23,6 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -811,8 +811,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     // Only lower this if the icmp is the only user of the GEP or if we expect
     // the result to fold to a constant!
     if ((GEPsInBounds || CmpInst::isEquality(Cond)) &&
-        (isa<ConstantExpr>(GEPLHS) || GEPLHS->hasOneUse()) &&
-        (isa<ConstantExpr>(GEPRHS) || GEPRHS->hasOneUse())) {
+        (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
+        (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse())) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
       Value *L = EmitGEPOffset(GEPLHS);
       Value *R = EmitGEPOffset(GEPRHS);
@@ -1323,34 +1323,21 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
 
 /// Canonicalize icmp instructions based on dominating conditions.
 Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
-  // This is a cheap/incomplete check for dominance - just match a single
-  // predecessor with a conditional branch.
-  BasicBlock *CmpBB = Cmp.getParent();
-  BasicBlock *DomBB = CmpBB->getSinglePredecessor();
-  if (!DomBB)
-    return nullptr;
-
-  Value *DomCond;
-  BasicBlock *TrueBB, *FalseBB;
-  if (!match(DomBB->getTerminator(), m_Br(m_Value(DomCond), TrueBB, FalseBB)))
-    return nullptr;
-
-  assert((TrueBB == CmpBB || FalseBB == CmpBB) &&
-         "Predecessor block does not point to successor?");
-
-  // The branch should get simplified. Don't bother simplifying this condition.
-  if (TrueBB == FalseBB)
-    return nullptr;
-
   // We already checked simple implication in InstSimplify, only handle complex
   // cases here.
-
-  CmpInst::Predicate Pred = Cmp.getPredicate();
   Value *X = Cmp.getOperand(0), *Y = Cmp.getOperand(1);
   ICmpInst::Predicate DomPred;
-  const APInt *C, *DomC;
-  if (match(DomCond, m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))) &&
-      match(Y, m_APInt(C))) {
+  const APInt *C;
+  if (!match(Y, m_APInt(C)))
+    return nullptr;
+
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+
+  auto handleDomCond = [&](Value *DomCond, bool CondIsTrue) -> Instruction * {
+    const APInt *DomC;
+    if (!match(DomCond, m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))))
+      return nullptr;
     // We have 2 compares of a variable with constants. Calculate the constant
     // ranges of those compares to see if we can transform the 2nd compare:
     // DomBB:
@@ -1358,11 +1345,10 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     //   br DomCond, CmpBB, FalseBB
     // CmpBB:
     //   Cmp = icmp Pred X, C
-    ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+    if (!CondIsTrue)
+      DomPred = CmpInst::getInversePredicate(DomPred);
     ConstantRange DominatingCR =
-        (CmpBB == TrueBB) ? ConstantRange::makeExactICmpRegion(DomPred, *DomC)
-                          : ConstantRange::makeExactICmpRegion(
-                                CmpInst::getInversePredicate(DomPred), *DomC);
+        ConstantRange::makeExactICmpRegion(DomPred, *DomC);
     ConstantRange Intersection = DominatingCR.intersectWith(CR);
     ConstantRange Difference = DominatingCR.difference(CR);
     if (Intersection.isEmptySet())
@@ -1390,6 +1376,21 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
       return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder.getInt(*EqC));
     if (const APInt *NeC = Difference.getSingleElement())
       return new ICmpInst(ICmpInst::ICMP_NE, X, Builder.getInt(*NeC));
+    return nullptr;
+  };
+
+  for (BranchInst *BI : DC.conditionsFor(X)) {
+    auto *Cond = BI->getCondition();
+    BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+    if (DT.dominates(Edge0, Cmp.getParent())) {
+      if (auto *V = handleDomCond(Cond, true))
+        return V;
+    } else {
+      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+      if (DT.dominates(Edge1, Cmp.getParent()))
+        if (auto *V = handleDomCond(Cond, false))
+          return V;
+    }
   }
 
   return nullptr;
@@ -6113,13 +6114,19 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   KnownBits Op0Known(BitWidth);
   KnownBits Op1Known(BitWidth);
 
-  if (SimplifyDemandedBits(&I, 0,
-                           getDemandedBitsLHSMask(I, BitWidth),
-                           Op0Known, 0))
-    return &I;
+  {
+    // Don't use dominating conditions when folding icmp using known bits. This
+    // may convert signed into unsigned predicates in ways that other passes
+    // (especially IndVarSimplify) may not be able to reliably undo.
+    SQ.DC = nullptr;
+    auto _ = make_scope_exit([&]() { SQ.DC = &DC; });
+    if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
+                             Op0Known, 0))
+      return &I;
 
-  if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
-    return &I;
+    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
+      return &I;
+  }
 
   // Given the known and unknown bits, compute a range that the LHS could be
   // in.  Compute the Min, Max and RHS values based on the known bits. For the
@@ -7027,7 +7034,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   {
-    Value *X, *Y, *Z;
+    Value *X, *Y;
     // Transform (X & ~Y) == 0 --> (X & Y) != 0
     // and       (X & ~Y) != 0 --> (X & Y) == 0
     // if A is a power of 2.
@@ -7037,32 +7044,18 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       return new ICmpInst(I.getInversePredicate(), Builder.CreateAnd(X, Y),
                           Op1);
 
-    // Transform (~X ^ Y) s< ~Z  --> (X ^ Y) s> Z,
-    //           (~X ^ Y) s> ~Z  --> (X ^ Y) s< Z,
-    //           (~X ^ Y) s<= ~Z --> (X ^ Y) s>= Z,
-    //           (~X ^ Y) s>= ~Z --> (X ^ Y) s<= Z,
-    //           (~X ^ Y) u< ~Z  --> (X ^ Y) u< Z,
-    //           (~X ^ Y) u> ~Z  --> (X ^ Y) u< Z,
-    //           (~X ^ Y) u<= ~Z --> (X ^ Y) u>= Z,
-    //           (~X ^ Y) u>= ~Z --> (X ^ Y) u<= Z,
-    //           (~X ^ Y) == ~Z  --> (X ^ Y) == Z,
-    // and       (~X ^ Y) != ~Z  --> (X ^ Y) != Z,
-    if (match(&I, m_c_ICmp(Pred, m_c_Xor(m_Not(m_Value(X)), m_Value(Y)),
-                           m_Not(m_Value(Z)))) &&
-        (I.getOperand(0)->hasOneUse() || I.getOperand(1)->hasOneUse()))
-      return new ICmpInst(I.getSwappedPredicate(Pred), Builder.CreateXor(X, Y),
-                          Z);
-
-    // ~X < ~Y --> Y < X
-    // ~X < C -->  X > ~C
-    if (match(Op0, m_Not(m_Value(X)))) {
-      if (match(Op1, m_Not(m_Value(Y))))
-        return new ICmpInst(I.getPredicate(), Y, X);
-
-      const APInt *C;
-      if (match(Op1, m_APInt(C)))
-        return new ICmpInst(I.getSwappedPredicate(), X,
-                            ConstantInt::get(Op1->getType(), ~(*C)));
+    // Op0 pred Op1 -> ~Op1 pred ~Op0, if this allows us to drop an instruction.
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      bool ConsumesOp0, ConsumesOp1;
+      if (isFreeToInvert(Op0, Op0->hasOneUse(), ConsumesOp0) &&
+          isFreeToInvert(Op1, Op1->hasOneUse(), ConsumesOp1) &&
+          (ConsumesOp0 || ConsumesOp1)) {
+        Value *InvOp0 = getFreelyInverted(Op0, Op0->hasOneUse(), &Builder);
+        Value *InvOp1 = getFreelyInverted(Op1, Op1->hasOneUse(), &Builder);
+        assert(InvOp0 && InvOp1 &&
+               "Mismatch between isFreeToInvert and getFreelyInverted");
+        return new ICmpInst(I.getSwappedPredicate(), InvOp0, InvOp1);
+      }
     }
 
     Instruction *AddI = nullptr;
