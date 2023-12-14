@@ -184,7 +184,9 @@ __attribute__((noinline)) static void do_start() {
     app.tls.align = phdr->p_align;
   }
 
-  LIBC_NAMESPACE::TLSDescriptor tls;
+  // This descriptor has to be static since its cleanup function cannot
+  // capture the context.
+  static LIBC_NAMESPACE::TLSDescriptor tls;
   LIBC_NAMESPACE::init_tls(tls);
   if (tls.size != 0)
     LIBC_NAMESPACE::set_thread_ptr(tls.tp);
@@ -192,7 +194,11 @@ __attribute__((noinline)) static void do_start() {
   LIBC_NAMESPACE::self.attrib = &LIBC_NAMESPACE::main_thread_attrib;
   LIBC_NAMESPACE::main_thread_attrib.atexit_callback_mgr =
       LIBC_NAMESPACE::internal::get_thread_atexit_callback_mgr();
-
+  // We register the cleanup_tls function to be the last atexit callback to be
+  // invoked. It will tear down the TLS. Other callbacks may depend on TLS (such
+  // as the stack protector canary).
+  LIBC_NAMESPACE::atexit(
+      []() { LIBC_NAMESPACE::cleanup_tls(tls.tp, tls.size); });
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
@@ -208,10 +214,6 @@ __attribute__((noinline)) static void do_start() {
                     reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));
 
-  // TODO: TLS cleanup should be done after all other atexit callbacks
-  // are run. So, register a cleanup callback for it with atexit before
-  // everything else.
-  LIBC_NAMESPACE::cleanup_tls(tls.addr, tls.size);
   LIBC_NAMESPACE::exit(retval);
 }
 

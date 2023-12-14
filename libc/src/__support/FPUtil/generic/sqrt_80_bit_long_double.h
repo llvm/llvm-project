@@ -65,7 +65,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // Step 1a: Normalize denormal input
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
-    } else if (bits.get_unbiased_exponent() == 0) {
+    } else if (bits.get_biased_exponent() == 0) {
       normalize(x_exp, x_mant);
     }
 
@@ -128,7 +128,7 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // Extract output
     FPBits<long double> out(0.0L);
-    out.set_unbiased_exponent(x_exp);
+    out.set_biased_exponent(x_exp);
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 

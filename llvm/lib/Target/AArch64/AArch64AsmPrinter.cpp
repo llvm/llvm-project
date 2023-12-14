@@ -1835,8 +1835,8 @@ void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
     Adrp.addOperand(MCOperand::createReg(AArch64::X16));
     MCOperand SymPage;
     MCInstLowering.lowerOperand(
-        MachineOperand::CreateES(LazyPointer->getName().data() + 1,
-                                 AArch64II::MO_GOT | AArch64II::MO_PAGE),
+        MachineOperand::CreateMCSymbol(LazyPointer,
+                                       AArch64II::MO_GOT | AArch64II::MO_PAGE),
         SymPage);
     Adrp.addOperand(SymPage);
     OutStreamer->emitInstruction(Adrp, *STI);
@@ -1849,8 +1849,8 @@ void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
     Ldr.addOperand(MCOperand::createReg(AArch64::X16));
     MCOperand SymPageOff;
     MCInstLowering.lowerOperand(
-        MachineOperand::CreateES(LazyPointer->getName().data() + 1,
-                                 AArch64II::MO_GOT | AArch64II::MO_PAGEOFF),
+        MachineOperand::CreateMCSymbol(LazyPointer, AArch64II::MO_GOT |
+                                                        AArch64II::MO_PAGEOFF),
         SymPageOff);
     Ldr.addOperand(SymPageOff);
     Ldr.addOperand(MCOperand::createImm(0));

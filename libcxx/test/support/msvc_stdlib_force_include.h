@@ -100,6 +100,8 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #  define TEST_STD_VER 14
 #endif
 
+#define TEST_SHORT_WCHAR
+
 #define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 
 #ifdef __clang__
