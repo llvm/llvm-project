@@ -974,7 +974,8 @@ bool raw_fd_stream::classof(const raw_ostream *OS) {
 
 #ifdef _WIN32
 WSABalancer::WSABalancer() {
-  WSADATA WsaData = {0};
+  WSADATA WsaData;
+  ::memset(&WsaData, 0, sizeof(WsaData));
   if (WSAStartup(MAKEWORD(2, 2), &WsaData) != 0) {
     llvm::report_fatal_error("WSAStartup failed");
   }
