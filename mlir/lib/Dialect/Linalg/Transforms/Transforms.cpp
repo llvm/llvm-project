@@ -430,13 +430,15 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
   RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
       stripMinedTensorType, packingMetadata.reassociations);
 
-  // Get dynamic dims for stripMined shape
-  SmallVector<Value> dims(llvm::map_range(
+  // Get dynamic dims from input tensor in order of stripMinedTensor
+  // `tensor.empty` op
+  SmallVector<Value, 4> dims(llvm::map_range(
       llvm::seq<int64_t>(0, packedTensorType.getRank()), [&](int64_t i) {
         return rewriter.create<tensor::DimOp>(loc, unPackOp.getSource(), i);
       }));
   applyPermutationToVector(dims, lastDimsToInsertPositionsPerm);
-  SmallVector<Value> dynDims;
+  SmallVector<Value, 4> dynDims;
+  dynDims.reserve(stripMinedTensorType.getNumDynamicDims());
   for (int64_t i = 0; i < stripMinedTensorType.getRank(); i++) {
     if (stripMinedTensorType.isDynamicDim(i))
       dynDims.push_back(dims[i]);
