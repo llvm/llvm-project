@@ -1023,13 +1023,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_HAS_NO_RTTI
 #  endif
 
-// Same as _LIBCXXABI_DTOR_FUNC in libcxxabi, we need this when working with ABI in exceptions code
-#  if defined(_WIN32)
-#    define _LIBCXX_DTOR_FUNC __thiscall
-#  else
-#    define _LIBCXX_DTOR_FUNC
-#  endif
-
 #  ifndef _LIBCPP_WEAK
 #    define _LIBCPP_WEAK __attribute__((__weak__))
 #  endif

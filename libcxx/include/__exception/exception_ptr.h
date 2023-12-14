@@ -13,6 +13,7 @@
 #include <__config>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
+#include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__utility/unreachable.h>
 #include <cstddef>
@@ -24,6 +25,18 @@
 #  pragma GCC system_header
 #endif
 
+namespace __cxxabiv1 {
+
+extern "C" {
+void* __cxa_allocate_exception(size_t) throw();
+void __cxa_free_exception(void*) throw();
+
+struct __cxa_exception;
+__cxa_exception* __cxa_init_primary_exception(void*, std::type_info*, void (*)(void*)) throw();
+}
+
+} // namespace __cxxabiv1
+
 namespace std { // purposefully not using versioning namespace
 
 #ifndef _LIBCPP_ABI_MICROSOFT
@@ -31,20 +44,10 @@ namespace std { // purposefully not using versioning namespace
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-  template <class _Ep>
-  _LIBCPP_HIDE_FROM_ABI _LIBCXX_DTOR_FUNC static inline void __dest_thunk(void* __x) {
-    static_cast<_Ep*>(__x)->~_Ep();
-  }
-
-  _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-  static void* __init_native_exception(size_t, std::type_info*, void(_LIBCXX_DTOR_FUNC*)(void*)) _NOEXCEPT;
-  static void __free_native_exception(void*) _NOEXCEPT;
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
   template <class _Ep>
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
-#  endif
 
 public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
@@ -73,14 +76,17 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
   using _Ep2 = __decay_t<_Ep>;
-  void* __ex = exception_ptr::__init_native_exception(
-      sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
+
+  void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
+  (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) {
+    std::__destroy_at(static_cast<_Ep2*>(__p));
+  });
 
   try {
     ::new (__ex) _Ep2(__e);
     return exception_ptr::__from_native_exception_pointer(__ex);
   } catch (...) {
-    exception_ptr::__free_native_exception(__ex);
+    __cxxabiv1::__cxa_free_exception(__ex);
     return current_exception();
   }
 #    else
