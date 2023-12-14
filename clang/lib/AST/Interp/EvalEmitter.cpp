@@ -208,6 +208,27 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
       }
       return Ok;
     }
+
+    // Complex types.
+    if (const auto *CT = Ty->getAs<ComplexType>()) {
+      QualType ElemTy = CT->getElementType();
+      std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+      assert(ElemT);
+
+      if (ElemTy->isIntegerType()) {
+        INT_TYPE_SWITCH(*ElemT, {
+          auto V1 = Ptr.atIndex(0).deref<T>();
+          auto V2 = Ptr.atIndex(1).deref<T>();
+          Result = APValue(V1.toAPSInt(), V2.toAPSInt());
+          return true;
+        });
+      } else if (ElemTy->isFloatingType()) {
+        Result = APValue(Ptr.atIndex(0).deref<Floating>().getAPFloat(),
+                         Ptr.atIndex(1).deref<Floating>().getAPFloat());
+        return true;
+      }
+      return false;
+    }
     llvm_unreachable("invalid value to return");
   };
 

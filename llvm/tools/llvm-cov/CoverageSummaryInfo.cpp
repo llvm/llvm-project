@@ -44,6 +44,21 @@ static void sumBranchExpansions(size_t &NumBranches, size_t &CoveredBranches,
   }
 }
 
+static std::pair<size_t, size_t>
+sumMCDCPairs(const ArrayRef<MCDCRecord> &Records) {
+  size_t NumPairs = 0, CoveredPairs = 0;
+  for (const auto &Record : Records) {
+    const auto NumConditions = Record.getNumConditions();
+    for (unsigned C = 0; C < NumConditions; C++) {
+      if (!Record.isCondFolded(C))
+        ++NumPairs;
+      if (Record.isConditionIndependencePairCovered(C))
+        ++CoveredPairs;
+    }
+  }
+  return {NumPairs, CoveredPairs};
+}
+
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
                              const coverage::FunctionRecord &Function) {
@@ -73,11 +88,15 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   sumBranches(NumBranches, CoveredBranches, CD.getBranches());
   sumBranchExpansions(NumBranches, CoveredBranches, CM, CD.getExpansions());
 
+  size_t NumPairs = 0, CoveredPairs = 0;
+  std::tie(NumPairs, CoveredPairs) = sumMCDCPairs(CD.getMCDCRecords());
+
   return FunctionCoverageSummary(
       Function.Name, Function.ExecutionCount,
       RegionCoverageInfo(CoveredRegions, NumCodeRegions),
       LineCoverageInfo(CoveredLines, NumLines),
-      BranchCoverageInfo(CoveredBranches, NumBranches));
+      BranchCoverageInfo(CoveredBranches, NumBranches),
+      MCDCCoverageInfo(CoveredPairs, NumPairs));
 }
 
 FunctionCoverageSummary
@@ -97,10 +116,12 @@ FunctionCoverageSummary::get(const InstantiationGroup &Group,
   Summary.RegionCoverage = Summaries[0].RegionCoverage;
   Summary.LineCoverage = Summaries[0].LineCoverage;
   Summary.BranchCoverage = Summaries[0].BranchCoverage;
+  Summary.MCDCCoverage = Summaries[0].MCDCCoverage;
   for (const auto &FCS : Summaries.drop_front()) {
     Summary.RegionCoverage.merge(FCS.RegionCoverage);
     Summary.LineCoverage.merge(FCS.LineCoverage);
     Summary.BranchCoverage.merge(FCS.BranchCoverage);
+    Summary.MCDCCoverage.merge(FCS.MCDCCoverage);
   }
   return Summary;
 }

@@ -2916,7 +2916,7 @@ OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult CallIntrinsicOp::verify() {
-  if (!getIntrin().startswith("llvm."))
+  if (!getIntrin().starts_with("llvm."))
     return emitOpError() << "intrinsic name must start with 'llvm.'";
   return success();
 }
