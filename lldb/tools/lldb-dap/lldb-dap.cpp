@@ -644,8 +644,7 @@ void request_attach(const llvm::json::Object &request) {
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
   g_dap.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
-  std::vector<std::string> postRunCommands =
-      GetStrings(arguments, "postRunCommands");
+  g_dap.post_run_commands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
   g_dap.enable_auto_variable_summaries =
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
@@ -664,7 +663,12 @@ void request_attach(const llvm::json::Object &request) {
     llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
-  g_dap.RunInitCommands();
+  if (llvm::Error err = g_dap.RunInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   SetSourceMapFromArguments(*arguments);
 
@@ -678,7 +682,12 @@ void request_attach(const llvm::json::Object &request) {
   }
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  g_dap.RunPreRunCommands();
+  if (llvm::Error err = g_dap.RunPreRunCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
     char attach_msg[256];
@@ -703,7 +712,12 @@ void request_attach(const llvm::json::Object &request) {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there
     // is no valid process after running these commands, we have failed.
-    g_dap.RunLLDBCommands("Running attachCommands:", attachCommands);
+    if (llvm::Error err = g_dap.RunAttachCommands(attachCommands)) {
+      response["success"] = false;
+      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_dap.target = g_dap.debugger.GetSelectedTarget();
@@ -727,7 +741,7 @@ void request_attach(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   } else {
-    g_dap.RunLLDBCommands("Running postRunCommands:", postRunCommands);
+    g_dap.RunPostRunCommands();
   }
 
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -1270,7 +1284,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result = RunLLDBCommands(llvm::StringRef(), {std::string(expression)});
+    auto result =
+        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1740,7 +1755,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // Set the launch info so that run commands can access the configured
     // launch details.
     g_dap.target.SetLaunchInfo(launch_info);
-    g_dap.RunLLDBCommands("Running launchCommands:", launchCommands);
+    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands))
+      error.SetErrorString(llvm::toString(std::move(err)).c_str());
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_dap.target = g_dap.debugger.GetSelectedTarget();
@@ -1797,8 +1813,7 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.stop_commands = GetStrings(arguments, "stopCommands");
   g_dap.exit_commands = GetStrings(arguments, "exitCommands");
   g_dap.terminate_commands = GetStrings(arguments, "terminateCommands");
-  std::vector<std::string> postRunCommands =
-      GetStrings(arguments, "postRunCommands");
+  g_dap.post_run_commands = GetStrings(arguments, "postRunCommands");
   g_dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
   g_dap.enable_auto_variable_summaries =
@@ -1820,7 +1835,12 @@ void request_launch(const llvm::json::Object &request) {
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
-  g_dap.RunInitCommands();
+  if (llvm::Error err = g_dap.RunInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   SetSourceMapFromArguments(*arguments);
 
@@ -1834,7 +1854,12 @@ void request_launch(const llvm::json::Object &request) {
   }
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  g_dap.RunPreRunCommands();
+  if (llvm::Error err = g_dap.RunPreRunCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   status = LaunchProcess(request);
 
@@ -1842,7 +1867,7 @@ void request_launch(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(status.GetCString()));
   } else {
-    g_dap.RunLLDBCommands("Running postRunCommands:", postRunCommands);
+    g_dap.RunPostRunCommands();
   }
 
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
