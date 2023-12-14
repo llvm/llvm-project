@@ -373,7 +373,7 @@ determining the names for new test files.
    * - ``FOO.sh.<anything>``
      - A *builtin Lit Shell* test.
    * - ``FOO.gen.<anything>``
-     - A *builtin Lit Shell* test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected
+     - A variant of a *Lit Shell* test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected
        by LLVM split-file. Each generated file will drive an invocation of a separate Lit test. The format of the generated file will determine the type
        of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
        in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
