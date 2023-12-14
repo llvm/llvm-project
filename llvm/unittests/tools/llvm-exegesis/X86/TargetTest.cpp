@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "MmapUtils.h"
 #include "SubprocessMemory.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"

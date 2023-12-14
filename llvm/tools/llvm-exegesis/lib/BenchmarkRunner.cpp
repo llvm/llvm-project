@@ -13,6 +13,7 @@
 #include "BenchmarkRunner.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
+#include "MmapUtils.h"
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"

@@ -8,6 +8,7 @@
 #include "../Target.h"
 
 #include "../Error.h"
+#include "../MmapUtils.h"
 #include "../ParallelSnippetGenerator.h"
 #include "../SerialSnippetGenerator.h"
 #include "../SnippetGenerator.h"
