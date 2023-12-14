@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple riscv64 -mattr=+v %s -o - \
 ; RUN:     -verify-machineinstrs | FileCheck %s
 
-define void @vadd_vint16m1(<vscale x 4 x i16> *%pc, <vscale x 4 x i16> *%pa, <vscale x 4 x i16> *%pb) nounwind {
+define void @vadd_vint16m1(ptr %pc, ptr %pa, ptr %pb) nounwind {
 ; CHECK-LABEL: vadd_vint16m1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1re16.v v8, (a1)
@@ -13,14 +13,14 @@ define void @vadd_vint16m1(<vscale x 4 x i16> *%pc, <vscale x 4 x i16> *%pa, <vs
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %va = load <vscale x 4 x i16>, <vscale x 4 x i16>* %pa
-  %vb = load <vscale x 4 x i16>, <vscale x 4 x i16>* %pb
+  %va = load <vscale x 4 x i16>, ptr %pa
+  %vb = load <vscale x 4 x i16>, ptr %pb
   %vc = add <vscale x 4 x i16> %va, %vb
-  store <vscale x 4 x i16> %vc, <vscale x 4 x i16> *%pc
+  store <vscale x 4 x i16> %vc, ptr %pc
   ret void
 }
 
-define void @vadd_vint16m2(<vscale x 8 x i16> *%pc, <vscale x 8 x i16> *%pa, <vscale x 8 x i16> *%pb) nounwind {
+define void @vadd_vint16m2(ptr %pc, ptr %pa, ptr %pb) nounwind {
 ; CHECK-LABEL: vadd_vint16m2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re16.v v8, (a1)
@@ -29,14 +29,14 @@ define void @vadd_vint16m2(<vscale x 8 x i16> *%pc, <vscale x 8 x i16> *%pa, <vs
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %va = load <vscale x 8 x i16>, <vscale x 8 x i16>* %pa
-  %vb = load <vscale x 8 x i16>, <vscale x 8 x i16>* %pb
+  %va = load <vscale x 8 x i16>, ptr %pa
+  %vb = load <vscale x 8 x i16>, ptr %pb
   %vc = add <vscale x 8 x i16> %va, %vb
-  store <vscale x 8 x i16> %vc, <vscale x 8 x i16> *%pc
+  store <vscale x 8 x i16> %vc, ptr %pc
   ret void
 }
 
-define void @vadd_vint16m4(<vscale x 16 x i16> *%pc, <vscale x 16 x i16> *%pa, <vscale x 16 x i16> *%pb) nounwind {
+define void @vadd_vint16m4(ptr %pc, ptr %pa, ptr %pb) nounwind {
 ; CHECK-LABEL: vadd_vint16m4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4re16.v v8, (a1)
@@ -45,14 +45,14 @@ define void @vadd_vint16m4(<vscale x 16 x i16> *%pc, <vscale x 16 x i16> *%pa, <
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %va = load <vscale x 16 x i16>, <vscale x 16 x i16>* %pa
-  %vb = load <vscale x 16 x i16>, <vscale x 16 x i16>* %pb
+  %va = load <vscale x 16 x i16>, ptr %pa
+  %vb = load <vscale x 16 x i16>, ptr %pb
   %vc = add <vscale x 16 x i16> %va, %vb
-  store <vscale x 16 x i16> %vc, <vscale x 16 x i16> *%pc
+  store <vscale x 16 x i16> %vc, ptr %pc
   ret void
 }
 
-define void @vadd_vint16m8(<vscale x 32 x i16> *%pc, <vscale x 32 x i16> *%pa, <vscale x 32 x i16> *%pb) nounwind {
+define void @vadd_vint16m8(ptr %pc, ptr %pa, ptr %pb) nounwind {
 ; CHECK-LABEL: vadd_vint16m8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re16.v v8, (a1)
@@ -61,14 +61,14 @@ define void @vadd_vint16m8(<vscale x 32 x i16> *%pc, <vscale x 32 x i16> *%pa, <
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %va = load <vscale x 32 x i16>, <vscale x 32 x i16>* %pa
-  %vb = load <vscale x 32 x i16>, <vscale x 32 x i16>* %pb
+  %va = load <vscale x 32 x i16>, ptr %pa
+  %vb = load <vscale x 32 x i16>, ptr %pb
   %vc = add <vscale x 32 x i16> %va, %vb
-  store <vscale x 32 x i16> %vc, <vscale x 32 x i16> *%pc
+  store <vscale x 32 x i16> %vc, ptr %pc
   ret void
 }
 
-define void @vadd_vint16mf2(<vscale x 2 x i16> *%pc, <vscale x 2 x i16> *%pa, <vscale x 2 x i16> *%pb) nounwind {
+define void @vadd_vint16mf2(ptr %pc, ptr %pa, ptr %pb) nounwind {
 ; CHECK-LABEL: vadd_vint16mf2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e16, mf2, ta, ma
@@ -77,14 +77,14 @@ define void @vadd_vint16mf2(<vscale x 2 x i16> *%pc, <vscale x 2 x i16> *%pa, <v
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %va = load <vscale x 2 x i16>, <vscale x 2 x i16>* %pa
-  %vb = load <vscale x 2 x i16>, <vscale x 2 x i16>* %pb
+  %va = load <vscale x 2 x i16>, ptr %pa
+  %vb = load <vscale x 2 x i16>, ptr %pb
   %vc = add <vscale x 2 x i16> %va, %vb
-  store <vscale x 2 x i16> %vc, <vscale x 2 x i16> *%pc
+  store <vscale x 2 x i16> %vc, ptr %pc
   ret void
 }
 
-define void @vadd_vint16mf4(<vscale x 1 x i16> *%pc, <vscale x 1 x i16> *%pa, <vscale x 1 x i16> *%pb) nounwind {
+define void @vadd_vint16mf4(ptr %pc, ptr %pa, ptr %pb) nounwind {
 ; CHECK-LABEL: vadd_vint16mf4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e16, mf4, ta, ma
@@ -93,9 +93,9 @@ define void @vadd_vint16mf4(<vscale x 1 x i16> *%pc, <vscale x 1 x i16> *%pa, <v
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %va = load <vscale x 1 x i16>, <vscale x 1 x i16>* %pa
-  %vb = load <vscale x 1 x i16>, <vscale x 1 x i16>* %pb
+  %va = load <vscale x 1 x i16>, ptr %pa
+  %vb = load <vscale x 1 x i16>, ptr %pb
   %vc = add <vscale x 1 x i16> %va, %vb
-  store <vscale x 1 x i16> %vc, <vscale x 1 x i16> *%pc
+  store <vscale x 1 x i16> %vc, ptr %pc
   ret void
 }
