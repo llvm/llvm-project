@@ -432,4 +432,3 @@ tbuffer_store_format_d16_xyzw v[4:5], off, ttmp[4:7], s3 format:[BUF_DATA_FORMAT
 
 tbuffer_store_format_d16_xyzw v[4:5], off, ttmp[4:7], s3 format:[BUF_DATA_FORMAT_32_32_32, BUF_NUM_FORMAT_FLOAT] offset:8388607 dlc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
