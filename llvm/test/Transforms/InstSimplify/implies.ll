@@ -321,9 +321,7 @@ define i1 @pr70374(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @pr70374(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[ADD]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP2]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %add = add nuw i32 %y, %z
   %cmp1 = icmp ule i32 %add, %x
@@ -334,11 +332,7 @@ define i1 @pr70374(i32 %x, i32 %y, i32 %z) {
 
 define i1 @test_uge_icmp_value(i32 %length.i, i32 %i, i32 %j) {
 ; CHECK-LABEL: @test_uge_icmp_value(
-; CHECK-NEXT:    [[IPLUSJ:%.*]] = add nuw i32 [[I:%.*]], [[J:%.*]]
-; CHECK-NEXT:    [[VAR29:%.*]] = icmp uge i32 [[LENGTH_I:%.*]], [[I]]
-; CHECK-NEXT:    [[VAR30:%.*]] = icmp uge i32 [[LENGTH_I]], [[IPLUSJ]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR30]], [[VAR29]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %iplusj = add nuw i32 %i, %j
   %var29 = icmp uge i32 %length.i, %i
