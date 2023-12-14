@@ -1814,7 +1814,7 @@ exit:
 }
 
 ; Illustrate if 2 pointers are non-equal when one of them is a recursive GEP.
-define i1 @icmp_recursiveGEP_withPtr(ptr noundef %val1) {
+define i1 @icmp_recursiveGEP_withPtr(ptr %val1) {
 ; CHECK-LABEL: @icmp_recursiveGEP_withPtr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
@@ -1826,10 +1826,9 @@ define i1 @icmp_recursiveGEP_withPtr(ptr noundef %val1) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq ptr [[TEST_0_I]], [[VAL1]]
 ; CHECK-NEXT:    br label [[_Z9STRINGLENPKS_EXIT]]
 ; CHECK:       _Z9stringlenPKs.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ [[BOOL]], [[WHILE_END_I]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ false, [[WHILE_END_I]] ], [ true, [[ENTRY]] ]
 ; CHECK-NEXT:    ret i1 [[RETVAL_0_I]]
 ;
 entry:
