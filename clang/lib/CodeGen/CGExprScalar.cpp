@@ -610,8 +610,6 @@ public:
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
 
-  llvm::Value *EmitVectorElementConversion(QualType SrcType, QualType DstType,
-                                           llvm::Value *Src);
 
   Value *VisitUnaryAddrOf(const UnaryOperator *E) {
     if (isa<MemberPointerType>(E->getType())) // never sugared
@@ -1424,9 +1422,6 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     return Builder.CreateVectorSplat(NumElements, Src, "splat");
   }
 
-  if (SrcType->isExtVectorType() && DstType->isExtVectorType())
-    return EmitVectorElementConversion(SrcType, DstType, Src);
-
   if (SrcType->isMatrixType() && DstType->isMatrixType())
     return EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
@@ -1706,14 +1701,10 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 }
 
 Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
-  QualType SrcType = E->getSrcExpr()->getType(), DstType = E->getType();
-  Value *Src = CGF.EmitScalarExpr(E->getSrcExpr());
-  return EmitVectorElementConversion(SrcType, DstType, Src);
-}
+  QualType SrcType = E->getSrcExpr()->getType(),
+           DstType = E->getType();
 
-llvm::Value *ScalarExprEmitter::EmitVectorElementConversion(QualType SrcType,
-                                                            QualType DstType,
-                                                            Value *Src) {
+  Value *Src  = CGF.EmitScalarExpr(E->getSrcExpr());
 
   SrcType = CGF.getContext().getCanonicalType(SrcType);
   DstType = CGF.getContext().getCanonicalType(DstType);
@@ -2415,6 +2406,12 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                 CE->getExprLoc());
 
   case CK_IntegralCast: {
+    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      return Builder.CreateIntCast(Visit(E), ConvertType(DestTy),
+                                   SrcElTy->isSignedIntegerOrEnumerationType(),
+                                   "conv");
+    }
     ScalarConversionOpts Opts;
     if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
       if (!ICE->isPartOfExplicitCast())
@@ -2423,9 +2420,41 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc(), Opts);
   }
-  case CK_IntegralToFloating:
-  case CK_FloatingToIntegral:
-  case CK_FloatingCast:
+  case CK_IntegralToFloating: {
+    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      if (SrcElTy->isSignedIntegerOrEnumerationType())
+        return Builder.CreateSIToFP(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateUIToFP(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
+  case CK_FloatingToIntegral: {
+    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
+      if (DstElTy->isSignedIntegerOrEnumerationType())
+        return Builder.CreateFPToSI(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateFPToUI(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
+  case CK_FloatingCast: {
+    if (E->getType()->isExtVectorType() && DestTy->isExtVectorType()) {
+      QualType SrcElTy = E->getType()->castAs<VectorType>()->getElementType();
+      QualType DstElTy = DestTy->castAs<VectorType>()->getElementType();
+      if (DstElTy->castAs<BuiltinType>()->getKind() <
+          SrcElTy->castAs<BuiltinType>()->getKind())
+        return Builder.CreateFPTrunc(Visit(E), ConvertType(DestTy), "conv");
+      return Builder.CreateFPExt(Visit(E), ConvertType(DestTy), "conv");
+    }
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+  }
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, CE);
