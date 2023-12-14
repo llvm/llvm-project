@@ -137,10 +137,6 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
       {Builtin::BI__builtin_modfl, "modf"},
   };
 
-  static SmallDenseMap<unsigned, StringRef, 4> PPCDoubleDoubleBuiltins{
-      {Builtin::BI__builtin_frexpl, "frexpl"},
-  };
-
   // If the builtin has been declared explicitly with an assembler label,
   // use the mangled name. This differs from the plain label on platforms
   // that prefix labels.
@@ -153,11 +149,6 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
         F128Builtins.contains(BuiltinID))
       Name = F128Builtins[BuiltinID];
-    else if (getTriple().isPPC() && getTriple().isOSLinux() &&
-             &getTarget().getLongDoubleFormat() ==
-                 &llvm::APFloat::PPCDoubleDouble() &&
-             PPCDoubleDoubleBuiltins.contains(BuiltinID))
-      Name = PPCDoubleDoubleBuiltins[BuiltinID];
     else if (getTriple().isOSAIX() &&
              &getTarget().getLongDoubleFormat() ==
                  &llvm::APFloat::IEEEdouble() &&
@@ -3420,8 +3411,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateCall(F, { Src0, Src1 }));
   }
   case Builtin::BI__builtin_frexpl: {
-    auto &Triple = getTarget().getTriple();
-    if (Triple.isPPC() && Triple.isOSLinux() &&
+    // Linux PPC will not be adding additional PPCDoubleDouble support.
+    // WIP to switch default to IEEE long double. Will emit libcall for
+    // frexpl instead of legalizing this type in the BE.
+    if (getTarget().getTriple().isPPC() &&
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
       break;
     LLVM_FALLTHROUGH;
