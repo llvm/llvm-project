@@ -160,8 +160,7 @@ define <16 x i8> @exact_vlen_i8_m1(ptr %p) vscale_range(2,2) {
 define <32 x i8> @exact_vlen_i8_m2(ptr %p) vscale_range(2,2) {
 ; CHECK-LABEL: exact_vlen_i8_m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = load <32 x i8>, ptr %p
@@ -171,8 +170,7 @@ define <32 x i8> @exact_vlen_i8_m2(ptr %p) vscale_range(2,2) {
 define <128 x i8> @exact_vlen_i8_m8(ptr %p) vscale_range(2,2) {
 ; CHECK-LABEL: exact_vlen_i8_m8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = load <128 x i8>, ptr %p
