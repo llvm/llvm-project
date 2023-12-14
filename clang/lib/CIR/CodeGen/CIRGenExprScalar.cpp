@@ -246,13 +246,19 @@ public:
   }
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     // Do we need anything like TestAndClearIgnoreResultAssign()?
-    assert(!E->getBase()->getType()->isVectorType() &&
-           "vector types not implemented");
 
-    // Emit subscript expressions in rvalue context's.  For most cases, this
-    // just loads the lvalue formed by the subscript expr.  However, we have to
-    // be careful, because the base of a vector subscript is occasionally an
-    // rvalue, so we can't get it as an lvalue.
+    if (E->getBase()->getType()->isVectorType()) {
+      assert(!UnimplementedFeature::scalableVectors() &&
+             "NYI: index into scalable vector");
+      // Subscript of vector type.  This is handled differently, with a custom
+      // operation.
+      mlir::Value VecValue = Visit(E->getBase());
+      mlir::Value IndexValue = Visit(E->getIdx());
+      return CGF.builder.create<mlir::cir::VecExtractOp>(
+          CGF.getLoc(E->getSourceRange()), VecValue, IndexValue);
+    }
+
+    // Just load the lvalue formed by the subscript expression.
     return buildLoadOfLValue(E);
   }
 
@@ -919,6 +925,7 @@ public:
            "Internal error: conversion between matrix type and scalar type");
 
     // TODO(CIR): Support VectorTypes
+    assert(!UnimplementedFeature::cirVectorType() && "NYI: vector cast");
 
     // Finally, we have the arithmetic types: real int/float.
     mlir::Value Res = nullptr;
@@ -1579,8 +1586,18 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   if (E->hadArrayRangeDesignator())
     llvm_unreachable("NYI");
 
-  if (UnimplementedFeature::cirVectorType())
-    llvm_unreachable("NYI");
+  if (E->getType()->isVectorType()) {
+    assert(!UnimplementedFeature::scalableVectors() &&
+           "NYI: scalable vector init");
+    assert(!UnimplementedFeature::vectorConstants() && "NYI: vector constants");
+    SmallVector<mlir::Value, 16> Elements;
+    for (Expr *init : E->inits()) {
+      Elements.push_back(Visit(init));
+    }
+    return CGF.getBuilder().create<mlir::cir::VecCreateOp>(
+        CGF.getLoc(E->getSourceRange()), CGF.getCIRType(E->getType()),
+        Elements);
+  }
 
   if (NumInitElements == 0) {
     // C++11 value-initialization for the scalar.

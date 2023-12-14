@@ -180,7 +180,7 @@ static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
   if (!ConstantSize)
     return;
   assert(!UnimplementedFeature::addAutoInitAnnotation());
-  assert(!UnimplementedFeature::cirVectorType());
+  assert(!UnimplementedFeature::vectorConstants());
   assert(!UnimplementedFeature::shouldUseBZeroPlusStoresToInitialize());
   assert(!UnimplementedFeature::shouldUseMemSetToInitialize());
   assert(!UnimplementedFeature::shouldSplitConstantStore());

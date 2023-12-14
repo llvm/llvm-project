@@ -650,7 +650,10 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
   case Type::ExtVector:
   case Type::Vector: {
-    assert(0 && "not implemented");
+    const VectorType *V = cast<VectorType>(Ty);
+    auto ElementType = convertTypeForMem(V->getElementType());
+    ResultType = ::mlir::cir::VectorType::get(Builder.getContext(), ElementType,
+                                              V->getNumElements());
     break;
   }
   case Type::ConstantMatrix: {
