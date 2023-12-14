@@ -36,7 +36,7 @@ LIBC_INLINE T trunc(T x) {
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
-  if (exponent >= static_cast<int>(MantissaWidth<T>::VALUE))
+  if (exponent >= static_cast<int>(FPBits<T>::MANTISSA_WIDTH))
     return x;
 
   // If the exponent is such that abs(x) is less than 1, then return 0.
@@ -47,7 +47,7 @@ LIBC_INLINE T trunc(T x) {
       return T(0.0);
   }
 
-  int trim_size = MantissaWidth<T>::VALUE - exponent;
+  int trim_size = FPBits<T>::MANTISSA_WIDTH - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
   return T(bits);
 }
@@ -65,7 +65,7 @@ LIBC_INLINE T ceil(T x) {
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
-  if (exponent >= static_cast<int>(MantissaWidth<T>::VALUE))
+  if (exponent >= static_cast<int>(FPBits<T>::MANTISSA_WIDTH))
     return x;
 
   if (exponent <= -1) {
@@ -75,7 +75,7 @@ LIBC_INLINE T ceil(T x) {
       return T(1.0);
   }
 
-  uint32_t trim_size = MantissaWidth<T>::VALUE - exponent;
+  uint32_t trim_size = FPBits<T>::MANTISSA_WIDTH - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
   T trunc_value = T(bits);
 
@@ -114,7 +114,7 @@ LIBC_INLINE T round(T x) {
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
-  if (exponent >= static_cast<int>(MantissaWidth<T>::VALUE))
+  if (exponent >= static_cast<int>(FPBits<T>::MANTISSA_WIDTH))
     return x;
 
   if (exponent == -1) {
@@ -133,7 +133,7 @@ LIBC_INLINE T round(T x) {
       return T(0.0);
   }
 
-  uint32_t trim_size = MantissaWidth<T>::VALUE - exponent;
+  uint32_t trim_size = FPBits<T>::MANTISSA_WIDTH - exponent;
   bool half_bit_set =
       bool(bits.get_mantissa() & (UIntType(1) << (trim_size - 1)));
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
@@ -167,7 +167,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
-  if (exponent >= static_cast<int>(MantissaWidth<T>::VALUE))
+  if (exponent >= static_cast<int>(FPBits<T>::MANTISSA_WIDTH))
     return x;
 
   if (exponent <= -1) {
@@ -188,7 +188,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
     }
   }
 
-  uint32_t trim_size = MantissaWidth<T>::VALUE - exponent;
+  uint32_t trim_size = FPBits<T>::MANTISSA_WIDTH - exponent;
   FPBits<T> new_bits = bits;
   new_bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
   T trunc_value = T(new_bits);
