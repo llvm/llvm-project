@@ -37,6 +37,12 @@ constexpr _Complex int I2 = {};
 static_assert(__real(I2) == 0, "");
 static_assert(__imag(I2) == 0, "");
 
+static_assert(__real(4.0) == 4.0, "");
+static_assert(__real(12u) == 12u, "");
+static_assert(__imag(4.0) == 0.0, "");
+static_assert(__imag(13) == 0, "");
+
+
 
 /// Standalone complex expressions.
 static_assert(__real((_Complex float){1.0, 3.0}) == 1.0, "");
