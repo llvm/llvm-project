@@ -549,6 +549,46 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Check that we can lower unpack "as unpad" with dynamic dims 
+// CHECK-LABEL: func.func @unpack_as_pad_dynamic(
+// CHECK-SAME: %[[ARG0:.*]]: tensor<1x1x1x1x?x?x?x?xf32>, %[[ARG1:.*]]: tensor<?x?x?x?xf32>
+//      CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//      CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//      CHECK-DAG:  %[[C2:.*]] = arith.constant 2 : index
+//      CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+//      CHECK-DAG: %[[DIM0:.*]] = tensor.dim %[[ARG1]], %[[C0]]
+//      CHECK-DAG: %[[DIM1:.*]] = tensor.dim %[[ARG1]], %[[C1]]
+//      CHECK-DAG: %[[DIM2:.*]] = tensor.dim %[[ARG1]], %[[C2]]
+//      CHECK-DAG: %[[DIM3:.*]] = tensor.dim %[[ARG1]], %[[C3]]
+//      CHECK: %[[RES:.*]] = tensor.extract_slice %[[ARG0]]
+// offsets.
+// CHECK-SAME:   [0, 0, 0, 0, 0, 0, 0, 0]
+// sizes.
+// CHECK-SAME:   [1, 1, 1, 1, %[[DIM0]], %[[DIM1]], %[[DIM2]], %[[DIM3]]]
+// strides multiplers.
+// CHECK-SAME:   [1, 1, 1, 1, 1, 1, 1, 1]
+// CHECK-SAME:   : tensor<1x1x1x1x?x?x?x?xf32> to tensor<?x?x?x?xf32>
+func.func @unpack_as_pad_dynamic(%arg0: tensor<1x1x1x1x?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %pack = tensor.unpack %arg0 inner_dims_pos = [0, 1, 2, 3] inner_tiles = [136, 64, 16, 16] into %arg1
+    : tensor<1x1x1x1x?x?x?x?xf32> -> tensor<?x?x?x?xf32>
+  return %pack : tensor<?x?x?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
+}
+
+// -----
+
 // At the moment, we cannot lower tensor.unpack with outer_dims_perm.
 func.func @diagnostic_unpack(%arg0: tensor<32x64xf32>, %arg1: tensor<2x4x32x8xf32>) -> tensor<32x64xf32> {
   // expected-note @below {{target payload op}}
