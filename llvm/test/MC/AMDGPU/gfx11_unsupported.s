@@ -1585,6 +1585,12 @@ v_mov_b64_e64 v[10:11], v[2:3]
 v_mul_lo_i32 v0, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+v_permlane16_var_b32 v0, v0, v1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_permlanex16_var_b32 v0, v0, v1
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 v_pk_add_f32 v[10:11], v[2:3], v[4:5]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
