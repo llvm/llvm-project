@@ -154,11 +154,11 @@ public:
   TypeSize getSequentialElementStride(const DataLayout &DL) const {
     assert(isSequential());
     Type *ElemTy = getIndexedType();
-    TypeSize ElemSizeInBits = isVector() ? DL.getTypeSizeInBits(ElemTy)
-                                         : DL.getTypeAllocSizeInBits(ElemTy);
-    // Check for invalid GEPs that are not byte-addressable.
-    assert(ElemSizeInBits.isKnownMultipleOf(8));
-    return ElemSizeInBits.divideCoefficientBy(8);
+    if (isVector()) {
+      assert(DL.typeSizeEqualsStoreSize(ElemTy) && "Not byte-addressable");
+      return DL.getTypeStoreSize(ElemTy);
+    }
+    return DL.getTypeAllocSize(ElemTy);
   }
 
   StructType *getStructType() const { return cast<StructType *>(CurTy); }
