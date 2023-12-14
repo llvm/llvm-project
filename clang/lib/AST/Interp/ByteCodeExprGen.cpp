@@ -671,6 +671,22 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     return true;
   }
 
+  if (T->isAnyComplexType()) {
+    unsigned InitIndex = 0;
+    for (const Expr *Init : E->inits()) {
+      PrimType InitT = classifyPrim(Init->getType());
+
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitInitElem(InitT, InitIndex, E))
+        return false;
+      ++InitIndex;
+    }
+    assert(InitIndex == 2);
+    return true;
+  }
+
   return false;
 }
 
@@ -2550,8 +2566,22 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
-  case UO_Real:   // __real x
-  case UO_Imag:   // __imag x
+  case UO_Real: { // __real x
+    assert(!T);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitConstUint8(0, E))
+      return false;
+    return this->emitArrayElemPtrPopUint8(E);
+  }
+  case UO_Imag: { // __imag x
+    assert(!T);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitConstUint8(1, E))
+      return false;
+    return this->emitArrayElemPtrPopUint8(E);
+  }
   case UO_Extension:
     return this->delegate(SubExpr);
   case UO_Coawait:
