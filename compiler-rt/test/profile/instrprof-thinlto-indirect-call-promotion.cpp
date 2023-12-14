@@ -68,8 +68,8 @@
 // IMPORTS: main.cpp: Import _ZL7callee0v.llvm.[[#]]
 // IMPORTS: main.cpp: Import _Z11global_funcv
 
-// PGOName: define dso_local void @_Z7callee1v() {{.*}} !prof ![[#]] {
-// PGOName: define internal void @_ZL7callee0v() {{.*}} !prof ![[#]] !PGOFuncName ![[#MD:]] {
+// PGOName: define {{(dso_local )?}}void @_Z7callee1v() #[[#]] !prof ![[#]] {
+// PGOName: define internal void @_ZL7callee0v() #[[#]] !prof ![[#]] !PGOFuncName ![[#MD:]] {
 // PGOName: ![[#MD]] = !{!"{{.*}}lib.cpp;_ZL7callee0v"}
 
 // IR-LABEL: define available_externally {{.*}} void @_Z11global_funcv() {{.*}} !prof ![[#]] {
