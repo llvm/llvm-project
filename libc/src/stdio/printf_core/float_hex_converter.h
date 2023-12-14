@@ -87,7 +87,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
   constexpr size_t MANT_BUFF_LEN =
-      (fputil::MantissaWidth<long double>::VALUE / BITS_IN_HEX_DIGIT) + 1;
+      (LDBits::MANTISSA_WIDTH / BITS_IN_HEX_DIGIT) + 1;
   char mant_buffer[MANT_BUFF_LEN];
 
   size_t mant_len = (mantissa_width / BITS_IN_HEX_DIGIT) + 1;

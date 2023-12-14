@@ -478,7 +478,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  constexpr int32_t MANT_WIDTH = fputil::FloatProperties<T>::MANTISSA_WIDTH;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
 
@@ -591,7 +591,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  constexpr int32_t MANT_WIDTH = fputil::FloatProperties<T>::MANTISSA_WIDTH;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   MantissaInt mantissa = float_bits.get_explicit_mantissa();
@@ -754,7 +754,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
   // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  constexpr int32_t MANT_WIDTH = fputil::FloatProperties<T>::MANTISSA_WIDTH;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   MantissaInt mantissa = float_bits.get_explicit_mantissa();
