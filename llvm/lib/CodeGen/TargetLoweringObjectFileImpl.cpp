@@ -645,7 +645,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name = ".rodata.cst";
     Name += utostr(EntrySize);
   } else {
-    Name = getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
+    Name = getSectionPrefixForGlobal(Kind, TM.isLargeGlobalObject(GO));
   }
 
   bool HasPrefix = false;
@@ -765,7 +765,7 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
   }
-  if (TM.isLargeGlobalValue(GO))
+  if (TM.isLargeGlobalObject(GO))
     Flags |= ELF::SHF_X86_64_LARGE;
   return {Group, IsComdat, Flags};
 }
