@@ -411,17 +411,8 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
-inline RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, size_t length, Terminator &terminator) {
-  if (length <= std::strlen(str)) {
-    char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
-    std::memcpy(newCmd, str, length);
-    newCmd[length] = '\0';
-    return newCmd;
-  } else {
-    return str;
-  }
-}
+RT_API_ATTRS const char *EnsureNullTerminated(
+    const char *str, size_t length, Terminator &terminator);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_
