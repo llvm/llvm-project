@@ -120,7 +120,8 @@ In the above example, the argument expression ``F`` undergoes element-wise
 conversion from a float vector to an integer vector to create a temporary
 ``int3``. On expiration the temporary undergoes elementwise conversion back to
 the floating point vector type ``float3``. This results in an implicit
-truncation of the vector even if the value is unused in the function.
+element-wise conversion of the vector even if the value is unused in the
+function (effectively truncating the floating point values).
 
 
 .. code-block:: c++
@@ -137,7 +138,9 @@ Parameters marked ``out`` are not initialized by the argument expression or
 implicitly by the function. They must be explicitly initialized. In this case
 the argument is not initialized in the function so the temporary is still
 uninitialized when it is copied back to the argument expression. This is
-undefined behavior in HLSL, and may be illegal in generated programs.
+undefined behavior in HLSL, and any use of the argument after the call is a use
+of an undefined value which may be illegal in the target (DXIL programs with
+used or potentially used ``undef`` or ``poison`` values fail validation).
 
 Clang Implementation 
 ====================
