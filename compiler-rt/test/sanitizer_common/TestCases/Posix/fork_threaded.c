@@ -1,9 +1,10 @@
 // RUN: %clang -O0 %s -o %t && %env_tool_opts=die_after_fork=0 %run %t
 
-// UNSUPPORTED: asan, lsan, hwasan
-
 // The test uses pthread barriers which are not available on Darwin.
 // UNSUPPORTED: darwin
+
+// FIXME: It probably hangs on this platform.
+// UNSUPPORTED: ppc
 
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.

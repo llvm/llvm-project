@@ -39,7 +39,7 @@ namespace bolt {
 bool YAMLProfileReader::isYAML(const StringRef Filename) {
   if (auto MB = MemoryBuffer::getFileOrSTDIN(Filename)) {
     StringRef Buffer = (*MB)->getBuffer();
-    return Buffer.startswith("---\n");
+    return Buffer.starts_with("---\n");
   } else {
     report_error(Filename, MB.getError());
   }
