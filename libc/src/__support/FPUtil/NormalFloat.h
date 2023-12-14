@@ -92,7 +92,7 @@ template <typename T> struct NormalFloat {
   LIBC_INLINE operator T() const {
     int biased_exponent = exponent + FPBits<T>::EXPONENT_BIAS;
     // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
-    constexpr int MAX_EXPONENT_VALUE = (1 << ExponentWidth<T>::VALUE) - 2;
+    constexpr int MAX_EXPONENT_VALUE = (1 << FPBits<T>::EXPONENT_WIDTH) - 2;
     if (biased_exponent > MAX_EXPONENT_VALUE) {
       return sign ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
     }
@@ -208,18 +208,18 @@ NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
 }
 
 template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
-  int biased_exponent = exponent + FPBits<long double>::EXPONENT_BIAS;
+  using LDBits = FPBits<long double>;
+  int biased_exponent = exponent + LDBits::EXPONENT_BIAS;
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
-  constexpr int MAX_EXPONENT_VALUE =
-      (1 << ExponentWidth<long double>::VALUE) - 2;
+  constexpr int MAX_EXPONENT_VALUE = (1 << LDBits::EXPONENT_WIDTH) - 2;
   if (biased_exponent > MAX_EXPONENT_VALUE) {
-    return sign ? FPBits<long double>::neg_inf() : FPBits<long double>::inf();
+    return sign ? LDBits::neg_inf() : LDBits::inf();
   }
 
   FPBits<long double> result(0.0l);
   result.set_sign(sign);
 
-  constexpr int SUBNORMAL_EXPONENT = -FPBits<long double>::EXPONENT_BIAS + 1;
+  constexpr int SUBNORMAL_EXPONENT = -LDBits::EXPONENT_BIAS + 1;
   if (exponent < SUBNORMAL_EXPONENT) {
     unsigned shift = SUBNORMAL_EXPONENT - exponent;
     if (shift <= MantissaWidth<long double>::VALUE + 1) {
