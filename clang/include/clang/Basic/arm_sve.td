@@ -2185,6 +2185,12 @@ let TargetGuard = "sme2" in {
 
   def REINTERPRET_SVBOOL_TO_SVCOUNT : Inst<"svreinterpret[_c]", "}P", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
   def REINTERPRET_SVCOUNT_TO_SVBOOL : Inst<"svreinterpret[_b]", "P}", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
+
+  // SQDMULH
+  def SVSQDMULH_SINGLE_X2 : SInst<"svqdmulh[_single_{d}_x2]", "22d", "csil", MergeNone, "aarch64_sve_sqdmulh_single_vgx2", [IsStreaming], []>;
+  def SVSQDMULH_SINGLE_X4 : SInst<"svqdmulh[_single_{d}_x4]", "44d", "csil", MergeNone, "aarch64_sve_sqdmulh_single_vgx4", [IsStreaming], []>;
+  def SVSQDMULH_X2        : SInst<"svqdmulh[_{d}_x2]",        "222", "csil", MergeNone, "aarch64_sve_sqdmulh_vgx2",        [IsStreaming], []>;
+  def SVSQDMULH_X4        : SInst<"svqdmulh[_{d}_x4]",        "444", "csil", MergeNone, "aarch64_sve_sqdmulh_vgx4",        [IsStreaming], []>;
 }
 
 let TargetGuard = "sve2p1" in {
