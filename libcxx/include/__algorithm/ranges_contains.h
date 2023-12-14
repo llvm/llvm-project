@@ -36,7 +36,8 @@ struct __fn {
     requires indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type*>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Proj __proj = {}) const {
-    return ranges::find(std::move(__first), std::move(__last), __value, std::ref(__proj)) != __last;
+    auto __end = __last;
+    return ranges::find(std::move(__first), std::move(__last), __value, std::ref(__proj)) != __end;
   }
 
   template <input_range _Range, class _Type, class _Proj = identity>
