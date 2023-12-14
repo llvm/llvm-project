@@ -362,7 +362,7 @@ define void @exact_vlen_vadd_vint8m1(ptr %pc, ptr %pa, ptr %pb) nounwind vscale_
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1r.v v8, (a1)
 ; CHECK-NEXT:    vl1r.v v9, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -392,7 +392,7 @@ define void @exact_vlen_vadd_vint8m2(ptr %pc, ptr %pa, ptr %pb) nounwind vscale_
 define void @exact_vlen_vadd_vint8mf2(ptr %pc, ptr %pa, ptr %pb) nounwind vscale_range(2,2) {
 ; CHECK-LABEL: exact_vlen_vadd_vint8mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle8.v v9, (a2)
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
@@ -408,7 +408,7 @@ define void @exact_vlen_vadd_vint8mf2(ptr %pc, ptr %pa, ptr %pb) nounwind vscale
 define void @exact_vlen_vadd_vint8mf4(ptr %pc, ptr %pa, ptr %pb) nounwind vscale_range(2,2) {
 ; CHECK-LABEL: exact_vlen_vadd_vint8mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle8.v v9, (a2)
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
@@ -424,7 +424,7 @@ define void @exact_vlen_vadd_vint8mf4(ptr %pc, ptr %pa, ptr %pb) nounwind vscale
 define void @exact_vlen_vadd_vint8mf8(ptr %pc, ptr %pa, ptr %pb) nounwind vscale_range(2,2) {
 ; CHECK-LABEL: exact_vlen_vadd_vint8mf8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle8.v v9, (a2)
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
@@ -442,7 +442,7 @@ define void @exact_vlen_vadd_vint32m1(ptr %pc, ptr %pa, ptr %pb) nounwind vscale
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1re32.v v8, (a1)
 ; CHECK-NEXT:    vl1re32.v v9, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -458,7 +458,7 @@ define void @exact_vlen_vadd_vint32m2(ptr %pc, ptr %pa, ptr %pb) nounwind vscale
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re32.v v8, (a1)
 ; CHECK-NEXT:    vl2re32.v v10, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -474,7 +474,7 @@ define void @exact_vlen_vadd_vint32m4(ptr %pc, ptr %pa, ptr %pb) nounwind vscale
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4re32.v v8, (a1)
 ; CHECK-NEXT:    vl4re32.v v12, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    ret
