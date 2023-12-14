@@ -1749,27 +1749,12 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   }
 
   for (auto BuiltinType : StreamingMap.keys()) {
-    // We can ignore ArmStreamingCompatible for SVE and ArmNonStreaming for SME
-    // as those are the defaults.
-    if (BuiltinType == "ArmNonStreaming" && ExtensionKind == "SME")
-      continue;
-    if (BuiltinType == "ArmStreamingCompatible" && ExtensionKind == "SVE")
-      continue;
     for (auto Name : StreamingMap[BuiltinType]) {
       OS << "case " << ExtensionKind << "::BI__builtin_"
          << ExtensionKind.lower() << "_";
       OS << Name << ":\n";
     }
     OS << "  BuiltinType = " << BuiltinType << ";\n";
-    OS << "  break;\n";
-  }
-  if (ExtensionKind == "SME") {
-    OS << "default:\n";
-    OS << "  BuiltinType = ArmNonStreaming;\n";
-    OS << "  break;\n";
-  } else if (ExtensionKind == "SVE") {
-    OS << "default:\n";
-    OS << "  BuiltinType = ArmStreamingCompatible;\n";
     OS << "  break;\n";
   }
 
