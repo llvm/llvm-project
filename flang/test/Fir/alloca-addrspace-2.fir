@@ -5,7 +5,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_mem
   // CHECK-LABEL: llvm.func @set_addrspace
   func.func @set_addrspace() {
     // CHECK: llvm.alloca {{.*}} x i32
-    // CHECK-SAME: -> !llvm.ptr<i32, 5>
+    // CHECK-SAME: -> !llvm.ptr<5>
     %0 = fir.alloca i32
     return
   }
