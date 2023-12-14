@@ -1406,25 +1406,17 @@ static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
   return &II;
 }
 
-// Optimize operations that take an all false predicate or send them for
-// canonicalization.
+// Simplify operations where predicate has all inactive lanes or try to replace
+// with _u form when all lanes are active
 static std::optional<Instruction *>
 instCombineSVEAllOrNoActive(InstCombiner &IC, IntrinsicInst &II,
                             Intrinsic::ID IID) {
   if (match(II.getOperand(0), m_ZeroInt())) {
-    if (II.getIntrinsicID() != IID) {
-      // llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
-      // inactive for sv[func]_m or sv[func]_z
-      return IC.replaceInstUsesWith(II, II.getOperand(1));
-    } else {
-      // llvm_ir_u, pred(0), op1, op2 - Spec says to return undef when all lanes
-      // are inactive for sv[func]_x
-      return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
-    }
+    //  llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
+    //  inactive for sv[func]_m or sv[func]_z
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
   }
-  if (II.getIntrinsicID() != IID)
-    return instCombineSVEAllActive(II, IID);
-  return std::nullopt;
+  return instCombineSVEAllActive(II, IID);
 }
 
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
@@ -1441,18 +1433,6 @@ static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
           IC, II, false))
     return MAD;
   return std::nullopt;
-}
-
-static std::optional<Instruction *>
-instCombineSVEVectorAddU(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_add_u))
-    return II_U;
-  else {
-    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
-                                             Intrinsic::aarch64_sve_mla_u>(
-        IC, II, true);
-  }
 }
 
 static std::optional<Instruction *>
@@ -1480,9 +1460,6 @@ instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *>
 instCombineSVEVectorFAddU(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fadd_u))
-    return II_U;
   if (auto FMLA =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
                                             Intrinsic::aarch64_sve_fmla>(IC, II,
@@ -1526,9 +1503,6 @@ instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *>
 instCombineSVEVectorFSubU(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fsub_u))
-    return II_U;
   if (auto FMLS =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
                                             Intrinsic::aarch64_sve_fmls>(IC, II,
@@ -1559,18 +1533,6 @@ static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
   return std::nullopt;
 }
 
-static std::optional<Instruction *>
-instCombineSVEVectorSubU(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sub_u))
-    return II_U;
-  else {
-    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
-                                             Intrinsic::aarch64_sve_mls_u>(
-        IC, II, true);
-  }
-}
-
 static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
                                                             IntrinsicInst &II,
                                                             Intrinsic::ID IID) {
@@ -1578,8 +1540,9 @@ static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
   auto *OpMultiplicand = II.getOperand(1);
   auto *OpMultiplier = II.getOperand(2);
 
-  if (auto II_U = instCombineSVEAllOrNoActive(IC, II, IID))
-    return II_U;
+  if (II.getIntrinsicID() != IID)
+    if (auto II_U = instCombineSVEAllOrNoActive(IC, II, IID))
+      return II_U;
 
   // Return true if a given instruction is a unit splat value, false otherwise.
   auto IsUnitSplat = [](auto *I) {
@@ -1944,44 +1907,33 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ptest_last:
     return instCombineSVEPTest(IC, II);
   case Intrinsic::aarch64_sve_fabd:
-  case Intrinsic::aarch64_sve_fabd_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fabd_u);
   case Intrinsic::aarch64_sve_fadd:
     return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fadd_u:
     return instCombineSVEVectorFAddU(IC, II);
   case Intrinsic::aarch64_sve_fdiv:
-  case Intrinsic::aarch64_sve_fdiv_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fdiv_u);
   case Intrinsic::aarch64_sve_fmax:
-  case Intrinsic::aarch64_sve_fmax_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmax_u);
   case Intrinsic::aarch64_sve_fmaxnm:
-  case Intrinsic::aarch64_sve_fmaxnm_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmaxnm_u);
   case Intrinsic::aarch64_sve_fmin:
-  case Intrinsic::aarch64_sve_fmin_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmin_u);
   case Intrinsic::aarch64_sve_fminnm:
-  case Intrinsic::aarch64_sve_fminnm_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fminnm_u);
   case Intrinsic::aarch64_sve_fmla:
-  case Intrinsic::aarch64_sve_fmla_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmla_u);
   case Intrinsic::aarch64_sve_fmls:
-  case Intrinsic::aarch64_sve_fmls_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmls_u);
   case Intrinsic::aarch64_sve_fmul:
   case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
   case Intrinsic::aarch64_sve_fmulx:
-  case Intrinsic::aarch64_sve_fmulx_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmulx_u);
   case Intrinsic::aarch64_sve_fnmla:
-  case Intrinsic::aarch64_sve_fnmla_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmla_u);
   case Intrinsic::aarch64_sve_fnmls:
-  case Intrinsic::aarch64_sve_fnmls_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmls_u);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorFSub(IC, II);
@@ -1990,70 +1942,55 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_add:
     return instCombineSVEVectorAdd(IC, II);
   case Intrinsic::aarch64_sve_add_u:
-    return instCombineSVEVectorAddU(IC, II);
+    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
+                                             Intrinsic::aarch64_sve_mla_u>(
+        IC, II, true);
   case Intrinsic::aarch64_sve_mla:
-  case Intrinsic::aarch64_sve_mla_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mla_u);
   case Intrinsic::aarch64_sve_mls:
-  case Intrinsic::aarch64_sve_mls_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mls_u);
   case Intrinsic::aarch64_sve_mul:
   case Intrinsic::aarch64_sve_mul_u:
     return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
   case Intrinsic::aarch64_sve_sabd:
-  case Intrinsic::aarch64_sve_sabd_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sabd_u);
   case Intrinsic::aarch64_sve_smax:
-  case Intrinsic::aarch64_sve_smax_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smax_u);
   case Intrinsic::aarch64_sve_smin:
-  case Intrinsic::aarch64_sve_smin_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smin_u);
   case Intrinsic::aarch64_sve_smulh:
-  case Intrinsic::aarch64_sve_smulh_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smulh_u);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
-    return instCombineSVEVectorSubU(IC, II);
+    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
+                                             Intrinsic::aarch64_sve_mls_u>(
+        IC, II, true);
   case Intrinsic::aarch64_sve_uabd:
-  case Intrinsic::aarch64_sve_uabd_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uabd_u);
   case Intrinsic::aarch64_sve_umax:
-  case Intrinsic::aarch64_sve_umax_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umax_u);
   case Intrinsic::aarch64_sve_umin:
-  case Intrinsic::aarch64_sve_umin_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umin_u);
   case Intrinsic::aarch64_sve_umulh:
-  case Intrinsic::aarch64_sve_umulh_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umulh_u);
   case Intrinsic::aarch64_sve_asr:
-  case Intrinsic::aarch64_sve_asr_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_asr_u);
   case Intrinsic::aarch64_sve_lsl:
-  case Intrinsic::aarch64_sve_lsl_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsl_u);
   case Intrinsic::aarch64_sve_lsr:
-  case Intrinsic::aarch64_sve_lsr_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsr_u);
   case Intrinsic::aarch64_sve_and:
-  case Intrinsic::aarch64_sve_and_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_and_u);
   case Intrinsic::aarch64_sve_bic:
-  case Intrinsic::aarch64_sve_bic_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_bic_u);
   case Intrinsic::aarch64_sve_eor:
-  case Intrinsic::aarch64_sve_eor_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_eor_u);
   case Intrinsic::aarch64_sve_orr:
-  case Intrinsic::aarch64_sve_orr_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_orr_u);
   case Intrinsic::aarch64_sve_sqsub:
-  case Intrinsic::aarch64_sve_sqsub_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sqsub_u);
   case Intrinsic::aarch64_sve_uqsub:
-  case Intrinsic::aarch64_sve_uqsub_u:
     return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uqsub_u);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);

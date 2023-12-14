@@ -11,7 +11,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fabd.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fabd_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fabd_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fabd.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fabd.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -21,7 +22,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fabd.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fabd_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fabd_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fabd.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fabd.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -31,7 +33,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fabd.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fabd_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fabd_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fabd.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fabd.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -41,7 +44,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fadd_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fadd_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -51,7 +55,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fadd_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fadd_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -61,7 +66,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fadd_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fadd_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -71,7 +77,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fdiv.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fdiv_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fdiv_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fdiv.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fdiv.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -81,7 +88,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fdiv.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fdiv_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fdiv_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fdiv.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fdiv.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -91,7 +99,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fdiv.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fdiv_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fdiv_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fdiv.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fdiv.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -101,7 +110,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmax.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fmax_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmax_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmax.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmax.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -111,7 +121,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmax.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fmax_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmax_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmax.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmax.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -121,7 +132,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmax.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fmax_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmax_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmax.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmax.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -131,7 +143,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.u.nxv8f16(<vscale x 8 x i1>
 define <vscale x 8 x half> @replace_fmaxnm_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmaxnm_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmaxnm.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -141,7 +154,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.u.nxv4f32(<vscale x 4 x i1
 define <vscale x 4 x float> @replace_fmaxnm_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmaxnm_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmaxnm.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -151,7 +165,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.u.nxv2f64(<vscale x 2 x i
 define <vscale x 2 x double> @replace_fmaxnm_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmaxnm_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmaxnm.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -161,7 +176,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmin.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fmin_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmin_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmin.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmin.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -171,7 +187,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmin.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fmin_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmin_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmin.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmin.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -181,7 +198,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmin.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fmin_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmin_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmin.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmin.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -191,7 +209,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fminnm.u.nxv8f16(<vscale x 8 x i1>
 define <vscale x 8 x half> @replace_fminnm_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fminnm_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fminnm.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fminnm.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -201,7 +220,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fminnm.u.nxv4f32(<vscale x 4 x i1
 define <vscale x 4 x float> @replace_fminnm_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fminnm_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fminnm.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fminnm.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -211,7 +231,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fminnm.u.nxv2f64(<vscale x 2 x i
 define <vscale x 2 x double> @replace_fminnm_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fminnm_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fminnm.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fminnm.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -221,7 +242,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fmla_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmla_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]], <vscale x 8 x half> [[C]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmla.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c)
   ret <vscale x 8 x half> %1
@@ -231,7 +253,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmla.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fmla_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmla_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmla.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]], <vscale x 4 x float> [[C]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmla.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c)
   ret <vscale x 4 x float> %1
@@ -241,7 +264,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmla.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fmla_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmla_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]], <vscale x 2 x double> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmla.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]], <vscale x 2 x double> [[C]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmla.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c)
   ret <vscale x 2 x double> %1
@@ -251,7 +275,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmls.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fmls_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmls_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmls.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]], <vscale x 8 x half> [[C]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmls.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c)
   ret <vscale x 8 x half> %1
@@ -261,7 +286,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmls.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fmls_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmls_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmls.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]], <vscale x 4 x float> [[C]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmls.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c)
   ret <vscale x 4 x float> %1
@@ -271,7 +297,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmls.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fmls_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmls_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]], <vscale x 2 x double> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmls.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]], <vscale x 2 x double> [[C]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmls.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c)
   ret <vscale x 2 x double> %1
@@ -281,7 +308,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fmul_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmul_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -291,7 +319,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fmul_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmul_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -301,7 +330,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fmul_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmul_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -311,7 +341,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fmulx.u.nxv8f16(<vscale x 8 x i1>,
 define <vscale x 8 x half> @replace_fmulx_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fmulx_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmulx.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fmulx.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -321,7 +352,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fmulx.u.nxv4f32(<vscale x 4 x i1>
 define <vscale x 4 x float> @replace_fmulx_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fmulx_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmulx.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fmulx.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -331,7 +363,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fmulx.u.nxv2f64(<vscale x 2 x i1
 define <vscale x 2 x double> @replace_fmulx_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fmulx_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmulx.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fmulx.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -341,7 +374,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fnmla.u.nxv8f16(<vscale x 8 x i1>,
 define <vscale x 8 x half> @replace_fnmla_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fnmla_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fnmla.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]], <vscale x 8 x half> [[C]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fnmla.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c)
   ret <vscale x 8 x half> %1
@@ -351,7 +385,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fnmla.u.nxv4f32(<vscale x 4 x i1>
 define <vscale x 4 x float> @replace_fnmla_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fnmla_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fnmla.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]], <vscale x 4 x float> [[C]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fnmla.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c)
   ret <vscale x 4 x float> %1
@@ -361,7 +396,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fnmla.u.nxv2f64(<vscale x 2 x i1
 define <vscale x 2 x double> @replace_fnmla_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fnmla_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]], <vscale x 2 x double> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fnmla.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]], <vscale x 2 x double> [[C]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fnmla.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c)
   ret <vscale x 2 x double> %1
@@ -371,7 +407,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fnmls.u.nxv8f16(<vscale x 8 x i1>,
 define <vscale x 8 x half> @replace_fnmls_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fnmls_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]], <vscale x 8 x half> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fnmls.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]], <vscale x 8 x half> [[C]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fnmls.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c)
   ret <vscale x 8 x half> %1
@@ -381,7 +418,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fnmls.u.nxv4f32(<vscale x 4 x i1>
 define <vscale x 4 x float> @replace_fnmls_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fnmls_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fnmls.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]], <vscale x 4 x float> [[C]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fnmls.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c)
   ret <vscale x 4 x float> %1
@@ -391,7 +429,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fnmls.u.nxv2f64(<vscale x 2 x i1
 define <vscale x 2 x double> @replace_fnmls_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fnmls_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]], <vscale x 2 x double> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fnmls.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]], <vscale x 2 x double> [[C]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fnmls.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c)
   ret <vscale x 2 x double> %1
@@ -401,7 +440,8 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1>, 
 define <vscale x 8 x half> @replace_fsub_intrinsic_half(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @replace_fsub_intrinsic_half
 ; CHECK-SAME: (<vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> [[A]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %1
@@ -411,7 +451,8 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1>,
 define <vscale x 4 x float> @replace_fsub_intrinsic_float(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @replace_fsub_intrinsic_float
 ; CHECK-SAME: (<vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %1
@@ -421,7 +462,8 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 2 x double> @replace_fsub_intrinsic_double(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @replace_fsub_intrinsic_double
 ; CHECK-SAME: (<vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x double> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> [[A]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %1
@@ -433,7 +475,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_add_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_add_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -443,7 +486,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.add.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_add_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_add_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.add.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.add.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -453,7 +497,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_add_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_add_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -463,7 +508,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.add.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_add_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_add_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.add.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.add.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -473,7 +519,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.mla.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_mla_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_mla_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]], <vscale x 16 x i8> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mla.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]], <vscale x 16 x i8> [[C]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mla.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
   ret <vscale x 16 x i8> %1
@@ -483,7 +530,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.mla.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_mla_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_mla_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]], <vscale x 8 x i16> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.mla.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]], <vscale x 8 x i16> [[C]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.mla.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
   ret <vscale x 8 x i16> %1
@@ -493,7 +541,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_mla_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_mla_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c)
   ret <vscale x 4 x i32> %1
@@ -503,7 +552,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_mla_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_mla_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]], <vscale x 2 x i64> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]], <vscale x 2 x i64> [[C]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.mla.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
   ret <vscale x 2 x i64> %1
@@ -513,7 +563,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.mls.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_mls_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_mls_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]], <vscale x 16 x i8> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mls.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]], <vscale x 16 x i8> [[C]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mls.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
   ret <vscale x 16 x i8> %1
@@ -523,7 +574,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.mls.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_mls_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_mls_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]], <vscale x 8 x i16> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.mls.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]], <vscale x 8 x i16> [[C]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.mls.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
   ret <vscale x 8 x i16> %1
@@ -533,7 +585,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.mls.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_mls_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_mls_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.mls.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.mls.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c)
   ret <vscale x 4 x i32> %1
@@ -543,7 +596,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.mls.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_mls_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_mls_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]], <vscale x 2 x i64> [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.mls.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]], <vscale x 2 x i64> [[C]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.mls.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
   ret <vscale x 2 x i64> %1
@@ -553,7 +607,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_mul_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_mul_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -563,7 +618,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_mul_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_mul_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -573,7 +629,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_mul_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_mul_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -583,7 +640,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_mul_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_mul_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -593,7 +651,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.sabd.u.nxv16i8(<vscale x 16 x i1>, 
 define <vscale x 16 x i8> @replace_sabd_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_sabd_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sabd.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sabd.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -603,7 +662,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.sabd.u.nxv8i16(<vscale x 8 x i1>, <
 define <vscale x 8 x i16> @replace_sabd_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_sabd_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sabd.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sabd.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -613,7 +673,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.sabd.u.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @replace_sabd_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_sabd_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sabd.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sabd.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -623,7 +684,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.sabd.u.nxv2i64(<vscale x 2 x i1>, <
 define <vscale x 2 x i64> @replace_sabd_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_sabd_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sabd.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sabd.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -633,7 +695,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.smax.u.nxv16i8(<vscale x 16 x i1>, 
 define <vscale x 16 x i8> @replace_smax_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_smax_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.smax.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.smax.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -643,7 +706,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.smax.u.nxv8i16(<vscale x 8 x i1>, <
 define <vscale x 8 x i16> @replace_smax_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_smax_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.smax.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.smax.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -653,7 +717,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.smax.u.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @replace_smax_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_smax_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smax.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smax.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -663,7 +728,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.smax.u.nxv2i64(<vscale x 2 x i1>, <
 define <vscale x 2 x i64> @replace_smax_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_smax_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.smax.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.smax.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -673,7 +739,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.smin.u.nxv16i8(<vscale x 16 x i1>, 
 define <vscale x 16 x i8> @replace_smin_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_smin_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.smin.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.smin.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -683,7 +750,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.smin.u.nxv8i16(<vscale x 8 x i1>, <
 define <vscale x 8 x i16> @replace_smin_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_smin_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.smin.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.smin.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -693,7 +761,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.smin.u.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @replace_smin_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_smin_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smin.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smin.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -703,7 +772,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.smin.u.nxv2i64(<vscale x 2 x i1>, <
 define <vscale x 2 x i64> @replace_smin_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_smin_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.smin.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.smin.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -713,7 +783,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1>,
 define <vscale x 16 x i8> @replace_smulh_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_smulh_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -723,7 +794,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x 8 x i1>, 
 define <vscale x 8 x i16> @replace_smulh_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_smulh_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -733,7 +805,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x 4 x i1>, 
 define <vscale x 4 x i32> @replace_smulh_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_smulh_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -743,7 +816,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x 2 x i1>, 
 define <vscale x 2 x i64> @replace_smulh_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_smulh_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -753,7 +827,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_sub_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_sub_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -763,7 +838,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.sub.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_sub_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_sub_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sub.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sub.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -773,7 +849,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_sub_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_sub_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -783,7 +860,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.sub.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_sub_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_sub_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sub.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sub.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -793,7 +871,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.uabd.u.nxv16i8(<vscale x 16 x i1>, 
 define <vscale x 16 x i8> @replace_uabd_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_uabd_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.uabd.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.uabd.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -803,7 +882,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.uabd.u.nxv8i16(<vscale x 8 x i1>, <
 define <vscale x 8 x i16> @replace_uabd_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_uabd_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uabd.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uabd.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -813,7 +893,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.uabd.u.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @replace_uabd_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_uabd_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uabd.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uabd.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -823,7 +904,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.uabd.u.nxv2i64(<vscale x 2 x i1>, <
 define <vscale x 2 x i64> @replace_uabd_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_uabd_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uabd.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uabd.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -833,7 +915,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.umax.u.nxv16i8(<vscale x 16 x i1>, 
 define <vscale x 16 x i8> @replace_umax_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_umax_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.umax.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.umax.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -843,7 +926,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.umax.u.nxv8i16(<vscale x 8 x i1>, <
 define <vscale x 8 x i16> @replace_umax_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_umax_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.umax.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.umax.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -853,7 +937,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.umax.u.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @replace_umax_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_umax_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umax.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umax.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -863,7 +948,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.umax.u.nxv2i64(<vscale x 2 x i1>, <
 define <vscale x 2 x i64> @replace_umax_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_umax_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.umax.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.umax.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -873,7 +959,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1>, 
 define <vscale x 16 x i8> @replace_umin_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_umin_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -883,7 +970,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.umin.u.nxv8i16(<vscale x 8 x i1>, <
 define <vscale x 8 x i16> @replace_umin_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_umin_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.umin.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.umin.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -893,7 +981,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.umin.u.nxv4i32(<vscale x 4 x i1>, <
 define <vscale x 4 x i32> @replace_umin_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_umin_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umin.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umin.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -903,7 +992,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.umin.u.nxv2i64(<vscale x 2 x i1>, <
 define <vscale x 2 x i64> @replace_umin_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_umin_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.umin.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.umin.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -913,7 +1003,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1>,
 define <vscale x 16 x i8> @replace_umulh_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_umulh_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -923,7 +1014,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x 8 x i1>, 
 define <vscale x 8 x i16> @replace_umulh_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_umulh_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -933,7 +1025,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1>, 
 define <vscale x 4 x i32> @replace_umulh_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_umulh_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -943,7 +1036,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x 2 x i1>, 
 define <vscale x 2 x i64> @replace_umulh_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_umulh_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -955,7 +1049,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_asr_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_asr_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asr.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -965,7 +1060,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_asr_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_asr_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.asr.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -975,7 +1071,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_asr_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_asr_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.asr.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -985,7 +1082,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_asr_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_asr_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.asr.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -995,7 +1093,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.lsl.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_lsl_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_lsl_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1005,7 +1104,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_lsl_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_lsl_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1015,7 +1115,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_lsl_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_lsl_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1025,7 +1126,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.lsl.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_lsl_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_lsl_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.lsl.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1035,7 +1137,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_lsr_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_lsr_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1045,7 +1148,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_lsr_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_lsr_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1055,7 +1159,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_lsr_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_lsr_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1065,7 +1170,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_lsr_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_lsr_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.lsr.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1077,7 +1183,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_and_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_and_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1087,7 +1194,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_and_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_and_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1097,7 +1205,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_and_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_and_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1107,7 +1216,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_and_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_and_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1117,7 +1227,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.bic.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_bic_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_bic_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.bic.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.bic.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1127,7 +1238,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.bic.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_bic_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_bic_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.bic.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.bic.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1137,7 +1249,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.bic.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_bic_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_bic_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.bic.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.bic.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1147,7 +1260,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.bic.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_bic_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_bic_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.bic.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.bic.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1157,7 +1271,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.eor.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_eor_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_eor_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.eor.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.eor.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1167,7 +1282,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.eor.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_eor_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_eor_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.eor.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.eor.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1177,7 +1293,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_eor_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_eor_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1187,7 +1304,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.eor.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_eor_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_eor_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.eor.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.eor.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1197,7 +1315,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.orr.u.nxv16i8(<vscale x 16 x i1>, <
 define <vscale x 16 x i8> @replace_orr_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_orr_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.orr.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.orr.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1207,7 +1326,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.orr.u.nxv8i16(<vscale x 8 x i1>, <v
 define <vscale x 8 x i16> @replace_orr_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_orr_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.orr.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.orr.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1217,7 +1337,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1>, <v
 define <vscale x 4 x i32> @replace_orr_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_orr_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1227,7 +1348,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.orr.u.nxv2i64(<vscale x 2 x i1>, <v
 define <vscale x 2 x i64> @replace_orr_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_orr_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.orr.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.orr.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1239,7 +1361,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.u.nxv16i8(<vscale x 16 x i1>,
 define <vscale x 16 x i8> @replace_sqsub_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_sqsub_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1249,7 +1372,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.sqsub.u.nxv8i16(<vscale x 8 x i1>, 
 define <vscale x 8 x i16> @replace_sqsub_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_sqsub_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqsub.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqsub.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1259,7 +1383,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.sqsub.u.nxv4i32(<vscale x 4 x i1>, 
 define <vscale x 4 x i32> @replace_sqsub_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_sqsub_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqsub.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqsub.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1269,7 +1394,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.u.nxv2i64(<vscale x 2 x i1>, 
 define <vscale x 2 x i64> @replace_sqsub_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_sqsub_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
@@ -1279,7 +1405,8 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.uqsub.u.nxv16i8(<vscale x 16 x i1>,
 define <vscale x 16 x i8> @replace_uqsub_intrinsic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @replace_uqsub_intrinsic_i8
 ; CHECK-SAME: (<vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.uqsub.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.uqsub.u.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %1
@@ -1289,7 +1416,8 @@ declare <vscale x 8 x i16> @llvm.aarch64.sve.uqsub.u.nxv8i16(<vscale x 8 x i1>, 
 define <vscale x 8 x i16> @replace_uqsub_intrinsic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: define <vscale x 8 x i16> @replace_uqsub_intrinsic_i16
 ; CHECK-SAME: (<vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqsub.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> [[A]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
   %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.uqsub.u.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %1
@@ -1299,7 +1427,8 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1>, 
 define <vscale x 4 x i32> @replace_uqsub_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_uqsub_intrinsic_i32
 ; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %1
@@ -1309,7 +1438,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.uqsub.u.nxv2i64(<vscale x 2 x i1>, 
 define <vscale x 2 x i64> @replace_uqsub_intrinsic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @replace_uqsub_intrinsic_i64
 ; CHECK-SAME: (<vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uqsub.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 ;
   %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uqsub.u.nxv2i64(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %1
