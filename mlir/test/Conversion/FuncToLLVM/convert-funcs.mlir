@@ -63,7 +63,7 @@ func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
 
 // CHECK-LABEL: llvm.func @target_features()
 // CHECK-SAME: target_features = #llvm.target_features<["+sme", "+sve"]>
-func.func private @target_features() attributes { "llvm.target_features" = "+sme,+sve" }
+func.func private @target_features() attributes { "target_features" = #llvm.target_features<["+sme", "+sve"]> }
 
 // CHECK-LABEL: llvm.func @target_cpu()
 // CHECK-SAME: target_cpu = "gfx90a"
@@ -94,8 +94,3 @@ func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 } /
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true, "llvm.emit_c_interface" } {
   return
 }
-
-// -----
-
-// expected-error@+1{{Contains llvm.target_features attribute not of type StringAttr}}
-func.func private @badllvmtargetfeatures() attributes { "llvm.target_features" = 1 : i64 }

@@ -54,6 +54,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -4332,10 +4333,11 @@ private:
     if (auto targetCPU = targetMachine.getTargetCPU(); !targetCPU.empty())
       func->setAttr("target_cpu",
                     mlir::StringAttr::get(func.getContext(), targetCPU));
+
     if (auto targetFeatures = targetMachine.getTargetFeatureString();
         !targetFeatures.empty())
-      func->setAttr("llvm.target_features",
-                    mlir::StringAttr::get(func.getContext(), targetFeatures));
+      func->setAttr("target_features", mlir::LLVM::TargetFeaturesAttr::get(
+                                           func.getContext(), targetFeatures));
 
     // Manage floating point exception, halting mode, and rounding mode
     // settings at function entry and exit.

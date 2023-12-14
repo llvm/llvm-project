@@ -5,16 +5,18 @@
 
 ! ALL-LABEL: func.func @_QPfoo()
 
-! NONE-NOT: llvm.target_features
 ! NONE-NOT: target_cpu
+! NONE-NOT: target_features
 
-! TRIPLE-NOT: llvm.target_features
 ! TRIPLE-SAME: target_cpu = "generic-hsa"
+! TRIPLE-NOT: target_features
 
-! CPU-NOT: llvm.target_features
 ! CPU-SAME: target_cpu = "gfx90a"
+! CPU-NOT: target_features
 
-! BOTH-SAME: llvm.target_features = "{{[^"]*}}+gfx90a-insts{{[^"]*}}"
 ! BOTH-SAME: target_cpu = "gfx90a"
+! BOTH-SAME: target_features = #llvm.target_features<[
+! BOTH-SAME: "+gfx90a-insts"
+! BOTH-SAME: ]>
 subroutine foo
 end subroutine
