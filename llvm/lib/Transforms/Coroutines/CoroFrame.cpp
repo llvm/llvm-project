@@ -963,7 +963,8 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    auto DDIs = FindDbgDeclareUses(V);
+    SmallVector<DbgDeclareInst *, 1> DDIs;
+    findDbgDeclares(DDIs, V);
     auto *I = llvm::find_if(DDIs, [](DbgDeclareInst *DDI) {
       return DDI->getExpression()->getNumElements() == 0;
     });
@@ -1119,7 +1120,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   assert(PromiseAlloca &&
          "Coroutine with switch ABI should own Promise alloca");
 
-  TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(PromiseAlloca);
+  SmallVector<DbgDeclareInst *, 1> DIs;
+  findDbgDeclares(DIs, PromiseAlloca);
   if (DIs.empty())
     return;
 
@@ -1840,7 +1842,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
 
-        TinyPtrVector<DbgDeclareInst *> DIs = FindDbgDeclareUses(Def);
+        SmallVector<DbgDeclareInst *, 1> DIs;
+        findDbgDeclares(DIs, Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
         // be a direct dbg.declare. Walk up the load chain to find one from an
         // alias.
@@ -1854,7 +1857,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             CurDef = LdInst->getPointerOperand();
             if (!isa<AllocaInst, LoadInst>(CurDef))
               break;
-            DIs = FindDbgDeclareUses(CurDef);
+            DIs.clear();
+            findDbgDeclares(DIs, CurDef);
           }
         }
 
@@ -2887,9 +2891,11 @@ void coro::salvageDebugInfo(
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
     std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      if (I->getDebugLoc())
+        DVI->setDebugLoc(I->getDebugLoc());
+    } else if (isa<Argument>(Storage))
       InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
       DVI->moveBefore(*(*InsertPt)->getParent(), *InsertPt);

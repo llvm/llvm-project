@@ -26,7 +26,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -36,7 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -433,7 +431,7 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
     return &GEP;
 
   assert(!IsSigned && "The logic below only supports decomposition for "
-                      "unsinged predicates at the moment.");
+                      "unsigned predicates at the moment.");
   const auto &[BasePtr, ConstantOffset, VariableOffsets, AllInbounds] =
       collectOffsets(GEP, DL);
   if (!BasePtr || !AllInbounds)
