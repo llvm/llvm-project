@@ -24,7 +24,7 @@
 
 #include "sanitizer_common/sanitizer_specific.h"
 
-static const size_t kBufferSize = 1 << 20;
+static const size_t kBufferSize = 8192;
 
 pthread_barrier_t bar;
 
