@@ -2659,9 +2659,9 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                          isOpenMPDistributeDirective(DKind) ||
                                  (DKind == OMPD_target_teams_loop)
                              ? OMP_IDENT_WORK_DISTRIBUTE
-                             : isOpenMPLoopDirective(DKind)
-                                   ? OMP_IDENT_WORK_LOOP
-                                   : OMP_IDENT_WORK_SECTIONS),
+                         : isOpenMPLoopDirective(DKind)
+                             ? OMP_IDENT_WORK_LOOP
+                             : OMP_IDENT_WORK_SECTIONS),
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   if (isOpenMPDistributeDirective(DKind) &&
