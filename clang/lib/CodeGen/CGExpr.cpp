@@ -2085,10 +2085,15 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   }
 
   if (LV.isVectorElt()) {
-    llvm::LoadInst *Load = Builder.CreateLoad(LV.getVectorAddress(),
-                                              LV.isVolatileQualified());
-    return RValue::get(Builder.CreateExtractElement(Load, LV.getVectorIdx(),
-                                                    "vecext"));
+    llvm::Value *Load = nullptr;
+    if (LV.getType()->isExtVectorBoolType())
+      Load = EmitLoadOfScalar(LV.getVectorAddress(), LV.isVolatileQualified(),
+                              LV.getType(), Loc);
+    else
+      Load =
+          Builder.CreateLoad(LV.getVectorAddress(), LV.isVolatileQualified());
+    return RValue::get(
+        Builder.CreateExtractElement(Load, LV.getVectorIdx(), "vecext"));
   }
 
   // If this is a reference to a subset of the elements of a vector, either

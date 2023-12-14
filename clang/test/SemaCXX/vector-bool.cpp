@@ -38,10 +38,10 @@ void Operations() {
   // (void)(eight_bools > other_eight_bools);
   // (void)(eight_bools >= other_eight_bools);
 
-  // // Legal assignments
-  // (void)(eight_bools |= other_eight_bools);
-  // (void)(eight_bools &= other_eight_bools);
-  // (void)(eight_bools ^= other_eight_bools);
+  // Legal assignments
+  (void)(eight_bools |= other_eight_bools);
+  (void)(eight_bools &= other_eight_bools);
+  (void)(eight_bools ^= other_eight_bools);
 
   // Illegal operators
   (void)(eight_bools || other_eight_bools); // expected-error@47 {{invalid operands to binary expression ('EightBools' (vector of 8 'bool' values) and 'EightBools')}}
