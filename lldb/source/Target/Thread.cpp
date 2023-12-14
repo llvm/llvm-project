@@ -723,9 +723,10 @@ void Thread::DidStop() { SetState(eStateStopped); }
     ThreadPlanSP p;                                                            \
     while ((p = GetPlans().GetPlanByIndex(i, false)))                          \
       i++;                                                                     \
-    (void)i;
-assert(i != 1 && "Cannot pop plan when there is only one plan (the base plan)");
-}
+    (void)i;                                                                   \
+    assert(i != 1 &&                                                           \
+           "Cannot pop plan when there is only one plan (the base plan)");     \
+  }
 
 bool Thread::ShouldStop(Event *event_ptr) {
   ThreadPlan *current_plan = GetCurrentPlan();
