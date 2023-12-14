@@ -19,6 +19,7 @@
 namespace llvm {
 class Module;
 class raw_ostream;
+class TargetMachine;
 
 struct AddressSanitizerOptions {
   bool CompileKernel = false;
@@ -38,7 +39,8 @@ struct AddressSanitizerOptions {
 /// run intependently of the function address sanitizer.
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
-  AddressSanitizerPass(const AddressSanitizerOptions &Options,
+  AddressSanitizerPass(const TargetMachine *TM,
+                       const AddressSanitizerOptions &Options,
                        bool UseGlobalGC = true, bool UseOdrIndicator = true,
                        AsanDtorKind DestructorKind = AsanDtorKind::Global,
                        AsanCtorKind ConstructorKind = AsanCtorKind::Global);
@@ -48,6 +50,7 @@ public:
   static bool isRequired() { return true; }
 
 private:
+  const TargetMachine *TM;
   AddressSanitizerOptions Options;
   bool UseGlobalGC;
   bool UseOdrIndicator;

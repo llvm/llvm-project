@@ -78,7 +78,7 @@ MODULE_PASS("inliner-wrapper-no-mandatory-first",
             ModuleInlinerWrapperPass(getInlineParams(), false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
-MODULE_PASS("instrprof", InstrProfilingLoweringPass())
+MODULE_PASS("instrprof", InstrProfilingLoweringPass(TM))
 MODULE_PASS("internalize", InternalizePass())
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
@@ -147,7 +147,7 @@ MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 #endif
 MODULE_PASS_WITH_PARAMS(
     "asan", "AddressSanitizerPass",
-    [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },
+    [this](AddressSanitizerOptions Opts) { return AddressSanitizerPass(TM, Opts); },
     parseASanPassOptions, "kernel")
 MODULE_PASS_WITH_PARAMS(
     "globaldce", "GlobalDCEPass",

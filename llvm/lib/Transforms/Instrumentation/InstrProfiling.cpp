@@ -170,16 +170,18 @@ using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
 class InstrLowerer final {
 public:
-  InstrLowerer(Module &M, const InstrProfOptions &Options,
+  InstrLowerer(Module &M, const TargetMachine *TM,
+               const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                bool IsCS)
-      : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
-        GetTLI(GetTLI) {}
+      : M(M), TM(TM), Options(Options), TT(Triple(M.getTargetTriple())),
+        IsCS(IsCS), GetTLI(GetTLI) {}
 
   bool lower();
 
 private:
   Module &M;
+  const TargetMachine *TM;
   const InstrProfOptions Options;
   const Triple TT;
   // Is this lowering for the context-sensitive instrumentation.
@@ -577,7 +579,7 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  InstrLowerer Lowerer(M, Options, GetTLI, IsCS);
+  InstrLowerer Lowerer(M, TM, Options, GetTLI, IsCS);
   if (!Lowerer.lower())
     return PreservedAnalyses::all();
 
@@ -1452,7 +1454,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         M, ValuesTy, false, Linkage, Constant::getNullValue(ValuesTy),
         getVarName(Inc, getInstrProfValuesVarPrefix(), Renamed));
     ValuesVar->setVisibility(Visibility);
-    setGlobalVariableLargeSection(TT, *ValuesVar);
+    setGlobalVariableLargeSection(*ValuesVar, TT, TM);
     ValuesVar->setSection(
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
@@ -1590,7 +1592,7 @@ void InstrLowerer::emitVNodes() {
   auto *VNodesVar = new GlobalVariable(
       M, VNodesTy, false, GlobalValue::PrivateLinkage,
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
-  setGlobalVariableLargeSection(TT, *VNodesVar);
+  setGlobalVariableLargeSection(*VNodesVar, TT, TM);
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
   VNodesVar->setAlignment(M.getDataLayout().getABITypeAlign(VNodesTy));
@@ -1618,7 +1620,7 @@ void InstrLowerer::emitNameData() {
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
   NamesSize = CompressedNameStr.size();
-  setGlobalVariableLargeSection(TT, *NamesVar);
+  setGlobalVariableLargeSection(*NamesVar, TT, TM);
   NamesVar->setSection(
       ProfileCorrelate == InstrProfCorrelator::BINARY
           ? getInstrProfSectionName(IPSK_covname, TT.getObjectFormat())

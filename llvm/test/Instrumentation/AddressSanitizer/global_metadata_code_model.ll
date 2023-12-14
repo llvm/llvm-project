@@ -1,4 +1,6 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=asan -S | FileCheck %s --check-prefix=LARGE
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=asan -S -code-model=large | FileCheck %s --check-prefix=LARGE
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=asan -S -code-model=medium | FileCheck %s --check-prefix=LARGE
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=asan -S -code-model=small | FileCheck %s --check-prefix=NORMAL
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -passes=asan -S | FileCheck %s --check-prefix=NORMAL
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -passes=asan -S | FileCheck %s --check-prefix=NORMAL
 

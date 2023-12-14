@@ -635,7 +635,7 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
       });
 }
 
-static void addSanitizers(const Triple &TargetTriple,
+static void addSanitizers(const TargetMachine *TM, const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
   auto SanitizersCallback = [&](ModulePassManager &MPM,
@@ -696,7 +696,7 @@ static void addSanitizers(const Triple &TargetTriple,
         Opts.Recover = CodeGenOpts.SanitizeRecover.has(Mask);
         Opts.UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
         Opts.UseAfterReturn = CodeGenOpts.getSanitizeAddressUseAfterReturn();
-        MPM.addPass(AddressSanitizerPass(Opts, UseGlobalGC, UseOdrIndicator,
+        MPM.addPass(AddressSanitizerPass(TM, Opts, UseGlobalGC, UseOdrIndicator,
                                          DestructorKind));
       }
     };
@@ -973,7 +973,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already
     // done on PreLink stage.
     if (!IsThinLTOPostLink) {
-      addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
+      addSanitizers(TM.get(), TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
     }
 
@@ -986,8 +986,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (std::optional<InstrProfOptions> Options =
             getInstrProfOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
-          [Options](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(InstrProfilingLoweringPass(*Options, false));
+          [this, Options](ModulePassManager &MPM, OptimizationLevel Level) {
+            MPM.addPass(InstrProfilingLoweringPass(TM.get(), *Options, false));
           });
 
     // TODO: Consider passing the MemoryProfileOutput to the pass builder via
