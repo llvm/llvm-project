@@ -147,28 +147,11 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
   return exitStatusVal;
 }
 
-const char *ensureNullTerminated(
-    const char *str, size_t length, Terminator &terminator) {
-  if (length <= strlen(str)) {
-    char *newCmd{(char *)malloc(length + 1)};
-    if (newCmd == NULL) {
-      terminator.Crash("Command not null-terminated, memory allocation failed "
-                       "for null-terminated newCmd.");
-    }
-
-    strncpy(newCmd, str, length);
-    newCmd[length] = '\0';
-    return newCmd;
-  } else {
-    return str;
-  }
-}
-
 void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-  const char *newCmd{ensureNullTerminated(
+  const char *newCmd{EnsureNullTerminated(
       command.OffsetElement(), command.ElementBytes(), terminator)};
 
   if (exitstat) {
@@ -202,14 +185,10 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
     // append "cmd.exe /c " to the beginning of command
     const char *prefix{"cmd.exe /c "};
-    char *newCmdWin{
-        (char *)malloc(std::strlen(prefix) + std::strlen(newCmd) + 1)};
-    if (newCmd != NULL) {
-      std::strcpy(newCmdWin, prefix);
-      std::strcat(newCmdWin, newCmd);
-    } else {
-      terminator.Crash("Memory allocation failed for newCmd");
-    }
+    char *newCmdWin{(char *)AllocateMemoryOrCrash(
+        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1)};
+    std::strcpy(newCmdWin, prefix);
+    std::strcat(newCmdWin, newCmd);
 
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
@@ -217,7 +196,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
-    free(newCmdWin);
+    FreeMemory((void *)newCmdWin);
 
     if (CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
@@ -233,7 +212,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         CheckAndCopyToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
-    delete[] wcmd;
+    FreeMemory((void *)wcmd);
 #else
     // terminated children do not become zombies
     signal(SIGCHLD, SIG_IGN);
@@ -251,6 +230,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
       exit(status);
     }
 #endif
+    FreeMemory((void *)newCmd);
   }
 }
 
