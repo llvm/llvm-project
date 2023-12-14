@@ -188,8 +188,7 @@ public:
     FPBits result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(),
               uint16_t(x_bits.get_biased_exponent() - 1));
-    ASSERT_EQ(result_bits.get_mantissa(),
-              (UIntType(1) << FPBits::MANTISSA_WIDTH) - 1);
+    ASSERT_EQ(result_bits.get_mantissa(), FPBits::FRACTION_MASK);
 
     result = func(x, 33.0);
     result_bits = FPBits(result);
@@ -202,8 +201,7 @@ public:
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(),
               uint16_t(x_bits.get_biased_exponent() - 1));
-    ASSERT_EQ(result_bits.get_mantissa(),
-              (UIntType(1) << FPBits::MANTISSA_WIDTH) - 1);
+    ASSERT_EQ(result_bits.get_mantissa(), FPBits::FRACTION_MASK);
 
     result = func(x, -33.0);
     result_bits = FPBits(result);

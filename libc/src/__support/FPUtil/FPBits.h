@@ -37,8 +37,8 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   using FloatProperties<T>::EXPONENT_MASK;
   using FloatProperties<T>::EXPONENT_BIAS;
   using FloatProperties<T>::EXPONENT_WIDTH;
-  using FloatProperties<T>::MANTISSA_MASK;
-  using FloatProperties<T>::MANTISSA_WIDTH;
+  using FloatProperties<T>::FRACTION_MASK;
+  using FloatProperties<T>::FRACTION_BITS;
   using FloatProperties<T>::QUIET_NAN_MASK;
   using FloatProperties<T>::SIGN_MASK;
 
@@ -48,32 +48,32 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   UIntType bits;
 
   LIBC_INLINE constexpr void set_mantissa(UIntType mantVal) {
-    mantVal &= MANTISSA_MASK;
-    bits &= ~MANTISSA_MASK;
+    mantVal &= FRACTION_MASK;
+    bits &= ~FRACTION_MASK;
     bits |= mantVal;
   }
 
   LIBC_INLINE constexpr UIntType get_mantissa() const {
-    return bits & MANTISSA_MASK;
+    return bits & FRACTION_MASK;
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
-    expVal = (expVal << MANTISSA_WIDTH) & EXPONENT_MASK;
+    expVal = (expVal << FRACTION_BITS) & EXPONENT_MASK;
     bits &= ~EXPONENT_MASK;
     bits |= expVal;
   }
 
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXPONENT_MASK) >> MANTISSA_WIDTH);
+    return uint16_t((bits & EXPONENT_MASK) >> FRACTION_BITS);
   }
 
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr UIntType get_explicit_mantissa() {
     return ((get_biased_exponent() > 0 && !is_inf_or_nan())
-                ? (MANTISSA_MASK + 1)
+                ? (FRACTION_MASK + 1)
                 : 0) |
-           (MANTISSA_MASK & bits);
+           (FRACTION_MASK & bits);
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {
@@ -92,10 +92,10 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   static constexpr int MAX_EXPONENT = (1 << EXPONENT_WIDTH) - 1;
 
   static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
-  static constexpr UIntType MAX_SUBNORMAL = (UIntType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr UIntType MIN_NORMAL = (UIntType(1) << MANTISSA_WIDTH);
+  static constexpr UIntType MAX_SUBNORMAL = FRACTION_MASK;
+  static constexpr UIntType MIN_NORMAL = (UIntType(1) << FRACTION_BITS);
   static constexpr UIntType MAX_NORMAL =
-      ((UIntType(MAX_EXPONENT) - 1) << MANTISSA_WIDTH) | MAX_SUBNORMAL;
+      ((UIntType(MAX_EXPONENT) - 1) << FRACTION_BITS) | MAX_SUBNORMAL;
 
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.

@@ -33,37 +33,37 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   using FloatProperties<long double>::EXPONENT_MASK;
   using FloatProperties<long double>::EXPONENT_BIAS;
   using FloatProperties<long double>::EXPONENT_WIDTH;
-  using FloatProperties<long double>::MANTISSA_MASK;
-  using FloatProperties<long double>::MANTISSA_WIDTH;
+  using FloatProperties<long double>::FRACTION_MASK;
+  using FloatProperties<long double>::FRACTION_BITS;
   using FloatProperties<long double>::QUIET_NAN_MASK;
   using FloatProperties<long double>::SIGN_MASK;
 
   static constexpr int MAX_EXPONENT = 0x7FFF;
   static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
-  static constexpr UIntType MAX_SUBNORMAL = (UIntType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr UIntType MIN_NORMAL = (UIntType(3) << MANTISSA_WIDTH);
+  static constexpr UIntType MAX_SUBNORMAL = (UIntType(1) << FRACTION_BITS) - 1;
+  static constexpr UIntType MIN_NORMAL = (UIntType(3) << FRACTION_BITS);
   static constexpr UIntType MAX_NORMAL =
-      (UIntType(MAX_EXPONENT - 1) << (MANTISSA_WIDTH + 1)) |
-      (UIntType(1) << MANTISSA_WIDTH) | MAX_SUBNORMAL;
+      (UIntType(MAX_EXPONENT - 1) << (FRACTION_BITS + 1)) |
+      (UIntType(1) << FRACTION_BITS) | MAX_SUBNORMAL;
 
   UIntType bits;
 
   LIBC_INLINE constexpr void set_mantissa(UIntType mantVal) {
-    mantVal &= MANTISSA_MASK;
-    bits &= ~MANTISSA_MASK;
+    mantVal &= FRACTION_MASK;
+    bits &= ~FRACTION_MASK;
     bits |= mantVal;
   }
 
   LIBC_INLINE constexpr UIntType get_mantissa() const {
-    return bits & MANTISSA_MASK;
+    return bits & FRACTION_MASK;
   }
 
   LIBC_INLINE constexpr UIntType get_explicit_mantissa() const {
     // The x86 80 bit float represents the leading digit of the mantissa
     // explicitly. This is the mask for that bit.
-    constexpr UIntType EXPLICIT_BIT_MASK = UIntType(1) << MANTISSA_WIDTH;
-    return bits & (MANTISSA_MASK | EXPLICIT_BIT_MASK);
+    constexpr UIntType EXPLICIT_BIT_MASK = UIntType(1) << FRACTION_BITS;
+    return bits & (FRACTION_MASK | EXPLICIT_BIT_MASK);
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
@@ -77,12 +77,12 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   }
 
   LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    bits &= ~(UIntType(1) << MANTISSA_WIDTH);
-    bits |= (UIntType(implicitVal) << MANTISSA_WIDTH);
+    bits &= ~(UIntType(1) << FRACTION_BITS);
+    bits |= (UIntType(implicitVal) << FRACTION_BITS);
   }
 
   LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return bool((bits & (UIntType(1) << MANTISSA_WIDTH)) >> MANTISSA_WIDTH);
+    return bool((bits & (UIntType(1) << FRACTION_BITS)) >> FRACTION_BITS);
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {

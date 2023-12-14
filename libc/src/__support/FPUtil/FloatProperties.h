@@ -152,18 +152,16 @@ private:
           ? bit_at(SIG_BITS - 1) | bit_at(SIG_BITS - 3) // 0b1010...
           : bit_at(SIG_BITS - 2);                       // 0b0100...
 
-  // The number of bits after the decimal dot when the number if in normal form.
+public:
+  LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = TOTAL_BITS;
+  // The number of bits after the decimal dot when the number is in normal form.
   LIBC_INLINE_VAR static constexpr int FRACTION_BITS =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision ? SIG_BITS - 1
                                                                   : SIG_BITS;
-
-public:
-  LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = TOTAL_BITS;
-  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_WIDTH = FRACTION_BITS;
   LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
-      MANTISSA_WIDTH + 1;
-  LIBC_INLINE_VAR static constexpr UIntType MANTISSA_MASK =
-      mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
+      FRACTION_BITS + 1;
+  LIBC_INLINE_VAR static constexpr UIntType FRACTION_MASK =
+      mask_trailing_ones<UIntType, FRACTION_BITS>();
   LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = EXP_BITS;
   LIBC_INLINE_VAR static constexpr int32_t EXPONENT_BIAS = EXP_BIAS;
   LIBC_INLINE_VAR static constexpr UIntType EXPONENT_MASK = EXP_MASK;

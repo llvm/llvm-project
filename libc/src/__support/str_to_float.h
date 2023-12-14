@@ -111,7 +111,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   // it's 6 bits for floats in this case.
   const uint64_t halfway_constant =
       (uint64_t(1) << (FloatProp::UINTTYPE_BITS -
-                       (FloatProp::MANTISSA_WIDTH + 3))) -
+                       (FloatProp::FRACTION_BITS + 3))) -
       1;
   if ((high64(first_approx) & halfway_constant) == halfway_constant &&
       low64(first_approx) + mantissa < mantissa) {
@@ -135,7 +135,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
                                        (FloatProp::UINTTYPE_BITS - 1));
   UIntType final_mantissa = static_cast<UIntType>(
       high64(final_approx) >>
-      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::MANTISSA_WIDTH + 3)));
+      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::FRACTION_BITS + 3)));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -161,7 +161,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
 
   // From 54 to 53 bits for doubles and 25 to 24 bits for floats
   final_mantissa >>= 1;
-  if ((final_mantissa >> (FloatProp::MANTISSA_WIDTH + 1)) > 0) {
+  if ((final_mantissa >> (FloatProp::FRACTION_BITS + 1)) > 0) {
     final_mantissa >>= 1;
     ++exp2;
   }
@@ -248,7 +248,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // it's 12 bits for 128 bit floats in this case.
   constexpr UInt128 HALFWAY_CONSTANT =
       (UInt128(1) << (FloatProp::UINTTYPE_BITS -
-                      (FloatProp::MANTISSA_WIDTH + 3))) -
+                      (FloatProp::FRACTION_BITS + 3))) -
       1;
 
   if ((final_approx_upper & HALFWAY_CONSTANT) == HALFWAY_CONSTANT &&
@@ -261,7 +261,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
                                        (FloatProp::UINTTYPE_BITS - 1));
   UIntType final_mantissa =
       final_approx_upper >>
-      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::MANTISSA_WIDTH + 3));
+      (msb + FloatProp::UINTTYPE_BITS - (FloatProp::FRACTION_BITS + 3));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -286,7 +286,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // From 65 to 64 bits for 80 bit floats and 113  to 112 bits for 128 bit
   // floats
   final_mantissa >>= 1;
-  if ((final_mantissa >> (FloatProp::MANTISSA_WIDTH + 1)) > 0) {
+  if ((final_mantissa >> (FloatProp::FRACTION_BITS + 1)) > 0) {
     final_mantissa >>= 1;
     ++exp2;
   }
@@ -347,7 +347,7 @@ simple_decimal_conversion(const char *__restrict numStart,
   if (hpd.get_decimal_point() < 0 &&
       exp10_to_exp2(-hpd.get_decimal_point()) >
           (FloatProp::EXPONENT_BIAS +
-           static_cast<int32_t>(FloatProp::MANTISSA_WIDTH))) {
+           static_cast<int32_t>(FloatProp::FRACTION_BITS))) {
     output.num = {0, 0};
     output.error = ERANGE;
     return output;
@@ -396,7 +396,7 @@ simple_decimal_conversion(const char *__restrict numStart,
   }
 
   // Shift left to fill the mantissa
-  hpd.shift(FloatProp::MANTISSA_WIDTH);
+  hpd.shift(FloatProp::FRACTION_BITS);
   UIntType final_mantissa = hpd.round_to_integer_type<UIntType>();
 
   // Handle subnormals
@@ -412,13 +412,13 @@ simple_decimal_conversion(const char *__restrict numStart,
     final_mantissa = hpd.round_to_integer_type<UIntType>(round);
 
     // Check if by shifting right we've caused this to round to a normal number.
-    if ((final_mantissa >> FloatProp::MANTISSA_WIDTH) != 0) {
+    if ((final_mantissa >> FloatProp::FRACTION_BITS) != 0) {
       ++exp2;
     }
   }
 
   // Check if rounding added a bit, and shift down if that's the case.
-  if (final_mantissa == UIntType(2) << FloatProp::MANTISSA_WIDTH) {
+  if (final_mantissa == UIntType(2) << FloatProp::FRACTION_BITS) {
     final_mantissa >>= 1;
     ++exp2;
 
@@ -522,7 +522,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   UIntType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
-  if ((mantissa >> FloatProp::MANTISSA_WIDTH) > 0) {
+  if ((mantissa >> FloatProp::FRACTION_BITS) > 0) {
     return cpp::nullopt;
   }
 
@@ -624,7 +624,7 @@ template <> constexpr int32_t get_upper_bound<double>() { return 309; }
 template <typename T> constexpr int32_t get_lower_bound() {
   using FloatProp = typename fputil::FloatProperties<T>;
   return -((FloatProp::EXPONENT_BIAS +
-            static_cast<int32_t>(FloatProp::MANTISSA_WIDTH +
+            static_cast<int32_t>(FloatProp::FRACTION_BITS +
                                  FloatProp::UINTTYPE_BITS)) /
            3);
 }
@@ -756,7 +756,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   }
 
   uint32_t amount_to_shift_right =
-      FloatProp::UINTTYPE_BITS - FloatProp::MANTISSA_WIDTH - 1;
+      FloatProp::UINTTYPE_BITS - FloatProp::FRACTION_BITS - 1;
 
   // Handle subnormals.
   if (biased_exponent <= 0) {
@@ -779,7 +779,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   if (amount_to_shift_right < FloatProp::UINTTYPE_BITS) {
     // Shift the mantissa and clear the implicit bit.
     mantissa >>= amount_to_shift_right;
-    mantissa &= FloatProp::MANTISSA_MASK;
+    mantissa &= FloatProp::FRACTION_MASK;
   } else {
     mantissa = 0;
   }
@@ -802,7 +802,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
     }
   }
 
-  if (mantissa > FloatProp::MANTISSA_MASK) {
+  if (mantissa > FloatProp::FRACTION_MASK) {
     // Rounding causes the exponent to increase.
     ++biased_exponent;
 
@@ -815,7 +815,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
     output.error = ERANGE;
   }
 
-  output.num = {mantissa & FloatProp::MANTISSA_MASK, biased_exponent};
+  output.num = {mantissa & FloatProp::FRACTION_MASK, biased_exponent};
   return output;
 }
 

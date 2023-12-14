@@ -17,7 +17,7 @@ template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << LIBC_NAMESPACE::fputil::FloatProperties<T>::MANTISSA_WIDTH;
+      UIntType(1) << LIBC_NAMESPACE::fputil::FloatProperties<T>::FRACTION_BITS;
 
 public:
   typedef T (*SqrtFunc)(T);

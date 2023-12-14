@@ -56,8 +56,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());
   s += exponent.view();
 
-  if constexpr (cpp::is_same_v<T, long double> &&
-                fputil::FloatProperties<long double>::MANTISSA_WIDTH == 63) {
+  if constexpr (fputil::get_fp_type<T>() == fputil::FPType::X86_Binary80) {
     s += ", I: ";
     s += sign_char(x.get_implicit_bit());
   }

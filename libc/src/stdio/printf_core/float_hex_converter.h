@@ -38,9 +38,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   int exponent;
   MantissaInt mantissa;
   bool is_inf_or_nan;
-  uint32_t mantissa_width;
+  uint32_t fraction_bits;
   if (to_conv.length_modifier == LengthModifier::L) {
-    mantissa_width = LDBits::MANTISSA_WIDTH;
+    fraction_bits = LDBits::FRACTION_BITS;
     LDBits::UIntType float_raw = to_conv.conv_val_raw;
     LDBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
@@ -49,7 +49,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     is_inf_or_nan = float_bits.is_inf_or_nan();
   } else {
     using LBits = fputil::FPBits<double>;
-    mantissa_width = LBits::MANTISSA_WIDTH;
+    fraction_bits = LBits::FRACTION_BITS;
     LBits::UIntType float_raw =
         static_cast<LBits::UIntType>(to_conv.conv_val_raw);
     LBits float_bits(float_raw);
@@ -78,8 +78,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // digits. This is primarily relevant for x86 80 bit long doubles, which have
   // 63 bit mantissas. In the case where the mantissa is 0, however, the
   // exponent should stay as 0.
-  if (mantissa_width % BITS_IN_HEX_DIGIT != 0 && mantissa > 0) {
-    exponent -= mantissa_width % BITS_IN_HEX_DIGIT;
+  if (fraction_bits % BITS_IN_HEX_DIGIT != 0 && mantissa > 0) {
+    exponent -= fraction_bits % BITS_IN_HEX_DIGIT;
   }
 
   // This is the max number of digits it can take to represent the mantissa.
@@ -87,10 +87,10 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
   constexpr size_t MANT_BUFF_LEN =
-      (LDBits::MANTISSA_WIDTH / BITS_IN_HEX_DIGIT) + 1;
+      (LDBits::FRACTION_BITS / BITS_IN_HEX_DIGIT) + 1;
   char mant_buffer[MANT_BUFF_LEN];
 
-  size_t mant_len = (mantissa_width / BITS_IN_HEX_DIGIT) + 1;
+  size_t mant_len = (fraction_bits / BITS_IN_HEX_DIGIT) + 1;
 
   // Precision only tracks the number of digits after the hexadecimal point, so
   // we have to add one to account for the digit before the hexadecimal point.

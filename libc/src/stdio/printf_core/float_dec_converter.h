@@ -477,8 +477,8 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
-  // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::FloatProperties<T>::MANTISSA_WIDTH;
+  // signed because later we use -FRACTION_BITS
+  constexpr int32_t FRACTION_BITS = fputil::FloatProperties<T>::FRACTION_BITS;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
 
@@ -536,7 +536,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
     float_writer.write_first_block(0);
   }
 
-  if (exponent < MANT_WIDTH) {
+  if (exponent < FRACTION_BITS) {
     const uint32_t blocks = (precision / static_cast<uint32_t>(BLOCK_SIZE)) + 1;
     uint32_t i = 0;
     // if all the blocks we should write are zero
@@ -569,9 +569,9 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
           digits /= 10;
         }
         RoundDirection round;
-        const bool truncated =
-            !zero_after_digits(exponent - MANT_WIDTH, precision,
-                               float_bits.get_explicit_mantissa(), MANT_WIDTH);
+        const bool truncated = !zero_after_digits(
+            exponent - FRACTION_BITS, precision,
+            float_bits.get_explicit_mantissa(), FRACTION_BITS);
         round = get_round_direction(last_digit, truncated, is_negative);
 
         RET_IF_RESULT_NEGATIVE(
@@ -590,8 +590,8 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
-  // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::FloatProperties<T>::MANTISSA_WIDTH;
+  // signed because later we use -FRACTION_BITS
+  constexpr int32_t FRACTION_BITS = fputil::FloatProperties<T>::FRACTION_BITS;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   MantissaInt mantissa = float_bits.get_explicit_mantissa();
@@ -733,11 +733,11 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
       }
     }
     // If it's still not truncated and there are digits below the decimal point
-    if (!truncated && exponent - MANT_WIDTH < 0) {
+    if (!truncated && exponent - FRACTION_BITS < 0) {
       // Use the formula from %f.
-      truncated =
-          !zero_after_digits(exponent - MANT_WIDTH, precision - final_exponent,
-                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
+      truncated = !zero_after_digits(
+          exponent - FRACTION_BITS, precision - final_exponent,
+          float_bits.get_explicit_mantissa(), FRACTION_BITS);
     }
   }
   round = get_round_direction(last_digit, truncated, is_negative);
@@ -753,8 +753,8 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
-  // signed because later we use -MANT_WIDTH
-  constexpr int32_t MANT_WIDTH = fputil::FloatProperties<T>::MANTISSA_WIDTH;
+  // signed because later we use -FRACTION_BITS
+  constexpr int32_t FRACTION_BITS = fputil::FloatProperties<T>::FRACTION_BITS;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   MantissaInt mantissa = float_bits.get_explicit_mantissa();
@@ -980,11 +980,11 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       }
     }
     // If it's still not truncated and there are digits below the decimal point
-    if (!truncated && exponent - MANT_WIDTH < 0) {
+    if (!truncated && exponent - FRACTION_BITS < 0) {
       // Use the formula from %f.
-      truncated =
-          !zero_after_digits(exponent - MANT_WIDTH, exp_precision - base_10_exp,
-                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
+      truncated = !zero_after_digits(
+          exponent - FRACTION_BITS, exp_precision - base_10_exp,
+          float_bits.get_explicit_mantissa(), FRACTION_BITS);
     }
   }
 

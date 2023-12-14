@@ -42,10 +42,10 @@ template <size_t Bits> struct DyadicFloat {
 
   template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
   DyadicFloat(T x) {
-    static_assert(FloatProperties<T>::MANTISSA_WIDTH < Bits);
+    static_assert(FloatProperties<T>::FRACTION_BITS < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.get_sign();
-    exponent = x_bits.get_exponent() - FloatProperties<T>::MANTISSA_WIDTH;
+    exponent = x_bits.get_exponent() - FloatProperties<T>::FRACTION_BITS;
     mantissa = MantissaType(x_bits.get_explicit_mantissa());
     normalize();
   }
@@ -86,7 +86,7 @@ template <size_t Bits> struct DyadicFloat {
   // TODO(lntue): Test or add specialization for x86 long double.
   template <typename T, typename = cpp::enable_if_t<
                             cpp::is_floating_point_v<T> &&
-                                (FloatProperties<T>::MANTISSA_WIDTH < Bits),
+                                (FloatProperties<T>::FRACTION_BITS < Bits),
                             void>>
   explicit operator T() const {
     // TODO(lntue): Do we need to treat signed zeros properly?
@@ -116,7 +116,7 @@ template <size_t Bits> struct DyadicFloat {
 
     T d_hi = FPBits<T>::create_value(sign, exp_hi,
                                      static_cast<output_bits_t>(m_hi) &
-                                         FloatProperties<T>::MANTISSA_MASK)
+                                         FloatProperties<T>::FRACTION_MASK)
                  .get_val();
 
     const MantissaType round_mask = MantissaType(1) << (shift - 1);
@@ -157,7 +157,7 @@ template <size_t Bits> struct DyadicFloat {
     if (LIBC_UNLIKELY(denorm)) {
       // Output is denormal, simply clear the exponent field.
       output_bits_t clear_exp = output_bits_t(exp_hi)
-                                << FloatProperties<T>::MANTISSA_WIDTH;
+                                << FloatProperties<T>::FRACTION_BITS;
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
       return FPBits<T>(r_bits).get_val();
     }

@@ -192,7 +192,7 @@ public:
     FPBits bits(F(1.0));
     bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
     bits.set_sign(1);
-    bits.set_mantissa(UIntType(0x1) << (FPBits::MANTISSA_WIDTH - 1));
+    bits.set_mantissa(FPBits::FRACTION_MASK);
 
     F x = F(bits);
     if (TestModes) {

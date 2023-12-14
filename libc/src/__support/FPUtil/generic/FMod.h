@@ -236,7 +236,7 @@ private:
     int e_y = sy.get_biased_exponent();
 
     // Most common case where |y| is "very normal" and |x/y| < 2^EXPONENT_WIDTH
-    if (LIBC_LIKELY(e_y > int(FPB::MANTISSA_WIDTH) &&
+    if (LIBC_LIKELY(e_y > int(FPB::FRACTION_BITS) &&
                     e_x - e_y <= int(FPB::EXPONENT_WIDTH))) {
       UIntType m_x = sx.get_explicit_mantissa();
       UIntType m_y = sy.get_explicit_mantissa();

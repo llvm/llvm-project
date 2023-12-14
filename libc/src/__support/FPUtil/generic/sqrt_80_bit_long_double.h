@@ -23,7 +23,7 @@ namespace x86 {
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
       cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
-      (8 * sizeof(uint64_t) - 1 - FPBits<long double>::MANTISSA_WIDTH));
+      (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_BITS));
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -38,7 +38,7 @@ LIBC_INLINE long double sqrt(long double x);
 LIBC_INLINE long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using UIntType = typename LDBits::UIntType;
-  constexpr UIntType ONE = UIntType(1) << int(LDBits::MANTISSA_WIDTH);
+  constexpr UIntType ONE = UIntType(1) << int(LDBits::FRACTION_BITS);
 
   FPBits<long double> bits(x);
 
@@ -111,7 +111,7 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // Append the exponent field.
     x_exp = ((x_exp >> 1) + LDBits::EXPONENT_BIAS);
-    y |= (static_cast<UIntType>(x_exp) << (LDBits::MANTISSA_WIDTH + 1));
+    y |= (static_cast<UIntType>(x_exp) << (LDBits::FRACTION_BITS + 1));
 
     switch (quick_get_round()) {
     case FE_TONEAREST:
