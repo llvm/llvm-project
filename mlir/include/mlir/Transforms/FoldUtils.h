@@ -91,10 +91,11 @@ private:
                                    ArrayRef<OpFoldResult> foldResults);
 
   /// Try to get or create a new constant entry. On success this returns the
-  /// constant operation, nullptr otherwise.
+  /// constant operation, nullptr otherwise. The constant operation will have
+  /// an `erasedFoldedLocation`.
   Operation *tryGetOrCreateConstant(ConstantMap &uniquedConstants,
                                     Dialect *dialect, Attribute value,
-                                    Type type, Location loc);
+                                    Type type);
 
   /// The location to overwrite with for folder-owned constants.
   UnknownLoc erasedFoldedLocation;
