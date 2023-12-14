@@ -10,6 +10,7 @@ add_mlir_library(MLIRTestIR
   TestInterfaces.cpp
   TestMatchers.cpp
   TestLazyLoading.cpp
+  TestNamedAttrs.cpp
   TestOpaqueLoc.cpp
   TestOperationEquals.cpp
   TestPrintDefUse.cpp

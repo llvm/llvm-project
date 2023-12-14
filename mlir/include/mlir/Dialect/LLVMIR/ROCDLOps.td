@@ -28,16 +28,6 @@ def ROCDL_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{
-    /// Get the name of the attribute used to annotate external kernel
-    /// functions.
-    static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
-    static constexpr ::llvm::StringLiteral getFlatWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("rocdl.flat_work_group_size");
-    }
-    static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
-    }
-
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
     /// The address space value that represents shared memory.
@@ -58,6 +48,22 @@ class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
+//===----------------------------------------------------------------------===//
+// ROCDL named attr definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_NamedAttr<string name, string userName, string baseAttrType = "::mlir::Attribute"> :
+  NamedAttrDef<ROCDL_Dialect, name, userName, baseAttrType>;
+
+def ROCDL_KernelAttr : ROCDL_NamedAttr<"Kernel", "kernel", "::mlir::UnitAttr">;
+def ROCDL_ReqdWorkGroupSizeAttr :
+    ROCDL_NamedAttr<"ReqdWorkGroupSize", "reqd_work_group_size", "::mlir::DenseI32ArrayAttr">;
+def ROCDL_FlatWorkGroupSizeAttr :
+    ROCDL_NamedAttr<"FlatWorkGroupSize", "flat_work_group_size", "::mlir::StringAttr">;
+def ROCDL_MaxFlatWorkGroupSizeAttr :
+    ROCDL_NamedAttr<"MaxFlatWorkGroupSize", "max_flat_work_group_size", "::mlir::IntegerAttr">;
+def ROCDL_WavesPerEuAttr :
+    ROCDL_NamedAttr<"WavesPerEu", "waves_per_eu", "::mlir::IntegerAttr">;
 
 //===----------------------------------------------------------------------===//
 // ROCDL op definitions

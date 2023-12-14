@@ -283,6 +283,75 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
                                  "::" # cppClassName # ">($_self)">;
 }
 
+// Define a StringAttr wrapper for the NamedAttribute `name`
+// - `name` is dialect-qualified, but mnemonic is based
+// - Utilities to is/has/get/set/lookup/create typed Attr on an Operation
+//   including typed `value` attribute
+class NamedAttrDef<Dialect dialect, string name, string userName,
+    string valueAttrType = "::mlir::Attribute">
+    : AttrDef<dialect, name, [], "::mlir::StringAttr"> {
+  let mnemonic = userName;
+
+  string scopedName = dialect.name # "." # mnemonic;
+  code getNameFunc = "static constexpr llvm::StringLiteral getName() { return \""
+      # scopedName # "\"; }\n";
+  code typedefValueAttr = "typedef " # valueAttrType # " ValueAttrType;\n";
+
+  code namedAttrDecls = !strconcat(typedefValueAttr, getNameFunc, [{
+    // Is or Has
+    static bool is(::mlir::NamedAttribute &attr) {
+      return attr.getName() == getName() && ::llvm::isa<ValueAttrType>(attr.getValue());
+    }
+    static bool isInherent(::mlir::NamedAttribute &attr) {
+      return attr.getName() == getMnemonic();
+    }
+    static bool has(::mlir::Operation *op) {
+      return op->hasAttrOfType<ValueAttrType>(getName());
+    }
+    // Get Name
+    static ::mlir::StringAttr get(::mlir::MLIRContext *ctx) {
+      return ::mlir::StringAttr::get(ctx, getName());
+    }
+    // Get Value
+    static ValueAttrType getValue(::mlir::Operation *op) {
+      return op->getAttrOfType<ValueAttrType>(getName());
+    }
+    // Scoped lookup for inheritance
+    static ValueAttrType lookupValue(::mlir::Operation *op) {
+      if (auto attr = getValue(op))
+        return attr;
+      std::optional<::mlir::RegisteredOperationName> opInfo = op->getRegisteredInfo();
+      if (!opInfo || !opInfo->hasTrait<::mlir::OpTrait::IsIsolatedFromAbove>()) {
+        if (auto *par = op->getParentOp())
+          return lookupValue(par);
+      }
+      return ValueAttrType();
+    }
+    // Set Value on Op
+    static void setValue(::mlir::Operation *op, ValueAttrType val) {
+      assert(op);
+      op->setAttr(getName(), val);
+    }
+    // Remove Value from Op
+    static void removeValue(::mlir::Operation *op) {
+      assert(op);
+      op->removeAttr(getName());
+    }
+    // Create (scoped) NamedAttribute
+    static ::mlir::NamedAttribute create(::mlir::Builder &b, ValueAttrType val);
+  }]);
+
+  code namedAttrDefs = [{
+    // Create (scoped) NamedAttribute
+    ::mlir::NamedAttribute $cppClass::create(::mlir::Builder &b, $cppClass::ValueAttrType val) {
+      return b.getNamedAttr($cppClass::getName(), val);
+    }
+  }];
+
+  let extraClassDeclaration = namedAttrDecls;
+  let extraClassDefinition = namedAttrDefs;
+}
+
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.
 class TypeDef<Dialect dialect, string name, list<Trait> traits = [],

@@ -43,6 +43,8 @@ public:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                               const test::CopyCount &value);
 
+#include "mlir/IR/Operation.h"
+
 /// A handle used to reference external elements instances.
 using TestDialectResourceBlobHandle =
     mlir::DialectResourceBlobHandle<TestDialect>;

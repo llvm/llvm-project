@@ -333,6 +333,13 @@ def TestCopyCount : Test_Attr<"TestCopyCount"> {
 }
 
 
+// Test NamedAttr attributes
+class Test_NamedAttr<string name, string userName, string baseAttrType = "::mlir::Attribute"> :
+  NamedAttrDef<Test_Dialect, name, userName, baseAttrType>;
+
+def Test_NamedUnitAttr : Test_NamedAttr<"TestNamedUnit", "test_unit", "::mlir::UnitAttr">;
+def Test_NamedIntAttr : Test_NamedAttr<"TestNamedInt", "test_int", "::mlir::IntegerAttr">;
+
 
 
 #endif // TEST_ATTRDEFS
