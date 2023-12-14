@@ -105,7 +105,18 @@ namespace llvm {
     }                                                                          \
     static AnalysisKey Key;                                                    \
   };
-#include "MachinePassRegistry.def"
+#define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)          \
+  struct PASS_NAME : public AnalysisInfoMixin<PASS_NAME> {                     \
+    template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
+    using Result = struct {};                                                  \
+    template <typename IRUnitT, typename AnalysisManagerT,                     \
+              typename... ExtraArgTs>                                          \
+    Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {              \
+      return {};                                                               \
+    }                                                                          \
+    static AnalysisKey Key;                                                    \
+  };
+#include "llvm/CodeGen/MachinePassRegistry.def"
 
 /// This class provides access to building LLVM's passes.
 ///
