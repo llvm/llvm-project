@@ -280,7 +280,7 @@ TEST_F(IndexActionTest, SkipFiles) {
     auto unskippable2() { return S(); }
   )cpp");
   Opts.FileFilter = [](const SourceManager &SM, FileID F) {
-    return !SM.getFileEntryRefForID(F)->getName().endswith("bad.h");
+    return !SM.getFileEntryRefForID(F)->getName().ends_with("bad.h");
   };
   IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
   EXPECT_THAT(*IndexFile.Symbols,
@@ -333,7 +333,7 @@ TEST_F(IndexActionTest, SymbolFromCC) {
  void foo();
  )cpp");
   Opts.FileFilter = [](const SourceManager &SM, FileID F) {
-    return !SM.getFileEntryRefForID(F)->getName().endswith("main.h");
+    return !SM.getFileEntryRefForID(F)->getName().ends_with("main.h");
   };
   IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
   EXPECT_THAT(*IndexFile.Symbols,

@@ -149,22 +149,22 @@ public:
     // Modules IEEE_FEATURES, IEEE_EXCEPTIONS, and IEEE_ARITHMETIC get common
     // declarations from several __fortran_... support module files.
     llvm::StringRef modName = toStringRef(modSym.name());
-    if (!modName.startswith("ieee_") && !modName.startswith("__fortran_"))
+    if (!modName.starts_with("ieee_") && !modName.starts_with("__fortran_"))
       return;
     llvm::StringRef procName = toStringRef(procSym.name());
-    if (!procName.startswith("ieee_"))
+    if (!procName.starts_with("ieee_"))
       return;
     lower::pft::FunctionLikeUnit *proc =
         evaluationListStack.back()->back().getOwningProcedure();
     proc->hasIeeeAccess = true;
-    if (!procName.startswith("ieee_set_"))
+    if (!procName.starts_with("ieee_set_"))
       return;
-    if (procName.startswith("ieee_set_modes_") ||
-        procName.startswith("ieee_set_status_"))
+    if (procName.starts_with("ieee_set_modes_") ||
+        procName.starts_with("ieee_set_status_"))
       proc->mayModifyHaltingMode = proc->mayModifyRoundingMode = true;
-    else if (procName.startswith("ieee_set_halting_mode_"))
+    else if (procName.starts_with("ieee_set_halting_mode_"))
       proc->mayModifyHaltingMode = true;
-    else if (procName.startswith("ieee_set_rounding_mode_"))
+    else if (procName.starts_with("ieee_set_rounding_mode_"))
       proc->mayModifyRoundingMode = true;
   }
 

@@ -1279,11 +1279,11 @@ void SimplifyIntrinsicsPass::runOnOperation() {
         // RTNAME(Sum<T>)(const Descriptor &x, const char *source, int line,
         //                int dim, const Descriptor *mask)
         //
-        if (funcName.startswith(RTNAME_STRING(Sum))) {
+        if (funcName.starts_with(RTNAME_STRING(Sum))) {
           simplifyIntOrFloatReduction(call, kindMap, genRuntimeSumBody);
           return;
         }
-        if (funcName.startswith(RTNAME_STRING(DotProduct))) {
+        if (funcName.starts_with(RTNAME_STRING(DotProduct))) {
           LLVM_DEBUG(llvm::dbgs() << "Handling " << funcName << "\n");
           LLVM_DEBUG(llvm::dbgs() << "Call operation:\n"; op->dump();
                      llvm::dbgs() << "\n");
@@ -1350,23 +1350,23 @@ void SimplifyIntrinsicsPass::runOnOperation() {
                      llvm::dbgs() << "\n");
           return;
         }
-        if (funcName.startswith(RTNAME_STRING(Maxval))) {
+        if (funcName.starts_with(RTNAME_STRING(Maxval))) {
           simplifyIntOrFloatReduction(call, kindMap, genRuntimeMaxvalBody);
           return;
         }
-        if (funcName.startswith(RTNAME_STRING(Count))) {
+        if (funcName.starts_with(RTNAME_STRING(Count))) {
           simplifyLogicalDim0Reduction(call, kindMap, genRuntimeCountBody);
           return;
         }
-        if (funcName.startswith(RTNAME_STRING(Any))) {
+        if (funcName.starts_with(RTNAME_STRING(Any))) {
           simplifyLogicalDim1Reduction(call, kindMap, genRuntimeAnyBody);
           return;
         }
-        if (funcName.endswith(RTNAME_STRING(All))) {
+        if (funcName.ends_with(RTNAME_STRING(All))) {
           simplifyLogicalDim1Reduction(call, kindMap, genRuntimeAllBody);
           return;
         }
-        if (funcName.startswith(RTNAME_STRING(Minloc))) {
+        if (funcName.starts_with(RTNAME_STRING(Minloc))) {
           simplifyMinlocReduction(call, kindMap);
           return;
         }
