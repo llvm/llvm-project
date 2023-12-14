@@ -175,7 +175,9 @@ def SIFIVE_S76 : RISCVProcessorModel<"sifive-s76",
                                       FeatureStdExtD,
                                       FeatureStdExtC,
                                       FeatureStdExtZihintpause,
-                                      FeatureVendorXSfcie],
+                                      FeatureVendorXSfcie,
+                                      FeatureVendorXSiFivecflushdlone,
+                                      FeatureVendorXSiFivecdiscarddlone],
                                      [TuneSiFive7]>;
 
 def SIFIVE_U54 : RISCVProcessorModel<"sifive-u54",

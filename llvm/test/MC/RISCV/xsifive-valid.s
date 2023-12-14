@@ -1,17 +1,17 @@
 # SCIE - SiFive Custom Instructions Extension.
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+xsfcie -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+xsfcie -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+xsfcie -riscv-no-aliases -show-encoding 2>&1 \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone -riscv-no-aliases -show-encoding 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-WARN %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+xsfcie -riscv-no-aliases -show-encoding 2>&1 \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone -riscv-no-aliases -show-encoding 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-WARN %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xsfcie < %s \
-# RUN:     | llvm-objdump --mattr=+xsfcie -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone < %s \
+# RUN:     | llvm-objdump --mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+xsfcie < %s \
-# RUN:     | llvm-objdump --mattr=+xsfcie -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone < %s \
+# RUN:     | llvm-objdump --mattr=+xsfcie,+xsifivecdiscarddlone,+xsifivecflushdlone -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mcpu=sifive-s76 -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s

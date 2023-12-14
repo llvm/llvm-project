@@ -820,6 +820,22 @@ def HasVendorXSfcie : Predicate<"Subtarget->hasVendorXSfcie()">,
                         AssemblerPredicate<(all_of FeatureVendorXSfcie),
                         "'XSfcie' (SiFive Custom Instruction Extension SCIE.)">;
 
+def FeatureVendorXSiFivecflushdlone
+    : SubtargetFeature<"xsifivecflushdlone", "HasVendorXSiFivecflushdlone", "true",
+                       "'XSiFivecflushdlone' (Cache Flush/Power Down Instructions)", []>;
+def HasVendorXSiFivecflushdlone :
+    Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
+    AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
+                       "'XSiFivecflushdlone' (Cache Flush/Power Down Instructions)">;
+
+def FeatureVendorXSiFivecdiscarddlone
+    : SubtargetFeature<"xsifivecdiscarddlone", "HasVendorXSiFivecdiscarddlone", "true",
+                       "'XSiFivecdiscarddlone' (Cache Flush/Power Down Instructions)", []>;
+def HasVendorXSiFivecdiscarddlone :
+    Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
+    AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
+                       "'XSiFivecdiscarddlone' (Cache Flush/Power Down Instructions)">;
+
 def FeatureVendorXSfvqmaccdod
     : SubtargetFeature<"xsfvqmaccdod", "HasVendorXSfvqmaccdod", "true",
                        "'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))",

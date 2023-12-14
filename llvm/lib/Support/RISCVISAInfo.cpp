@@ -81,6 +81,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xsfvfwmaccqqq", RISCVExtensionVersion{1, 0}},
     {"xsfvqmaccdod", RISCVExtensionVersion{1, 0}},
     {"xsfvqmaccqoq", RISCVExtensionVersion{1, 0}},
+    {"xsifivecdiscarddlone", RISCVExtensionVersion{1, 0}},
+    {"xsifivecflushdlone", RISCVExtensionVersion{1, 0}},
     {"xtheadba", RISCVExtensionVersion{1, 0}},
     {"xtheadbb", RISCVExtensionVersion{1, 0}},
     {"xtheadbs", RISCVExtensionVersion{1, 0}},
@@ -218,7 +220,7 @@ static void verifyTables() {
 static void PrintExtension(const std::string Name, const std::string Version,
                            const std::string Description) {
   outs() << "    "
-         << format(Description.empty() ? "%-20s%s\n" : "%-20s%-10s%s\n",
+         << format(Description.empty() ? "%-21s%s\n" : "%-21s%-10s%s\n",
                    Name.c_str(), Version.c_str(), Description.c_str());
 }
 
