@@ -111,8 +111,8 @@ define void @test_evaluate_gep_as_ptrs_array(ptr addrspace(2) %B) {
   ret void
 }
 
+; This should be turned into a constexpr instead of being an instruction
 define void @test_overaligned_vec(i8 %B) {
-        ; This should be turned into a constexpr instead of being an instruction
 ; CHECK-LABEL: @test_overaligned_vec(
 ; CHECK-NEXT:    store i8 [[B:%.*]], ptr getelementptr inbounds ([10 x i8], ptr @Global, i64 0, i64 2), align 1
 ; CHECK-NEXT:    ret void
