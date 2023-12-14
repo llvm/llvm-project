@@ -507,14 +507,15 @@ class WorkloadImportsManager : public ModuleImportsManager {
             return IsPrevailing(VI.getGUID(), Candidate);
           });
       if (PrevailingCandidates.empty()) {
-        if (!llvm::hasSingleElement(PotentialCandidates))
+        GVS = *PotentialCandidates.begin();
+        if (!llvm::hasSingleElement(PotentialCandidates) &&
+            GlobalValue::isLocalLinkage(GVS->linkage()))
           LLVM_DEBUG(
               dbgs()
               << "[Workload] Found multiple non-prevailing candidates for "
               << VI.name()
               << ". This is unexpected. Are module paths passed to the "
                  "compiler unique for the modules passed to the linker?");
-        GVS = *PotentialCandidates.begin();
         // We could in theory have multiple (interposable) copies of a symbol
         // when there is no prevailing candidate, if say the prevailing copy was
         // in a native object being linked in. However, we should in theory be
