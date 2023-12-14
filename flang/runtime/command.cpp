@@ -282,28 +282,11 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
   return StatOk;
 }
 
-const char *ensureNullTerminated(
-    const char *str, size_t length, Terminator &terminator) {
-  if (length <= strlen(str)) {
-    char *newCmd{(char *)malloc(length + 1)};
-    if (newCmd == NULL) {
-      terminator.Crash("Command not null-terminated, memory allocation failed "
-                       "for null-terminated newCmd.");
-    }
-
-    strncpy(newCmd, str, length);
-    newCmd[length] = '\0';
-    return newCmd;
-  } else {
-    return str;
-  }
-}
-
 void RTNAME(System)(const Descriptor &command, const Descriptor *exitstat,
     const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
-  const char *newCmd{ensureNullTerminated(
+  const char *newCmd{EnsureNullTerminated(
       command.OffsetElement(), command.ElementBytes(), terminator)};
   int status{std::system(newCmd)};
 
@@ -315,6 +298,7 @@ void RTNAME(System)(const Descriptor &command, const Descriptor *exitstat,
     int exitstatVal{WEXITSTATUS(status)};
     StoreLengthToDescriptor(exitstat, exitstatVal, terminator);
 #endif
+    FreeMemory((void *)newCmd);
   }
 }
 
