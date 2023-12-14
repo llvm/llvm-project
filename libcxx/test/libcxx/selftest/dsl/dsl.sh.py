@@ -6,7 +6,9 @@
 #
 # ===----------------------------------------------------------------------===##
 
-# XFAIL: libcxx-fake-executor
+# With picolibc, test_program_stderr_is_not_conflated_with_stdout fails
+# because stdout & stderr are treated as the same.
+# XFAIL: LIBCXX-PICOLIBC-FIXME
 
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.

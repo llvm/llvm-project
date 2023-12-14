@@ -166,15 +166,3 @@ struct y {
 };
 int y::z;
 }
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_A_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
-// CHECK:      ![[CONST_A_VAR]] = distinct !DIGlobalVariable(name: "const_a"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_A_DECL]])
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_B_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[CONST_B_VAR]] = distinct !DIGlobalVariable(name: "const_b"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_B_DECL]])
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_C_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 18, DW_OP_stack_value))
-// CHECK:      ![[CONST_C_VAR]] = distinct !DIGlobalVariable(name: "const_c"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_C_DECL]])

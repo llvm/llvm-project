@@ -4,9 +4,6 @@
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23 %s -fexperimental-new-constant-interpreter
 
 
-// expected23-no-diagnostics
-
-
 /// FIXME: The new interpreter is missing all the 'control flows through...' diagnostics.
 
 constexpr int f(int n) {  // ref20-error {{constexpr function never produces a constant expression}} \
@@ -82,3 +79,27 @@ constexpr int k(int n) {
   return m;
 }
 constexpr int k0 = k(0);
+
+namespace StaticLambdas {
+  constexpr auto static_capture_constexpr() {
+    char n = 'n';
+    return [n] static { return n; }(); // expected23-error {{a static lambda cannot have any captures}} \
+                                       // expected20-error {{a static lambda cannot have any captures}} \
+                                       // expected20-warning {{are a C++23 extension}} \
+                                       // expected20-warning {{is a C++23 extension}} \
+                                       // ref23-error {{a static lambda cannot have any captures}} \
+                                       // ref20-error {{a static lambda cannot have any captures}} \
+                                       // ref20-warning {{are a C++23 extension}} \
+                                       // ref20-warning {{is a C++23 extension}}
+  }
+  static_assert(static_capture_constexpr()); // expected23-error {{static assertion expression is not an integral constant expression}} \
+                                             // expected20-error {{static assertion expression is not an integral constant expression}} \
+                                             // ref23-error {{static assertion expression is not an integral constant expression}} \
+                                             // ref20-error {{static assertion expression is not an integral constant expression}}
+
+  constexpr auto capture_constexpr() {
+    char n = 'n';
+    return [n] { return n; }();
+  }
+  static_assert(capture_constexpr());
+}

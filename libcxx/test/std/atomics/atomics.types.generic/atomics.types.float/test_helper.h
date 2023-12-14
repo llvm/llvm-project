@@ -23,7 +23,7 @@
 
 template <class T>
 bool approximately_equals(T x, T y) {
-  T epsilon = 0.001;
+  T epsilon = T(0.001);
   return std::abs(x - y) < epsilon;
 }
 

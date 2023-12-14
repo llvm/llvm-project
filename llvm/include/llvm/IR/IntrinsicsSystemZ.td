@@ -30,10 +30,6 @@ class SystemZBinaryConv<string name, LLVMType result, LLVMType arg>
 class SystemZBinary<string name, LLVMType type>
   : SystemZBinaryConv<name, type, type>;
 
-class SystemZBinaryInt<string name, LLVMType type>
-  : ClangBuiltin<"__builtin_s390_" # name>,
-    Intrinsic<[type], [type, llvm_i32_ty], [IntrNoMem]>;
-
 class SystemZBinaryConvCC<LLVMType result, LLVMType arg>
   : Intrinsic<[result, llvm_i32_ty], [arg, arg], [IntrNoMem]>;
 
@@ -129,13 +125,6 @@ multiclass SystemZBinaryBHF<string name> {
 
 multiclass SystemZBinaryBHFG<string name> : SystemZBinaryBHF<name> {
   def g : SystemZBinary<name#"g", llvm_v2i64_ty>;
-}
-
-multiclass SystemZBinaryIntBHFG<string name> {
-  def b : SystemZBinaryInt<name#"b", llvm_v16i8_ty>;
-  def h : SystemZBinaryInt<name#"h", llvm_v8i16_ty>;
-  def f : SystemZBinaryInt<name#"f", llvm_v4i32_ty>;
-  def g : SystemZBinaryInt<name#"g", llvm_v2i64_ty>;
 }
 
 multiclass SystemZBinaryCCBHF {
@@ -303,8 +292,6 @@ let TargetPrefix = "s390" in {
   defm int_s390_vmo  : SystemZBinaryExtBHF<"vmo">;
   defm int_s390_vmlo : SystemZBinaryExtBHF<"vmlo">;
 
-  defm int_s390_verllv : SystemZBinaryBHFG<"verllv">;
-  defm int_s390_verll  : SystemZBinaryIntBHFG<"verll">;
   defm int_s390_verim  : SystemZQuaternaryIntBHFG<"verim">;
 
   def int_s390_vsl   : SystemZBinary<"vsl",   llvm_v16i8_ty>;
@@ -411,11 +398,11 @@ let TargetPrefix = "s390" in {
                                  [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
   // Instructions from the Vector Packed Decimal Facility
-  def int_s390_vlrl : ClangBuiltin<"__builtin_s390_vlrl">,
+  def int_s390_vlrl : ClangBuiltin<"__builtin_s390_vlrlr">,
                       Intrinsic<[llvm_v16i8_ty], [llvm_i32_ty, llvm_ptr_ty],
                                 [IntrReadMem, IntrArgMemOnly]>;
 
-  def int_s390_vstrl : ClangBuiltin<"__builtin_s390_vstrl">,
+  def int_s390_vstrl : ClangBuiltin<"__builtin_s390_vstrlr">,
                        Intrinsic<[], [llvm_v16i8_ty, llvm_i32_ty, llvm_ptr_ty],
                                  [IntrArgMemOnly, IntrWriteMem]>;
 

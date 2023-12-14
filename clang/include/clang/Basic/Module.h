@@ -156,7 +156,7 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
+  OptionalDirectoryEntryRef Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
@@ -672,7 +672,7 @@ public:
   }
 
   /// The serialized AST file for this module, if one was created.
-  OptionalFileEntryRefDegradesToFileEntryPtr getASTFile() const {
+  OptionalFileEntryRef getASTFile() const {
     return getTopLevelModule()->ASTFile;
   }
 

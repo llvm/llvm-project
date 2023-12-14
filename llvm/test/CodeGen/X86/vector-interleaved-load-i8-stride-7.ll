@@ -12065,8 +12065,8 @@ define void @load_i8_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQBW-FAST-NEXT:    vpshufb {{.*#+}} xmm20 = xmm20[u,u,u],zero,zero,xmm20[4,11],zero,zero,xmm20[0,7,14,u,u,u,u]
 ; AVX512DQBW-FAST-NEXT:    vporq %xmm23, %xmm20, %xmm20
 ; AVX512DQBW-FAST-NEXT:    vinserti32x4 $1, %xmm20, %ymm0, %ymm15
-; AVX512DQBW-FAST-NEXT:    vbroadcasti64x2 {{.*#+}} ymm20 = [1,3,4,6,1,3,4,6]
-; AVX512DQBW-FAST-NEXT:    # ymm20 = mem[0,1,0,1]
+; AVX512DQBW-FAST-NEXT:    vbroadcasti32x4 {{.*#+}} ymm20 = [1,3,4,6,1,3,4,6]
+; AVX512DQBW-FAST-NEXT:    # ymm20 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQBW-FAST-NEXT:    vpermd %ymm19, %ymm20, %ymm20
 ; AVX512DQBW-FAST-NEXT:    vpshufb {{.*#+}} ymm14 = ymm20[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,17,20,27,30]
 ; AVX512DQBW-FAST-NEXT:    vpblendd {{.*#+}} ymm14 = ymm15[0,1,2,3,4,5,6],ymm14[7]
@@ -12089,8 +12089,8 @@ define void @load_i8_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQBW-FAST-NEXT:    vpshufb {{.*#+}} xmm14 = xmm14[u,u,0,7,14],zero,zero,xmm14[3,10],zero,zero,zero,xmm14[u,u,u,u]
 ; AVX512DQBW-FAST-NEXT:    vporq %xmm20, %xmm14, %xmm14
 ; AVX512DQBW-FAST-NEXT:    vinserti128 $1, %xmm14, %ymm0, %ymm14
-; AVX512DQBW-FAST-NEXT:    vbroadcasti64x2 {{.*#+}} ymm20 = [1,3,5,6,1,3,5,6]
-; AVX512DQBW-FAST-NEXT:    # ymm20 = mem[0,1,0,1]
+; AVX512DQBW-FAST-NEXT:    vbroadcasti32x4 {{.*#+}} ymm20 = [1,3,5,6,1,3,5,6]
+; AVX512DQBW-FAST-NEXT:    # ymm20 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQBW-FAST-NEXT:    vpermd %ymm19, %ymm20, %ymm19
 ; AVX512DQBW-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm19[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,18,21,24,31]
 ; AVX512DQBW-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm14[0,1,2,3,4,5,6],ymm0[7]

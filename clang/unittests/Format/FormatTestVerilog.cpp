@@ -373,6 +373,11 @@ TEST_F(FormatTestVerilog, Case) {
                "      arg);\n"
                "endcase",
                Style);
+
+  verifyFormat("case (v) matches\n"
+               "  tagged Valid .n:\n"
+               "    ;\n"
+               "endcase");
 }
 
 TEST_F(FormatTestVerilog, Coverage) {
@@ -1292,12 +1297,17 @@ TEST_F(FormatTestVerilog, StructLiteral) {
   verifyFormat("c = '{'{1, 1.0}, '{2, 2.0}};");
   verifyFormat("c = '{a: 0, b: 0.0};");
   verifyFormat("c = '{a: 0, b: 0.0, default: 0};");
+  verifyFormat("d = {int: 1, shortreal: 1.0};");
+  verifyFormat("c = '{default: 0};");
+
+  // The identifier before the quote can be either a tag or a type case.  There
+  // should be a space between the tag and the quote.
   verifyFormat("c = ab'{a: 0, b: 0.0};");
   verifyFormat("c = ab'{cd: cd'{1, 1.0}, ef: ef'{2, 2.0}};");
   verifyFormat("c = ab'{cd'{1, 1.0}, ef'{2, 2.0}};");
-  verifyFormat("d = {int: 1, shortreal: 1.0};");
   verifyFormat("d = ab'{int: 1, shortreal: 1.0};");
-  verifyFormat("c = '{default: 0};");
+  verifyFormat("x = tagged Add '{e1, 4, ed};");
+
   auto Style = getDefaultStyle();
   Style.SpacesInContainerLiterals = true;
   verifyFormat("c = '{a : 0, b : 0.0};", Style);

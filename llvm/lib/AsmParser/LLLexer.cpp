@@ -571,6 +571,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(partition);
+  KEYWORD(code_model);
   KEYWORD(alias);
   KEYWORD(ifunc);
   KEYWORD(module);
@@ -697,6 +698,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
 
+  KEYWORD(splat);
   KEYWORD(vscale);
   KEYWORD(x);
   KEYWORD(blockaddress);
@@ -920,17 +922,17 @@ lltok::Kind LLLexer::LexIdentifier() {
 
 #undef DWKEYWORD
 
-  if (Keyword.startswith("DIFlag")) {
+  if (Keyword.starts_with("DIFlag")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DIFlag;
   }
 
-  if (Keyword.startswith("DISPFlag")) {
+  if (Keyword.starts_with("DISPFlag")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DISPFlag;
   }
 
-  if (Keyword.startswith("CSK_")) {
+  if (Keyword.starts_with("CSK_")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::ChecksumKind;
   }

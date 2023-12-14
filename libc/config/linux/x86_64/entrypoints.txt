@@ -153,9 +153,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
 
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.socket
-
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
@@ -173,6 +170,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -554,6 +554,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
   )
 endif()
 

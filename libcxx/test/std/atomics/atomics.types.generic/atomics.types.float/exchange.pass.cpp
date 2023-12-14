@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
-// XFAIL: target={{x86_64-.*}} && msan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;
 //  T exchange(T, memory_order = memory_order::seq_cst) noexcept;
@@ -35,7 +31,7 @@ void test_impl() {
 
   // exchange
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     std::same_as<T> decltype(auto) r = a.exchange(T(1.2), std::memory_order::relaxed);
     assert(a.load() == T(1.2));
     assert(r == T(3.1));
@@ -73,7 +69,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

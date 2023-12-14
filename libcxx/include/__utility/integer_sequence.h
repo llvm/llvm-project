@@ -51,6 +51,7 @@ template<typename _Tp, _Tp ..._Np, size_t ..._Extra> struct __repeat<__integer_s
 template<size_t _Np> struct __parity;
 template<size_t _Np> struct __make : __parity<_Np % 8>::template __pmake<_Np> {};
 
+// clang-format off
 template<> struct __make<0> { typedef __integer_sequence<size_t> type; };
 template<> struct __make<1> { typedef __integer_sequence<size_t, 0> type; };
 template<> struct __make<2> { typedef __integer_sequence<size_t, 0, 1> type; };
@@ -68,6 +69,7 @@ template<> struct __parity<4> { template<size_t _Np> struct __pmake : __repeat<t
 template<> struct __parity<5> { template<size_t _Np> struct __pmake : __repeat<typename __make<_Np / 8>::type, _Np - 5, _Np - 4, _Np - 3, _Np - 2, _Np - 1> {}; };
 template<> struct __parity<6> { template<size_t _Np> struct __pmake : __repeat<typename __make<_Np / 8>::type, _Np - 6, _Np - 5, _Np - 4, _Np - 3, _Np - 2, _Np - 1> {}; };
 template<> struct __parity<7> { template<size_t _Np> struct __pmake : __repeat<typename __make<_Np / 8>::type, _Np - 7, _Np - 6, _Np - 5, _Np - 4, _Np - 3, _Np - 2, _Np - 1> {}; };
+// clang-format on
 
 } // namespace detail
 
@@ -94,7 +96,7 @@ struct _LIBCPP_TEMPLATE_VIS integer_sequence
     static_assert( is_integral<_Tp>::value,
                   "std::integer_sequence can only be instantiated with an integral type" );
     static
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     size_t
     size() noexcept { return sizeof...(_Ip); }

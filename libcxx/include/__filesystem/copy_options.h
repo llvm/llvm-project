@@ -35,40 +35,40 @@ enum class copy_options : unsigned short {
   __in_recursive_copy = 512,
 };
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr copy_options operator&(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) &
                                    static_cast<unsigned short>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr copy_options operator|(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) |
                                    static_cast<unsigned short>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr copy_options operator^(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) ^
                                    static_cast<unsigned short>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr copy_options operator~(copy_options __lhs) {
   return static_cast<copy_options>(~static_cast<unsigned short>(__lhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline copy_options& operator&=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs & __rhs;
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline copy_options& operator|=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs | __rhs;
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline copy_options& operator^=(copy_options& __lhs, copy_options __rhs) {
   return __lhs = __lhs ^ __rhs;
 }

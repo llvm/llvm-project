@@ -68,14 +68,14 @@ sleep_until(const chrono::time_point<_Clock, _Duration>& __t)
 }
 
 template <class _Duration>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 sleep_until(const chrono::time_point<chrono::steady_clock, _Duration>& __t)
 {
     this_thread::sleep_for(__t - chrono::steady_clock::now());
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void yield() _NOEXCEPT {__libcpp_thread_yield();}
 
 } // namespace this_thread

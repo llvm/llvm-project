@@ -1783,6 +1783,8 @@ static bool skipPGOUse(const Function &F) {
 static bool skipPGOGen(const Function &F) {
   if (skipPGOUse(F))
     return true;
+  if (F.hasFnAttribute(llvm::Attribute::Naked))
+    return true;
   if (F.hasFnAttribute(llvm::Attribute::NoProfile))
     return true;
   if (F.hasFnAttribute(llvm::Attribute::SkipProfile))

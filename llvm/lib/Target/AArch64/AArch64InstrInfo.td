@@ -863,6 +863,12 @@ def AArch64stilp : SDNode<"AArch64ISD::STILP", SDT_AArch64stilp, [SDNPHasChain, 
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
+
+def AArch64probedalloca
+    : SDNode<"AArch64ISD::PROBED_ALLOCA",
+             SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+             [SDNPHasChain, SDNPMayStore]>;
+
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
                         [SDNPHasChain, SDNPOutGlue]>;
@@ -934,7 +940,8 @@ include "SMEInstrFormats.td"
 // Miscellaneous instructions.
 //===----------------------------------------------------------------------===//
 
-let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1, isCodeGenOnly = 1 in {
+let Defs = [SP], Uses = [SP] in {
 // We set Sched to empty list because we expect these instructions to simply get
 // removed in most cases.
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -943,7 +950,35 @@ def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             [(AArch64callseq_end timm:$amt1, timm:$amt2)]>,
                             Sched<[]>;
-} // Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1
+
+}
+
+let Defs = [SP, NZCV], Uses = [SP] in {
+// Probed stack allocation of a constant size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC : Pseudo<(outs GPR64:$scratch),
+                               (ins i64imm:$stacksize, i64imm:$fixed_offset,
+                                i64imm:$scalable_offset),
+                               []>,
+                               Sched<[]>;
+
+// Probed stack allocation of a variable size, used in function prologues when
+// stack-clash protection is enabled.
+def PROBED_STACKALLOC_VAR : Pseudo<(outs),
+                                   (ins GPR64sp:$target),
+                                   []>,
+                                   Sched<[]>;
+
+// Probed stack allocations of a variable size, used for allocas of unknown size
+// when stack-clash protection is enabled.
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs),
+                                   (ins GPR64common:$target),
+                                   [(AArch64probedalloca GPR64common:$target)]>,
+                                   Sched<[]>;
+
+} // Defs = [SP, NZCV], Uses = [SP] in 
+} // hasSideEffects = 1, isCodeGenOnly = 1
 
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // FIXME: The following pseudo instructions are only needed because remat

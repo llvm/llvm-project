@@ -397,6 +397,52 @@ define i1 @test61_as1(ptr addrspace(1) %foo, i16 %i, i16 %j) {
 ; Don't transform non-inbounds GEPs.
 }
 
+define i1 @test60_extra_use(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_extra_use(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, ptr [[FOO]], i64 [[J:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    call void @use(ptr [[GEP2]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %foo, i64 %i
+  %gep2 = getelementptr inbounds i16, ptr %foo, i64 %j
+  call void @use(ptr %gep1)
+  call void @use(ptr %gep2)
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @test60_extra_use_const_operands_inbounds(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_extra_use_const_operands_inbounds(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 1
+; CHECK-NEXT:    call void @use(ptr nonnull [[GEP1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[J:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %foo, i64 1
+  %gep2 = getelementptr inbounds i16, ptr %foo, i64 %j
+  call void @use(ptr %gep1)
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @test60_extra_use_const_operands_no_inbounds(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test60_extra_use_const_operands_no_inbounds(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 1
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    [[GEP2_IDX_MASK:%.*]] = and i64 [[J:%.*]], 9223372036854775807
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP2_IDX_MASK]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %foo, i64 1
+  %gep2 = getelementptr i16, ptr %foo, i64 %j
+  call void @use(ptr %gep1)
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
 define i1 @test_scalable_same(ptr %x) {
 ; CHECK-LABEL: @test_scalable_same(
 ; CHECK-NEXT:    ret i1 false

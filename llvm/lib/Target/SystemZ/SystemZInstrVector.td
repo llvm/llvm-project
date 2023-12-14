@@ -732,21 +732,17 @@ let Predicates = [FeatureVector] in {
 
   // Element rotate left logical (with vector shift amount).
   def VERLLV  : BinaryVRRcGeneric<"verllv", 0xE773>;
-  def VERLLVB : BinaryVRRc<"verllvb", 0xE773, int_s390_verllvb,
-                           v128b, v128b, 0>;
-  def VERLLVH : BinaryVRRc<"verllvh", 0xE773, int_s390_verllvh,
-                           v128h, v128h, 1>;
-  def VERLLVF : BinaryVRRc<"verllvf", 0xE773, int_s390_verllvf,
-                           v128f, v128f, 2>;
-  def VERLLVG : BinaryVRRc<"verllvg", 0xE773, int_s390_verllvg,
-                           v128g, v128g, 3>;
+  def VERLLVB : BinaryVRRc<"verllvb", 0xE773, rotl, v128b, v128b, 0>;
+  def VERLLVH : BinaryVRRc<"verllvh", 0xE773, rotl, v128h, v128h, 1>;
+  def VERLLVF : BinaryVRRc<"verllvf", 0xE773, rotl, v128f, v128f, 2>;
+  def VERLLVG : BinaryVRRc<"verllvg", 0xE773, rotl, v128g, v128g, 3>;
 
   // Element rotate left logical (with scalar shift amount).
   def VERLL  : BinaryVRSaGeneric<"verll", 0xE733>;
-  def VERLLB : BinaryVRSa<"verllb", 0xE733, int_s390_verllb, v128b, v128b, 0>;
-  def VERLLH : BinaryVRSa<"verllh", 0xE733, int_s390_verllh, v128h, v128h, 1>;
-  def VERLLF : BinaryVRSa<"verllf", 0xE733, int_s390_verllf, v128f, v128f, 2>;
-  def VERLLG : BinaryVRSa<"verllg", 0xE733, int_s390_verllg, v128g, v128g, 3>;
+  def VERLLB : BinaryVRSa<"verllb", 0xE733, z_vrotl_by_scalar, v128b, v128b, 0>;
+  def VERLLH : BinaryVRSa<"verllh", 0xE733, z_vrotl_by_scalar, v128h, v128h, 1>;
+  def VERLLF : BinaryVRSa<"verllf", 0xE733, z_vrotl_by_scalar, v128f, v128f, 2>;
+  def VERLLG : BinaryVRSa<"verllg", 0xE733, z_vrotl_by_scalar, v128g, v128g, 3>;
 
   // Element rotate and insert under mask.
   def VERIM  : QuaternaryVRIdGeneric<"verim", 0xE772>;

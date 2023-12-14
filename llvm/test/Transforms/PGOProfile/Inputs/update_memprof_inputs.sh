@@ -127,3 +127,21 @@ ${CLANG} ${COMMON_FLAGS} -fmemory-profile -DUSE_MUSTTAIL=1 ${OUTDIR}/memprof_mis
 env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof_missing_leaf.exe > ${OUTDIR}/memprof_missing_leaf.memprofraw
 
 rm ${OUTDIR}/memprof_missing_leaf.cc
+
+cat > ${OUTDIR}/memprof_internal_linkage.cc << EOF
+#include <cstring>
+#include <unistd.h>
+static void foo() {
+  int *a = new int[5];
+  memset(a, 0, 5);
+}
+int main(int argc, char **argv) {
+  foo();
+  return 0;
+}
+EOF
+
+${CLANG} ${COMMON_FLAGS} -fmemory-profile -funique-internal-linkage-names ${OUTDIR}/memprof_internal_linkage.cc -o ${OUTDIR}/memprof_internal_linkage.exe
+env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof_internal_linkage.exe > ${OUTDIR}/memprof_internal_linkage.memprofraw
+
+rm ${OUTDIR}/memprof_internal_linkage.cc

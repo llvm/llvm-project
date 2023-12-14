@@ -178,6 +178,12 @@ void SourceCoverageView::addBranch(unsigned Line,
   BranchSubViews.emplace_back(Line, Regions, std::move(View));
 }
 
+void SourceCoverageView::addMCDCRecord(
+    unsigned Line, ArrayRef<MCDCRecord> Records,
+    std::unique_ptr<SourceCoverageView> View) {
+  MCDCSubViews.emplace_back(Line, Records, std::move(View));
+}
+
 void SourceCoverageView::addInstantiation(
     StringRef FunctionName, unsigned Line,
     std::unique_ptr<SourceCoverageView> View) {
@@ -203,12 +209,15 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   llvm::stable_sort(ExpansionSubViews);
   llvm::stable_sort(InstantiationSubViews);
   llvm::stable_sort(BranchSubViews);
+  llvm::stable_sort(MCDCSubViews);
   auto NextESV = ExpansionSubViews.begin();
   auto EndESV = ExpansionSubViews.end();
   auto NextISV = InstantiationSubViews.begin();
   auto EndISV = InstantiationSubViews.end();
   auto NextBRV = BranchSubViews.begin();
   auto EndBRV = BranchSubViews.end();
+  auto NextMSV = MCDCSubViews.begin();
+  auto EndMSV = MCDCSubViews.end();
 
   // Get the coverage information for the file.
   auto StartSegment = CoverageInfo.begin();
@@ -274,6 +283,11 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
     for (; NextBRV != EndBRV && NextBRV->Line == LI.line_number(); ++NextBRV) {
       renderViewDivider(OS, ViewDepth + 1);
       renderBranchView(OS, *NextBRV, ViewDepth + 1);
+      RenderedSubView = true;
+    }
+    for (; NextMSV != EndMSV && NextMSV->Line == LI.line_number(); ++NextMSV) {
+      renderViewDivider(OS, ViewDepth + 1);
+      renderMCDCView(OS, *NextMSV, ViewDepth + 1);
       RenderedSubView = true;
     }
     if (RenderedSubView)

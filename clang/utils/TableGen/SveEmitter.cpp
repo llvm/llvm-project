@@ -97,6 +97,7 @@ public:
   bool isScalar() const { return NumVectors == 0; }
   bool isVector() const { return NumVectors > 0; }
   bool isScalableVector() const { return isVector() && IsScalable; }
+  bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
   bool isVoid() const { return Void & !Pointer; }
   bool isDefault() const { return DefaultType; }
@@ -378,6 +379,9 @@ public:
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createSMECodeGenMap(raw_ostream &o);
 
+  /// Create a table for a builtin's requirement for PSTATE.SM.
+  void createStreamingAttrs(raw_ostream &o, ACLEKind Kind);
+
   /// Emit all the range checks for the immediates.
   void createSMERangeChecks(raw_ostream &o);
 
@@ -466,7 +470,8 @@ std::string SVEType::builtin_str() const {
     return S;
   }
 
-  assert(isScalableVector() && "Unsupported type");
+  if (isFixedLengthVector())
+    return "V" + utostr(getNumElements() * NumVectors) + S;
   return "q" + utostr(getNumElements() * NumVectors) + S;
 }
 
@@ -499,7 +504,7 @@ std::string SVEType::str() const {
 
     if (!isScalarPredicate() && !isPredicateVector() && !isSvcount())
       S += utostr(ElementBitwidth);
-    if (!isScalableVector() && isVector())
+    if (isFixedLengthVector())
       S += "x" + utostr(getNumElements());
     if (NumVectors > 1)
       S += "x" + utostr(NumVectors);
@@ -609,6 +614,11 @@ void SVEType::applyModifier(char Mod) {
     Svcount = false;
     Bitwidth = 16;
     ElementBitwidth = 1;
+    break;
+  case '{':
+    IsScalable = false;
+    Bitwidth = 128;
+    NumVectors = 1;
     break;
   case 's':
   case 'a':
@@ -743,6 +753,12 @@ void SVEType::applyModifier(char Mod) {
     Float = false;
     BFloat = false;
     ElementBitwidth = 64;
+    break;
+  case '[':
+    Signed = false;
+    Float = false;
+    BFloat = false;
+    ElementBitwidth = 8;
     break;
   case 't':
     Signed = true;
@@ -1280,6 +1296,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVBfloat16_t svbfloat16_t;\n";
 
   OS << "#include <arm_bf16.h>\n";
+  OS << "#include <arm_vector_types.h>\n";
 
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
@@ -1688,6 +1705,58 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
+void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  // The mappings must be sorted based on BuiltinID.
+  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                      const std::unique_ptr<Intrinsic> &B) {
+    return A->getMangledName() < B->getMangledName();
+  });
+
+  StringRef ExtensionKind;
+  switch (Kind) {
+  case ACLEKind::SME:
+    ExtensionKind = "SME";
+    break;
+  case ACLEKind::SVE:
+    ExtensionKind = "SVE";
+    break;
+  }
+
+  OS << "#ifdef GET_" << ExtensionKind << "_STREAMING_ATTRS\n";
+
+  // Ensure these are only emitted once.
+  std::set<std::string> Emitted;
+
+  uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
+  uint64_t IsStreamingCompatibleFlag =
+      getEnumValueForFlag("IsStreamingCompatible");
+  for (auto &Def : Defs) {
+    if (Emitted.find(Def->getMangledName()) != Emitted.end())
+      continue;
+
+    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower()
+       << "_";
+    OS << Def->getMangledName() << ":\n";
+
+    if (Def->isFlagSet(IsStreamingFlag))
+      OS << "  BuiltinType = ArmStreaming;\n";
+    else if (Def->isFlagSet(IsStreamingCompatibleFlag))
+      OS << "  BuiltinType = ArmStreamingCompatible;\n";
+    else
+      OS << "  BuiltinType = ArmNonStreaming;\n";
+    OS << "  break;\n";
+
+    Emitted.insert(Def->getMangledName());
+  }
+
+  OS << "#endif\n\n";
+}
+
 namespace clang {
 void EmitSveHeader(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createHeader(OS);
@@ -1709,6 +1778,10 @@ void EmitSveTypeFlags(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createTypeFlags(OS);
 }
 
+void EmitSveStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SVE);
+}
+
 void EmitSmeHeader(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMEHeader(OS);
 }
@@ -1723,5 +1796,9 @@ void EmitSmeBuiltinCG(RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMERangeChecks(OS);
+}
+
+void EmitSmeStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SME);
 }
 } // End namespace clang

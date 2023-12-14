@@ -35,7 +35,7 @@
 
 template <class E>
 constexpr void test_layout_mapping_left() {
-  using M = std::layout_left::template mapping<E>;
+  using M = std::layout_left::mapping<E>;
   assert(M::is_unique() == true);
   assert(M::is_exhaustive() == true);
   assert(M::is_strided() == true);

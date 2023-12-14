@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -22,7 +22,7 @@ namespace x86 {
 
 LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
-      unsafe_clz(static_cast<uint64_t>(mantissa)) -
+      cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
       (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE));
   exponent -= shift;
   mantissa <<= shift;
@@ -34,7 +34,7 @@ LIBC_INLINE long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
-#if defined(SPECIAL_X86_LONG_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 LIBC_INLINE long double sqrt(long double x) {
   using UIntType = typename FPBits<long double>::UIntType;
   constexpr UIntType ONE = UIntType(1)
@@ -65,7 +65,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // Step 1a: Normalize denormal input
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
-    } else if (bits.get_unbiased_exponent() == 0) {
+    } else if (bits.get_biased_exponent() == 0) {
       normalize(x_exp, x_mant);
     }
 
@@ -101,7 +101,7 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // We compute one more iteration in order to round correctly.
     bool lsb = static_cast<bool>(y & 1); // Least significant bit
-    bool rb = false;  // Round bit
+    bool rb = false;                     // Round bit
     r <<= 2;
     UIntType tmp = (y << 2) + 1;
     if (r >= tmp) {
@@ -128,14 +128,14 @@ LIBC_INLINE long double sqrt(long double x) {
 
     // Extract output
     FPBits<long double> out(0.0L);
-    out.set_unbiased_exponent(x_exp);
+    out.set_biased_exponent(x_exp);
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 
     return out;
   }
 }
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace x86
 } // namespace fputil

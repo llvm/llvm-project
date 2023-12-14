@@ -54,13 +54,13 @@ public:
 
         _LIBCPP_HIDE_FROM_ABI explicit param_type(double __mean = 1.0);
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         double mean() const {return __mean_;}
 
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__mean_ == __y.__mean_;}
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
 
@@ -73,48 +73,48 @@ private:
 public:
     // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     poisson_distribution() : poisson_distribution(1.0) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit poisson_distribution(double __mean)
         : __p_(__mean) {}
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit poisson_distribution(double __mean = 1.0)
         : __p_(__mean) {}
 #endif
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit poisson_distribution(const param_type& __p) : __p_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reset() {}
 
     // generating functions
     template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
     template<class _URNG>
     _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     double mean() const {return __p_.mean();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void param(const param_type& __p) {__p_ = __p;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type min() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type max() const {return numeric_limits<result_type>::max();}
 
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator==(const poisson_distribution& __x,
                         const poisson_distribution& __y)
         {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator!=(const poisson_distribution& __x,
                         const poisson_distribution& __y)
         {return !(__x == __y);}
@@ -131,7 +131,7 @@ poisson_distribution<_IntType>::param_type::param_type(double __mean)
     {
         __s_ = 0;
         __d_ = 0;
-        __l_ = _VSTD::exp(-__mean_);
+        __l_ = std::exp(-__mean_);
         __omega_ = 0;
         __c3_ = 0;
         __c2_ = 0;
@@ -141,9 +141,9 @@ poisson_distribution<_IntType>::param_type::param_type(double __mean)
     }
     else
     {
-        __s_ = _VSTD::sqrt(__mean_);
+        __s_ = std::sqrt(__mean_);
         __d_ = 6 * __mean_ * __mean_;
-        __l_ = _VSTD::trunc(__mean_ - 1.1484);
+        __l_ = std::trunc(__mean_ - 1.1484);
         __omega_ = .3989423 / __s_;
         double __b1 = .4166667E-1 / __mean_;
         double __b2 = .3 * __b1 * __b1;
@@ -176,13 +176,13 @@ poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr
         double __u;
         if (__g > 0)
         {
-            __tx = _VSTD::trunc(__g);
+            __tx = std::trunc(__g);
             if (__tx >= __pr.__l_)
-                return _VSTD::__clamp_to_integral<result_type>(__tx);
+                return std::__clamp_to_integral<result_type>(__tx);
             __difmuk = __pr.__mean_ - __tx;
             __u = __urd(__urng);
             if (__pr.__d_ * __u >= __difmuk * __difmuk * __difmuk)
-                return _VSTD::__clamp_to_integral<result_type>(__tx);
+                return std::__clamp_to_integral<result_type>(__tx);
         }
         exponential_distribution<double> __edist;
         for (bool __using_exp_dist = false; true; __using_exp_dist = true)
@@ -198,7 +198,7 @@ poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr
                     __u += __u - 1;
                     __t = 1.8 + (__u < 0 ? -__e : __e);
                 } while (__t <= -.6744);
-                __tx = _VSTD::trunc(__pr.__mean_ + __pr.__s_ * __t);
+                __tx = std::trunc(__pr.__mean_ + __pr.__s_ * __t);
                 __difmuk = __pr.__mean_ - __tx;
                 __using_exp_dist = true;
             }
@@ -209,20 +209,20 @@ poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr
                 const double __fac[] = {1, 1, 2, 6, 24, 120, 720, 5040,
                                              40320, 362880};
                 __px = -__pr.__mean_;
-                __py = _VSTD::pow(__pr.__mean_, (double)__tx) / __fac[static_cast<int>(__tx)];
+                __py = std::pow(__pr.__mean_, (double)__tx) / __fac[static_cast<int>(__tx)];
             }
             else
             {
                 double __del = .8333333E-1 / __tx;
                 __del -= 4.8 * __del * __del * __del;
                 double __v = __difmuk / __tx;
-                if (_VSTD::abs(__v) > 0.25)
-                    __px = __tx * _VSTD::log(1 + __v) - __difmuk - __del;
+                if (std::abs(__v) > 0.25)
+                    __px = __tx * std::log(1 + __v) - __difmuk - __del;
                 else
                     __px = __tx * __v * __v * (((((((.1250060 * __v + -.1384794) *
                            __v + .1421878) * __v + -.1661269) * __v + .2000118) *
                            __v + -.2500068) * __v + .3333333) * __v + -.5) - __del;
-                __py = .3989423 / _VSTD::sqrt(__tx);
+                __py = .3989423 / std::sqrt(__tx);
             }
             double __r = (0.5 - __difmuk) / __pr.__s_;
             double __r2 = __r * __r;
@@ -231,18 +231,18 @@ poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr
                                         __r2 + __pr.__c1_) * __r2 + __pr.__c0_);
             if (__using_exp_dist)
             {
-                if (__pr.__c_ * _VSTD::abs(__u) <= __py * _VSTD::exp(__px + __e) -
-                                                   __fy * _VSTD::exp(__fx + __e))
+                if (__pr.__c_ * std::abs(__u) <= __py * std::exp(__px + __e) -
+                                                   __fy * std::exp(__fx + __e))
                     break;
             }
             else
             {
-                if (__fy - __u * __fy <= __py * _VSTD::exp(__px - __fx))
+                if (__fy - __u * __fy <= __py * std::exp(__px - __fx))
                     break;
             }
         }
     }
-    return _VSTD::__clamp_to_integral<result_type>(__tx);
+    return std::__clamp_to_integral<result_type>(__tx);
 }
 
 template <class _CharT, class _Traits, class _IntType>

@@ -281,6 +281,13 @@ public:
   static constexpr bool available = true;
 };
 
+/// Trivial span<T> -> SPSSequence<SPSElementTagT> serialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceSerialization<SPSElementTagT, span<T>> {
+public:
+  static constexpr bool available = true;
+};
+
 /// Trivial SPSSequence<SPSElementTagT> -> std::vector<T> deserialization.
 template <typename SPSElementTagT, typename T>
 class TrivialSPSSequenceDeserialization<SPSElementTagT, std::vector<T>> {

@@ -78,48 +78,48 @@ public:
     static _LIBCPP_CONSTEXPR const result_type _Max = _Engine::max();
 #endif
     static_assert(_Min < _Max, "shuffle_order_engine invalid parameters");
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
     static _LIBCPP_CONSTEXPR const unsigned long long _Rp = _Max - _Min + 1ull;
 
     // constructors and seeding functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shuffle_order_engine() {__init();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit shuffle_order_engine(const _Engine& __e)
         : __e_(__e) {__init();}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit shuffle_order_engine(_Engine&& __e)
-        : __e_(_VSTD::move(__e)) {__init();}
+        : __e_(std::move(__e)) {__init();}
 #endif // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit shuffle_order_engine(result_type __sd) : __e_(__sd) {__init();}
     template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value &&
                                         !is_convertible<_Sseq, _Engine>::value, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         explicit shuffle_order_engine(_Sseq& __q)
          : __e_(__q) {__init();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void seed() {__e_.seed(); __init();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void seed(result_type __sd) {__e_.seed(__sd); __init();}
     template<class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         void
         seed(_Sseq& __q) {__e_.seed(__q); __init();}
 
     // generating functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type operator()() {return __eval(integral_constant<bool, _Rp != 0>());}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void discard(unsigned long long __z) {for (; __z; --__z) operator()();}
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const _Engine& base() const _NOEXCEPT {return __e_;}
 
 private:
@@ -151,7 +151,7 @@ private:
     operator>>(basic_istream<_CharT, _Traits>& __is,
                shuffle_order_engine<_Eng, _Kp>& __x);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __init()
     {
         for (size_t __i = 0; __i < __k; ++__i)
@@ -159,24 +159,24 @@ private:
         __y_ = __e_();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type __eval(false_type) {return __eval2(integral_constant<bool, __k & 1>());}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type __eval(true_type) {return __eval(__uratio<__k, _Rp>());}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type __eval2(false_type) {return __eval(__uratio<__k/2, 0x8000000000000000ull>());}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type __eval2(true_type) {return __evalf<__k, 0>();}
 
     template <uint64_t _Np, uint64_t _Dp, __enable_if_t<(__uratio<_Np, _Dp>::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)), int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type
         __eval(__uratio<_Np, _Dp>)
             {return __evalf<__uratio<_Np, _Dp>::num, __uratio<_Np, _Dp>::den>();}
 
     template <uint64_t _Np, uint64_t _Dp, __enable_if_t<__uratio<_Np, _Dp>::num <= 0xFFFFFFFFFFFFFFFFull / (_Max - _Min), int> = 0>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type
         __eval(__uratio<_Np, _Dp>)
         {
@@ -188,7 +188,7 @@ private:
         }
 
     template <uint64_t __n, uint64_t __d>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type __evalf()
         {
             const double __fp = __d == 0 ?
@@ -210,12 +210,12 @@ operator==(
     const shuffle_order_engine<_Eng, _Kp>& __x,
     const shuffle_order_engine<_Eng, _Kp>& __y)
 {
-    return __x.__y_ == __y.__y_ && _VSTD::equal(__x.__v_, __x.__v_ + _Kp, __y.__v_) &&
+    return __x.__y_ == __y.__y_ && std::equal(__x.__v_, __x.__v_ + _Kp, __y.__v_) &&
            __x.__e_ == __y.__e_;
 }
 
 template<class _Eng, size_t _Kp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(
     const shuffle_order_engine<_Eng, _Kp>& __x,

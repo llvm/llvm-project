@@ -26,7 +26,7 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable
 {
     __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr condition_variable() noexcept = default;
 
     ~condition_variable();

@@ -57,6 +57,10 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   PolymorphicOpConversion
+
+// PASSES-NEXT: AddAliasTags
+
+// PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   CFGConversion
 
 // PASSES-NEXT: SCFToControlFlow

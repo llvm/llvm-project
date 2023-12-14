@@ -140,7 +140,8 @@ public:
   /// registers so that the instructions result is independent of the place
   /// in the function.
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
-    return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
+    return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
+            MI.getNumOperands() == 1) ||
            (MI.getDesc().isRematerializable() &&
             isReallyTriviallyReMaterializable(MI));
   }
@@ -1414,6 +1415,8 @@ public:
   /// Get the base operand and byte offset of an instruction that reads/writes
   /// memory. This is a convenience function for callers that are only prepared
   /// to handle a single base operand.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
                                bool &OffsetIsScalable,
@@ -1426,6 +1429,8 @@ public:
   /// It returns false if base operands and offset could not be determined.
   /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
+  /// FIXME: Move Offset and OffsetIsScalable to some ElementCount-style
+  /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
       int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
@@ -1496,12 +1501,18 @@ public:
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
+  /// \p Offset1 and \p Offset2 are the byte offsets for the memory
+  /// operations.
+  /// \p OffsetIsScalable1 and \p OffsetIsScalable2 indicate if the offset is
+  /// scaled by a runtime quantity.
   /// \p ClusterSize is the number of operations in the resulting load/store
   /// cluster if this hook returns true.
   /// \p NumBytes is the number of bytes that will be loaded from all the
   /// clustered loads if this hook returns true.
   virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                                   int64_t Offset1, bool OffsetIsScalable1,
                                    ArrayRef<const MachineOperand *> BaseOps2,
+                                   int64_t Offset2, bool OffsetIsScalable2,
                                    unsigned ClusterSize,
                                    unsigned NumBytes) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");
@@ -1706,9 +1717,9 @@ public:
     return Opcode <= TargetOpcode::COPY;
   }
 
-  virtual int getOperandLatency(const InstrItineraryData *ItinData,
-                                SDNode *DefNode, unsigned DefIdx,
-                                SDNode *UseNode, unsigned UseIdx) const;
+  virtual std::optional<unsigned>
+  getOperandLatency(const InstrItineraryData *ItinData, SDNode *DefNode,
+                    unsigned DefIdx, SDNode *UseNode, unsigned UseIdx) const;
 
   /// Compute and return the use operand latency of a given pair of def and use.
   /// In most cases, the static scheduling itinerary was enough to determine the
@@ -1718,10 +1729,10 @@ public:
   /// This is a raw interface to the itinerary that may be directly overridden
   /// by a target. Use computeOperandLatency to get the best estimate of
   /// latency.
-  virtual int getOperandLatency(const InstrItineraryData *ItinData,
-                                const MachineInstr &DefMI, unsigned DefIdx,
-                                const MachineInstr &UseMI,
-                                unsigned UseIdx) const;
+  virtual std::optional<unsigned>
+  getOperandLatency(const InstrItineraryData *ItinData,
+                    const MachineInstr &DefMI, unsigned DefIdx,
+                    const MachineInstr &UseMI, unsigned UseIdx) const;
 
   /// Compute the instruction latency of a given instruction.
   /// If the instruction has higher cost when predicated, it's returned via
@@ -1732,8 +1743,8 @@ public:
 
   virtual unsigned getPredicationCost(const MachineInstr &MI) const;
 
-  virtual int getInstrLatency(const InstrItineraryData *ItinData,
-                              SDNode *Node) const;
+  virtual unsigned getInstrLatency(const InstrItineraryData *ItinData,
+                                   SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
   unsigned defaultDefLatency(const MCSchedModel &SchedModel,

@@ -169,14 +169,11 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
-        name="has-latomic",
+        name="add-latomic-workaround",  # https://github.com/llvm/llvm-project/issues/73361
         when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            int main(int, char**) { return 0; }
-          """,
-            ["-latomic"],
+            cfg, "int main(int, char**) { return 0; }", ["-latomic"]
         ),
+        actions=[AddLinkFlag("-latomic")],
     ),
     Feature(
         name="non-lockfree-atomics",
@@ -198,6 +195,18 @@ DEFAULT_FEATURES = [
             #include <atomic>
             std::atomic_uint64_t x;
             int main(int, char**) { (void)x.load(); return 0; }
+          """,
+        ),
+    ),
+    # Tests that require 64-bit architecture
+    Feature(
+        name="32-bit-pointer",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) {
+              static_assert(sizeof(void *) == 4);
+            }
           """,
         ),
     ),
@@ -568,18 +577,6 @@ DEFAULT_FEATURES += [
             # TODO(ldionne) Please provide the correct value.
             "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
             cfg.available_features,
-        ),
-    ),
-    # Tests that require 64-bit architecture
-    Feature(
-        name="32-bit-pointer",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            int main(int, char**) {
-              static_assert(sizeof(void *) == 4);
-            }
-          """,
         ),
     ),
 ]

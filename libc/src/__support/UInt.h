@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_UINT_H
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/bit.h" // unsafe_clz
 #include "src/__support/integer_utils.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -103,13 +103,20 @@ template <size_t Bits, bool Signed> struct BigInt {
       val[i] = words[i];
   }
 
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
-                                                    sizeof(T) <= 16 &&
-                                                    !cpp::is_same_v<T, bool>>>
-  LIBC_INLINE constexpr explicit operator T() const {
-    if constexpr (sizeof(T) <= 8)
-      return static_cast<T>(val[0]);
+  template <typename T> LIBC_INLINE constexpr explicit operator T() const {
+    return to<T>();
+  }
 
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) <= 8 && !cpp::is_same_v<T, bool>, T>
+  to() const {
+    return static_cast<T>(val[0]);
+  }
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) == 16, T>
+  to() const {
     // T is 128-bit.
     T lo = static_cast<T>(val[0]);
 
@@ -556,7 +563,7 @@ template <size_t Bits, bool Signed> struct BigInt {
       if (val[i - 1] == 0) {
         leading_zeroes += sizeof(uint64_t) * 8;
       } else {
-        leading_zeroes += unsafe_clz(val[i - 1]);
+        leading_zeroes += countl_zero(val[i - 1]);
         break;
       }
     }
@@ -896,6 +903,7 @@ public:
     return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
   }
   LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>(0); }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 template <> class numeric_limits<Int<128>> {
@@ -906,6 +914,7 @@ public:
   LIBC_INLINE static constexpr Int<128> min() {
     return Int<128>({0, 0x8000'0000'0000'0000});
   }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 // Provides is_integral of U/Int<128>, U/Int<192>, U/Int<256>.

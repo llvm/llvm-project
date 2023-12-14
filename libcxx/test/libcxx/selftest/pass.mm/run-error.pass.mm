@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: objective-c++
-// UNSUPPORTED: libcxx-fake-executor
 
 // XFAIL: *
 

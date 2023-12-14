@@ -465,7 +465,8 @@ class InitListChecker {
   void FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
                                const InitializedEntity &ParentEntity,
                                InitListExpr *ILE, bool &RequiresSecondPass,
-                               bool FillWithNoInit = false);
+                               bool FillWithNoInit = false,
+                               bool WarnIfMissing = false);
   void FillInEmptyInitializations(const InitializedEntity &Entity,
                                   InitListExpr *ILE, bool &RequiresSecondPass,
                                   InitListExpr *OuterILE, unsigned OuterIndex,
@@ -654,11 +655,16 @@ void InitListChecker::FillInEmptyInitForBase(
   }
 }
 
-void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
-                                        const InitializedEntity &ParentEntity,
-                                              InitListExpr *ILE,
-                                              bool &RequiresSecondPass,
-                                              bool FillWithNoInit) {
+static bool hasAnyDesignatedInits(const InitListExpr *IL) {
+  return llvm::any_of(*IL, [=](const Stmt *Init) {
+    return isa_and_nonnull<DesignatedInitExpr>(Init);
+  });
+}
+
+void InitListChecker::FillInEmptyInitForField(
+    unsigned Init, FieldDecl *Field, const InitializedEntity &ParentEntity,
+    InitListExpr *ILE, bool &RequiresSecondPass, bool FillWithNoInit,
+    bool WarnIfMissing) {
   SourceLocation Loc = ILE->getEndLoc();
   unsigned NumInits = ILE->getNumInits();
   InitializedEntity MemberEntity
@@ -726,15 +732,52 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
 
     if (hadError || VerifyOnly) {
       // Do nothing
-    } else if (Init < NumInits) {
-      ILE->setInit(Init, MemberInit.getAs<Expr>());
-    } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
-      // Empty initialization requires a constructor call, so
-      // extend the initializer list to include the constructor
-      // call and make a note that we'll need to take another pass
-      // through the initializer list.
-      ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
-      RequiresSecondPass = true;
+    } else {
+      if (WarnIfMissing) {
+        auto CheckAnonMember = [&](const FieldDecl *FD,
+                                   auto &&CheckAnonMember) -> FieldDecl * {
+          FieldDecl *Uninitialized = nullptr;
+          RecordDecl *RD = FD->getType()->getAsRecordDecl();
+          assert(RD && "Not anonymous member checked?");
+          for (auto *F : RD->fields()) {
+            FieldDecl *UninitializedFieldInF = nullptr;
+            if (F->isAnonymousStructOrUnion())
+              UninitializedFieldInF = CheckAnonMember(F, CheckAnonMember);
+            else if (!F->isUnnamedBitfield() &&
+                     !F->getType()->isIncompleteArrayType() &&
+                     !F->hasInClassInitializer())
+              UninitializedFieldInF = F;
+
+            if (RD->isUnion() && !UninitializedFieldInF)
+              return nullptr;
+            if (!Uninitialized)
+              Uninitialized = UninitializedFieldInF;
+          }
+          return Uninitialized;
+        };
+
+        FieldDecl *FieldToDiagnose = nullptr;
+        if (Field->isAnonymousStructOrUnion())
+          FieldToDiagnose = CheckAnonMember(Field, CheckAnonMember);
+        else if (!Field->isUnnamedBitfield() &&
+                 !Field->getType()->isIncompleteArrayType())
+          FieldToDiagnose = Field;
+
+        if (FieldToDiagnose)
+          SemaRef.Diag(Loc, diag::warn_missing_field_initializers)
+              << FieldToDiagnose;
+      }
+
+      if (Init < NumInits) {
+        ILE->setInit(Init, MemberInit.getAs<Expr>());
+      } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
+        // Empty initialization requires a constructor call, so
+        // extend the initializer list to include the constructor
+        // call and make a note that we'll need to take another pass
+        // through the initializer list.
+        ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
+        RequiresSecondPass = true;
+      }
     }
   } else if (InitListExpr *InnerILE
                = dyn_cast<InitListExpr>(ILE->getInit(Init))) {
@@ -802,9 +845,25 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
         }
       }
     } else {
+      InitListExpr *SForm =
+          ILE->isSyntacticForm() ? ILE : ILE->getSyntacticForm();
       // The fields beyond ILE->getNumInits() are default initialized, so in
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
+
+      // Some checks that are required for missing fields warning are bound to
+      // how many elements the initializer list originally was provided; perform
+      // them before the list is expanded.
+      bool WarnIfMissingField =
+          !SForm->isIdiomaticZeroInitializer(SemaRef.getLangOpts()) &&
+          ILE->getNumInits();
+
+      // Disable check for missing fields when designators are used in C to
+      // match gcc behaviour.
+      // FIXME: Should we emulate possible gcc warning bug?
+      WarnIfMissingField &=
+          SemaRef.getLangOpts().CPlusPlus || !hasAnyDesignatedInits(SForm);
+
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
         ++NumElems;
@@ -832,7 +891,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
           return;
 
         FillInEmptyInitForField(Init, Field, Entity, ILE, RequiresSecondPass,
-                                FillWithNoInit);
+                                FillWithNoInit, WarnIfMissingField);
         if (hadError)
           return;
 
@@ -945,13 +1004,6 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
                                  /*FillWithNoInit =*/true);
     }
   }
-}
-
-static bool hasAnyDesignatedInits(const InitListExpr *IL) {
-  for (const Stmt *Init : *IL)
-    if (isa_and_nonnull<DesignatedInitExpr>(Init))
-      return true;
-  return false;
 }
 
 InitListChecker::InitListChecker(
@@ -2225,11 +2277,7 @@ void InitListChecker::CheckStructUnionTypes(
   size_t NumRecordDecls = llvm::count_if(RD->decls(), [&](const Decl *D) {
     return isa<FieldDecl>(D) || isa<RecordDecl>(D);
   });
-  bool CheckForMissingFields =
-    !IList->isIdiomaticZeroInitializer(SemaRef.getLangOpts());
   bool HasDesignatedInit = false;
-
-  llvm::SmallPtrSet<FieldDecl *, 4> InitializedFields;
 
   while (Index < IList->getNumInits()) {
     Expr *Init = IList->getInit(Index);
@@ -2254,24 +2302,17 @@ void InitListChecker::CheckStructUnionTypes(
 
       // Find the field named by the designated initializer.
       DesignatedInitExpr::Designator *D = DIE->getDesignator(0);
-      if (!VerifyOnly && D->isFieldDesignator()) {
+      if (!VerifyOnly && D->isFieldDesignator() && !DesignatedInitFailed) {
         FieldDecl *F = D->getFieldDecl();
-        InitializedFields.insert(F);
-        if (!DesignatedInitFailed) {
-          QualType ET = SemaRef.Context.getBaseElementType(F->getType());
-          if (checkDestructorReference(ET, InitLoc, SemaRef)) {
-            hadError = true;
-            return;
-          }
+        QualType ET = SemaRef.Context.getBaseElementType(F->getType());
+        if (checkDestructorReference(ET, InitLoc, SemaRef)) {
+          hadError = true;
+          return;
         }
       }
 
       InitializedSomething = true;
 
-      // Disable check for missing fields when designators are used.
-      // This matches gcc behaviour.
-      if (!SemaRef.getLangOpts().CPlusPlus)
-        CheckForMissingFields = false;
       continue;
     }
 
@@ -2350,7 +2391,6 @@ void InitListChecker::CheckStructUnionTypes(
     CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
                         StructuredList, StructuredIndex);
     InitializedSomething = true;
-    InitializedFields.insert(*Field);
 
     if (RD->isUnion() && StructuredList) {
       // Initialize the first field within the union.
@@ -2358,28 +2398,6 @@ void InitListChecker::CheckStructUnionTypes(
     }
 
     ++Field;
-  }
-
-  // Emit warnings for missing struct field initializers.
-  if (!VerifyOnly && InitializedSomething && CheckForMissingFields &&
-      !RD->isUnion()) {
-    // It is possible we have one or more unnamed bitfields remaining.
-    // Find first (if any) named field and emit warning.
-    for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
-                                                           : Field,
-                                    end = RD->field_end();
-         it != end; ++it) {
-      if (HasDesignatedInit && InitializedFields.count(*it))
-        continue;
-
-      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
-          !it->getType()->isIncompleteArrayType()) {
-        SemaRef.Diag(IList->getSourceRange().getEnd(),
-                     diag::warn_missing_field_initializers)
-            << *it;
-        break;
-      }
-    }
   }
 
   // Check that any remaining fields can be value-initialized if we're not
@@ -4085,16 +4103,13 @@ static bool hasCopyOrMoveCtorParam(ASTContext &Ctx,
   return Ctx.hasSameUnqualifiedType(ParmT, ClassT);
 }
 
-static OverloadingResult
-ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
-                           MultiExprArg Args,
-                           OverloadCandidateSet &CandidateSet,
-                           QualType DestType,
-                           DeclContext::lookup_result Ctors,
-                           OverloadCandidateSet::iterator &Best,
-                           bool CopyInitializing, bool AllowExplicit,
-                           bool OnlyListConstructors, bool IsListInit,
-                           bool SecondStepOfCopyInit = false) {
+static OverloadingResult ResolveConstructorOverload(
+    Sema &S, SourceLocation DeclLoc, MultiExprArg Args,
+    OverloadCandidateSet &CandidateSet, QualType DestType,
+    DeclContext::lookup_result Ctors, OverloadCandidateSet::iterator &Best,
+    bool CopyInitializing, bool AllowExplicit, bool OnlyListConstructors,
+    bool IsListInit, bool RequireActualConstructor,
+    bool SecondStepOfCopyInit = false) {
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByConstructor);
   CandidateSet.setDestAS(DestType.getQualifiers().getAddressSpace());
 
@@ -4157,7 +4172,7 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
   // Note: SecondStepOfCopyInit is only ever true in this case when
   // evaluating whether to produce a C++98 compatibility warning.
   if (S.getLangOpts().CPlusPlus17 && Args.size() == 1 &&
-      !SecondStepOfCopyInit) {
+      !RequireActualConstructor && !SecondStepOfCopyInit) {
     Expr *Initializer = Args[0];
     auto *SourceRD = Initializer->getType()->getAsCXXRecordDecl();
     if (SourceRD && S.isCompleteType(DeclLoc, Initializer->getType())) {
@@ -4225,6 +4240,12 @@ static void TryConstructorInitialization(Sema &S,
     return;
   }
 
+  bool RequireActualConstructor =
+      !(Entity.getKind() != InitializedEntity::EK_Base &&
+        Entity.getKind() != InitializedEntity::EK_Delegating &&
+        Entity.getKind() !=
+            InitializedEntity::EK_LambdaToBlockConversionBlockElement);
+
   // C++17 [dcl.init]p17:
   //     - If the initializer expression is a prvalue and the cv-unqualified
   //       version of the source type is the same class as the class of the
@@ -4234,11 +4255,7 @@ static void TryConstructorInitialization(Sema &S,
   // class or delegating to another constructor from a mem-initializer.
   // ObjC++: Lambda captured by the block in the lambda to block conversion
   // should avoid copy elision.
-  if (S.getLangOpts().CPlusPlus17 &&
-      Entity.getKind() != InitializedEntity::EK_Base &&
-      Entity.getKind() != InitializedEntity::EK_Delegating &&
-      Entity.getKind() !=
-          InitializedEntity::EK_LambdaToBlockConversionBlockElement &&
+  if (S.getLangOpts().CPlusPlus17 && !RequireActualConstructor &&
       UnwrappedArgs.size() == 1 && UnwrappedArgs[0]->isPRValue() &&
       S.Context.hasSameUnqualifiedType(UnwrappedArgs[0]->getType(), DestType)) {
     // Convert qualifications if necessary.
@@ -4286,11 +4303,10 @@ static void TryConstructorInitialization(Sema &S,
     // If the initializer list has no elements and T has a default constructor,
     // the first phase is omitted.
     if (!(UnwrappedArgs.empty() && S.LookupDefaultConstructor(DestRecordDecl)))
-      Result = ResolveConstructorOverload(S, Kind.getLocation(), Args,
-                                          CandidateSet, DestType, Ctors, Best,
-                                          CopyInitialization, AllowExplicit,
-                                          /*OnlyListConstructors=*/true,
-                                          IsListInit);
+      Result = ResolveConstructorOverload(
+          S, Kind.getLocation(), Args, CandidateSet, DestType, Ctors, Best,
+          CopyInitialization, AllowExplicit,
+          /*OnlyListConstructors=*/true, IsListInit, RequireActualConstructor);
   }
 
   // C++11 [over.match.list]p1:
@@ -4300,11 +4316,10 @@ static void TryConstructorInitialization(Sema &S,
   //     elements of the initializer list.
   if (Result == OR_No_Viable_Function) {
     AsInitializerList = false;
-    Result = ResolveConstructorOverload(S, Kind.getLocation(), UnwrappedArgs,
-                                        CandidateSet, DestType, Ctors, Best,
-                                        CopyInitialization, AllowExplicit,
-                                        /*OnlyListConstructors=*/false,
-                                        IsListInit);
+    Result = ResolveConstructorOverload(
+        S, Kind.getLocation(), UnwrappedArgs, CandidateSet, DestType, Ctors,
+        Best, CopyInitialization, AllowExplicit,
+        /*OnlyListConstructors=*/false, IsListInit, RequireActualConstructor);
   }
   if (Result) {
     Sequence.SetOverloadFailure(
@@ -6778,6 +6793,7 @@ static ExprResult CopyObject(Sema &S,
       S, Loc, CurInitExpr, CandidateSet, T, Ctors, Best,
       /*CopyInitializing=*/false, /*AllowExplicit=*/true,
       /*OnlyListConstructors=*/false, /*IsListInit=*/false,
+      /*RequireActualConstructor=*/false,
       /*SecondStepOfCopyInit=*/true)) {
   case OR_Success:
     break;
@@ -6920,6 +6936,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
       S, Loc, CurInitExpr, CandidateSet, CurInitExpr->getType(), Ctors, Best,
       /*CopyInitializing=*/false, /*AllowExplicit=*/true,
       /*OnlyListConstructors=*/false, /*IsListInit=*/false,
+      /*RequireActualConstructor=*/false,
       /*SecondStepOfCopyInit=*/true);
 
   PartialDiagnostic Diag = S.PDiag(diag::warn_cxx98_compat_temp_copy)
@@ -10573,7 +10590,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
          diag::err_deduced_non_class_template_specialization_type)
       << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
     if (auto *TD = TemplateName.getAsTemplateDecl())
-      Diag(TD->getLocation(), diag::note_template_decl_here);
+      NoteTemplateLocation(*TD);
     return QualType();
   }
 

@@ -2266,7 +2266,6 @@ MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
   if (RA.isEmpty())
     return Ret.getPointer();
 
-  auto OrigTy = Ret.getType();
   Ret = Ret.withElementType(CGF.Int8Ty);
 
   llvm::Value *V = Ret.getPointer();
@@ -2283,8 +2282,7 @@ MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
   if (RA.NonVirtual)
     V = CGF.Builder.CreateConstInBoundsGEP1_32(CGF.Int8Ty, V, RA.NonVirtual);
 
-  // Cast back to the original type.
-  return CGF.Builder.CreateBitCast(V, OrigTy);
+  return V;
 }
 
 bool MicrosoftCXXABI::requiresArrayCookie(const CXXDeleteExpr *expr,

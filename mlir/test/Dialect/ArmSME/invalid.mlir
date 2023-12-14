@@ -1,87 +1,47 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 //===----------------------------------------------------------------------===//
-// arm_sme.cast_tile_to_vector
+// arm_sme.get_tile
 //===----------------------------------------------------------------------===//
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_tile_id_bitwidth(%tile_id : i8) -> vector<[8]x[8]xi16> {
-  // expected-error@+1 {{op failed to verify that `tile_id` has the same number of bits as elements in `vector`}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[8]x[8]xi16>
-  return %0 : vector<[8]x[8]xi16>
-}
-
-// -----
-
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_rank_1(%tile_id : i8) -> vector<[16]xi8> {
+func.func @arm_sme_get_tile__bad_vector_type_rank_1() -> vector<[16]xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[16]xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]xi8>
+  %0 = arm_sme.get_tile : vector<[16]xi8>
   return %0 : vector<[16]xi8>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_i4(%tile_id : i8) -> vector<[16]x[16]xi4> {
+func.func @arm_sme_get_tile__bad_vector_type_i4() -> vector<[16]x[16]xi4> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[16]x[16]xi4>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]x[16]xi4>
+  %0 = arm_sme.get_tile : vector<[16]x[16]xi4>
   return %0 : vector<[16]x[16]xi4>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_non_scalable_dim_0(%tile_id : i8) -> vector<16x[16]xi8> {
+func.func @arm_sme_get_tile__bad_vector_type_non_scalable_dim_0() -> vector<16x[16]xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<16x[16]xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<16x[16]xi8>
+  %0 = arm_sme.get_tile : vector<16x[16]xi8>
   return %0 : vector<16x[16]xi8>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector__bad_vector_type_non_scalable_dim_1(%tile_id : i8) -> vector<[16]x16xi8> {
+func.func @arm_sme_get_tile__bad_vector_type_non_scalable_dim_1() -> vector<[16]x16xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[16]x16xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]x16xi8>
+  %0 = arm_sme.get_tile : vector<[16]x16xi8>
   return %0 : vector<[16]x16xi8>
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_bad_shape(%tile_id : i8) -> vector<[4]x[16]xi8> {
+func.func @arm_sme_get_tile__bad_shape(%tile_id : i8) -> vector<[4]x[16]xi8> {
   // expected-error@+1 {{op result #0 must be a vector type that fits into a SME tile, but got 'vector<[4]x[16]xi8>'}}
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[4]x[16]xi8>
+  %0 = arm_sme.get_tile : vector<[4]x[16]xi8>
   return %0 : vector<[4]x[16]xi8>
-}
-
-//===----------------------------------------------------------------------===//
-// arm_sme.cast_vector_to_tile
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile__bad_tile_id_bitwidth(%vector : vector<[1]x[1]xi128>) -> i32 {
-  // expected-error@+1 {{op failed to verify that `tile_id` has the same number of bits as elements in `vector`}}
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[1]x[1]xi128> to i32
-  return %0 : i32
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile__bad_rank_1d(%vector : vector<[16]xi8>) -> i8 {
-  // expected-error@+1 {{op operand #0 must be a vector type that fits into a SME tile, but got 'vector<[16]xi8>'}}
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[16]xi8> to i8
-  return %0 : i8
-}
-
-//===----------------------------------------------------------------------===//
-// arm_sme.get_tile_id
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @arm_sme_get_tile_id__bad_type() -> i1 {
-  // expected-error@+1 {{op result #0 must be an identifier of a virtual tile (of a size) within the ZA storage}}
-  %0 = arm_sme.get_tile_id : i1
-  return %0 : i1
 }
 
 //===----------------------------------------------------------------------===//

@@ -235,6 +235,8 @@ public:
 
   bool isNumRegsMajorCostOfLSR() const { return true; }
 
+  bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
+
   bool isProfitableLSRChainElement(Instruction *I) const { return false; }
 
   bool canMacroFuseCmp() const { return false; }
@@ -423,6 +425,11 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind) const {
     return TTI::TCC_Free;
+  }
+
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const {
+    return false;
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
@@ -707,6 +714,7 @@ public:
     case Intrinsic::coro_subfn_addr:
     case Intrinsic::threadlocal_address:
     case Intrinsic::experimental_widenable_condition:
+    case Intrinsic::ssa_copy:
       // These intrinsics don't actually represent code after lowering.
       return 0;
     }
