@@ -2,12 +2,11 @@
 
 // The example given in the standard (this is rejected for other reasons anyway).
 template<class T> struct A;
-template<class T> using B = typename A<T>::U; // expected-error {{no type named 'U' in 'A<short>'}}
-                                              // expected-note@-1 {{in instantiation of template class 'A<short>' requested here}}
+template<class T> using B = typename A<T>::U; // expected-error {{no type named 'U' in 'A<T>'}}
 template<class T> struct A {
   typedef B<T> U; // expected-note {{in instantiation of template type alias 'B' requested here}}
 };
-B<short> b; // expected-note {{in instantiation of template type alias 'B' requested here}}
+B<short> b;
 
 template<typename T> using U = int;
 
