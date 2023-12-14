@@ -33,7 +33,7 @@ splitStringByGroupSize(const std::basic_string<char> &String, size_t GroupSize) 
   return Result;
 }
 
-std::string getFormatedLiteralString(const llvm::StringRef OriginalLiteralString, const llvm::APInt IntegerValue) {
+std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString, const llvm::APInt IntegerValue) {
   // Configure formatting
   unsigned int Radix;
   size_t GroupSize;
@@ -101,7 +101,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Get formatting literal text
     const llvm::APInt IntegerValue = MatchedInteger->getValue();
-    const std::string FormatedLiteralString = getFormatedLiteralString(OriginalLiteralString, IntegerValue);
+    const std::string FormatedLiteralString = getFormatedIntegerString(OriginalLiteralString, IntegerValue);
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
