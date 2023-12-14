@@ -515,6 +515,12 @@ class WorkloadImportsManager : public ModuleImportsManager {
               << ". This is unexpected. Are module paths passed to the "
                  "compiler unique for the modules passed to the linker?");
         GVS = *PotentialCandidates.begin();
+        // We could in theory have multiple (interposable) copies of a symbol
+        // when there is no prevailing candidate, if say the prevailing copy was
+        // in a native object being linked in. However, we should in theory be
+        // marking all of these non-prevailing IR copies dead in that case, in
+        // which case they won't be candidates.
+        assert(GVS->isLive());
       } else {
         assert(llvm::hasSingleElement(PrevailingCandidates));
         GVS = *PrevailingCandidates.begin();
