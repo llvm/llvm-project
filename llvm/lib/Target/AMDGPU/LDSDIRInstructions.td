@@ -1,4 +1,4 @@
-//===-- LDSDIRInstructions.td - LDS/DS Direct Instruction Definitions -----===//
+//===-- DSDIRInstructions.td - LDS/VDS Direct Instruction Definitions -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,8 +59,8 @@ class LDSDIR_getIns<bit direct> {
 
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc)
+    (ins wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc)
   );
 }
 
@@ -116,7 +116,7 @@ class DSDIR_Real<DSDIR_Pseudo lds, dag ins, string asm, int subtarget> :
 }
 
 //===----------------------------------------------------------------------===//
-// LDS/DS Direct Instructions
+// LDS/VDS Direct Instructions
 //===----------------------------------------------------------------------===//
 
 let SubtargetPredicate = isGFX11Only in {
