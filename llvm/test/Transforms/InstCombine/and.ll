@@ -2714,8 +2714,8 @@ define i32 @canonicalize_and_sub_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) 
 
 define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_pass(i32 %x) {
 ; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 24
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP1]], 16
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %add = add i32 %x, 16
@@ -2725,8 +2725,8 @@ define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_pass(i32 %x) {
 
 define <2 x i16> @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(<2 x i16> %x) {
 ; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i16> [[X:%.*]], <i16 16, i16 16>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[ADD]], <i16 24, i16 24>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 24, i16 24>
+; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i16> [[TMP1]], <i16 16, i16 16>
 ; CHECK-NEXT:    ret <2 x i16> [[AND]]
 ;
   %add = add <2 x i16> %x, <i16 16, i16 16>

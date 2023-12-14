@@ -21,10 +21,7 @@ define i16 @or_and_add_and() {
 ; CHECK-LABEL: @or_and_add_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = call i16 @dummy(), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[X]], 32
-; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[ADD]], 48
-; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X]], 15
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i16 [[AND1]], [[AND2]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i16 [[X]], 32
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
 entry:
