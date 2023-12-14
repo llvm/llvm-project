@@ -754,6 +754,15 @@ define void @lifetime(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @invariant
+define void @invariant(ptr %0) {
+  ; CHECK: %[[START:.*]] = llvm.intr.invariant.start 16, %{{.*}} : !llvm.ptr
+  %2 = call ptr @llvm.invariant.start.p0(i64 16, ptr %0)
+  ; CHECK: llvm.intr.invariant.end %[[START]], 32, %{{.*}} : !llvm.ptr
+  call void @llvm.invariant.end.p0(ptr %2, i64 32, ptr %0)
+  ret void
+}
+
 ; CHECK-LABEL: llvm.func @vector_insert
 define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
   ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into !llvm.vec<? x 4 x  f32>
@@ -1096,6 +1105,9 @@ declare <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr>, <8 x i1>, i32)
 declare <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64>, <8 x i1>, i32)
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
