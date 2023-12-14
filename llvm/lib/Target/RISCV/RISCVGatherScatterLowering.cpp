@@ -362,7 +362,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
     VecOperand = i;
 
-    TypeSize TS = DL->getTypeAllocSize(GTI.getIndexedType());
+    TypeSize TS = GTI.getSequentialElementStride(*DL);
     if (TS.isScalable())
       return std::make_pair(nullptr, nullptr);
 

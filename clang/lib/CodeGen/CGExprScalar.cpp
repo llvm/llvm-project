@@ -5292,8 +5292,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
     } else {
       // Otherwise this is array-like indexing. The local offset is the index
       // multiplied by the element size.
-      auto *ElementSize = llvm::ConstantInt::get(
-          IntPtrTy, DL.getTypeAllocSize(GTI.getIndexedType()));
+      auto *ElementSize =
+          llvm::ConstantInt::get(IntPtrTy, GTI.getSequentialElementStride(DL));
       auto *IndexS = Builder.CreateIntCast(Index, IntPtrTy, /*isSigned=*/true);
       LocalOffset = eval(BO_Mul, ElementSize, IndexS);
     }
