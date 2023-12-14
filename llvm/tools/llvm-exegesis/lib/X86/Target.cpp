@@ -1080,21 +1080,6 @@ ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
   return ExitCallCode;
 }
 
-// Before kernel 4.17, Linux did not support MAP_FIXED_NOREPLACE, so if it is
-// not available, simplfy define it as MAP_FIXED which performs the same
-// function but does not guarantee existing mappings won't get clobbered.
-#ifndef MAP_FIXED_NOREPLACE
-#define MAP_FIXED_NOREPLACE MAP_FIXED
-#endif
-
-// Some 32-bit architectures don't have mmap and define mmap2 instead. The only
-// difference between the two syscalls is that mmap2's offset parameter is in
-// terms 4096 byte offsets rather than individual bytes, so for our purposes
-// they are effectively the same as all ofsets here are set to 0.
-#if defined(SYS_mmap2) && !defined(SYS_mmap)
-#define SYS_mmap SYS_mmap2
-#endif
-
 std::vector<MCInst>
 ExegesisX86Target::generateMmap(intptr_t Address, size_t Length,
                                 intptr_t FileDescriptorAddress) const {
