@@ -688,6 +688,9 @@ Bug Fixes in This Version
 - Fixed false positive error emitted when templated alias inside a class
   used private members of the same class.
   Fixes (`#41693 <https://github.com/llvm/llvm-project/issues/41693>`_)
+- Clang now accepts recursive non-dependent calls to functions with deduced return
+  type.
+  Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

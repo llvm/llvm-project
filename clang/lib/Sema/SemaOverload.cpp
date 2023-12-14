@@ -13994,6 +13994,24 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadCandidateSet::iterator Best;
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
+  FunctionDecl *FDecl = Best->Function;
+
+  // Model the case with a call to a templated function whose definition
+  // encloses the call and whose return type contains a placeholder type as if
+  // the UnresolvedLookupExpr was type-dependent.
+  if (OverloadResult == OR_Success && FDecl &&
+      FDecl->isTemplateInstantiation() &&
+      FDecl->getReturnType()->isUndeducedType()) {
+    if (auto TP = FDecl->getTemplateInstantiationPattern(false)) {
+      if (TP->willHaveBody()) {
+        CallExpr *CE =
+            CallExpr::Create(Context, Fn, Args, Context.DependentTy, VK_PRValue,
+                             RParenLoc, CurFPFeatureOverrides());
+        result = CE;
+        return result;
+      }
+    }
+  }
 
   return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args, RParenLoc,
                                   ExecConfig, &CandidateSet, &Best,
