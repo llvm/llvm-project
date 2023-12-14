@@ -1,0 +1,58 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-basic-cu.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-types-no-cu.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.exe > %t.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
+
+## This test checks we correclty re-renerate .debug_str_offsets when there are type units that have an offset not shared with CU.
+
+# CHECK: .debug_str_offsets contents
+# CHECK-NEXT: Contribution size = 24, Format = DWARF32, Version = 5
+# CHECK-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# CHECK-NEXT:  "main.cpp"
+# CHECK-NEXT:  "/home"
+# CHECK-NEXT:  "main"
+# CHECK-NEXT:  "int"
+# CHECK-NEXT: Contribution size = 60, Format = DWARF32, Version = 5
+# CHECK-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# CHECK-NEXT:  "helper.cpp"
+# CHECK-NEXT:  "/home"
+# CHECK-NEXT:  "f1"
+# CHECK-NEXT:  "a1"
+# CHECK-NEXT:  "char"
+# CHECK-NEXT:  "a2"
+# CHECK-NEXT:  "a3"
+# CHECK-NEXT:  "Foo1"
+# CHECK-NEXT:  "f2"
+# CHECK-NEXT:  "b1"
+# CHECK-NEXT:  "int"
+# CHECK-NEXT:  "b2"
+# CHECK-NEXT:  "Foo2"
+
+## Checking post bolt
+# CHECK: .debug_str_offsets contents
+# CHECK-NEXT: Contribution size = 60, Format = DWARF32, Version = 5
+# CHECK-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# CHECK-NEXT:  "helper.cpp"
+# CHECK-NEXT:  "/home"
+# CHECK-NEXT:  "f1"
+# CHECK-NEXT:  "a1"
+# CHECK-NEXT:  "char"
+# CHECK-NEXT:  "a2"
+# CHECK-NEXT:  "a3"
+# CHECK-NEXT:  "Foo1"
+# CHECK-NEXT:  "f2"
+# CHECK-NEXT:  "b1"
+# CHECK-NEXT:  "int"
+# CHECK-NEXT:  "b2"
+# CHECK-NEXT:  "Foo2"
+# CHECK-NEXT: Contribution size = 24, Format = DWARF32, Version = 5
+# CHECK-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# CHECK-NEXT:  "main.cpp"
+# CHECK-NEXT:  "/home"
+# CHECK-NEXT:  "main"
+# CHECK-NEXT:  "int"
