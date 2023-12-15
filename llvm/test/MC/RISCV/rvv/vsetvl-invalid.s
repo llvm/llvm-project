@@ -6,35 +6,35 @@
 # CHECK: vsetvli a1, a0, e64, m1, tu, mu
 .word 0x018575d7
 
-# CHECK: vsetvli a1, a0, 0x1c
+# CHECK: vsetvli a1, a0, 28
 .word 0x01c575d7
 
-# CHECK: vsetvli a1, a0, 0x24
+# CHECK: vsetvli a1, a0, 36
 .word 0x024575d7
 
-# CHECK: vsetvli a1, a0, 0x29
+# CHECK: vsetvli a1, a0, 41
 .word 0x029575d7
 
-# CHECK: vsetvli a1, a0, 0x110
+# CHECK: vsetvli a1, a0, 272
 .word 0x110575d7
 
 # CHECK: vsetvli a1, a0, e64, mf8, tu, mu
 .word 0x01d575d7
 
-# CHECK: vsetivli a1, 0x10, e8, m4, tu, mu
+# CHECK: vsetivli a1, 16, e8, m4, tu, mu
 .word 0xc02875d7
 
-# CHECK: vsetivli a1, 0x10, 0xc
+# CHECK: vsetivli a1, 16, 12
 .word 0xc0c875d7
 
-# CHECK: vsetivli a1, 0x10, 0x14
+# CHECK: vsetivli a1, 16, 20
 .word 0xc14875d7
 
-# CHECK: vsetivli a1, 0x10, 0x38
+# CHECK: vsetivli a1, 16, 56
 .word 0xc38875d7
 
-# CHECK: vsetivli a1, 0x10, 0x103
+# CHECK: vsetivli a1, 16, 259
 .word 0xd03875d7
 
-# CHECK: vsetivli a1, 0x10, e8, mf4, tu, mu
+# CHECK: vsetivli a1, 16, e8, mf4, tu, mu
 .word 0xc06875d7

@@ -91,7 +91,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    markup(O, Markup::Immediate) << formatImm(MO.getImm());
+    markup(O, Markup::Immediate) << MO.getImm();
     return;
   }
 
@@ -113,7 +113,7 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
       Target &= 0xffffffff;
     markup(O, Markup::Target) << formatHex(Target);
   } else {
-    markup(O, Markup::Target) << formatImm(MO.getImm());
+    markup(O, Markup::Target) << MO.getImm();
   }
 }
 
@@ -128,7 +128,7 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
   else if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
     markup(O, Markup::Register) << SysReg->Name;
   else
-    markup(O, Markup::Register) << formatImm(Imm);
+    markup(O, Markup::Register) << Imm;
 }
 
 void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
@@ -212,7 +212,7 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   // or non-zero in bits 8 and above.
   if (RISCVVType::getVLMUL(Imm) == RISCVII::VLMUL::LMUL_RESERVED ||
       RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
-    O << formatImm(Imm);
+    O << Imm;
     return;
   }
   // Print the text form.
