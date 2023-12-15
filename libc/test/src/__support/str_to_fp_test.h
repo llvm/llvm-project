@@ -16,13 +16,13 @@
 namespace LIBC_NAMESPACE {
 
 template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
-  using UIntType = typename fputil::FloatProperties<T>::UIntType;
+  using StorageType = typename fputil::FloatProperties<T>::StorageType;
 
-  void clinger_fast_path_test(const UIntType inputMantissa,
+  void clinger_fast_path_test(const StorageType inputMantissa,
                               const int32_t inputExp10,
-                              const UIntType expectedOutputMantissa,
+                              const StorageType expectedOutputMantissa,
                               const uint32_t expectedOutputExp2) {
-    UIntType actual_output_mantissa = 0;
+    StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
 
     auto result = internal::clinger_fast_path<T>({inputMantissa, inputExp10});
@@ -36,16 +36,17 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
   }
 
-  void clinger_fast_path_fails_test(const UIntType inputMantissa,
+  void clinger_fast_path_fails_test(const StorageType inputMantissa,
                                     const int32_t inputExp10) {
     ASSERT_FALSE(internal::clinger_fast_path<T>({inputMantissa, inputExp10})
                      .has_value());
   }
 
-  void eisel_lemire_test(const UIntType inputMantissa, const int32_t inputExp10,
-                         const UIntType expectedOutputMantissa,
+  void eisel_lemire_test(const StorageType inputMantissa,
+                         const int32_t inputExp10,
+                         const StorageType expectedOutputMantissa,
                          const uint32_t expectedOutputExp2) {
-    UIntType actual_output_mantissa = 0;
+    StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
 
     auto result = internal::eisel_lemire<T>({inputMantissa, inputExp10});
@@ -60,10 +61,10 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   }
 
   void simple_decimal_conversion_test(const char *__restrict numStart,
-                                      const UIntType expectedOutputMantissa,
+                                      const StorageType expectedOutputMantissa,
                                       const uint32_t expectedOutputExp2,
                                       const int expectedErrno = 0) {
-    UIntType actual_output_mantissa = 0;
+    StorageType actual_output_mantissa = 0;
     uint32_t actual_output_exp2 = 0;
     libc_errno = 0;
 
