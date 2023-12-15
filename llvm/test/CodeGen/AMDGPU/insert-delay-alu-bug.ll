@@ -245,3 +245,6 @@ bb43:
 }
 
 attributes #0 = { noinline optnone }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

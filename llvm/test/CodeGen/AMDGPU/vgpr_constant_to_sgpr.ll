@@ -55,4 +55,6 @@ define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id 
   ret void
 }
 
+!llvm.module.flags = !{!1}
 !0 = !{i32 42}
+!1 = !{i32 1, !"amdgpu_code_object_version", i32 500}

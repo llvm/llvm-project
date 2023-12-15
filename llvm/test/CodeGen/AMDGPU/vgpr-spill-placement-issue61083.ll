@@ -102,3 +102,6 @@ declare align 4 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 declare void @llvm.assume(i1 noundef)
 declare void @llvm.amdgcn.s.barrier()
 declare void @llvm.trap()
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
