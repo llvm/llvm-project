@@ -1678,6 +1678,7 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose"> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
