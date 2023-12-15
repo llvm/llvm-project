@@ -4,7 +4,7 @@
 # executable or a shared library. It is an intermediate file format that can
 # be passed into the linker.
 # A crt object has arch-specific code and arch-agnostic code. To reduce code
-# cohesion, the implementation is splitted into multiple units. As a result,
+# duplication, the implementation is split into multiple units. As a result,
 # we need to merge them into a single relocatable object.
 function(merge_relocatable_object name)
   set(obj_list "")
@@ -18,25 +18,22 @@ function(merge_relocatable_object name)
   list(REMOVE_DUPLICATES obj_list)
   list(REMOVE_DUPLICATES fq_link_libraries)
   get_fq_target_name(${name} fq_name)
+  set(relocatable_target "${fq_name}.__relocatable__")
   add_executable(
-    ${fq_name}.relocatable
+    ${relocatable_target}
     ${obj_list}
   )
-  target_link_options(
-    ${fq_name}.relocatable
-    PRIVATE
-      -nostdlib
-      -ffreestanding
-      -no-pie
-      -nostartfiles
-      -Wl,-r)
+  # Pass -r to the driver is much cleaner than passing -Wl,-r: the compiler knows it is
+  # a relocatable linking and will not passing other irrelevant flags to the linker.
+  target_link_options(${relocatable_target} PRIVATE -r)
   set_target_properties(
-    ${fq_name}.relocatable
+    ${relocatable_target}
     PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       OUTPUT_NAME ${name}.o
   )
   add_library(${fq_name} OBJECT IMPORTED GLOBAL)
-  add_dependencies(${fq_name} ${fq_name}.relocatable)
+  add_dependencies(${fq_name} ${relocatable_target})
   target_link_libraries(${fq_name} INTERFACE ${fq_link_libraries})
   set_target_properties(
     ${fq_name} 
@@ -71,6 +68,13 @@ function(add_startup_object name)
       OUTPUT_NAME ${name}.o
   )
 endfunction()
+
+llvm_check_linker_flag(CXX "-r" LIBC_LINKER_SUPPORTS_RELOCATABLE)
+
+if(NOT LIBC_LINKER_SUPPORTS_RELOCATABLE)
+  message(STATUS "Skipping startup for target architecture ${LIBC_TARGET_ARCHITECTURE}: linker does not support -r")
+  return()
+endif()
 
 if(NOT (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}))
   message(STATUS "Skipping startup for target architecture ${LIBC_TARGET_ARCHITECTURE}")
