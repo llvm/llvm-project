@@ -9845,9 +9845,8 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
     SDValue NewLoad =
-      DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
-                  Load->getPointerInfo(), Load->getOriginalAlign(),
-                  Load->getMemOperand()->getFlags());
+        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+                    Load->getMemOperand());
     SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
     return DAG.getMergeValues({Result, NewLoad.getValue(1)}, DL);
   }
@@ -9907,8 +9906,7 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT))
     return DAG.getStore(Store->getChain(), DL, NewValue, Store->getBasePtr(),
-                        Store->getPointerInfo(), Store->getOriginalAlign(),
-                        Store->getMemOperand()->getFlags());
+                        Store->getMemOperand());
 
   SDValue VL = getVLOp(VT.getVectorNumElements(), ContainerVT, DL, DAG,
                        Subtarget);
