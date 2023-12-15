@@ -61,7 +61,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Hard to round value(s).
   using fputil::round_result_slightly_up;
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   // log2(1.0f) = 0.0f.
   if (LIBC_UNLIKELY(x_u == 0x3f80'0000U))
@@ -87,10 +87,10 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
     m -= 23;
   }
 
-  m += xbits.get_unbiased_exponent();
+  m += xbits.get_biased_exponent();
   int index = xbits.get_mantissa() >> 16;
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
   float u = static_cast<float>(xbits);
   double v;

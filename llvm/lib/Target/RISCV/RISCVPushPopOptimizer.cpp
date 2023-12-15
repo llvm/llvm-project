@@ -22,9 +22,7 @@ namespace {
 struct RISCVPushPopOpt : public MachineFunctionPass {
   static char ID;
 
-  RISCVPushPopOpt() : MachineFunctionPass(ID) {
-    initializeRISCVPushPopOptPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVPushPopOpt() : MachineFunctionPass(ID) {}
 
   const RISCVInstrInfo *TII;
   const TargetRegisterInfo *TRI;

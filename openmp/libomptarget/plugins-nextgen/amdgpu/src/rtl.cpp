@@ -2692,11 +2692,8 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'amdgpu-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    GlobalTy Global(Name, sizeof(void *));
-    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
-      consumeError(std::move(Err));
+    if (!Handler.isSymbolInImage(*this, Image, Name))
       return Plugin::success();
-    }
 
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy AMDGPUKernel(Name);

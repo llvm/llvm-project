@@ -424,9 +424,9 @@ def LLVM_DIGlobalVariableExpressionAttr
 def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
                                       /*traits=*/[], "DINodeAttr"> {
   let parameters = (ins
-    "DIScopeAttr":$scope,
-    "StringAttr":$name,
-    "StringAttr":$linkageName,
+    OptionalParameter<"DIScopeAttr">:$scope,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"StringAttr">:$linkageName,
     "DIFileAttr":$file,
     "unsigned":$line,
     "DITypeAttr":$type,

@@ -26,13 +26,13 @@
 # SYM32: 0001190 0 FUNC GLOBAL DEFAULT {{.*}} func
 
 # DIS32:      <_start>:
-# DIS32-NEXT: 1180: auipc a0, 0
-# DIS32-NEXT:       addi a0, a0, 16
+# DIS32-NEXT: 1180: auipc a0, 0x0
+# DIS32-NEXT:       addi a0, a0, 0x10
 # DIS32:      Disassembly of section .iplt:
 # DIS32:      <func>:
 ## 32-bit: &.got.plt[func]-. = 0x3220-0x1190 = 4096*2+144
-# DIS32-NEXT: 1190: auipc t3, 2
-# DIS32-NEXT:       lw t3, 144(t3)
+# DIS32-NEXT: 1190: auipc t3, 0x2
+# DIS32-NEXT:       lw t3, 0x90(t3)
 # DIS32-NEXT:       jalr t1, t3
 # DIS32-NEXT:       nop
 
@@ -47,13 +47,13 @@
 # SYM64: 000000000001270 0 FUNC GLOBAL DEFAULT {{.*}} func
 
 # DIS64:      <_start>:
-# DIS64-NEXT: 1264: auipc a0, 0
-# DIS64-NEXT:       addi a0, a0, 12
+# DIS64-NEXT: 1264: auipc a0, 0x0
+# DIS64-NEXT:       addi a0, a0, 0xc
 # DIS64:      Disassembly of section .iplt:
 # DIS64:      <func>:
 ## 64-bit: &.got.plt[func]-. = 0x3380-0x1270 = 4096*2+272
-# DIS64-NEXT: 1270: auipc t3, 2
-# DIS64-NEXT:       ld t3, 272(t3)
+# DIS64-NEXT: 1270: auipc t3, 0x2
+# DIS64-NEXT:       ld t3, 0x110(t3)
 # DIS64-NEXT:       jalr t1, t3
 # DIS64-NEXT:       nop
 

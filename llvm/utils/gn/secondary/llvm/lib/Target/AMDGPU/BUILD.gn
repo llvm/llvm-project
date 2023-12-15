@@ -141,6 +141,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUCtorDtorLowering.cpp",
     "AMDGPUExportClustering.cpp",
     "AMDGPUFrameLowering.cpp",
+    "AMDGPUGlobalISelDivergenceLowering.cpp",
     "AMDGPUGlobalISelUtils.cpp",
     "AMDGPUHSAMetadataStreamer.cpp",
     "AMDGPUIGroupLP.cpp",

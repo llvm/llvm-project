@@ -34,12 +34,6 @@ namespace {
 
 // Function definition of a RVV intrinsic.
 struct RVVIntrinsicDef {
-  /// Full function name with suffix, e.g. vadd_vv_i32m1.
-  std::string Name;
-
-  /// Overloaded function name, e.g. vadd.
-  std::string OverloadName;
-
   /// Mapping to which clang built-in function, e.g. __builtin_rvv_vadd.
   std::string BuiltinName;
 
@@ -49,7 +43,7 @@ struct RVVIntrinsicDef {
 
 struct RVVOverloadIntrinsicDef {
   // Indexes of RISCVIntrinsicManagerImpl::IntrinsicList.
-  SmallVector<size_t, 8> Indexes;
+  SmallVector<uint32_t, 8> Indexes;
 };
 
 } // namespace
@@ -168,7 +162,7 @@ private:
   // List of all RVV intrinsic.
   std::vector<RVVIntrinsicDef> IntrinsicList;
   // Mapping function name to index of IntrinsicList.
-  StringMap<size_t> Intrinsics;
+  StringMap<uint32_t> Intrinsics;
   // Mapping function name to RVVOverloadIntrinsicDef.
   StringMap<RVVOverloadIntrinsicDef> OverloadIntrinsics;
 
@@ -180,7 +174,7 @@ private:
 
   // Create FunctionDecl for a vector intrinsic.
   void CreateRVVIntrinsicDecl(LookupResult &LR, IdentifierInfo *II,
-                              Preprocessor &PP, unsigned Index,
+                              Preprocessor &PP, uint32_t Index,
                               bool IsOverload);
 
   void ConstructRVVIntrinsics(ArrayRef<RVVIntrinsicRecord> Recs,
@@ -392,8 +386,8 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
                                      Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
-  size_t Index = IntrinsicList.size();
-  IntrinsicList.push_back({Name, OverloadedName, BuiltinName, Signature});
+  uint32_t Index = IntrinsicList.size();
+  IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
   Intrinsics.insert({Name, Index});
@@ -409,7 +403,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP,
-                                                       unsigned Index,
+                                                       uint32_t Index,
                                                        bool IsOverload) {
   ASTContext &Context = S.Context;
   RVVIntrinsicDef &IDef = IntrinsicList[Index];

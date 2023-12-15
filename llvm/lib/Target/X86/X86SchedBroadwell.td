@@ -946,8 +946,8 @@ def BWWriteResGroup58 : SchedWriteRes<[BWPort23]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[BWWriteResGroup58], (instregex "LD_F(32|64|80)m")>;
-def: InstRW<[BWWriteResGroup58], (instrs VBROADCASTF128,
-                                         VBROADCASTI128,
+def: InstRW<[BWWriteResGroup58], (instrs VBROADCASTF128rm,
+                                         VBROADCASTI128rm,
                                          VBROADCASTSDYrm,
                                          VBROADCASTSSYrm,
                                          VMOVDDUPYrm,

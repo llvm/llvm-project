@@ -1446,6 +1446,92 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
+/// For vectors with either leading or trailing unit dim, replaces:
+///   elementwise(a, b)
+/// with:
+///   sc_a = shape_cast(a)
+///   sc_b = shape_cast(b)
+///   res = elementwise(sc_a, sc_b)
+///   return shape_cast(res)
+/// The newly inserted shape_cast Ops fold (before elementwise Op) and then
+/// restore (after elementwise Op) the unit dim. Vectors `a` and `b` are
+/// required to be rank > 1.
+///
+/// Ex:
+/// ```
+///  %mul = arith.mulf %B_row, %A_row : vector<1x[4]xf32>
+///  %cast = vector.shape_cast %mul : vector<1x[4]xf32> to vector<[4]xf32>
+/// ```
+///
+/// gets converted to:
+///
+/// ```
+///  %B_row_sc = vector.shape_cast %B_row : vector<1x[4]xf32> to vector<[4]xf32>
+///  %A_row_sc = vector.shape_cast %A_row : vector<1x[4]xf32> to vector<[4]xf32>
+///  %mul = arith.mulf %B_row_sc, %A_row_sc : vector<[4]xf32>
+///  %cast_new = vector.shape_cast %mul : vector<[4]xf32> to vector<1x[4]xf32>
+///  %cast = vector.shape_cast %cast_new : vector<1x[4]xf32> to vector<[4]xf32>
+/// ```
+///
+/// Patterns for folding shape_casts should instantly eliminate `%cast_new` and
+/// `%cast`.
+struct DropUnitDimFromElementwiseOps final
+    : public OpTraitRewritePattern<OpTrait::Elementwise> {
+  using OpTraitRewritePattern::OpTraitRewritePattern;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumResults() != 1 || op->getNumRegions() != 0)
+      return failure();
+
+    auto resultVectorType = dyn_cast<VectorType>(op->getResult(0).getType());
+    if (!resultVectorType)
+      return failure();
+
+    // Check the pre-conditions. For `Elementwise` Ops all operands are
+    // guaranteed to have identical shapes and it suffices to only check the
+    // first one.
+    auto sourceVectorType = cast<VectorType>(op->getOperands()[0].getType());
+    if (sourceVectorType.getRank() < 2)
+      return failure();
+
+    bool hasTrailingDimUnitFixed =
+        ((sourceVectorType.getShape().back() == 1) &&
+         (!sourceVectorType.getScalableDims().back()));
+    bool hasLeadingDimUnitFixed =
+        ((sourceVectorType.getShape().front() == 1) &&
+         (!sourceVectorType.getScalableDims().front()));
+    if (!hasLeadingDimUnitFixed && !hasTrailingDimUnitFixed)
+      return failure();
+
+    // Drop leading/trailing unit dim by applying vector.shape_cast to all
+    // operands
+    int64_t dim = hasLeadingDimUnitFixed ? 0 : sourceVectorType.getRank() - 1;
+
+    SmallVector<Value> newOperands;
+    auto loc = op->getLoc();
+    for (auto operand : op->getOperands()) {
+      auto opVectorType = cast<VectorType>(operand.getType());
+      VectorType newVType = VectorType::Builder(opVectorType).dropDim(dim);
+      auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
+      newOperands.push_back(opSC);
+    }
+
+    VectorType newResultVectorType =
+        VectorType::Builder(resultVectorType).dropDim(dim);
+    // Create an updated elementwise Op without leading/trailing unit dim
+    Operation *elementwiseOp =
+        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
+                        newResultVectorType, op->getAttrs());
+
+    // Restore the leading/trailing unit dim by applying vector.shape_cast
+    // to the result
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(op, resultVectorType,
+                                             elementwiseOp->getResult(0));
+
+    return success();
+  }
+};
+
 /// Pattern to eliminate redundant zero-constants added to reduction operands.
 /// It's enough for there to be one initial zero value, so we can eliminate the
 /// extra ones that feed into `vector.reduction <add>`. These get created by the
@@ -1512,6 +1598,12 @@ void mlir::vector::populateVectorMaskMaterializationPatterns(
 void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
   patterns.add<ShapeCastOpFolder>(patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<DropUnitDimFromElementwiseOps, ShapeCastOpFolder>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(

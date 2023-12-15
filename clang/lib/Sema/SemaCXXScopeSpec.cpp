@@ -30,20 +30,6 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
     return nullptr;
 
   const Type *Ty = T->getCanonicalTypeInternal().getTypePtr();
-  if (isa<TemplateSpecializationType>(Ty)) {
-    if (auto *Record = dyn_cast<CXXRecordDecl>(CurContext)) {
-      if (isa<ClassTemplatePartialSpecializationDecl>(Record) ||
-          Record->getDescribedClassTemplate()) {
-        const Type *ICNT = Record->getTypeForDecl();
-        QualType Injected =
-            cast<InjectedClassNameType>(ICNT)->getInjectedSpecializationType();
-
-        if (Ty == Injected->getCanonicalTypeInternal().getTypePtr())
-          return Record;
-      }
-    }
-  }
-
   if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
     CXXRecordDecl *Record = cast<CXXRecordDecl>(RecordTy->getDecl());
     if (!Record->isDependentContext() ||
@@ -51,12 +37,10 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
       return Record;
 
     return nullptr;
-  }
-
-  if (isa<InjectedClassNameType>(Ty))
+  } else if (isa<InjectedClassNameType>(Ty))
     return cast<InjectedClassNameType>(Ty)->getDecl();
-
-  return nullptr;
+  else
+    return nullptr;
 }
 
 /// Compute the DeclContext that is associated with the given type.
