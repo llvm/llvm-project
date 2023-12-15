@@ -89,9 +89,7 @@ struct __fold_left_with_iter {
   }
 };
 
-inline namespace __cpo {
 inline constexpr auto fold_left_with_iter = __fold_left_with_iter();
-} // namespace __cpo
 
 struct __fold_left {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
@@ -106,9 +104,7 @@ struct __fold_left {
   }
 };
 
-inline namespace __cpo {
 inline constexpr auto fold_left = __fold_left();
-} // namespace __cpo
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23
