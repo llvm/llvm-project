@@ -40,11 +40,15 @@ static cl::opt<unsigned>
                         cl::desc("The maximum number of pointers may-alias "
                                  "sets may contain before degradation"));
 
-bool AliasSet::isMustAliasMergeWith(AliasSet &AS,
-                                    BatchAAResults &BatchAA) const {
-  for (const MemoryLocation &MemLoc : MemoryLocs)
-    for (const MemoryLocation &ASMemLoc : AS.MemoryLocs)
-      if (!BatchAA.isMustAlias(MemLoc, ASMemLoc))
+/// For the given two alias sets, when known that the sets are must-aliases
+/// individually, check whether their union preserves the must-alias status.
+static bool isMustAliasMerge(const AliasSet &AS, const AliasSet &OtherAS,
+                             BatchAAResults &BatchAA) {
+  // Since the sets are must-aliases individually, we must only check
+  // the pairs across the sets.
+  for (const MemoryLocation &MemLoc : AS)
+    for (const MemoryLocation &OtherMemLoc : OtherAS)
+      if (!BatchAA.isMustAlias(MemLoc, OtherMemLoc))
         return false;
   return true;
 }
@@ -62,7 +66,7 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
   if (Alias == SetMustAlias) {
     // Check that these two merged sets really are must aliases.
     // If the pointers are not a must-alias pair, this set becomes a may alias.
-    if (!isMustAliasMergeWith(AS, BatchAA))
+    if (!isMustAliasMerge(*this, AS, BatchAA))
       Alias = SetMayAlias;
   }
 

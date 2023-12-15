@@ -149,7 +149,6 @@ private:
 
   void removeFromTracker(AliasSetTracker &AST);
 
-  bool isMustAliasMergeWith(AliasSet &AS, BatchAAResults &BatchAA) const;
   void addPointer(AliasSetTracker &AST, const MemoryLocation &MemLoc,
                   bool KnownMustAlias = false);
   void addUnknownInst(Instruction *I, BatchAAResults &AA);
