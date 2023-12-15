@@ -529,10 +529,12 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         WideIV->getStartValue(), WideIV->getStepValue());
 
     // Update scalar users of IV to use Step instead.
-    WideIV->replaceUsesWithIf(
-        Steps, [HasOnlyVectorVFs, WideIV](VPUser &U, unsigned) {
-          return !HasOnlyVectorVFs || U.usesScalars(WideIV);
-        });
+    if (!HasOnlyVectorVFs)
+      WideIV->replaceAllUsesWith(Steps);
+    else
+      WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
+        return U.usesScalars(WideIV);
+      });
   }
 }
 
