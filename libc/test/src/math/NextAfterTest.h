@@ -22,9 +22,6 @@ class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
-  static constexpr int BIT_WIDTH_OF_TYPE =
-      LIBC_NAMESPACE::fputil::FloatProperties<T>::TOTAL_LEN;
-
   const T zero = T(FPBits::zero());
   const T neg_zero = T(FPBits::neg_zero());
   const T inf = T(FPBits::inf());
@@ -55,7 +52,7 @@ public:
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, T(-1));
-    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
+    expected_bits = FPBits::SIGN_MASK + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
@@ -66,7 +63,7 @@ public:
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, -1);
-    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
+    expected_bits = FPBits::SIGN_MASK + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
@@ -84,13 +81,12 @@ public:
     x = -x;
 
     result = func(x, -1);
-    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal;
+    expected_bits = FPBits::SIGN_MASK + min_normal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, 0);
-    expected_bits =
-        (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal - 1;
+    expected_bits = FPBits::SIGN_MASK + max_subnormal - 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
@@ -104,8 +100,7 @@ public:
 
     x = -x;
     result = func(x, -1);
-    expected_bits =
-        (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_subnormal + 1;
+    expected_bits = FPBits::SIGN_MASK + min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, 0), T(-0.0));
@@ -124,13 +119,12 @@ public:
 
     x = -x;
     result = func(x, 0);
-    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal;
+    expected_bits = FPBits::SIGN_MASK + max_subnormal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, -inf);
-    expected_bits =
-        (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal + 1;
+    expected_bits = FPBits::SIGN_MASK + min_normal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
@@ -152,7 +146,7 @@ public:
 
     x = neg_inf;
     result = func(x, 0);
-    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_normal;
+    expected_bits = FPBits::SIGN_MASK + max_normal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, neg_inf), neg_inf);
