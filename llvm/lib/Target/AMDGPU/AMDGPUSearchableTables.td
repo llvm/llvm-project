@@ -333,6 +333,8 @@ def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
 def : SourceOfDivergence<int_amdgcn_permlane16>;
 def : SourceOfDivergence<int_amdgcn_permlanex16>;
+def : SourceOfDivergence<int_amdgcn_permlane16_var>;
+def : SourceOfDivergence<int_amdgcn_permlanex16_var>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
