@@ -9,6 +9,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-scev-validator"
 
 namespace SCEVType {

@@ -21,6 +21,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-scop-inliner"
 
 using namespace llvm;

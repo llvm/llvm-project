@@ -69,6 +69,7 @@ class Loop;
 class Module;
 } // namespace llvm
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-opt-isl"
 
 static cl::opt<std::string>

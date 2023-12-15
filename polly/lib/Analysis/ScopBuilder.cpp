@@ -60,6 +60,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-scops"
 
 STATISTIC(ScopFound, "Number of valid Scops");

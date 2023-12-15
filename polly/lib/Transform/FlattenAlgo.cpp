@@ -15,6 +15,7 @@
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/Support/Debug.h"
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-flatten-algo"
 
 using namespace polly;

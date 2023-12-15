@@ -73,6 +73,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-scops"
 
 STATISTIC(AssumptionsAliasing, "Number of aliasing assumptions taken.");

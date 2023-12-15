@@ -156,6 +156,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-zone"
 
 STATISTIC(NumIncompatibleArrays, "Number of not zone-analyzable arrays");

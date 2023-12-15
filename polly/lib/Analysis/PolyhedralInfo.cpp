@@ -32,6 +32,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polyhedral-info"
 
 static cl::opt<bool> CheckParallel("polly-check-parallel",

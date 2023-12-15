@@ -42,6 +42,7 @@
 #include <string>
 #include <vector>
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-opt-isl"
 
 using namespace llvm;

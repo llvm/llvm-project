@@ -22,6 +22,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <optional>
 
+#include "polly/Support/PollyDebug.inc"
 #define DEBUG_TYPE "polly-opt-manual"
 
 using namespace polly;
