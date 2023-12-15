@@ -1419,6 +1419,19 @@ define i32 @tryFactorization_xor_lshr_ashr(i32 %a) {
   ret i32 %xor
 }
 
+define i32 @tryFactorization_xor_ashr_lshr_negative_lhs(i32 %a) {
+; CHECK-LABEL: @tryFactorization_xor_ashr_lshr_negative_lhs(
+; CHECK-NEXT:    [[NOT:%.*]] = ashr i32 -3, [[A:%.*]]
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 -5, [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NOT]], [[SHR1]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %not = ashr i32 -3, %a
+  %shr1 = lshr i32 -5, %a
+  %xor = xor i32 %not, %shr1
+  ret i32 %xor
+}
+
 define i32 @tryFactorization_xor_lshr_lshr(i32 %a) {
 ; CHECK-LABEL: @tryFactorization_xor_lshr_lshr(
 ; CHECK-NEXT:    [[XOR:%.*]] = lshr i32 -8, [[A:%.*]]
