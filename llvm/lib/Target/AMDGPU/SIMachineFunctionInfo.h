@@ -1099,10 +1099,7 @@ public:
   bool usesAGPRs(const MachineFunction &MF) const;
 
   /// \returns Default/requested number of work groups for this function.
-  unsigned getNumWorkGroups() const {
-    return NumWorkGroups;
-  }
-
+  unsigned getNumWorkGroups() const { return NumWorkGroups; }
 };
 
 } // end namespace llvm

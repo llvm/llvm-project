@@ -1111,6 +1111,6 @@ unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
 
 unsigned AMDGPUSubtarget::getNumWorkGroups(const Function &F) const {
   const unsigned Default = 0;
-  return AMDGPU::getUnsignedIntegerAttribute(F, "amdgpu-num-work-groups", Default);
+  return AMDGPU::getUnsignedIntegerAttribute(F, "amdgpu-num-work-groups",
+                                             Default);
 }
-

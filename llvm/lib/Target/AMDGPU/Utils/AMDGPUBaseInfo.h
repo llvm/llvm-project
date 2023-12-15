@@ -824,7 +824,8 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 ///
 /// \returns \p Default and emits error if requested value cannot be converted
 /// to integer.
-unsigned getUnsignedIntegerAttribute(const Function &F, StringRef Name, unsigned Default);
+unsigned getUnsignedIntegerAttribute(const Function &F, StringRef Name,
+                                     unsigned Default);
 
 /// \returns A pair of integer values requested using \p F's \p Name attribute
 /// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired

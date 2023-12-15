@@ -1221,7 +1221,8 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
   return Ints;
 }
 
-unsigned getUnsignedIntegerAttribute(const Function &F, StringRef Name, unsigned Default) {
+unsigned getUnsignedIntegerAttribute(const Function &F, StringRef Name,
+                                     unsigned Default) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
