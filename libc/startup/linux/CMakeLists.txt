@@ -70,7 +70,7 @@ function(add_startup_object name)
   )
 endfunction()
 
-llvm_check_linker_flag(CXX "-r" LIBC_LINKER_SUPPORTS_RELOCATABLE)
+check_cxx_compiler_flag("-r" LIBC_LINKER_SUPPORTS_RELOCATABLE)
 
 if(NOT LIBC_LINKER_SUPPORTS_RELOCATABLE)
   message(STATUS "Skipping startup for target architecture ${LIBC_TARGET_ARCHITECTURE}: linker does not support -r")
