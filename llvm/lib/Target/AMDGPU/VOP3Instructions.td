@@ -808,7 +808,6 @@ class PermlaneVarPat<SDPatternOperator permlane,
         VGPR_32:$src1, VGPR_32:$vdst_in)
 >;
 
-
 let SubtargetPredicate = isGFX10Plus in {
   let isCommutable = 1, isReMaterializable = 1 in {
     defm V_XOR3_B32 : VOP3Inst <"v_xor3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
