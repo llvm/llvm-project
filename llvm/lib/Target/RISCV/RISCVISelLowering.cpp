@@ -19882,6 +19882,9 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       Op == Instruction::And || Op == Instruction::Or || Op == Instruction::Xor)
     return false;
 
+  if (Inst.getType()->isScalableTy())
+    return true;
+
   for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
     if (Inst.getOperand(i)->getType()->isScalableTy() &&
         !isa<ReturnInst>(&Inst))
