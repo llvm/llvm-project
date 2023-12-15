@@ -10319,7 +10319,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 }
 
 static void swapCommutativeSMEOperands(unsigned BuiltinID,
-                                       SmallVectorImpl<Value*> &Ops) {
+                                       SmallVectorImpl<Value *> &Ops) {
   unsigned MultiVec;
   switch (BuiltinID) {
   default:
