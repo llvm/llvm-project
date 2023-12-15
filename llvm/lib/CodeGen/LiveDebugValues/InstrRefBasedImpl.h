@@ -205,11 +205,11 @@ namespace LiveDebugValues {
 using namespace llvm;
 
 /// Type for a table of values in a block.
-using ValueTable = std::unique_ptr<ValueIDNum[]>;
+using ValueTable = SmallVector<ValueIDNum, 0>;
 
 /// Type for a table-of-table-of-values, i.e., the collection of either
 /// live-in or live-out values for each block in the function.
-using FuncValueTable = std::unique_ptr<ValueTable[]>;
+using FuncValueTable = SmallVector<ValueTable, 0>;
 
 /// Thin wrapper around an integer -- designed to give more type safety to
 /// spill location numbers.
@@ -1200,12 +1200,12 @@ private:
   /// exists, otherwise returns std::nullopt.
   std::optional<ValueIDNum> getValueForInstrRef(unsigned InstNo, unsigned OpNo,
                                                 MachineInstr &MI,
-                                                const ValueTable *MLiveOuts,
-                                                const ValueTable *MLiveIns);
+                                                const FuncValueTable *MLiveOuts,
+                                                const FuncValueTable *MLiveIns);
 
   /// Observe a single instruction while stepping through a block.
-  void process(MachineInstr &MI, const ValueTable *MLiveOuts,
-               const ValueTable *MLiveIns);
+  void process(MachineInstr &MI, const FuncValueTable *MLiveOuts,
+               const FuncValueTable *MLiveIns);
 
   /// Examines whether \p MI is a DBG_VALUE and notifies trackers.
   /// \returns true if MI was recognized and processed.
@@ -1213,8 +1213,8 @@ private:
 
   /// Examines whether \p MI is a DBG_INSTR_REF and notifies trackers.
   /// \returns true if MI was recognized and processed.
-  bool transferDebugInstrRef(MachineInstr &MI, const ValueTable *MLiveOuts,
-                             const ValueTable *MLiveIns);
+  bool transferDebugInstrRef(MachineInstr &MI, const FuncValueTable *MLiveOuts,
+                             const FuncValueTable *MLiveIns);
 
   /// Stores value-information about where this PHI occurred, and what
   /// instruction number is associated with it.
@@ -1246,14 +1246,14 @@ private:
   /// \p InstrNum Debug instruction number defined by DBG_PHI instructions.
   /// \returns The machine value number at position Here, or std::nullopt.
   std::optional<ValueIDNum> resolveDbgPHIs(MachineFunction &MF,
-                                           const ValueTable *MLiveOuts,
-                                           const ValueTable *MLiveIns,
+                                           const FuncValueTable &MLiveOuts,
+                                           const FuncValueTable &MLiveIns,
                                            MachineInstr &Here,
                                            uint64_t InstrNum);
 
   std::optional<ValueIDNum> resolveDbgPHIsImpl(MachineFunction &MF,
-                                               const ValueTable *MLiveOuts,
-                                               const ValueTable *MLiveIns,
+                                               const FuncValueTable &MLiveOuts,
+                                               const FuncValueTable &MLiveIns,
                                                MachineInstr &Here,
                                                uint64_t InstrNum);
 

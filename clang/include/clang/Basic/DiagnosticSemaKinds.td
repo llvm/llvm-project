@@ -8729,7 +8729,7 @@ def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
-  "memory order argument to atomic operation is invalid">,
+  "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
 def err_atomic_op_has_invalid_synch_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;

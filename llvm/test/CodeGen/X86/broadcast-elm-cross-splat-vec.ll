@@ -1459,17 +1459,16 @@ define <8 x i64> @f8xi64_i128(<8 x i64> %a) {
 ;
 ; AVX-64-LABEL: f8xi64_i128:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-64-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
-; AVX-64-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
-; AVX-64-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
-; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX-64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-64-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
-; AVX-64-NEXT:    vpaddq %xmm3, %xmm0, %xmm0
-; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX-64-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
+; AVX-64-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [0,1,0,1]
 ; AVX-64-NEXT:    # ymm2 = mem[0,1,0,1]
+; AVX-64-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX-64-NEXT:    vpaddq %xmm2, %xmm3, %xmm3
+; AVX-64-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
+; AVX-64-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX-64-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX-64-NEXT:    vpaddq %xmm2, %xmm3, %xmm3
+; AVX-64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; AVX-64-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX-64-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX-64-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX-64-NEXT:    retq

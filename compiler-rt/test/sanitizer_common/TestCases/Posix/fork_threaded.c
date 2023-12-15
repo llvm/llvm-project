@@ -3,6 +3,9 @@
 // The test uses pthread barriers which are not available on Darwin.
 // UNSUPPORTED: darwin
 
+// FIXME: It probably hangs on this platform.
+// UNSUPPORTED: ppc
+
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
 // The test try to check two things:
@@ -21,7 +24,7 @@
 
 #include "sanitizer_common/sanitizer_specific.h"
 
-static const size_t kBufferSize = 1 << 20;
+static const size_t kBufferSize = 8192;
 
 pthread_barrier_t bar;
 

@@ -1423,6 +1423,8 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
+    if (getTriple().isOSBinFormatMachO())
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
