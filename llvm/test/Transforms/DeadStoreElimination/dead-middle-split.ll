@@ -2,9 +2,9 @@
 
 ; RUN: opt < %s -passes=dse -S | FileCheck %s
 
-define dso_local void @overwrite_middle(ptr nocapture noundef writeonly %X) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @overwrite_middle(
-; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) local_unnamed_addr {
+define void @overwrite_middle(ptr nocapture noundef writeonly %X) {
+; CHECK-LABEL: define void @overwrite_middle(
+; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 976
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) [[TMP0]], i8 5, i64 24, i1 false)
@@ -20,9 +20,9 @@ entry:
   ret void
 }
 
-define dso_local void @overwrite_middle2(ptr nocapture noundef writeonly %X) local_unnamed_addr #0 {
-; CHECK-LABEL: define dso_local void @overwrite_middle2(
-; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) local_unnamed_addr {
+define void @overwrite_middle2(ptr nocapture noundef writeonly %X) {
+; CHECK-LABEL: define void @overwrite_middle2(
+; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 990
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(10) [[TMP0]], i8 5, i64 10, i1 false)
@@ -38,6 +38,37 @@ entry:
   ret void
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
+define void @front_and_rear_bigger_than_threshold(ptr nocapture noundef writeonly %X) {
+; CHECK-LABEL: define void @front_and_rear_bigger_than_threshold(
+; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(1000) [[X]], i8 5, i64 1000, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 65
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(800) [[ARRAYIDX]], i8 3, i64 800, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(1000) %X, i8 5, i64 1000, i1 false)
+  %arrayidx = getelementptr inbounds i8, ptr %X, i64 65
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(800) %arrayidx, i8 3, i64 800, i1 false)
+  ret void
+}
+
+define void @dead_smaller_than_threshold(ptr nocapture noundef writeonly %X) {
+; CHECK-LABEL: define void @dead_smaller_than_threshold(
+; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(50) [[X]], i8 5, i64 50, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 10
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(45) [[ARRAYIDX]], i8 3, i64 25, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(50) %X, i8 5, i64 50, i1 false)
+  %arrayidx = getelementptr inbounds i8, ptr %X, i64 10
+  tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(45) %arrayidx, i8 3, i64 25, i1 false)
+  ret void
+}
+
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 

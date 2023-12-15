@@ -9,7 +9,6 @@ define void @_Z22overwrite_middle_localv() !dbg !23 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BLOB:%.*]] = alloca [1000 x i8], align 16, !DIAssignID [[DIASSIGNID33:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28:![0-9]+]], metadata !DIExpression(), metadata [[DIASSIGNID33]], metadata ptr [[BLOB]], metadata !DIExpression()), !dbg [[DBG34:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1000, ptr nonnull [[BLOB]]), !dbg [[DBG34]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[BLOB]], i64 976
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(24) [[TMP0]], i8 5, i64 24, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID35:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(10) [[BLOB]], i8 5, i64 10, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID35]]
@@ -19,30 +18,23 @@ define void @_Z22overwrite_middle_localv() !dbg !23 {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 2 dereferenceable(980) [[ADD_PTR]], i8 3, i64 980, i1 false), !dbg [[DBG34]], !DIAssignID [[DIASSIGNID37:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.dbg.assign(metadata i1 undef, metadata [[META28]], metadata !DIExpression(DW_OP_LLVM_fragment, 80, 7840), metadata [[DIASSIGNID37]], metadata ptr [[ADD_PTR]], metadata !DIExpression()), !dbg [[DBG34]]
 ; CHECK-NEXT:    call void @_Z3escPc(ptr noundef nonnull [[BLOB]]), !dbg [[DBG34]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1000, ptr nonnull [[BLOB]]), !dbg [[DBG34]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG34]]
 ;
 entry:
   %blob = alloca [1000 x i8], align 16, !DIAssignID !33
   call void @llvm.dbg.assign(metadata i1 undef, metadata !28, metadata !DIExpression(), metadata !33, metadata ptr %blob, metadata !DIExpression()), !dbg !34
-  call void @llvm.lifetime.start.p0(i64 1000, ptr nonnull %blob), !dbg !34
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(1000) %blob, i8 5, i64 1000, i1 false), !dbg !34, !DIAssignID !35
   call void @llvm.dbg.assign(metadata i1 undef, metadata !28, metadata !DIExpression(), metadata !35, metadata ptr %blob, metadata !DIExpression()), !dbg !34
   %add.ptr = getelementptr inbounds i8, ptr %blob, i64 10, !dbg !34
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 2 dereferenceable(980) %add.ptr, i8 3, i64 980, i1 false), !dbg !34, !DIAssignID !36
   call void @llvm.dbg.assign(metadata i1 undef, metadata !28, metadata !DIExpression(DW_OP_LLVM_fragment, 80, 7840), metadata !36, metadata ptr %add.ptr, metadata !DIExpression()), !dbg !34
   call void @_Z3escPc(ptr noundef nonnull %blob), !dbg !34
-  call void @llvm.lifetime.end.p0(i64 1000, ptr nonnull %blob), !dbg !34
   ret void, !dbg !34
 }
-
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 declare void @_Z3escPc(ptr noundef)
-
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
