@@ -33,6 +33,8 @@ struct TestingAndDir {
   std::optional<llvm::unittest::TempDir> Temp;
 };
 
+void setMaxOnDiskCASMappingSize();
+
 class CASTest
     : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
 protected:
@@ -58,7 +60,10 @@ protected:
       Envs.emplace_back(std::move(TD.Env));
     return std::move(TD.Cache);
   }
-  void SetUp() { NextCASIndex = 0; }
+  void SetUp() {
+    NextCASIndex = 0;
+    setMaxOnDiskCASMappingSize();
+  }
   void TearDown() {
     NextCASIndex = std::nullopt;
     Dirs.clear();
