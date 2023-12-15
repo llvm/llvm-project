@@ -248,10 +248,17 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   SmallVector<StringRef, 8> Args = {
       Clang, "--driver-mode=gcc", "-target", Opts.Triple, "-E",
       "-xc", "-DRC_INVOKED"};
+  std::string PreprocessorExecutable;
   if (!Opts.PreprocessCmd.empty()) {
     Args.clear();
     for (const auto &S : Opts.PreprocessCmd)
       Args.push_back(S);
+    if (!sys::fs::can_execute(Args[0])) {
+      if (auto P = sys::findProgramByName(Args[0])) {
+        PreprocessorExecutable = *P;
+        Args[0] = PreprocessorExecutable;
+      }
+    }
   }
   for (const auto &S : Opts.PreprocessArgs)
     Args.push_back(S);
@@ -269,9 +276,15 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   }
   // The llvm Support classes don't handle reading from stdout of a child
   // process; otherwise we could avoid using a temp file.
-  int Res = sys::ExecuteAndWait(Args[0], Args);
+  std::string ErrMsg;
+  int Res =
+      sys::ExecuteAndWait(Args[0], Args, /*Env=*/std::nullopt, /*Redirects=*/{},
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
   if (Res) {
-    fatalError("llvm-rc: Preprocessing failed.");
+    if (!ErrMsg.empty())
+      fatalError("llvm-rc: Preprocessing failed: " + ErrMsg);
+    else
+      fatalError("llvm-rc: Preprocessing failed.");
   }
 }
 
