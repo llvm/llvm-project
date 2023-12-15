@@ -10,6 +10,7 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/RemoteCachingService/RemoteCachingService.h"
+#include "llvm/Support/CommandLine.h"
 #include "gtest/gtest.h"
 #include <mutex>
 
@@ -27,23 +28,20 @@ TestingAndDir createInMemory(int I) {
   return TestingAndDir{std::move(CAS), std::move(Cache), nullptr, std::nullopt};
 }
 
-__attribute__((constructor)) static void configureCASTestEnv() {
-  // Restrict the size of the on-disk CAS for tests. This allows testing in
-  // constrained environments (e.g. small TMPDIR). It also prevents leaving
-  // behind large files on file systems that do not support sparse files if a
-  // test  crashes before resizing the file.
-  static std::once_flag Flag;
-  std::call_once(Flag, [] {
-    size_t Limit = 100 * 1024 * 1024;
-    std::string LimitStr = std::to_string(Limit);
-    setenv("LLVM_CAS_MAX_MAPPING_SIZE", LimitStr.c_str(), /*overwrite=*/false);
-  });
-}
-
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
                          ::testing::Values(createInMemory));
 
 #if LLVM_ENABLE_ONDISK_CAS
+namespace llvm::cas::ondisk {
+void setMaxMappingSize(uint64_t Size);
+} // namespace llvm::cas::ondisk
+
+void setMaxOnDiskCASMappingSize() {
+  static std::once_flag Flag;
+  std::call_once(
+      Flag, [] { llvm::cas::ondisk::setMaxMappingSize(100 * 1024 * 1024); });
+}
+
 TestingAndDir createOnDisk(int I) {
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
   std::unique_ptr<ObjectStore> CAS;
@@ -55,6 +53,8 @@ TestingAndDir createOnDisk(int I) {
                        std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASTest, ::testing::Values(createOnDisk));
+#else
+void setMaxOnDiskCASMappingSize() {}
 #endif /* LLVM_ENABLE_ONDISK_CAS */
 
 #if LLVM_CAS_ENABLE_REMOTE_CACHE

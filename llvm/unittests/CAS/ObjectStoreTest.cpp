@@ -416,6 +416,7 @@ TEST(OnDiskCASTest, BlobsBigParallelMultiCAS) {
 
 #ifndef _WIN32 // FIXME: resize support on Windows.
 TEST(OnDiskCASTest, DiskSize) {
+  setMaxOnDiskCASMappingSize();
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
   std::unique_ptr<ObjectStore> CAS;
   ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
