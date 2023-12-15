@@ -21,7 +21,9 @@ def OpenACC_Dialect : Dialect {
   let summary = "An OpenACC dialect for MLIR.";
 
   let description = [{
-    This dialect models the construct from the OpenACC 3.3 directive language.
+    This dialect models the construct from the OpenACC directive
+    language. See [`OpenACC Dialect Documentation`](Dialects/OpenACC.md)
+    for more details.
   }];
 
   let useDefaultAttributePrinterParser = 1;
