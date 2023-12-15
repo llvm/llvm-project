@@ -78,8 +78,8 @@ TEST(NextgenPluginsTest, PluginAsyncAlloc) {
   // Platforms like x86_64 don't support it
   if (__tgt_rtl_init_async_info(DEVICE_ID, &info) == OFFLOAD_SUCCESS) {
     // Allocate memory
-    void *device_ptr =
-        __tgt_rtl_data_alloc(DEVICE_ID, var_size, nullptr, TARGET_ALLOC_DEFAULT);
+    void *device_ptr = __tgt_rtl_data_alloc(DEVICE_ID, var_size, nullptr,
+                                            TARGET_ALLOC_DEFAULT);
 
     // Check that the result is not null
     EXPECT_NE(device_ptr, nullptr);
@@ -104,8 +104,8 @@ TEST(NextgenPluginsTest, PluginAsyncAlloc) {
     EXPECT_EQ(host_value, test_value);
 
     // Cleanup data
-    EXPECT_EQ(OFFLOAD_SUCCESS,
-              __tgt_rtl_data_delete(DEVICE_ID, device_ptr, TARGET_ALLOC_DEFAULT));
+    EXPECT_EQ(OFFLOAD_SUCCESS, __tgt_rtl_data_delete(DEVICE_ID, device_ptr,
+                                                     TARGET_ALLOC_DEFAULT));
   }
 }
 
