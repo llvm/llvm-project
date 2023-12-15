@@ -582,6 +582,9 @@ void FracMatrix::LLL(Fraction delta) {
   MPInt nearest;
   Fraction mu;
 
+  // `bStar` holds the Gram-Schmidt orthogonalisation
+  // of the matrix at all times. It is recomputed every
+  // time the matrix is modified during the algorithm.
   FracMatrix bStar = gramSchmidt();
 
   unsigned k = 1;
