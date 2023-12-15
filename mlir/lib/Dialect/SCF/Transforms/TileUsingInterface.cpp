@@ -362,9 +362,8 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   auto clonedOp = cast<TilingInterface>(
       cloneOpAndUpdateDestinationArgs(rewriter, op, clonedOpDestination));
 
-  // 5b. Early return cloned op if tiling is not happenning.
-  if (llvm::all_of(tileSizeVector,
-                   [](OpFoldResult v) { return isZeroIndex(v); })) {
+  // 5b. Early return cloned op if tiling is not happening.
+  if (llvm::all_of(tileSizeVector, isZeroIndex)) {
     return scf::SCFTilingResult{/*tiledOps=*/{clonedOp}, /*loops=*/{},
                                 clonedOp->getResults()};
   }
