@@ -528,8 +528,7 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         Plan, ID, SE, WideIV->getTruncInst(), WideIV->getPHINode()->getType(),
         WideIV->getStartValue(), WideIV->getStepValue());
 
-    // Update scalar users of IV to use Step instead. Use SetVector to ensure
-    // the list of users doesn't contain duplicates.
+    // Update scalar users of IV to use Step instead.
     WideIV->replaceUsesWithIf(
         Steps, [HasOnlyVectorVFs, WideIV](VPUser &U, unsigned) {
           return !HasOnlyVectorVFs || U.usesScalars(WideIV);
