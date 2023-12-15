@@ -1,4 +1,4 @@
-//===-- cpu_model_aarch64.c - Support for __cpu_model builtin  ----*- C -*-===//
+//===-- cpu_model/aarch64.c - Support for __cpu_model builtin  ----*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file is based on LLVM's lib/Support/Host.cpp.
-//  It implements __aarch64_have_lse_atomics, __aarch64_cpu_features for AArch64.
+//  It implements __aarch64_have_lse_atomics, __aarch64_cpu_features for
+//  AArch64.
 //
 //===----------------------------------------------------------------------===//
 
 #include "cpu_model.h"
 
 #if !defined(__aarch64__)
-#  error This file is intended only for aarch64-based targets
+#error This file is intended only for aarch64-based targets
 #endif
-
 
 #if __has_include(<sys/ifunc.h>)
 #include <sys/ifunc.h>
@@ -28,24 +28,22 @@ typedef struct __ifunc_arg_t {
 } __ifunc_arg_t;
 #endif // __has_include(<sys/ifunc.h>)
 
-
 // LSE support detection for out-of-line atomics
 // using HWCAP and Auxiliary vector
 _Bool __aarch64_have_lse_atomics
     __attribute__((visibility("hidden"), nocommon)) = false;
 
 #if defined(__FreeBSD__)
-#  include "lse_atomics/freebsd.inc"
+#include "lse_atomics/freebsd.inc"
 #elif defined(__Fucsia__)
-#  include "lse_atomics/fucsia.inc"
+#include "lse_atomics/fucsia.inc"
 #elif defined(__ANDROID__)
-#  include "lse_atomics/android.inc"
+#include "lse_atomics/android.inc"
 #elif __has_include(<sys/auxv.h>)
-#  include "lse_atomics/sysauxv.inc"
+#include "lse_atomics/sysauxv.inc"
 #else
 // When unimplemented, we leave __aarch64_have_lse_atomics initialized to false.
 #endif
-
 
 #if !defined(DISABLE_AARCH64_FMV)
 // CPUFeatures must correspond to the same AArch64 features in
@@ -124,21 +122,21 @@ struct {
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
 #if defined(__APPLE__)
-#  include "aarch64/fmv/apple.inc"
+#include "aarch64/fmv/apple.inc"
 #elif defined(__FreeBSD__)
-#  include "aarch64/fmv/mrs.inc"
-#  include "aarch64/fmv/freebsd.inc"
+#include "aarch64/fmv/freebsd.inc"
+#include "aarch64/fmv/mrs.inc"
 #elif defined(__Fucsia__)
-#  include "aarch64/fmv/mrs.inc"
-#  include "aarch64/fmv/fucsia.inc"
+#include "aarch64/fmv/fucsia.inc"
+#include "aarch64/fmv/mrs.inc"
 #elif defined(__ANDROID__)
-#  include "aarch64/fmv/mrs.inc"
-#  include "aarch64/fmv/android.inc"
+#include "aarch64/fmv/android.inc"
+#include "aarch64/fmv/mrs.inc"
 #elif __has_include(<sys/auxv.h>)
-#  include "aarch64/fmv/mrs.inc"
-#  include "aarch64/fmv/sysauxv.inc"
+#include "aarch64/fmv/mrs.inc"
+#include "aarch64/fmv/sysauxv.inc"
 #else
-#  include "aarch64/fmv/unimplemented.inc"
+#include "aarch64/fmv/unimplemented.inc"
 #endif
 
 #endif // !defined(DISABLE_AARCH64_FMV)

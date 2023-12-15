@@ -65,3 +65,5 @@ void __init_cpu_features_resolver(void) {
     __aarch64_cpu_features.features |= (1ULL << FEAT_INIT);
   });
 }
+
+#endif // TARGET_OS_OSX || TARGET_OS_IPHONE
