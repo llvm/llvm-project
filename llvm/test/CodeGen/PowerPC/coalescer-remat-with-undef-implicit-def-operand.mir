@@ -4612,7 +4612,7 @@ constants:
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name:            _Z13testTransposeIfLj31ELj17EEvv
-  ; CHECK: IMPLICIT_DEF implicit-def %{{[0-9]+}}
+  ; CHECK: undef %[[REG:[0-9]+]].sub_64:vsrc = IMPLICIT_DEF implicit-def %[[REG]]
   bb.0.entry:
     liveins: $x2
     %1584:g8rc = LI8 31
