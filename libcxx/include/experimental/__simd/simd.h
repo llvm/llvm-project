@@ -42,7 +42,7 @@ public:
   using mask_type  = simd_mask<_Tp, _Abi>;
   using abi_type   = _Abi;
 
-  static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
+  static _LIBCPP_CONSTEVAL_EXT size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
 
   _LIBCPP_HIDE_FROM_ABI simd() noexcept = default;
 
