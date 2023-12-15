@@ -754,7 +754,8 @@ static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
          // that originally constructs the object.
          // Ultimately, this will be fixed by propagating locations down from
          // the result object, rather than up from the original constructor as
-         // we do now.
+         // we do now (see also the FIXME in the documentation for
+         // `getResultObjectLocation()`).
          isa<ConditionalOperator>(RecordPRValue);
 }
 
