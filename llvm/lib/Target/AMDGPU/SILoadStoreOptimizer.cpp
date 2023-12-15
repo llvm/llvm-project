@@ -322,7 +322,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
     // FIXME: Handle d16 correctly
     return AMDGPU::getMUBUFElements(Opc);
   }
-  if (TII.isMIMG(MI)) {
+  if (TII.isImage(MI)) {
     uint64_t DMaskImm =
         TII.getNamedOperand(MI, AMDGPU::OpName::dmask)->getImm();
     return llvm::popcount(DMaskImm);
@@ -411,7 +411,7 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
         return BUFFER_STORE;
       }
     }
-    if (TII.isMIMG(Opc)) {
+    if (TII.isImage(Opc)) {
       // Ignore instructions encoded without vaddr.
       if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
           !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr0))
@@ -513,7 +513,7 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   default:
     if (TII.isMUBUF(Opc))
       return AMDGPU::getMUBUFBaseOpcode(Opc);
-    if (TII.isMIMG(Opc)) {
+    if (TII.isImage(Opc)) {
       const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opc);
       assert(Info);
       return Info->BaseOpcode;
@@ -611,11 +611,13 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
     return Result;
   }
 
-  if (TII.isMIMG(Opc)) {
+  if (TII.isImage(Opc)) {
     int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
     if (VAddr0Idx >= 0) {
-      int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
-      Result.NumVAddrs = SRsrcIdx - VAddr0Idx;
+      int RsrcName =
+          TII.isMIMG(Opc) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
+      int RsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcName);
+      Result.NumVAddrs = RsrcIdx - VAddr0Idx;
     } else {
       Result.VAddr = true;
     }
@@ -753,6 +755,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
   }
 
   AddressRegs Regs = getRegs(Opc, *LSO.TII);
+  bool isVIMAGEorVSAMPLE = LSO.TII->isVIMAGE(*I) || LSO.TII->isVSAMPLE(*I);
 
   NumAddresses = 0;
   for (unsigned J = 0; J < Regs.NumVAddrs; J++)
@@ -765,8 +768,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sbase);
   if (Regs.SRsrc)
-    AddrIdx[NumAddresses++] =
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::srsrc);
+    AddrIdx[NumAddresses++] = AMDGPU::getNamedOperandIdx(
+        Opc, isVIMAGEorVSAMPLE ? AMDGPU::OpName::rsrc : AMDGPU::OpName::srsrc);
   if (Regs.SOffset)
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::soffset);
@@ -777,8 +780,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     AddrIdx[NumAddresses++] =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
   if (Regs.SSamp)
-    AddrIdx[NumAddresses++] =
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::ssamp);
+    AddrIdx[NumAddresses++] = AMDGPU::getNamedOperandIdx(
+        Opc, isVIMAGEorVSAMPLE ? AMDGPU::OpName::samp : AMDGPU::OpName::ssamp);
   assert(NumAddresses <= MaxAddressRegs);
 
   for (unsigned J = 0; J < NumAddresses; J++)
