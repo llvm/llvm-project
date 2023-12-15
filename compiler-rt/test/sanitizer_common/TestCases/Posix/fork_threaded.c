@@ -85,8 +85,8 @@ int main(void) {
     break;
   default: {
     int status;
-    while (waitpid(-1, &status, __WALL) != pid) {
-    }
+    pid_t child = waitpid(pid, &status, /*options=*/0);
+    assert(pid == child);
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
     break;
   }
