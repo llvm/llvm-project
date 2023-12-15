@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/bit.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/math_utils.h"
 
@@ -167,11 +167,11 @@ template <typename T> struct FModFastMathWrapper {
 
 template <typename T> class FModDivisionSimpleHelper {
 private:
-  using intU_t = typename FPBits<T>::UIntType;
+  using UIntType = typename FPBits<T>::UIntType;
 
 public:
-  LIBC_INLINE constexpr static intU_t
-  execute(int exp_diff, int sides_zeroes_count, intU_t m_x, intU_t m_y) {
+  LIBC_INLINE constexpr static UIntType
+  execute(int exp_diff, int sides_zeroes_count, UIntType m_x, UIntType m_y) {
     while (exp_diff > sides_zeroes_count) {
       exp_diff -= sides_zeroes_count;
       m_x <<= sides_zeroes_count;
@@ -186,23 +186,22 @@ public:
 template <typename T> class FModDivisionInvMultHelper {
 private:
   using FPB = FPBits<T>;
-  using intU_t = typename FPB::UIntType;
+  using UIntType = typename FPB::UIntType;
 
 public:
-  LIBC_INLINE constexpr static intU_t
-  execute(int exp_diff, int sides_zeroes_count, intU_t m_x, intU_t m_y) {
+  LIBC_INLINE constexpr static UIntType
+  execute(int exp_diff, int sides_zeroes_count, UIntType m_x, UIntType m_y) {
     if (exp_diff > sides_zeroes_count) {
-      intU_t inv_hy = (cpp::numeric_limits<intU_t>::max() / m_y);
+      UIntType inv_hy = (cpp::numeric_limits<UIntType>::max() / m_y);
       while (exp_diff > sides_zeroes_count) {
         exp_diff -= sides_zeroes_count;
-        intU_t hd =
-            (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - sides_zeroes_count);
+        UIntType hd = (m_x * inv_hy) >> (FPB::BIT_WIDTH - sides_zeroes_count);
         m_x <<= sides_zeroes_count;
         m_x -= hd * m_y;
         while (LIBC_UNLIKELY(m_x > m_y))
           m_x -= m_y;
       }
-      intU_t hd = (m_x * inv_hy) >> (FPB::FloatProp::BIT_WIDTH - exp_diff);
+      UIntType hd = (m_x * inv_hy) >> (FPB::BIT_WIDTH - exp_diff);
       m_x <<= exp_diff;
       m_x -= hd * m_y;
       while (LIBC_UNLIKELY(m_x > m_y))
@@ -223,25 +222,25 @@ class FMod {
 
 private:
   using FPB = FPBits<T>;
-  using intU_t = typename FPB::UIntType;
+  using UIntType = typename FPB::UIntType;
 
   LIBC_INLINE static constexpr FPB eval_internal(FPB sx, FPB sy) {
 
     if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
-        return sx;        // |x|<|y| return x
+        return sx;             // |x|<|y| return x
       return FPB(FPB::zero()); // |x|=|y| return 0.0
     }
 
-    int e_x = sx.get_unbiased_exponent();
-    int e_y = sy.get_unbiased_exponent();
+    int e_x = sx.get_biased_exponent();
+    int e_y = sy.get_biased_exponent();
 
     // Most common case where |y| is "very normal" and |x/y| < 2^EXPONENT_WIDTH
-    if (LIBC_LIKELY(e_y > int(FPB::FloatProp::MANTISSA_WIDTH) &&
-                    e_x - e_y <= int(FPB::FloatProp::EXPONENT_WIDTH))) {
-      intU_t m_x = sx.get_explicit_mantissa();
-      intU_t m_y = sy.get_explicit_mantissa();
-      intU_t d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
+    if (LIBC_LIKELY(e_y > int(FPB::MANTISSA_WIDTH) &&
+                    e_x - e_y <= int(FPB::EXPONENT_WIDTH))) {
+      UIntType m_x = sx.get_explicit_mantissa();
+      UIntType m_y = sy.get_explicit_mantissa();
+      UIntType d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
       if (d == 0)
         return FPB(FPB::zero());
       // iy - 1 because of "zero power" for number with power 1
@@ -255,20 +254,20 @@ private:
     }
 
     // Note that hx is not subnormal by conditions above.
-    intU_t m_x = sx.get_explicit_mantissa();
+    UIntType m_x = sx.get_explicit_mantissa();
     e_x--;
 
-    intU_t m_y = sy.get_explicit_mantissa();
-    int lead_zeros_m_y = FPB::FloatProp::EXPONENT_WIDTH;
+    UIntType m_y = sy.get_explicit_mantissa();
+    int lead_zeros_m_y = FPB::EXPONENT_WIDTH;
     if (LIBC_LIKELY(e_y > 0)) {
       e_y--;
     } else {
       m_y = sy.get_mantissa();
-      lead_zeros_m_y = unsafe_clz(m_y);
+      lead_zeros_m_y = cpp::countl_zero(m_y);
     }
 
     // Assume hy != 0
-    int tail_zeros_m_y = unsafe_ctz(m_y);
+    int tail_zeros_m_y = cpp::countr_zero(m_y);
     int sides_zeroes_count = lead_zeros_m_y + tail_zeros_m_y;
     // n > 0 by conditions above
     int exp_diff = e_x - e_y;
@@ -282,9 +281,8 @@ private:
 
     {
       // Shift hx left until the end or n = 0
-      int left_shift = exp_diff < int(FPB::FloatProp::EXPONENT_WIDTH)
-                           ? exp_diff
-                           : FPB::FloatProp::EXPONENT_WIDTH;
+      int left_shift =
+          exp_diff < int(FPB::EXPONENT_WIDTH) ? exp_diff : FPB::EXPONENT_WIDTH;
       m_x <<= left_shift;
       exp_diff -= left_shift;
     }

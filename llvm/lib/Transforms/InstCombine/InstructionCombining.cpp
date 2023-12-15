@@ -356,6 +356,7 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
+  BinOp1->dropPoisonGeneratingFlags();
   Cast->dropPoisonGeneratingFlags();
   return true;
 }
@@ -609,7 +610,7 @@ static Value *getIdentityValue(Instruction::BinaryOps Opcode, Value *V) {
 /// allow more factorization opportunities.
 static Instruction::BinaryOps
 getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
-                          Value *&LHS, Value *&RHS) {
+                          Value *&LHS, Value *&RHS, BinaryOperator *OtherOp) {
   assert(Op && "Expected a binary operator");
   LHS = Op->getOperand(0);
   RHS = Op->getOperand(1);
@@ -621,6 +622,13 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
       return Instruction::Mul;
     }
     // TODO: We can add other conversions e.g. shr => div etc.
+  }
+  if (Instruction::isBitwiseLogicOp(TopOpcode)) {
+    if (OtherOp && OtherOp->getOpcode() == Instruction::AShr &&
+        match(Op, m_LShr(m_NonNegative(), m_Value()))) {
+      // lshr nneg C, X --> ashr nneg C, X
+      return Instruction::AShr;
+    }
   }
   return Op->getOpcode();
 }
@@ -962,9 +970,9 @@ Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
   Instruction::BinaryOps LHSOpcode, RHSOpcode;
 
   if (Op0)
-    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
+    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B, Op1);
   if (Op1)
-    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
+    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D, Op0);
 
   // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
   // a common term.
@@ -1131,6 +1139,14 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   };
 
   if (LHSIsSelect && RHSIsSelect && A == D) {
+    // op(select(%v, %x, %y), select(%v, %y, %x)) --> op(%x, %y)
+    if (I.isCommutative() && B == F && C == E) {
+      Value *BI = Builder.CreateBinOp(I.getOpcode(), B, E);
+      if (auto *BO = dyn_cast<BinaryOperator>(BI))
+        BO->copyIRFlags(&I);
+      return BI;
+    }
+
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
@@ -2181,16 +2197,6 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return nullptr;
   }
 
-  // Treat lshr with non-negative operand as ashr.
-  if (match(V, m_LShr(m_Value(A), m_Value(B))) &&
-      isKnownNonNegative(A, SQ.getWithInstruction(cast<Instruction>(V)),
-                         Depth)) {
-    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
-                                         DoesConsume, Depth))
-      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
-    return nullptr;
-  }
-
   Value *Cond;
   // LogicOps are special in that we canonicalize them at the cost of an
   // instruction.
@@ -3106,6 +3112,7 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return nullptr;
   }
 
+  DC.registerBranch(&BI);
   return nullptr;
 }
 

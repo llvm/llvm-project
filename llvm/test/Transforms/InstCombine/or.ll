@@ -1511,6 +1511,27 @@ define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
   ret <2 x i12> %r
 }
 
+define i32 @mul_no_common_bits_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_no_common_bits_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, %y
+  %r = or disjoint i32 %m, %x
+  ret i32 %r
+}
+
+define i32 @mul_no_common_bits_const_op_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_no_common_bits_const_op_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X:%.*]], 25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 24
+  %r = or disjoint i32 %m, %x
+  ret i32 %r
+}
+
 ; negative test - extra use requires extra instructions
 
 define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
@@ -1586,4 +1607,17 @@ define i8 @drop_disjoint(i8 %x) {
   %a = and i8 %x, -2
   %b = or disjoint i8 %a, 1
   ret i8 %b
+}
+
+; Make sure we drop disjoint when combining the Ors.
+define i32 @assoc_cast_assoc_disjoint(i16 %x) {
+; CHECK-LABEL: @assoc_cast_assoc_disjoint(
+; CHECK-NEXT:    [[B:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[B]], 65537
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %a = or i16 %x, 1
+  %b = zext i16 %a to i32
+  %c = or disjoint i32 %b, 65536
+  ret i32 %c
 }

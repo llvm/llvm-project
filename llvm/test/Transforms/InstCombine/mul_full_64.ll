@@ -177,6 +177,7 @@ define i64 @mul_full_64_variant2(i64 %a, i64 %b, ptr nocapture %rhi) {
   ret i64 %add27
 }
 
+; Negative test case for mul_fold function: MUL7 is used in more than one place
 define i64 @mul_full_64_variant3(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-LABEL: @mul_full_64_variant3(
 ; CHECK-NEXT:    [[CONV:%.*]] = and i64 [[A:%.*]], 4294967295
@@ -196,7 +197,9 @@ define i64 @mul_full_64_variant3(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[ADD10]], [[SHR_I]]
 ; CHECK-NEXT:    store i64 [[ADD17]], ptr [[RHI:%.*]], align 8
-; CHECK-NEXT:    [[ADD19:%.*]] = mul i64 [[A]], [[B]]
+; CHECK-NEXT:    [[ADD18:%.*]] = add i64 [[MUL6]], [[MUL5]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADD18]], 32
+; CHECK-NEXT:    [[ADD19:%.*]] = add i64 [[SHL]], [[MUL7]]
 ; CHECK-NEXT:    ret i64 [[ADD19]]
 ;
   %conv = and i64 %a, 4294967295

@@ -585,6 +585,8 @@ static bool fnegFoldsIntoOpcode(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::SELECT:
   case ISD::FSIN:
   case ISD::FTRUNC:
@@ -4572,6 +4574,10 @@ static unsigned inverseMinMax(unsigned Opc) {
     return ISD::FMINNUM_IEEE;
   case ISD::FMINNUM_IEEE:
     return ISD::FMAXNUM_IEEE;
+  case ISD::FMAXIMUM:
+    return ISD::FMINIMUM;
+  case ISD::FMINIMUM:
+    return ISD::FMAXIMUM;
   case AMDGPUISD::FMAX_LEGACY:
     return AMDGPUISD::FMIN_LEGACY;
   case AMDGPUISD::FMIN_LEGACY:
@@ -4695,6 +4701,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMINNUM:
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case AMDGPUISD::FMAX_LEGACY:
   case AMDGPUISD::FMIN_LEGACY: {
     // fneg (fmaxnum x, y) -> fminnum (fneg x), (fneg y)
@@ -5305,6 +5313,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FMED3)
   NODE_NAME_CASE(SMED3)
   NODE_NAME_CASE(UMED3)
+  NODE_NAME_CASE(FMAXIMUM3)
+  NODE_NAME_CASE(FMINIMUM3)
   NODE_NAME_CASE(FDOT2)
   NODE_NAME_CASE(URECIP)
   NODE_NAME_CASE(DIV_SCALE)
@@ -5759,6 +5769,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMIN3:
   case AMDGPUISD::FMAX3:
+  case AMDGPUISD::FMINIMUM3:
+  case AMDGPUISD::FMAXIMUM3:
   case AMDGPUISD::FMAD_FTZ: {
     if (SNaN)
       return true;

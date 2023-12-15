@@ -40,7 +40,7 @@ static void test_signatures()
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr));
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts));
     ASSERT_NOEXCEPT(fs::permissions(p, pr, ec));
-    LIBCPP_ONLY(ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec)));
+    LIBCPP_ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec));
 }
 
 static void test_error_reporting()

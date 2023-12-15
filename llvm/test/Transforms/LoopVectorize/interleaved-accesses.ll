@@ -64,7 +64,7 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx0, align 4
-  %tmp1 = or i64 %indvars.iv, 1
+  %tmp1 = or disjoint i64 %indvars.iv, 1
   %arrayidx1 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %tmp1
   %tmp2 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %tmp, %C
@@ -700,7 +700,7 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %tmp = load i32, ptr %arrayidx, align 4
-  %tmp1 = or i64 %indvars.iv, 1
+  %tmp1 = or disjoint i64 %indvars.iv, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %tmp1
   %tmp2 = load i32, ptr %arrayidx2, align 4
   %mul = mul nsw i32 %tmp2, %tmp
@@ -1510,7 +1510,7 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul nsw <4 x i32> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul nsw <4 x i32> [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP14]], align 4, !alias.scope !36, !noalias !39
+; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP14]], align 4, !alias.scope [[META36:![0-9]+]], !noalias [[META39:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]

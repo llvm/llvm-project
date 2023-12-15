@@ -762,7 +762,7 @@ define <vscale x 2 x i64> @bitcast_vec_cond_scalable(<vscale x 16 x i1> %cond, <
 
 ; Negative test - bitcast of condition from wide source element type cannot be converted to select.
 
-define <8 x i3> @bitcast_vec_cond_commute1(<3 x i1> %cond, <8 x i3> %pc, <8 x i3> %d) {
+define <8 x i3> @bitcast_vec_cond_commute1(<3 x i1> noundef %cond, <8 x i3> %pc, <8 x i3> %d) {
 ; CHECK-LABEL: @bitcast_vec_cond_commute1(
 ; CHECK-NEXT:    [[C:%.*]] = mul <8 x i3> [[PC:%.*]], [[PC]]
 ; CHECK-NEXT:    [[S:%.*]] = sext <3 x i1> [[COND:%.*]] to <3 x i8>
@@ -830,7 +830,7 @@ define <2 x i16> @bitcast_vec_cond_commute3(<4 x i8> %cond, <2 x i16> %pc, <2 x 
 
 ; Don't crash on invalid type for compute signbits.
 
-define <2 x i64> @bitcast_fp_vec_cond(<2 x double> %s, <2 x i64> %c, <2 x i64> %d) {
+define <2 x i64> @bitcast_fp_vec_cond(<2 x double> noundef %s, <2 x i64> %c, <2 x i64> %d) {
 ; CHECK-LABEL: @bitcast_fp_vec_cond(
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast <2 x double> [[S:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], <i64 -1, i64 -1>
@@ -849,7 +849,7 @@ define <2 x i64> @bitcast_fp_vec_cond(<2 x double> %s, <2 x i64> %c, <2 x i64> %
 
 ; Wider source type would be ok except poison could leak across elements.
 
-define <2 x i64> @bitcast_int_vec_cond(i1 %b, <2 x i64> %c, <2 x i64> %d) {
+define <2 x i64> @bitcast_int_vec_cond(i1 noundef %b, <2 x i64> %c, <2 x i64> %d) {
 ; CHECK-LABEL: @bitcast_int_vec_cond(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i128
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast i128 [[S]] to <2 x i64>

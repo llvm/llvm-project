@@ -4473,7 +4473,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
         ItinData->getOperandCycle(DefMCID.getSchedClass(), DefIdx);
     int Adj = Subtarget.getPreISelOperandLatencyAdjustment();
     int Threshold = 1 + Adj;
-    return !Latency || Latency <= Threshold ? 1 : *Latency - Adj;
+    return !Latency || Latency <= (unsigned)Threshold ? 1 : *Latency - Adj;
   }
 
   const MCInstrDesc &UseMCID = get(UseNode->getMachineOpcode());
@@ -4490,7 +4490,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   if (!Latency)
     return std::nullopt;
 
-  if (Latency > 1 &&
+  if (Latency > 1U &&
       (Subtarget.isCortexA8() || Subtarget.isLikeA9() ||
        Subtarget.isCortexA7())) {
     // FIXME: Shifter op hack: no shift (i.e. [r +/- r]) or [r + r << 2]
@@ -4519,7 +4519,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
       break;
     }
     }
-  } else if (DefIdx == 0 && Latency > 2 && Subtarget.isSwift()) {
+  } else if (DefIdx == 0 && Latency > 2U && Subtarget.isSwift()) {
     // FIXME: Properly handle all of the latency adjustments for address
     // writeback.
     switch (DefMCID.getOpcode()) {
@@ -4836,7 +4836,7 @@ bool ARMBaseInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     unsigned DefClass = DefMI.getDesc().getSchedClass();
     std::optional<unsigned> DefCycle =
         ItinData->getOperandCycle(DefClass, DefIdx);
-    return DefCycle <= 2;
+    return DefCycle && DefCycle <= 2U;
   }
   return false;
 }
@@ -6435,20 +6435,20 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator It, bool CFI,
                                      bool Auth) const {
   int Align = std::max(Subtarget.getStackAlignment().value(), uint64_t(8));
+  unsigned MIFlags = CFI ? MachineInstr::FrameSetup : 0;
   assert(Align >= 8 && Align <= 256);
   if (Auth) {
     assert(Subtarget.isThumb2());
     // Compute PAC in R12. Outlining ensures R12 is dead across the outlined
     // sequence.
-    BuildMI(MBB, It, DebugLoc(), get(ARM::t2PAC))
-        .setMIFlags(MachineInstr::FrameSetup);
+    BuildMI(MBB, It, DebugLoc(), get(ARM::t2PAC)).setMIFlags(MIFlags);
     BuildMI(MBB, It, DebugLoc(), get(ARM::t2STRD_PRE), ARM::SP)
         .addReg(ARM::R12, RegState::Kill)
         .addReg(ARM::LR, RegState::Kill)
         .addReg(ARM::SP)
         .addImm(-Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(MIFlags);
   } else {
     unsigned Opc = Subtarget.isThumb() ? ARM::t2STR_PRE : ARM::STR_PRE_IMM;
     BuildMI(MBB, It, DebugLoc(), get(Opc), ARM::SP)
@@ -6456,7 +6456,7 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
         .addReg(ARM::SP)
         .addImm(-Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameSetup);
+        .setMIFlags(MIFlags);
   }
 
   if (!CFI)
@@ -6511,6 +6511,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator It,
                                           bool CFI, bool Auth) const {
   int Align = Subtarget.getStackAlignment().value();
+  unsigned MIFlags = CFI ? MachineInstr::FrameDestroy : 0;
   if (Auth) {
     assert(Subtarget.isThumb2());
     // Restore return address PAC and LR.
@@ -6521,7 +6522,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
         .addReg(ARM::SP)
         .addImm(Align)
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameDestroy);
+        .setMIFlags(MIFlags);
     // LR authentication is after the CFI instructions, below.
   } else {
     unsigned Opc = Subtarget.isThumb() ? ARM::t2LDR_POST : ARM::LDR_POST_IMM;
@@ -6532,7 +6533,7 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
       MIB.addReg(0);
     MIB.addImm(Subtarget.getStackAlignment().value())
         .add(predOps(ARMCC::AL))
-        .setMIFlags(MachineInstr::FrameDestroy);
+        .setMIFlags(MIFlags);
   }
 
   if (CFI) {

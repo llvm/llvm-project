@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// MSVC warning C4244: 'argument': conversion from 'const _Ty2' to 'T', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17

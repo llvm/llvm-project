@@ -53,6 +53,13 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
 static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
+  if (A.getAttributeSpellingListIndex() == SuppressAttr::CXX11_gsl_suppress &&
+      A.getNumArgs() < 1) {
+    // Suppression attribute with GSL spelling requires at least 1 argument.
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
+    return nullptr;
+  }
+
   std::vector<StringRef> DiagnosticIdentifiers;
   for (unsigned I = 0, E = A.getNumArgs(); I != E; ++I) {
     StringRef RuleName;
@@ -60,8 +67,6 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     if (!S.checkStringLiteralArgumentAttr(A, I, RuleName, nullptr))
       return nullptr;
 
-    // FIXME: Warn if the rule name is unknown. This is tricky because only
-    // clang-tidy knows about available rules.
     DiagnosticIdentifiers.push_back(RuleName);
   }
 
@@ -397,6 +402,16 @@ static void CheckForDuplicateCodeAlignAttrs(Sema &S,
   }
 }
 
+static Attr *handleMSConstexprAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                   SourceRange Range) {
+  if (!S.getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2022_3)) {
+    S.Diag(A.getLoc(), diag::warn_unknown_attribute_ignored)
+        << A << A.getRange();
+    return nullptr;
+  }
+  return ::new (S.Context) MSConstexprAttr(S.Context, A);
+}
+
 #define WANT_STMT_MERGE_LOGIC
 #include "clang/Sema/AttrParsedAttrImpl.inc"
 #undef WANT_STMT_MERGE_LOGIC
@@ -600,6 +615,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleUnlikely(S, St, A, Range);
   case ParsedAttr::AT_CodeAlign:
     return handleCodeAlignAttr(S, St, A);
+  case ParsedAttr::AT_MSConstexpr:
+    return handleMSConstexprAttr(S, St, A, Range);
   default:
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // declaration attribute is not written on a statement, but this code is

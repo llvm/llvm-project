@@ -1309,4 +1309,3 @@ func.func @test_large_constant_permutation() {
   %72 = tosa.transpose %14, %cst_26 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
   return
 }
-

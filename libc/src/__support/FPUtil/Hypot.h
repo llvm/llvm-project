@@ -16,7 +16,6 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -28,7 +27,7 @@ template <typename T>
 LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
   shift_length = 0;
   if (mant > 0) {
-    shift_length = (sizeof(mant) * 8) - 1 - unsafe_clz(mant);
+    shift_length = (sizeof(mant) * 8) - 1 - cpp::countl_zero(mant);
   }
   return T(1) << shift_length;
 }
@@ -37,9 +36,13 @@ LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
 
 template <typename T> struct DoubleLength;
 
-template <> struct DoubleLength<uint16_t> { using Type = uint32_t; };
+template <> struct DoubleLength<uint16_t> {
+  using Type = uint32_t;
+};
 
-template <> struct DoubleLength<uint32_t> { using Type = uint64_t; };
+template <> struct DoubleLength<uint32_t> {
+  using Type = uint64_t;
+};
 
 template <> struct DoubleLength<uint64_t> {
   using Type = UInt128;
@@ -117,11 +120,11 @@ LIBC_INLINE T hypot(T x, T y) {
     return y;
   }
 
-  uint16_t x_exp = x_bits.get_unbiased_exponent();
-  uint16_t y_exp = y_bits.get_unbiased_exponent();
+  uint16_t x_exp = x_bits.get_biased_exponent();
+  uint16_t y_exp = y_bits.get_biased_exponent();
   uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
 
-  if ((exp_diff >= MantissaWidth<T>::VALUE + 2) || (x == 0) || (y == 0)) {
+  if ((exp_diff >= FPBits_t::MANTISSA_WIDTH + 2) || (x == 0) || (y == 0)) {
     return abs(x) + abs(y);
   }
 
@@ -145,7 +148,7 @@ LIBC_INLINE T hypot(T x, T y) {
   out_exp = a_exp;
 
   // Add an extra bit to simplify the final rounding bit computation.
-  constexpr UIntType ONE = UIntType(1) << (MantissaWidth<T>::VALUE + 1);
+  constexpr UIntType ONE = UIntType(1) << (FPBits_t::MANTISSA_WIDTH + 1);
 
   a_mant <<= 1;
   b_mant <<= 1;
@@ -155,7 +158,7 @@ LIBC_INLINE T hypot(T x, T y) {
   if (a_exp != 0) {
     leading_one = ONE;
     a_mant |= ONE;
-    y_mant_width = MantissaWidth<T>::VALUE + 1;
+    y_mant_width = FPBits_t::MANTISSA_WIDTH + 1;
   } else {
     leading_one = internal::find_leading_one(a_mant, y_mant_width);
     a_exp = 1;
@@ -175,7 +178,7 @@ LIBC_INLINE T hypot(T x, T y) {
   // But before that, remember to store the losing bits to sticky.
   // The shift length is for a^2 and b^2, so it's double of the exponent
   // difference between a and b.
-  uint16_t shift_length = 2 * (a_exp - b_exp);
+  uint16_t shift_length = static_cast<uint16_t>(2 * (a_exp - b_exp));
   sticky_bits =
       ((b_mant_sq & ((DUIntType(1) << shift_length) - DUIntType(1))) !=
        DUIntType(0));
@@ -255,7 +258,7 @@ LIBC_INLINE T hypot(T x, T y) {
     }
   }
 
-  y_new |= static_cast<UIntType>(out_exp) << MantissaWidth<T>::VALUE;
+  y_new |= static_cast<UIntType>(out_exp) << FPBits_t::MANTISSA_WIDTH;
   return cpp::bit_cast<T>(y_new);
 }
 

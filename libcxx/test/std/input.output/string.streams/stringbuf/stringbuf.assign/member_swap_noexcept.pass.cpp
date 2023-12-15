@@ -27,7 +27,7 @@ struct test_alloc {
   using value_type = T;
 
   [[nodiscard]] constexpr T* allocate(std::size_t) { return nullptr; }
-  void deallocate(void*, unsigned) {}
+  void deallocate(void*, std::size_t) {}
 };
 
 template <class T>
@@ -84,7 +84,7 @@ static void test() {
   {
     std::basic_stringbuf<CharT, std::char_traits<CharT>, test_alloc_not_empty<CharT>> buf1;
     std::basic_stringbuf<CharT, std::char_traits<CharT>, test_alloc_not_empty<CharT>> buf;
-    static_assert(!noexcept(buf.swap(buf1)));
+    LIBCPP_STATIC_ASSERT(!noexcept(buf.swap(buf1)));
   }
   {
     std::basic_stringbuf<CharT, std::char_traits<CharT>, test_alloc_propagate_on_container_swap_not_empty<CharT>> buf1;

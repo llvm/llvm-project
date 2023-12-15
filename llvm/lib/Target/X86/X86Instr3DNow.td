@@ -79,16 +79,6 @@ let SchedRW = [WriteEMMS],
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
                    [(int_x86_mmx_femms)]>, TB;
 
-// PREFETCHWT1 is supported we want to use it for everything but T0.
-def PrefetchWLevel : PatFrag<(ops), (i32 timm), [{
-  return N->getSExtValue() == 3 || !Subtarget->hasPREFETCHWT1();
-}]>;
-
-// Use PREFETCHWT1 for NTA, T2, T1.
-def PrefetchWT1Level : TImmLeaf<i32, [{
-  return Imm < 3;
-}]>;
-
 let SchedRW = [WriteLoad] in {
 let Predicates = [Has3DNow, NoSSEPrefetch] in
 def PREFETCH : I3DNow<0x0D, MRM0m, (outs), (ins i8mem:$addr),

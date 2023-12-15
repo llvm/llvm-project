@@ -353,9 +353,9 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     EmitToStreamer(*OutStreamer, MCInstBuilder(Op)
                                      .addReg(TargetReg)
-                                     .addReg(IndexReg)
+                                     .addReg(ADAReg)
                                      .addImm(Disp)
-                                     .addReg(ADAReg));
+                                     .addReg(IndexReg));
 
     return;
   }

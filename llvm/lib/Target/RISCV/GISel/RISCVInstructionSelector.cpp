@@ -104,6 +104,10 @@ private:
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
+  void renderImmSubFromXLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                            int OpIdx) const;
+  void renderImmSubFrom32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -719,6 +723,24 @@ void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(-CstVal);
+}
+
+void RISCVInstructionSelector::renderImmSubFromXLen(MachineInstrBuilder &MIB,
+                                                    const MachineInstr &MI,
+                                                    int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t CstVal = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(STI.getXLen() - CstVal);
+}
+
+void RISCVInstructionSelector::renderImmSubFrom32(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t CstVal = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(32 - CstVal);
 }
 
 void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,

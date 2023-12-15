@@ -47,7 +47,7 @@ struct __debug_less
 
     template <class _LHS, class _RHS>
     _LIBCPP_CONSTEXPR_SINCE_CXX14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     decltype((void)std::declval<_Compare&>()(
         std::declval<_LHS &>(), std::declval<_RHS &>()))
     __do_compare_assert(int, _LHS & __l, _RHS & __r) {
@@ -59,7 +59,7 @@ struct __debug_less
 
     template <class _LHS, class _RHS>
     _LIBCPP_CONSTEXPR_SINCE_CXX14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     void __do_compare_assert(long, _LHS &, _RHS &) {}
 };
 
