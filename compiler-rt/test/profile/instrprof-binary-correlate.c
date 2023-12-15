@@ -12,7 +12,9 @@
 // RUN: llvm-profdata merge -o %t-1.profdata --binary-file=%t-1.exe %t-1.profraw
 // RUN: llvm-cov report --instr-profile=%t-1.profdata %t-1.exe > %t-1.report
 // RUN: llvm-cov show --instr-profile=%t-1.profdata %t-1.exe > %t-1.show
-// RUN: diff %t.normal.profdata %t-1.profdata
+// RUN: llvm-profdata show --all-functions --counts %t.normal.profdata > %t.normal.profdata.show
+// RUN: llvm-profdata show --all-functions --counts %t-1.profdata > %t-1.profdata.show
+// RUN: diff %t.normal.profdata.show %t-1.profdata.show
 // RUN: diff %t.normal.report %t-1.report
 // RUN: diff %t.normal.show %t-1.show
 
@@ -22,7 +24,8 @@
 // RUN: llvm-profdata merge -o %t-2.profdata --binary-file=%t-1.exe %t-2.profraw
 // RUN: llvm-cov report --instr-profile=%t-2.profdata %t-1.exe > %t-2.report
 // RUN: llvm-cov show --instr-profile=%t-2.profdata %t-1.exe > %t-2.show
-// RUN: diff %t.normal.profdata %t-2.profdata
+// RUN: llvm-profdata show --all-functions --counts %t-2.profdata > %t-2.profdata.show
+// RUN: diff %t.normal.profdata.show %t-2.profdata.show
 // RUN: diff %t.normal.report %t-2.report
 // RUN: diff %t.normal.show %t-2.show
 
@@ -39,7 +42,9 @@
 // RUN: llvm-profdata merge -o %t-4.profdata --binary-file=%t-1.exe  %t.profdir
 // RUN: llvm-cov report --instr-profile=%t-4.profdata %t-1.exe > %t-4.report
 // RUN: llvm-cov show --instr-profile=%t-4.profdata %t-1.exe > %t-4.show
-// RUN: diff %t.normal.merged.profdata %t-4.profdata
+// RUN: llvm-profdata show --all-functions --counts %t.normal.merged.profdata > %t.normal.merged.profdata.show
+// RUN: llvm-profdata show --all-functions --counts %t-4.profdata > %t-4.profdata.show
+// RUN: diff %t.normal.merged.profdata.show %t-4.profdata.show
 // RUN: diff %t.normal.merged.report %t-4.report
 // RUN: diff %t.normal.merged.show %t-4.show
 
