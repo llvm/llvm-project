@@ -17,7 +17,7 @@ class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   void test_na_n_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
@@ -53,9 +53,9 @@ public:
   }
 
   void test_in_range(FuncPtr func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = StorageType(-1) / COUNT;
+    for (StorageType i = 0, v = 0, w = StorageType(-1); i <= COUNT;
          ++i, v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       if (isnan(x) || isinf(x))
