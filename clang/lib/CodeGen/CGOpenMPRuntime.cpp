@@ -1793,6 +1793,8 @@ Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
   if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPUseTLS &&
       CGM.getTarget().isTLSSupported()) {
     GAddr->setThreadLocal(/*Val=*/true);
+    /// reset the dso_local for thread_local.
+    GAddr->setDSOLocal(/*Val=*/false);
     return Address(GAddr, GAddr->getValueType(),
                    CGM.getContext().getTypeAlignInChars(VarType));
   }

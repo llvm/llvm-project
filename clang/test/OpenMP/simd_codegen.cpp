@@ -23,8 +23,8 @@
 #define CONDITIONAL
 #endif //OMP5
 // CHECK: [[SS_TY:%.+]] = type { i32 }
-// OMP5-DAG: [[LAST_IV:@.+]] = {{.*}}common global i64 0
-// OMP5-DAG: [[LAST_A:@.+]] = {{.*}}common global i32 0
+// OMP5-DAG: [[LAST_IV:@.+]] = {{.*}}common dso_local global i64 0
+// OMP5-DAG: [[LAST_A:@.+]] = {{.*}}common dso_local global i32 0
 
 long long get_val() { extern void mayThrow(); mayThrow(); return 0; }
 double *g_ptr;

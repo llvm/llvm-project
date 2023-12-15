@@ -20,4 +20,3 @@ int omp_critical_test()
   known_sum = 999 * 1000 / 2;
   return (known_sum == sum);
 }
-
