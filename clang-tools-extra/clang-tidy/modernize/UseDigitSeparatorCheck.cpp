@@ -100,35 +100,15 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, 
   const std::string IntegerSubString = FloatString.substr(0, DotPosition);
   std::string FractionalSubString =
       FloatString.substr(DotPosition + 1, FloatString.size());
-
-  // Split integer and fractional parts of float number
   std::reverse(FractionalSubString.begin(), FractionalSubString.end());
-  const std::vector<std::string> PartsOfFloat = {IntegerSubString,
-                                                 FractionalSubString};
-  const std::vector<std::string> SplittedIntegerSubString =
-      splitStringByGroupSize(PartsOfFloat[0], 3);
-  const std::vector<std::string> SplittedFractionalSubString =
-      splitStringByGroupSize(PartsOfFloat[1], 3);
 
   // Get formatting literal text
-  std::string FormatedFractionalSubString =
-      std::accumulate(
-          SplittedFractionalSubString.begin(),
-          SplittedFractionalSubString.end(), std::string(""),
-          [](std::basic_string<char> S1, std::basic_string<char> S2) {
-            return S1 + "\'" + S2;
-          }).erase(0, 1);
+  const std::string FormatedIntegerSubString = getFormatedIntegerString(IntegerSubString, llvm::APInt(128, std::stoi(IntegerSubString)));
+  std::string FormatedFractionalSubString = getFormatedIntegerString(FractionalSubString, llvm::APInt(128, std::stoi(FractionalSubString)));
   std::reverse(FormatedFractionalSubString.begin(),
                FormatedFractionalSubString.end());
-  const std::string FormatedLiteralString =
-      std::accumulate(
-          SplittedIntegerSubString.begin(), SplittedIntegerSubString.end(),
-          std::string(""),
-          [](std::basic_string<char> S1, std::basic_string<char> S2) {
-            return S1 + "\'" + S2;
-          })
-          .erase(0, 1) +
-      '.' + FormatedFractionalSubString + Postfix;
+
+  const std::string FormatedLiteralString = FormatedIntegerSubString + '.' + FormatedFractionalSubString + Postfix;
 
   return FormatedLiteralString;
 }
