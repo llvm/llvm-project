@@ -644,8 +644,6 @@ private:
   std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  // std::vector<std::vector<Value>> positionsBuffers;   // to_positions
-  // std::vector<std::vector<Value>> coordinatesBuffers; // to_coordinates
   std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
   std::vector<Value> valBuffer;                       // to_value
 
