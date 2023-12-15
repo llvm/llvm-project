@@ -703,23 +703,24 @@ supported for the ``amdgcn`` target.
   .. table:: AMDGPU Address Spaces
      :name: amdgpu-address-spaces-table
 
-     ================================= =============== =========== ================ ======= ============================
-     ..                                                                                     64-Bit Process Address Space
-     --------------------------------- --------------- ----------- ---------------- ------------------------------------
-     Address Space Name                LLVM IR Address HSA Segment Hardware         Address NULL Value
-                                       Space Number    Name        Name             Size
-     ================================= =============== =========== ================ ======= ============================
-     Generic                           0               flat        flat             64      0x0000000000000000
-     Global                            1               global      global           64      0x0000000000000000
-     Region                            2               N/A         GDS              32      *not implemented for AMDHSA*
-     Local                             3               group       LDS              32      0xFFFFFFFF
-     Constant                          4               constant    *same as global* 64      0x0000000000000000
-     Private                           5               private     scratch          32      0xFFFFFFFF
-     Constant 32-bit                   6               *TODO*                               0x00000000
-     Buffer Fat Pointer (experimental) 7               *TODO*
-     Buffer Resource (experimental)    8               *TODO*
-     Streamout Registers               128             N/A         GS_REGS
-     ================================= =============== =========== ================ ======= ============================
+     ===================================== =============== =========== ================ ======= ============================
+     ..                                                                                         64-Bit Process Address Space
+     ------------------------------------- --------------- ----------- ---------------- ------------------------------------
+     Address Space Name                    LLVM IR Address HSA Segment Hardware         Address NULL Value
+                                           Space Number    Name        Name             Size
+     ===================================== =============== =========== ================ ======= ============================
+     Generic                               0               flat        flat             64      0x0000000000000000
+     Global                                1               global      global           64      0x0000000000000000
+     Region                                2               N/A         GDS              32      *not implemented for AMDHSA*
+     Local                                 3               group       LDS              32      0xFFFFFFFF
+     Constant                              4               constant    *same as global* 64      0x0000000000000000
+     Private                               5               private     scratch          32      0xFFFFFFFF
+     Constant 32-bit                       6               *TODO*                               0x00000000
+     Buffer Fat Pointer (experimental)     7               *TODO*
+     Buffer Resource (experimental)        8               *TODO*
+     Buffer Strided Pointer (experimental) 9               *TODO*
+     Streamout Registers                   128             N/A         GS_REGS
+     ===================================== =============== =========== ================ ======= ============================
 
 **Generic**
   The generic address space is supported unless the *Target Properties* column
@@ -836,7 +837,7 @@ supported for the ``amdgcn`` target.
   the backend.
 
   The buffer descriptor used to construct a buffer fat pointer must be *raw*:
-  the stride must be 0, the "add tid" flag bust be 0, the swizzle enable bits
+  the stride must be 0, the "add tid" flag must be 0, the swizzle enable bits
   must be off, and the extent must be measured in bytes. (On subtargets where
   bounds checking may be disabled, buffer fat pointers may choose to enable
   it or not).
@@ -863,6 +864,18 @@ supported for the ``amdgcn`` target.
   the 32-bit NumRecords/extent field (bits `95:64`), and the 32-bit flags field
   (bits `127:96`). The specific interpretation of these fields varies by the
   target architecture and is detailed in the ISA descriptions.
+
+**Buffer Strided Pointer**
+  The buffer index pointer is an experimental address space. It represents
+  a 128-bit buffer descriptor and a 32-bit offset, like the **Buffer Fat
+  Pointer**. Additionally, it contains an index into the buffer, which
+  allows the direct addressing of structured elements. These components appear
+  in that order, i.e., the descriptor comes first, then the 32-bit offset
+  followed by the 32-bit index.
+
+  The bits in the buffer descriptor must meet the following requirements:
+  the stride is the size of a structured element, the "add tid" flag must be 0,
+  and the swizzle enable bits must be off.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
