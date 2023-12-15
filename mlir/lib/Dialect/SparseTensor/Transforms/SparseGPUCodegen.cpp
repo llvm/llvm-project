@@ -476,7 +476,7 @@ static Value genFirstPosOrCrds(OpBuilder &builder, Location loc, Value a,
   if (format == CuSparseFormat::kCOO) {
     // Library uses SoA COO, direct IR uses AoS COO.
     if (enableRT)
-      return genToCoordinates(builder, loc, a, 0, /*cooStart=*/0);
+      return genToCoordinates(builder, loc, a, 0);
     return genToCoordinatesBuffer(builder, loc, a);
   }
   // Formats CSR/CSC and BSR use positions at 1.
@@ -490,7 +490,7 @@ static Value genSecondCrds(OpBuilder &builder, Location loc, Value a,
   if (isCOO && !enableRT)
     return Value(); // nothing needed
   // Formats CSR/CSC and BSR use coordinates at 1.
-  return genToCoordinates(builder, loc, a, 1, /*cooStart=*/isCOO ? 0 : 2);
+  return genToCoordinates(builder, loc, a, 1);
 }
 
 /// Generates the sparse matrix handle.
