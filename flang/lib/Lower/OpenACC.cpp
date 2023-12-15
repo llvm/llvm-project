@@ -218,14 +218,18 @@ static void createDeclareDeallocFuncWithArg(
   builder.create<mlir::acc::DeclareExitOp>(
       loc, mlir::Value{}, mlir::ValueRange(entryOp.getAccPtr()));
 
-  mlir::Value varPtr;
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                 std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
-    varPtr = entryOp.getVarPtr();
-  builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
-                         entryOp.getBounds(), entryOp.getDataClause(),
-                         /*structured=*/false, /*implicit=*/false,
-                         builder.getStringAttr(*entryOp.getName()));
+    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
+                           entryOp.getVarPtr(), entryOp.getBounds(),
+                           entryOp.getDataClause(),
+                           /*structured=*/false, /*implicit=*/false,
+                           builder.getStringAttr(*entryOp.getName()));
+  else
+    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
+                           entryOp.getBounds(), entryOp.getDataClause(),
+                           /*structured=*/false, /*implicit=*/false,
+                           builder.getStringAttr(*entryOp.getName()));
 
   // Generate the post dealloc function.
   modBuilder.setInsertionPointAfter(preDeallocOp);
@@ -368,14 +372,17 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
   for (mlir::Value operand : operands) {
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
-    mlir::Value varPtr;
     if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                   std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
-      varPtr = entryOp.getVarPtr();
-    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
-                           entryOp.getBounds(), entryOp.getDataClause(),
-                           structured, entryOp.getImplicit(),
-                           builder.getStringAttr(*entryOp.getName()));
+      builder.create<ExitOp>(
+          entryOp.getLoc(), entryOp.getAccPtr(), entryOp.getVarPtr(),
+          entryOp.getBounds(), entryOp.getDataClause(), structured,
+          entryOp.getImplicit(), builder.getStringAttr(*entryOp.getName()));
+    else
+      builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
+                             entryOp.getBounds(), entryOp.getDataClause(),
+                             structured, entryOp.getImplicit(),
+                             builder.getStringAttr(*entryOp.getName()));
   }
 }
 
@@ -2840,9 +2847,8 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   else
     builder.create<DeclareOp>(loc, mlir::Value{},
                               mlir::ValueRange(entryOp.getAccPtr()));
-  mlir::Value varPtr;
   if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
-    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
+    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
                            entryOp.getBounds(), entryOp.getDataClause(),
                            /*structured=*/false, /*implicit=*/false,
                            builder.getStringAttr(*entryOp.getName()));
@@ -2930,14 +2936,18 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   builder.create<mlir::acc::DeclareExitOp>(
       loc, mlir::Value{}, mlir::ValueRange(entryOp.getAccPtr()));
 
-  mlir::Value varPtr;
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                 std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
-    varPtr = entryOp.getVarPtr();
-  builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
-                         entryOp.getBounds(), entryOp.getDataClause(),
-                         /*structured=*/false, /*implicit=*/false,
-                         builder.getStringAttr(*entryOp.getName()));
+    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
+                           entryOp.getVarPtr(), entryOp.getBounds(),
+                           entryOp.getDataClause(),
+                           /*structured=*/false, /*implicit=*/false,
+                           builder.getStringAttr(*entryOp.getName()));
+  else
+    builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(),
+                           entryOp.getBounds(), entryOp.getDataClause(),
+                           /*structured=*/false, /*implicit=*/false,
+                           builder.getStringAttr(*entryOp.getName()));
 
   // Generate the post dealloc function.
   modBuilder.setInsertionPointAfter(preDeallocOp);

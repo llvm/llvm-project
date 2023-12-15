@@ -248,8 +248,8 @@ LogicalResult acc::DeleteOp::verify() {
     return emitError(
         "data clause associated with delete operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  if (!getVarPtr() && !getAccPtr())
-    return emitError("must have either host or device pointer");
+  if (!getAccPtr())
+    return emitError("must have device pointer");
   return success();
 }
 
@@ -263,8 +263,8 @@ LogicalResult acc::DetachOp::verify() {
     return emitError(
         "data clause associated with detach operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  if (!getVarPtr() && !getAccPtr())
-    return emitError("must have either host or device pointer");
+  if (!getAccPtr())
+    return emitError("must have device pointer");
   return success();
 }
 
@@ -1336,12 +1336,56 @@ LogicalResult acc::WaitOp::verify() {
 // acc dialect utilities
 //===----------------------------------------------------------------------===//
 
-mlir::Value mlir::acc::getVarPtr(mlir::Operation *accDataEntryOp) {
-  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataEntryOp)
+mlir::Value mlir::acc::getVarPtr(mlir::Operation *accDataClauseOp) {
+  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
                   .Case<ACC_DATA_ENTRY_OPS>(
                       [&](auto entry) { return entry.getVarPtr(); })
+                  .Case<mlir::acc::CopyoutOp, mlir::acc::UpdateHostOp>(
+                      [&](auto exit) { return exit.getVarPtr(); })
                   .Default([&](mlir::Operation *) { return mlir::Value(); })};
   return varPtr;
+}
+
+mlir::Value mlir::acc::getAccPtr(mlir::Operation *accDataClauseOp) {
+  auto accPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+                  .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+                      [&](auto dataClause) { return dataClause.getAccPtr(); })
+                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  return accPtr;
+}
+
+mlir::Value mlir::acc::getVarPtrPtr(mlir::Operation *accDataClauseOp) {
+  auto varPtrPtr{
+      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+          .Case<ACC_DATA_ENTRY_OPS>(
+              [&](auto dataClause) { return dataClause.getVarPtrPtr(); })
+          .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  return varPtrPtr;
+}
+
+mlir::SmallVector<mlir::Value>
+mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
+  mlir::SmallVector<mlir::Value> bounds{
+      llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
+          accDataClauseOp)
+          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+            return mlir::SmallVector<mlir::Value>(
+                dataClause.getBounds().begin(), dataClause.getBounds().end());
+          })
+          .Default([&](mlir::Operation *) {
+            return mlir::SmallVector<mlir::Value, 0>();
+          })};
+  return bounds;
+}
+
+std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {
+  auto name{
+      llvm::TypeSwitch<mlir::Operation *, std::optional<llvm::StringRef>>(accOp)
+          .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getName(); })
+          .Default([&](mlir::Operation *) -> std::optional<llvm::StringRef> {
+            return {};
+          })};
+  return name;
 }
 
 std::optional<mlir::acc::DataClause>
@@ -1361,4 +1405,23 @@ bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
                         [&](auto entry) { return entry.getImplicit(); })
                     .Default([&](mlir::Operation *) { return false; })};
   return implicit;
+}
+
+mlir::ValueRange mlir::acc::getDataOperands(mlir::Operation *accOp) {
+  auto dataOperands{
+      llvm::TypeSwitch<mlir::Operation *, mlir::ValueRange>(accOp)
+          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>(
+              [&](auto entry) { return entry.getDataClauseOperands(); })
+          .Default([&](mlir::Operation *) { return mlir::ValueRange(); })};
+  return dataOperands;
+}
+
+mlir::MutableOperandRange
+mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
+  auto dataOperands{
+      llvm::TypeSwitch<mlir::Operation *, mlir::MutableOperandRange>(accOp)
+          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>(
+              [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
+          .Default([&](mlir::Operation *) { return nullptr; })};
+  return dataOperands;
 }
