@@ -8102,10 +8102,9 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
   }
 
   case CmpInst::ICMP_ULE: {
-    const APInt *C;
-
-    // LHS u<= LHS +_{nuw} C   for any C
-    if (match(RHS, m_NUWAdd(m_Specific(LHS), m_APInt(C))))
+    // LHS u<= LHS +_{nuw} V for any V
+    if (match(RHS, m_c_Add(m_Specific(LHS), m_Value())) &&
+        cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
       return true;
 
     // RHS >> V u<= RHS for any V
