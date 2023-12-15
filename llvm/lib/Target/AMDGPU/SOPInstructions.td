@@ -675,19 +675,8 @@ let SubtargetPredicate = isGFX12Plus in {
 
 } // End SubtargetPredicate = isGFX12Plus
 
-def SelectPat : PatFrag <
-  (ops node:$src1, node:$src2),
-  (select SCC, $src1, $src2),
-  [{ return !N->isDivergent(); }]
->;
-
 let Uses = [SCC] in {
-  let AddedComplexity = 20 in {
-    def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32",
-      [(set i32:$sdst, (SelectPat i32:$src0, i32:$src1))]
-    >;
-  }
-
+  def S_CSELECT_B32 : SOP2_32 <"s_cselect_b32">;
   def S_CSELECT_B64 : SOP2_64 <"s_cselect_b64">;
 } // End Uses = [SCC]
 
@@ -1602,6 +1591,10 @@ def S_SLEEP : SOPP_Pseudo <"s_sleep", (ins i32imm:$simm16),
   "$simm16", [(int_amdgcn_s_sleep timm:$simm16)]> {
 }
 
+def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$src0)]> {
+  let hasSideEffects = 1;
+}
+
 def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio timm:$simm16)]> {
 }
@@ -1804,6 +1797,27 @@ def : GetFPModePat<fpmode_mask_gfx6plus>;
 // SOP2 Patterns
 //===----------------------------------------------------------------------===//
 
+def UniformSelect : PatFrag<
+  (ops node:$src0, node:$src1),
+  (select SCC, $src0, $src1),
+  [{ return !N->isDivergent(); }]
+>;
+
+let AddedComplexity = 20 in {
+  def : GCNPat<
+    (i32 (UniformSelect i32:$src0, i32:$src1)),
+    (S_CSELECT_B32 SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
+
+  // TODO: The predicate should not be necessary, but enabling this pattern for
+  // all subtargets generates worse code in some cases.
+  let OtherPredicates = [HasPseudoScalarTrans] in
+  def : GCNPat<
+    (f32 (UniformSelect f32:$src0, f32:$src1)),
+    (S_CSELECT_B32 SSrc_b32:$src0, SSrc_b32:$src1)
+  >;
+}
+
 // V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
 // case, the sgpr-copies pass will fix this to use the vector version.
 def : GCNPat <
@@ -1997,6 +2011,7 @@ defm S_GET_BARRIER_STATE_IMM      : SOP1_Real_gfx12<0x050>;
 defm S_BARRIER_INIT_IMM           : SOP1_Real_gfx12<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_Real_gfx12<0x052>;
 defm S_WAKEUP_BARRIER_IMM         : SOP1_Real_gfx12<0x057>;
+defm S_SLEEP_VAR                  : SOP1_Real_gfx12<0x058>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12

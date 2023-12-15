@@ -230,3 +230,15 @@ defm add_symbol
 defm update_section
     : Eq<"update-section", "Replace the contents of section <name> with contents from a file <file>">,
       MetaVarName<"name=file">;
+
+defm gap_fill
+    : Eq<"gap-fill", "Fill the gaps between sections with <value> instead of zero. "
+                     "<value> must be an unsigned 8-bit integer. "
+                     "This option is only supported for ELF input and binary output">,
+      MetaVarName<"value">;
+
+defm pad_to
+    : Eq<"pad-to", "Pad the output up to the load address <address>, using a value "
+                   "of zero or the value specified by the --gap-fill option. "
+                   "This option is only supported for ELF input and binary output">,
+      MetaVarName<"address">;

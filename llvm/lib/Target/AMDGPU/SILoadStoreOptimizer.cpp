@@ -161,8 +161,10 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
         if (!AddrOp->isReg())
           return false;
 
-        // TODO: We should be able to merge physical reg addresses.
-        if (AddrOp->getReg().isPhysical())
+        // TODO: We should be able to merge instructions with other physical reg
+        // addresses too.
+        if (AddrOp->getReg().isPhysical() &&
+            AddrOp->getReg() != AMDGPU::SGPR_NULL)
           return false;
 
         // If an address has only one use then there will be no other
@@ -350,6 +352,9 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_LOAD_DWORDX2:
   case AMDGPU::FLAT_STORE_DWORDX2:
     return 2;
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
+  case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
   case AMDGPU::GLOBAL_LOAD_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX3:
@@ -443,16 +448,19 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
     return UNKNOWN;
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return S_BUFFER_LOAD_IMM;
   case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
     return S_BUFFER_LOAD_SGPR_IMM;
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
     return S_LOAD_IMM;
@@ -524,16 +532,19 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
     return Opc;
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
   case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
     return AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM;
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
     return AMDGPU::S_LOAD_DWORD_IMM;
@@ -631,16 +642,19 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
     return Result;
   case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
     Result.SOffset = true;
     [[fallthrough]];
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
     Result.SBase = true;
@@ -967,6 +981,17 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
       return false;
     if (CI.CPol != Paired.CPol)
       return false;
+    if (CI.InstClass == S_LOAD_IMM || CI.InstClass == S_BUFFER_LOAD_IMM ||
+        CI.InstClass == S_BUFFER_LOAD_SGPR_IMM) {
+      // Reject cases like:
+      //   dword + dwordx2 -> dwordx3
+      //   dword + dwordx3 -> dwordx4
+      // If we tried to combine these cases, we would fail to extract a subreg
+      // for the result of the second load due to SGPR alignment requirements.
+      if (CI.Width != Paired.Width &&
+          (CI.Width < Paired.Width) == (CI.Offset < Paired.Offset))
+        return false;
+    }
     return true;
   }
 
@@ -1046,6 +1071,8 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
     case 4:
     case 8:
       return true;
+    case 3:
+      return STM.hasScalarDwordx3Loads();
     }
   }
 }
@@ -1674,6 +1701,8 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return 0;
     case 2:
       return AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM;
+    case 3:
+      return AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM;
     case 4:
       return AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM;
     case 8:
@@ -1685,6 +1714,8 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return 0;
     case 2:
       return AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM;
+    case 3:
+      return AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM;
     case 4:
       return AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM;
     case 8:
@@ -1696,6 +1727,8 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return 0;
     case 2:
       return AMDGPU::S_LOAD_DWORDX2_IMM;
+    case 3:
+      return AMDGPU::S_LOAD_DWORDX3_IMM;
     case 4:
       return AMDGPU::S_LOAD_DWORDX4_IMM;
     case 8:
@@ -1817,6 +1850,8 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
       return nullptr;
     case 2:
       return &AMDGPU::SReg_64_XEXECRegClass;
+    case 3:
+      return &AMDGPU::SGPR_96RegClass;
     case 4:
       return &AMDGPU::SGPR_128RegClass;
     case 8:
