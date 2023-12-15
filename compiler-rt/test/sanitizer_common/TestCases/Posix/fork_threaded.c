@@ -9,6 +9,9 @@
 // FIXME: TSAN does not lock allocator.
 // UNSUPPORTED: tsan
 
+// FIXME: False stack overflow report
+// UNSUPPORTED: android && asan
+
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
 // The test try to check two things:
