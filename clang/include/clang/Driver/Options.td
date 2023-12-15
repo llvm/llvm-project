@@ -4778,6 +4778,16 @@ defm unsafe_fp_atomics : BoolOption<"m", "unsafe-fp-atomics",
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
+
+defm amdgpu_fine_grained_mem : BoolOption<"m", "amdgpu-fine-grained-mem",
+  TargetOpts<"AllowAMDGPUFineGrainedMem">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Indicates that fine-grained memory allocations may be accessed in the "
+          "kernel. This may result in certain atomic operations being replaced "
+          "in order to guarantee correct operation when fine-grained memory "
+          "allocations are used. (AMDGPU only)">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option]>>, Group<m_Group>;
+
 let Flags = [TargetSpecific] in {
 def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>,
   HelpText<"Enable AltiVec vector initializer syntax">;

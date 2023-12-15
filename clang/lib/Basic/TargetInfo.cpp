@@ -157,6 +157,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasAArch64SVETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
+  AllowAMDGPUFineGrainedMem = false;
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.

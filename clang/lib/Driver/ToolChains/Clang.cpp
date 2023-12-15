@@ -7420,6 +7420,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     Args.addOptInFlag(CmdArgs, options::OPT_munsafe_fp_atomics,
                       options::OPT_mno_unsafe_fp_atomics);
+    Args.addOptInFlag(CmdArgs, options::OPT_mamdgpu_fine_grained_mem,
+                      options::OPT_mno_amdgpu_fine_grained_mem);
     Args.addOptOutFlag(CmdArgs, options::OPT_mamdgpu_ieee,
                        options::OPT_mno_amdgpu_ieee);
   }

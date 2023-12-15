@@ -268,6 +268,9 @@ protected:
 
   unsigned ARMCDECoprocMask : 8;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned AllowAMDGPUFineGrainedMem : 1;
+
   unsigned MaxOpenCLWorkGroupSize;
 
   std::optional<unsigned> MaxBitIntWidth;
@@ -1007,6 +1010,9 @@ public:
   /// Returns whether or not the AMDGPU unsafe floating point atomics are
   /// allowed.
   bool allowAMDGPUUnsafeFPAtomics() const { return AllowAMDGPUUnsafeFPAtomics; }
+
+  /// Returns whether or not fine-grained memory access is allowed on AMDGPU.
+  bool allowAMDGPUFineGrainedMem() const { return AllowAMDGPUFineGrainedMem; }
 
   /// For ARM targets returns a mask defining which coprocessors are configured
   /// as Custom Datapath.

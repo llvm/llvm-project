@@ -15303,6 +15303,26 @@ bool unsafeFPAtomicsDisabled(Function *F) {
          "true";
 }
 
+// Inspect the instruction's metadata to determine whether or not it can access
+// fine-grained memory allocations. Some atomic instructions may fail on certain
+// systems when accessing fine-grained memory.
+static bool canAccessFineGrainedMem(AtomicRMWInst &RMW) {
+  if (MDNode *MD = RMW.getMetadata("amdgpu.atomic")) {
+    for (const MDOperand &Op : MD->operands()) {
+      MDNode *OpMD = dyn_cast<MDNode>(&*Op);
+      if (!OpMD || OpMD->getNumOperands() < 2)
+        continue;
+      const MDString *NameOp = dyn_cast<MDString>(OpMD->getOperand(0));
+      const MDOperand &ValOp = OpMD->getOperand(1);
+      if (NameOp->getString().equals("fine_grained") &&
+          mdconst::extract<ConstantInt>(ValOp)->getZExtValue() != 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
@@ -15422,6 +15442,12 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // Always expand system scope min/max atomics.
       if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
+    }
+    break;
+  }
+  case AtomicRMWInst::Xor: {
+    if (AMDGPU::isFlatGlobalAddrSpace(AS) && canAccessFineGrainedMem(*RMW)) {
+      return AtomicExpansionKind::CmpXChg;
     }
     break;
   }
