@@ -1653,6 +1653,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       debug == DebugKind::GHash || debug == DebugKind::NoGHash) {
     config->debug = true;
     config->incremental = true;
+    config->includeDwarfChunks = true;
   }
 
   // Handle /demangle
@@ -2029,9 +2030,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     parseSwaprun(arg->getValue());
   config->terminalServerAware =
       !config->dll && args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
-  config->debugDwarf = debug == DebugKind::Dwarf;
   config->debugGHashes = debug == DebugKind::GHash || debug == DebugKind::Full;
-  config->debugSymtab = debug == DebugKind::Symtab;
+  config->writeSymtab = debug == DebugKind::Dwarf || debug == DebugKind::Symtab;
   config->autoImport =
       args.hasFlag(OPT_auto_import, OPT_auto_import_no, config->mingw);
   config->pseudoRelocs = args.hasFlag(
@@ -2050,7 +2050,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Don't warn about long section names, such as .debug_info, for mingw or
   // when -debug:dwarf is requested.
-  if (config->mingw || config->debugDwarf)
+  if (config->mingw || debug == DebugKind::Dwarf)
     config->warnLongSectionNames = false;
 
   if (config->incremental && args.hasArg(OPT_profile)) {
