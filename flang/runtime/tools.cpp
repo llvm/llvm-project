@@ -195,30 +195,26 @@ RT_API_ATTRS std::size_t LengthWithoutTrailingSpaces(const Descriptor &d) {
 
 // Returns the length of the \p string. Assumes \p string is valid.
 RT_API_ATTRS std::int64_t StringLength(const char *string) {
-  std::size_t length{std::strlen(string)};
-  if constexpr (sizeof(std::size_t) < sizeof(std::int64_t)) {
-    return static_cast<std::int64_t>(length);
-  } else {
-    std::size_t max{std::numeric_limits<std::int64_t>::max()};
-    return length > max ? 0 // Just fail.
-                        : static_cast<std::int64_t>(length);
-  }
+  return static_cast<std::int64_t>(std::strlen(string));
 }
 
+// Assumes Descriptor \p value is not nullptr.
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value) {
   return value && value->IsAllocated() &&
       value->type() == TypeCode(TypeCategory::Character, 1) &&
       value->rank() == 0;
 }
 
-RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *length) {
-  auto typeCode{length->type().GetCategoryAndKind()};
+// Assumes Descriptor \p intVal is not nullptr.
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal) {
+  auto typeCode{intVal->type().GetCategoryAndKind()};
   // Check that our descriptor is allocated and is a scalar integer with
   // kind != 1 (i.e. with a large enough decimal exponent range).
-  return length->IsAllocated() && length->rank() == 0 &&
-      length->type().IsInteger() && typeCode && typeCode->second != 1;
+  return intVal->IsAllocated() && intVal->rank() == 0 &&
+      intVal->type().IsInteger() && typeCode && typeCode->second != 1;
 }
 
+// Assume Descriptor \p value is valid: pass IsValidCharDescriptor check.
 RT_API_ATTRS void FillWithSpaces(const Descriptor &value, std::size_t offset) {
   if (offset < value.ElementBytes()) {
     std::memset(

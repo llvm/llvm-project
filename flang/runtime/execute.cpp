@@ -177,8 +177,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
       exit(status);
     }
 #endif
-    FreeMemory((void *)newCmd);
   }
+  FreeMemory((void *)newCmd);
 }
 
 } // namespace Fortran::runtime

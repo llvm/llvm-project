@@ -420,10 +420,13 @@ RT_API_ATTRS std::size_t LengthWithoutTrailingSpaces(const Descriptor &d);
 // Returns the length of the \p string. Assumes \p string is valid.
 RT_API_ATTRS std::int64_t StringLength(const char *string);
 
+// Assumes Descriptor \p value is not nullptr.
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
 
-RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *length);
+// Assumes Descriptor \p intVal is not nullptr.
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal);
 
+// Assume Descriptor \p value is valid: pass IsValidCharDescriptor check.
 RT_API_ATTRS void FillWithSpaces(
     const Descriptor &value, std::size_t offset = 0);
 
