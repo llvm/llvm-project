@@ -3,6 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefix=GFX90A %s
 ; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX940 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1100 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1200 %s
 
 define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX908-LABEL: syncscope_system:
@@ -85,6 +86,32 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1100-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1200-LABEL: syncscope_system:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    flat_load_b32 v3, v[0:1]
+; GFX1200-NEXT:    s_mov_b32 s0, 0
+; GFX1200-NEXT:  .LBB0_1: ; %atomicrmw.start
+; GFX1200-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-NEXT:    v_add_f32_e32 v3, v4, v2
+; GFX1200-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1200-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    buffer_gl0_inv
+; GFX1200-NEXT:    buffer_gl1_inv
+; GFX1200-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
+; GFX1200-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1200-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX1200-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX1200-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX1200-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1200-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %res = atomicrmw fadd ptr %addr, float %val seq_cst
   ret float %res
 }
@@ -175,6 +202,15 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    buffer_gl0_inv
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1200-LABEL: syncscope_workgroup_rtn:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    buffer_gl0_inv
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst
   ret float %res
 }
@@ -296,6 +332,16 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    buffer_gl0_inv
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1200-LABEL: syncscope_workgroup_nortn:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1200-NEXT:    flat_atomic_add_f32 v[0:1], v2
+; GFX1200-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1200-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1200-NEXT:    buffer_gl0_inv
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst
   ret void
 }
@@ -374,6 +420,31 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1100-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1200-LABEL: no_unsafe:
+; GFX1200:       ; %bb.0:
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    flat_load_b32 v3, v[0:1]
+; GFX1200-NEXT:    s_mov_b32 s0, 0
+; GFX1200-NEXT:  .LBB3_1: ; %atomicrmw.start
+; GFX1200-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    v_mov_b32_e32 v4, v3
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1200-NEXT:    v_add_f32_e32 v3, v4, v2
+; GFX1200-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1200-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN
+; GFX1200-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX1200-NEXT:    buffer_gl0_inv
+; GFX1200-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
+; GFX1200-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1200-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX1200-NEXT:    s_cbranch_execnz .LBB3_1
+; GFX1200-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX1200-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX1200-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1200-NEXT:    s_setpc_b64 s[30:31]
   %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst
   ret float %res
 }
