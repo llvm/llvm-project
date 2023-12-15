@@ -13,9 +13,8 @@ int test(id x) {
 
 // Try explicit too.
 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -emit-module -fmodule-name=redeclarations_left %S/Inputs/module.map -o %t/redeclarations_left.pcm
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -emit-module -fmodule-name=weird_objc %S/Inputs/module.map -o %t/weird_objc.pcm
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -emit-module -fmodule-file=%t/weird_objc.pcm -fmodule-name=objc_redef_indirect %S/Inputs/module.map -o %t/objc_redef_indirect.pcm -I %S/Inputs
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -emit-module -fmodule-name=redeclarations_left %S/Inputs/module.modulemap -o %t/redeclarations_left.pcm
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -emit-module -fmodule-name=weird_objc %S/Inputs/module.modulemap -o %t/weird_objc.pcm
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -emit-module -fmodule-file=%t/weird_objc.pcm -fmodule-name=objc_redef_indirect %S/Inputs/module.modulemap -o %t/objc_redef_indirect.pcm -I %S/Inputs
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodule-file=%t/redeclarations_left.pcm -fmodule-file=%t/weird_objc.pcm -fmodule-file=%t/objc_redef_indirect.pcm -I %S/Inputs %s -verify
 // expected-no-diagnostics
-
