@@ -1074,17 +1074,28 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   llvm::Value *Res = nullptr;
   if (auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
     Res = EmitDeclRefLValue(DRE).getPointer(*this);
-  } else if (StructBase->HasSideEffects(getContext())) {
+  } else {
     auto I = LocalDeclMap.find(VD);
     if (I != LocalDeclMap.end())
       Res = I->second.getPointer();
   }
 
+  bool NeedLoad = true;
+  if (!Res && !StructBase->HasSideEffects(getContext())) {
+    LValueBaseInfo EltBaseInfo;
+    TBAAAccessInfo EltTBAAInfo;
+    Address Addr =
+        EmitPointerWithAlignment(StructBase, &EltBaseInfo, &EltTBAAInfo);
+    Res = Addr.getPointer();
+    NeedLoad = false;
+  }
+
   if (!Res)
     return nullptr;
 
-  Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
-                                  "struct.load");
+  if (NeedLoad)
+    Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
+                                    "struct.load");
   return EmitCountedByFieldExprImpl(Res, CountedByRD, VD);
 }
 
