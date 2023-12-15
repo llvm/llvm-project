@@ -56,7 +56,7 @@ public:
 
   void test_normal_range(SqrtFunc func) {
     constexpr StorageType COUNT = 200'001;
-    constexpr StorageType STEP = StorageType(-1) / COUNT;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
       if (isnan(x) || (x < 0)) {
