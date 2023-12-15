@@ -53,8 +53,8 @@ public:
 
   void testRange(FMaxFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = StorageType(-1) / COUNT;
-    for (StorageType i = 0, v = 0, w = StorageType(-1); i <= COUNT;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       if (isnan(x) || isinf(x))
