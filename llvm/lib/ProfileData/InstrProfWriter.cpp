@@ -539,6 +539,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     // Release the memory of this MapVector as it is no longer needed.
     MemProfRecordData.clear();
 
+    // The call to Emit invokes RecordWriterTrait::EmitData which destructs
+    // the memprof record copies owned by the RecordTableGenerator. This works
+    // because the RecordTableGenerator is not used after this point.
     uint64_t RecordTableOffset =
         RecordTableGenerator.Emit(OS.OS, *RecordWriter);
 
