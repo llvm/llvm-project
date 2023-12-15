@@ -468,7 +468,7 @@ public:
       mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
       mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);
       mpfr_mul_2si(inputMPFR.value, inputMPFR.value,
-                   -thisExponent + int(fputil::FPBits<T>::FRACTION_BITS),
+                   -thisExponent + int(fputil::FPBits<T>::FRACTION_LEN),
                    MPFR_RNDN);
       return inputMPFR;
     }
@@ -496,12 +496,12 @@ public:
 
     mpfr_sub(minMPFR.value, pivot.value, minMPFR.value, MPFR_RNDN);
     mpfr_mul_2si(minMPFR.value, minMPFR.value,
-                 -minExponent + int(fputil::FPBits<T>::FRACTION_BITS),
+                 -minExponent + int(fputil::FPBits<T>::FRACTION_LEN),
                  MPFR_RNDN);
 
     mpfr_sub(maxMPFR.value, maxMPFR.value, pivot.value, MPFR_RNDN);
     mpfr_mul_2si(maxMPFR.value, maxMPFR.value,
-                 -maxExponent + int(fputil::FPBits<T>::FRACTION_BITS),
+                 -maxExponent + int(fputil::FPBits<T>::FRACTION_LEN),
                  MPFR_RNDN);
 
     mpfr_add(minMPFR.value, minMPFR.value, maxMPFR.value, MPFR_RNDN);

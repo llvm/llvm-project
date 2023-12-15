@@ -35,7 +35,7 @@ using ZeroPaddedHexFmt = IntegerToString<
 // 3. The exponent is always 16 bits wide irrespective of the type of the
 //    floating encoding.
 template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
-  using UIntType = typename fputil::FPBits<T>::UIntType;
+  using StorageType = typename fputil::FPBits<T>::StorageType;
 
   if (x.is_nan())
     return "(NaN)";
@@ -46,7 +46,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
   cpp::string s;
 
-  const details::ZeroPaddedHexFmt<UIntType> bits(x.bits);
+  const details::ZeroPaddedHexFmt<StorageType> bits(x.bits);
   s += bits.view();
 
   s += " = (S: ";
@@ -62,7 +62,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   }
 
   s += ", M: ";
-  const details::ZeroPaddedHexFmt<UIntType> mantissa(x.get_mantissa());
+  const details::ZeroPaddedHexFmt<StorageType> mantissa(x.get_mantissa());
   s += mantissa.view();
 
   s += ')';

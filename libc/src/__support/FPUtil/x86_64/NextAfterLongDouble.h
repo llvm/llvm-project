@@ -43,10 +43,10 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     from_bits.set_biased_exponent(1);
   }
 
-  using UIntType = FPBits::UIntType;
-  constexpr UIntType SIGN_VAL = (UIntType(1) << 79);
-  constexpr UIntType FRACTION_MASK = FPBits::FRACTION_MASK;
-  UIntType int_val = from_bits.uintval();
+  using StorageType = FPBits::StorageType;
+  constexpr StorageType SIGN_VAL = (StorageType(1) << 79);
+  constexpr StorageType FRACTION_MASK = FPBits::FRACTION_MASK;
+  StorageType int_val = from_bits.uintval();
   if (from < 0.0l) {
     if (from > to) {
       if (int_val == (SIGN_VAL + FPBits::MAX_SUBNORMAL)) {
@@ -116,8 +116,8 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     }
   }
 
-  UIntType implicit_bit = int_val & (UIntType(1) << FPBits::FRACTION_BITS);
-  if (implicit_bit == UIntType(0))
+  StorageType implicit_bit = int_val & (StorageType(1) << FPBits::FRACTION_LEN);
+  if (implicit_bit == StorageType(0))
     raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 
   return cpp::bit_cast<long double>(int_val);

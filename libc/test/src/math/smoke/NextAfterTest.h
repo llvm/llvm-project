@@ -31,20 +31,20 @@
 template <typename T>
 class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   static constexpr int BIT_WIDTH_OF_TYPE =
-      LIBC_NAMESPACE::fputil::FloatProperties<T>::BIT_WIDTH;
+      LIBC_NAMESPACE::fputil::FloatProperties<T>::TOTAL_LEN;
 
   const T zero = T(FPBits::zero());
   const T neg_zero = T(FPBits::neg_zero());
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());
   const T nan = T(FPBits::build_quiet_nan(1));
-  const UIntType min_subnormal = FPBits::MIN_SUBNORMAL;
-  const UIntType max_subnormal = FPBits::MAX_SUBNORMAL;
-  const UIntType min_normal = FPBits::MIN_NORMAL;
-  const UIntType max_normal = FPBits::MAX_NORMAL;
+  const StorageType min_subnormal = FPBits::MIN_SUBNORMAL;
+  const StorageType max_subnormal = FPBits::MAX_SUBNORMAL;
+  const StorageType min_normal = FPBits::MIN_NORMAL;
+  const StorageType max_normal = FPBits::MAX_NORMAL;
 
 public:
   typedef T (*NextAfterFunc)(T, T);
@@ -61,12 +61,12 @@ public:
     // 'from' is zero|neg_zero.
     T x = zero;
     T result = func(x, T(1));
-    UIntType expected_bits = 1;
+    StorageType expected_bits = 1;
     T expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, T(-1));
-    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
+    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
@@ -77,7 +77,7 @@ public:
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, -1);
-    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
+    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
@@ -95,13 +95,13 @@ public:
     x = -x;
 
     result = func(x, -1);
-    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal;
+    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
     result = func(x, 0);
     expected_bits =
-        (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal - 1;
+        (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal - 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
@@ -116,7 +116,7 @@ public:
     x = -x;
     result = func(x, -1);
     expected_bits =
-        (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_subnormal + 1;
+        (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
     ASSERT_FP_EQ_WITH_UNDERFLOW(func(x, 0), T(-0.0));
@@ -135,12 +135,13 @@ public:
 
     x = -x;
     result = func(x, 0);
-    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal;
+    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, -inf);
-    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal + 1;
+    expected_bits =
+        (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
 
@@ -162,7 +163,7 @@ public:
 
     x = neg_inf;
     result = func(x, 0);
-    expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_normal;
+    expected_bits = (StorageType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_normal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
     ASSERT_FP_EQ(func(x, neg_inf), neg_inf);
@@ -179,7 +180,8 @@ public:
     result = func(x, T(33.0));
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
-    ASSERT_EQ(result_bits.get_mantissa(), x_bits.get_mantissa() + UIntType(1));
+    ASSERT_EQ(result_bits.get_mantissa(),
+              x_bits.get_mantissa() + StorageType(1));
 
     x = -x;
 
@@ -192,7 +194,8 @@ public:
     result = func(x, T(-33.0));
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
-    ASSERT_EQ(result_bits.get_mantissa(), x_bits.get_mantissa() + UIntType(1));
+    ASSERT_EQ(result_bits.get_mantissa(),
+              x_bits.get_mantissa() + StorageType(1));
   }
 };
 

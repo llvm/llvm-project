@@ -389,22 +389,22 @@ static constexpr DoubleDouble LOG2_R2_DD[] = {
 LIBC_INLINE bool is_odd_integer(float x) {
   using FloatProp = typename fputil::FloatProperties<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
-                                     FloatProp::FRACTION_BITS);
-  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXP_MASK) >>
+                                     FloatProp::FRACTION_LEN);
+  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXP_MASK);
   constexpr int32_t UNIT_EXPONENT =
-      FloatProp::EXPONENT_BIAS + static_cast<int32_t>(FloatProp::FRACTION_BITS);
+      FloatProp::EXP_BIAS + static_cast<int32_t>(FloatProp::FRACTION_LEN);
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
 LIBC_INLINE bool is_integer(float x) {
   using FloatProp = typename fputil::FloatProperties<float>;
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
-  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXPONENT_MASK) >>
-                                     FloatProp::FRACTION_BITS);
-  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
+  int32_t x_e = static_cast<int32_t>((x_u & FloatProp::EXP_MASK) >>
+                                     FloatProp::FRACTION_LEN);
+  int32_t lsb = cpp::countr_zero(x_u | FloatProp::EXP_MASK);
   constexpr int32_t UNIT_EXPONENT =
-      FloatProp::EXPONENT_BIAS + static_cast<int32_t>(FloatProp::FRACTION_BITS);
+      FloatProp::EXP_BIAS + static_cast<int32_t>(FloatProp::FRACTION_LEN);
   return (x_e + lsb >= UNIT_EXPONENT);
 }
 
@@ -589,7 +589,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
     }
   }
 
-  int ex = -FloatBits::EXPONENT_BIAS;
+  int ex = -FloatBits::EXP_BIAS;
   uint64_t sign = 0;
 
   // y is finite and non-zero.
@@ -669,11 +669,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   x_u = FloatBits(x).uintval();
 
   // Extract exponent field of x.
-  ex += (x_u >> FloatProp::FRACTION_BITS);
+  ex += (x_u >> FloatProp::FRACTION_LEN);
   double e_x = static_cast<double>(ex);
   // Use the highest 7 fractional bits of m_x as the index for look up tables.
   uint32_t x_mant = x_u & FloatProp::FRACTION_MASK;
-  int idx_x = static_cast<int>(x_mant >> (FloatProp::FRACTION_BITS - 7));
+  int idx_x = static_cast<int>(x_mant >> (FloatProp::FRACTION_LEN - 7));
   // Add the hidden bit to the mantissa.
   // 1 <= m_x < 2
   float m_x = cpp::bit_cast<float>(x_mant | 0x3f800000);
@@ -774,7 +774,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   int idx_y = hm_i & 0x3f;
 
   // 2^hi
-  int64_t exp_hi_i = (hm_i >> 6) << DoubleProp::FRACTION_BITS;
+  int64_t exp_hi_i = (hm_i >> 6) << DoubleProp::FRACTION_LEN;
   // 2^mid
   int64_t exp_mid_i = cpp::bit_cast<uint64_t>(EXP2_MID1[idx_y].hi);
   // (-1)^sign * 2^hi * 2^mid

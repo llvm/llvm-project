@@ -30,7 +30,7 @@ public:
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   const F zero = F(FPBits::zero());
   const F neg_zero = F(FPBits::neg_zero());
@@ -126,7 +126,7 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
+    bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
     bits.set_sign(1);
     bits.set_mantissa(0);
 
@@ -190,7 +190,7 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
+    bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
     bits.set_sign(1);
     bits.set_mantissa(FPBits::FRACTION_MASK);
 
@@ -213,11 +213,11 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
+    constexpr StorageType COUNT = 1'000'001;
+    constexpr StorageType STEP = (StorageType(FPBits::MAX_SUBNORMAL) -
+                                  StorageType(FPBits::MIN_SUBNORMAL)) /
+                                 COUNT;
+    for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       F x = F(FPBits(i));
       if (x == F(0.0))
@@ -258,10 +258,12 @@ public:
     if (sizeof(I) > sizeof(long))
       return;
 
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += STEP) {
+    constexpr StorageType COUNT = 1'000'001;
+    constexpr StorageType STEP =
+        (StorageType(FPBits::MAX_NORMAL) - StorageType(FPBits::MIN_NORMAL)) /
+        COUNT;
+    for (StorageType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL;
+         i += STEP) {
       F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.

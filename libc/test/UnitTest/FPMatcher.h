@@ -61,7 +61,7 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 
 template <typename T> struct FPTest : public Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
   static constexpr T zero = FPBits::zero();
   static constexpr T neg_zero = FPBits::neg_zero();
   static constexpr T aNaN = FPBits::build_quiet_nan(1);
@@ -87,7 +87,7 @@ template <typename T> struct FPTest : public Test {
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
-  using UIntType = typename FPBits::UIntType;                                  \
+  using StorageType = typename FPBits::StorageType;                            \
   const T zero = FPBits::zero();                                               \
   const T neg_zero = FPBits::neg_zero();                                       \
   const T aNaN = FPBits::build_quiet_nan(1);                                   \

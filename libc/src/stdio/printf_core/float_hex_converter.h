@@ -28,7 +28,7 @@ namespace printf_core {
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
   using LDBits = fputil::FPBits<long double>;
-  using MantissaInt = LDBits::UIntType;
+  using MantissaInt = LDBits::StorageType;
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the name of the conversion. This converts any
   // conversion name into the letter 'a' with the appropriate case.
@@ -40,8 +40,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   bool is_inf_or_nan;
   uint32_t fraction_bits;
   if (to_conv.length_modifier == LengthModifier::L) {
-    fraction_bits = LDBits::FRACTION_BITS;
-    LDBits::UIntType float_raw = to_conv.conv_val_raw;
+    fraction_bits = LDBits::FRACTION_LEN;
+    LDBits::StorageType float_raw = to_conv.conv_val_raw;
     LDBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
@@ -49,9 +49,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     is_inf_or_nan = float_bits.is_inf_or_nan();
   } else {
     using LBits = fputil::FPBits<double>;
-    fraction_bits = LBits::FRACTION_BITS;
-    LBits::UIntType float_raw =
-        static_cast<LBits::UIntType>(to_conv.conv_val_raw);
+    fraction_bits = LBits::FRACTION_LEN;
+    LBits::StorageType float_raw =
+        static_cast<LBits::StorageType>(to_conv.conv_val_raw);
     LBits float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
@@ -87,7 +87,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // for the extra implicit bit. We use the larger of the two possible values
   // since the size must be constant.
   constexpr size_t MANT_BUFF_LEN =
-      (LDBits::FRACTION_BITS / BITS_IN_HEX_DIGIT) + 1;
+      (LDBits::FRACTION_LEN / BITS_IN_HEX_DIGIT) + 1;
   char mant_buffer[MANT_BUFF_LEN];
 
   size_t mant_len = (fraction_bits / BITS_IN_HEX_DIGIT) + 1;
@@ -158,7 +158,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   // 15 -> 5
   // 11 -> 4
   // 8  -> 3
-  constexpr size_t EXP_LEN = (((LDBits::EXPONENT_WIDTH * 5) + 15) / 16) + 1;
+  constexpr size_t EXP_LEN = (((LDBits::EXP_LEN * 5) + 15) / 16) + 1;
   char exp_buffer[EXP_LEN];
 
   bool exp_is_negative = false;

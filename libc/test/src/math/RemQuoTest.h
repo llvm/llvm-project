@@ -21,7 +21,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   const T zero = T(FPBits::zero());
   const T neg_zero = T(FPBits::neg_zero());
@@ -95,11 +95,11 @@ public:
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = (StorageType(FPBits::MAX_SUBNORMAL) -
+                                  StorageType(FPBits::MIN_SUBNORMAL)) /
+                                 COUNT;
+    for (StorageType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
          v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
          v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
@@ -111,10 +111,11 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr UIntType COUNT = 1'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
+    constexpr StorageType COUNT = 1'001;
+    constexpr StorageType STEP =
+        (StorageType(FPBits::MAX_NORMAL) - StorageType(FPBits::MIN_NORMAL)) /
+        COUNT;
+    for (StorageType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
          v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
