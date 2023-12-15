@@ -766,7 +766,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    predNot(UseOutlineAtomics)))
       .customIf(all(typeIs(0, s128), predNot(UseOutlineAtomics)))
       .customIf([UseOutlineAtomics](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() == 128 && !UseOutlineAtomics(Query);
+        return Query.Types[0].getSizeInBits() == 128 &&
+               !UseOutlineAtomics(Query);
       })
       .libcallIf(all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(1, p0),
                      UseOutlineAtomics))
