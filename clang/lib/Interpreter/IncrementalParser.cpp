@@ -377,9 +377,8 @@ void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
     return;
 
   TranslationUnitDecl *FirstTU = MostRecentTU->getFirstDecl();
-  if (!FirstTU) {
+  if (!FirstTU)
     return;
-  }
 
   if (StoredDeclsMap *Map = FirstTU->getPrimaryContext()->getLookupPtr()) {
     for (auto I = Map->begin(); I != Map->end(); ++I) {
