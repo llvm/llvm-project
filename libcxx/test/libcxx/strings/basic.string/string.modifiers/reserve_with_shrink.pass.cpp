@@ -11,7 +11,7 @@
 // modules builds should follow the new ABI
 // UNSUPPORTED: clang-modules-build
 
-#  include <__config>
+#include <__config>
 
 // Check reserve(0) with old mangling shrinks for compatibility if it exists.
 #if !defined(_LIBCPP_ABI_DO_NOT_RETAIN_SHRINKING_RESERVE)
