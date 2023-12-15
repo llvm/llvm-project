@@ -12,13 +12,8 @@ declare void @use(i1)
 define i1 @ckd_add_unsigned(i31 %num) {
 ; CHECK-LABEL: define i1 @ckd_add_unsigned(
 ; CHECK-SAME: i31 [[NUM:%.*]]) {
-; CHECK-NEXT:    [[A0:%.*]] = zext i31 [[NUM]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp slt i32 [[A3]], 0
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
-; CHECK-NEXT:    ret i1 [[A5]]
+; CHECK-NEXT:    [[A2:%.*]] = icmp eq i31 [[NUM]], -1
+; CHECK-NEXT:    ret i1 [[A2]]
 ;
   %a0 = zext i31 %num to i32
   %a1 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a0, i32 1)
@@ -32,13 +27,8 @@ define i1 @ckd_add_unsigned(i31 %num) {
 define i1 @ckd_add_unsigned_commuted(i31 %num) {
 ; CHECK-LABEL: define i1 @ckd_add_unsigned_commuted(
 ; CHECK-SAME: i31 [[NUM:%.*]]) {
-; CHECK-NEXT:    [[A0:%.*]] = zext i31 [[NUM]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp slt i32 [[A3]], 0
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A4]], [[A2]]
-; CHECK-NEXT:    ret i1 [[A5]]
+; CHECK-NEXT:    [[A2:%.*]] = icmp eq i31 [[NUM]], -1
+; CHECK-NEXT:    ret i1 [[A2]]
 ;
   %a0 = zext i31 %num to i32
   %a1 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a0, i32 1)
@@ -52,13 +42,7 @@ define i1 @ckd_add_unsigned_commuted(i31 %num) {
 define i1 @ckd_add_unsigned_imply_true(i31 %num) {
 ; CHECK-LABEL: define i1 @ckd_add_unsigned_imply_true(
 ; CHECK-SAME: i31 [[NUM:%.*]]) {
-; CHECK-NEXT:    [[A0:%.*]] = zext i31 [[NUM]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp sgt i32 [[A3]], -1
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
-; CHECK-NEXT:    ret i1 [[A5]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a0 = zext i31 %num to i32
   %a1 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a0, i32 1)
@@ -72,11 +56,8 @@ define i1 @ckd_add_unsigned_imply_true(i31 %num) {
 define i1 @canonicalize_or_sadd_with_overflow_icmp(i32 %a0) {
 ; CHECK-LABEL: define i1 @canonicalize_or_sadd_with_overflow_icmp(
 ; CHECK-SAME: i32 [[A0:%.*]]) {
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp slt i32 [[A3]], 0
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A0]], -2147483647
+; CHECK-NEXT:    [[A5:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[A5]]
 ;
   %a1 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a0, i32 1)
@@ -90,12 +71,8 @@ define i1 @canonicalize_or_sadd_with_overflow_icmp(i32 %a0) {
 define i1 @canonicalize_or_ssub_with_overflow_icmp(i32 %a0) {
 ; CHECK-LABEL: define i1 @canonicalize_or_ssub_with_overflow_icmp(
 ; CHECK-SAME: i32 [[A0:%.*]]) {
-; CHECK-NEXT:    [[A1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A0]], i32 -1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp slt i32 [[A3]], 0
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
-; CHECK-NEXT:    ret i1 [[A5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[A0]], 1
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %a1 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %a0, i32 1)
   %a2 = extractvalue { i32, i1 } %a1, 1
@@ -108,11 +85,8 @@ define i1 @canonicalize_or_ssub_with_overflow_icmp(i32 %a0) {
 define i1 @canonicalize_or_uadd_with_overflow_icmp(i32 %a0) {
 ; CHECK-LABEL: define i1 @canonicalize_or_uadd_with_overflow_icmp(
 ; CHECK-SAME: i32 [[A0:%.*]]) {
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp ult i32 [[A3]], 10
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A0]], 1
+; CHECK-NEXT:    [[A5:%.*]] = icmp ult i32 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[A5]]
 ;
   %a1 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a0, i32 1)
@@ -126,11 +100,9 @@ define i1 @canonicalize_or_uadd_with_overflow_icmp(i32 %a0) {
 define i1 @canonicalize_or_sadd_with_overflow_icmp_eq(i32 %a0) {
 ; CHECK-LABEL: define i1 @canonicalize_or_sadd_with_overflow_icmp_eq(
 ; CHECK-SAME: i32 [[A0:%.*]]) {
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp eq i32 [[A3]], 10
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
+; CHECK-NEXT:    [[A2:%.*]] = icmp eq i32 [[A0]], 2147483647
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A0]], 9
+; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[A5]]
 ;
   %a1 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a0, i32 1)
@@ -144,12 +116,8 @@ define i1 @canonicalize_or_sadd_with_overflow_icmp_eq(i32 %a0) {
 define i1 @canonicalize_or_uadd_with_overflow_icmp_ne(i32 %a0) {
 ; CHECK-LABEL: define i1 @canonicalize_or_uadd_with_overflow_icmp_ne(
 ; CHECK-SAME: i32 [[A0:%.*]]) {
-; CHECK-NEXT:    [[A1:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A0]], i32 1)
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue { i32, i1 } [[A1]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue { i32, i1 } [[A1]], 0
-; CHECK-NEXT:    [[A4:%.*]] = icmp ne i32 [[A3]], 10
-; CHECK-NEXT:    [[A5:%.*]] = or i1 [[A2]], [[A4]]
-; CHECK-NEXT:    ret i1 [[A5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A0]], 9
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %a1 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a0, i32 1)
   %a2 = extractvalue { i32, i1 } %a1, 1
