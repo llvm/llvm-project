@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -765,46 +766,15 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   return LegalizerHelper::Legalized;
 }
 
-static RTLIB::Libcall
-getOutlineAtomicLibcall(unsigned Opc, AtomicOrdering Order, uint64_t MemSize) {
-  unsigned ModeN, ModelN;
-  switch (MemSize) {
-  case 1:
-    ModeN = 0;
-    break;
-  case 2:
-    ModeN = 1;
-    break;
-  case 4:
-    ModeN = 2;
-    break;
-  case 8:
-    ModeN = 3;
-    break;
-  case 16:
-    ModeN = 4;
-    break;
-  default:
+static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  auto &AtomicMI = cast<GMemOperation>(MI);
+  auto &MMO = AtomicMI.getMMO();
+  auto Ordering = MMO.getMergedOrdering();
+  LLT MemType = MMO.getMemoryType();
+  uint64_t MemSize = MemType.getSizeInBytes();
+  if (!MemType.isScalar())
     return RTLIB::UNKNOWN_LIBCALL;
-  }
-
-  switch (Order) {
-  case AtomicOrdering::Monotonic:
-    ModelN = 0;
-    break;
-  case AtomicOrdering::Acquire:
-    ModelN = 1;
-    break;
-  case AtomicOrdering::Release:
-    ModelN = 2;
-    break;
-  case AtomicOrdering::AcquireRelease:
-  case AtomicOrdering::SequentiallyConsistent:
-    ModelN = 3;
-    break;
-  default:
-    return RTLIB::UNKNOWN_LIBCALL;
-  }
 
 #define LCALLS(A, B)                                                           \
   { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
@@ -814,31 +784,28 @@ getOutlineAtomicLibcall(unsigned Opc, AtomicOrdering Order, uint64_t MemSize) {
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_CAS)};
-    return LC[ModeN][ModelN];
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
   }
   case TargetOpcode::G_ATOMICRMW_XCHG: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_SWP)};
-    return LC[ModeN][ModelN];
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
   }
-  case TargetOpcode::G_ATOMICRMW_ADD: {
-    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
-    return LC[ModeN][ModelN];
-  }
+  case TargetOpcode::G_ATOMICRMW_ADD:
   case TargetOpcode::G_ATOMICRMW_SUB: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
-    return LC[ModeN][ModelN];
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
   }
   case TargetOpcode::G_ATOMICRMW_AND: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDCLR)};
-    return LC[ModeN][ModelN];
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
   }
   case TargetOpcode::G_ATOMICRMW_OR: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDSET)};
-    return LC[ModeN][ModelN];
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
   }
   case TargetOpcode::G_ATOMICRMW_XOR: {
     const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDEOR)};
-    return LC[ModeN][ModelN];
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
   }
   default:
     return RTLIB::UNKNOWN_LIBCALL;
@@ -909,10 +876,7 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  auto &AtomicMI = cast<GMemOperation>(MI);
-  auto Ordering = AtomicMI.getMMO().getMergedOrdering();
-  uint64_t MemSize = AtomicMI.getMemSize();
-  RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(Opc, Ordering, MemSize);
+  RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
   const char *Name = TLI.getLibcallName(RTLibcall);
 
   // Unsupported libcall on the target.
