@@ -123,6 +123,40 @@ def adjust_mangled_name(name):
     return name[1:]
 
 
+def extract_object_sizes_from_map(mapfilename: str):
+    maplines = []
+    result = {}
+
+    with open(mapfilename, "r") as f:
+        maplines = f.readlines()
+
+    if len(maplines) == 0:
+        return {}
+
+    # Yes, this is fragile.
+    symbols_start_index = -1
+    for i in range(0, len(maplines)):
+        if re.search("# Symbols:", maplines[i]):
+            symbols_start_index = i
+            break
+
+    if symbols_start_index == -1:
+        return {}
+
+    # There is a header after the line we use to detect
+    # the start of the symbol section -- + 2 to jump
+    # over that.
+    maplines = maplines[symbols_start_index + 2 :]
+    for line in maplines:
+        components = line.split()
+        name = components[4]
+        size = int(components[1], 16)
+        if size != 0:
+            result[name] = size
+
+    return result
+
+
 new_delete_std_symbols = ["_Znam", "_Znwm", "_ZdaPv", "_ZdaPvm", "_ZdlPv", "_ZdlPvm"]
 
 cxxabi_symbols = [

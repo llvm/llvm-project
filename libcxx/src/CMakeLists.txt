@@ -196,6 +196,26 @@ split_list(LIBCXX_LINK_FLAGS)
 
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
+
+  if (APPLE)
+    # If we are on an Apple platform, let's ask the linker to generate a map
+    # that we can use to determine the size of the abi symbols (see generate-cxx-abilist target).
+    if (CMAKE_CXX_COMPILER_TARGET)
+      set(triple "${CMAKE_CXX_COMPILER_TARGET}")
+    else()
+      set(triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
+    endif()
+    cxx_abi_identifier(abi_identifier
+      "${triple}"
+      "${LIBCXX_CXX_ABI}"
+      "${LIBCXX_ABI_VERSION}"
+      "${LIBCXX_ABI_UNSTABLE}"
+      "${LIBCXX_ENABLE_EXCEPTIONS}"
+      "${LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS}"
+    )
+    add_link_flags("-Wl,-map,${CMAKE_CURRENT_SOURCE_DIR}/../lib/abi/${abi_identifier}.linker.map")
+  endif()
+
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers

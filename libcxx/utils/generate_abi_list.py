@@ -30,6 +30,13 @@ def main(argv):
         "library", metavar="LIB", type=str, help="The library to extract symbols from."
     )
     parser.add_argument(
+        "-m",
+        "--mapfile",
+        dest="mapfile",
+        default=None,
+        help="The name of the mapfile that contains supplementary information about symbols. (optional)",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         dest="output",
@@ -42,6 +49,20 @@ def main(argv):
 
     symbols = libcxx.sym_check.extract.extract_symbols(args.library)
     symbols, _ = libcxx.sym_check.util.filter_stdlib_symbols(symbols)
+
+    supplemental_info = {}
+    if args.mapfile != None:
+        supplemental_info = libcxx.sym_check.util.extract_object_sizes_from_map(
+            args.mapfile
+        )
+
+    if len(supplemental_info) != 0:
+        for sym in symbols:
+            if "size" not in sym or sym["size"] != 0 or sym["type"] != "OBJECT":
+                continue
+            if sym["name"] in supplemental_info:
+                updated_size = supplemental_info[sym["name"]]
+                sym["size"] = updated_size
 
     lines = [pprint.pformat(sym, width=99999) for sym in symbols]
     args.output.writelines("\n".join(sorted(lines)))
