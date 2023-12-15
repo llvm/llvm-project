@@ -56,8 +56,13 @@ void genOpenMPConstruct(AbstractConverter &, semantics::SemanticsContext &,
                         pft::Evaluation &, const parser::OpenMPConstruct &);
 void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
-void handleOpenMPSymbolProperties(AbstractConverter &converter,
-                                  const pft::Variable &var);
+/// Symbols in OpenMP code can have flags (e.g. threadprivate directive)
+/// that require additional handling when lowering the corresponding
+/// variable. Perform such handling according to the flags on the symbol.
+/// The variable \p var is required to have a `Symbol`.
+void genOpenMPSymbolProperties(AbstractConverter &converter,
+                               const pft::Variable &var);
+
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);

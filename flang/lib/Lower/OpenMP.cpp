@@ -3483,7 +3483,7 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
       ompDeclConstruct.u);
 }
 
-void Fortran::lower::handleOpenMPSymbolProperties(
+void Fortran::lower::genOpenMPSymbolProperties(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable &var) {
   assert(var.hasSymbol() && "Expecting Symbol");

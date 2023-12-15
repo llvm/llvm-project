@@ -4244,7 +4244,7 @@ private:
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
     if (var.hasSymbol())
-      handleOpenMPSymbolProperties(*this, var);
+      genOpenMPSymbolProperties(*this, var);
   }
 
   /// Where applicable, save the exception state and halting and rounding
