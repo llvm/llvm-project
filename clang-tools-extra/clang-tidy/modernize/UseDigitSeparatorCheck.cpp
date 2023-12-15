@@ -103,12 +103,15 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, 
   std::reverse(FractionalSubString.begin(), FractionalSubString.end());
 
   // Get formatting literal text
-  const std::string FormatedIntegerSubString = getFormatedIntegerString(IntegerSubString, llvm::APInt(128, std::stoi(IntegerSubString)));
-  std::string FormatedFractionalSubString = getFormatedIntegerString(FractionalSubString, llvm::APInt(128, std::stoi(FractionalSubString)));
+  const std::string FormatedIntegerSubString = getFormatedIntegerString(
+      IntegerSubString, llvm::APInt(128, std::stoi(IntegerSubString)));
+  std::string FormatedFractionalSubString = getFormatedIntegerString(
+      FractionalSubString, llvm::APInt(128, std::stoi(FractionalSubString)));
   std::reverse(FormatedFractionalSubString.begin(),
                FormatedFractionalSubString.end());
 
-  const std::string FormatedLiteralString = FormatedIntegerSubString + '.' + FormatedFractionalSubString + Postfix;
+  const std::string FormatedLiteralString =
+      FormatedIntegerSubString + '.' + FormatedFractionalSubString + Postfix;
 
   return FormatedLiteralString;
 }
