@@ -82,7 +82,7 @@ public:
 
   void testRange(ModfFunc func) {
     constexpr StorageType COUNT = 100'000;
-    constexpr StorageType STEP = StorageType(-1) / COUNT;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == T(0.0))
