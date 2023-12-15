@@ -140,6 +140,7 @@ Changes to the RISC-V Backend
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 * Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
+* Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f for RV64.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -269,6 +270,9 @@ Changes to the LLVM tools
   debugging information to print symbols' filenames and line numbers.
 
 * llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
+
+* llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
+  ELF input and binary output files only.
 
 Changes to LLDB
 ---------------------------------
