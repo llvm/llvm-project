@@ -1,0 +1,57 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-basic-cu.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-types-no-cu.s -o %thelper.o
+# RUN: %clang %cflags %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.exe | FileCheck -check-prefix=PRE-BOLT %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt | FileCheck -check-prefix=POST-BOLT %s
+
+## This test checks we correclty re-generate .debug_str_offsets when there are type units that have an offset not shared with CU.
+
+# PRE-BOLT: .debug_str_offsets contents
+# PRE-BOLT-NEXT: Contribution size = 24, Format = DWARF32, Version = 5
+# PRE-BOLT-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# PRE-BOLT-NEXT:  "main.cpp"
+# PRE-BOLT-NEXT:  "/home"
+# PRE-BOLT-NEXT:  "main"
+# PRE-BOLT-NEXT:  "int"
+# PRE-BOLT-NEXT: Contribution size = 60, Format = DWARF32, Version = 5
+# PRE-BOLT-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# PRE-BOLT-NEXT:  "helper.cpp"
+# PRE-BOLT-NEXT:  "/home"
+# PRE-BOLT-NEXT:  "f1"
+# PRE-BOLT-NEXT:  "a1"
+# PRE-BOLT-NEXT:  "char"
+# PRE-BOLT-NEXT:  "a2"
+# PRE-BOLT-NEXT:  "a3"
+# PRE-BOLT-NEXT:  "Foo1"
+# PRE-BOLT-NEXT:  "f2"
+# PRE-BOLT-NEXT:  "b1"
+# PRE-BOLT-NEXT:  "int"
+# PRE-BOLT-NEXT:  "b2"
+# PRE-BOLT-NEXT:  "Foo2"
+
+## Checking post bolt
+# POST-BOLT: .debug_str_offsets contents
+# POST-BOLT-NEXT: Contribution size = 60, Format = DWARF32, Version = 5
+# POST-BOLT-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# POST-BOLT-NEXT:  "helper.cpp"
+# POST-BOLT-NEXT:  "/home"
+# POST-BOLT-NEXT:  "f1"
+# POST-BOLT-NEXT:  "a1"
+# POST-BOLT-NEXT:  "char"
+# POST-BOLT-NEXT:  "a2"
+# POST-BOLT-NEXT:  "a3"
+# POST-BOLT-NEXT:  "Foo1"
+# POST-BOLT-NEXT:  "f2"
+# POST-BOLT-NEXT:  "b1"
+# POST-BOLT-NEXT:  "int"
+# POST-BOLT-NEXT:  "b2"
+# POST-BOLT-NEXT:  "Foo2"
+# POST-BOLT-NEXT: Contribution size = 24, Format = DWARF32, Version = 5
+# POST-BOLT-NEXT:  "clang version 18.0.0git (git@github.com:llvm/llvm-project.git 44dc1e0baae7c4b8a02ba06dcf396d3d452aa873)"
+# POST-BOLT-NEXT:  "main.cpp"
+# POST-BOLT-NEXT:  "/home"
+# POST-BOLT-NEXT:  "main"
+# POST-BOLT-NEXT:  "int"
