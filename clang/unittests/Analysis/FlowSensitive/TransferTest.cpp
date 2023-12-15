@@ -2651,6 +2651,7 @@ TEST(TransferTest, ResultObjectLocation) {
   using ast_matchers::exprWithCleanups;
   using ast_matchers::has;
   using ast_matchers::match;
+  using ast_matchers::selectFirst;
   using ast_matchers::traverse;
   runDataflow(
       Code,
