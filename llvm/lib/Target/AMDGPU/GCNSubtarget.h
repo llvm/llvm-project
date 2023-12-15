@@ -119,6 +119,7 @@ protected:
   bool HasFmaMixInsts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
+  bool HasScalarDwordx3Loads = false;
   bool HasScalarStores = false;
   bool HasScalarAtomics = false;
   bool HasSDWAOmod = false;
@@ -888,6 +889,8 @@ public:
   bool hasScalarCompareEq64() const {
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
+
+  bool hasScalarDwordx3Loads() const { return HasScalarDwordx3Loads; }
 
   bool hasScalarStores() const {
     return HasScalarStores;
