@@ -15,11 +15,6 @@
 ; RUN: opt %s -mtriple=powerpc64-ibm-aix -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
 ; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
 
-;; Check that globals have the proper code model.
-; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=CODEMODEL,CODEMODEL-NORMAL
-; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S -code-model=medium | FileCheck %s --check-prefixes=CODEMODEL,CODEMODEL-LARGE
-; RUN: opt %s -mtriple=powerpc-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=CODEMODEL,CODEMODEL-NORMAL
-
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_bar = private constant [3 x i8] c"bar"
 
@@ -79,24 +74,3 @@ attributes #0 = { nounwind }
 ; ALIGN: @__profd_bar = private global {{.*}} section "__llvm_prf_data",{{.*}} align 8
 ; ALIGN: @__llvm_prf_vnodes = private global {{.*}} section "__llvm_prf_vnds",{{.*}} align 8
 ; ALIGN: @__llvm_prf_nm = private constant {{.*}} section "__llvm_prf_names",{{.*}} align 1
-
-; CODEMODEL: @__profc_foo =
-; CODEMODEL-NOT: code_model "large"
-; CODEMODEL: @__profvp_foo =
-; CODEMODEL-LARGE-SAME: code_model "large"
-; CODEMODEL-NORMAL-NOT: code_model
-; CODEMODEL: @__profd_foo =
-; CODEMODEL-NOT: code_model "large"
-; CODEMODEL: @__profc_bar =
-; CODEMODEL-NOT: code_model "large"
-; CODEMODEL: @__profvp_bar =
-; CODEMODEL-LARGE-SAME: code_model "large"
-; CODEMODEL-NORMAL-NOT: code_model
-; CODEMODEL: @__profd_bar =
-; CODEMODEL-NOT: code_model "large"
-; CODEMODEL: @__llvm_prf_vnodes =
-; CODEMODEL-LARGE-SAME: code_model "large"
-; CODEMODEL-NORMAL-NOT: code_model
-; CODEMODEL: @__llvm_prf_nm =
-; CODEMODEL-LARGE-SAME: code_model "large"
-; CODEMODEL-NORMAL-NOT: code_model

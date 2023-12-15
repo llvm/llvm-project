@@ -787,14 +787,12 @@ private:
 
 class ModuleAddressSanitizer {
 public:
-  ModuleAddressSanitizer(Module &M, const TargetMachine *TM,
-                         bool InsertVersionCheck, bool CompileKernel = false,
-                         bool Recover = false, bool UseGlobalsGC = true,
-                         bool UseOdrIndicator = true,
+  ModuleAddressSanitizer(Module &M, bool InsertVersionCheck,
+                         bool CompileKernel = false, bool Recover = false,
+                         bool UseGlobalsGC = true, bool UseOdrIndicator = true,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
-      : TM(TM),
-        CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
+      : CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
                                                             : CompileKernel),
         InsertVersionCheck(ClInsertVersionCheck.getNumOccurrences() > 0
                                ? ClInsertVersionCheck
@@ -871,7 +869,6 @@ private:
   uint64_t getRedzoneSizeForGlobal(uint64_t SizeInBytes) const;
   int GetAsanVersion(const Module &M) const;
 
-  const TargetMachine *TM;
   bool CompileKernel;
   bool InsertVersionCheck;
   bool Recover;
@@ -1164,17 +1161,17 @@ void AddressSanitizerPass::printPipeline(
 }
 
 AddressSanitizerPass::AddressSanitizerPass(
-    const TargetMachine *TM, const AddressSanitizerOptions &Options,
-    bool UseGlobalGC, bool UseOdrIndicator, AsanDtorKind DestructorKind,
+    const AddressSanitizerOptions &Options, bool UseGlobalGC,
+    bool UseOdrIndicator, AsanDtorKind DestructorKind,
     AsanCtorKind ConstructorKind)
-    : TM(TM), Options(Options), UseGlobalGC(UseGlobalGC),
+    : Options(Options), UseGlobalGC(UseGlobalGC),
       UseOdrIndicator(UseOdrIndicator), DestructorKind(DestructorKind),
       ConstructorKind(ConstructorKind) {}
 
 PreservedAnalyses AddressSanitizerPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
   ModuleAddressSanitizer ModuleSanitizer(
-      M, TM, Options.InsertVersionCheck, Options.CompileKernel, Options.Recover,
+      M, Options.InsertVersionCheck, Options.CompileKernel, Options.Recover,
       UseGlobalGC, UseOdrIndicator, DestructorKind, ConstructorKind);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -2149,7 +2146,7 @@ ModuleAddressSanitizer::CreateMetadataGlobal(Module &M, Constant *Initializer,
   Metadata->setSection(getGlobalMetadataSection());
   // Place metadata in a large section for x86-64 ELF binaries to mitigate
   // relocation pressure.
-  setGlobalVariableLargeSection(*Metadata, TargetTriple, TM);
+  setGlobalVariableLargeSection(TargetTriple, *Metadata);
   return Metadata;
 }
 

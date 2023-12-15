@@ -24,17 +24,14 @@ class TargetLibraryInfo;
 /// instrumentation pass.
 class InstrProfilingLoweringPass
     : public PassInfoMixin<InstrProfilingLoweringPass> {
-  const TargetMachine *TM;
   const InstrProfOptions Options = {};
   // Is this lowering for the context-sensitive instrumentation.
   const bool IsCS = false;
 
 public:
-  InstrProfilingLoweringPass(const TargetMachine *TM)
-      : TM(TM), Options(), IsCS() {}
-  InstrProfilingLoweringPass(const TargetMachine *TM,
-                             const InstrProfOptions &Options, bool IsCS = false)
-      : TM(TM), Options(Options), IsCS(IsCS) {}
+  InstrProfilingLoweringPass() = default;
+  InstrProfilingLoweringPass(const InstrProfOptions &Options, bool IsCS = false)
+      : Options(Options), IsCS(IsCS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

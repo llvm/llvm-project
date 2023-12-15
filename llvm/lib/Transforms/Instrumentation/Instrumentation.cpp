@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -86,18 +85,15 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   return C;
 }
 
-void llvm::setGlobalVariableLargeSection(GlobalVariable &GV,
-                                         const Triple &TargetTriple,
-                                         const TargetMachine *TM) {
+void llvm::setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                         GlobalVariable &GV) {
   // Limit to x86-64 ELF.
   if (TargetTriple.getArch() != Triple::x86_64 ||
-      TargetTriple.getObjectFormat() != Triple::ELF) {
+      TargetTriple.getObjectFormat() != Triple::ELF)
     return;
-  }
   // Limit to medium/large code models.
-  if (!TM || (TM->getCodeModel() != CodeModel::Medium &&
-              TM->getCodeModel() != CodeModel::Large)) {
+  std::optional<CodeModel::Model> CM = GV.getParent()->getCodeModel();
+  if (!CM || (*CM != CodeModel::Medium && *CM != CodeModel::Large))
     return;
-  }
   GV.setCodeModel(CodeModel::Large);
 }

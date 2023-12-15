@@ -27,7 +27,6 @@
 namespace llvm {
 
 class Triple;
-class TargetMachine;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
@@ -53,9 +52,8 @@ Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 // Place global in a large section for x86-64 ELF binaries to mitigate
 // relocation overflow pressure. This can be be used for metadata globals that
 // aren't directly accessed by code, which has no performance impact.
-void setGlobalVariableLargeSection(GlobalVariable &GV,
-                                   const Triple &TargetTriple,
-                                   const TargetMachine *TM);
+void setGlobalVariableLargeSection(const Triple &TargetTriple,
+                                   GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
