@@ -826,7 +826,7 @@ def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 
-multiclass SMRD_Pattern <string Instr, ValueType vt> {
+multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
 
   // 1. IMM offset
   def : GCNPat <
@@ -835,7 +835,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   >;
 
   // 2. 32-bit IMM offset on CI
-  def : GCNPat <
+  if immci then def : GCNPat <
     (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
     (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
     let OtherPredicates = [isGFX7Only];
@@ -867,7 +867,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   >;
 }
 
-multiclass SMLoad_Pattern <string Instr, ValueType vt> {
+multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {
   // 1. Offset as an immediate
   def : GCNPat <
     (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm i32:$offset), timm:$cachepolicy),
@@ -876,7 +876,7 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   }
 
   // 2. 32-bit IMM offset on CI
-  def : GCNPat <
+  if immci then def : GCNPat <
     (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), timm:$cachepolicy)),
     (!cast<InstSI>(Instr#"_IMM_ci") SReg_128:$sbase, smrd_literal_offset:$offset,
                                     (extract_cpol $cachepolicy))> {
@@ -919,6 +919,10 @@ foreach vt = SReg_64.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX2", vt>;
 }
 
+foreach vt = SReg_96.RegTypes in {
+defm : SMRD_Pattern <"S_LOAD_DWORDX3", vt, false>;
+}
+
 foreach vt = SReg_128.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX4", vt>;
 }
@@ -935,12 +939,14 @@ defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX3",   v3i32, false>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16i32>;
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2f32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX3",   v3f32, false>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
