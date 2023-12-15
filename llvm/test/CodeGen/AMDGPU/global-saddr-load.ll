@@ -2547,7 +2547,6 @@ define amdgpu_ps float @global_zextload_saddr_i16_immneg128(ptr addrspace(1) inr
 define amdgpu_ps float @atomic_global_load_saddr_i32(ptr addrspace(1) inreg %sbase, i32 %voffset) {
 ; GFX9-LABEL: atomic_global_load_saddr_i32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v0, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -2555,8 +2554,6 @@ define amdgpu_ps float @atomic_global_load_saddr_i32(ptr addrspace(1) inreg %sba
 ;
 ; GFX10-LABEL: atomic_global_load_saddr_i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2565,8 +2562,6 @@ define amdgpu_ps float @atomic_global_load_saddr_i32(ptr addrspace(1) inreg %sba
 ;
 ; GFX11-LABEL: atomic_global_load_saddr_i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
@@ -2582,7 +2577,6 @@ define amdgpu_ps float @atomic_global_load_saddr_i32(ptr addrspace(1) inreg %sba
 define amdgpu_ps float @atomic_global_load_saddr_i32_immneg128(ptr addrspace(1) inreg %sbase, i32 %voffset) {
 ; GFX9-LABEL: atomic_global_load_saddr_i32_immneg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v0, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -2590,8 +2584,6 @@ define amdgpu_ps float @atomic_global_load_saddr_i32_immneg128(ptr addrspace(1) 
 ;
 ; GFX10-LABEL: atomic_global_load_saddr_i32_immneg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v0, s[2:3] offset:-128 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2600,8 +2592,6 @@ define amdgpu_ps float @atomic_global_load_saddr_i32_immneg128(ptr addrspace(1) 
 ;
 ; GFX11-LABEL: atomic_global_load_saddr_i32_immneg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
@@ -2618,7 +2608,6 @@ define amdgpu_ps float @atomic_global_load_saddr_i32_immneg128(ptr addrspace(1) 
 define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64(ptr addrspace(1) inreg %sbase, i32 %voffset) {
 ; GFX9-LABEL: atomic_global_load_saddr_i64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -2626,8 +2615,6 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64(ptr addrspace(1) inre
 ;
 ; GFX10-LABEL: atomic_global_load_saddr_i64:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2636,8 +2623,6 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64(ptr addrspace(1) inre
 ;
 ; GFX11-LABEL: atomic_global_load_saddr_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[2:3] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
@@ -2653,7 +2638,6 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64(ptr addrspace(1) inre
 define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64_immneg128(ptr addrspace(1) inreg %sbase, i32 %voffset) {
 ; GFX9-LABEL: atomic_global_load_saddr_i64_immneg128:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] offset:-128 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -2661,8 +2645,6 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64_immneg128(ptr addrspa
 ;
 ; GFX10-LABEL: atomic_global_load_saddr_i64_immneg128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] offset:-128 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -2671,8 +2653,6 @@ define amdgpu_ps <2 x float> @atomic_global_load_saddr_i64_immneg128(ptr addrspa
 ;
 ; GFX11-LABEL: atomic_global_load_saddr_i64_immneg128:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:-128 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
