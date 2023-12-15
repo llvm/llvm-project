@@ -475,6 +475,11 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(EnableIPRA)
   SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(VerifyMachineCode)
+  SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
+  SET_OPTION(DisableExpandReductions)
+  SET_OPTION(PrintAfterISel)
+  SET_OPTION(FSProfileFile)
+  SET_OPTION(GCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -491,6 +496,11 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
   SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
+  SET_BOOLEAN_OPTION(DebugifyAndStripAll)
+  SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
+  SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
+  SET_BOOLEAN_OPTION(DisableCFIFixup)
+  SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
