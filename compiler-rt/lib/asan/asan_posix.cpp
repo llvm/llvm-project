@@ -149,6 +149,9 @@ void PlatformTSDDtor(void *tsd) {
 #endif
 
 void InstallAtForkHandler() {
+#  if SANITIZER_SOLARIS || SANITIZER_NETBSD
+  return;  // FIXME: Implement FutexWait.
+#  endif
   auto before = []() {
     if (CAN_SANITIZE_LEAKS) {
       __lsan::LockGlobal();
