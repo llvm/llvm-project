@@ -3,6 +3,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=PREGFX10 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GFX10 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GFX11 %s
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12 %s
 
 define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; VERDE-LABEL: tbuffer_store:
@@ -43,6 +44,18 @@ define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: tbuffer_store:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v12, 0
+; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v12, s[0:3], null format:[BUF_FMT_8_8_8_8_USCALED] idxen
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[4:7], v12, s[0:3], null format:[BUF_FMT_32_32_32_32_UINT] idxen th:TH_STORE_NT
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[8:11], v12, s[0:3], null format:78 idxen th:TH_STORE_HT
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[8:11], v12, s[0:3], null format:78 idxen th:TH_STORE_RT_NT
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
   %in2 = bitcast <4 x float> %2 to <4 x i32>
@@ -80,6 +93,14 @@ define amdgpu_ps void @tbuffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: tbuffer_store_immoffs:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:117 idxen offset:42
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 0, i32 42, i32 0, i32 117, i32 0)
@@ -112,6 +133,14 @@ define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(<4 x i32> inreg, <4 x f
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: tbuffer_store_scalar_and_imm_offs:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], s4 format:117 idxen offset:42
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 0, i32 42, i32 %soffset, i32 117, i32 0)
@@ -140,6 +169,13 @@ define amdgpu_ps void @buffer_store_idx(<4 x i32> inreg, <4 x float> %vdata, i32
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_idx:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_8_8_8_8_SINT] idxen
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 %vindex, i32 0, i32 0, i32 47, i32 0)
@@ -180,6 +216,14 @@ define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float> %vdata, i32
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_ofs:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:115 idxen offen
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 0, i32 %voffset, i32 0, i32 115, i32 0)
@@ -208,6 +252,13 @@ define amdgpu_ps void @buffer_store_both(<4 x i32> inreg, <4 x float> %vdata, i3
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_both:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:70 idxen offen
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 %vindex, i32 %voffset, i32 0, i32 70, i32 0)
@@ -249,6 +300,16 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float> %vdata, i3
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_wait:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen
+; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v5, s[0:3], null idxen
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v6, s[0:3], null format:[BUF_FMT_8_8_8_8_UINT] idxen
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 %vindex.1, i32 0, i32 0, i32 63, i32 0)
@@ -280,6 +341,13 @@ define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data, i32 %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_x1:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    tbuffer_store_format_x v0, v1, s[0:3], null format:125 idxen
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %data.i = bitcast float %data to i32
   call void @llvm.amdgcn.struct.tbuffer.store.i32(i32 %data.i, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 125, i32 0)
@@ -308,6 +376,13 @@ define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data,
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_x2:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    tbuffer_store_format_xy v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   %data.i = bitcast <2 x float> %data to <2 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v2i32(<2 x i32> %data.i, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 33, i32 0)
@@ -340,6 +415,14 @@ define amdgpu_ps void @buffer_store_voffset_large_12bit(<4 x i32> inreg %rsrc, <
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_voffset_large_12bit:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:4092
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 0, i32 4092, i32 0, i32 63, i32 0)
   ret void
@@ -379,6 +462,14 @@ define amdgpu_ps void @buffer_store_voffset_large_13bit(<4 x i32> inreg %rsrc, <
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_voffset_large_13bit:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8188
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 0, i32 8188, i32 0, i32 63, i32 0)
   ret void
@@ -418,6 +509,14 @@ define amdgpu_ps void @buffer_store_voffset_large_16bit(<4 x i32> inreg %rsrc, <
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_voffset_large_16bit:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:65532
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 0, i32 65532, i32 0, i32 63, i32 0)
   ret void
@@ -457,6 +556,14 @@ define amdgpu_ps void @buffer_store_voffset_large_23bit(<4 x i32> inreg %rsrc, <
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_voffset_large_23bit:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offset:8388604
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 0, i32 8388604, i32 0, i32 63, i32 0)
   ret void
@@ -496,6 +603,14 @@ define amdgpu_ps void @buffer_store_voffset_large_24bit(<4 x i32> inreg %rsrc, <
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_voffset_large_24bit:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_dual_mov_b32 v5, 0x800000 :: v_dual_mov_b32 v4, 0
+; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen offen offset:8388604
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float> %data, <4 x i32> %rsrc, i32 0, i32 16777212, i32 0, i32 63, i32 0)
   ret void

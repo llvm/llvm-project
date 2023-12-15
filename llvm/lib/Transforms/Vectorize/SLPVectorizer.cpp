@@ -391,8 +391,10 @@ static SmallBitVector isUndefVector(const Value *V,
         if (isa<T>(II->getOperand(1)))
           continue;
         std::optional<unsigned> Idx = getInsertIndex(II);
-        if (!Idx)
-          continue;
+        if (!Idx) {
+          Res.reset();
+          return Res;
+        }
         if (*Idx < UseMask.size() && !UseMask.test(*Idx))
           Res.reset(*Idx);
       }
@@ -13680,8 +13682,10 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     // constant index, or a pointer operand that doesn't point to a scalar
     // type.
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      if (GEP->getNumIndices() != 1)
+        continue;
       Value *Idx = GEP->idx_begin()->get();
-      if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
+      if (isa<Constant>(Idx))
         continue;
       if (!isValidElementType(Idx->getType()))
         continue;

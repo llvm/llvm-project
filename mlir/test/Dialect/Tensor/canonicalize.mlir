@@ -1248,6 +1248,19 @@ func.func @expand_shape_splat(%arg : f32) -> tensor<2x2x2xf32> {
 
 // -----
 
+// CHECK-LABEL: @expand_shape_splat_dynamic_no_fold
+// CHECK-SAME: %[[F:.+]]: f32
+// CHECK-SAME: %[[M:.+]]: index
+func.func @expand_shape_splat_dynamic_no_fold(%arg: f32, %m: index) -> tensor<2x2x?xf32> {
+  // CHECK: %[[SPLAT:.+]] = tensor.splat %[[F]][%[[M]]]
+  // CHECK: %[[EXPANDED:.+]] = tensor.expand_shape %[[SPLAT]]
+  %c0 = tensor.splat %arg[%m] : tensor<2x?xf32>
+  %0 = tensor.expand_shape %c0 [[0], [1, 2]] : tensor<2x?xf32> into tensor<2x2x?xf32>
+  return %0 : tensor<2x2x?xf32>
+}
+
+// -----
+
 func.func @collapse_shape_splat(%arg : f32) -> tensor<2x4xf32> {
   %c0 = tensor.splat %arg : tensor<2x2x2xf32>
   %0 = tensor.collapse_shape %c0 [[0], [1, 2]]
@@ -1261,6 +1274,20 @@ func.func @collapse_shape_splat(%arg : f32) -> tensor<2x4xf32> {
 //       CHECK:   return %[[CST]]
 
 // -----
+
+// CHECK-LABEL: @collapse_shape_splat_dynamic_no_fold
+// CHECK-SAME: %[[F:.+]]: f32
+// CHECK-SAME: %[[M:.+]]: index
+func.func @collapse_shape_splat_dynamic_no_fold(%f: f32, %m: index) -> tensor<2x?xf32> {
+  // CHECK: %[[SPLAT:.+]] = tensor.splat %[[F]][%[[M]]]
+  // CHECK: %[[COLLAPSED:.+]] = tensor.collapse_shape %[[SPLAT]]
+  %c0 = tensor.splat %f[%m] : tensor<2x2x?xf32>
+  %0 = tensor.collapse_shape %c0 [[0], [1, 2]] : tensor<2x2x?xf32> into tensor<2x?xf32>
+  return %0 : tensor<2x?xf32>
+}
+
+// -----
+
 func.func @reshape_splat_constant_int16() -> tensor<2x4x2xi16> {
   %c0 = arith.constant dense<42> : tensor<2x8xi16>
   %0 = tensor.expand_shape %c0 [[0], [1, 2]]
@@ -1667,6 +1694,19 @@ func.func @splat_fold() -> tensor<4xf32> {
 
   // CHECK-NEXT: [[T:%.*]] = arith.constant dense<1.000000e+00> : tensor<4xf32>
   // CHECK-NEXT: return [[T]] : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @splat_dynamic_no_fold
+// CHECK-SAME: %[[M:.+]]: index
+func.func @splat_dynamic_no_fold(%m: index) -> tensor<4x?xf32> {
+  // CHECK: %[[F:.+]] = arith.constant
+  %f = arith.constant 1.0 : f32
+
+  // CHECK: tensor.splat %[[F]][%[[M]]] : tensor<4x?xf32>
+  %t = tensor.splat %f[%m] : tensor<4x?xf32>
+  return %t : tensor<4x?xf32>
 }
 
 // -----
