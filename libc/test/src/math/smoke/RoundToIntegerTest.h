@@ -110,9 +110,8 @@ public:
 
   void testSubnormalRange(RoundToIntegerFunc func) {
     constexpr StorageType COUNT = 1'000'001;
-    constexpr StorageType STEP = (StorageType(FPBits::MAX_SUBNORMAL) -
-                                  StorageType(FPBits::MIN_SUBNORMAL)) /
-                                 COUNT;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       F x = F(FPBits(i));

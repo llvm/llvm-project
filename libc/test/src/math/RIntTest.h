@@ -94,9 +94,8 @@ public:
 
   void testSubnormalRange(RIntFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (StorageType(FPBits::MAX_SUBNORMAL) -
-                                  StorageType(FPBits::MIN_SUBNORMAL)) /
-                                 COUNT;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       T x = T(FPBits(i));
@@ -111,8 +110,7 @@ public:
   void testNormalRange(RIntFunc func) {
     constexpr StorageType COUNT = 100'001;
     constexpr StorageType STEP =
-        (StorageType(FPBits::MAX_NORMAL) - StorageType(FPBits::MIN_NORMAL)) /
-        COUNT;
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (StorageType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL;
          i += STEP) {
       T x = T(FPBits(i));

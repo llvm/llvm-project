@@ -76,9 +76,8 @@ public:
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
     using StorageType = typename FPBits::StorageType;
     constexpr StorageType COUNT = 10'001;
-    constexpr StorageType STEP = (StorageType(FPBits::MAX_SUBNORMAL) -
-                                  StorageType(FPBits::MIN_SUBNORMAL)) /
-                                 COUNT;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (StorageType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
          v += STEP) {
       T x = T(FPBits(v));
@@ -97,8 +96,7 @@ public:
     using StorageType = typename FPBits::StorageType;
     constexpr StorageType COUNT = 10'001;
     constexpr StorageType STEP =
-        (StorageType(FPBits::MAX_NORMAL) - StorageType(FPBits::MIN_NORMAL)) /
-        COUNT;
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (StorageType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL;
          v += STEP) {
       T x = T(FPBits(v));

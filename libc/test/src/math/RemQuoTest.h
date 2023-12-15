@@ -96,9 +96,8 @@ public:
 
   void testSubnormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (StorageType(FPBits::MAX_SUBNORMAL) -
-                                  StorageType(FPBits::MIN_SUBNORMAL)) /
-                                 COUNT;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
     for (StorageType v = FPBits::MIN_SUBNORMAL, w = FPBits::MAX_SUBNORMAL;
          v <= FPBits::MAX_SUBNORMAL && w >= FPBits::MIN_SUBNORMAL;
          v += STEP, w -= STEP) {
@@ -113,8 +112,7 @@ public:
   void testNormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 1'001;
     constexpr StorageType STEP =
-        (StorageType(FPBits::MAX_NORMAL) - StorageType(FPBits::MIN_NORMAL)) /
-        COUNT;
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
     for (StorageType v = FPBits::MIN_NORMAL, w = FPBits::MAX_NORMAL;
          v <= FPBits::MAX_NORMAL && w >= FPBits::MIN_NORMAL;
          v += STEP, w -= STEP) {
