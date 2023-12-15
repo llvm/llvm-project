@@ -2486,6 +2486,11 @@ def int_amdgcn_permlanex16_var : ClangBuiltin<"__builtin_amdgcn_permlanex16_var"
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]>;
 
+def int_amdgcn_flat_atomic_fmin_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmax_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmin_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmax_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
