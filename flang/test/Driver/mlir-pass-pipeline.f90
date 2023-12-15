@@ -66,13 +66,13 @@ end program
 ! ALL-NEXT: SimplifyRegionLite
 !  O2-NEXT: SimplifyIntrinsics
 !  O2-NEXT: AlgebraicSimplification
+!  O2-NEXT: ConstantArgumentGlobalisationOpt
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   MemoryAllocationOpt
-! ALL-NEXT:   ConstExtruderOpt
 
 ! ALL-NEXT: Inliner
 ! ALL-NEXT: SimplifyRegionLite
