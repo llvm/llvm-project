@@ -873,8 +873,8 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
 LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   using FPBits_t = typename fputil::FPBits<double>;
   constexpr int EXPONENT_BIAS = FPBits_t::EXPONENT_BIAS;
-  constexpr int MANTISSA_WIDTH = FPBits_t::FloatProp::MANTISSA_WIDTH;
-  constexpr uint64_t MANTISSA_MASK = FPBits_t::FloatProp::MANTISSA_MASK;
+  constexpr int MANTISSA_WIDTH = FPBits_t::MANTISSA_WIDTH;
+  constexpr uint64_t MANTISSA_MASK = FPBits_t::MANTISSA_MASK;
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
@@ -969,7 +969,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   // Scaling factior = 2^(-xh_bits.get_exponent())
   uint64_t s_u =
       (static_cast<uint64_t>(EXPONENT_BIAS) << (MANTISSA_WIDTH + 1)) -
-      (x_u & FPBits_t::FloatProp::EXPONENT_MASK);
+      (x_u & FPBits_t::EXPONENT_MASK);
   // When the exponent of x is 2^1023, its inverse, 2^(-1023), is subnormal.
   const double EXPONENT_CORRECTION[2] = {0.0, 0x1.0p-1023};
   double scaling = FPBits_t(s_u).get_val() + EXPONENT_CORRECTION[s_u == 0];

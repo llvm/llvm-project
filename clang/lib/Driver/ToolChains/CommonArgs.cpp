@@ -303,7 +303,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
     A->claim();
 
     // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
+    assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
     auto Proc = getCPUName(D, Args, Triple);
@@ -317,7 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.startswith("no-");
+    bool IsNegative = Name.starts_with("no-");
     if (IsNegative)
       Name = Name.substr(3);
 
@@ -1132,24 +1132,30 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
       // --whole-archive flag to the link line.  If it's not, add a proper
       // --whole-archive/--no-whole-archive bracket to the link line.
       bool WholeArchiveActive = false;
-      for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA))
-        if (Arg)
+      for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
+        if (Arg) {
           for (StringRef ArgValue : Arg->getValues()) {
             if (ArgValue == "--whole-archive")
               WholeArchiveActive = true;
             if (ArgValue == "--no-whole-archive")
               WholeArchiveActive = false;
           }
+        }
+      }
 
-      if (!WholeArchiveActive)
+      // TODO: Find an equivalent of `--whole-archive` for Darwin.
+      if (!WholeArchiveActive && !TC.getTriple().isMacOSX()) {
         CmdArgs.push_back("--whole-archive");
-      CmdArgs.push_back("-lFortran_main");
-      if (!WholeArchiveActive)
+        CmdArgs.push_back("-lFortran_main");
         CmdArgs.push_back("--no-whole-archive");
+      } else {
+        CmdArgs.push_back("-lFortran_main");
+      }
+
+      // Perform regular linkage of the remaining runtime libraries.
+      CmdArgs.push_back("-lFortranRuntime");
+      CmdArgs.push_back("-lFortranDecimal");
     }
-    // Perform regular linkage of the remaining runtime libraries.
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
   } else {
     if (LinkFortranMain) {
       unsigned RTOptionID = options::OPT__SLASH_MT;
@@ -2343,20 +2349,20 @@ static void GetSDLFromOffloadArchive(
   llvm::Triple Triple(D.getTargetTriple());
   bool IsMSVC = Triple.isWindowsMSVCEnvironment();
   auto Ext = IsMSVC ? ".lib" : ".a";
-  if (!Lib.startswith(":") && !Lib.startswith("-l")) {
+  if (!Lib.starts_with(":") && !Lib.starts_with("-l")) {
     if (llvm::sys::fs::exists(Lib)) {
       ArchiveOfBundles = Lib;
       FoundAOB = true;
     }
   } else {
-    if (Lib.startswith("-l"))
+    if (Lib.starts_with("-l"))
       Lib = Lib.drop_front(2);
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
-      auto LibFile =
-          (Lib.startswith(":") ? Lib.drop_front()
-                               : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
-              .str();
+      auto LibFile = (Lib.starts_with(":") ? Lib.drop_front()
+                      : IsMSVC             ? Lib + Ext
+                                           : "lib" + Lib + Ext)
+                         .str();
       for (auto Prefix : {"/libdevice/", "/"}) {
         auto AOB = Twine(LPath + Prefix + LibFile).str();
         if (llvm::sys::fs::exists(AOB)) {

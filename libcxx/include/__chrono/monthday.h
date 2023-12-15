@@ -59,7 +59,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const month_day& __lhs, const month_day& __rhs) noexcept
 { return __lhs.month() == __rhs.month() && __lhs.day() == __rhs.day(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const month_day& __lhs, const month_day& __rhs) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(const month_day& __lhs, const month_day& __rhs) noexcept {
     if (auto __c = __lhs.month() <=> __rhs.month(); __c != 0)
         return __c;
     return __lhs.day() <=> __rhs.day();
@@ -69,7 +69,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day operator/(const month& __lhs, const day& __rhs) noexcept
 { return month_day{__lhs, __rhs}; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day operator/(const day& __lhs, const month& __rhs) noexcept
 { return __rhs / __lhs; }
 
@@ -77,11 +77,11 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day operator/(const month& __lhs, int __rhs) noexcept
 { return __lhs / day(__rhs); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day operator/(int __lhs, const day& __rhs) noexcept
 { return month(__lhs) / __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr
+_LIBCPP_HIDE_FROM_ABI inline constexpr
 month_day operator/(const day& __lhs, int __rhs) noexcept
 { return month(__rhs) / __lhs; }
 
@@ -99,7 +99,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool operator==(const month_day_last& __lhs, const month_day_last& __rhs) noexcept
 { return __lhs.month() == __rhs.month(); }
 
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
+_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering
 operator<=>(const month_day_last& __lhs, const month_day_last& __rhs) noexcept {
     return __lhs.month() <=> __rhs.month();
 }

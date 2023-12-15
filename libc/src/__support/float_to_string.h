@@ -416,7 +416,7 @@ class FloatToString {
   int exponent;
   FloatProp::UIntType mantissa;
 
-  static constexpr int MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
+  static constexpr int MANT_WIDTH = fputil::FPBits<T>::MANTISSA_WIDTH;
   static constexpr int EXP_BIAS = fputil::FPBits<T>::EXPONENT_BIAS;
 
 public:

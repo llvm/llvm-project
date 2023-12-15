@@ -16,6 +16,7 @@
 #ifndef MODULE_ANALYSIS
 #define MODULE_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis, ())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #undef MODULE_ANALYSIS
 
@@ -29,6 +30,7 @@ MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass, ())
 #ifndef FUNCTION_ANALYSIS
 #define FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis, ())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
                   (std::move(TM.getTargetIRAnalysis())))
@@ -44,9 +46,12 @@ FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass, (TM))
 FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass, (false))
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass, ())
 FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass, ())
+FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass, (TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
+FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, (TM))
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass, (TM))
+FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass, (TM))
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass, ())
 FUNCTION_PASS("lowerinvoke", LowerInvokePass, ())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass, ())
@@ -126,9 +131,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
 DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
-DUMMY_FUNCTION_PASS("expandmemcmp", ExpandMemCmpPass, ())
 DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
-DUMMY_FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 #undef DUMMY_FUNCTION_PASS

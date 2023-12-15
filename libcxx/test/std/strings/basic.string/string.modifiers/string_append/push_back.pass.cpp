@@ -16,6 +16,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 struct VeryLarge {
   long long a;
@@ -61,6 +62,7 @@ TEST_CONSTEXPR_CXX20 void test(S s, typename S::value_type c, S expected) {
   s.push_back(c);
   LIBCPP_ASSERT(s.__invariants());
   assert(s == expected);
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 template <class S>
@@ -78,6 +80,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
 #endif
   {
     // https://llvm.org/PR31454
