@@ -1,4 +1,4 @@
-;; Check that certain globals are in large sections under x86-64 large code model (but not in other arches).
+;; Check that certain globals are in large sections under x86-64 large code model.
 ; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s
 
 @__profn_foo = private constant [3 x i8] c"foo"
