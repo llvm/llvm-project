@@ -11,6 +11,16 @@
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-SMALL-DATA-PIC
 
+; Check that the relocations we emit are valid.
+; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=small  -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=medium -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=static -code-model=large  -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=small  -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -large-data-threshold=1000 -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -filetype=obj -o /dev/null
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 -filetype=obj -o /dev/null
+
 ; Generated from this C source:
 ;
 ; static int static_data[10];
@@ -376,7 +386,6 @@ define dso_local ptr @lea_forced_small_data() #0 {
   ret ptr @forced_small_data
 }
 
-; TODO: make small and medium instruction sequence the same
 define dso_local i32 @load_forced_small_data() #0 {
 ; SMALL-STATIC-LABEL: load_forced_small_data:
 ; SMALL-STATIC:       # %bb.0:
@@ -385,8 +394,7 @@ define dso_local i32 @load_forced_small_data() #0 {
 ;
 ; MEDIUM-STATIC-LABEL: load_forced_small_data:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movl $forced_small_data+8, %eax
-; MEDIUM-STATIC-NEXT:    movl (%rax), %eax
+; MEDIUM-STATIC-NEXT:    movl forced_small_data+8(%rip), %eax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: load_forced_small_data:
@@ -433,7 +441,6 @@ define dso_local i32 @load_forced_small_data() #0 {
   ret i32 %rv
 }
 
-; TODO: fix small code model instruction sequences to use 64-bit constants
 define dso_local ptr @lea_forced_large_data() #0 {
 ; SMALL-STATIC-LABEL: lea_forced_large_data:
 ; SMALL-STATIC:       # %bb.0:
@@ -452,8 +459,9 @@ define dso_local ptr @lea_forced_large_data() #0 {
 ;
 ; SMALL-PIC-LABEL: lea_forced_large_data:
 ; SMALL-PIC:       # %bb.0:
-; SMALL-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; SMALL-PIC-NEXT:    leaq forced_large_data@GOTOFF(%rax), %rax
+; SMALL-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rcx
+; SMALL-PIC-NEXT:    movabsq $forced_large_data@GOTOFF, %rax
+; SMALL-PIC-NEXT:    addq %rcx, %rax
 ; SMALL-PIC-NEXT:    retq
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: lea_forced_large_data:
@@ -495,8 +503,8 @@ define dso_local ptr @lea_forced_large_data() #0 {
 define dso_local i32 @load_forced_large_data() #0 {
 ; SMALL-STATIC-LABEL: load_forced_large_data:
 ; SMALL-STATIC:       # %bb.0:
-; SMALL-STATIC-NEXT:    movl $8, %eax
-; SMALL-STATIC-NEXT:    movl forced_large_data(%rax), %eax
+; SMALL-STATIC-NEXT:    movabsq $forced_large_data, %rax
+; SMALL-STATIC-NEXT:    movl 8(%rax), %eax
 ; SMALL-STATIC-NEXT:    retq
 ;
 ; MEDIUM-STATIC-LABEL: load_forced_large_data:
@@ -514,8 +522,8 @@ define dso_local i32 @load_forced_large_data() #0 {
 ; SMALL-PIC-LABEL: load_forced_large_data:
 ; SMALL-PIC:       # %bb.0:
 ; SMALL-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; SMALL-PIC-NEXT:    movl $8, %ecx
-; SMALL-PIC-NEXT:    movl forced_large_data@GOTOFF(%rax,%rcx), %eax
+; SMALL-PIC-NEXT:    movabsq $forced_large_data@GOTOFF, %rcx
+; SMALL-PIC-NEXT:    movl 8(%rax,%rcx), %eax
 ; SMALL-PIC-NEXT:    retq
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: load_forced_large_data:
@@ -1126,8 +1134,7 @@ define dso_local float @load_constant_pool(float %x) #0 {
 ;
 ; MEDIUM-STATIC-LABEL: load_constant_pool:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
-; MEDIUM-STATIC-NEXT:    addss (%rax), %xmm0
+; MEDIUM-STATIC-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: load_constant_pool:
