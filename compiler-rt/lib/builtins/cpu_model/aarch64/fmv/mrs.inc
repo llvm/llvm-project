@@ -1,11 +1,11 @@
 #if __has_include(<sys/auxv.h>)
-#  include <sys/auxv.h>
-#  define HAVE_SYS_AUXV_H
+#include <sys/auxv.h>
+#define HAVE_SYS_AUXV_H
 #endif
 
 #if __has_include(<sys/hwcap.h>)
-#  include <sys/hwcap.h>
-#  define HAVE_SYS_HWCAP_H
+#include <sys/hwcap.h>
+#define HAVE_SYS_HWCAP_H
 #endif
 
 #ifndef _IFUNC_ARG_HWCAP
