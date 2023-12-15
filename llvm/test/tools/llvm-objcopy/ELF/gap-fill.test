@@ -23,7 +23,7 @@
 
 ## Test no gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary %t %t-default
-# RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT --match-full-lines
+# RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT --ignore-case --match-full-lines
 # DEFAULT:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba 00 a1 b2
 # DEFAULT-NEXT: {{0*}}10 c3 d4 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # DEFAULT-NEXT: {{0*}}20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
@@ -37,7 +37,7 @@
 
 ## Test gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL --match-full-lines
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL --ignore-case --match-full-lines
 # FULL:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
 # FULL-NEXT: {{0*}}10 c3 d4 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
 # FULL-NEXT: {{0*}}20 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
@@ -51,7 +51,7 @@
 
 ## Test gap fill with a decimal value.
 # RUN: llvm-objcopy -O binary --gap-fill=99 %t %t-filled-decimal
-# RUN: od -v -Ax -t x1 %t-filled-decimal | FileCheck %s --check-prefix=DEC --match-full-lines
+# RUN: od -v -Ax -t x1 %t-filled-decimal | FileCheck %s --check-prefix=DEC --ignore-case --match-full-lines
 # DEC:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba 63 a1 b2
 # DEC-NEXT: {{0*}}10 c3 d4 63 63 63 63 63 63 63 63 63 63 63 63 63 63
 # DEC-NEXT: {{0*}}20 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
@@ -65,14 +65,14 @@
 
 ## Test gap fill with the last section removed, should be truncated.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 --remove-section=.foo %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-LAST-SECTION --match-full-lines
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-LAST-SECTION --ignore-case --match-full-lines
 # REMOVE-LAST-SECTION: {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
 # REMOVE-LAST-SECTION-NEXT: {{0*}}10 c3 d4
 # REMOVE-LAST-SECTION-NEXT: {{0*}}12
 
 ## Test gap fill with the middle section removed, should be filled.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 --remove-section=.gap2 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-MIDDLE-SECTION --match-full-lines
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-MIDDLE-SECTION --ignore-case --match-full-lines
 # REMOVE-MIDDLE-SECTION:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 e9 e9
 # REMOVE-MIDDLE-SECTION-NEXT: {{0*}}10 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
 # REMOVE-MIDDLE-SECTION-NEXT: {{0*}}20 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
@@ -149,7 +149,7 @@ Sections:
 
 # RUN: yaml2obj --docnum=2 %s -o %t.2
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t.2 %t.2.filled
-# RUN: od -v -Ax -t x1 %t.2.filled | FileCheck --match-full-lines %s
+# RUN: od -v -Ax -t x1 %t.2.filled | FileCheck --ignore-case --match-full-lines %s
 # CHECK: {{0*}}00 aa bb cc dd e9 e9 e9 e9 11 22 33 44
 
 --- !ELF
