@@ -2421,48 +2421,8 @@ private:
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    localSymbols.pushScope();
-    genOpenMPConstruct(*this, bridge.getSemanticsContext(), getEval(), omp);
-
-    const Fortran::parser::OpenMPLoopConstruct *ompLoop =
-        std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
-    const Fortran::parser::OpenMPBlockConstruct *ompBlock =
-        std::get_if<Fortran::parser::OpenMPBlockConstruct>(&omp.u);
-
-    // If loop is part of an OpenMP Construct then the OpenMP dialect
-    // workshare loop operation has already been created. Only the
-    // body needs to be created here and the do_loop can be skipped.
-    // Skip the number of collapsed loops, which is 1 when there is a
-    // no collapse requested.
-
-    Fortran::lower::pft::Evaluation *curEval = &getEval();
-    const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
-    if (ompLoop) {
-      loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
-          std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
-      int64_t collapseValue =
-          Fortran::lower::getCollapseValue(*loopOpClauseList);
-
-      curEval = &curEval->getFirstNestedEvaluation();
-      for (int64_t i = 1; i < collapseValue; i++) {
-        curEval = &*std::next(curEval->getNestedEvaluations().begin());
-      }
-    }
-
-    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-      genFIR(e);
-
-    if (ompLoop) {
-      genOpenMPReduction(*this, *loopOpClauseList);
-    } else if (ompBlock) {
-      const auto &blockStart =
-          std::get<Fortran::parser::OmpBeginBlockDirective>(ompBlock->t);
-      const auto &blockClauses =
-          std::get<Fortran::parser::OmpClauseList>(blockStart.t);
-      genOpenMPReduction(*this, blockClauses);
-    }
-
-    localSymbols.popScope();
+    genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
+                       getEval(), omp);
     builder->restoreInsertionPoint(insertPt);
 
     // Register if a target region was found
@@ -2478,8 +2438,6 @@ private:
         ompDeviceCodeFound ||
         Fortran::lower::isOpenMPDeviceDeclareTarget(*this, getEval(), ompDecl);
     genOpenMPDeclarativeConstruct(*this, getEval(), ompDecl);
-    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
-      genFIR(e);
     builder->restoreInsertionPoint(insertPt);
   }
 
