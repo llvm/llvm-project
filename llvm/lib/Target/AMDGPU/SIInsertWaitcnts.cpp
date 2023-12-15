@@ -1319,7 +1319,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   // instruction was modified to handle the required wait.
   if (Wait.hasWaitExceptVsCnt()) {
     unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-    auto SWaitInst =
+    [[maybe_unused]] auto SWaitInst =
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
     Modified = true;
 
@@ -1331,7 +1331,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   if (Wait.hasWaitVsCnt()) {
     assert(ST->hasVscnt());
 
-    auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
+    [[maybe_unused]] auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
                          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                          .addImm(Wait.VsCnt);
     Modified = true;
