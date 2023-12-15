@@ -373,9 +373,8 @@ std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
 
 void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
   TranslationUnitDecl *MostRecentTU = PTU.TUPart;
-  if (!MostRecentTU) {
+  if (!MostRecentTU)
     return;
-  }
 
   TranslationUnitDecl *FirstTU = MostRecentTU->getFirstDecl();
   if (!FirstTU) {
