@@ -106,7 +106,7 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T hypot(T x, T y) {
   using FPBits_t = FPBits<T>;
   using StorageType = typename FPBits<T>::StorageType;
-  using DUIntType = typename DoubleLength<StorageType>::Type;
+  using DStorageType = typename DoubleLength<StorageType>::Type;
 
   FPBits_t x_bits(x), y_bits(y);
 
@@ -130,7 +130,7 @@ LIBC_INLINE T hypot(T x, T y) {
 
   uint16_t a_exp, b_exp, out_exp;
   StorageType a_mant, b_mant;
-  DUIntType a_mant_sq, b_mant_sq;
+  DStorageType a_mant_sq, b_mant_sq;
   bool sticky_bits;
 
   if (abs(x) >= abs(y)) {
@@ -170,8 +170,8 @@ LIBC_INLINE T hypot(T x, T y) {
     b_exp = 1;
   }
 
-  a_mant_sq = static_cast<DUIntType>(a_mant) * a_mant;
-  b_mant_sq = static_cast<DUIntType>(b_mant) * b_mant;
+  a_mant_sq = static_cast<DStorageType>(a_mant) * a_mant;
+  b_mant_sq = static_cast<DStorageType>(b_mant) * b_mant;
 
   // At this point, a_exp >= b_exp > a_exp - 25, so in order to line up aSqMant
   // and bSqMant, we need to shift bSqMant to the right by (a_exp - b_exp) bits.
@@ -180,12 +180,12 @@ LIBC_INLINE T hypot(T x, T y) {
   // difference between a and b.
   uint16_t shift_length = static_cast<uint16_t>(2 * (a_exp - b_exp));
   sticky_bits =
-      ((b_mant_sq & ((DUIntType(1) << shift_length) - DUIntType(1))) !=
-       DUIntType(0));
+      ((b_mant_sq & ((DStorageType(1) << shift_length) - DStorageType(1))) !=
+       DStorageType(0));
   b_mant_sq >>= shift_length;
 
-  DUIntType sum = a_mant_sq + b_mant_sq;
-  if (sum >= (DUIntType(1) << (2 * y_mant_width + 2))) {
+  DStorageType sum = a_mant_sq + b_mant_sq;
+  if (sum >= (DStorageType(1) << (2 * y_mant_width + 2))) {
     // a^2 + b^2 >= 4* leading_one^2, so we will need an extra bit to the left.
     if (leading_one == ONE) {
       // For normal result, we discard the last 2 bits of the sum and increase
