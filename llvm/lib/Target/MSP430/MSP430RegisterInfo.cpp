@@ -135,6 +135,9 @@ MSP430RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.setDesc(TII.get(MSP430::MOV16rr));
     MI.getOperand(FIOperandNum).ChangeToRegister(BasePtr, false);
 
+    // Remove the now unused Offset operand.
+    MI.removeOperand(FIOperandNum + 1);
+
     if (Offset == 0)
       return false;
 

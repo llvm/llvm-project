@@ -159,6 +159,10 @@ void MsanAllocatorInit() {
     max_malloc_size = kMaxAllowedMallocSize;
 }
 
+void LockAllocator() { allocator.ForceLock(); }
+
+void UnlockAllocator() { allocator.ForceUnlock(); }
+
 AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
   CHECK(ms);
   CHECK_LE(sizeof(AllocatorCache), sizeof(ms->allocator_cache));

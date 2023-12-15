@@ -682,6 +682,11 @@ TargetTransformInfo::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return Cost;
 }
 
+bool TargetTransformInfo::preferToKeepConstantsAttached(
+    const Instruction &Inst, const Function &Fn) const {
+  return TTIImpl->preferToKeepConstantsAttached(Inst, Fn);
+}
+
 unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }

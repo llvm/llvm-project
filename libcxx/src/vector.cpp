@@ -22,11 +22,11 @@ struct __vector_base_common<true> {
 };
 
 void __vector_base_common<true>::__throw_length_error() const {
-  _VSTD::__throw_length_error("vector");
+  std::__throw_length_error("vector");
 }
 
 void __vector_base_common<true>::__throw_out_of_range() const {
-  _VSTD::__throw_out_of_range("vector");
+  std::__throw_out_of_range("vector");
 }
 
 #endif // _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON

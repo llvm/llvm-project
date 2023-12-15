@@ -371,7 +371,7 @@ SyntaxTree::Impl::getRelativeName(const NamedDecl *ND,
   // Strip the qualifier, if Val refers to something in the current scope.
   // But leave one leading ':' in place, so that we know that this is a
   // relative path.
-  if (!ContextPrefix.empty() && StringRef(Val).startswith(ContextPrefix))
+  if (!ContextPrefix.empty() && StringRef(Val).starts_with(ContextPrefix))
     Val = Val.substr(ContextPrefix.size() + 1);
   return Val;
 }

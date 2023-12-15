@@ -347,7 +347,12 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     auto *SinkStartAR = cast<SCEVAddRecExpr>(SinkStartInt);
     const Loop *StartARLoop = SrcStartAR->getLoop();
     if (StartARLoop == SinkStartAR->getLoop() &&
-        StartARLoop == InnerLoop->getParentLoop()) {
+        StartARLoop == InnerLoop->getParentLoop() &&
+        // If the diff check would already be loop invariant (due to the
+        // recurrences being the same), then we prefer to keep the diff checks
+        // because they are cheaper.
+        SrcStartAR->getStepRecurrence(*SE) !=
+            SinkStartAR->getStepRecurrence(*SE)) {
       LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
                            "cannot be hoisted out of the outer loop\n");
       CanUseDiffCheck = false;
@@ -661,7 +666,7 @@ public:
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, Type *AccessTy, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
+    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
     Accesses[MemAccessInfo(Ptr, false)].insert(AccessTy);
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -670,7 +675,7 @@ public:
   /// Register a store.
   void addStore(MemoryLocation &Loc, Type *AccessTy) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, LocationSize::beforeOrAfterPointer(), Loc.AATags);
+    AST.add(Loc.getWithNewSize(LocationSize::beforeOrAfterPointer()));
     Accesses[MemAccessInfo(Ptr, true)].insert(AccessTy);
   }
 
@@ -1916,15 +1921,12 @@ getDependenceDistanceStrideAndSize(
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
 
-  // If the induction step is negative we have to invert source and sink of
-  // the dependence.
+  // If the induction step is negative we have to invert source and sink of the
+  // dependence when measuring the distance between them. We should not swap
+  // AIsWrite with BIsWrite, as their uses expect them in program order.
   if (StrideAPtr < 0) {
-    std::swap(APtr, BPtr);
-    std::swap(ATy, BTy);
     std::swap(Src, Sink);
-    std::swap(AIsWrite, BIsWrite);
     std::swap(AInst, BInst);
-    std::swap(StrideAPtr, StrideBPtr);
   }
 
   const SCEV *Dist = SE.getMinusSCEV(Sink, Src);

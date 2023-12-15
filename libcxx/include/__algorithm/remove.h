@@ -24,7 +24,7 @@ template <class _ForwardIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 remove(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
 {
-    __first = _VSTD::find(__first, __last, __value);
+    __first = std::find(__first, __last, __value);
     if (__first != __last)
     {
         _ForwardIterator __i = __first;
@@ -32,7 +32,7 @@ remove(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
         {
             if (!(*__i == __value))
             {
-                *__first = _VSTD::move(*__i);
+                *__first = std::move(*__i);
                 ++__first;
             }
         }

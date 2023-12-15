@@ -57,6 +57,7 @@ struct file_magic {
     dxcontainer_object,        ///< DirectX container file
     offload_bundle,            ///< Clang offload bundle file
     offload_bundle_compressed, ///< Compressed clang offload bundle file
+    spirv_object,              ///< A binary SPIR-V file
   };
 
   bool is_object() const { return V != unknown; }

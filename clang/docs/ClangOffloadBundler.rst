@@ -500,7 +500,6 @@ Additional Options while Archive Unbundling
   as defined in :ref:`code-object-composition` before creating device-specific
   archive(s).
 
-
 **-debug-only=CodeObjectCompatibility**
   Verbose printing of matched/unmatched comparisons between bundle entry id of
   a device binary from HDA and bundle entry ID of a given target processor

@@ -24,7 +24,6 @@
 #include "SourcePrinter.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1539,7 +1538,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // __mh_(execute|dylib|dylinker|bundle|preload|object)_header are special
       // symbols that support MachO header introspection. They do not bind to
       // code locations and are irrelevant for disassembly.
-      if (NameOrErr->startswith("__mh_") && NameOrErr->endswith("_header"))
+      if (NameOrErr->starts_with("__mh_") && NameOrErr->ends_with("_header"))
         continue;
       // Don't ask a Mach-O STAB symbol for its section unless you know that
       // STAB symbol's section field refers to a valid section index. Otherwise

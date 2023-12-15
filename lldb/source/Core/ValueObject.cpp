@@ -398,13 +398,16 @@ ValueObject::GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
   if (idxs.size() == 0)
     return GetSP();
   ValueObjectSP root(GetSP());
+
+  size_t current_index = 0;
   for (size_t idx : idxs) {
     root = root->GetChildAtIndex(idx);
     if (!root) {
       if (index_of_error)
-        *index_of_error = idx;
+        *index_of_error = current_index;
       return root;
     }
+    current_index += 1;
   }
   return root;
 }
@@ -414,13 +417,17 @@ lldb::ValueObjectSP ValueObject::GetChildAtIndexPath(
   if (idxs.size() == 0)
     return GetSP();
   ValueObjectSP root(GetSP());
+
+  size_t current_index = 0;
   for (std::pair<size_t, bool> idx : idxs) {
     root = root->GetChildAtIndex(idx.first, idx.second);
     if (!root) {
       if (index_of_error)
-        *index_of_error = idx.first;
+        *index_of_error = current_index;
       return root;
     }
+
+    current_index += 1;
   }
   return root;
 }

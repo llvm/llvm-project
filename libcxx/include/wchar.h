@@ -143,39 +143,39 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 #if defined(__cplusplus) && !defined(_LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS) && defined(_LIBCPP_PREFERRED_OVERLOAD)
 extern "C++" {
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 wchar_t* __libcpp_wcschr(const wchar_t* __s, wchar_t __c) {return (wchar_t*)wcschr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
 const wchar_t* wcschr(const wchar_t* __s, wchar_t __c) {return __libcpp_wcschr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
       wchar_t* wcschr(      wchar_t* __s, wchar_t __c) {return __libcpp_wcschr(__s, __c);}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 wchar_t* __libcpp_wcspbrk(const wchar_t* __s1, const wchar_t* __s2) {return (wchar_t*)wcspbrk(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
 const wchar_t* wcspbrk(const wchar_t* __s1, const wchar_t* __s2) {return __libcpp_wcspbrk(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
       wchar_t* wcspbrk(      wchar_t* __s1, const wchar_t* __s2) {return __libcpp_wcspbrk(__s1, __s2);}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 wchar_t* __libcpp_wcsrchr(const wchar_t* __s, wchar_t __c) {return (wchar_t*)wcsrchr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
 const wchar_t* wcsrchr(const wchar_t* __s, wchar_t __c) {return __libcpp_wcsrchr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
       wchar_t* wcsrchr(      wchar_t* __s, wchar_t __c) {return __libcpp_wcsrchr(__s, __c);}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 wchar_t* __libcpp_wcsstr(const wchar_t* __s1, const wchar_t* __s2) {return (wchar_t*)wcsstr(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
 const wchar_t* wcsstr(const wchar_t* __s1, const wchar_t* __s2) {return __libcpp_wcsstr(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
       wchar_t* wcsstr(      wchar_t* __s1, const wchar_t* __s2) {return __libcpp_wcsstr(__s1, __s2);}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 wchar_t* __libcpp_wmemchr(const wchar_t* __s, wchar_t __c, size_t __n) {return (wchar_t*)wmemchr(__s, __c, __n);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
 const wchar_t* wmemchr(const wchar_t* __s, wchar_t __c, size_t __n) {return __libcpp_wmemchr(__s, __c, __n);}
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_PREFERRED_OVERLOAD
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD
       wchar_t* wmemchr(      wchar_t* __s, wchar_t __c, size_t __n) {return __libcpp_wmemchr(__s, __c, __n);}
 }
 #endif

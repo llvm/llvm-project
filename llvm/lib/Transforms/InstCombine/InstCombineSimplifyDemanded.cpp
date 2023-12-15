@@ -24,6 +24,12 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+static cl::opt<bool>
+    VerifyKnownBits("instcombine-verify-known-bits",
+                    cl::desc("Verify that computeKnownBits() and "
+                             "SimplifyDemandedBits() are consistent"),
+                    cl::Hidden, cl::init(false));
+
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
 /// constant that are not demanded. If so, shrink the constant and return true.
@@ -258,6 +264,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (ShrinkDemandedConstant(I, 1, DemandedMask))
       return I;
 
+    // Infer disjoint flag if no common bits are set.
+    if (!cast<PossiblyDisjointInst>(I)->isDisjoint()) {
+      WithCache<const Value *> LHSCache(I->getOperand(0), LHSKnown),
+          RHSCache(I->getOperand(1), RHSKnown);
+      if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(I))) {
+        cast<PossiblyDisjointInst>(I)->setIsDisjoint(true);
+        return I;
+      }
+    }
+
     break;
   }
   case Instruction::Xor: {
@@ -298,8 +314,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     //    e.g. (A & C1)^(B & C2) -> (A & C1)|(B & C2) iff C1&C2 == 0
     if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.Zero)) {
       Instruction *Or =
-        BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1),
-                                 I->getName());
+          BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1));
+      if (DemandedMask.isAllOnes())
+        cast<PossiblyDisjointInst>(Or)->setIsDisjoint(true);
+      Or->takeName(I);
       return InsertNewInstWith(Or, I->getIterator());
     }
 
@@ -460,7 +478,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (InputKnown.isNonNegative() ||
         DemandedMask.getActiveBits() <= SrcBitWidth) {
       // Convert to ZExt cast.
-      CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy, I->getName());
+      CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy);
+      NewCast->takeName(I);
       return InsertNewInstWith(NewCast, I->getIterator());
      }
 
@@ -532,6 +551,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I->getOperand(0);
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
+
+    // (add X, C) --> (xor X, C) IFF C is equal to the top bit of the DemandMask
+    {
+      const APInt *C;
+      if (match(I->getOperand(1), m_APInt(C)) &&
+          C->isOneBitSet(DemandedMask.getActiveBits() - 1)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
+        return Builder.CreateXor(I->getOperand(0), ConstantInt::get(VTy, *C));
+      }
+    }
 
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
@@ -768,6 +798,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         BinaryOperator *LShr = BinaryOperator::CreateLShr(I->getOperand(0),
                                                           I->getOperand(1));
         LShr->setIsExact(cast<BinaryOperator>(I)->isExact());
+        LShr->takeName(I);
         return InsertNewInstWith(LShr, I->getIterator());
       } else if (Known.One[BitWidth-ShiftAmt-1]) { // New bits are known one.
         Known.One |= HighBits;
@@ -1033,6 +1064,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // TODO: We could return `(inttoptr const)` for pointers.
   if (!V->getType()->isPointerTy() && DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
+
+  if (VerifyKnownBits) {
+    KnownBits ReferenceKnown = computeKnownBits(V, Depth, CxtI);
+    if (Known != ReferenceKnown) {
+      errs() << "Mismatched known bits for " << *V << " in "
+             << I->getFunction()->getName() << "\n";
+      errs() << "computeKnownBits(): " << ReferenceKnown << "\n";
+      errs() << "SimplifyDemandedBits(): " << Known << "\n";
+      std::abort();
+    }
+  }
+
   return nullptr;
 }
 

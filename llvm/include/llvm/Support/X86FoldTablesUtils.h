@@ -44,15 +44,16 @@ enum {
   TB_ALIGN_MASK = 0x7 << TB_ALIGN_SHIFT,
 
   // Broadcast type.
-  // (stored in bits 12 - 13)
+  // (stored in bits 12 - 14)
   TB_BCAST_TYPE_SHIFT = TB_ALIGN_SHIFT + 3,
   TB_BCAST_D = 0 << TB_BCAST_TYPE_SHIFT,
   TB_BCAST_Q = 1 << TB_BCAST_TYPE_SHIFT,
   TB_BCAST_SS = 2 << TB_BCAST_TYPE_SHIFT,
   TB_BCAST_SD = 3 << TB_BCAST_TYPE_SHIFT,
-  TB_BCAST_MASK = 0x3 << TB_BCAST_TYPE_SHIFT,
+  TB_BCAST_SH = 4 << TB_BCAST_TYPE_SHIFT,
+  TB_BCAST_MASK = 0x7 << TB_BCAST_TYPE_SHIFT,
 
-  // Unused bits 14-15
+  // Unused bits 15-16
 };
 } // namespace llvm
 #endif // LLVM_SUPPORT_X86FOLDTABLESUTILS_H

@@ -154,7 +154,6 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI);
 
-  // TODO: AArch64 can handle this case, and we probably should too.
   BaseOps.clear();
   MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                  MachineMemOperand::MOStore, 4, Align(4));
@@ -165,7 +164,13 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addMemOperand(MMO);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI);
-  EXPECT_FALSE(Res);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(BaseOps.size(), 1u);
+  ASSERT_TRUE(BaseOps.front()->isFI());
+  EXPECT_EQ(BaseOps.front()->getIndex(), 2);
+  EXPECT_EQ(Offset, 4);
+  EXPECT_FALSE(OffsetIsScalable);
+  EXPECT_EQ(Width, 4u);
 }
 
 } // namespace

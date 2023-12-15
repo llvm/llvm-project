@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 //  operator floating-point-type() volatile noexcept;
 //  operator floating-point-type() noexcept;
@@ -29,7 +28,7 @@ void test_impl() {
 
   // operator float
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     T r = a;
     assert(r == T(3.1));
   }
@@ -53,7 +52,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

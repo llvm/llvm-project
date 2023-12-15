@@ -18,7 +18,7 @@ struct Foo bar1[] = {
   1, 2,
   1, 2,
   1
-}; // expected-warning {{missing field 'b' initializer}}
+}; // expected-warning@-1 {{missing field 'b' initializer}}
 
 struct Foo bar2[] = { {}, {}, {} };
 
@@ -61,3 +61,26 @@ struct S {
 // f1, now we no longer issue that warning (note, this code is still unsafe
 // because of the buffer overrun).
 struct S s = {1, {1, 2}};
+
+struct S1 {
+  long int l;
+  struct  { int a, b; } d1;
+};
+
+struct S1 s01 = { 1, {1} }; // expected-warning {{missing field 'b' initializer}}
+struct S1 s02 = { .d1.a = 1 }; // designator avoids MFI warning
+
+union U1 {
+  long int l;
+  struct  { int a, b; } d1;
+};
+
+union U1 u01 = { 1 };
+union U1 u02 = { .d1.a = 1 }; // designator avoids MFI warning
+
+struct S2 {
+  long int l;
+  struct { int a, b; struct {int c; } d2; } d1;
+};
+
+struct S2 s22 = { .d1.d2.c = 1 }; // designator avoids MFI warning

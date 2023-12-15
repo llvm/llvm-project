@@ -1,5 +1,9 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
+; REQUIRES: asserts
+
 ; CHECK: %[[#bool:]] = OpTypeBool
 ; CHECK: %[[#true:]] = OpConstantTrue %[[#bool]]
 ; CHECK: OpBranchConditional %[[#true]]

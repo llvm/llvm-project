@@ -101,7 +101,7 @@ end subroutine
 ! CHECK:      ^bb0(%[[VAL_7:.*]]: index):
 ! CHECK:        %[[VAL_8:.*]] = hlfir.designate %[[VAL_1]]#0 (%[[VAL_7]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:        %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<f32>
-! CHECK:        %[[VAL_10:.*]] = arith.cmpf olt, %[[VAL_9]], %[[VAL_2]] : f32
+! CHECK:        %[[VAL_10:.*]] = arith.cmpf olt, %[[VAL_9]], %[[VAL_2]] {{.*}} : f32
 ! CHECK:        %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i1) -> !fir.logical<4>
 ! CHECK:        hlfir.yield_element %[[VAL_11]] : !fir.logical<4>
 ! CHECK:      }

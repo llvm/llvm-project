@@ -4,9 +4,9 @@
 define i32 @test1(i32 %i, ptr %a) {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge body -> exit probability is 0x04000000 / 0x80000000 = 3.12%
-; CHECK-NEXT:    edge body -> body probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %body -> %exit probability is 0x04000000 / 0x80000000 = 3.12%
+; CHECK-NEXT:    edge %body -> %body probability is 0x7c000000 / 0x80000000 = 96.88% [HOT edge]
 ;
 entry:
   br label %body
@@ -28,10 +28,10 @@ exit:
 define i32 @test2(i32 %i, i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
-; CHECK-NEXT:    edge entry -> else probability is 0x07878788 / 0x80000000 = 5.88%
-; CHECK-NEXT:    edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x78787878 / 0x80000000 = 94.12% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %else probability is 0x07878788 / 0x80000000 = 5.88%
+; CHECK-NEXT:    edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   %cond = icmp ult i32 %i, 42
@@ -53,16 +53,16 @@ exit:
 define i32 @test3(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> case_a probability is 0x06666666 / 0x80000000 = 5.00%
-; CHECK-NEXT:    edge entry -> case_b probability is 0x06666666 / 0x80000000 = 5.00%
-; CHECK-NEXT:    edge entry -> case_c probability is 0x66666666 / 0x80000000 = 80.00%
-; CHECK-NEXT:    edge entry -> case_d probability is 0x06666666 / 0x80000000 = 5.00%
-; CHECK-NEXT:    edge entry -> case_e probability is 0x06666666 / 0x80000000 = 5.00%
-; CHECK-NEXT:    edge case_a -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_b -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_c -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_d -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_e -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_a probability is 0x06666666 / 0x80000000 = 5.00%
+; CHECK-NEXT:    edge %entry -> %case_b probability is 0x06666666 / 0x80000000 = 5.00%
+; CHECK-NEXT:    edge %entry -> %case_c probability is 0x66666666 / 0x80000000 = 80.00%
+; CHECK-NEXT:    edge %entry -> %case_d probability is 0x06666666 / 0x80000000 = 5.00%
+; CHECK-NEXT:    edge %entry -> %case_e probability is 0x06666666 / 0x80000000 = 5.00%
+; CHECK-NEXT:    edge %case_a -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_b -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_c -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_d -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_e -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   switch i32 %i, label %case_a [ i32 1, label %case_b
@@ -95,13 +95,13 @@ exit:
 define i32 @test4(i32 %x) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: 'test4'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> return probability is 0x0a8a8a8b / 0x80000000 = 8.24%
-; CHECK-NEXT:    edge entry -> sw.bb probability is 0x15151515 / 0x80000000 = 16.47%
-; CHECK-NEXT:    edge entry -> sw.bb probability is 0x15151515 / 0x80000000 = 16.47%
-; CHECK-NEXT:    edge entry -> sw.bb probability is 0x15151515 / 0x80000000 = 16.47%
-; CHECK-NEXT:    edge entry -> sw.bb1 probability is 0x60606060 / 0x80000000 = 75.29%
-; CHECK-NEXT:    edge sw.bb -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge sw.bb1 -> return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %return probability is 0x0a8a8a8b / 0x80000000 = 8.24%
+; CHECK-NEXT:    edge %entry -> %sw.bb probability is 0x15151515 / 0x80000000 = 16.47%
+; CHECK-NEXT:    edge %entry -> %sw.bb probability is 0x15151515 / 0x80000000 = 16.47%
+; CHECK-NEXT:    edge %entry -> %sw.bb probability is 0x15151515 / 0x80000000 = 16.47%
+; CHECK-NEXT:    edge %entry -> %sw.bb1 probability is 0x60606060 / 0x80000000 = 75.29%
+; CHECK-NEXT:    edge %sw.bb -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %sw.bb1 -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   %conv = sext i32 %x to i64
@@ -130,10 +130,10 @@ declare void @coldfunc() cold
 define i32 @test5(i32 %a, i32 %b, i1 %flag) {
 ; CHECK-LABEL: 'test5'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x078780e3 / 0x80000000 = 5.88%
-; CHECK-NEXT:    edge entry -> else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-; CHECK-NEXT:    edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK-NEXT:    edge %entry -> %else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+; CHECK-NEXT:    edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   br i1 %flag, label %then, label %else
@@ -153,11 +153,11 @@ exit:
 define i32 @test_cold_loop(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_cold_loop'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> header probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK-NEXT:    edge entry -> exit probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK-NEXT:    edge header -> body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge body -> header probability is 0x7fbe1203 / 0x80000000 = 99.80% [HOT edge]
-; CHECK-NEXT:    edge body -> exit probability is 0x0041edfd / 0x80000000 = 0.20%
+; CHECK-NEXT:    edge %entry -> %header probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK-NEXT:    edge %entry -> %exit probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK-NEXT:    edge %header -> %body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %body -> %header probability is 0x7fbe1203 / 0x80000000 = 99.80% [HOT edge]
+; CHECK-NEXT:    edge %body -> %exit probability is 0x0041edfd / 0x80000000 = 0.20%
 ;
 entry:
   %cond1 = icmp eq i32 %a, 42
@@ -178,14 +178,14 @@ declare i32 @regular_function(i32 %i)
 define i32 @test_cold_call_sites_with_prof(i32 %a, i32 %b, i1 %flag, i1 %flag2) {
 ; CHECK-LABEL: 'test_cold_call_sites_with_prof'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x078780e3 / 0x80000000 = 5.88%
-; CHECK-NEXT:    edge entry -> else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-; CHECK-NEXT:    edge then -> then2 probability is 0x7ebb907a / 0x80000000 = 99.01% [HOT edge]
-; CHECK-NEXT:    edge then -> else2 probability is 0x01446f86 / 0x80000000 = 0.99%
-; CHECK-NEXT:    edge then2 -> join probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else2 -> join probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge join -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK-NEXT:    edge %entry -> %else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+; CHECK-NEXT:    edge %then -> %then2 probability is 0x7ebb907a / 0x80000000 = 99.01% [HOT edge]
+; CHECK-NEXT:    edge %then -> %else2 probability is 0x01446f86 / 0x80000000 = 0.99%
+; CHECK-NEXT:    edge %then2 -> %join probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else2 -> %join probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %join -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   br i1 %flag, label %then, label %else
@@ -222,10 +222,10 @@ define i32 @test_cold_call_sites(ptr %a) {
 ; after that is fixed.
 ; CHECK-LABEL: 'test_cold_call_sites'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x078780e3 / 0x80000000 = 5.88%
-; CHECK-NEXT:    edge entry -> else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-; CHECK-NEXT:    edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK-NEXT:    edge %entry -> %else probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+; CHECK-NEXT:    edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 
 entry:
@@ -253,12 +253,12 @@ exit:
 define i32 @test_invoke_code_callsite1(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: 'test_invoke_code_callsite1'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> if.then probability is 0x078780e3 / 0x80000000 = 5.88%
-; CHECK-NEXT:    edge entry -> if.end probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-; CHECK-NEXT:    edge if.then -> invoke.cont probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge if.then -> lpad probability is 0x00008000 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge invoke.cont -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge lpad -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %if.then probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK-NEXT:    edge %entry -> %if.end probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+; CHECK-NEXT:    edge %if.then -> %invoke.cont probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %if.then -> %lpad probability is 0x00008000 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %invoke.cont -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %lpad -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   br i1 %c, label %if.then, label %if.end
@@ -286,12 +286,12 @@ if.end:
 define i32 @test_invoke_code_callsite2(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: 'test_invoke_code_callsite2'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> if.then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK-NEXT:    edge entry -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK-NEXT:    edge if.then -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge if.then -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge invoke.cont -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge lpad -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %if.then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK-NEXT:    edge %entry -> %if.end probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK-NEXT:    edge %if.then -> %invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %if.then -> %lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %invoke.cont -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %lpad -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   br i1 %c, label %if.then, label %if.end
@@ -317,12 +317,12 @@ if.end:
 define i32 @test_invoke_code_callsite3(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: 'test_invoke_code_callsite3'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> if.then probability is 0x078780e3 / 0x80000000 = 5.88%
-; CHECK-NEXT:    edge entry -> if.end probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-; CHECK-NEXT:    edge if.then -> invoke.cont probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge if.then -> lpad probability is 0x00008000 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge invoke.cont -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge lpad -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %if.then probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK-NEXT:    edge %entry -> %if.end probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+; CHECK-NEXT:    edge %if.then -> %invoke.cont probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %if.then -> %lpad probability is 0x00008000 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %invoke.cont -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %lpad -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   br i1 %c, label %if.then, label %if.end
@@ -350,12 +350,12 @@ if.end:
 define void @test_invoke_code_profiled(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: 'test_invoke_code_profiled'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> invoke.to0 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge entry -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge invoke.to0 -> invoke.to1 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge invoke.to0 -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge invoke.to1 -> invoke.to2 probability is 0x55555555 / 0x80000000 = 66.67%
-; CHECK-NEXT:    edge invoke.to1 -> lpad probability is 0x2aaaaaab / 0x80000000 = 33.33%
+; CHECK-NEXT:    edge %entry -> %invoke.to0 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %invoke.to0 -> %invoke.to1 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %invoke.to0 -> %lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %invoke.to1 -> %invoke.to2 probability is 0x55555555 / 0x80000000 = 66.67%
+; CHECK-NEXT:    edge %invoke.to1 -> %lpad probability is 0x2aaaaaab / 0x80000000 = 33.33%
 ;
 entry:
   invoke i32 @InvokeCall() to label %invoke.to0 unwind label %lpad
@@ -388,10 +388,10 @@ attributes #0 = { cold }
 define i32 @zero1(i32 %i, i32 %a, i32 %b) {
 ; CHECK-LABEL: 'zero1'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK-NEXT:    edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK-NEXT:    edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK-NEXT:    edge %entry -> %else probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK-NEXT:    edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   %cond = icmp eq i32 %i, 0
@@ -411,10 +411,10 @@ exit:
 define i32 @zero2(i32 %i, i32 %a, i32 %b) {
 ; CHECK-LABEL: 'zero2'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK-NEXT:    edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK-NEXT:    edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK-NEXT:    edge %entry -> %else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK-NEXT:    edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   %cond = icmp ne i32 %i, -1
@@ -434,11 +434,11 @@ exit:
 define i32 @zero3(i32 %i, i32 %a, i32 %b) {
 ; CHECK-LABEL: 'zero3'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK-NEXT:    edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK-NEXT:    edge then -> else probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK-NEXT:    edge then -> exit probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK-NEXT:    edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK-NEXT:    edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK-NEXT:    edge %then -> %else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK-NEXT:    edge %then -> %exit probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK-NEXT:    edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
 ; AND'ing with a single bit bitmask essentially leads to a bool comparison,
@@ -465,8 +465,8 @@ exit:
 define i32 @test_unreachable_with_prof_greater(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_unreachable_with_prof_greater'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge entry -> unr probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %unr probability is 0x00000001 / 0x80000000 = 0.00%
 ;
 entry:
   %cond = icmp eq i32 %a, 42
@@ -485,8 +485,8 @@ exit:
 define i32 @test_unreachable_with_prof_equal(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_unreachable_with_prof_equal'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge entry -> unr probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %unr probability is 0x00000001 / 0x80000000 = 0.00%
 ;
 entry:
   %cond = icmp eq i32 %a, 42
@@ -505,8 +505,8 @@ exit:
 define i32 @test_unreachable_with_prof_zero(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_unreachable_with_prof_zero'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge entry -> unr probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %exit probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %unr probability is 0x00000001 / 0x80000000 = 0.00%
 ;
 entry:
   %cond = icmp eq i32 %a, 42
@@ -525,8 +525,8 @@ exit:
 define i32 @test_unreachable_with_prof_less(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_unreachable_with_prof_less'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge entry -> unr probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %unr probability is 0x00000000 / 0x80000000 = 0.00%
 ;
 entry:
   %cond = icmp eq i32 %a, 42
@@ -545,15 +545,15 @@ exit:
 define i32 @test_unreachable_with_switch_prof1(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: 'test_unreachable_with_switch_prof1'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge entry -> case_b probability is 0x06bca1af / 0x80000000 = 5.26%
-; CHECK-NEXT:    edge entry -> case_c probability is 0x6bca1af3 / 0x80000000 = 84.21% [HOT edge]
-; CHECK-NEXT:    edge entry -> case_d probability is 0x06bca1af / 0x80000000 = 5.26%
-; CHECK-NEXT:    edge entry -> case_e probability is 0x06bca1af / 0x80000000 = 5.26%
-; CHECK-NEXT:    edge case_b -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_c -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_d -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_e -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_a probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %case_b probability is 0x06bca1af / 0x80000000 = 5.26%
+; CHECK-NEXT:    edge %entry -> %case_c probability is 0x6bca1af3 / 0x80000000 = 84.21% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_d probability is 0x06bca1af / 0x80000000 = 5.26%
+; CHECK-NEXT:    edge %entry -> %case_e probability is 0x06bca1af / 0x80000000 = 5.26%
+; CHECK-NEXT:    edge %case_b -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_c -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_d -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_e -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   switch i32 %i, label %case_a [
@@ -591,14 +591,14 @@ exit:
 define i32 @test_unreachable_with_switch_prof2(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: 'test_unreachable_with_switch_prof2'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> case_a probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge entry -> case_c probability is 0x71c71c71 / 0x80000000 = 88.89% [HOT edge]
-; CHECK-NEXT:    edge entry -> case_d probability is 0x071c71c7 / 0x80000000 = 5.56%
-; CHECK-NEXT:    edge entry -> case_e probability is 0x071c71c7 / 0x80000000 = 5.56%
-; CHECK-NEXT:    edge case_c -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_d -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_e -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_a probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %case_b probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %case_c probability is 0x71c71c71 / 0x80000000 = 88.89% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_d probability is 0x071c71c7 / 0x80000000 = 5.56%
+; CHECK-NEXT:    edge %entry -> %case_e probability is 0x071c71c7 / 0x80000000 = 5.56%
+; CHECK-NEXT:    edge %case_c -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_d -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_e -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   switch i32 %i, label %case_a [ i32 1, label %case_b
@@ -635,14 +635,14 @@ exit:
 define i32 @test_unreachable_with_switch_prof3(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: 'test_unreachable_with_switch_prof3'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> case_a probability is 0x00000000 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge entry -> case_b probability is 0x00000001 / 0x80000000 = 0.00%
-; CHECK-NEXT:    edge entry -> case_c probability is 0x71c71c71 / 0x80000000 = 88.89% [HOT edge]
-; CHECK-NEXT:    edge entry -> case_d probability is 0x071c71c7 / 0x80000000 = 5.56%
-; CHECK-NEXT:    edge entry -> case_e probability is 0x071c71c7 / 0x80000000 = 5.56%
-; CHECK-NEXT:    edge case_c -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_d -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge case_e -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_a probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %case_b probability is 0x00000001 / 0x80000000 = 0.00%
+; CHECK-NEXT:    edge %entry -> %case_c probability is 0x71c71c71 / 0x80000000 = 88.89% [HOT edge]
+; CHECK-NEXT:    edge %entry -> %case_d probability is 0x071c71c7 / 0x80000000 = 5.56%
+; CHECK-NEXT:    edge %entry -> %case_e probability is 0x071c71c7 / 0x80000000 = 5.56%
+; CHECK-NEXT:    edge %case_c -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_d -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK-NEXT:    edge %case_e -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
 entry:
   switch i32 %i, label %case_a [ i32 1, label %case_b
@@ -678,11 +678,11 @@ exit:
 define i32 @test_unreachable_with_switch_prof4(i32 %i, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; CHECK-LABEL: 'test_unreachable_with_switch_prof4'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
-; CHECK-NEXT:    edge entry -> case_a probability is 0x1999999a / 0x80000000 = 20.00%
-; CHECK-NEXT:    edge entry -> case_b probability is 0x1999999a / 0x80000000 = 20.00%
-; CHECK-NEXT:    edge entry -> case_c probability is 0x1999999a / 0x80000000 = 20.00%
-; CHECK-NEXT:    edge entry -> case_d probability is 0x1999999a / 0x80000000 = 20.00%
-; CHECK-NEXT:    edge entry -> case_e probability is 0x1999999a / 0x80000000 = 20.00%
+; CHECK-NEXT:    edge %entry -> %case_a probability is 0x1999999a / 0x80000000 = 20.00%
+; CHECK-NEXT:    edge %entry -> %case_b probability is 0x1999999a / 0x80000000 = 20.00%
+; CHECK-NEXT:    edge %entry -> %case_c probability is 0x1999999a / 0x80000000 = 20.00%
+; CHECK-NEXT:    edge %entry -> %case_d probability is 0x1999999a / 0x80000000 = 20.00%
+; CHECK-NEXT:    edge %entry -> %case_e probability is 0x1999999a / 0x80000000 = 20.00%
 ;
 entry:
   switch i32 %i, label %case_a [ i32 1, label %case_b

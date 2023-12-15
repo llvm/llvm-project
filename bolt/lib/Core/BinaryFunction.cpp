@@ -3352,9 +3352,9 @@ void BinaryFunction::fixBranches() {
         // We are going to generate two branches. Check if their targets are in
         // the same fragment as this block. If only one target is in the same
         // fragment, make it the destination of the conditional branch. There
-        // is a chance it will be a short branch which takes 5 bytes fewer than
+        // is a chance it will be a short branch which takes 4 bytes fewer than
         // a long conditional branch. For unconditional branch, the difference
-        // is 4 bytes.
+        // is 3 bytes.
         if (BB->getFragmentNum() != TSuccessor->getFragmentNum() &&
             BB->getFragmentNum() == FSuccessor->getFragmentNum())
           swapSuccessors();
@@ -3633,7 +3633,7 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
   return DFS;
 }
 
-size_t BinaryFunction::computeHash(bool UseDFS,
+size_t BinaryFunction::computeHash(bool UseDFS, HashFunction HashFunction,
                                    OperandHashFuncTy OperandHashFunc) const {
   if (size() == 0)
     return 0;
@@ -3652,7 +3652,13 @@ size_t BinaryFunction::computeHash(bool UseDFS,
   for (const BinaryBasicBlock *BB : Order)
     HashString.append(hashBlock(BC, *BB, OperandHashFunc));
 
-  return Hash = llvm::xxh3_64bits(HashString);
+  switch (HashFunction) {
+  case HashFunction::StdHash:
+    return Hash = std::hash<std::string>{}(HashString);
+  case HashFunction::XXH3:
+    return Hash = llvm::xxh3_64bits(HashString);
+  }
+  llvm_unreachable("Unhandled HashFunction");
 }
 
 void BinaryFunction::insertBasicBlocks(

@@ -625,8 +625,10 @@ void X86DomainReassignment::initConverters() {
   createReplacerDstCOPY(X86::MOVZX64rm16,
                         HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm);
 
-  createReplacerDstCOPY(X86::MOVZX32rr16, X86::KMOVWkk);
-  createReplacerDstCOPY(X86::MOVZX64rr16, X86::KMOVWkk);
+  createReplacerDstCOPY(X86::MOVZX32rr16,
+                        HasEGPR ? X86::KMOVWkk_EVEX : X86::KMOVWkk);
+  createReplacerDstCOPY(X86::MOVZX64rr16,
+                        HasEGPR ? X86::KMOVWkk_EVEX : X86::KMOVWkk);
 
   if (STI->hasDQI()) {
     createReplacerDstCOPY(X86::MOVZX16rm8,
@@ -636,9 +638,12 @@ void X86DomainReassignment::initConverters() {
     createReplacerDstCOPY(X86::MOVZX64rm8,
                           HasEGPR ? X86::KMOVBkm_EVEX : X86::KMOVBkm);
 
-    createReplacerDstCOPY(X86::MOVZX16rr8, X86::KMOVBkk);
-    createReplacerDstCOPY(X86::MOVZX32rr8, X86::KMOVBkk);
-    createReplacerDstCOPY(X86::MOVZX64rr8, X86::KMOVBkk);
+    createReplacerDstCOPY(X86::MOVZX16rr8,
+                          HasEGPR ? X86::KMOVBkk_EVEX : X86::KMOVBkk);
+    createReplacerDstCOPY(X86::MOVZX32rr8,
+                          HasEGPR ? X86::KMOVBkk_EVEX : X86::KMOVBkk);
+    createReplacerDstCOPY(X86::MOVZX64rr8,
+                          HasEGPR ? X86::KMOVBkk_EVEX : X86::KMOVBkk);
   }
 
   auto createReplacer = [&](unsigned From, unsigned To) {
@@ -647,7 +652,7 @@ void X86DomainReassignment::initConverters() {
 
   createReplacer(X86::MOV16rm, HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm);
   createReplacer(X86::MOV16mr, HasEGPR ? X86::KMOVWmk_EVEX : X86::KMOVWmk);
-  createReplacer(X86::MOV16rr, X86::KMOVWkk);
+  createReplacer(X86::MOV16rr, HasEGPR ? X86::KMOVWkk_EVEX : X86::KMOVWkk);
   createReplacer(X86::SHR16ri, X86::KSHIFTRWri);
   createReplacer(X86::SHL16ri, X86::KSHIFTLWri);
   createReplacer(X86::NOT16r, X86::KNOTWrr);
@@ -662,8 +667,8 @@ void X86DomainReassignment::initConverters() {
     createReplacer(X86::MOV32mr, HasEGPR ? X86::KMOVDmk_EVEX : X86::KMOVDmk);
     createReplacer(X86::MOV64mr, HasEGPR ? X86::KMOVQmk_EVEX : X86::KMOVQmk);
 
-    createReplacer(X86::MOV32rr, X86::KMOVDkk);
-    createReplacer(X86::MOV64rr, X86::KMOVQkk);
+    createReplacer(X86::MOV32rr, HasEGPR ? X86::KMOVDkk_EVEX : X86::KMOVDkk);
+    createReplacer(X86::MOV64rr, HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk);
 
     createReplacer(X86::SHR32ri, X86::KSHIFTRDri);
     createReplacer(X86::SHR64ri, X86::KSHIFTRQri);
@@ -703,7 +708,7 @@ void X86DomainReassignment::initConverters() {
 
     createReplacer(X86::MOV8rm, HasEGPR ? X86::KMOVBkm_EVEX : X86::KMOVBkm);
     createReplacer(X86::MOV8mr, HasEGPR ? X86::KMOVBmk_EVEX : X86::KMOVBmk);
-    createReplacer(X86::MOV8rr, X86::KMOVBkk);
+    createReplacer(X86::MOV8rr, HasEGPR ? X86::KMOVBkk_EVEX : X86::KMOVBkk);
 
     createReplacer(X86::NOT8r, X86::KNOTBrr);
 

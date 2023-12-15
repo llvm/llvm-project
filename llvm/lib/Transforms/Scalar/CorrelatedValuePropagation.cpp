@@ -278,8 +278,10 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   ICmpInst::Predicate UnsignedPred =
       ConstantRange::getEquivalentPredWithFlippedSignedness(
           Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0)),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1)));
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                     /*UndefAllowed*/ true),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                     /*UndefAllowed*/ true));
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
@@ -393,8 +395,10 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRangeAtUse(BO->getOperandUse(0));
-  ConstantRange RRange = LVI->getConstantRangeAtUse(BO->getOperandUse(1));
+  ConstantRange LRange =
+      LVI->getConstantRangeAtUse(BO->getOperandUse(0), /*UndefAllowed*/ false);
+  ConstantRange RRange =
+      LVI->getConstantRangeAtUse(BO->getOperandUse(1), /*UndefAllowed*/ false);
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);
@@ -757,7 +761,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
     Value *FrozenX = X;
-    if (!isGuaranteedNotToBeUndefOrPoison(X))
+    if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
     auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
     auto *Cmp =
@@ -821,8 +825,11 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
-  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0),
+                                                 /*UndefAllowed*/ false);
+  // Allow undef for RHS, as we can assume it is division by zero UB.
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1),
+                                                 /*UndefAllowed*/ true);
   if (expandUDivOrURem(Instr, XCR, YCR))
     return true;
 
@@ -949,8 +956,11 @@ static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  ConstantRange LCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
-  ConstantRange RCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  ConstantRange LCR =
+      LVI->getConstantRangeAtUse(Instr->getOperandUse(0), /*AllowUndef*/ false);
+  // Allow undef for RHS, as we can assume it is division by zero UB.
+  ConstantRange RCR =
+      LVI->getConstantRangeAtUse(Instr->getOperandUse(1), /*AlloweUndef*/ true);
   if (Instr->getOpcode() == Instruction::SDiv)
     if (processSDiv(Instr, LCR, RCR, LVI))
       return true;
@@ -1048,8 +1058,10 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   Value *LHS = BinOp->getOperand(0);
   Value *RHS = BinOp->getOperand(1);
 
-  ConstantRange LRange = LVI->getConstantRange(LHS, BinOp);
-  ConstantRange RRange = LVI->getConstantRange(RHS, BinOp);
+  ConstantRange LRange =
+      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed*/ false);
+  ConstantRange RRange =
+      LVI->getConstantRange(RHS, BinOp, /*UndefAllowed*/ false);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;

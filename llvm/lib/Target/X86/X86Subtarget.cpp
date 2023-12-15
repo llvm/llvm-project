@@ -83,32 +83,20 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   if (is64Bit()) {
     // 64-bit ELF PIC local references may use GOTOFF relocations.
     if (isTargetELF()) {
-      switch (TM.getCodeModel()) {
-      // 64-bit small code model is simple: All rip-relative.
-      case CodeModel::Tiny:
-        llvm_unreachable("Tiny codesize model not supported on X86");
-      case CodeModel::Small:
-      case CodeModel::Kernel:
-        return X86II::MO_NO_FLAG;
-
-      // The large PIC code model uses GOTOFF.
-      case CodeModel::Large:
+      CodeModel::Model CM = TM.getCodeModel();
+      assert(CM != CodeModel::Tiny &&
+             "Tiny codesize model not supported on X86");
+      // In the large code model, all text is far from any global data, so we
+      // use GOTOFF.
+      if (CM == CodeModel::Large)
         return X86II::MO_GOTOFF;
-
-      // Medium is a hybrid: RIP-rel for code and non-large data, GOTOFF for
-      // remaining DSO local data.
-      case CodeModel::Medium:
-        // Constant pool and jump table handling pass a nullptr to this
-        // function so we need to use isa_and_nonnull.
-        if (isa_and_nonnull<Function>(GV))
-          return X86II::MO_NO_FLAG; // All code is RIP-relative
-        if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV)) {
-          if (TM.isLargeData(GVar))
-            return X86II::MO_GOTOFF;
-        }
-        return X86II::MO_NO_FLAG;    // Local symbols use GOTOFF.
-      }
-      llvm_unreachable("invalid code model");
+      // Large GlobalValues use GOTOFF, otherwise use RIP-rel access.
+      if (GV)
+        return TM.isLargeGlobalValue(GV) ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
+      // GV == nullptr is for all other non-GlobalValue global data like the
+      // constant pool, jump tables, labels, etc. The small and medium code
+      // models treat these as accessible with a RIP-rel access.
+      return X86II::MO_NO_FLAG;
     }
 
     // Otherwise, this is either a RIP-relative reference or a 64-bit movabsq,
@@ -279,8 +267,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (CPU == "generic" || CPU == "pentium4" || CPU == "x86-64") {
     size_t posNoEVEX512 = FS.rfind("-evex512");
     // Make sure we won't be cheated by "-avx512fp16".
-    size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
-                                                  : FS.rfind("-avx512f,");
+    size_t posNoAVX512F =
+        FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
     size_t posEVEX512 = FS.rfind("+evex512");
     // Any AVX512XXX will enable AVX512F.
     size_t posAVX512F = FS.rfind("+avx512");

@@ -538,9 +538,7 @@ struct ConvertArmSMEToLLVMPass
   void runOnOperation() override {
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
-    ArmSMETypeConverter converter(&getContext(),
-                                  LowerToLLVMOptions(&getContext()));
-
+    LLVMTypeConverter converter(&getContext());
     configureArmSMEToLLVMConversionLegality(target);
     populateArmSMEToLLVMConversionPatterns(converter, patterns);
 
@@ -573,8 +571,16 @@ void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
   target.addLegalOp<UnrealizedConversionCastOp>();
 }
 
-void mlir::populateArmSMEToLLVMConversionPatterns(
-    ArmSMETypeConverter &converter, RewritePatternSet &patterns) {
+void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns) {
+  converter.addConversion([&](VectorType type) -> std::optional<Type> {
+    // There's no LLVM type for SME tiles, but after lowering to intrinsics all
+    // SME vector types should be eliminated.
+    if (arm_sme::isValidSMETileVectorType(type))
+      return type;
+    return std::nullopt;
+  });
+
   patterns.add<LoadTileSliceConversion, MoveTileSliceToVectorConversion,
                MoveVectorToTileSliceConversion, StoreTileSliceConversion,
                OuterProductOpConversion, ZeroOpConversion, GetTileConversion>(

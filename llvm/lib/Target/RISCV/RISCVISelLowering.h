@@ -744,7 +744,13 @@ public:
     // The following equations have been reordered to prevent loss of precision
     // when calculating fractional LMUL.
     return ((VectorBits / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
-  };
+  }
+
+  // Return inclusive (low, high) bounds on the value of VLMAX for the
+  // given scalable container type given known bounds on VLEN.
+  static std::pair<unsigned, unsigned>
+  computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
+
   static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
@@ -986,6 +992,9 @@ bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
 bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                   CCState &State);
+
+ArrayRef<MCPhysReg> getArgGPRs();
+
 } // end namespace RISCV
 
 namespace RISCVVIntrinsicsTable {
