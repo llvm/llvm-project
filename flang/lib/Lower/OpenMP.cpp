@@ -1794,27 +1794,28 @@ bool ClauseProcessor::processMap(
              std::get<Fortran::parser::OmpObjectList>(mapClause->v.t).v) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
-          mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-              Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
-              mlir::omp::DataBoundsType>(
-              converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
-              clauseLocation, asFortran, bounds, treatIndexAsSection);
+          Fortran::lower::AddrAndBoundsInfo info =
+              Fortran::lower::gatherDataOperandAddrAndBounds<
+                  Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
+                  mlir::omp::DataBoundsType>(
+                  converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+                  clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
           mlir::Value mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, baseAddr, asFortran, bounds,
+              firOpBuilder, clauseLocation, info.addr, asFortran, bounds,
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, baseAddr.getType());
+              mlir::omp::VariableCaptureKind::ByRef, info.addr.getType());
 
           mapOperands.push_back(mapOp);
           if (mapSymTypes)
-            mapSymTypes->push_back(baseAddr.getType());
+            mapSymTypes->push_back(info.addr.getType());
           if (mapSymLocs)
-            mapSymLocs->push_back(baseAddr.getLoc());
+            mapSymLocs->push_back(info.addr.getLoc());
           if (mapSymbols)
             mapSymbols->push_back(getOmpObjectSymbol(ompObject));
         }
@@ -2655,16 +2656,16 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
         fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
         name << sym.name().ToString();
 
-        mlir::Value baseAddr =
+        Fortran::lower::AddrAndBoundsInfo info =
             getDataOperandBaseAddr(converter, converter.getFirOpBuilder(), sym,
                                    converter.getCurrentLocation());
-        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::BaseBoxType>())
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>())
           bounds =
               Fortran::lower::genBoundsOpsFromBox<mlir::omp::DataBoundsOp,
                                                   mlir::omp::DataBoundsType>(
                   converter.getFirOpBuilder(), converter.getCurrentLocation(),
-                  converter, dataExv, baseAddr);
-        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::SequenceType>())
+                  converter, dataExv, info);
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>())
           bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
                                                     mlir::omp::DataBoundsType>(
               converter.getFirOpBuilder(), converter.getCurrentLocation(),
