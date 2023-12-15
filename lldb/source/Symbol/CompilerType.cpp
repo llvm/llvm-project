@@ -302,6 +302,192 @@ bool CompilerType::IsBeingDefined() const {
   return false;
 }
 
+bool CompilerType::IsInteger() const {
+  bool is_signed = false; // May be reset by the call below.
+  return IsIntegerType(is_signed);
+}
+
+bool CompilerType::IsFloat() const {
+  uint32_t count = 0;
+  bool is_complex = false;
+  return IsFloatingPointType(count, is_complex);
+}
+
+bool CompilerType::IsEnumerationType() const {
+  bool is_signed = false; // May be reset by the call below.
+  return IsEnumerationType(is_signed);
+}
+
+bool CompilerType::IsUnscopedEnumerationType() const {
+  return IsEnumerationType() && !IsScopedEnumerationType();
+}
+
+bool CompilerType::IsIntegerOrUnscopedEnumerationType() const {
+  return IsInteger() || IsUnscopedEnumerationType();
+}
+
+bool CompilerType::IsSigned() const {
+  return GetTypeInfo() & lldb::eTypeIsSigned;
+}
+
+bool CompilerType::IsNullPtrType() const {
+  return GetCanonicalType().GetBasicTypeEnumeration() ==
+         lldb::eBasicTypeNullPtr;
+}
+
+bool CompilerType::IsBoolean() const {
+  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
+}
+
+bool CompilerType::IsEnumerationIntegerTypeSigned() const {
+  if (IsValid())
+    return GetEnumerationIntegerType().GetTypeInfo() & lldb::eTypeIsSigned;
+
+  return false;
+}
+
+bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
+  return IsScalarType() || IsUnscopedEnumerationType();
+}
+
+bool CompilerType::IsPromotableIntegerType() const {
+  // Unscoped enums are always considered as promotable, even if their
+  // underlying type does not need to be promoted (e.g. "int").
+  if (IsUnscopedEnumerationType())
+    return true;
+
+  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
+  case lldb::eBasicTypeBool:
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+  case lldb::eBasicTypeUnsignedChar:
+  case lldb::eBasicTypeShort:
+  case lldb::eBasicTypeUnsignedShort:
+  case lldb::eBasicTypeWChar:
+  case lldb::eBasicTypeSignedWChar:
+  case lldb::eBasicTypeUnsignedWChar:
+  case lldb::eBasicTypeChar16:
+  case lldb::eBasicTypeChar32:
+    return true;
+
+  default:
+    return false;
+  }
+
+  llvm_unreachable("All cases handled above.");
+}
+
+bool CompilerType::IsPointerToVoid() const {
+  if (!IsValid())
+    return false;
+
+  return IsPointerType() &&
+         GetPointeeType().GetBasicTypeEnumeration() == lldb::eBasicTypeVoid;
+}
+
+bool CompilerType::IsRecordType() const {
+  if (!IsValid())
+    return false;
+
+  return GetCanonicalType().GetTypeClass() &
+         (lldb::eTypeClassClass | lldb::eTypeClassStruct |
+          lldb::eTypeClassUnion);
+}
+
+bool CompilerType::IsVirtualBase(CompilerType target_base,
+                                 CompilerType *virtual_base,
+                                 bool carry_virtual) const {
+  if (CompareTypes(target_base))
+    return carry_virtual;
+
+  if (!carry_virtual) {
+    uint32_t num_virtual_bases = GetNumVirtualBaseClasses();
+    for (uint32_t i = 0; i < num_virtual_bases; ++i) {
+      uint32_t bit_offset;
+      auto base = GetVirtualBaseClassAtIndex(i, &bit_offset);
+      if (base.IsVirtualBase(target_base, virtual_base,
+                             /*carry_virtual*/ true)) {
+        if (virtual_base)
+          *virtual_base = base;
+
+        return true;
+      }
+    }
+  }
+
+  uint32_t num_direct_bases = GetNumDirectBaseClasses();
+  for (uint32_t i = 0; i < num_direct_bases; ++i) {
+    uint32_t bit_offset;
+    auto base = GetDirectBaseClassAtIndex(i, &bit_offset);
+    if (base.IsVirtualBase(target_base, virtual_base, carry_virtual))
+      return true;
+  }
+
+  return false;
+}
+
+bool CompilerType::IsContextuallyConvertibleToBool() const {
+  return IsScalarType() || IsUnscopedEnumerationType() || IsPointerType() ||
+         IsNullPtrType() || IsArrayType();
+}
+
+bool CompilerType::IsBasicType() const {
+  return GetCanonicalType().GetBasicTypeEnumeration() !=
+         lldb::eBasicTypeInvalid;
+}
+
+std::string CompilerType::TypeDescription() {
+  auto name = GetTypeName();
+  auto canonical_name = GetCanonicalType().GetTypeName();
+  if (name.IsEmpty() || canonical_name.IsEmpty())
+    return "''"; // Should not happen, unless the input is broken somehow.
+
+  if (name == canonical_name)
+    return llvm::formatv("'{0}'", name);
+
+  return llvm::formatv("'{0}' (canonically referred to as '{1}')", name,
+                       canonical_name);
+}
+
+bool CompilerType::CompareTypes(CompilerType rhs) const {
+  if (*this == rhs)
+    return true;
+
+  const ConstString name = GetFullyUnqualifiedType().GetTypeName();
+  const ConstString rhs_name = rhs.GetFullyUnqualifiedType().GetTypeName();
+  return name == rhs_name;
+}
+
+const char *CompilerType::GetTypeTag() {
+  switch (GetTypeClass()) {
+  case lldb::eTypeClassClass:
+    return "class";
+  case lldb::eTypeClassEnumeration:
+    return "enum";
+  case lldb::eTypeClassStruct:
+    return "struct";
+  case lldb::eTypeClassUnion:
+    return "union";
+  default:
+    return "unknown";
+  }
+  llvm_unreachable("All cases are covered by code above.");
+}
+
+uint32_t CompilerType::GetNumberOfNonEmptyBaseClasses() {
+  uint32_t ret = 0;
+  uint32_t num_direct_bases = GetNumDirectBaseClasses();
+
+  for (uint32_t i = 0; i < num_direct_bases; ++i) {
+    uint32_t bit_offset;
+    CompilerType base_type = GetDirectBaseClassAtIndex(i, &bit_offset);
+    if (base_type.GetNumFields() > 0 ||
+        base_type.GetNumberOfNonEmptyBaseClasses() > 0)
+      ret += 1;
+  }
+  return ret;
+}
+
 // Type Completion
 
 bool CompilerType::GetCompleteType() const {
