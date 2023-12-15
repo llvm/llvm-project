@@ -33,18 +33,18 @@ class _LIBCPP_TEMPLATE_VIS inout_ptr_t {
   static_assert(!__is_specialization_v<_Smart, shared_ptr>, "std::shared_ptr<> is not supported");
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit inout_ptr_t(_Smart& __s, _Args... __args)
-      : __s_(__s), __a_(std::forward<_Args>(__args)...), __p_([&__s] {
+  _LIBCPP_HIDE_FROM_ABI explicit inout_ptr_t(_Smart& __smart, _Args... __args)
+      : __s_(__smart), __a_(std::forward<_Args>(__args)...), __p_([&__smart] {
           if constexpr (is_pointer_v<_Smart>) {
-            return __s;
+            return __smart;
           } else {
-            return __s.get();
+            return __smart.get();
           }
         }()) {
-    if constexpr (requires { __s.release(); }) {
-      __s.release();
+    if constexpr (requires { __s_.release(); }) {
+      __s_.release();
     } else {
-      __s = _Smart();
+      __s_ = _Smart();
     }
   }
 

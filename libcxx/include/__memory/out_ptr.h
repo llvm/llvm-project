@@ -36,9 +36,9 @@ class _LIBCPP_TEMPLATE_VIS out_ptr_t {
                 "Specialization of std::shared_ptr<> requires a deleter.");
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit out_ptr_t(_Smart& __s, _Args... __args)
-      : __s_(__s), __a_(std::forward<_Args>(__args)...), __p_() {
-    using _Ptr = decltype(__s);
+  _LIBCPP_HIDE_FROM_ABI explicit out_ptr_t(_Smart& __smart, _Args... __args)
+      : __s_(__smart), __a_(std::forward<_Args>(__args)...), __p_() {
+    using _Ptr = decltype(__smart);
     if constexpr (__resettable_smart_pointer<_Ptr>) {
       __s_.reset();
     } else if constexpr (is_constructible_v<_Smart>) {
