@@ -428,7 +428,7 @@ module attributes {transform.with_named_sequence} {
 // Check that we can lower unpack with dynamic dimensions in the destination.
 // CHECK-LABEL: func.func @unpack_with_dynamic_dest(
 // CHECK-SAME: %[[ARG0:.*]]: tensor<32x2x49x16x16xf32>, %[[ARG1:.*]]: tensor<32x?x?xf32>)
-//      CHECK-DAG: %[[EMPTY:.*]] = tensor.empty() : tensor<32x2x16x49x16xf32>
+//      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<32x2x16x49x16xf32>
 //      CHECK: %[[TRAN:.*]] = linalg.transpose
 // CHECK-SAME:    ins(%[[ARG0]] : tensor<32x2x49x16x16xf32>)
 // CHECK-SAME:   outs(%[[EMPTY]] : tensor<32x2x16x49x16xf32>)
