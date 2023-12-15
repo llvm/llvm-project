@@ -748,7 +748,8 @@ mlir::linalg::detail::verifyDepthwiseConvolutionInterface(Operation *op) {
     const auto imageRank = imageType.getRank();
     const auto kernelRank =
         conv.filter().getType().cast<ShapedType>().getRank();
-    const auto initType = conv.init().getType().dyn_cast<ShapedType>();
+    const auto initType =
+        cast<LinalgOp>(op).getDpsInits()[0].getType().dyn_cast<ShapedType>();
     const auto initRank = initType.getRank();
     if (imageRank != kernelRank || imageRank != initRank - 1)
       return op->emitError(

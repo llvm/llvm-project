@@ -1663,13 +1663,6 @@ LogicalResult ReduceOp::verify() {
 //===----------------------------------------------------------------------===//
 
 // There must be a way to avoid defining the following 3 functions
-void mlir::linalg::detail::depthwise_convolution_impl::getEffects(
-    DepthwiseConvolutionOpInterface op,
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  getGenericEffectsImpl(effects, op.result(), op.image(), op.filter());
-}
-
 ParseResult mlir::linalg::detail::depthwise_convolution_impl::parse(
     OpAsmParser &parser, OperationState &result, bool isQuantized) {
   if (isQuantized)
@@ -1682,17 +1675,10 @@ ParseResult mlir::linalg::detail::depthwise_convolution_impl::parse(
       mlir::linalg::detail::depthwise_convolution_impl::regionBuilder);
 }
 
-void mlir::linalg::detail::depthwise_convolution_impl::print(
-    DepthwiseConvolutionOpInterface op, OpAsmPrinter &p) {
-  if (op.isQuantized())
-    printNamedStructuredOp(p, op.getOperation(),
-                           ValueRange{op.image(), op.filter(),
-                                      op->getOperand(2), op->getOperand(3)},
-                           ValueRange{op.init()});
-  else
-    printNamedStructuredOp(p, op.getOperation(),
-                           ValueRange{op.image(), op.filter()},
-                           ValueRange{op.init()});
+void mlir::linalg::detail::depthwise_convolution_impl::print(LinalgOp op,
+                                                             OpAsmPrinter &p) {
+  printNamedStructuredOp(p, op.getOperation(), op.getDpsInputs(),
+                         op.getDpsInits());
 }
 
 // Build {mul, add} region for convolution

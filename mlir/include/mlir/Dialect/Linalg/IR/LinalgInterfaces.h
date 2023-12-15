@@ -137,7 +137,7 @@ void getEffects(
         &effects);
 ParseResult parse(OpAsmParser &parser, OperationState &result,
                   bool isQuantized = false);
-void print(DepthwiseConvolutionOpInterface op, OpAsmPrinter &p);
+void print(LinalgOp op, OpAsmPrinter &p);
 } // namespace depthwise_convolution_impl
 
 /// Returns true if the block contains a contraction of the following form:

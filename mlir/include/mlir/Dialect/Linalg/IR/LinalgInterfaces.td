@@ -174,29 +174,7 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
       /*defaultImplementation=*/[{
         return $_op.getOperation()->getOperand(1);
       }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Return the init operand.",
-      /*retTy=*/"Value",
-      /*methodName=*/"init",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return $_op.getOperation()->getOperand($_op.getOperation()->getOperands().size() - 1);
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/"Return the result tensor operand.",
-      /*retTy=*/"Value",
-      /*methodName=*/"result",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        if ($_op.getOperation()->getResults().empty())
-          return nullptr;
-        return $_op.getOperation()->getResult(0);
-      }]
-    >,
+    >
   ];
   let extraSharedClassDeclaration = [{
     // Returns strides attribute.
