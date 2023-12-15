@@ -86,8 +86,7 @@ entry:
 define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX12-SDAG-LABEL: prefetch_data_sgpr_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_add_co_u32 s0, s0, 0x800000
-; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -274,8 +273,7 @@ entry:
 define amdgpu_ps void @prefetch_inst_sgpr_too_large_offset(ptr addrspace(4) inreg %ptr) {
 ; GFX12-SDAG-LABEL: prefetch_inst_sgpr_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
-; GFX12-SDAG-NEXT:    s_add_co_u32 s0, s0, 0x800000
-; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
