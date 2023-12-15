@@ -3222,6 +3222,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
         ":MeshIncGen",
@@ -9132,6 +9133,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":mlir_c_runner_utils",
+        ":mlir_float16_utils",
         "//llvm:Support",
     ],
 )
