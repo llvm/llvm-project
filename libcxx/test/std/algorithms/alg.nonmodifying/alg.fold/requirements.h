@@ -24,7 +24,6 @@ struct bad_iterator_category {
 };
 
 struct non_movable {
-  non_movable()              = default;
   non_movable(non_movable&&) = delete;
 };
 
@@ -42,7 +41,6 @@ struct copyable_non_movable {
 };
 
 struct non_copy_constructible_callable {
-  non_copy_constructible_callable()                                       = default;
   non_copy_constructible_callable(non_copy_constructible_callable&&)      = default;
   non_copy_constructible_callable(non_copy_constructible_callable const&) = delete;
 
