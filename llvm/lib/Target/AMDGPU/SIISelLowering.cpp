@@ -1046,12 +1046,20 @@ static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
 MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
   if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
     return MVT::v5i32;
+  if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+      DL.getPointerSizeInBits(AS) == 192)
+    return MVT::v6i32;
   return AMDGPUTargetLowering::getPointerTy(DL, AS);
 }
 /// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
 /// v8i32 when padding is added.
+/// The in-memory representation of a p9 is {p8, i32, i32}, which is
+/// also v8i32 with padding.
 MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
-  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+  if ((AMDGPUAS::BUFFER_FAT_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 160) ||
+      (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 192))
     return MVT::v8i32;
   return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
 }
@@ -1230,9 +1238,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fadd:
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1315,6 +1327,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_global_atomic_csub: {
@@ -1412,7 +1426,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE) {
+      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
+      AS == AMDGPUAS::BUFFER_STRIDED_POINTER) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -8642,8 +8657,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax: {
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     MemSDNode *M = cast<MemSDNode>(Op);
     SDValue Ops[] = {
       M->getOperand(0), // Chain
@@ -8653,12 +8672,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Opcode = 0;
     switch (IntrID) {
     case Intrinsic::amdgcn_global_atomic_fmin:
-    case Intrinsic::amdgcn_flat_atomic_fmin: {
+    case Intrinsic::amdgcn_global_atomic_fmin_num:
+    case Intrinsic::amdgcn_flat_atomic_fmin:
+    case Intrinsic::amdgcn_flat_atomic_fmin_num: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMIN;
       break;
     }
     case Intrinsic::amdgcn_global_atomic_fmax:
-    case Intrinsic::amdgcn_flat_atomic_fmax: {
+    case Intrinsic::amdgcn_global_atomic_fmax_num:
+    case Intrinsic::amdgcn_flat_atomic_fmax:
+    case Intrinsic::amdgcn_flat_atomic_fmax_num: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMAX;
       break;
     }

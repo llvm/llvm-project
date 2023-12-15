@@ -42,6 +42,7 @@ class SemanticsContext;
 namespace lower {
 
 class AbstractConverter;
+class SymMap;
 
 namespace pft {
 struct Evaluation;
@@ -52,8 +53,9 @@ struct Variable;
 void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
                          mlir::Location);
 
-void genOpenMPConstruct(AbstractConverter &, semantics::SemanticsContext &,
-                        pft::Evaluation &, const parser::OpenMPConstruct &);
+void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
+                        semantics::SemanticsContext &, pft::Evaluation &,
+                        const parser::OpenMPConstruct &);
 void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
