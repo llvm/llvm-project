@@ -854,8 +854,8 @@ std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
 void DebugStrOffsetsWriter::initialize(DWARFUnit &Unit) {
   if (Unit.getVersion() < 5)
     return;
-  const DWARFSection StrOffsetsSection = Unit.getStringOffsetSection();
-  const std::optional<StrOffsetsContributionDescriptor> Contr =
+  const DWARFSection &StrOffsetsSection = Unit.getStringOffsetSection();
+  const std::optional<StrOffsetsContributionDescriptor> &Contr =
       Unit.getStringOffsetsTableContribution();
   if (!Contr)
     return;

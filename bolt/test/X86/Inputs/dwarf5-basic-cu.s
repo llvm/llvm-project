@@ -1,3 +1,7 @@
+# clang++ main.cpp   -g2 -gdwarf-5 -gno-pubnames -fdebug-types-section -S
+# int main() {
+#   return 0;
+# }
 	.text
 	.file	"main.cpp"
 	.globl	main                            # -- Begin function main
