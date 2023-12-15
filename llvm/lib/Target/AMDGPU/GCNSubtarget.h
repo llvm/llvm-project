@@ -830,6 +830,9 @@ public:
 
   bool hasInstPrefetch() const { return getGeneration() >= GFX10; }
 
+  // Has s_cmpk_* instructions.
+  bool hasSCmpK() const { return getGeneration() < GFX12; }
+
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this
   // is 4-byte aligned.
@@ -1212,7 +1215,8 @@ public:
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }
 
-  // \returns true is CSUB atomics support a no-return form.
+  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
+  // no-return form.
   bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit

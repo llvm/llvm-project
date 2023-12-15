@@ -2636,9 +2636,36 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
 }
 
 Error BinaryWriter::write() {
-  for (const SectionBase &Sec : Obj.allocSections())
+  SmallVector<const SectionBase *, 30> SectionsToWrite;
+  for (const SectionBase &Sec : Obj.allocSections()) {
+    if (Sec.Type != SHT_NOBITS)
+      SectionsToWrite.push_back(&Sec);
+  }
+
+  if (SectionsToWrite.empty())
+    return Error::success();
+
+  llvm::stable_sort(SectionsToWrite,
+                    [](const SectionBase *LHS, const SectionBase *RHS) {
+                      return LHS->Offset < RHS->Offset;
+                    });
+
+  assert(SectionsToWrite.front()->Offset == 0);
+
+  for (size_t i = 0; i != SectionsToWrite.size(); ++i) {
+    const SectionBase &Sec = *SectionsToWrite[i];
     if (Error Err = Sec.accept(*SecWriter))
       return Err;
+    if (GapFill == 0)
+      continue;
+    uint64_t PadOffset = (i < SectionsToWrite.size() - 1)
+                             ? SectionsToWrite[i + 1]->Offset
+                             : Buf->getBufferSize();
+    assert(PadOffset <= Buf->getBufferSize());
+    assert(Sec.Offset + Sec.Size <= PadOffset);
+    std::fill(Buf->getBufferStart() + Sec.Offset + Sec.Size,
+              Buf->getBufferStart() + PadOffset, GapFill);
+  }
 
   // TODO: Implement direct writing to the output stream (without intermediate
   // memory buffer Buf).
@@ -2664,7 +2691,7 @@ Error BinaryWriter::finalize() {
   // file size. This might not be the same as the offset returned by
   // layoutSections, because we want to truncate the last segment to the end of
   // its last non-empty section, to match GNU objcopy's behaviour.
-  TotalSize = 0;
+  TotalSize = PadTo > MinAddr ? PadTo - MinAddr : 0;
   for (SectionBase &Sec : Obj.allocSections())
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0) {
       Sec.Offset = Sec.Addr - MinAddr;

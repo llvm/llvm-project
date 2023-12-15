@@ -20,10 +20,6 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-template <typename T> struct MantissaWidth {
-  static constexpr unsigned VALUE = FloatProperties<T>::MANTISSA_WIDTH;
-};
-
 // A generic class to represent single precision, double precision, and quad
 // precision IEEE 754 floating point formats.
 // On most platforms, the 'float' type corresponds to single precision floating
