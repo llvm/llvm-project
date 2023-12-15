@@ -84,15 +84,9 @@ void test() {
     Lock lock{mutex};
 
     std::atomic_bool start = false;
-    std::atomic_bool done  = false;
     auto thread            = support::make_test_thread([&]() {
       start.wait(false);
       ss.request_stop();
-
-      while (!done) {
-        cv.notify_all();
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
-      }
     });
 
     std::same_as<bool> auto r = cv.wait(lock, ss.get_token(), [&]() {
@@ -101,7 +95,6 @@ void test() {
       return false;
     });
     assert(!r);
-    done = true;
     thread.join();
 
     assert(lock.owns_lock());

@@ -131,6 +131,7 @@ public:
 #include <__mutex/mutex.h>
 #include <__mutex/tag_types.h>
 #include <__mutex/unique_lock.h>
+#include <__stop_token/stop_callback.h>
 #include <__stop_token/stop_token.h>
 #include <__utility/move.h>
 #include <version>
@@ -257,23 +258,38 @@ condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Pe
 
 template <class _Lock, class _Predicate>
 bool condition_variable_any::wait(_Lock& __lock, stop_token __stoken, _Predicate __pred) {
-  while (!__stoken.stop_requested()) {
+  shared_ptr<mutex> __mut = __mut_;
+  stop_callback __cb { __stoken, [this]{ notify_all(); } };
+  while (true) {
     if (__pred())
       return true;
-    wait(__lock);
-  }
-  return __pred();
+    unique_lock<mutex> __lk { *__mut };
+    if (__stoken.stop_requested())
+      return __pred();
+    __lock.unlock();
+    unique_ptr<_Lock, __lock_external> __lxx(&__lock);
+    lock_guard<unique_lock<mutex>> __lx(__lk, adopt_lock_t());
+    __cv_.wait(__lk);
+  } // __mut_.unlock(), __lock.lock()
 }
 
 template <class _Lock, class _Clock, class _Duration, class _Predicate>
 bool condition_variable_any::wait_until(
     _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred) {
-  while (!__stoken.stop_requested()) {
+  shared_ptr<mutex> __mut = __mut_;
+  stop_callback __cb { __stoken, [this]{ notify_all(); } };
+  while (true) {
     if (__pred())
       return true;
-    if (wait_until(__lock, __abs_time) == cv_status::timeout)
+    unique_lock<mutex> __lk { *__mut };
+    if (__stoken.stop_requested())
       return __pred();
-  }
+    __lock.unlock();
+    unique_ptr<_Lock, __lock_external> __lxx(&__lock);
+    lock_guard<unique_lock<mutex>> __lx(__lk, adopt_lock_t());
+    if (__cv_.wait_until(__lk, __abs_time) == cv_status::timeout)
+      break;
+  } // __mut_.unlock(), __lock.lock()
   return __pred();
 }
 
