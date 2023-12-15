@@ -1310,7 +1310,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   // single instruction while VScnt has its own instruction.
   if (Wait.hasWaitExceptStoreCnt()) {
     unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-    auto SWaitInst =
+    [[maybe_unused]] auto SWaitInst =
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
     Modified = true;
 
@@ -1322,7 +1322,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   if (Wait.hasWaitStoreCnt()) {
     assert(ST->hasVscnt());
 
-    auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
+    [[maybe_unused]] auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
                          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                          .addImm(Wait.StoreCnt);
     Modified = true;
