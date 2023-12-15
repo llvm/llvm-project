@@ -763,6 +763,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasPrefetch())
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+
   if (Subtarget->hasIEEEMinMax())
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
@@ -3884,6 +3887,23 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
   return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
 }
 
+SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  if (Op->isDivergent())
+    return SDValue();
+
+  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
+  case AMDGPUAS::FLAT_ADDRESS:
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    break;
+  default:
+    return SDValue();
+  }
+
+  return Op;
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5432,6 +5452,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
+  case ISD::PREFETCH:
+    return lowerPREFETCH(Op, DAG);
   }
   return SDValue();
 }
