@@ -1,4 +1,4 @@
-//===-- cpu_model_x86.c - Support for __cpu_model builtin  --------*- C -*-===//
+//===-- cpu_model/x86.c - Support for __cpu_model builtin  --------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,15 +15,13 @@
 #include "cpu_model.h"
 
 #if !(defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||          \
-     defined(_M_X64))
-#  error This file is intended only for x86-based targets
+      defined(_M_X64))
+#error This file is intended only for x86-based targets
 #endif
 
 #if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
 
 #include <assert.h>
-
-
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -300,12 +298,12 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
   }
 }
 
-static const char *
-getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                                const unsigned *Features,
-                                unsigned *Type, unsigned *Subtype) {
-#define testFeature(F)                                                         \
-  (Features[F / 32] & (1 << (F % 32))) != 0
+static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
+                                                   unsigned Model,
+                                                   const unsigned *Features,
+                                                   unsigned *Type,
+                                                   unsigned *Subtype) {
+#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
 
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
@@ -338,7 +336,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x1e: // Intel(R) Core(TM) i7 CPU         870  @ 2.93GHz.
                // As found in a Summer 2010 model iMac.
     case 0x1f:
-    case 0x2e:              // Nehalem EX
+    case 0x2e: // Nehalem EX
       CPU = "nehalem";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_NEHALEM;
@@ -359,7 +357,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_SANDYBRIDGE;
       break;
     case 0x3a:
-    case 0x3e:              // Ivy Bridge EP
+    case 0x3e: // Ivy Bridge EP
       CPU = "ivybridge";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_IVYBRIDGE;
@@ -386,12 +384,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       break;
 
     // Skylake:
-    case 0x4e:              // Skylake mobile
-    case 0x5e:              // Skylake desktop
-    case 0x8e:              // Kaby Lake mobile
-    case 0x9e:              // Kaby Lake desktop
-    case 0xa5:              // Comet Lake-H/S
-    case 0xa6:              // Comet Lake-U
+    case 0x4e: // Skylake mobile
+    case 0x5e: // Skylake desktop
+    case 0x8e: // Kaby Lake mobile
+    case 0x9e: // Kaby Lake desktop
+    case 0xa5: // Comet Lake-H/S
+    case 0xa6: // Comet Lake-U
       CPU = "skylake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_SKYLAKE;
@@ -590,10 +588,11 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   return CPU;
 }
 
-static const char *
-getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                              const unsigned *Features,
-                              unsigned *Type, unsigned *Subtype) {
+static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
+                                                 unsigned Model,
+                                                 const unsigned *Features,
+                                                 unsigned *Type,
+                                                 unsigned *Subtype) {
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
   const char *CPU = 0;
@@ -670,10 +669,8 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = AMDFAM19H_ZNVER3;
       break;
     }
-    if ((Model >= 0x10 && Model <= 0x1f) ||
-        (Model >= 0x60 && Model <= 0x74) ||
-        (Model >= 0x78 && Model <= 0x7b) ||
-        (Model >= 0xA0 && Model <= 0xAf)) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x60 && Model <= 0x74) ||
+        (Model >= 0x78 && Model <= 0x7b) || (Model >= 0xA0 && Model <= 0xAf)) {
       CPU = "znver4";
       *Subtype = AMDFAM19H_ZNVER4;
       break; //  "znver4"
@@ -691,8 +688,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   unsigned EAX = 0, EBX = 0;
 
 #define hasFeature(F) ((Features[F / 32] >> (F % 32)) & 1)
-#define setFeature(F)                                                          \
-  Features[F / 32] |= 1U << (F % 32)
+#define setFeature(F) Features[F / 32] |= 1U << (F % 32)
 
   if ((EDX >> 15) & 1)
     setFeature(FEATURE_CMOV);

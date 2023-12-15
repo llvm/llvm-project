@@ -20,7 +20,6 @@ static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
     // the Android 9.0 release on those devices, and this issue has not been
     // observed anywhere else. Thus, this workaround may be removed if
     // compiler-rt ever drops support for Android 8.0.
-    char arch[PROP_VALUE_MAX];
     if (__isExynos9810())
       result = false;
   }
