@@ -1955,13 +1955,6 @@ define <8 x double> @f8xf64_f128(<8 x double> %a) {
 }
 
 
-; AVX512:       .LCPI37
-; AVX512-NEXT:  .quad	0x4010000000000000      # double 4
-; AVX512-NEXT:  .quad	0x3ff0000000000000      # double 1
-; AVX512-NEXT:  .quad	0x4000000000000000      # double 2
-; AVX512-NEXT:  .quad	0x4008000000000000      # double 3
-; AVX512-NOT:   .quad
-
 define <8 x double> @f8xf64_f256(<8 x double> %a) {
 ; AVX-LABEL: f8xf64_f256:
 ; AVX:       # %bb.0:

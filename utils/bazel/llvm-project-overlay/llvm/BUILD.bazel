@@ -266,7 +266,9 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [],
+        "@platforms//os:windows": [
+            "ws2_32.lib",
+        ],
         "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",
@@ -5005,6 +5007,7 @@ cc_binary(
         "utils/count/*.h",
     ]),
     stamp = 0,
+    deps = [":Support"],
 )
 
 cc_binary(

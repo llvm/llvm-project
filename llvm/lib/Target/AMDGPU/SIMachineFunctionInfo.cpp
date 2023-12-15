@@ -37,7 +37,7 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F), GWSResourcePSV(getTM(STI)),
+    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
       UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),

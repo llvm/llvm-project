@@ -252,6 +252,8 @@ def umin_oneuse : HasOneUseBinOp<umin>;
 
 def fminnum_oneuse : HasOneUseBinOp<fminnum>;
 def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+def fminimum_oneuse : HasOneUseBinOp<fminimum>;
+def fmaximum_oneuse : HasOneUseBinOp<fmaximum>;
 
 def fminnum_ieee_oneuse : HasOneUseBinOp<fminnum_ieee>;
 def fmaxnum_ieee_oneuse : HasOneUseBinOp<fmaxnum_ieee>;
