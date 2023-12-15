@@ -6003,17 +6003,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-#define FIELD(Name, Width, Merge)                                              \
-  if (!DefinitionBits.canWriteNextNBits(Width)) {                              \
-    Record->push_back(DefinitionBits);                                         \
-    DefinitionBits.reset(0);                                                   \
-  }                                                                            \
-  DefinitionBits.addBits(Data.Name, Width);
-
+#define FIELD(Name, Width, Merge) DefinitionBits.addBits(Data.Name, Width);
 #include "clang/AST/CXXRecordDeclDefinitionBits.def"
 #undef FIELD
 
-  Record->push_back(DefinitionBits);
+  while (DefinitionBits.hasUnconsumedValues())
+    Record->push_back(DefinitionBits.getNextValue());
 
   // getODRHash will compute the ODRHash if it has not been previously computed.
   Record->push_back(D->getODRHash());
@@ -6052,7 +6047,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     LambdaBits.addBits(Lambda.CaptureDefault, /*Width=*/2);
     LambdaBits.addBits(Lambda.NumCaptures, /*Width=*/15);
     LambdaBits.addBit(Lambda.HasKnownInternalLinkage);
-    Record->push_back(LambdaBits);
+    Record->push_back(LambdaBits.getNextValue());
 
     Record->push_back(Lambda.NumExplicitCaptures);
     Record->push_back(Lambda.ManglingNumber);
@@ -6063,12 +6058,10 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     for (unsigned I = 0, N = Lambda.NumCaptures; I != N; ++I) {
       const LambdaCapture &Capture = Lambda.Captures.front()[I];
       AddSourceLocation(Capture.getLocation());
-
       BitsPacker CaptureBits;
       CaptureBits.addBit(Capture.isImplicit());
       CaptureBits.addBits(Capture.getCaptureKind(), /*Width=*/3);
       Record->push_back(CaptureBits);
-
       switch (Capture.getCaptureKind()) {
       case LCK_StarThis:
       case LCK_This:
