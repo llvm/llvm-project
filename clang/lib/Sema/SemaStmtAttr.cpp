@@ -363,8 +363,7 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 // Diagnose non-identical duplicates as a 'conflicting' loop attributes
 // and suppress duplicate errors in cases where the two match.
 template <typename LoopAttrT>
-static void CheckForDuplicateLoopAttrs(Sema &S,
-                                            ArrayRef<const Attr *> Attrs) {
+static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
   auto FindFunc = [](const Attr *A) { return isa<const LoopAttrT>(A); };
   const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
 
@@ -383,8 +382,8 @@ static void CheckForDuplicateLoopAttrs(Sema &S,
 
   while (Attrs.end() != (LastFoundItr = std::find_if(LastFoundItr + 1,
                                                      Attrs.end(), FindFunc))) {
-    const auto *CASA = dyn_cast<ConstantExpr>(
-        cast<LoopAttrT>(*LastFoundItr)->getAlignment());
+    const auto *CASA =
+        dyn_cast<ConstantExpr>(cast<LoopAttrT>(*LastFoundItr)->getAlignment());
     // If the value is dependent, we can not test anything.
     if (!CASA)
       return;
