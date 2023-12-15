@@ -353,14 +353,14 @@ genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
   // Return the reduction value from the function.
   builder.create<mlir::func::ReturnOp>(loc, results[resultIndex]);
 }
-using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
+using MinMaxlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
     fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
     mlir::Value, llvm::SmallVector<mlir::Value, Fortran::common::maxRank> &)>;
 
 static void genMinMaxlocReductionLoop(
     fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
-    InitValGeneratorTy initVal, MinlocBodyOpGeneratorTy genBody, unsigned rank,
-    mlir::Type elementType, mlir::Location loc, bool hasMask,
+    InitValGeneratorTy initVal, MinMaxlocBodyOpGeneratorTy genBody,
+    unsigned rank, mlir::Type elementType, mlir::Location loc, bool hasMask,
     mlir::Type maskElemType, mlir::Value resultArr) {
 
   mlir::IndexType idxTy = builder.getIndexType();
@@ -764,10 +764,10 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
           loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/isMax));
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t maxInt = (isMax ? llvm::APInt::getSignedMinValue(bits)
-                            : llvm::APInt::getSignedMaxValue(bits))
-                         .getSExtValue();
-    return builder.createIntegerConstant(loc, elementType, maxInt);
+    int64_t initValue = (isMax ? llvm::APInt::getSignedMinValue(bits)
+                               : llvm::APInt::getSignedMaxValue(bits))
+                            .getSExtValue();
+    return builder.createIntegerConstant(loc, elementType, initValue);
   };
 
   mlir::Location loc = mlir::UnknownLoc::get(builder.getContext());
