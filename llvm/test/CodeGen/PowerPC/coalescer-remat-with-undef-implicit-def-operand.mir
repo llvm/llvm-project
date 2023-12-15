@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64-unknown-linux-gnu -verify-coalescing -run-pass=register-coalescer \
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-coalescing -run-pass=register-coalescer \
 # RUN:   -o - %s | FileCheck %s
 --- |
   source_filename = "SingleSource/UnitTests/matrix-types-spec.cpp"
