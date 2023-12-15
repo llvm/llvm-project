@@ -171,3 +171,89 @@ define i1 @xor_icmp_ptr(ptr %c, ptr %d) {
   ret i1 %xor
 }
 
+; Tests from PR70928
+define i1 @xor_icmp_true1(i32 %x, i32 %y) {
+; CHECK-LABEL: @xor_icmp_true1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %add = add nsw i32 %y, 1
+  %cmp1 = icmp sgt i32 %x, %y
+  %cmp2 = icmp slt i32 %x, %add
+  %xor = xor i1 %cmp1, %cmp2
+  ret i1 %xor
+}
+
+define i1 @xor_icmp_true2(i32 %x, i32 %y) {
+; CHECK-LABEL: @xor_icmp_true2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %sub = add nsw i32 %y, -1
+  %cmp1 = icmp slt i32 %x, %y
+  %cmp2 = icmp sgt i32 %x, %sub
+  %xor = xor i1 %cmp1, %cmp2
+  ret i1 %xor
+}
+
+define i1 @xor_icmp_true3(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 6
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+entry:
+  %cmp = icmp sgt i32 %a, 5
+  %cmp1 = icmp slt i32 %a, 6
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+
+define i1 @xor_icmp_true4(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+entry:
+  %cmp = icmp slt i32 %a, 5
+  %cmp1 = icmp sgt i32 %a, 4
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
+
+define i1 @xor_icmp_true4_commuted(i32 %a) {
+; CHECK-LABEL: @xor_icmp_true4_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 5
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP1]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+entry:
+  %cmp = icmp slt i32 %a, 5
+  %cmp1 = icmp sgt i32 %a, 4
+  %cmp3 = xor i1 %cmp1, %cmp
+  ret i1 %cmp3
+}
+
+define i1 @xor_icmp_failed_to_imply(i32 %a) {
+; CHECK-LABEL: @xor_icmp_failed_to_imply(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 7
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 4
+; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[CMP3]]
+;
+entry:
+  %cmp = icmp slt i32 %a, 7
+  %cmp1 = icmp sgt i32 %a, 4
+  %cmp3 = xor i1 %cmp, %cmp1
+  ret i1 %cmp3
+}
