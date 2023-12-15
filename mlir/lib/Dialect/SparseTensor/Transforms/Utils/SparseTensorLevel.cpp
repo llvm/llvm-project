@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SparseTensorLevel.h"
 #include "CodegenUtils.h"
-#include "SparseTensorLevels.h"
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 
