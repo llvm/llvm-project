@@ -577,3 +577,36 @@ FracMatrix FracMatrix::gramSchmidt() const {
   }
   return orth;
 }
+
+void FracMatrix::LLL(Fraction delta)
+{
+    MPInt nearest;
+    Fraction mu;
+
+    FracMatrix bStar = gramSchmidt();
+
+    unsigned k = 1;
+    while (k < getNumRows())
+    {
+        for (unsigned j = k-1; j < k; j--)
+        {
+            mu = dotProduct(getRow(k), bStar.getRow(j)) / dotProduct(bStar.getRow(j), bStar.getRow(j));
+            if (abs(mu) > Fraction(1, 2))
+            {
+                nearest = floor(mu + Fraction(1, 2));
+                addToRow(k, getRow(j), -Fraction(nearest, 1));
+                bStar = gramSchmidt();
+            }
+        }
+        mu = dotProduct(getRow(k), bStar.getRow(k-1)) / dotProduct(bStar.getRow(k-1), bStar.getRow(k-1));
+        if (dotProduct(bStar.getRow(k), bStar.getRow(k)) > (delta - mu*mu) * dotProduct(bStar.getRow(k-1), bStar.getRow(k-1)))
+            k += 1;
+        else
+        {
+            swapRows(k, k-1);
+            bStar = gramSchmidt();
+            k = k > 1 ? k-1 : 1;
+        }
+    }
+    return;
+}

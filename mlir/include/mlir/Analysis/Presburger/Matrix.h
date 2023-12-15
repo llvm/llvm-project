@@ -270,6 +270,11 @@ public:
   // of the rows of matrix (cubic time).
   // The rows of the matrix must be linearly independent.
   FracMatrix gramSchmidt() const;
+
+  // Run LLL basis reduction on the matrix, modifying it in-place.
+  // The parameter is delta.
+  void LLL(Fraction delta);
+
 };
 
 } // namespace presburger
