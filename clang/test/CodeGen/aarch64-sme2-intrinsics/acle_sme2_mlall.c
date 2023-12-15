@@ -23,178 +23,158 @@
 
 // CHECK-LABEL: @test_svmla_single_x1_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmla_single_x1_s8ju10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x1_s8(uint32_t slice_base, svint8_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za32,_s8,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmla_za32,_s8,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x1_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmla_single_x1_s16ju11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za64,_s16,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmla_za64,_s16,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_uvmlal_single_x1_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_uvmlal_single_x1_u8ju11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_uvmlal_single_x1_u8(uint32_t slice_base, svuint8_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za32,_u8,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmla_za32,_u8,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_uvmlal_single_x1_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_uvmlal_single_x1_u16ju12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_uvmlal_single_x1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za64,_u16,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmla_za64,_u16,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // MLSL
 
 // CHECK-LABEL: @test_svmls_single_x1_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmls_single_x1_s8ju10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x1_s8(uint32_t slice_base, svint8_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za32,_s8,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmls_za32,_s8,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x1_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmls_single_x1_s16ju11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za64,_s16,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmls_za64,_s16,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_uvmlsl_single_x1_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_uvmlsl_single_x1_u8ju11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_uvmlsl_single_x1_u8(uint32_t slice_base, svuint8_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za32,_u8,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmls_za32,_u8,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_uvmlsl_single_x1_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_uvmlsl_single_x1_u16ju12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_uvmlsl_single_x1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za64,_u16,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svmls_za64,_u16,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_sumlall_single_x1_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZM:%.*]], <vscale x 16 x i8> [[ZN:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZM:%.*]], <vscale x 16 x i8> [[ZN:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_sumlall_single_x1_s8ju10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZM:%.*]], <vscale x 16 x i8> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZM:%.*]], <vscale x 16 x i8> [[ZN:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_sumlall_single_x1_s8(uint32_t slice_base, svint8_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla_za32,_s8,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svsumla_za32,_s8,_vg4x1,,)(slice_base, zn, zm);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlall_single_x1_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_usmlall_single_x1_u8ju11__SVUint8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlall_single_x1_u8(uint32_t slice_base, svuint8_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla_za32,_u8,_vg4x1,,)(slice_base + 12, zn, zm);
+  SVE_ACLE_FUNC(svusmla_za32,_u8,_vg4x1,,)(slice_base, zn, zm);
 }
 
 //
@@ -205,218 +185,198 @@ void test_usmlall_single_x1_u8(uint32_t slice_base, svuint8_t zn, svint8_t zm) _
 
 // CHECK-LABEL: @test_svmla_single_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmla_single_x2_s8j10svint8x2_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x2_s8(uint32_t slice_base, svint8x2_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za32,_s8,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za32,_s8,_vg4x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmla_single_x2_s16j11svint16x2_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za64,_s16,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za64,_s16,_vg4x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmla_single_x2_u8j11svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x2_u8(uint32_t slice_base, svuint8x2_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za32,_u8,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za32,_u8,_vg4x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmla_single_x2_u16j12svuint16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za64,_u16,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za64,_u16,_vg4x2)(slice_base, zn, zm);
 }
 
 // MLSL
 
 // CHECK-LABEL: @test_svmls_single_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmls_single_x2_s8j10svint8x2_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x2_s8(uint32_t slice_base, svint8x2_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za32,_s8,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za32,_s8,_vg4x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmls_single_x2_s16j11svint16x2_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za64,_s16,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za64,_s16,_vg4x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmls_single_x2_u8j11svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x2_u8(uint32_t slice_base, svuint8x2_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za32,_u8,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za32,_u8,_vg4x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmls_single_x2_u16j12svuint16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za64,_u16,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za64,_u16,_vg4x2)(slice_base, zn, zm);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_svsumla_single_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_svsumla_single_x2_s8j10svint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svsumla_single_x2_s8(uint32_t slice_base, svint8x2_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla,_single,_za32,_s8,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svsumla,_single,_za32,_s8,_vg4x2)(slice_base, zn, zm);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlall_single_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_usmlall_single_x2_u8j11svuint8x2_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlall_single_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla,_single,_za32,_u8,_vg4x2)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svusmla,_single,_za32,_u8,_vg4x2)(slice_base, zn, zm);
 }
 
 //
@@ -427,258 +387,238 @@ void test_usmlall_single_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8_t zm)
 
 // CHECK-LABEL: @test_svmla_single_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmla_single_x4_s8j10svint8x4_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za32,_s8,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za32,_s8,_vg4x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x4_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmla_single_x4_s16j11svint16x4_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za64,_s16,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za64,_s16,_vg4x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmla_single_x4_u8j11svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za32,_u8,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za32,_u8,_vg4x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single_x4_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmla_single_x4_u16j12svuint16x4_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla,_single,_za64,_u16,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za64,_u16,_vg4x4)(slice_base, zn, zm);
 }
 
 // MLSL
 
 // CHECK-LABEL: @test_svmls_single_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmls_single_x4_s8j10svint8x4_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za32,_s8,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za32,_s8,_vg4x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x4_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmls_single_x4_s16j11svint16x4_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za64,_s16,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za64,_s16,_vg4x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_svmls_single_x4_u8j11svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za32,_u8,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za32,_u8,_vg4x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single_x4_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z24test_svmls_single_x4_u16j12svuint16x4_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.single.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmls_single_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls,_single,_za64,_u16,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls,_single,_za64,_u16,_vg4x4)(slice_base, zn, zm);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_svsumla_single_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_svsumla_single_x4_s8j10svint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svsumla_single_x4_s8(uint32_t slice_base, svint8x4_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla,_single,_za32,_s8,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svsumla,_single,_za32,_s8,_vg4x4)(slice_base, zn, zm);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlall_single_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z25test_usmlall_single_x4_u8j11svuint8x4_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.single.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlall_single_x4_u8(uint32_t slice_base, svuint8x4_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla,_single,_za32,_u8,_vg4x4)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svusmla,_single,_za32,_u8,_vg4x4)(slice_base, zn, zm);
 }
 
 //
@@ -689,258 +629,238 @@ void test_usmlall_single_x4_u8(uint32_t slice_base, svuint8x4_t zn, svint8_t zm)
 
 // CHECK-LABEL: @test_mlal_multi_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlal_multi_x2_s8j10svint8x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x2_s8(uint32_t slice_base, svint8x2_t zn, svint8x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za32,_s8,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za32,_s8,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlal_multi_x2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlal_multi_x2_s16j11svint16x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x2_s16(uint32_t slice_base, svint16x2_t zn, svint16x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za64,_s16,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za64,_s16,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlal_multi_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlal_multi_x2_u8j11svuint8x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x2_u8(uint32_t slice_base, svuint8x2_t zn, svuint8x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za32,_u8,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za32,_u8,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlal_multi_x2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlal_multi_x2_u16j12svuint16x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za64,_u16,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za64,_u16,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // MLSL
 
 // CHECK-LABEL: @test_mlsl_multi_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlsl_multi_x2_s8j10svint8x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x2_s8(uint32_t slice_base, svint8x2_t zn, svint8x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za32,_s8,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za32,_s8,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlsl_multi_x2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlsl_multi_x2_s16j11svint16x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x2_s16(uint32_t slice_base, svint16x2_t zn, svint16x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za64,_s16,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za64,_s16,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlsl_multi_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlsl_multi_x2_u8j11svuint8x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x2_u8(uint32_t slice_base, svuint8x2_t zn, svuint8x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za32,_u8,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za32,_u8,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlsl_multi_x2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlsl_multi_x2_u16j12svuint16x2_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZM]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za64,_u16,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za64,_u16,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_sumlal_multi_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_sumlal_multi_x2_s8j10svint8x2_t11svuint8x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_sumlal_multi_x2_s8(uint32_t slice_base, svint8x2_t zn, svuint8x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla_za32,_s8,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svsumla_za32,_s8,_vg4x2,,)(slice_base, zn, zm);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlal_multi_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_usmlal_multi_x2_u8j11svuint8x2_t10svint8x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZM]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlal_multi_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8x2_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla_za32,_u8,_vg4x2,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svusmla_za32,_u8,_vg4x2,,)(slice_base, zn, zm);
 }
 
 //
@@ -951,7 +871,6 @@ void test_usmlal_multi_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8x2_t zm)
 
 // CHECK-LABEL: @test_mlal_multi_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -960,12 +879,11 @@ void test_usmlal_multi_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8x2_t zm)
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlal_multi_x4_s8j10svint8x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -974,17 +892,16 @@ void test_usmlal_multi_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8x2_t zm)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za32,_s8,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za32,_s8,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlal_multi_x4_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -993,12 +910,11 @@ void test_mlal_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8x4_t zm) __
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlal_multi_x4_s16j11svint16x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1007,17 +923,16 @@ void test_mlal_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8x4_t zm) __
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za64,_s16,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za64,_s16,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlal_multi_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1026,12 +941,11 @@ void test_mlal_multi_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm)
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlal_multi_x4_u8j11svuint8x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1040,17 +954,16 @@ void test_mlal_multi_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za32,_u8,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za32,_u8,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlal_multi_x4_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1059,12 +972,11 @@ void test_mlal_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8x4_t zm) 
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlal_multi_x4_u16j12svuint16x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1073,19 +985,18 @@ void test_mlal_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8x4_t zm) 
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlal_multi_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_za64,_u16,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmla_za64,_u16,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // MLSL
 
 // CHECK-LABEL: @test_mlsl_multi_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1094,12 +1005,11 @@ void test_mlal_multi_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t z
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlsl_multi_x4_s8j10svint8x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1108,17 +1018,16 @@ void test_mlal_multi_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t z
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za32,_s8,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za32,_s8,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlsl_multi_x4_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1127,12 +1036,11 @@ void test_mlsl_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8x4_t zm) __
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlsl_multi_x4_s16j11svint16x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1141,17 +1049,16 @@ void test_mlsl_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8x4_t zm) __
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za64,_s16,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za64,_s16,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlsl_multi_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1160,12 +1067,11 @@ void test_mlsl_multi_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm)
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_mlsl_multi_x4_u8j11svuint8x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1174,17 +1080,16 @@ void test_mlsl_multi_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za32,_u8,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za32,_u8,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_mlsl_multi_x4_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1193,12 +1098,11 @@ void test_mlsl_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8x4_t zm) 
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_mlsl_multi_x4_u16j12svuint16x4_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
@@ -1207,19 +1111,18 @@ void test_mlsl_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8x4_t zm) 
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZM]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_mlsl_multi_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_za64,_u16,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svmls_za64,_u16,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_sumlal_multi_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1228,12 +1131,11 @@ void test_mlsl_multi_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t z
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_sumlal_multi_x4_s8j10svint8x4_t11svuint8x4_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1242,19 +1144,18 @@ void test_mlsl_multi_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t z
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_sumlal_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svuint8x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla_za32,_s8,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svsumla_za32,_s8,_vg4x4,,)(slice_base, zn, zm);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlal_multi_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1263,12 +1164,11 @@ void test_sumlal_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svuint8x4_t zm)
 // CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_usmlal_multi_x4_u8j11svuint8x4_t10svint8x4_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
@@ -1277,12 +1177,12 @@ void test_sumlal_multi_x4_s8(uint32_t slice_base, svint8x4_t zn, svuint8x4_t zm)
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZM]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], <vscale x 16 x i8> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlal_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svint8x4_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla_za32,_u8,_vg4x4,,)(slice_base + 4, zn, zm);
+  SVE_ACLE_FUNC(svusmla_za32,_u8,_vg4x4,,)(slice_base, zn, zm);
 }
 
 //
@@ -1293,178 +1193,158 @@ void test_usmlal_multi_x4_u8(uint32_t slice_base, svuint8x4_t zn, svint8x4_t zm)
 
 // CHECK-LABEL: @test_smlal_lane_x1_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlal_lane_x1_s8ju10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x1_s8(uint32_t slice_base, svint8_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za32,_s8,_vg4x1,,)(slice_base + 12, zn, zm, 15);
+  SVE_ACLE_FUNC(svmla_lane_za32,_s8,_vg4x1,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x1_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlal_lane_x1_s16ju11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za64,_s16,_vg4x1,,)(slice_base + 12, zn, zm, 7);
+  SVE_ACLE_FUNC(svmla_lane_za64,_s16,_vg4x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x1_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlal_lane_x1_u8ju11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x1_u8(uint32_t slice_base, svuint8_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za32,_u8,_vg4x1,,)(slice_base + 12, zn, zm, 15);
+  SVE_ACLE_FUNC(svmla_lane_za32,_u8,_vg4x1,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x1_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlal_lane_x1_u16ju12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za64,_u16,_vg4x1,,)(slice_base + 12, zn, zm, 7);
+  SVE_ACLE_FUNC(svmla_lane_za64,_u16,_vg4x1,,)(slice_base, zn, zm, 7);
 }
 
 // SMLSL
 
 // CHECK-LABEL: @test_smlsl_lane_x1_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlsl_lane_x1_s8ju10__SVInt8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x1_s8(uint32_t slice_base, svint8_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za32,_s8,_vg4x1,,)(slice_base + 12, zn, zm, 15);
+  SVE_ACLE_FUNC(svmls_lane_za32,_s8,_vg4x1,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x1_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlsl_lane_x1_s16ju11__SVInt16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za64,_s16,_vg4x1,,)(slice_base + 12, zn, zm, 7);
+  SVE_ACLE_FUNC(svmls_lane_za64,_s16,_vg4x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x1_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlsl_lane_x1_u8ju11__SVUint8_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x1_u8(uint32_t slice_base, svuint8_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za32,_u8,_vg4x1,,)(slice_base + 12, zn, zm, 15);
+  SVE_ACLE_FUNC(svmls_lane_za32,_u8,_vg4x1,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x1_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlsl_lane_x1_u16ju12__SVUint16_tS_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x1.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za64,_u16,_vg4x1,,)(slice_base + 12, zn, zm, 7);
+  SVE_ACLE_FUNC(svmls_lane_za64,_u16,_vg4x1,,)(slice_base, zn, zm, 7);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_sumlall_lane_x1_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_sumlall_lane_x1_s8ju10__SVInt8_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_sumlall_lane_x1_s8(uint32_t slice_base, svint8_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla_lane_za32,_s8,_vg4x1,,)(slice_base + 12, zn, zm, 15);
+  SVE_ACLE_FUNC(svsumla_lane_za32,_s8,_vg4x1,,)(slice_base, zn, zm, 15);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlall_lane_x1_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_usmlall_lane_x1_u8ju11__SVUint8_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 12
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x1.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x1.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlall_lane_x1_u8(uint32_t slice_base, svuint8_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla_lane_za32,_u8,_vg4x1,,)(slice_base + 12, zn, zm, 15);
+  SVE_ACLE_FUNC(svusmla_lane_za32,_u8,_vg4x1,,)(slice_base, zn, zm, 15);
 }
 
 //
@@ -1475,216 +1355,196 @@ void test_usmlall_lane_x1_u8(uint32_t slice_base, svuint8_t zn, svint8_t zm) __a
 
 // CHECK-LABEL: @test_smlal_lane_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlal_lane_x2_s8j10svint8x2_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x2_s8(uint32_t slice_base, svint8x2_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za32,_s8,_vg4x2,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmla_lane_za32,_s8,_vg4x2,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlal_lane_x2_s16j11svint16x2_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za64,_s16,_vg4x2,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmla_lane_za64,_s16,_vg4x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlal_lane_x2_u8j11svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x2_u8(uint32_t slice_base, svuint8x2_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za32,_u8,_vg4x2,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmla_lane_za32,_u8,_vg4x2,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlal_lane_x2_u16j12svuint16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za64,_u16,_vg4x2,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmla_lane_za64,_u16,_vg4x2,,)(slice_base, zn, zm, 7);
 }
 
 // SMLSL
 
 // CHECK-LABEL: @test_smlsl_lane_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlsl_lane_x2_s8j10svint8x2_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x2_s8(uint32_t slice_base, svint8x2_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za32,_s8,_vg4x2,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmls_lane_za32,_s8,_vg4x2,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x2_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlsl_lane_x2_s16j11svint16x2_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za64,_s16,_vg4x2,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmls_lane_za64,_s16,_vg4x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlsl_lane_x2_u8j11svuint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x2_u8(uint32_t slice_base, svuint8x2_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za32,_u8,_vg4x2,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmls_lane_za32,_u8,_vg4x2,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x2_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlsl_lane_x2_u16j12svuint16x2_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv16i16(<vscale x 16 x i16> [[ZN]], i64 8)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x2.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za64,_u16,_vg4x2,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmls_lane_za64,_u16,_vg4x2,,)(slice_base, zn, zm, 7);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_sumlall_lane_x2_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_sumlall_lane_x2_s8j10svint8x2_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_sumlall_lane_x2_s8(uint32_t slice_base, svint8x2_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla_lane_za32,_s8,_vg4x2,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svsumla_lane_za32,_s8,_vg4x2,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_usmlall_lane_x2_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_usmlall_lane_x2_u8j11svuint8x2_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[ZN]], i64 16)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x2.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x2.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlall_lane_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla_lane_za32,_u8,_vg4x2,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svusmla_lane_za32,_u8,_vg4x2,,)(slice_base, zn, zm, 15);
 }
 
 //
@@ -1695,256 +1555,236 @@ void test_usmlall_lane_x2_u8(uint32_t slice_base, svuint8x2_t zn, svint8_t zm) _
 
 // CHECK-LABEL: @test_smlal_lane_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlal_lane_x4_s8j10svint8x4_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za32,_s8,_vg4x4,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmla_lane_za32,_s8,_vg4x4,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x4_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlal_lane_x4_s16j11svint16x4_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smla.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za64,_s16,_vg4x4,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmla_lane_za64,_s16,_vg4x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlal_lane_x4_u8j11svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za32,_u8,_vg4x4,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmla_lane_za32,_u8,_vg4x4,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlal_lane_x4_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlal_lane_x4_u16j12svuint16x4_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umla.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlal_lane_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmla_lane_za64,_u16,_vg4x4,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmla_lane_za64,_u16,_vg4x4,,)(slice_base, zn, zm, 7);
 }
 
 // MLSL
 
 // CHECK-LABEL: @test_smlsl_lane_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlsl_lane_x4_s8j10svint8x4_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x4_s8(uint32_t slice_base, svint8x4_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za32,_s8,_vg4x4,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmls_lane_za32,_s8,_vg4x4,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x4_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlsl_lane_x4_s16j11svint16x4_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smls.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za64,_s16,_vg4x4,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmls_lane_za64,_s16,_vg4x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x4_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z21test_smlsl_lane_x4_u8j11svuint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x4_u8(uint32_t slice_base, svuint8x4_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za32,_u8,_vg4x4,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svmls_lane_za32,_u8,_vg4x4,,)(slice_base, zn, zm, 15);
 }
 
 // CHECK-LABEL: @test_smlsl_lane_x4_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z22test_smlsl_lane_x4_u16j12svuint16x4_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 8)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i16> @llvm.vector.extract.nxv8i16.nxv32i16(<vscale x 32 x i16> [[ZN]], i64 24)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x4.nxv8i16(i32 [[ADD]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umls.za64.lane.vg4x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_smlsl_lane_x4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svmls_lane_za64,_u16,_vg4x4,,)(slice_base + 4, zn, zm, 7);
+  SVE_ACLE_FUNC(svmls_lane_za64,_u16,_vg4x4,,)(slice_base, zn, zm, 7);
 }
 
 // SUMLALL
 
 // CHECK-LABEL: @test_sumlall_lane_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_sumlall_lane_x4_s8j10svint8x4_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.sumla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_sumlall_lane_x4_s8(uint32_t slice_base, svint8x4_t zn, svuint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svsumla_lane_za32,_s8,_vg4x4,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svsumla_lane_za32,_s8,_vg4x4,,)(slice_base, zn, zm, 15);
 }
 
 // USMLALL
 
 // CHECK-LABEL: @test_usmlall_lane_x4_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z23test_usmlall_lane_x4_s8j11svuint8x4_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SLICE_BASE:%.*]], 4
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN:%.*]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 16)
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 32)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv64i8(<vscale x 64 x i8> [[ZN]], i64 48)
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x4.nxv16i8(i32 [[ADD]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmla.za32.lane.vg4x4.nxv16i8(i32 [[SLICE_BASE:%.*]], <vscale x 16 x i8> [[TMP0]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], <vscale x 16 x i8> [[ZM:%.*]], i32 15)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_usmlall_lane_x4_s8(uint32_t slice_base, svuint8x4_t zn, svint8_t zm) __arm_streaming __arm_shared_za
 {
-  SVE_ACLE_FUNC(svusmla_lane_za32,_u8,_vg4x4,,)(slice_base + 4, zn, zm, 15);
+  SVE_ACLE_FUNC(svusmla_lane_za32,_u8,_vg4x4,,)(slice_base, zn, zm, 15);
 }
