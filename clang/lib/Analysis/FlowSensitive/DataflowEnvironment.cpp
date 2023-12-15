@@ -1079,6 +1079,7 @@ RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
     if (auto *ExistingVal = cast_or_null<RecordValue>(Env.getValue(Expr))) {
       auto &NewVal = Env.create<RecordValue>(ExistingVal->getLoc());
       Env.setValue(Expr, NewVal);
+      Env.setValue(NewVal.getLoc(), NewVal);
       return NewVal;
     }
 
