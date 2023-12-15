@@ -4634,16 +4634,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   // Analyze the case when either Op0 or Op1 is an add instruction.
   // Op0 = A + B (or A and B are null); Op1 = C + D (or C and D are null).
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
-  auto hasNoWrapProblem = [&](const BinaryOperator &BO, const Value *X,
-                              const Value *Y, bool &HasNSW,
-                              bool &HasNUW) -> bool {
+  auto hasNoWrapProblem = [](const BinaryOperator &BO, CmpInst::Predicate Pred,
+                             bool &HasNSW, bool &HasNUW) -> bool {
     if (isa<OverflowingBinaryOperator>(BO)) {
       HasNUW = BO.hasNoUnsignedWrap();
       HasNSW = BO.hasNoSignedWrap();
       return ICmpInst::isEquality(Pred) ||
              (CmpInst::isUnsigned(Pred) && HasNUW) ||
              (CmpInst::isSigned(Pred) && HasNSW);
-    } else if (BO0->getOpcode() == Instruction::Or) {
+    } else if (BO.getOpcode() == Instruction::Or) {
       HasNUW = true;
       HasNSW = true;
       return true;
@@ -4654,11 +4653,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   if (BO0) {
     match(BO0, m_AddLike(m_Value(A), m_Value(B)));
-    NoOp0WrapProblem = hasNoWrapProblem(*BO0, A, B, Op0HasNSW, Op0HasNUW);
+    NoOp0WrapProblem = hasNoWrapProblem(*BO0, Pred, Op0HasNSW, Op0HasNUW);
   }
   if (BO1) {
     match(BO1, m_AddLike(m_Value(C), m_Value(D)));
-    NoOp1WrapProblem = hasNoWrapProblem(*BO1, C, D, Op1HasNSW, Op1HasNUW);
+    NoOp1WrapProblem = hasNoWrapProblem(*BO1, Pred, Op1HasNSW, Op1HasNUW);
   }
 
   if ((A == Op1 || B == Op1) && NoOp0WrapProblem)
