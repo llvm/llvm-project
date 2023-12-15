@@ -74,7 +74,14 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 ValueProfNode *CurrentVNode = &VNodesStart + 1;
 ValueProfNode *EndVNode = &VNodesEnd;
 
+uint64_t BuildIdLen = 16;
+COMPILER_RT_WEAK extern uint8_t __buildid[16];
 COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
+  if (*__buildid) {
+    if (Writer && lprofWriteOneBinaryId(Writer, BuildIdLen, __buildid, 0) == -1)
+      return -1;
+    return sizeof(BuildIdLen) + BuildIdLen;
+  }
   return 0;
 }
 
