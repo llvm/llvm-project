@@ -887,11 +887,19 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
 //===----------------------------------------------------------------------===//
 
 def extract_cpol : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & AMDGPU::CPol::ALL, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::ALL
+                               : AMDGPU::CPol::ALL_pregfx12),
+      SDLoc(N), MVT::i8);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 1, SDLoc(N), MVT::i8);
+  const bool Swizzle =
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::SWZ
+                               : AMDGPU::CPol::SWZ_pregfx12);
+  return CurDAG->getTargetConstant(Swizzle, SDLoc(N), MVT::i8);
 }]>;
 
 def set_glc : SDNodeXForm<timm, [{

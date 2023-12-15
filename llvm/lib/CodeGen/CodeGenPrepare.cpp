@@ -3218,10 +3218,6 @@ public:
   /// Same as IRBuilder::createZExt.
   Value *createZExt(Instruction *Inst, Value *Opnd, Type *Ty);
 
-  /// Same as Instruction::moveBefore.
-  void moveBefore(Instruction *Inst, Instruction *Before);
-  /// @}
-
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
@@ -3279,13 +3275,6 @@ Value *TypePromotionTransaction::createZExt(Instruction *Inst, Value *Opnd,
   Value *Val = Ptr->getBuiltValue();
   Actions.push_back(std::move(Ptr));
   return Val;
-}
-
-void TypePromotionTransaction::moveBefore(Instruction *Inst,
-                                          Instruction *Before) {
-  Actions.push_back(
-      std::make_unique<TypePromotionTransaction::InstructionMoveBefore>(
-          Inst, Before));
 }
 
 TypePromotionTransaction::ConstRestorationPt
