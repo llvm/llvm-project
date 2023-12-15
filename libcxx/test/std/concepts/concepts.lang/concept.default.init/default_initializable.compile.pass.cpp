@@ -10,7 +10,7 @@
 
 // We voluntarily use std::default_initializable on types that have redundant
 // or ignored cv-qualifiers -- don't warn about it.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-ignored-qualifiers
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-ignored-qualifiers
 
 // template<class T>
 //     concept default_initializable = constructible_from<T> &&

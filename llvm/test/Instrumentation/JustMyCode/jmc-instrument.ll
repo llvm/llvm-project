@@ -1,6 +1,9 @@
-; RUN: opt -jmc-instrument -mtriple=x86_64-pc-windows-msvc  -S < %s | FileCheck %s
-; RUN: opt -jmc-instrument -mtriple=aarch64-pc-windows-msvc -S < %s | FileCheck %s
-; RUN: opt -jmc-instrument -mtriple=arm-pc-windows-msvc     -S < %s | FileCheck %s
+; RUN: opt -jmc-instrumenter -mtriple=x86_64-pc-windows-msvc  -S < %s | FileCheck %s
+; RUN: opt -jmc-instrumenter -mtriple=aarch64-pc-windows-msvc -S < %s | FileCheck %s
+; RUN: opt -jmc-instrumenter -mtriple=arm-pc-windows-msvc     -S < %s | FileCheck %s
+; RUN: opt -passes=jmc-instrumenter -mtriple=x86_64-pc-windows-msvc  -S < %s | FileCheck %s
+; RUN: opt -passes=jmc-instrumenter -mtriple=aarch64-pc-windows-msvc -S < %s | FileCheck %s
+; RUN: opt -passes=jmc-instrumenter -mtriple=arm-pc-windows-msvc     -S < %s | FileCheck %s
 
 ; CHECK: $__JustMyCode_Default = comdat any
 

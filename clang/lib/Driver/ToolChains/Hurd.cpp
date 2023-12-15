@@ -92,7 +92,7 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // those searched.
   // FIXME: It's not clear whether we should use the driver's installed
   // directory ('Dir' below) or the ResourceDir.
-  if (StringRef(D.Dir).startswith(SysRoot)) {
+  if (StringRef(D.Dir).starts_with(SysRoot)) {
     addPathIfExists(D, D.Dir + "/../lib/" + MultiarchTriple, Paths);
     addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
   }
@@ -110,7 +110,7 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // searched.
   // FIXME: It's not clear whether we should use the driver's installed
   // directory ('Dir' below) or the ResourceDir.
-  if (StringRef(D.Dir).startswith(SysRoot))
+  if (StringRef(D.Dir).starts_with(SysRoot))
     addPathIfExists(D, D.Dir + "/../lib", Paths);
 
   addPathIfExists(D, SysRoot + "/lib", Paths);

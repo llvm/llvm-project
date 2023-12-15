@@ -41,37 +41,50 @@ constexpr bool test() {
   constexpr month January   = std::chrono::January;
 
   { // year_month_weekday_last + months
-    year_month_weekday_last ym{year{1234}, January, weekday_last{Tuesday}};
-    for (int i = 0; i <= 10; ++i) // TODO test wrap-around
-    {
-      year_month_weekday_last ym1 = ym + months{i};
-      year_month_weekday_last ym2 = months{i} + ym;
-      assert(ym1.year() == year(1234));
-      assert(ym2.year() == year(1234));
-      assert(ym1.month() == month(1 + i));
-      assert(ym2.month() == month(1 + i));
-      assert(ym1.weekday() == Tuesday);
-      assert(ym2.weekday() == Tuesday);
-      assert(ym1.weekday_last() == weekday_last{Tuesday});
-      assert(ym2.weekday_last() == weekday_last{Tuesday});
-      assert(ym1 == ym2);
+    year_month_weekday_last ymwdl{year{1234}, January, weekday_last{Tuesday}};
+    for (int i = 0; i <= 10; ++i) {
+      year_month_weekday_last ymwdl1 = ymwdl + months{i};
+      year_month_weekday_last ymwdl2 = months{i} + ymwdl;
+      assert(ymwdl1.year() == year{1234});
+      assert(ymwdl2.year() == year{1234});
+      assert(ymwdl1.month() == month(1 + i));
+      assert(ymwdl2.month() == month(1 + i));
+      assert(ymwdl1.weekday() == Tuesday);
+      assert(ymwdl2.weekday() == Tuesday);
+      assert(ymwdl1.weekday_last() == weekday_last{Tuesday});
+      assert(ymwdl2.weekday_last() == weekday_last{Tuesday});
+      assert(ymwdl1 == ymwdl2);
+    }
+    // Test the year wraps around.
+    for (int i = 12; i <= 15; ++i) {
+      year_month_weekday_last ymwdl1 = ymwdl + months{i};
+      year_month_weekday_last ymwdl2 = months{i} + ymwdl;
+      assert(ymwdl1.year() == year{1235});
+      assert(ymwdl2.year() == year{1235});
+      assert(ymwdl1.month() == month(1 + i - 12));
+      assert(ymwdl2.month() == month(1 + i - 12));
+      assert(ymwdl1.weekday() == Tuesday);
+      assert(ymwdl2.weekday() == Tuesday);
+      assert(ymwdl1.weekday_last() == weekday_last{Tuesday});
+      assert(ymwdl2.weekday_last() == weekday_last{Tuesday});
+      assert(ymwdl1 == ymwdl2);
     }
   }
 
   { // year_month_weekday_last + years
-    year_month_weekday_last ym{year{1234}, std::chrono::January, weekday_last{Tuesday}};
+    year_month_weekday_last ymwdl{year{1234}, std::chrono::January, weekday_last{Tuesday}};
     for (int i = 0; i <= 10; ++i) {
-      year_month_weekday_last ym1 = ym + years{i};
-      year_month_weekday_last ym2 = years{i} + ym;
-      assert(ym1.year() == year(1234 + i));
-      assert(ym2.year() == year(1234 + i));
-      assert(ym1.month() == January);
-      assert(ym2.month() == January);
-      assert(ym1.weekday() == Tuesday);
-      assert(ym2.weekday() == Tuesday);
-      assert(ym1.weekday_last() == weekday_last{Tuesday});
-      assert(ym2.weekday_last() == weekday_last{Tuesday});
-      assert(ym1 == ym2);
+      year_month_weekday_last ymwdl1 = ymwdl + years{i};
+      year_month_weekday_last ymwdl2 = years{i} + ymwdl;
+      assert(ymwdl1.year() == year(1234 + i));
+      assert(ymwdl2.year() == year(1234 + i));
+      assert(ymwdl1.month() == January);
+      assert(ymwdl2.month() == January);
+      assert(ymwdl1.weekday() == Tuesday);
+      assert(ymwdl2.weekday() == Tuesday);
+      assert(ymwdl1.weekday_last() == weekday_last{Tuesday});
+      assert(ymwdl2.weekday_last() == weekday_last{Tuesday});
+      assert(ymwdl1 == ymwdl2);
     }
   }
 

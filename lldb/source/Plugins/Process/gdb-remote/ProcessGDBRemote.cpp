@@ -303,7 +303,7 @@ ProcessGDBRemote::~ProcessGDBRemote() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 
   // The general Finalize is going to try to destroy the process and that
   // SHOULD shut down the async thread.  However, if we don't kill it it will

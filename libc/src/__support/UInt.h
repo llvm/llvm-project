@@ -103,13 +103,20 @@ template <size_t Bits, bool Signed> struct BigInt {
       val[i] = words[i];
   }
 
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
-                                                    sizeof(T) <= 16 &&
-                                                    !cpp::is_same_v<T, bool>>>
-  LIBC_INLINE constexpr explicit operator T() const {
-    if constexpr (sizeof(T) <= 8)
-      return static_cast<T>(val[0]);
+  template <typename T> LIBC_INLINE constexpr explicit operator T() const {
+    return to<T>();
+  }
 
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) <= 8 && !cpp::is_same_v<T, bool>, T>
+  to() const {
+    return static_cast<T>(val[0]);
+  }
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) == 16, T>
+  to() const {
     // T is 128-bit.
     T lo = static_cast<T>(val[0]);
 
@@ -121,7 +128,6 @@ template <size_t Bits, bool Signed> struct BigInt {
         return lo;
       }
     } else {
-      // TODO: silence shift warning
       return static_cast<T>((static_cast<T>(val[1]) << 64) + lo);
     }
   }
@@ -897,6 +903,7 @@ public:
     return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
   }
   LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>(0); }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 template <> class numeric_limits<Int<128>> {
@@ -907,6 +914,7 @@ public:
   LIBC_INLINE static constexpr Int<128> min() {
     return Int<128>({0, 0x8000'0000'0000'0000});
   }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 // Provides is_integral of U/Int<128>, U/Int<192>, U/Int<256>.

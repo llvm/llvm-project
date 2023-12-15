@@ -2415,17 +2415,14 @@ public:
   BitsUnpacker(BitsUnpacker &&) = delete;
   BitsUnpacker operator=(const BitsUnpacker &) = delete;
   BitsUnpacker operator=(BitsUnpacker &&) = delete;
-  ~BitsUnpacker() {
-#ifndef NDEBUG
-    while (isValid())
-      assert(!getNextBit() && "There are unprocessed bits!");
-#endif
-  }
+  ~BitsUnpacker() = default;
 
   void updateValue(uint32_t V) {
     Value = V;
     CurrentBitsIndex = 0;
   }
+
+  void advance(uint32_t BitsWidth) { CurrentBitsIndex += BitsWidth; }
 
   bool getNextBit() {
     assert(isValid());

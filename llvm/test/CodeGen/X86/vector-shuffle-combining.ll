@@ -3225,7 +3225,7 @@ define void @PR43024() {
 ; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}+12(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
   store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
