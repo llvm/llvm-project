@@ -1205,19 +1205,10 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   }
 
   auto *SizeVal = llvm::ConstantInt::get(CGM.IntPtrTy, ConstantSize);
-  auto trivialAutoVarInitMaxSize =
-      CGM.getContext().getLangOpts().TrivialAutoVarInitMaxSize;
-  bool AutoInitExceedMaxSize = false;
-  if (IsAutoInit) {
-    AutoInitExceedMaxSize = trivialAutoVarInitMaxSize > 0 &&
-                            SizeVal->getValue().sgt(trivialAutoVarInitMaxSize);
-  }
 
   // If the initializer is all or mostly the same, codegen with bzero / memset
   // then do a few stores afterward.
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
-    if (AutoInitExceedMaxSize)
-      return;
     auto *I = Builder.CreateMemSet(Loc, llvm::ConstantInt::get(CGM.Int8Ty, 0),
                                    SizeVal, isVolatile);
     if (IsAutoInit)
@@ -1237,8 +1228,6 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   llvm::Value *Pattern =
       shouldUseMemSetToInitialize(constant, ConstantSize, CGM.getDataLayout());
   if (Pattern) {
-    if (AutoInitExceedMaxSize)
-      return;
     uint64_t Value = 0x00;
     if (!isa<llvm::UndefValue>(Pattern)) {
       const llvm::APInt &AP = cast<llvm::ConstantInt>(Pattern)->getValue();
@@ -1277,15 +1266,13 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   }
 
   // Copy from a global.
-  if (!AutoInitExceedMaxSize) {
-    auto *I =
-        Builder.CreateMemCpy(Loc,
-                             createUnnamedGlobalForMemcpyFrom(
-                                 CGM, D, Builder, constant, Loc.getAlignment()),
-                             SizeVal, isVolatile);
-    if (IsAutoInit)
-      I->addAnnotationMetadata("auto-init");
-  }
+  auto *I =
+      Builder.CreateMemCpy(Loc,
+                           createUnnamedGlobalForMemcpyFrom(
+                               CGM, D, Builder, constant, Loc.getAlignment()),
+                           SizeVal, isVolatile);
+  if (IsAutoInit)
+    I->addAnnotationMetadata("auto-init");
 }
 
 static void emitStoresForZeroInit(CodeGenModule &CGM, const VarDecl &D,
@@ -1772,19 +1759,33 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
   auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
+  auto trivialAutoVarInitMaxSize =
+      getContext().getLangOpts().TrivialAutoVarInitMaxSize;
   CharUnits Size = getContext().getTypeSizeInChars(type);
   bool isVolatile = type.isVolatileQualified();
   if (!Size.isZero()) {
+    // We skip auto-init variables by their alloc size. Take this as an example:
+    // "struct Foo {int x; char buff[1024];}" Assume the max-size flag is 1023.
+    // All Foo type variables will be skipped. Ideally, we only skip the buff
+    // array and still auto-init X in this example.
+    // TODO: Improve the size filtering to by member size. 
+    auto allocSize = CGM.getDataLayout().getTypeAllocSize(Loc.getElementType());
     switch (trivialAutoVarInit) {
     case LangOptions::TrivialAutoVarInitKind::Uninitialized:
       llvm_unreachable("Uninitialized handled by caller");
     case LangOptions::TrivialAutoVarInitKind::Zero:
       if (CGM.stopAutoInit())
         return;
+      if (trivialAutoVarInitMaxSize > 0 &&
+          allocSize > trivialAutoVarInitMaxSize)
+        return;
       emitStoresForZeroInit(CGM, D, Loc, isVolatile, Builder);
       break;
     case LangOptions::TrivialAutoVarInitKind::Pattern:
       if (CGM.stopAutoInit())
+        return;
+      if (trivialAutoVarInitMaxSize > 0 &&
+          allocSize > trivialAutoVarInitMaxSize)
         return;
       emitStoresForPatternInit(CGM, D, Loc, isVolatile, Builder);
       break;
