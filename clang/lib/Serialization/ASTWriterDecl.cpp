@@ -2131,7 +2131,7 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
   //
   //  Add an AbbrevOp for 'size then elements' and use it here.
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  return std::move(Abv);
+  return Abv;
 }
 
 template <FunctionDecl::TemplatedKind Kind>
