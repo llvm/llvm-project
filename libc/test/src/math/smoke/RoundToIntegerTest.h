@@ -27,7 +27,7 @@ public:
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
   const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
@@ -109,11 +109,10 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
+    constexpr StorageType COUNT = 1'000'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+    for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       F x = F(FPBits(i));
       if (x == F(0.0))
