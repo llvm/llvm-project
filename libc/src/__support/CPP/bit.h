@@ -26,7 +26,7 @@ namespace LIBC_NAMESPACE::cpp {
 #endif
 
 // Performs a copy from 'src' to 'dst' of 'size' bytes.
-// The semantics is valid if 'src' and 'dst' are equal but undefined if the
+// The semantics are valid if 'src' and 'dst' are equal but undefined if the
 // regions defined by [src, src + size] and [dst, dst + size] overlap.
 template <size_t size, typename DstT, typename SrcT>
 LIBC_INLINE constexpr void memcpy_inline(DstT *__restrict dst,
