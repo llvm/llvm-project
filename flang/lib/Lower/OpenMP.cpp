@@ -3542,6 +3542,19 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
     converter.genEval(e);
 }
 
+void Fortran::lower::genOpenMPSymbolProperties(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var) {
+  assert(var.hasSymbol() && "Expecting Symbol");
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+
+  if (sym.test(Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+    Fortran::lower::genThreadprivateOp(converter, var);
+
+  if (sym.test(Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
+    Fortran::lower::genDeclareTargetIntGlobal(converter, var);
+}
+
 int64_t Fortran::lower::getCollapseValue(
     const Fortran::parser::OmpClauseList &clauseList) {
   for (const Fortran::parser::OmpClause &clause : clauseList.v) {
