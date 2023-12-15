@@ -101,9 +101,7 @@ inline bool operator>=(const Fraction &x, const Fraction &y) {
   return compare(x, y) >= 0;
 }
 
-inline Fraction abs(const Fraction &f) {
-  return Fraction(abs(f.num), f.den);
-}
+inline Fraction abs(const Fraction &f) { return Fraction(abs(f.num), f.den); }
 
 inline Fraction reduce(const Fraction &f) {
   if (f == Fraction(0))

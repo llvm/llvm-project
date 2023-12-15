@@ -274,7 +274,6 @@ public:
   // Run LLL basis reduction on the matrix, modifying it in-place.
   // The parameter is delta.
   void LLL(Fraction delta);
-
 };
 
 } // namespace presburger

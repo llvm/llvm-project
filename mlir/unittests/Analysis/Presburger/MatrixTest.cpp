@@ -380,39 +380,48 @@ TEST(MatrixTest, gramSchmidt) {
 }
 
 TEST(MatrixTest, LLL) {
-    FracMatrix mat = makeFracMatrix(3, 3, {{Fraction(1, 1), Fraction(1, 1), Fraction(1, 1)},
-                                                 {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)},
-                                                 {Fraction(3, 1), Fraction(5, 1), Fraction(6, 1)}});
-    mat.LLL(Fraction(3, 4));
-    
-    FracMatrix LLL = makeFracMatrix(3, 3, {{Fraction(0, 1), Fraction(1, 1), Fraction(0, 1)},
-                                                 {Fraction(1, 1), Fraction(0, 1), Fraction(1, 1)},
-                                                 {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)}});
+  FracMatrix mat =
+      makeFracMatrix(3, 3,
+                     {{Fraction(1, 1), Fraction(1, 1), Fraction(1, 1)},
+                      {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)},
+                      {Fraction(3, 1), Fraction(5, 1), Fraction(6, 1)}});
+  mat.LLL(Fraction(3, 4));
 
-    for (unsigned row = 0; row < 3; row++)
-      for (unsigned col = 0; col < 3; col++)
-        EXPECT_EQ(mat(row, col), LLL(row, col));
+  FracMatrix LLL =
+      makeFracMatrix(3, 3,
+                     {{Fraction(0, 1), Fraction(1, 1), Fraction(0, 1)},
+                      {Fraction(1, 1), Fraction(0, 1), Fraction(1, 1)},
+                      {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)}});
 
+  for (unsigned row = 0; row < 3; row++)
+    for (unsigned col = 0; col < 3; col++)
+      EXPECT_EQ(mat(row, col), LLL(row, col));
 
-    mat = makeFracMatrix(2, 2, {{Fraction(12, 1), Fraction(2, 1)}, {Fraction(13, 1), Fraction(4, 1)}});
-    LLL = makeFracMatrix(2, 2, {{Fraction(1, 1),  Fraction(2, 1)}, {Fraction(9, 1),  Fraction(-4, 1)}});
+  mat = makeFracMatrix(
+      2, 2,
+      {{Fraction(12, 1), Fraction(2, 1)}, {Fraction(13, 1), Fraction(4, 1)}});
+  LLL = makeFracMatrix(
+      2, 2,
+      {{Fraction(1, 1), Fraction(2, 1)}, {Fraction(9, 1), Fraction(-4, 1)}});
 
-    mat.LLL(Fraction(3, 4));
+  mat.LLL(Fraction(3, 4));
 
-    for (unsigned row = 0; row < 2; row++)
-      for (unsigned col = 0; col < 2; col++)
-        EXPECT_EQ(mat(row, col), LLL(row, col));
+  for (unsigned row = 0; row < 2; row++)
+    for (unsigned col = 0; col < 2; col++)
+      EXPECT_EQ(mat(row, col), LLL(row, col));
 
-    mat = makeFracMatrix(3, 3, {{Fraction(1, 1), Fraction(0, 1), Fraction(2, 1)},
-                                {Fraction(0, 1), Fraction(1, 3), -Fraction(5, 3)},
-                                {Fraction(0, 1), Fraction(0, 1), Fraction(1, 1)}});
-    LLL = makeFracMatrix(3, 3, {{Fraction(0, 1), Fraction(1, 3), Fraction(1, 3)},
-                                {Fraction(0, 1), Fraction(1, 3), -Fraction(2, 3)},
-                                {Fraction(1, 1), Fraction(0, 1), Fraction(0, 1)}});
+  mat = makeFracMatrix(3, 3,
+                       {{Fraction(1, 1), Fraction(0, 1), Fraction(2, 1)},
+                        {Fraction(0, 1), Fraction(1, 3), -Fraction(5, 3)},
+                        {Fraction(0, 1), Fraction(0, 1), Fraction(1, 1)}});
+  LLL = makeFracMatrix(3, 3,
+                       {{Fraction(0, 1), Fraction(1, 3), Fraction(1, 3)},
+                        {Fraction(0, 1), Fraction(1, 3), -Fraction(2, 3)},
+                        {Fraction(1, 1), Fraction(0, 1), Fraction(0, 1)}});
 
-    mat.LLL(Fraction(3, 4));
+  mat.LLL(Fraction(3, 4));
 
-    for (unsigned row = 0; row < 3; row++)
-      for (unsigned col = 0; col < 3; col++)
-        EXPECT_EQ(mat(row, col), LLL(row, col));
+  for (unsigned row = 0; row < 3; row++)
+    for (unsigned col = 0; col < 3; col++)
+      EXPECT_EQ(mat(row, col), LLL(row, col));
 }
