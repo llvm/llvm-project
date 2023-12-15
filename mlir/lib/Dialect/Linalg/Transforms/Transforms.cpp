@@ -432,16 +432,14 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
 
   // Get dynamic dims from input tensor in order of stripMinedTensor
   // `tensor.empty` op
-  SmallVector<Value, 4> dims(llvm::map_range(
-      llvm::seq<int64_t>(0, packedTensorType.getRank()), [&](int64_t i) {
-        return rewriter.create<tensor::DimOp>(loc, unPackOp.getSource(), i);
-      }));
+  SmallVector<OpFoldResult, 4> dims =
+      tensor::getMixedSizes(rewriter, loc, unPackOp.getSource());
   applyPermutationToVector(dims, lastDimsToInsertPositionsPerm);
   SmallVector<Value, 4> dynDims;
   dynDims.reserve(stripMinedTensorType.getNumDynamicDims());
   for (int64_t i = 0; i < stripMinedTensorType.getRank(); i++) {
     if (stripMinedTensorType.isDynamicDim(i))
-      dynDims.push_back(dims[i]);
+      dynDims.push_back(cast<Value>(dims[i]));
   }
 
   auto emptyOp =
