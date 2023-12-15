@@ -417,9 +417,10 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
   return &*it_b.first->second;
 }
 
-llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
-    CompilerType instance_type, ValueObject *instance, llvm::StringRef member_name,
-    Status *error) {
+llvm::Optional<uint64_t>
+SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
+    CompilerType instance_type, ValueObject *instance,
+    llvm::StringRef member_name, Status *error) {
   LLDB_LOGF(GetLog(LLDBLog::Types), "using remote mirrors");
   auto ts =
       instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
