@@ -666,7 +666,7 @@ template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
                  Fortran::lower::AbstractConverter &converter,
-                 fir::ExtendedValue dataExv, mlir::Value baseAddr) {
+                 fir::ExtendedValue dataExv) {
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
   llvm::SmallVector<mlir::Value> bounds;
@@ -899,7 +899,7 @@ mlir::Value gatherDataOperandAddrAndBounds(
                 if (fir::unwrapRefType(baseAddr.getType())
                         .isa<fir::SequenceType>())
                   bounds = genBaseBoundsOps<BoundsOp, BoundsType>(
-                      builder, operandLocation, converter, compExv, baseAddr);
+                      builder, operandLocation, converter, compExv);
                 asFortran << (*expr).AsFortran();
 
                 if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(
@@ -949,7 +949,7 @@ mlir::Value gatherDataOperandAddrAndBounds(
                   if (fir::unwrapRefType(baseAddr.getType())
                           .isa<fir::SequenceType>())
                     bounds = genBaseBoundsOps<BoundsOp, BoundsType>(
-                        builder, operandLocation, converter, dataExv, baseAddr);
+                        builder, operandLocation, converter, dataExv);
                   asFortran << name.ToString();
                 } else { // Unsupported
                   llvm::report_fatal_error(
