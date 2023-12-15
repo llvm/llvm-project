@@ -536,6 +536,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       // Insert the key (func hash) and value (memprof record).
       RecordTableGenerator.insert(I.first, I.second);
     }
+    // Release the memory of this MapVector as it is no longer needed.
+    MemProfRecordData.clear();
 
     uint64_t RecordTableOffset =
         RecordTableGenerator.Emit(OS.OS, *RecordWriter);
@@ -549,6 +551,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       // Insert the key (frame id) and value (frame contents).
       FrameTableGenerator.insert(I.first, I.second);
     }
+    // Release the memory of this MapVector as it is no longer needed.
+    MemProfFrameData.clear();
 
     uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
 
