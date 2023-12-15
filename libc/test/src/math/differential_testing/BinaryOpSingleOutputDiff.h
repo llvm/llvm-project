@@ -18,7 +18,7 @@ template <typename T> class BinaryOpSingleOutputDiff {
   using FPBits = fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   static constexpr StorageType MSBIT = StorageType(1)
-                                       << (8 * sizeof(StorageType) - 1);
+                                       << (FPBits::STORAGE_LEN - 1);
   static constexpr StorageType UINTMAX = (MSBIT - 1) + MSBIT;
 
 public:
