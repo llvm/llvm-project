@@ -37,14 +37,12 @@ function(get_object_files_for_test result skipped_entrypoints_list)
       continue()
     endif()
 
-    get_target_property(dep_obj ${dep} "OBJECT_FILES_FOR_TESTS")
-    get_target_property(dep_skip ${dep} "SKIPPED_LIST_FOR_TESTS")
     get_target_property(dep_checked ${dep} "CHECK_OBJ_FOR_TESTS")
 
     if(dep_checked)
       # Target full dependency has already been checked.  Just use the results.
-      list(APPEND object_files ${dep_obj})
-      list(APPEND skipped_list ${dep_skip})
+      get_target_property(dep_obj ${dep} "OBJECT_FILES_FOR_TESTS")
+      get_target_property(dep_skip ${dep} "SKIPPED_LIST_FOR_TESTS")
     else()
       # Target full dependency hasn't been checked.  Recursively check its DEPS.
       set(dep_obj "${dep}")
@@ -62,6 +60,7 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         get_target_property(is_skipped ${dep} "SKIPPED")
         if(is_skipped)
           list(APPEND dep_skip ${dep})
+          list(REMOVE_ITEM dep_obj ${dep})
         endif()
         get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
         if(object_file_raw)
@@ -70,6 +69,7 @@ function(get_object_files_for_test result skipped_entrypoints_list)
       elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
         # Skip tests for externally implemented entrypoints.
         list(APPEND dep_skip ${dep})
+        list(REMOVE_ITEM dep_obj ${dep})
       endif()
 
       set_target_properties(${dep} PROPERTIES
@@ -78,9 +78,10 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         CHECK_OBJ_FOR_TESTS "YES"
       )
 
-      list(APPEND object_files ${dep_obj})
-      list(APPEND skipped_list ${dep_skip})
     endif()
+
+    list(APPEND object_files ${dep_obj})
+    list(APPEND skipped_list ${dep_skip})
 
   endforeach(dep)
 
