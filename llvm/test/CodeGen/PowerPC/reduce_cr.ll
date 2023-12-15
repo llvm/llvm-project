@@ -7,7 +7,7 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK-NEXT: - BB0[entry]: float = 1.0, int = {{.*}}
 ;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = {{.*}}
 ;CHECK-NEXT: - BB2[test1]: float = 1.6667, int = {{.*}}
-;CHECK-NEXT: - BB3[optional1]: float = 0.625, int = {{.*}}
+;CHECK-NEXT: - BB3[optional2]: float = 0.625, int = {{.*}}
 
 ;CHECK:      block-frequency-info: loop_test
 ;CHECK:      block-frequency-info: loop_test
@@ -19,7 +19,7 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = {{.*}}
 ;CHECK-NEXT: - BB2[for.check]: float = 2.1667, int = {{.*}}
 ;CHECK-NEXT: - BB3[test1]: float = 1.6667, int = {{.*}}
-;CHECK-NEXT: - BB4[optional1]: float = 0.625, int = {{.*}}
+;CHECK-NEXT: - BB4[optional2]: float = 0.625, int = {{.*}}
 
 
 define void @loop_test(ptr %tags, i32 %count) {

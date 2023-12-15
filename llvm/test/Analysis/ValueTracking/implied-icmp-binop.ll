@@ -7,11 +7,7 @@ define i1 @f_and(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_and(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[AND14:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    [[AND1115:%.*]] = and i1 [[CMP]], [[AND14]]
-; CHECK-NEXT:    ret i1 [[AND1115]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp ne i32 %x, 0
@@ -25,11 +21,7 @@ define i1 @f_or(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_or(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OR14:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    [[OR1115:%.*]] = or i1 [[CMP_NOT]], [[OR14]]
-; CHECK-NEXT:    ret i1 [[OR1115]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp.not = icmp eq i32 %x, 0
@@ -45,12 +37,7 @@ define i1 @f_add(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_add(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[YR:%.*]] = and i32 [[Y]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 8
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[YR]], [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[TMP0]], 16
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %yr = and i32 %y, 7
@@ -65,12 +52,7 @@ define i1 @f_add_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_add_nsw(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[YR:%.*]] = and i32 [[Y]], 2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], 5
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[YR]], [[X]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP0]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %yr = and i32 %y, 2147483647
@@ -85,11 +67,7 @@ define i1 @f_add_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_add_nuw(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp ugt i32 %x, 1
@@ -103,12 +81,8 @@ define i1 @f_sub_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_sub_nsw(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[YR:%.*]] = and i32 [[Y]], 2147483647
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 5
-; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 [[X]], [[YR]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP0]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
   %yr = and i32 %y, 2147483647
@@ -123,11 +97,7 @@ define i1 @f_sub_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @f_sub_nuw(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 5
-; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 6
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp ult i32 %x, 5
@@ -226,10 +196,7 @@ define i1 @pr69038(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @pr69038(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp ne i32 [[OR]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[TOBOOL]], [[TOBOOL1]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
   %tobool = icmp ne i32 %a, 0
   %or = or i32 %a, %b
