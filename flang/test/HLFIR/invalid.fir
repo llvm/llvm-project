@@ -614,6 +614,71 @@ func.func @bad_minloc11(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32, %arg
   %0 = hlfir.minloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
 }
 
+// -----
+func.func @bad_maxloc1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result must be scalar integer}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> f32
+}
+
+// -----
+func.func @bad_maxloc2(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxloc3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?xi32>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxloc4(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result rank must be one less than ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
+func.func @bad_maxloc5(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result must be scalar integer}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !fir.logical<4>
+}
+
+// -----
+func.func @bad_maxloc6(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.maxloc' op result must be an array}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_maxloc7(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.maxloc' op result must be of numerical expr type}}
+  %0 = hlfir.maxloc %arg0 : (!hlfir.expr<?xi32>) -> i32
+}
+
+// -----
+func.func @bad_maxloc8(%arg0: !hlfir.expr<?xi32>){
+  // expected-error@+1 {{'hlfir.maxloc' op result must have integer elements}}
+  %0 = hlfir.maxloc %arg0 : (!hlfir.expr<?xi32>) -> !hlfir.expr<?xf32>
+}
+
+// -----
+func.func @bad_maxloc9(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x!fir.char<1,?>>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxloc10(%arg0: !hlfir.expr<?x5x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?x!fir.char<1,?>>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<!fir.char<1,?>>
+}
+
+// -----
+func.func @bad_maxloc11(%arg0: !hlfir.expr<?x?x!fir.char<1,?>>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.maxloc' op result rank must be one less than ARRAY}}
+  %0 = hlfir.maxloc %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x?x!fir.char<1,?>>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
 
 
 // -----
