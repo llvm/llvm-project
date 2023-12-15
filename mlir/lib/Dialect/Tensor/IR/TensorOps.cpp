@@ -629,8 +629,9 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
     if (!getType().isDynamicDim(i)) {
       reifiedReturnShapes[0][i] = builder.getIndexAttr(getType().getDimSize(i));
     } else if (!inferredResultType.isDynamicDim(i)) {
-      reifiedReturnShapes[0][i] =
-          builder.getIndexAttr(inferredResultType.getDimSize(i));
+      reifiedReturnShapes[0][i] = getValueOrCreateConstantIndexOp(
+          builder, getLoc(),
+          builder.getIndexAttr(inferredResultType.getDimSize(i)));
     } else {
       reifiedReturnShapes[0][i] =
           builder.create<tensor::DimOp>(init.getLoc(), init, i).getResult();
@@ -647,22 +648,14 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
       sizes.push_back(
           builder.createOrFold<tensor::DimOp>(input.getLoc(), input, dim));
     }
-    reifiedReturnShapes[0][dim] =
-        affine::makeComposedFoldedAffineApply(builder, getLoc(), sum, sizes);
+    reifiedReturnShapes[0][dim] = getValueOrCreateConstantIndexOp(
+        builder, getLoc(),
+        affine::makeComposedFoldedAffineApply(builder, getLoc(), sum, sizes));
   } else {
     // If the result shape is static along the concatenated dim, use the static
     // shape.
     reifiedReturnShapes[0][dim] =
         builder.getIndexAttr(getType().getDimSize(dim));
-  }
-
-  // ReifyRankedShapedTypeOpInterface requires that reifyResultShapes
-  // returns a Value for dynamic dimensions.
-  for (int64_t i = 0; i < rank; ++i) {
-    if (getType().isDynamicDim(i)) {
-      reifiedReturnShapes[0][i] = getValueOrCreateConstantIndexOp(
-          builder, getLoc(), reifiedReturnShapes[0][i]);
-    }
   }
   return success();
 }
