@@ -1603,17 +1603,10 @@ TSAN_INTERCEPTOR(int, __fxstat, int version, int fd, void *buf) {
 #endif
 
 TSAN_INTERCEPTOR(int, fstat, int fd, void *buf) {
-#if SANITIZER_GLIBC
-  SCOPED_TSAN_INTERCEPTOR(__fxstat, 0, fd, buf);
-  if (fd > 0)
-    FdAccess(thr, pc, fd);
-  return REAL(__fxstat)(0, fd, buf);
-#else
   SCOPED_TSAN_INTERCEPTOR(fstat, fd, buf);
   if (fd > 0)
     FdAccess(thr, pc, fd);
   return REAL(fstat)(fd, buf);
-#endif
 }
 
 #if SANITIZER_GLIBC
@@ -1630,10 +1623,10 @@ TSAN_INTERCEPTOR(int, __fxstat64, int version, int fd, void *buf) {
 
 #if SANITIZER_GLIBC
 TSAN_INTERCEPTOR(int, fstat64, int fd, void *buf) {
-  SCOPED_TSAN_INTERCEPTOR(__fxstat64, 0, fd, buf);
+  SCOPED_TSAN_INTERCEPTOR(fstat64, fd, buf);
   if (fd > 0)
     FdAccess(thr, pc, fd);
-  return REAL(__fxstat64)(0, fd, buf);
+  return REAL(fstat64)(fd, buf);
 }
 #define TSAN_MAYBE_INTERCEPT_FSTAT64 TSAN_INTERCEPT(fstat64)
 #else
