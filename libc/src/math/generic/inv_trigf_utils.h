@@ -38,6 +38,7 @@ extern const double ATAN_K[5];
 // x should be positive, normal finite value
 LIBC_INLINE double atan_eval(double x) {
   using FPB = fputil::FPBits<double>;
+  using FloatProp = fputil::FloatProperties<double>;
   // Added some small value to umin and umax mantissa to avoid possible rounding
   // errors.
   FPB::StorageType umin =
@@ -50,7 +51,7 @@ LIBC_INLINE double atan_eval(double x) {
 
   FPB bs(x);
   bool sign = bs.get_sign();
-  auto x_abs = bs.uintval() & FPB::EXP_MANT_MASK;
+  auto x_abs = FloatProp::abs(bs.uintval());
 
   if (x_abs <= umin) {
     double pe = LIBC_NAMESPACE::fputil::polyeval(

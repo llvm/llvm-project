@@ -200,7 +200,7 @@ double set_exceptional(double x) {
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
-  uint64_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint64_t x_abs = FloatProp::abs(x_u);
 
   // |x| < log2(1 + 2^-53)
   if (x_abs <= 0x3ca71547652b82fd) {

@@ -28,6 +28,36 @@ enum class FPType {
   X86_Binary80,
 };
 
+// Returns the 'FPType' associated with this 'FP' type.
+template <typename FP> LIBC_INLINE static constexpr FPType get_fp_type() {
+  if constexpr (cpp::is_same_v<FP, float> && __FLT_MANT_DIG__ == 24)
+    return FPType::IEEE754_Binary32;
+  else if constexpr (cpp::is_same_v<FP, double> && __DBL_MANT_DIG__ == 53)
+    return FPType::IEEE754_Binary64;
+  else if constexpr (cpp::is_same_v<FP, long double>) {
+    if constexpr (__LDBL_MANT_DIG__ == 53)
+      return FPType::IEEE754_Binary64;
+    else if constexpr (__LDBL_MANT_DIG__ == 64)
+      return FPType::X86_Binary80;
+    else if constexpr (__LDBL_MANT_DIG__ == 113)
+      return FPType::IEEE754_Binary128;
+  }
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
+  else if constexpr (cpp::is_same_v<FP, _Float16>)
+    return FPType::IEEE754_Binary16;
+#endif
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
+  else if constexpr (cpp::is_same_v<FP, _Float128>)
+    return FPType::IEEE754_Binary128;
+#endif
+#if defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
+  else if constexpr (cpp::is_same_v<FP, __float128>)
+    return FPType::IEEE754_Binary128;
+#endif
+  else
+    static_assert(cpp::always_false<FP>, "Unsupported type");
+}
+
 // For now 'FPEncoding', 'FPBaseProperties' and 'FPCommonProperties' are
 // implementation details.
 namespace internal {
@@ -89,6 +119,41 @@ private:
   using UP = internal::FPBaseProperties<fp_type>;
 
 public:
+  //---------------------------------------------------------------------------
+  // Physical layer
+  //
+  // At this level, we only describe the bit *ranges* not necessarily their
+  // meaning. A *floating point number* is composed of three parts : a `sign`,
+  // an `exponent` and a `significand`. By convention, they are also designated
+  // by a single letter : `s`, `e` and `m`. Note that `m` here stands for
+  // *mantissa* but its use is generally discouraged :
+  // https://en.wikipedia.org/wiki/Significand#Terminology
+  //
+  // For virtually all of the floating point number formats the bit ranges are
+  // in this exact order : `sign`, `exponent` and `significand`.
+  //
+  // e.g. Depiction of 'IEEE754 Float16'
+  //
+  // sign   exponent          significand
+  //    |  ┌───────┐  ┌─────────────────┐
+  //    0  0 1 1 0 0  0 1 0 0 0 0 0 0 0 0
+  //   15 14      10  9                 0
+  //
+  //---------------------------------------------------------------------------
+  // Types
+  //---------------------------------------------------------------------------
+  // An unsigned integer that is wide enough to contain all of the floating
+  // point bits.
+  using StorageType = typename UP::StorageType;
+
+  //---------------------------------------------------------------------------
+  // Properties
+  //---------------------------------------------------------------------------
+
+  // The number of bits in StorageType.
+  LIBC_INLINE_VAR static constexpr int STORAGE_LEN =
+      sizeof(StorageType) * CHAR_BIT;
+
   // The number of bits to represent sign. For documentation purpose, always 1.
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   using UP::EXP_LEN;   // The number of bits for the *exponent* part
@@ -96,22 +161,14 @@ public:
   using UP::TOTAL_LEN; // For convenience, the sum of `SIG_LEN`, `EXP_LEN`,
                        // and `SIGN_LEN`.
   static_assert(SIGN_LEN + EXP_LEN + SIG_LEN == TOTAL_LEN);
-
-  // An unsigned integer that is wide enough to contain all of the floating
-  // point bits.
-  using StorageType = typename UP::StorageType;
-
-  // The number of bits in StorageType.
-  LIBC_INLINE_VAR static constexpr int STORAGE_LEN =
-      sizeof(StorageType) * CHAR_BIT;
   static_assert(STORAGE_LEN >= TOTAL_LEN);
 
-  // The exponent bias. Always positive.
-  LIBC_INLINE_VAR static constexpr int32_t EXP_BIAS =
-      (1U << (EXP_LEN - 1U)) - 1U;
-  static_assert(EXP_BIAS > 0);
-
 private:
+  // Helper to set a single bit at 'position'.
+  LIBC_INLINE static constexpr StorageType bit_at(int position) {
+    return StorageType(1) << position;
+  }
+
   // The shift amount to get the *significand* part to the least significant
   // bit. Always `0` but kept for consistency.
   LIBC_INLINE_VAR static constexpr int SIG_MASK_SHIFT = 0;
@@ -120,17 +177,19 @@ private:
   // The shift amount to get the *sign* part to the least significant bit.
   LIBC_INLINE_VAR static constexpr int SIGN_MASK_SHIFT = SIG_LEN + EXP_LEN;
 
+public:
   // The bit pattern that keeps only the *significand* part.
   LIBC_INLINE_VAR static constexpr StorageType SIG_MASK =
       mask_trailing_ones<StorageType, SIG_LEN>() << SIG_MASK_SHIFT;
-
-public:
   // The bit pattern that keeps only the *exponent* part.
   LIBC_INLINE_VAR static constexpr StorageType EXP_MASK =
       mask_trailing_ones<StorageType, EXP_LEN>() << EXP_MASK_SHIFT;
   // The bit pattern that keeps only the *sign* part.
   LIBC_INLINE_VAR static constexpr StorageType SIGN_MASK =
       mask_trailing_ones<StorageType, SIGN_LEN>() << SIGN_MASK_SHIFT;
+  // The bit pattern that keeps only the *exponent + significand* part.
+  LIBC_INLINE_VAR static constexpr StorageType EXP_SIG_MASK =
+      mask_trailing_ones<StorageType, EXP_LEN + SIG_LEN>();
   // The bit pattern that keeps only the *sign + exponent + significand* part.
   LIBC_INLINE_VAR static constexpr StorageType FP_MASK =
       mask_trailing_ones<StorageType, TOTAL_LEN>();
@@ -138,11 +197,43 @@ public:
   static_assert((SIG_MASK & EXP_MASK & SIGN_MASK) == 0, "masks disjoint");
   static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
 
-private:
-  LIBC_INLINE static constexpr StorageType bit_at(int position) {
-    return StorageType(1) << position;
-  }
+  // The exponent bias. Always positive.
+  LIBC_INLINE_VAR static constexpr int32_t EXP_BIAS =
+      (1U << (EXP_LEN - 1U)) - 1U;
+  static_assert(EXP_BIAS > 0);
 
+  //---------------------------------------------------------------------------
+  // Semantic layer
+  //
+  // At this level, we define properties and methods of the floating point
+  // number and regardless of how it's encoded. In this layer, the signficand is
+  // always returned in its normal form and the exponent is always a signed
+  // integer.
+  //
+  // * Normal form : A significand is in a *normalized form* when the leading
+  // `1` is at the position of the most significant bit.
+  //
+  // e.g., Here is the `1.01` normalized significand stored in an `uint16_t`.
+  //    ┌──────────────────────────────┐
+  //     1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+  //    15                             0
+  //
+  // It is always possible to normalize a (non-zero) significand by decreasing
+  // its associated exponent. For instance, the value `0.000000000000001p0` can
+  // be rewritten `1p-15`.
+  //
+  // * Significant working format : By definition `StorageType` can store all of
+  // the bits for the floating point format (`sign` + `exponent` +
+  // `significand`). In the Semantic layer we also use the `StorageType` to
+  // manipulate the `significand`, this means that the number of bits for the
+  // fraction part is greater in the Semantic layer than in the underlying
+  // floating point format.
+  //
+  //
+  //---------------------------------------------------------------------------
+  // Properties
+  //---------------------------------------------------------------------------
+private:
   LIBC_INLINE_VAR static constexpr StorageType QNAN_MASK =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 2) // 0b1100...
@@ -152,7 +243,6 @@ private:
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
           : bit_at(SIG_LEN - 2);                      // 0b0100...
-
 public:
   // The number of bits after the decimal dot when the number is in normal form.
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN =
@@ -162,44 +252,28 @@ public:
       FRACTION_LEN + 1;
   LIBC_INLINE_VAR static constexpr StorageType FRACTION_MASK =
       mask_trailing_ones<StorageType, FRACTION_LEN>();
-  LIBC_INLINE_VAR static constexpr StorageType EXP_MANT_MASK =
-      EXP_MASK | SIG_MASK;
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
   // Else, it is a signalling NAN.
   static constexpr StorageType QUIET_NAN_MASK = QNAN_MASK;
-};
 
-//-----------------------------------------------------------------------------
-template <typename FP> LIBC_INLINE static constexpr FPType get_fp_type() {
-  if constexpr (cpp::is_same_v<FP, float> && __FLT_MANT_DIG__ == 24)
-    return FPType::IEEE754_Binary32;
-  else if constexpr (cpp::is_same_v<FP, double> && __DBL_MANT_DIG__ == 53)
-    return FPType::IEEE754_Binary64;
-  else if constexpr (cpp::is_same_v<FP, long double>) {
-    if constexpr (__LDBL_MANT_DIG__ == 53)
-      return FPType::IEEE754_Binary64;
-    else if constexpr (__LDBL_MANT_DIG__ == 64)
-      return FPType::X86_Binary80;
-    else if constexpr (__LDBL_MANT_DIG__ == 113)
-      return FPType::IEEE754_Binary128;
+  //---------------------------------------------------------------------------
+  // Observers
+  //---------------------------------------------------------------------------
+
+  LIBC_INLINE static constexpr bool sign(StorageType value) {
+    return value & SIGN_MASK;
   }
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
-  else if constexpr (cpp::is_same_v<FP, _Float16>)
-    return FPType::IEEE754_Binary16;
-#endif
-#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
-  else if constexpr (cpp::is_same_v<FP, _Float128>)
-    return FPType::IEEE754_Binary128;
-#endif
-#if defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
-  else if constexpr (cpp::is_same_v<FP, __float128>)
-    return FPType::IEEE754_Binary128;
-#endif
-  else
-    static_assert(cpp::always_false<FP>, "Unsupported type");
-}
+
+  //---------------------------------------------------------------------------
+  // Modifiers
+  //---------------------------------------------------------------------------
+
+  LIBC_INLINE static constexpr StorageType abs(StorageType value) {
+    return value & EXP_SIG_MASK;
+  }
+};
 
 template <typename FP>
 struct FloatProperties : public FPProperties<get_fp_type<FP>()> {};

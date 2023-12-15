@@ -19,9 +19,10 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
+  using FloatProp = typename fputil::FloatProperties<float>;
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FPBits_t::EXP_MANT_MASK;
+  uint32_t x_abs = FloatProp::abs(x_u);
 
   // |x| <= 2^-3
   if (LIBC_UNLIKELY(x_abs <= 0x3e80'0000U)) {

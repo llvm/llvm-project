@@ -33,7 +33,11 @@ template <typename T> struct FPBits : private FloatProperties<T> {
                 "FPBits instantiated with invalid type.");
   using typename FloatProperties<T>::StorageType;
   using FloatProperties<T>::TOTAL_LEN;
-  using FloatProperties<T>::EXP_MANT_MASK;
+
+private:
+  using FloatProperties<T>::EXP_SIG_MASK;
+
+public:
   using FloatProperties<T>::EXP_MASK;
   using FloatProperties<T>::EXP_BIAS;
   using FloatProperties<T>::EXP_LEN;
@@ -146,15 +150,15 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
-    return (bits & EXP_MANT_MASK) == EXP_MASK;
+    return (bits & EXP_SIG_MASK) == EXP_MASK;
   }
 
   LIBC_INLINE constexpr bool is_nan() const {
-    return (bits & EXP_MANT_MASK) > EXP_MASK;
+    return (bits & EXP_SIG_MASK) > EXP_MASK;
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_MANT_MASK) == (EXP_MASK | QUIET_NAN_MASK);
+    return (bits & EXP_SIG_MASK) == (EXP_MASK | QUIET_NAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
