@@ -763,9 +763,8 @@ public:
       return DeclDependentNonTemplateCXXMethodAbbrev;
     case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
       return DeclDependentSpecializationCXXMethodAbbrev;
-    default:
-      llvm_unreachable("Unknwon Template Kind!");
     }
+    llvm_unreachable("Unknwon Template Kind!");
   }
   unsigned getDeclTemplateTypeParmAbbrev() const {
     return DeclTemplateTypeParmAbbrev;
