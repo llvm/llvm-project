@@ -4243,9 +4243,8 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
-    if (var.hasSymbol()) {
+    if (var.hasSymbol())
       handleOpenMPSymbolProperties(*this, var);
-    }
   }
 
   /// Where applicable, save the exception state and halting and rounding
