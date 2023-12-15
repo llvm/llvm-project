@@ -778,12 +778,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                      UseOutlineAtomics))
       .clampScalar(0, s32, s64);
 
-  // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
-  // Don't outline them unless
-  // (1) high level <atomic> support approved:
-  //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
-  // (2) low level libgcc and compiler-rt support implemented by:
-  //   min/max outline atomics helpers
+  // Do not outline these atomics operations, as per comment in
+  // AArch64ISelLowering.cpp's shouldExpandAtomicRMWInIR().
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_MIN, G_ATOMICRMW_MAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
       .clampScalar(0, s32, s64)
