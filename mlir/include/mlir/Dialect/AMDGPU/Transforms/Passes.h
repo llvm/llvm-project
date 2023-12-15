@@ -21,6 +21,10 @@ class ConversionTarget;
 namespace amdgpu {
 
 #define GEN_PASS_DECL_AMDGPUEMULATEATOMICSPASS
+
+/// Create a pass to optimize shared memory reads and writes.
+std::unique_ptr<Pass> createOptimizeSharedMemoryPass();
+
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
 

@@ -30,4 +30,12 @@ def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
                         "Chipset that these operations will run on">];
 }
 
+def OptimizeSharedMemory : Pass<"amdgpu-optimize-shared-memory"> {
+  let summary = "Optimizes accesses to shared memory memrefs in order to reduce bank conflicts.";
+  let constructor = "mlir::amdgpu::createOptimizeSharedMemoryPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect", "vector::VectorDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_
