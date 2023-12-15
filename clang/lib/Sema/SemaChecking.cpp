@@ -3176,7 +3176,7 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
 
 bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
-    ArmStreamingType BuiltinType;
+    std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
 #define GET_SME_STREAMING_ATTRS
@@ -3185,7 +3185,7 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     if (BuiltinType)
-      checkArmStreamingBuiltin(*this, TheCall, FD, BuiltinType);
+      checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
   }
 
   // Range check SME intrinsics that take immediate values.
