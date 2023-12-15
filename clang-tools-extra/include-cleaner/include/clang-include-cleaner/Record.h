@@ -113,7 +113,7 @@ private:
   llvm::DenseSet<llvm::sys::fs::UniqueID> ShouldKeep;
 
   /// Owns the strings.
-  llvm::BumpPtrAllocator Arena;
+  std::shared_ptr<llvm::BumpPtrAllocator> Arena;
 
   // FIXME: add support for clang use_instead pragma
 };
