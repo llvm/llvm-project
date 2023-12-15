@@ -17,6 +17,7 @@
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -4515,8 +4516,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     return true;
   }
 
-  if (isMIMG(MI) && MI.memoperands_empty() && MI.mayLoadOrStore()) {
-    ErrInfo = "missing memory operand from MIMG instruction.";
+  if (isImage(MI) && MI.memoperands_empty() && MI.mayLoadOrStore()) {
+    ErrInfo = "missing memory operand from image instruction.";
     return false;
   }
 
@@ -4708,8 +4709,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  // Verify MIMG
-  if (isMIMG(MI.getOpcode()) && !MI.mayStore()) {
+  // Verify MIMG / VIMAGE / VSAMPLE
+  if (isImage(MI.getOpcode()) && !MI.mayStore()) {
     // Ensure that the return type used is large enough for all the options
     // being used TFE/LWE require an extra result register.
     const MachineOperand *DMask = getNamedOperand(MI, AMDGPU::OpName::dmask);
@@ -4973,12 +4974,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (isMIMG(MI)) {
+  if (isImage(MI)) {
     const MachineOperand *DimOp = getNamedOperand(MI, AMDGPU::OpName::dim);
     if (DimOp) {
       int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opcode,
                                                  AMDGPU::OpName::vaddr0);
-      int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srsrc);
+      int RSrcOpName =
+          isMIMG(MI) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
+      int RsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, RSrcOpName);
       const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Opcode);
       const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
           AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
@@ -4999,16 +5002,17 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         IsA16 = A16->getImm() != 0;
       }
 
-      bool IsNSA = SRsrcIdx - VAddr0Idx > 1;
+      bool IsNSA = RsrcIdx - VAddr0Idx > 1;
 
       unsigned AddrWords =
           AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, ST.hasG16());
 
       unsigned VAddrWords;
       if (IsNSA) {
-        VAddrWords = SRsrcIdx - VAddr0Idx;
-        if (ST.hasPartialNSAEncoding() && AddrWords > ST.getNSAMaxSize()) {
-          unsigned LastVAddrIdx = SRsrcIdx - 1;
+        VAddrWords = RsrcIdx - VAddr0Idx;
+        if (ST.hasPartialNSAEncoding() &&
+            AddrWords > ST.getNSAMaxSize(isVSAMPLE(MI))) {
+          unsigned LastVAddrIdx = RsrcIdx - 1;
           VAddrWords += getOpSize(MI, LastVAddrIdx) / 4 - 1;
         }
       } else {
@@ -6528,18 +6532,21 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize MIMG and MUBUF/MTBUF for shaders.
+  // Legalize MIMG/VIMAGE/VSAMPLE and MUBUF/MTBUF for shaders.
   //
   // Shaders only generate MUBUF/MTBUF instructions via intrinsics or via
   // scratch memory access. In both cases, the legalization never involves
   // conversion to the addr64 form.
-  if (isMIMG(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
-                     (isMUBUF(MI) || isMTBUF(MI)))) {
-    MachineOperand *SRsrc = getNamedOperand(MI, AMDGPU::OpName::srsrc);
+  if (isImage(MI) || (AMDGPU::isGraphics(MF.getFunction().getCallingConv()) &&
+                      (isMUBUF(MI) || isMTBUF(MI)))) {
+    int RSrcOpName = (isVIMAGE(MI) || isVSAMPLE(MI)) ? AMDGPU::OpName::rsrc
+                                                     : AMDGPU::OpName::srsrc;
+    MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
       CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
 
-    MachineOperand *SSamp = getNamedOperand(MI, AMDGPU::OpName::ssamp);
+    int SampOpName = isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
+    MachineOperand *SSamp = getNamedOperand(MI, SampOpName);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))
       CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SSamp}, MDT);
 
@@ -6593,7 +6600,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::soffset);
   if (SoffsetIdx != -1) {
     MachineOperand *Soffset = &MI.getOperand(SoffsetIdx);
-    if (Soffset->isReg() &&
+    if (Soffset->isReg() && Soffset->getReg().isVirtual() &&
         !RI.isSGPRClass(MRI.getRegClass(Soffset->getReg()))) {
       isSoffsetLegal = false;
     }
@@ -8552,7 +8559,16 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   }
 }
 
-unsigned SIInstrInfo::getMaxMUBUFImmOffset() { return (1 << 12) - 1; }
+bool SIInstrInfo::isLegalMUBUFImmOffset(unsigned Imm) const {
+  return Imm <= getMaxMUBUFImmOffset(ST);
+}
+
+unsigned SIInstrInfo::getMaxMUBUFImmOffset(const GCNSubtarget &ST) {
+  // GFX12 field is non-negative 24-bit signed byte offset.
+  const unsigned OffsetBits =
+      ST.getGeneration() >= AMDGPUSubtarget::GFX12 ? 23 : 12;
+  return (1 << OffsetBits) - 1;
+}
 
 void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (!ST.isWave32())
@@ -8589,7 +8605,7 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // offsets within the given alignment can be added to the resulting ImmOffset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
                                    uint32_t &ImmOffset, Align Alignment) const {
-  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset();
+  const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
   uint32_t Overflow = 0;
 
@@ -8615,11 +8631,17 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
     }
   }
 
-  // There is a hardware bug in SI and CI which prevents address clamping in
-  // MUBUF instructions from working correctly with SOffsets. The immediate
-  // offset is unaffected.
-  if (Overflow > 0 && ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
+  if (Overflow > 0) {
+    // There is a hardware bug in SI and CI which prevents address clamping in
+    // MUBUF instructions from working correctly with SOffsets. The immediate
+    // offset is unaffected.
+    if (ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+      return false;
+
+    // It is not possible to set immediate in SOffset field on some targets.
+    if (ST.hasRestrictedSOffset())
+      return false;
+  }
 
   ImmOffset = Imm;
   SOffset = Overflow;

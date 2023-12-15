@@ -1275,11 +1275,9 @@ public:
   static bool isKillTerminator(unsigned Opcode);
   const MCInstrDesc &getKillTerminatorFromPseudo(unsigned Opcode) const;
 
-  static bool isLegalMUBUFImmOffset(unsigned Imm) {
-    return isUInt<12>(Imm);
-  }
+  bool isLegalMUBUFImmOffset(unsigned Imm) const;
 
-  static unsigned getMaxMUBUFImmOffset();
+  static unsigned getMaxMUBUFImmOffset(const GCNSubtarget &ST);
 
   bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
                         Align Alignment = Align(4)) const;

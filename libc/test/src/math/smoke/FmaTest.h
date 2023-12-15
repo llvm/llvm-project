@@ -18,7 +18,7 @@ class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
   const T nan = T(FPBits::build_quiet_nan(1));
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());
@@ -39,9 +39,9 @@ public:
     // Test underflow rounding up.
     EXPECT_FP_EQ(func(T(0.5), T(FPBits(FPBits::MIN_SUBNORMAL)),
                       T(FPBits(FPBits::MIN_SUBNORMAL))),
-                 T(FPBits(UIntType(2))));
+                 T(FPBits(StorageType(2))));
     // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + UIntType(1)));
+    T v = T(FPBits(FPBits::MIN_NORMAL + StorageType(1)));
     EXPECT_FP_EQ(func(T(1) / T(FPBits::MIN_NORMAL << 1), v,
                       T(FPBits(FPBits::MIN_NORMAL))),
                  v);
