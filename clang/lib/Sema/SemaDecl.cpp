@@ -20287,7 +20287,7 @@ Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr,
 }
 
 Decl *Sema::ActOnTopLevelStmtDecl(Stmt *Statement) {
-  DeclContext* NamespaceContext = CurContext->getEnclosingNamespaceContext();
+  DeclContext *NamespaceContext = CurContext->getEnclosingNamespaceContext();
   auto *New = TopLevelStmtDecl::Create(Context, NamespaceContext, Statement);
   NamespaceContext->addDecl(New);
   return New;
