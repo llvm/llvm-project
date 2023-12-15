@@ -330,6 +330,19 @@ define i1 @pr70374(i32 %x, i32 %y, i32 %z) {
   ret i1 %res
 }
 
+define i1 @pr70374_commuted_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @pr70374_commuted_add(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i32 [[ADD]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %add = add nuw i32 %z, %y
+  %cmp1 = icmp ule i32 %add, %x
+  %cmp2 = icmp uge i32 %x, %y
+  %res = and i1 %cmp2, %cmp1
+  ret i1 %res
+}
+
 define i1 @test_uge_icmp_value(i32 %length.i, i32 %i, i32 %j) {
 ; CHECK-LABEL: @test_uge_icmp_value(
 ; CHECK-NEXT:    ret i1 true
