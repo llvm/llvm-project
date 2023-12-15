@@ -237,33 +237,14 @@ define amdgpu_kernel void @test_vop3_cmp_f32_sop_and(ptr addrspace(1) %arg) {
 }
 
 define amdgpu_kernel void @test_vop3_cmp_i32_sop_xor(ptr addrspace(1) %arg) {
-; GFX1032-LABEL: test_vop3_cmp_i32_sop_xor:
-; GFX1032:       ; %bb.0:
-; GFX1032-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GFX1032-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX1032-NEXT:    s_waitcnt vmcnt(0)
-; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0, v1
-; GFX1032-NEXT:    v_cmp_gt_i32_e64 s0, 1, v1
-; GFX1032-NEXT:    s_xor_b32 s0, vcc_lo, s0
-; GFX1032-NEXT:    v_cndmask_b32_e64 v1, 2, 1, s0
-; GFX1032-NEXT:    global_store_dword v0, v1, s[2:3]
-; GFX1032-NEXT:    s_endpgm
-;
-; GFX1064-LABEL: test_vop3_cmp_i32_sop_xor:
-; GFX1064:       ; %bb.0:
-; GFX1064-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GFX1064-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_load_dword v1, v0, s[2:3]
-; GFX1064-NEXT:    s_waitcnt vmcnt(0)
-; GFX1064-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v1
-; GFX1064-NEXT:    v_cmp_gt_i32_e64 s[0:1], 1, v1
-; GFX1064-NEXT:    s_xor_b64 s[0:1], vcc, s[0:1]
-; GFX1064-NEXT:    v_cndmask_b32_e64 v1, 2, 1, s[0:1]
-; GFX1064-NEXT:    global_store_dword v0, v1, s[2:3]
-; GFX1064-NEXT:    s_endpgm
+; GCN-LABEL: test_vop3_cmp_i32_sop_xor:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %lid
   %load = load i32, ptr addrspace(1) %gep, align 4

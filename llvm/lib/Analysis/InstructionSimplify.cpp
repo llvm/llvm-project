@@ -2563,6 +2563,22 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (Value *V = simplifyByDomEq(Instruction::Xor, Op0, Op1, Q, MaxRecurse))
     return V;
 
+  if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    bool InvalidTable[2][2] = {};
+    if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, false))
+      InvalidTable[0][!*Implied] = true;
+    if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, true))
+      InvalidTable[1][!*Implied] = true;
+    if (std::optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, false))
+      InvalidTable[!*Implied][0] = true;
+    if (std::optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, true))
+      InvalidTable[!*Implied][1] = true;
+
+    if (InvalidTable[0][0] && InvalidTable[1][1])
+      return ConstantInt::getTrue(Op0->getType());
+    // NOTE: There would be no benefit to handle other cases.
+  }
+
   return nullptr;
 }
 

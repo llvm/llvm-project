@@ -201,10 +201,7 @@ entry:
 define i1 @xor_icmp_true3(i32 %a) {
 ; CHECK-LABEL: @xor_icmp_true3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 6
-; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
@@ -216,10 +213,7 @@ entry:
 define i1 @xor_icmp_true4(i32 %a) {
 ; CHECK-LABEL: @xor_icmp_true4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 5
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 4
-; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP]], [[CMP1]]
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp slt i32 %a, 5
@@ -231,10 +225,7 @@ entry:
 define i1 @xor_icmp_true4_commuted(i32 %a) {
 ; CHECK-LABEL: @xor_icmp_true4_commuted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 5
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 4
-; CHECK-NEXT:    [[CMP3:%.*]] = xor i1 [[CMP1]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp slt i32 %a, 5
