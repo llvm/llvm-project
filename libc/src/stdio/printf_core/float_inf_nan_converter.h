@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-using MantissaInt = fputil::FPBits<long double>::StorageType;
+using StorageType = fputil::FPBits<long double>::StorageType;
 
 LIBC_INLINE int convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
@@ -29,7 +29,7 @@ LIBC_INLINE int convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
   const char a = (to_conv.conv_name & 32) | 'A';
 
   bool is_negative;
-  MantissaInt mantissa;
+  StorageType mantissa;
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);

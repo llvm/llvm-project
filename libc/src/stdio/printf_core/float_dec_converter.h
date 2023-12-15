@@ -31,7 +31,7 @@
 namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-using MantissaInt = fputil::FPBits<long double>::StorageType;
+using StorageType = fputil::FPBits<long double>::StorageType;
 using DecimalString = IntegerToString<intmax_t>;
 using ExponentString =
     IntegerToString<intmax_t, radix::Dec::WithWidth<2>::WithSign>;
@@ -594,7 +594,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
-  MantissaInt mantissa = float_bits.get_explicit_mantissa();
+  StorageType mantissa = float_bits.get_explicit_mantissa();
 
   const char a = (to_conv.conv_name & 32) | 'A';
 
@@ -757,7 +757,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
-  MantissaInt mantissa = float_bits.get_explicit_mantissa();
+  StorageType mantissa = float_bits.get_explicit_mantissa();
 
   // From the standard: Let P (init_precision) equal the precision if nonzero, 6
   // if the precision is omitted, or 1 if the precision is zero.

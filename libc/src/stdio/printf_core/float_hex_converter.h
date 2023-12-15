@@ -28,7 +28,7 @@ namespace printf_core {
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
   using LDBits = fputil::FPBits<long double>;
-  using MantissaInt = LDBits::StorageType;
+  using StorageType = LDBits::StorageType;
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the name of the conversion. This converts any
   // conversion name into the letter 'a' with the appropriate case.
@@ -36,7 +36,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
   bool is_negative;
   int exponent;
-  MantissaInt mantissa;
+  StorageType mantissa;
   bool is_inf_or_nan;
   uint32_t fraction_bits;
   if (to_conv.length_modifier == LengthModifier::L) {
@@ -100,9 +100,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     const size_t shift_amount =
         (mant_len - intended_digits) * BITS_IN_HEX_DIGIT;
 
-    const MantissaInt truncated_bits =
-        mantissa & ((MantissaInt(1) << shift_amount) - 1);
-    const MantissaInt halfway_const = MantissaInt(1) << (shift_amount - 1);
+    const StorageType truncated_bits =
+        mantissa & ((StorageType(1) << shift_amount) - 1);
+    const StorageType halfway_const = StorageType(1) << (shift_amount - 1);
 
     mantissa >>= shift_amount;
 
@@ -128,7 +128,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
     // If the rounding caused an overflow, shift the mantissa and adjust the
     // exponent to match.
-    if (mantissa >= (MantissaInt(1) << (intended_digits * BITS_IN_HEX_DIGIT))) {
+    if (mantissa >= (StorageType(1) << (intended_digits * BITS_IN_HEX_DIGIT))) {
       mantissa >>= BITS_IN_HEX_DIGIT;
       exponent += BITS_IN_HEX_DIGIT;
     }
