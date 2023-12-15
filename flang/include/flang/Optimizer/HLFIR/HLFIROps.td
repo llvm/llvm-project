@@ -483,6 +483,32 @@ def hlfir_MinlocOp : hlfir_Op<"minloc", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlfir_MaxlocOp : hlfir_Op<"maxloc", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "MAXLOC transformational intrinsic";
+  let description = [{
+    Maxlocs of an array.
+  }];
+
+  let arguments = (ins
+    AnyFortranArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    Optional<Type<AnyLogicalLike.predicate>>:$back,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? (`back` $back^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {

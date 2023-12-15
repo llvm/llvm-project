@@ -105,6 +105,7 @@ protected:
             mlir::Type stmtResultType) override;
 };
 using HlfirMinlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MinlocOp>;
+using HlfirMaxlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MaxlocOp>;
 
 template <typename OP>
 class HlfirProductIntrinsic : public HlfirTransformationalIntrinsic {
@@ -427,6 +428,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
                                                    stmtResultType);
   if (name == "minloc")
     return HlfirMinlocLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "maxloc")
+    return HlfirMaxlocLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
