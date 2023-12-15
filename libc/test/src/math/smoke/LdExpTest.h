@@ -23,7 +23,6 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
   using StorageType = typename FPBits::StorageType;
-  static constexpr StorageType FRACTION_LEN = FPBits::FRACTION_LEN;
   // A normalized mantissa to be used with tests.
   static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x1234;
 
@@ -69,7 +68,7 @@ public:
   void testUnderflowToZeroOnNormal(LdExpFunc func) {
     // In this test, we pass a normal nubmer to func and expect zero
     // to be returned due to underflow.
-    int32_t base_exponent = FPBits::EXP_BIAS + int32_t(FRACTION_LEN);
+    int32_t base_exponent = FPBits::EXP_BIAS + FPBits::FRACTION_LEN;
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
@@ -82,7 +81,7 @@ public:
   void testUnderflowToZeroOnSubnormal(LdExpFunc func) {
     // In this test, we pass a normal nubmer to func and expect zero
     // to be returned due to underflow.
-    int32_t base_exponent = FPBits::EXP_BIAS + int32_t(FRACTION_LEN);
+    int32_t base_exponent = FPBits::EXP_BIAS + FPBits::FRACTION_LEN;
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
@@ -100,7 +99,7 @@ public:
         // Subnormal numbers
         NormalFloat(-FPBits::EXP_BIAS, MANTISSA, 0),
         NormalFloat(-FPBits::EXP_BIAS, MANTISSA, 1)};
-    for (int32_t exp = 0; exp <= static_cast<int32_t>(FRACTION_LEN); ++exp) {
+    for (int32_t exp = 0; exp <= FPBits::FRACTION_LEN; ++exp) {
       for (T x : val_array) {
         // We compare the result of ldexp with the result
         // of the native multiplication/division instruction.
@@ -134,7 +133,7 @@ public:
     ASSERT_EQ(result_bits.get_biased_exponent(), uint16_t(0));
     // But if the exp is so less that normalization leads to zero, then
     // the result should be zero.
-    result = func(x, -FPBits::MAX_EXPONENT - int(FRACTION_LEN) - 5);
+    result = func(x, -FPBits::MAX_EXPONENT - FPBits::FRACTION_LEN - 5);
     ASSERT_TRUE(FPBits(result).is_zero());
 
     // Start with a subnormal number but pass a very high number for exponent.
