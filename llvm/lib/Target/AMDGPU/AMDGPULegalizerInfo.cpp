@@ -633,6 +633,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
   const LLT BufferFatPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_FAT_POINTER);
   const LLT RsrcPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_RESOURCE);
+  const LLT BufferStridedPtr =
+      GetAddrSpacePtr(AMDGPUAS::BUFFER_STRIDED_POINTER);
 
   const LLT CodePtr = FlatPtr;
 
@@ -1113,7 +1115,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .unsupportedFor({BufferFatPtr, RsrcPtr})
+      .unsupportedFor({BufferFatPtr, BufferStridedPtr, RsrcPtr})
       .legalIf(all(isPointer(0), sameSize(0, 1)))
       .scalarize(0)
       .scalarSameSizeAs(1, 0);
@@ -1403,7 +1405,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // The custom pointers (fat pointers, buffer resources) don't work with load
     // and store at this level. Fat pointers should have been lowered to
     // intrinsics before the translation to MIR.
-    Actions.unsupportedIf(typeInSet(1, {BufferFatPtr, RsrcPtr}));
+    Actions.unsupportedIf(
+        typeInSet(1, {BufferFatPtr, BufferStridedPtr, RsrcPtr}));
 
     // Address space 8 pointers are handled by a 4xs32 load, bitcast, and
     // ptrtoint. This is needed to account for the fact that we can't have i128
