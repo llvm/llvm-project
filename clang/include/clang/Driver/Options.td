@@ -1010,6 +1010,30 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
+def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">;
+
+def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are disabled.">;
+
+def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is enabled for complex arithmetic operations.">;
+
+def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+
+def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
+  Visibility<[CC1Option]>,
+  Values<"full,limited,fortran">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran"]>,
+  MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
+
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -1818,6 +1842,9 @@ def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Gr
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
   MetaVarName<"<arg>">, MarshallingInfoStringVector<LangOpts<"CommentOpts.BlockCommandNames">>;
+defm define_target_os_macros : OptInCC1FFlag<"define-target-os-macros",
+  "Enable", "Disable", " predefined target OS macros",
+  [ClangOption, CC1Option]>;
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
@@ -2869,9 +2896,11 @@ defm asm_blocks : BoolFOption<"asm-blocks",
   LangOpts<"AsmBlocks">, Default<fms_extensions.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
   NegFlag<SetFalse>>;
-def fms_volatile : Flag<["-"], "fms-volatile">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"MSVolatile">>;
+defm ms_volatile : BoolFOption<"ms-volatile",
+  LangOpts<"MSVolatile">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Volatile loads and stores have acquire and release semantics">,
+  NegFlag<SetFalse>>;
 def fmsc_version : Joined<["-"], "fmsc-version=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))">;
@@ -6351,6 +6380,12 @@ def J : JoinedOrSeparate<["-"], "J">,
   Group<gfortran_Group>,
   Alias<module_dir>;
 
+let Visibility = [FlangOption] in {
+def no_fortran_main : Flag<["-"], "fno-fortran-main">,
+  Visibility<[FlangOption]>, Group<f_Group>,
+  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
+} // let Visibility = [ FlangOption ]
+
 //===----------------------------------------------------------------------===//
 // FC1 Options
 //===----------------------------------------------------------------------===//
@@ -8184,7 +8219,7 @@ def _SLASH_winsysroot : CLJoinedOrSeparate<"winsysroot">,
   HelpText<"Same as \"/diasdkdir <dir>/DIA SDK\" /vctoolsdir <dir>/VC/Tools/MSVC/<vctoolsversion> \"/winsdkdir <dir>/Windows Kits/10\"">,
   MetaVarName<"<dir>">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
-  Group<_SLASH_volatile_Group>, Flags<[NoXarchOption]>, Visibility<[CLOption]>,
+  Visibility<[CLOption]>, Alias<fno_ms_volatile>,
   HelpText<"Volatile loads and stores have standard semantics">;
 def _SLASH_vmb : CLFlag<"vmb">,
   HelpText<"Use a best-case representation method for member pointers">;
@@ -8199,7 +8234,7 @@ def _SLASH_vmv : CLFlag<"vmv">,
   HelpText<"Set the default most-general representation to "
            "virtual inheritance">;
 def _SLASH_volatile_ms  : Option<["/", "-"], "volatile:ms", KIND_FLAG>,
-  Group<_SLASH_volatile_Group>, Flags<[NoXarchOption]>, Visibility<[CLOption]>,
+  Visibility<[CLOption]>, Alias<fms_volatile>,
   HelpText<"Volatile loads and stores have acquire and release semantics">;
 def _SLASH_clang : CLJoined<"clang:">,
   HelpText<"Pass <arg> to the clang driver">, MetaVarName<"<arg>">;

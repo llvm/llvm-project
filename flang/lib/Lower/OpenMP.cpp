@@ -1794,8 +1794,8 @@ bool ClauseProcessor::processMap(
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-              Fortran::parser::OmpObject, mlir::omp::DataBoundsType,
-              mlir::omp::DataBoundsOp>(
+              Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
+              mlir::omp::DataBoundsType>(
               converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
               clauseLocation, asFortran, bounds, treatIndexAsSection);
 
@@ -2117,12 +2117,8 @@ static void createBodyOfOp(
     for (const Fortran::semantics::Symbol *arg : args)
       loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-    llvm::SmallVector<mlir::Type> tiv;
-    llvm::SmallVector<mlir::Location> locs;
-    for (int i = 0; i < (int)args.size(); i++) {
-      tiv.push_back(loopVarType);
-      locs.push_back(loc);
-    }
+    llvm::SmallVector<mlir::Type> tiv(args.size(), loopVarType);
+    llvm::SmallVector<mlir::Location> locs(args.size(), loc);
     firOpBuilder.createBlock(&op.getRegion(), {}, tiv, locs);
     int argIndex = 0;
     // The argument is not currently in memory, so make a temporary for the
@@ -2150,13 +2146,7 @@ static void createBodyOfOp(
         firOpBuilder, eval.getNestedEvaluations());
 
   // Insert the terminator.
-  if constexpr (std::is_same_v<Op, mlir::omp::WsLoopOp> ||
-                std::is_same_v<Op, mlir::omp::SimdLoopOp>) {
-    mlir::ValueRange results;
-    firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
-  } else {
-    firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
-  }
+  Fortran::lower::genOpenMPTerminator(firOpBuilder, op.getOperation(), loc);
   // Reset the insert point to before the terminator.
   resetBeforeTerminator(firOpBuilder, storeOp, block);
 
@@ -3233,7 +3223,6 @@ static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
       eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
@@ -3251,10 +3240,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
               .t);
   // Currently only private/firstprivate clause is handled, and
   // all privatization is done within `omp.section` operations.
-  mlir::omp::SectionOp sectionOp =
-      firOpBuilder.create<mlir::omp::SectionOp>(currentLocation);
-  createBodyOfOp<mlir::omp::SectionOp>(sectionOp, converter, currentLocation,
-                                       eval, &sectionsClauseList);
+  genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
+                                      /*outerCombined=*/false,
+                                      &sectionsClauseList);
 }
 
 static void

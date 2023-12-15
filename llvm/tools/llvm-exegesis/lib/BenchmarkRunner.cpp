@@ -13,6 +13,7 @@
 #include "BenchmarkRunner.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
+#include "MmapUtils.h"
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -44,7 +46,7 @@
 #define GLIBC_INITS_RSEQ
 #endif
 #endif
-#endif
+#endif // __linux__
 
 namespace llvm {
 namespace exegesis {
@@ -140,17 +142,16 @@ private:
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {
-        std::string Msg = "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
         // See "Exit Status for Commands":
         // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
         constexpr const int kSigOffset = 128;
-        if (const char *const SigName = strsignal(CRC.RetCode - kSigOffset)) {
-          Msg += ": ";
-          Msg += SigName;
-        }
-#endif
-        return make_error<SnippetCrash>(std::move(Msg));
+        return make_error<SnippetSignal>(CRC.RetCode - kSigOffset);
+#else
+        // The exit code of the process on windows is not meaningful as a
+        // signal, so simply pass in -1 as the signal into the error.
+        return make_error<SnippetSignal>(-1);
+#endif // LLVM_ON_UNIX
       }
     }
 
@@ -359,7 +360,7 @@ private:
         return Error::success();
       }
       // The child exited, but not successfully
-      return make_error<SnippetCrash>(
+      return make_error<Failure>(
           "Child benchmarking process exited with non-zero exit code: " +
           childProcessExitCodeToString(ChildExitCode));
     }
@@ -372,9 +373,11 @@ private:
                                  Twine(strerror(errno)));
     }
 
-    return make_error<SnippetCrash>(
-        "The benchmarking subprocess sent unexpected signal: " +
-        Twine(strsignal(ChildSignalInfo.si_signo)));
+    if (ChildSignalInfo.si_signo == SIGSEGV)
+      return make_error<SnippetSegmentationFault>(
+          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+
+    return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
   }
 
   void disableCoreDumps() const {
@@ -565,7 +568,7 @@ BenchmarkRunner::createFunctionExecutor(
   llvm_unreachable("ExecutionMode is outside expected range");
 }
 
-Expected<Benchmark> BenchmarkRunner::runConfiguration(
+std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     RunnableConfiguration &&RC,
     const std::optional<StringRef> &DumpFile) const {
   Benchmark &InstrBenchmark = RC.InstrBenchmark;
@@ -576,8 +579,7 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
     auto ObjectFilePath =
         writeObjectFile(ObjectFile.getBinary()->getData(), *DumpFile);
     if (Error E = ObjectFilePath.takeError()) {
-      InstrBenchmark.Error = toString(std::move(E));
-      return std::move(InstrBenchmark);
+      return {std::move(E), std::move(InstrBenchmark)};
     }
     outs() << "Check generated assembly with: /usr/bin/objdump -d "
            << *ObjectFilePath << "\n";
@@ -585,20 +587,17 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
 
   if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure) {
     InstrBenchmark.Error = "actual measurements skipped.";
-    return std::move(InstrBenchmark);
+    return {Error::success(), std::move(InstrBenchmark)};
   }
 
   Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>> Executor =
       createFunctionExecutor(std::move(ObjectFile), RC.InstrBenchmark.Key);
   if (!Executor)
-    return Executor.takeError();
+    return {Executor.takeError(), std::move(InstrBenchmark)};
   auto NewMeasurements = runMeasurements(**Executor);
 
   if (Error E = NewMeasurements.takeError()) {
-    if (!E.isA<SnippetCrash>())
-      return std::move(E);
-    InstrBenchmark.Error = toString(std::move(E));
-    return std::move(InstrBenchmark);
+    return {std::move(E), std::move(InstrBenchmark)};
   }
   assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
   for (BenchmarkMeasure &BM : *NewMeasurements) {
@@ -611,7 +610,7 @@ Expected<Benchmark> BenchmarkRunner::runConfiguration(
   }
   InstrBenchmark.Measurements = std::move(*NewMeasurements);
 
-  return std::move(InstrBenchmark);
+  return {Error::success(), std::move(InstrBenchmark)};
 }
 
 Expected<std::string>

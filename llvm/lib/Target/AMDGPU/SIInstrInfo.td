@@ -887,7 +887,11 @@ def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
 //===----------------------------------------------------------------------===//
 
 def extract_cpol : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() & AMDGPU::CPol::ALL, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::ALL
+                               : AMDGPU::CPol::ALL_pregfx12),
+      SDLoc(N), MVT::i8);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
@@ -918,6 +922,13 @@ def InterpSlot : CustomOperand<i32>;
 def InterpAttr : CustomOperand<i32>;
 
 def InterpAttrChan : ImmOperand<i32>;
+
+def SplitBarrier : ImmOperand<i32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
+  let DecoderMethod = "decodeSplitBarrier";
+  let PrintMethod = "printOperand";
+}
 
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
@@ -2898,14 +2909,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-  let Fields = ["Opcode", "OpX", "OpY"];
+  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-  let Key = ["OpX", "OpY"];
+  let Key = ["OpX", "OpY", "SubTgt"];
 }
 
 include "SIInstructions.td"

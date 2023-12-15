@@ -2127,10 +2127,10 @@ Instruction *InstCombinerImpl::foldBinOpOfDisplacedShifts(BinaryOperator &I) {
   Constant *ShiftedC1, *ShiftedC2, *AddC;
   Type *Ty = I.getType();
   unsigned BitWidth = Ty->getScalarSizeInBits();
-  if (!match(&I,
-             m_c_BinOp(m_Shift(m_ImmConstant(ShiftedC1), m_Value(ShAmt)),
-                       m_Shift(m_ImmConstant(ShiftedC2),
-                               m_Add(m_Deferred(ShAmt), m_ImmConstant(AddC))))))
+  if (!match(&I, m_c_BinOp(m_Shift(m_ImmConstant(ShiftedC1), m_Value(ShAmt)),
+                           m_Shift(m_ImmConstant(ShiftedC2),
+                                   m_AddLike(m_Deferred(ShAmt),
+                                             m_ImmConstant(AddC))))))
     return nullptr;
 
   // Make sure the add constant is a valid shift amount.
@@ -4278,6 +4278,12 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 
     // ~(~X >>s Y) --> (X >>s Y)
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
+      return BinaryOperator::CreateAShr(X, Y);
+
+    // Treat lshr with non-negative operand as ashr.
+    // ~(~X >>u Y) --> (X >>s Y) iff X is known negative
+    if (match(NotVal, m_LShr(m_Not(m_Value(X)), m_Value(Y))) &&
+        isKnownNegative(X, SQ.getWithInstruction(NotVal)))
       return BinaryOperator::CreateAShr(X, Y);
 
     // Bit-hack form of a signbit test for iN type:

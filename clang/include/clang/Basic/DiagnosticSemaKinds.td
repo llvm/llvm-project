@@ -1669,6 +1669,8 @@ def err_qualified_friend_def : Error<
   "friend function definition cannot be qualified with '%0'">;
 def err_friend_def_in_local_class : Error<
   "friend function cannot be defined in a local class">;
+def err_friend_specialization_def : Error<
+  "friend function specialization cannot be defined">;
 def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
@@ -2884,6 +2886,8 @@ def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
   InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
+def err_ms_constexpr_cannot_be_applied : Error<
+  "attribute 'msvc::constexpr' cannot be applied to the %select{constexpr|consteval|virtual}0 function %1">;
 
 // C++20 function try blocks in constexpr
 def ext_constexpr_function_try_block_cxx20 : ExtWarn<
@@ -8725,7 +8729,7 @@ def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
-  "memory order argument to atomic operation is invalid">,
+  "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
 def err_atomic_op_has_invalid_synch_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
@@ -11998,7 +12002,7 @@ def warn_tcb_enforcement_violation : Warning<
 
 // RISC-V builtin required extension warning
 def err_riscv_builtin_requires_extension : Error<
-  "builtin requires%select{| at least one of the following extensions to be enabled}0: %1">;
+  "builtin requires%select{| at least one of the following extensions}0: %1">;
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 def err_riscv_type_requires_extension : Error<

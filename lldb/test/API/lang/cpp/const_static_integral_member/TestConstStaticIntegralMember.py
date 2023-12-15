@@ -104,7 +104,7 @@ class TestCase(TestBase):
 
     # dsymutil strips the debug info for classes that only have const static
     # data members without locations.
-    @expectedFailureAll(debug_info=["dsym"])
+    @expectedFailureAll(debug_info=["dsym"], dwarf_version=["<", "5"])
     def test_class_with_only_const_static(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -120,6 +120,9 @@ class TestCase(TestBase):
         self.assertEqual(varobj.type.name, expect_type)
         self.assertEqual(varobj.value, expect_val)
 
+    @expectedFailureAll(dwarf_version=["<", "5"])
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
     def test_inline_static_members(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -167,6 +170,9 @@ class TestCase(TestBase):
             "ClassWithEnumAlias::enum_alias_alias", result_value="scoped_enum_case1"
         )
 
+    @expectedFailureAll(dwarf_version=["<", "5"])
+    # On linux this passes due to the manual index
+    @expectedFailureDarwin(debug_info=no_match(["dsym"]))
     def test_shadowed_static_inline_members(self):
         """Tests that the expression evaluator and SBAPI can both
         correctly determine the requested inline static variable

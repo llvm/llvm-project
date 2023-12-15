@@ -42,7 +42,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <vector>
 
 using namespace llvm;
@@ -413,7 +412,8 @@ void ProcessSwitchInst(SwitchInst *SI,
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =
         ConstantRange::fromKnownBits(Known, /*IsSigned=*/false);
-    const ConstantRange LVIRange = LVI->getConstantRange(Val, SI);
+    const ConstantRange LVIRange =
+        LVI->getConstantRange(Val, SI, /*UndefAllowed*/ false);
     ConstantRange ValRange = KnownBitsRange.intersectWith(LVIRange);
     // We delegate removal of unreachable non-default cases to other passes. In
     // the unlikely event that some of them survived, we just conservatively

@@ -1035,7 +1035,7 @@ def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
   "%select{an attribute specifier sequence|%0}1 in this position "
-  "is a C++23 extension">, InGroup<CXX23>;
+  "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
   InGroup<CXX23>;

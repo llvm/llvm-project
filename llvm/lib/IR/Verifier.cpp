@@ -958,7 +958,7 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
 void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   // There used to be various other llvm.dbg.* nodes, but we don't support
   // upgrading them and we want to reserve the namespace for future uses.
-  if (NMD.getName().startswith("llvm.dbg."))
+  if (NMD.getName().starts_with("llvm.dbg."))
     CheckDI(NMD.getName() == "llvm.dbg.cu",
             "unrecognized named metadata node in the llvm.dbg namespace", &NMD);
   for (const MDNode *MD : NMD.operands()) {
@@ -2229,13 +2229,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   // Check EVEX512 feature.
-  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features")) {
-    Triple T(M.getTargetTriple());
-    if (T.isX86()) {
-      StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
-      Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
-            "512-bit vector arguments require 'evex512' for AVX512", V);
-    }
+  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features") &&
+      TT.isX86()) {
+    StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
+    Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
+          "512-bit vector arguments require 'evex512' for AVX512", V);
   }
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
@@ -5374,7 +5372,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
           "rw argument to llvm.prefetch must be 0-1", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
-          "locality argument to llvm.prefetch must be 0-4", Call);
+          "locality argument to llvm.prefetch must be 0-3", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
           "cache type argument to llvm.prefetch must be 0-1", Call);
     break;

@@ -1,7 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-17,cxx11-14,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-17,cxx11-14,since-cxx14,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-17,since-cxx14,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 __extension__ typedef __SIZE_TYPE__ size_t;
 
@@ -14,11 +17,13 @@ namespace std {
 }
 
 #if __cplusplus >= 201103L
-namespace dr1305 { // dr1305: yes
-struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
+namespace dr1305 { // dr1305: 3.0
+struct Incomplete; // #dr1305-Incomplete
 struct Complete {};
 
-int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'Incomplete'}}
+int incomplete = alignof(Incomplete(&)[]);
+// since-cxx11-error@-1 {{invalid application of 'alignof' to an incomplete type 'Incomplete'}}
+//   since-cxx11-note@#dr1305-Incomplete {{forward declaration of 'dr1305::Incomplete'}}
 int complete = alignof(Complete(&)[]);
 }
 #endif
@@ -36,9 +41,11 @@ void caller() {
 } // namespace dr1307
 
 namespace dr1310 { // dr1310: 5
-  struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
+  struct S {} * sp = new S::S;
+  // expected-error@-1 {{qualified reference to 'S' is a constructor name rather than a type in this context}}
   void f() {
-    S::S(a); // expected-error {{qualified reference to 'S' is a constructor name}}
+    S::S(a);
+    // expected-error@-1 {{qualified reference to 'S' is a constructor name rather than a type in this context}}
   }
   struct T { int n; typedef int U; typedef T V; };
   int k = T().T::T::n;
@@ -64,39 +71,67 @@ namespace dr1310 { // dr1310: 5
   template<typename T> struct W : WBase<T> { typedef int X; int n; };
 
   void w_test() {
-    W<int>::W w1a; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W w1a;
+    // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a type in this context}}
     W<int>::W::X w1ax;
-    W<int>::W<int> w1b; // expected-error {{qualified reference to 'W' is a constructor name}}
+    W<int>::W<int> w1b;
+    // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a template name in this context}}
     W<int>::W<int>::X w1bx;
-    typename W<int>::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
-    typename W<int>::W::X w2ax; // expected-error 0-1{{outside of a template}}
-    typename W<int>::W<int> w2b; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
-    typename W<int>::W<int>::X w2bx; // expected-error 0-1{{outside of a template}}
-    W<int>::template W<int> w3; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
-    W<int>::template W<int>::X w3x; // expected-error 0-1{{outside of a template}}
-    typename W<int>::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-2{{outside of a template}}
-    typename W<int>::template W<int>::X w4x; // expected-error 0-2{{outside of a template}}
+    typename W<int>::W w2a;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
+    // cxx98-error@-2 {{'typename' occurs outside of a template}}
+    typename W<int>::W::X w2ax;
+    // cxx98-error@-1 {{'typename' occurs outside of a template}}
+    typename W<int>::W<int> w2b;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'typename' keyword}}
+    // cxx98-error@-2 {{'typename' occurs outside of a template}}
+    typename W<int>::W<int>::X w2bx;
+    // cxx98-error@-1 {{'typename' occurs outside of a template}}
+    W<int>::template W<int> w3;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
+    // cxx98-error@-2 {{'template' keyword outside of a template}}
+    W<int>::template W<int>::X w3x;
+    // cxx98-error@-1 {{'template' keyword outside of a template}}
+    typename W<int>::template W<int> w4;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
+    // cxx98-error@-2 {{'template' keyword outside of a template}}
+    // cxx98-error@-3 {{'typename' occurs outside of a template}}
+    typename W<int>::template W<int>::X w4x;
+    // cxx98-error@-1 {{'template' keyword outside of a template}}
+    // cxx98-error@-2 {{'typename' occurs outside of a template}}
 
-    TT<W<int>::W> tt1; // expected-error {{qualified reference to 'W' is a constructor name}}
-    TTy<W<int>::W> tt1a; // expected-error {{qualified reference to 'W' is a constructor name}}
-    TT<W<int>::template W> tt2; // expected-error {{qualified reference to 'W' is a constructor name}} expected-error 0-1{{outside of a template}}
+    TT<W<int>::W> tt1;
+    // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a type in this context}}
+    TTy<W<int>::W> tt1a;
+    // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a type in this context}}
+    TT<W<int>::template W> tt2;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
+    // cxx98-error@-2 {{'template' keyword outside of a template}}
     TT<W<int>::WBase> tt3;
     TTy<W<int>::WBase> tt3a;
-    TT<W<int>::template WBase> tt4; // expected-error 0-1{{outside of a template}}
+    TT<W<int>::template WBase> tt4;
+    // cxx98-error@-1 {{'template' keyword outside of a template}}
 
     W<int> w;
     (void)w.W::W::n;
     (void)w.W<int>::W::n;
     (void)w.W<int>::W<int>::n;
-    (void)w.W<int>::template W<int>::n; // expected-error 0-1{{outside of a template}}
+    (void)w.W<int>::template W<int>::n;
+    // cxx98-error@-1 {{'template' keyword outside of a template}}
   }
 
   template<typename W>
   void wt_test() {
-    typename W::W w2a; // expected-error {{qualified reference to 'W' is a constructor name}}
-    typename W::template W<int> w4; // expected-error {{qualified reference to 'W' is a constructor name}}
-    TTy<typename W::W> tt2; // expected-error {{qualified reference to 'W' is a constructor name}}
-    TT<W::template W> tt3; // expected-error {{qualified reference to 'W' is a constructor name}}
+    typename W::W w2a;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
+    //   cxx98-note@#dr1310-W-int {{in instantiation of function template specialization 'dr1310::wt_test<dr1310::W<int> >' requested here}}
+    //   since-cxx11-note@#dr1310-W-int {{in instantiation of function template specialization 'dr1310::wt_test<dr1310::W<int>>' requested here}}
+    typename W::template W<int> w4;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
+    TTy<typename W::W> tt2;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
+    TT<W::template W> tt3;
+    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
   }
   template<typename W>
   void wt_test_good() {
@@ -111,18 +146,19 @@ namespace dr1310 { // dr1310: 5
     (void)w.template W<int>::W::n;
     (void)w.template W<int>::template W<int>::n;
   }
-  template void wt_test<W<int> >(); // expected-note {{instantiation of}}
+  template void wt_test<W<int> >(); // #dr1310-W-int
   template void wt_test_good<W<int> >();
 }
 
 namespace dr1315 { // dr1315: partial
   template <int I, int J> struct A {};
-  template <int I> // expected-note {{non-deducible template parameter 'I'}}
-    struct A<I + 5, I * 2> {}; // expected-error {{contains a template parameter that cannot be deduced}}
+  template <int I> struct A<I + 5, I * 2> {};
+  // expected-error@-1 {{class template partial specialization contains a template parameter that cannot be deduced; this partial specialization will never be used}}
+  //   expected-note@-2 {{non-deducible template parameter 'I'}}
   template <int I> struct A<I, I> {};
 
   template <int I, int J, int K> struct B;
-  template <int I, int K> struct B<I, I * 2, K> {}; // expected-note {{matches}}
+  template <int I, int K> struct B<I, I * 2, K> {}; // #dr1315-B-1
   B<1, 2, 3> b1;
 
   // Multiple declarations with the same dependent expression are equivalent
@@ -131,8 +167,11 @@ namespace dr1315 { // dr1315: partial
   B<1, 2, 2>::type b2;
 
   // Multiple declarations with differing dependent expressions are unordered.
-  template <int I, int K> struct B<I, I + 1, K> {}; // expected-note {{matches}}
-  B<1, 2, 4> b3; // expected-error {{ambiguous}}
+  template <int I, int K> struct B<I, I + 1, K> {}; // #dr1315-B-2
+  B<1, 2, 4> b3;
+  // expected-error@-1 {{ambiguous partial specializations of 'B<1, 2, 4>'}}
+  //   expected-note@#dr1315-B-1 {{partial specialization matches [with I = 1, K = 4]}}
+  //   expected-note@#dr1315-B-2 {{partial specialization matches [with I = 1, K = 4]}}
 
   // FIXME: Under dr1315, this is perhaps valid, but that is not clear: this
   // fails the "more specialized than the primary template" test because the
@@ -146,7 +185,9 @@ namespace dr1315 { // dr1315: partial
 namespace dr1330 { // dr1330: 4 c++11
   // exception-specifications are parsed in a context where the class is complete.
   struct A {
-    void f() throw(T) {} // expected-error 0-1{{C++17}} expected-note 0-1{{noexcept}}
+    void f() throw(T) {}
+    // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
     struct T {};
 
 #if __cplusplus >= 201103L
@@ -156,8 +197,12 @@ namespace dr1330 { // dr1330: 4 c++11
 #endif
   };
 
-  void (A::*af1)() throw(A::T) = &A::f; // expected-error 0-1{{C++17}} expected-note 0-1{{noexcept}}
-  void (A::*af2)() throw() = &A::f; // expected-error-re {{{{not superset|different exception spec}}}}
+  void (A::*af1)() throw(A::T) = &A::f;
+  // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  void (A::*af2)() throw() = &A::f;
+  // cxx98-14-error@-1 {{target exception specification is not superset of source}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (dr1330::A::*)() throw()' with an rvalue of type 'void (dr1330::A::*)() throw(T)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(A().g()), "");
@@ -166,7 +211,9 @@ namespace dr1330 { // dr1330: 4 c++11
   // Likewise, they're instantiated separately from an enclosing class template.
   template<typename U>
   struct B {
-    void f() throw(T, typename U::type) {} // expected-error 0-1{{C++17}} expected-note 0-1{{noexcept}}
+    void f() throw(T, typename U::type) {}
+    // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
     struct T {};
 
 #if __cplusplus >= 201103L
@@ -183,9 +230,6 @@ namespace dr1330 { // dr1330: 4 c++11
     static const int value = true;
   };
 
-  void (B<P>::*bpf1)() throw(B<P>::T, int) = &B<P>::f; // expected-error 0-1{{C++17}} expected-note 0-1{{noexcept}}
-#if __cplusplus < 201103L
-  // expected-error@-2 {{not superset}}
   // FIXME: We only delay instantiation in C++11 onwards. In C++98, something
   // weird happens: instantiation of B<P> fails because it references T before
   // it's instantiated, but the diagnostic is suppressed in
@@ -193,20 +237,20 @@ namespace dr1330 { // dr1330: 4 c++11
   // obviously a bad way to react to this situation; we should still producing
   // the "T has not yet been instantiated" error here, rather than giving
   // confusing errors later on.
-#endif
-  void (B<P>::*bpf2)() throw(int) = &B<P>::f; // expected-error 0-1{{C++17}} expected-note 0-1{{noexcept}}
-#if __cplusplus <= 201402L
-  // expected-error@-2 {{not superset}}
-#else
-  // expected-warning@-4 {{not superset}}
-#endif
+  void (B<P>::*bpf1)() throw(B<P>::T, int) = &B<P>::f;
+  // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  // cxx98-error@-3 {{target exception specification is not superset of source}}
+
+  void (B<P>::*bpf2)() throw(int) = &B<P>::f;
+  // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  // cxx98-14-error@-3 {{target exception specification is not superset of source}}
+  // since-cxx17-warning@-4 {{target exception specification is not superset of source}}
   void (B<P>::*bpf3)() = &B<P>::f;
   void (B<P>::*bpf4)() throw() = &B<P>::f;
-#if __cplusplus <= 201402L
-  // expected-error@-2 {{not superset}}
-#else
-  // expected-error@-4 {{different exception specifications}}
-#endif
+  // cxx98-14-error@-1 {{target exception specification is not superset of source}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (B<P>::*)() throw()' with an rvalue of type 'void (dr1330::B<dr1330::P>::*)() throw(T, typename P::type)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(B<P>().g()), "");
@@ -214,57 +258,64 @@ namespace dr1330 { // dr1330: 4 c++11
   static_assert(!noexcept(B<Q>().g()), "");
 #endif
 
-  template<typename T> int f() throw(typename T::error) { return 0; } // expected-error 1-4{{prior to '::'}} expected-note 0-1{{prior to '::'}} expected-note 0-1{{requested here}}
-#if __cplusplus > 201402L
-    // expected-error@-2 0-1{{C++17}} expected-note@-2 0-1{{noexcept}}
-#endif
+  template<typename T> int f() throw(typename T::error) { return 0; } // #dr1330-f
+  // expected-error@#dr1330-f {{type 'int' cannot be used prior to '::' because it has no members}}
+  //   cxx98-note@#dr1330-f-int {{in instantiation of function template specialization 'dr1330::f<int>' requested here}}
+  //   since-cxx11-note@#dr1330-f-int {{in instantiation of exception specification for 'f<int>' requested here}}
+  // cxx98-14-error@#dr1330-f {{type 'short' cannot be used prior to '::' because it has no members}}
+  //   cxx98-14-note@#dr1330-f-short {{in instantiation of function template specialization 'dr1330::f<short>' requested here}}
+  //   cxx11-14-note@#dr1330-f {{in instantiation of exception specification for 'f<short>' requested here}}
+  // since-cxx11-error@#dr1330-f {{type 'char' cannot be used prior to '::' because it has no members}}
+  //   since-cxx11-note@#dr1330-f-char {{in instantiation of exception specification for 'f<char>' requested here}}
+  // since-cxx11-error@#dr1330-f {{type 'float' cannot be used prior to '::' because it has no members}}
+  //   since-cxx11-note@#dr1330-f-float {{in instantiation of exception specification for 'f<float>' requested here}}
+  // since-cxx17-error@#dr1330-f {{ISO C++17 does not allow dynamic exception specifications}}
+  //   since-cxx17-note@#dr1330-f {{use 'noexcept(false)' instead}}
+
   // An exception-specification is needed even if the function is only used in
   // an unevaluated operand.
-  int f1 = sizeof(f<int>()); // expected-note {{instantiation of}}
+  int f1 = sizeof(f<int>()); // #dr1330-f-int
 #if __cplusplus >= 201103L
-  decltype(f<char>()) f2; // expected-note {{instantiation of}}
-  bool f3 = noexcept(f<float>()); // expected-note {{instantiation of}}
+  decltype(f<char>()) f2; // #dr1330-f-char
+  bool f3 = noexcept(f<float>()); /// #dr1330-f-float
 #endif
   // In C++17 onwards, substituting explicit template arguments into the
   // function type substitutes into the exception specification (because it's
   // part of the type). In earlier languages, we don't notice there's a problem
   // until we've already started to instantiate.
-  template int f<short>();
-#if __cplusplus >= 201703L
-  // expected-error@-2 {{does not refer to a function template}}
-#else
-  // expected-note@-4 {{instantiation of}}
-#endif
+  template int f<short>(); // #dr1330-f-short
+  // since-cxx17-error@-1 {{explicit instantiation of 'f' does not refer to a function template, variable template, member function, member class, or static data member}}
+  //   since-cxx17-note@#dr1330-f {{candidate template ignored: substitution failure [with T = short]: type 'short' cannot be used prior to '::' because it has no members}}
 
   template<typename T> struct C {
-    C() throw(typename T::type); // expected-error 1-2{{prior to '::'}}
-#if __cplusplus > 201402L
-    // expected-error@-2 0-1{{C++17}} expected-note@-2 0-1{{noexcept}}
-#endif
+    C() throw(typename T::type); // #dr1330-C
+    // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+    // cxx98-error@#dr1330-C {{type 'void' cannot be used prior to '::' because it has no members}}
+    //   cxx98-note@#dr1330-C-void {{in instantiation of template class 'dr1330::C<void>' requested here}}
+    // expected-error@#dr1330-C {{type 'int' cannot be used prior to '::' because it has no members}}
+    //   cxx98-note@#dr1330-C-int {{in instantiation of template class 'dr1330::C<int>' requested here}}
+    //   since-cxx11-note@#dr1330-C-int {{in instantiation of exception specification for 'C' requested here}}
+    //   since-cxx11-note@#dr1330-e {{in evaluation of exception specification for 'dr1330::E::E' needed here}}
   };
-  struct D : C<void> {}; // ok
-#if __cplusplus < 201103L
-  // expected-note@-2 {{instantiation of}}
-#endif
+  struct D : C<void> {}; // #dr1330-C-void
   void f(D &d) { d = d; } // ok
 
-  struct E : C<int> {}; // expected-note {{in instantiation of}}
-#if __cplusplus >= 201103L
-  E e; // expected-note {{needed here}}
-#endif
+  struct E : C<int> {}; // #dr1330-C-int
+  E e; // #dr1330-e
 }
 
 namespace dr1341 { // dr1341: sup P0683R1
 #if __cplusplus >= 202002L
 int a;
-const int b = 0; // #dr1341-b-decl
+const int b = 0; // #dr1341-b
 struct S {
   int x1 : 8 = 42;
   int x2 : 8 { 42 };
   int y1 : true ? 8 : a = 42;
   int y2 : true ? 8 : b = 42;
-  // expected-error@-1            {{cannot assign to variable 'b' with const-qualified type 'const int'}}
-  // expected-note@#dr1341-b-decl {{variable 'b' declared const here}}
+  // since-cxx20-error@-1 {{cannot assign to variable 'b' with const-qualified type 'const int'}}
+  //   since-cxx20-note@#dr1341-b {{variable 'b' declared const here}}
   int y3 : (true ? 8 : b) = 42;
   int z : 1 || new int { 0 };
 };
@@ -272,44 +323,66 @@ struct S {
 }
 
 namespace dr1346 { // dr1346: 3.5
-  auto a(1); // expected-error 0-1{{extension}}
-  auto b(1, 2); // expected-error {{multiple expressions}} expected-error 0-1{{extension}}
+  auto a(1);
+  // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+  auto b(1, 2);
+  // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+  // expected-error@-2 {{initializer for variable 'b' with type 'auto' contains multiple expressions}}
 #if __cplusplus >= 201103L
-  auto c({}); // expected-error {{parenthesized initializer list}}
-  auto d({1}); // expected-error {{parenthesized initializer list}}
-  auto e({1, 2}); // expected-error {{parenthesized initializer list}}
+  auto c({});
+  // since-cxx11-error@-1 {{cannot deduce type for variable 'c' with type 'auto' from parenthesized initializer list}}
+  auto d({1});
+  // since-cxx11-error@-1 {{cannot deduce type for variable 'd' with type 'auto' from parenthesized initializer list}}
+  auto e({1, 2});
+  // since-cxx11-error@-1 {{cannot deduce type for variable 'e' with type 'auto' from parenthesized initializer list}}
 #endif
-  template<typename...Ts> void f(Ts ...ts) { // expected-error 0-1{{extension}}
-    auto x(ts...); // expected-error {{empty}} expected-error 0-1{{extension}}
+  template<typename...Ts> void f(Ts ...ts) {
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+    auto x(ts...);
+    // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+    // expected-error@-2 {{initializer for variable 'x' with type 'auto' is empty}}
+    //   expected-note@#dr1346-f {{in instantiation of function template specialization 'dr1346::f<>' requested here}}
   }
-  template void f(); // expected-note {{instantiation}}
+  template void f(); // #dr1346-f
 
 #if __cplusplus >= 201103L
   void init_capture() {
-    [a(1)] {} (); // expected-error 0-1{{extension}}
-    [b(1, 2)] {} (); // expected-error {{multiple expressions}} expected-error 0-1{{extension}}
-#if __cplusplus >= 201103L
-    [c({})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
-    [d({1})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
-    [e({1, 2})] {} (); // expected-error {{parenthesized initializer list}} expected-error 0-1{{extension}}
-#endif
+    [a(1)] {} ();
+    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
+    [b(1, 2)] {} ();
+    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
+    // since-cxx11-error@-2 {{initializer for lambda capture 'b' contains multiple expressions}}
+    [c({})] {} ();
+    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
+    // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'c' from parenthesized initializer list}}
+    [d({1})] {} ();
+    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
+    // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'd' from parenthesized initializer list}}
+    [e({1, 2})] {} ();
+    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
+    // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'e' from parenthesized initializer list}}
   }
 #endif
 }
 
-namespace dr1347 { // dr1347: yes
-  auto x = 5, *y = &x; // expected-error 0-1{{extension}}
-  auto z = y, *q = y; // expected-error {{'auto' deduced as 'int *' in declaration of 'z' and deduced as 'int' in declaration of 'q'}} expected-error 0-1{{extension}}
+namespace dr1347 { // dr1347: 3.1
+  auto x = 5, *y = &x;
+  // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+  auto z = y, *q = y;
+  // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+  // expected-error@-2 {{'auto' deduced as 'int *' in declaration of 'z' and deduced as 'int' in declaration of 'q'}}
 #if __cplusplus >= 201103L
-  auto a = 5, b = {1, 2}; // expected-error {{'auto' deduced as 'int' in declaration of 'a' and deduced as 'std::initializer_list<int>' in declaration of 'b'}}
-  auto (*fp)(int) -> int, i = 0; // expected-error {{declaration with trailing return type must be the only declaration in its group}}
+  auto a = 5, b = {1, 2};
+  // since-cxx11-error@-1 {{'auto' deduced as 'int' in declaration of 'a' and deduced as 'std::initializer_list<int>' in declaration of 'b'}}
+  auto (*fp)(int) -> int, i = 0;
+  // since-cxx11-error@-1 {{declaration with trailing return type must be the only declaration in its group}}
 #endif
 }
 
-namespace dr1358 { // dr1358: yes
+namespace dr1358 { // dr1358: 3.1
 #if __cplusplus >= 201103L
   struct Lit { constexpr operator int() const { return 0; } };
-  struct NonLit { NonLit(); operator int(); }; // expected-note 2{{no constexpr constructors}}
+  struct NonLit { NonLit(); operator int(); }; // #dr1358-NonLit
   struct NonConstexprConv { constexpr operator int() const; };
   struct Virt { virtual int f(int) const; };
 
@@ -336,8 +409,12 @@ namespace dr1358 { // dr1358: yes
   // But the corresponding non-template cases are rejected.
   struct B : Virt {
     int member;
-    constexpr B(NonLit u) : member(u) {} // expected-error {{not a literal type}}
-    constexpr NonLit f(NonLit u) const { return NonLit(); } // expected-error {{not a literal type}}
+    constexpr B(NonLit u) : member(u) {}
+    // since-cxx11-error@-1 {{constexpr constructor's 1st parameter type 'NonLit' is not a literal type}}
+    //   since-cxx11-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    constexpr NonLit f(NonLit u) const { return NonLit(); }
+    // since-cxx11-error@-1 {{constexpr function's return type 'NonLit' is not a literal type}}
+    //   since-cxx11-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   };
 #endif
 }
@@ -345,65 +422,113 @@ namespace dr1358 { // dr1358: yes
 namespace dr1359 { // dr1359: 3.5
 #if __cplusplus >= 201103L
   union A { constexpr A() = default; };
-  union B { constexpr B() = default; int a; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
-  union C { constexpr C() = default; int a, b; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
-  struct X { constexpr X() = default; union {}; }; // expected-error {{does not declare anything}}
-  struct Y { constexpr Y() = default; union { int a; }; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
+  union B { constexpr B() = default; int a; }; // #dr1359-B
+  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
+  union C { constexpr C() = default; int a, b; }; // #dr1359-C
+  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}} 
+  struct X { constexpr X() = default; union {}; };
+  // since-cxx11-error@-1 {{declaration does not declare anything}}
+  struct Y { constexpr Y() = default; union { int a; }; }; // #dr1359-Y
+  // cxx11-17-error@-1 {{defaulted definition of default constructor is not constexpr}}
 
   constexpr A a = A();
-  constexpr B b = B(); // expected-error {{no matching}}
-  constexpr C c = C(); // expected-error {{no matching}}
+  constexpr B b = B();
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'B'}}
+  //   cxx11-17-note@#dr1359-B {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1359-B {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
+  constexpr C c = C();
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'C'}}
+  //   cxx11-17-note@#dr1359-C {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1359-C {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   constexpr X x = X();
-  constexpr Y y = Y(); // expected-error {{no matching}}
+  constexpr Y y = Y();
+  // cxx11-17-error@-1 {{no matching constructor for initialization of 'Y'}}
+  //   cxx11-17-note@#dr1359-Y {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
+  //   cxx11-17-note@#dr1359-Y {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 #endif
 }
 
 namespace dr1388 { // dr1388: 4
-  template<typename A, typename ...T> void f(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
-  template<typename ...T> void g(T..., int); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
-  template<typename ...T, typename A> void h(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
+  template<typename A, typename ...T> void f(T..., A); // #dr1388-f
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+  template<typename ...T> void g(T..., int); // #dr1388-g
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+  template<typename ...T, typename A> void h(T..., A); // #dr1388-h
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
 
   void test_f() {
     f(0); // ok, trailing parameter pack deduced to empty
-    f(0, 0); // expected-error {{no matching}}
+    f(0, 0);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr1388-f {{candidate function [with A = int, T = <>] not viable: requires 1 argument, but 2 were provided}}
     f<int>(0);
-    f<int>(0, 0); // expected-error {{no matching}}
+    f<int>(0, 0);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr1388-f {{candidate function [with A = int, T = <>] not viable: requires 1 argument, but 2 were provided}}
     f<int, int>(0, 0);
-    f<int, int, int>(0, 0); // expected-error {{no matching}}
+    f<int, int, int>(0, 0);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr1388-f {{candidate function [with A = int, T = <int, int>] not viable: requires 3 arguments, but 2 were provided}}
 
     g(0);
-    g(0, 0); // expected-error {{no matching}}
+    g(0, 0);
+    // expected-error@-1 {{no matching function for call to 'g'}}
+    //   expected-note@#dr1388-g {{candidate function [with T = <>] not viable: requires 1 argument, but 2 were provided}}
     g<>(0);
-    g<int>(0); // expected-error {{no matching}}
+    g<int>(0);
+    // expected-error@-1 {{no matching function for call to 'g'}}
+    //   expected-note@#dr1388-g {{candidate function [with T = <int>] not viable: requires 2 arguments, but 1 was provided}}
     g<int>(0, 0);
 
     h(0);
-    h(0, 0); // expected-error {{no matching}}
+    h(0, 0);
+    // expected-error@-1 {{no matching function for call to 'h'}}
+    //   expected-note@#dr1388-h {{candidate function [with T = <>, A = int] not viable: requires 1 argument, but 2 were provided}}
     h<int>(0, 0);
-    h<int, int>(0, 0); // expected-error {{no matching}}
+    h<int, int>(0, 0);
+    // expected-error@-1 {{no matching function for call to 'h'}}
+    //   expected-note@#dr1388-h {{candidate template ignored: couldn't infer template argument 'A'}}
   }
 
   // A non-trailing parameter pack is still a non-deduced context, even though
   // we know exactly how many arguments correspond to it.
   template<typename T, typename U> struct pair {};
-  template<typename ...T> struct tuple { typedef char type; }; // expected-error 0-2{{C++11}}
-  template<typename ...T, typename ...U> void f_pair_1(pair<T, U>..., int); // expected-error 0-2{{C++11}} expected-note {{[with T = <int, long>]: deduced incomplete pack <(no value), (no value)> for template parameter 'U'}}
-  template<typename ...T, typename U> void f_pair_2(pair<T, char>..., U); // expected-error 0-2{{C++11}}
-  template<typename ...T, typename ...U> void f_pair_3(pair<T, U>..., tuple<U...>); // expected-error 0-2{{C++11}} expected-note {{deduced packs of different lengths for parameter 'U' (<(no value), (no value)> vs. <char>)}}
-  template<typename ...T> void f_pair_4(pair<T, char>..., T...); // expected-error 0-2{{C++11}} expected-note {{<int, long> vs. <int, long, const char *>}}
+  template<typename ...T> struct tuple { typedef char type; }; //
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+  template<typename ...T, typename ...U> void f_pair_1(pair<T, U>..., int); // #dr1388-f-1
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+  // cxx98-error@-2 {{variadic templates are a C++11 extension}}
+  template<typename ...T, typename U> void f_pair_2(pair<T, char>..., U);
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+  template<typename ...T, typename ...U> void f_pair_3(pair<T, U>..., tuple<U...>); // #dr1388-f-3
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
+  // cxx98-error@-2 {{variadic templates are a C++11 extension}}
+  template<typename ...T> void f_pair_4(pair<T, char>..., T...); // #dr1388-f-4
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
   void g(pair<int, char> a, pair<long, char> b, tuple<char, char> c) {
-    f_pair_1<int, long>(a, b, 0); // expected-error {{no match}}
+    f_pair_1<int, long>(a, b, 0);
+    // expected-error@-1 {{no matching function for call to 'f_pair_1'}}
+    //   expected-note@#dr1388-f-1 {{candidate template ignored: substitution failure [with T = <int, long>]: deduced incomplete pack <(no value), (no value)> for template parameter 'U'}}
     f_pair_2<int, long>(a, b, 0);
     f_pair_3<int, long>(a, b, c);
-    f_pair_3<int, long>(a, b, tuple<char>()); // expected-error {{no match}}
+    f_pair_3<int, long>(a, b, tuple<char>());
+    // expected-error@-1 {{no matching function for call to 'f_pair_3'}}
+    //   expected-note@#dr1388-f-3 {{candidate template ignored: deduced packs of different lengths for parameter 'U' (<(no value), (no value)> vs. <char>)}}
     f_pair_4<int, long>(a, b, 0, 0L);
-    f_pair_4<int, long>(a, b, 0, 0L, "foo"); // expected-error {{no match}}
+    f_pair_4<int, long>(a, b, 0, 0L, "foo");
+    // expected-error@-1 {{no matching function for call to 'f_pair_4'}}
+    //   expected-note@#dr1388-f-4 {{candidate template ignored: deduced packs of different lengths for parameter 'T' (<int, long> vs. <int, long, const char *>)}}
   }
 }
 
 namespace dr1391 { // dr1391: partial
   struct A {}; struct B : A {};
-  template<typename T> struct C { C(int); typename T::error error; }; // expected-error 2{{'::'}}
+  template<typename T> struct C { C(int); typename T::error error; }; // #dr1391-C
+  // expected-error@#dr1391-C {{type 'int' cannot be used prior to '::' because it has no members}}
+  //   expected-note@#dr1391-b {{in instantiation of template class 'dr1391::C<int>' requested here}}
+  //   expected-note@#dr1391-b {{while substituting deduced template arguments into function template 'b' [with T = int]}}
+  // expected-error@#dr1391-C {{type 'double' cannot be used prior to '::' because it has no members}}
+  //   expected-note@#dr1391-c {{in instantiation of template class 'dr1391::C<double>' requested here}}
   template<typename T> struct D {};
 
   // No deduction is performed for parameters with no deducible template-parameters, therefore types do not need to match.
@@ -444,28 +569,36 @@ namespace dr1391 { // dr1391: partial
   void test_b() {
     b(0, 0); // ok, deduction fails prior to forming a conversion sequence and instantiating C<int>
     // FIXME: The "while substituting" note should point at the overload candidate.
-    b<int>(0, 0); // expected-note {{instantiation of}} expected-note {{while substituting}}
+    b<int>(0, 0); // #dr1391-b
   }
 
   template<typename T> struct Id { typedef T type; };
   template<typename T> void c(T, typename Id<C<T> >::type);
   void test_c() {
     // Implicit conversion sequences for dependent types are checked later.
-    c(0.0, 0); // expected-note {{instantiation of}}
+    c(0.0, 0); // #dr1391-c
   }
 
   namespace partial_ordering {
     // FIXME: Second template should be considered more specialized because non-dependent parameter is ignored.
-    template<typename T> int a(T, short) = delete; // expected-error 0-1{{extension}} expected-note {{candidate}}
-    template<typename T> int a(T*, char); // expected-note {{candidate}}
-    int test_a = a((int*)0, 0); // FIXME: expected-error {{ambiguous}}
+    template<typename T> int a(T, short) = delete; // #dr1391-a-short
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
+    template<typename T> int a(T*, char); // #dr1391-a-char
+    int test_a = a((int*)0, 0);
+    // expected-error@-1 {{call to 'a' is ambiguous}} FIXME
+    //   expected-note@#dr1391-a-short {{candidate function [with T = int *] has been explicitly deleted}}
+    //   expected-note@#dr1391-a-char {{candidate function [with T = int]}}
 
     // FIXME: Second template should be considered more specialized:
     // deducing #1 from #2 ignores the second P/A pair, so deduction succeeds,
     // deducing #2 from #1 fails to deduce T, so deduction fails.
-    template<typename T> int b(T, int) = delete; // expected-error 0-1{{extension}} expected-note {{candidate}}
-    template<typename T, typename U> int b(T*, U); // expected-note {{candidate}}
-    int test_b = b((int*)0, 0); // FIXME: expected-error {{ambiguous}}
+    template<typename T> int b(T, int) = delete; // #dr1391-b-int
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
+    template<typename T, typename U> int b(T*, U); // #dr1391-b-U
+    int test_b = b((int*)0, 0);
+    // expected-error@-1 {{call to 'b' is ambiguous}} FIXME
+    //   expected-note@#dr1391-b-int {{candidate function [with T = int *] has been explicitly deleted}}
+    //   expected-note@#dr1391-b-U {{candidate function [with T = int, U = int]}}
 
     // Unintended consequences: because partial ordering does not consider
     // explicit template arguments, and deduction from a non-dependent type
@@ -499,26 +632,26 @@ namespace dr1395 { // dr1395: 16
 
 namespace dr1397 { // dr1397: 3.2
 #if __cplusplus >= 201103L
-struct A {       // #dr1397-struct-A
-  void *p = A{}; // #dr1397-void-p
-#if __cplusplus == 201103L
-  // expected-error@#dr1397-struct-A {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
-  // expected-note@#dr1397-void-p {{in evaluation of exception specification for 'dr1397::A::A' needed here}}
-  // expected-note@#dr1397-void-p {{default member initializer declared here}}
-#elif __cplusplus >= 201402L
-  // expected-error@#dr1397-void-p {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
-  // expected-note@#dr1397-void-p {{default member initializer declared here}}
-#endif
+struct A {
+// cxx11-error@-1 {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
+//   cxx11-note@#dr1397-p {{in evaluation of exception specification for 'dr1397::A::A' needed here}}
+//   cxx11-note@#dr1397-p {{default member initializer declared here}}
+  void *p = A{}; // #dr1397-p
+  // since-cxx14-error@-1 {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
+  //   since-cxx14-note@-2 {{default member initializer declared here}}
   operator void*() const { return nullptr; }
 };
 #endif
 } // namespace dr1397
 
 namespace dr1399 { // dr1399: dup 1388
-  template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
+  template<typename ...T> void f(T..., int, T...) {} // #dr1399-f 
+  // cxx98-error@-1 {{variadic templates are a C++11 extension}}
   void g() {
     f(0);
     f<int>(0, 0, 0);
-    f(0, 0, 0); // expected-error {{no match}}
+    f(0, 0, 0);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr1399-f {{candidate template ignored: deduced packs of different lengths for parameter 'T' (<> vs. <int, int>)}}
   }
 }

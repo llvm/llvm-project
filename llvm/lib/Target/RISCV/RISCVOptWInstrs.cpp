@@ -53,9 +53,7 @@ class RISCVOptWInstrs : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVOptWInstrs() : MachineFunctionPass(ID) {
-    initializeRISCVOptWInstrsPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVOptWInstrs() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
