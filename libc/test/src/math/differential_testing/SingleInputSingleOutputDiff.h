@@ -17,9 +17,8 @@ namespace testing {
 template <typename T> class SingleInputSingleOutputDiff {
   using FPBits = fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  static constexpr StorageType MSBit = StorageType(1)
-                                       << (8 * sizeof(StorageType) - 1);
-  static constexpr StorageType UIntMax = (MSBit - 1) + MSBit;
+  static constexpr StorageType UIntMax =
+      cpp::numeric_limits<StorageType>::max();
 
 public:
   typedef T Func(T);
