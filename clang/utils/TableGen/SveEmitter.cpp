@@ -1711,12 +1711,6 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
-  // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-    return A->getMangledName() < B->getMangledName();
-  });
-
   StringRef ExtensionKind;
   switch (Kind) {
   case ACLEKind::SME:
@@ -1729,23 +1723,18 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 
   OS << "#ifdef GET_" << ExtensionKind << "_STREAMING_ATTRS\n";
 
-  // Ensure these are only emitted once.
-  std::set<std::string> Emitted;
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
-    if (Emitted.find(Def->getMangledName()) != Emitted.end())
-      continue;
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else
       StreamingMap["ArmNonStreaming"].insert(Def->getMangledName());
-    Emitted.insert(Def->getMangledName());
   }
 
   for (auto BuiltinType : StreamingMap.keys()) {
