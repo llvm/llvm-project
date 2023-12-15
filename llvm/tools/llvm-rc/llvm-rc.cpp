@@ -253,11 +253,11 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
     for (const auto &S : Opts.PreprocessCmd)
       Args.push_back(S);
   }
+  for (const auto &S : Opts.PreprocessArgs)
+    Args.push_back(S);
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);
-  for (const auto &S : Opts.PreprocessArgs)
-    Args.push_back(S);
   if (Opts.PrintCmdAndExit || Opts.BeVerbose) {
     for (const auto &A : Args) {
       outs() << " ";
