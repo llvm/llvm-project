@@ -31,49 +31,49 @@ namespace fputil {
 template <typename T> struct FPBits : private FloatProperties<T> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
-  using typename FloatProperties<T>::UIntType;
-  using FloatProperties<T>::BIT_WIDTH;
+  using typename FloatProperties<T>::StorageType;
+  using FloatProperties<T>::TOTAL_LEN;
   using FloatProperties<T>::EXP_MANT_MASK;
-  using FloatProperties<T>::EXPONENT_MASK;
-  using FloatProperties<T>::EXPONENT_BIAS;
-  using FloatProperties<T>::EXPONENT_WIDTH;
-  using FloatProperties<T>::MANTISSA_MASK;
-  using FloatProperties<T>::MANTISSA_WIDTH;
+  using FloatProperties<T>::EXP_MASK;
+  using FloatProperties<T>::EXP_BIAS;
+  using FloatProperties<T>::EXP_LEN;
+  using FloatProperties<T>::FRACTION_MASK;
+  using FloatProperties<T>::FRACTION_LEN;
   using FloatProperties<T>::QUIET_NAN_MASK;
   using FloatProperties<T>::SIGN_MASK;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
-  UIntType bits;
+  StorageType bits;
 
-  LIBC_INLINE constexpr void set_mantissa(UIntType mantVal) {
-    mantVal &= MANTISSA_MASK;
-    bits &= ~MANTISSA_MASK;
+  LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
+    mantVal &= FRACTION_MASK;
+    bits &= ~FRACTION_MASK;
     bits |= mantVal;
   }
 
-  LIBC_INLINE constexpr UIntType get_mantissa() const {
-    return bits & MANTISSA_MASK;
+  LIBC_INLINE constexpr StorageType get_mantissa() const {
+    return bits & FRACTION_MASK;
   }
 
-  LIBC_INLINE constexpr void set_biased_exponent(UIntType expVal) {
-    expVal = (expVal << MANTISSA_WIDTH) & EXPONENT_MASK;
-    bits &= ~EXPONENT_MASK;
+  LIBC_INLINE constexpr void set_biased_exponent(StorageType expVal) {
+    expVal = (expVal << FRACTION_LEN) & EXP_MASK;
+    bits &= ~EXP_MASK;
     bits |= expVal;
   }
 
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXPONENT_MASK) >> MANTISSA_WIDTH);
+    return uint16_t((bits & EXP_MASK) >> FRACTION_LEN);
   }
 
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
-  LIBC_INLINE constexpr UIntType get_explicit_mantissa() {
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
     return ((get_biased_exponent() > 0 && !is_inf_or_nan())
-                ? (MANTISSA_MASK + 1)
+                ? (FRACTION_MASK + 1)
                 : 0) |
-           (MANTISSA_MASK & bits);
+           (FRACTION_MASK & bits);
   }
 
   LIBC_INLINE constexpr void set_sign(bool signVal) {
@@ -86,25 +86,25 @@ template <typename T> struct FPBits : private FloatProperties<T> {
     return (bits & SIGN_MASK) != 0;
   }
 
-  static_assert(sizeof(T) == sizeof(UIntType),
+  static_assert(sizeof(T) == sizeof(StorageType),
                 "Data type and integral representation have different sizes.");
 
-  static constexpr int MAX_EXPONENT = (1 << EXPONENT_WIDTH) - 1;
+  static constexpr int MAX_EXPONENT = (1 << EXP_LEN) - 1;
 
-  static constexpr UIntType MIN_SUBNORMAL = UIntType(1);
-  static constexpr UIntType MAX_SUBNORMAL = (UIntType(1) << MANTISSA_WIDTH) - 1;
-  static constexpr UIntType MIN_NORMAL = (UIntType(1) << MANTISSA_WIDTH);
-  static constexpr UIntType MAX_NORMAL =
-      ((UIntType(MAX_EXPONENT) - 1) << MANTISSA_WIDTH) | MAX_SUBNORMAL;
+  static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
+  static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
+  static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
+  static constexpr StorageType MAX_NORMAL =
+      ((StorageType(MAX_EXPONENT) - 1) << FRACTION_LEN) | MAX_SUBNORMAL;
 
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
   template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
   LIBC_INLINE constexpr explicit FPBits(XType x)
-      : bits(cpp::bit_cast<UIntType>(x)) {}
+      : bits(cpp::bit_cast<StorageType>(x)) {}
 
   template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<XType, StorageType>, int> = 0>
   LIBC_INLINE constexpr explicit FPBits(XType x) : bits(x) {}
 
   LIBC_INLINE constexpr FPBits() : bits(0) {}
@@ -112,15 +112,15 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
   LIBC_INLINE constexpr void set_val(T value) {
-    bits = cpp::bit_cast<UIntType>(value);
+    bits = cpp::bit_cast<StorageType>(value);
   }
 
   LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
-  LIBC_INLINE constexpr UIntType uintval() const { return bits; }
+  LIBC_INLINE constexpr StorageType uintval() const { return bits; }
 
   LIBC_INLINE constexpr int get_exponent() const {
-    return int(get_biased_exponent()) - EXPONENT_BIAS;
+    return int(get_biased_exponent()) - EXP_BIAS;
   }
 
   // If the number is subnormal, the exponent is treated as if it were the
@@ -134,9 +134,9 @@ template <typename T> struct FPBits : private FloatProperties<T> {
     if (is_zero()) {
       return 0;
     } else if (biased_exp == 0) {
-      return 1 - EXPONENT_BIAS;
+      return 1 - EXP_BIAS;
     } else {
-      return biased_exp - EXPONENT_BIAS;
+      return biased_exp - EXP_BIAS;
     }
   }
 
@@ -146,29 +146,29 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE constexpr bool is_inf() const {
-    return (bits & EXP_MANT_MASK) == EXPONENT_MASK;
+    return (bits & EXP_MANT_MASK) == EXP_MASK;
   }
 
   LIBC_INLINE constexpr bool is_nan() const {
-    return (bits & EXP_MANT_MASK) > EXPONENT_MASK;
+    return (bits & EXP_MANT_MASK) > EXP_MASK;
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_MANT_MASK) == (EXPONENT_MASK | QUIET_NAN_MASK);
+    return (bits & EXP_MANT_MASK) == (EXP_MASK | QUIET_NAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
-    return (bits & EXPONENT_MASK) == EXPONENT_MASK;
+    return (bits & EXP_MASK) == EXP_MASK;
   }
 
   LIBC_INLINE static constexpr T zero(bool sign = false) {
-    return FPBits(sign ? SIGN_MASK : UIntType(0)).get_val();
+    return FPBits(sign ? SIGN_MASK : StorageType(0)).get_val();
   }
 
   LIBC_INLINE static constexpr T neg_zero() { return zero(true); }
 
   LIBC_INLINE static constexpr T inf(bool sign = false) {
-    return FPBits((sign ? SIGN_MASK : UIntType(0)) | EXPONENT_MASK).get_val();
+    return FPBits((sign ? SIGN_MASK : StorageType(0)) | EXP_MASK).get_val();
   }
 
   LIBC_INLINE static constexpr T neg_inf() { return inf(true); }
@@ -189,13 +189,13 @@ template <typename T> struct FPBits : private FloatProperties<T> {
     return FPBits(MAX_SUBNORMAL).get_val();
   }
 
-  LIBC_INLINE static constexpr T build_nan(UIntType v) {
+  LIBC_INLINE static constexpr T build_nan(StorageType v) {
     FPBits<T> bits(inf());
     bits.set_mantissa(v);
     return T(bits);
   }
 
-  LIBC_INLINE static constexpr T build_quiet_nan(UIntType v) {
+  LIBC_INLINE static constexpr T build_quiet_nan(StorageType v) {
     return build_nan(QUIET_NAN_MASK | v);
   }
 
@@ -209,10 +209,11 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   //   3) The function did not check exponent high limit.
   //   4) "number" zero value is not processed correctly.
   //   5) Number is unsigned, so the result can be only positive.
-  LIBC_INLINE static constexpr FPBits<T> make_value(UIntType number, int ep) {
+  LIBC_INLINE static constexpr FPBits<T> make_value(StorageType number,
+                                                    int ep) {
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = cpp::countl_zero(number) - EXPONENT_WIDTH;
+    int lz = cpp::countl_zero(number) - EXP_LEN;
     number <<= lz;
     ep -= lz;
 
@@ -227,7 +228,7 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE static constexpr FPBits<T>
-  create_value(bool sign, UIntType biased_exp, UIntType mantissa) {
+  create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
     FPBits<T> result;
     result.set_sign(sign);
     result.set_biased_exponent(biased_exp);

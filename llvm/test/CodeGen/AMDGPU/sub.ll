@@ -451,12 +451,8 @@ define amdgpu_kernel void @test_sub_i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_u16 v1, v0, s[2:3] scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_load_u16 v0, v0, s[2:3] offset:2 scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_nc_u16 v0, v1, v0
 ; GFX12-NEXT:    global_store_b16 v2, v0, s[0:1]

@@ -864,6 +864,17 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       WarnIfMissingField &=
           SemaRef.getLangOpts().CPlusPlus || !hasAnyDesignatedInits(SForm);
 
+      if (OuterILE) {
+        // When nested designators are present, there might be two nested init
+        // lists created and only outer will contain designated initializer
+        // expression, so check outer list as well.
+        InitListExpr *OuterSForm = OuterILE->isSyntacticForm()
+                                       ? OuterILE
+                                       : OuterILE->getSyntacticForm();
+        WarnIfMissingField &= SemaRef.getLangOpts().CPlusPlus ||
+                              !hasAnyDesignatedInits(OuterSForm);
+      }
+
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
         ++NumElems;

@@ -309,6 +309,16 @@ func.func @test_splat_op(%s : f32) {
   return
 }
 
+// CHECK-LABEL: func @test_splat_op
+// CHECK-SAME: [[S:arg[0-9]+]]: f32
+// CHECK-SAME: [[M:arg[0-9]+]]: index
+// CHECK-SAME: [[N:arg[0-9]+]]: index
+func.func @test_splat_op_dynamic(%s: f32, %m: index, %n: index) {
+  // CHECK: tensor.splat %[[S]][%[[M]], %[[N]]] : tensor<?x8x?xf32>
+  %v = tensor.splat %s[%m, %n] : tensor<?x8x?xf32>
+  return
+}
+
 // -----
 
 // CHECK-LABEL: func.func @gather_scatter(

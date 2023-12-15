@@ -1,6 +1,7 @@
 ; Test 128-bit atomic stores.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
 define void @f1(i128 %val, ptr %src) {
 ; CHECK-LABEL: f1:

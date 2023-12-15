@@ -16,7 +16,6 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX908-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    buffer_wbinvl1_vol
@@ -40,7 +39,6 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX90A-NEXT:    v_add_f32_e32 v4, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[4:5] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -58,7 +56,6 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -75,7 +72,6 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1100-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -106,13 +102,8 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX1200-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN
-; GFX1200-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1200-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
@@ -139,7 +130,6 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX908-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
@@ -168,7 +158,6 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX90A-NEXT:  ; %bb.2: ; %atomicrmw.global
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_add_f32 v3, v[0:1], v2, off glc
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr2
@@ -192,7 +181,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:  ; %bb.7: ; %atomicrmw.shared
 ; GFX90A-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ds_add_rtn_f32 v3, v0, v2
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:  .LBB1_8: ; %atomicrmw.phi
@@ -226,8 +215,6 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
-; GFX1200-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
@@ -258,7 +245,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX908-NEXT:    s_cbranch_execz .LBB2_5
 ; GFX908-NEXT:  ; %bb.4: ; %atomicrmw.global
-; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
 ; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX908-NEXT:    ; implicit-def: $vgpr2
@@ -281,7 +267,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:  .LBB2_8: ; %atomicrmw.shared
 ; GFX908-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GFX908-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    ds_add_f32 v0, v2
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -310,7 +295,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB2_5
 ; GFX90A-NEXT:  ; %bb.4: ; %atomicrmw.global
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_atomic_add_f32 v[0:1], v2, off
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr2
@@ -333,7 +317,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:  .LBB2_8: ; %atomicrmw.shared
 ; GFX90A-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    ds_add_f32 v0, v2
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -384,7 +367,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX908-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
@@ -406,7 +388,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX90A-NEXT:    v_add_f32_e32 v4, v5, v2
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[4:5] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
@@ -436,7 +417,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1100-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] glc
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -466,13 +446,8 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1200-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-NEXT:    v_add_f32_e32 v3, v4, v2
-; GFX1200-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-NEXT:    s_wait_samplecnt 0x0
-; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN
-; GFX1200-NEXT:    s_wait_bvhcnt 0x0
-; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1200-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
