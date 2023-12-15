@@ -611,8 +611,8 @@ static bool tryToSplitMiddle(Instruction *DeadI,
   DeadIntrinsic->addDereferenceableParamAttr(0, FrontSize);
 
   Instruction *RearDestGEP = GetElementPtrInst::CreateInBounds(
-      Type::getInt8Ty(DeadIntrinsic->getContext()), DeadDest, ConstantInt::get(DeadWriteLength->getType(), RearStart), "",
-      DeadI);
+      Type::getInt8Ty(DeadIntrinsic->getContext()), DeadDest,
+      ConstantInt::get(DeadWriteLength->getType(), RearStart), "", DeadI);
   auto *Rear = cast<AnyMemIntrinsic>(DeadIntrinsic->clone());
   Rear->setDest(RearDestGEP);
   Rear->setLength(ConstantInt::get(DeadWriteLength->getType(), RearSize));
