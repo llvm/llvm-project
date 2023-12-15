@@ -827,14 +827,13 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::thumb:
   case Triple::x86:
   case Triple::x86_64:
-    if (T.isOSWindows())
+    switch (T.getOS()) {
+    case Triple::Win32:
+    case Triple::UEFI:
       return Triple::COFF;
-    else if (T.isUEFI())
-      return Triple::COFF;
-
-    if (T.isOSDarwin())
-      return Triple::MachO;
-    return Triple::ELF;
+    default:
+      return T.isOSDarwin() ? Triple::MachO : Triple::ELF;
+    }
   case Triple::aarch64_be:
   case Triple::amdgcn:
   case Triple::amdil64:
