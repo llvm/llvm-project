@@ -2693,6 +2693,29 @@ An error will be given if:
   }];
 }
 
+def AMDGPUNumWorkGroupsDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+The number of work groups specifies the number of work groups when the kernel
+is dispatched.
+
+Clang supports the
+``__attribute__((amdgpu_num_work_groups(<num>)))`` attribute for the
+AMDGPU target. This attribute may be attached to a kernel function definition
+and is an optimization hint.
+
+``<num>`` parameter specifies the number of work groups.
+
+If specified, the AMDGPU target backend might be able to produce better machine
+code.
+
+An error will be given if:
+  - Specified values violate subtarget specifications;
+  - Specified values are not compatible with values provided through other
+    attributes.
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target

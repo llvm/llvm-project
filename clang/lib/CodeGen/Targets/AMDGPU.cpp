@@ -356,6 +356,13 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUNumWorkGroupsAttr>()) {
+    uint32_t NumWG = Attr->getNumWorkGroups();
+
+    if (NumWG != 0)
+      F->addFnAttr("amdgpu-num-work-groups", llvm::utostr(NumWG));
+  }
 }
 
 /// Emits control constants used to change per-architecture behaviour in the

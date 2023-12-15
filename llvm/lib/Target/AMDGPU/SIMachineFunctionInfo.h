@@ -426,6 +426,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
 
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
 
+  // Default/requested number of work groups for the function.
+  unsigned NumWorkGroups = 0;
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -1094,6 +1097,12 @@ public:
 
   // \returns true if a function needs or may need AGPRs.
   bool usesAGPRs(const MachineFunction &MF) const;
+
+  /// \returns Default/requested number of work groups for this function.
+  unsigned getNumWorkGroups() const {
+    return NumWorkGroups;
+  }
+
 };
 
 } // end namespace llvm

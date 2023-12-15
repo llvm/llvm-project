@@ -494,6 +494,10 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
+  unsigned NumWG = MFI.getNumWorkGroups();
+  if (NumWG != 0) {
+    Kern[".num_work_groups"] = Kern.getDocument()->getNode(NumWG);
+  }
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =

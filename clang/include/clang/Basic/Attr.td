@@ -2011,6 +2011,13 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUNumWorkGroups : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_num_work_groups", 0>];
+  let Args = [UnsignedArgument<"NumWorkGroups">];
+  let Documentation = [AMDGPUNumWorkGroupsDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
 def AMDGPUKernelCall : DeclOrTypeAttr {
   let Spellings = [Clang<"amdgpu_kernel">];
   let Documentation = [Undocumented];

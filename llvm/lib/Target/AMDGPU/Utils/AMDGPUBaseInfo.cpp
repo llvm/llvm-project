@@ -1221,6 +1221,21 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
   return Ints;
 }
 
+unsigned getUnsignedIntegerAttribute(const Function &F, StringRef Name, unsigned Default) {
+  Attribute A = F.getFnAttribute(Name);
+  if (!A.isStringAttribute())
+    return Default;
+
+  LLVMContext &Ctx = F.getContext();
+  unsigned IntVal = Default;
+  StringRef Str = A.getValueAsString();
+  if (Str.trim().getAsInteger(0, IntVal)) {
+    Ctx.emitError("can't parse integer attribute " + Name);
+    return Default;
+  }
+  return IntVal;
+}
+
 unsigned getVmcntBitMask(const IsaVersion &Version) {
   return (1 << (getVmcntBitWidthLo(Version.Major) +
                 getVmcntBitWidthHi(Version.Major))) -

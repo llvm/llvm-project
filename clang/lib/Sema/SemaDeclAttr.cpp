@@ -8051,6 +8051,16 @@ static void handleAMDGPUNumVGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) AMDGPUNumVGPRAttr(S.Context, AL, NumVGPR));
 }
 
+static void handleAMDGPUNumWorkGroupsAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  uint32_t NumWG = 0;
+  Expr *NumWGExpr = AL.getArgAsExpr(0);
+  if (!checkUInt32Argument(S, AL, NumWGExpr, NumWG))
+    return;
+
+  D->addAttr(::new (S.Context) AMDGPUNumWorkGroupsAttr(S.Context, AL, NumWG));
+}
+
 static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,
                                               const ParsedAttr &AL) {
   // If we try to apply it to a function pointer, don't warn, but don't
@@ -9057,6 +9067,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_AMDGPUNumVGPR:
     handleAMDGPUNumVGPRAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_AMDGPUNumWorkGroups:
+    handleAMDGPUNumWorkGroupsAttr(S, D, AL);
     break;
   case ParsedAttr::AT_AVRSignal:
     handleAVRSignalAttr(S, D, AL);
