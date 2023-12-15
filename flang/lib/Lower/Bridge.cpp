@@ -4201,15 +4201,8 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
-    if (var.hasSymbol()) {
-      if (var.getSymbol().test(
-              Fortran::semantics::Symbol::Flag::OmpThreadprivate))
-        Fortran::lower::genThreadprivateOp(*this, var);
-
-      if (var.getSymbol().test(
-              Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
-        Fortran::lower::genDeclareTargetIntGlobal(*this, var);
-    }
+    if (var.hasSymbol())
+      genOpenMPSymbolProperties(*this, var);
   }
 
   /// Where applicable, save the exception state and halting and rounding
