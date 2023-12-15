@@ -451,13 +451,13 @@ Example:
    .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
    .byte     y                            # BB_1 metadata
 
-PGO Analysis Map Extra Data
-"""""""""""""""""""""""""""
+PGO Analysis Map
+""""""""""""""""
 
 PGO related analysis data can be emitted after each function within the
-BBAddrMap through the optional ``pgo-analysis-map`` flag. Supported analyses
-currently are Function Entry Count, Basic Block Frequencies, and Branch
-Probabilities.
+``SHT_LLVM_BB_ADDR_MAP`` through the optional ``pgo-analysis-map`` flag.
+Supported analyses currently are Function Entry Count, Basic Block Frequencies,
+and Branch Probabilities.
 
 Each analysis is enabled or disabled via a bit in the feature byte. Currently
 those bits are:

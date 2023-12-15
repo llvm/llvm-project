@@ -2000,10 +2000,10 @@ void AsmPrinter::emitFunctionBody() {
 
   // Emit section containing BB address offsets and their metadata, when
   // BB labels are requested for this function. Skip empty functions.
-  bool HasLabels = MF->hasBBLabels();
-  if (HasLabels && HasAnyRealCode)
+  bool HasBBLabels = MF->hasBBLabels();
+  if (HasBBLabels && HasAnyRealCode)
     emitBBAddrMapSection(*MF);
-  else if (!HasLabels && HasAnyRealCode &&
+  else if (!HasBBLabels && HasAnyRealCode &&
            PgoAnalysisMapFeatures.getBits() != 0)
     MF->getContext().reportWarning(
         SMLoc(), "pgo-analysis-map is enabled but the following machine "

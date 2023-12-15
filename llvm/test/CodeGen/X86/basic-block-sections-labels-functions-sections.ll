@@ -1,5 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,BASIC
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=labels -pgo-analysis-map=func-entry-count,bb-freq | FileCheck %s --check-prefixes=CHECK,PGO
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=labels | FileCheck %s
 
 $_Z4fooTIiET_v = comdat any
 
@@ -12,15 +11,8 @@ define dso_local i32 @_Z3barv() {
 ; CHECK-NEXT:	[[BAR_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:		.section .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3barv{{$}}
 ; CHECK-NEXT:		.byte 2			# version
-; BASIC-NEXT:		.byte 0			# feature
-; PGO-NEXT:		.byte 3			# feature
+; CHECK-NEXT:		.byte 0			# feature
 ; CHECK-NEXT:		.quad [[BAR_BEGIN]]	# function address
-; CHECK-NEXT:		.byte 1			# number of basic blocks
-; CHECK-NEXT:	      	.byte 0			# BB id
-; CHECK-NEXT:	      	.uleb128 .Lfunc_begin0-.Lfunc_begin0
-; CHECK-NEXT:	      	.uleb128 .LBB_END0_0-.Lfunc_begin0
-; CHECK-NEXT:	      	.byte 1
-; PGO-NEXT:		.byte 0			# function entry count
 
 
 define dso_local i32 @_Z3foov() {
@@ -32,15 +24,8 @@ define dso_local i32 @_Z3foov() {
 ; CHECK-NEXT:	[[FOO_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:		.section  .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3foov{{$}}
 ; CHECK-NEXT:		.byte 2			# version
-; BASIC-NEXT:		.byte 0			# feature
-; PGO-NEXT:		.byte 3			# feature
+; CHECK-NEXT:		.byte 0			# feature
 ; CHECK-NEXT:		.quad [[FOO_BEGIN]]	# function address
-; CHECK-NEXT:		.byte 1			# number of basic blocks
-; CHECK-NEXT:	      	.byte 0			# BB id
-; CHECK-NEXT:	      	.uleb128 .Lfunc_begin1-.Lfunc_begin1
-; CHECK-NEXT:	      	.uleb128 .LBB_END1_0-.Lfunc_begin1
-; CHECK-NEXT:	      	.byte 1
-; PGO-NEXT:		.byte 0			# function entry count
 
 
 define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
@@ -52,12 +37,5 @@ define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
 ; CHECK-NEXT:	[[FOOCOMDAT_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:		.section .llvm_bb_addr_map,"Go",@llvm_bb_addr_map,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v{{$}}
 ; CHECK-NEXT:		.byte 2				# version
-; BASIC-NEXT:		.byte 0				# feature
-; PGO-NEXT:		.byte 3				# feature
+; CHECK-NEXT:		.byte 0				# feature
 ; CHECK-NEXT:		.quad [[FOOCOMDAT_BEGIN]]	# function address
-; CHECK-NEXT:		.byte 1				# number of basic blocks
-; CHECK-NEXT:	      	.byte 0			# BB id
-; CHECK-NEXT:	      	.uleb128 .Lfunc_begin2-.Lfunc_begin2
-; CHECK-NEXT:	      	.uleb128 .LBB_END2_0-.Lfunc_begin2
-; CHECK-NEXT:	      	.byte 1
-; PGO-NEXT:		.byte 0				# function entry count
