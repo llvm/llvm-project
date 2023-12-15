@@ -79,39 +79,59 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: fmul_pow2_ldexp_4xfloat:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    subq $40, %rsp
-; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX-NEXT:    vextractps $1, %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX-NEXT:    callq ldexpf@PLT
-; CHECK-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-AVX-NEXT:    vmovd %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX-NEXT:    callq ldexpf@PLT
-; CHECK-AVX-NEXT:    vinsertps $16, (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
-; CHECK-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-AVX-NEXT:    vextractps $2, %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX-NEXT:    callq ldexpf@PLT
-; CHECK-AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
-; CHECK-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-AVX-NEXT:    vextractps $3, %xmm0, %edi
-; CHECK-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX-NEXT:    callq ldexpf@PLT
-; CHECK-AVX-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
-; CHECK-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; CHECK-AVX-NEXT:    addq $40, %rsp
-; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-AVX-NEXT:    retq
-  %r = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> <float 9.000000e+00, float 9.000000e+00, float 9.000000e+00, float 9.000000e+00>, <4 x i32> %i)
+; CHECK-AVX2-LABEL: fmul_pow2_ldexp_4xfloat:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    subq $40, %rsp
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-AVX2-NEXT:    vextractps $1, %xmm0, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    callq ldexpf@PLT
+; CHECK-AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-AVX2-NEXT:    vmovd %xmm0, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    callq ldexpf@PLT
+; CHECK-AVX2-NEXT:    vinsertps $16, (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; CHECK-AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-AVX2-NEXT:    vextractps $2, %xmm0, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    callq ldexpf@PLT
+; CHECK-AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
+; CHECK-AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-AVX2-NEXT:    vextractps $3, %xmm0, %edi
+; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-AVX2-NEXT:    callq ldexpf@PLT
+; CHECK-AVX2-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; CHECK-AVX2-NEXT:    addq $40, %rsp
+; CHECK-AVX2-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-AVX2-NEXT:    retq
+
+; CHECK-AVX512-LABEL: fmul_pow2_ldexp_4xfloat:
+; CHECK:              # %bb.0:
+; CHECK-AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm1
+; CHECK-AVX512-NEXT:    vmovss  .LCPI1_0(%rip), %xmm2           # xmm2 = mem[0],zero,zero,zero
+; CHECK-AVX512-NEXT:    vscalefss %xmm1, %xmm2, %xmm1
+; CHECK-AVX512-NEXT:    vshufps $85, %xmm0, %xmm0, %xmm3        # xmm3 = xmm0[1,1,1,1]
+; CHECK-AVX512-NEXT:    vcvtdq2ps %xmm3, %xmm3
+; CHECK-AVX512-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
+; CHECK-AVX512-NEXT:    vunpcklps %xmm3, %xmm1, %xmm1     # xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; CHECK-AVX512-NEXT:    vshufps $238, %xmm0, %xmm0, %xmm3       # xmm3 = xmm0[2,3,2,3]
+; CHECK-AVX512-NEXT:    vcvtdq2ps %xmm3, %xmm3
+; CHECK-AVX512-NEXT:    vscalefss %xmm3, %xmm2, %xmm3
+; CHECK-AVX512-NEXT:    vmovlhps  %xmm3, %xmm1, %xmm1             # xmm1 = xmm1[0],xmm3[0]
+; CHECK-AVX512-NEXT:    vshufps $255, %xmm0, %xmm0, %xmm0       # xmm0 = xmm0[3,3,3,3]
+; CHECK-AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vscalefss %xmm0, %xmm2, %xmm0
+; CHECK-AVX512-NEXT:    vinsertps $48, %xmm0, %xmm1, %xmm0 # xmm0 = xmm1[0,1,2],xmm0[0]
+; CHECK-AVX512-NEXT:    retq
+
+%r = call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> <float 9.000000e+00, float 9.000000e+00, float 9.000000e+00, float 9.000000e+00>, <4 x i32> %i)
   ret <4 x float> %r
 }
 
@@ -543,88 +563,70 @@ define <8 x half> @fmul_pow2_ldexp_8xhalf(<8 x i16> %i) {
 ;
 ; CHECK-AVX512F-LABEL: fmul_pow2_ldexp_8xhalf:
 ; CHECK-AVX512F:       # %bb.0:
-; CHECK-AVX512F-NEXT:    subq $72, %rsp
-; CHECK-AVX512F-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vpextrw $7, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
+; CHECK-AVX512F-NEXT:    vpextrw $7, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm1, %xmm2
+; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-AVX512F-NEXT:    vscalefss %xmm2, %xmm1, %xmm2
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; CHECK-AVX512F-NEXT:    vmovd %xmm2, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm2
+; CHECK-AVX512F-NEXT:    vpextrw $6, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm3, %xmm3
+; CHECK-AVX512F-NEXT:    vscalefss %xmm3, %xmm1, %xmm3
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; CHECK-AVX512F-NEXT:    vmovd %xmm3, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm3
+; CHECK-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; CHECK-AVX512F-NEXT:    vpextrw $5, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm4, %xmm3
+; CHECK-AVX512F-NEXT:    vscalefss %xmm3, %xmm1, %xmm3
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; CHECK-AVX512F-NEXT:    vmovd %xmm3, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm3
+; CHECK-AVX512F-NEXT:    vpextrw $4, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm4, %xmm4
+; CHECK-AVX512F-NEXT:    vscalefss %xmm4, %xmm1, %xmm4
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; CHECK-AVX512F-NEXT:    vmovd %xmm4, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; CHECK-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; CHECK-AVX512F-NEXT:    vpextrw $3, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm5, %xmm3
+; CHECK-AVX512F-NEXT:    vscalefss %xmm3, %xmm1, %xmm3
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; CHECK-AVX512F-NEXT:    vmovd %xmm3, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm3
+; CHECK-AVX512F-NEXT:    vpextrw $2, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm5, %xmm4
+; CHECK-AVX512F-NEXT:    vscalefss %xmm4, %xmm1, %xmm4
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; CHECK-AVX512F-NEXT:    vmovd %xmm4, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; CHECK-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; CHECK-AVX512F-NEXT:    vpextrw $1, %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm5, %xmm4
+; CHECK-AVX512F-NEXT:    vscalefss %xmm4, %xmm1, %xmm4
+; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm4, %xmm4
+; CHECK-AVX512F-NEXT:    vmovd %xmm4, %eax
+; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm4
+; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
+; CHECK-AVX512F-NEXT:    cwtl
+; CHECK-AVX512F-NEXT:    vcvtsi2ss %eax, %xmm5, %xmm0
+; CHECK-AVX512F-NEXT:    vscalefss %xmm0, %xmm1, %xmm0
 ; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
 ; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $6, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $5, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $4, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-AVX512F-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $3, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $2, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vpextrw $1, %xmm0, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-AVX512F-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    movzwl %ax, %edi
-; CHECK-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-AVX512F-NEXT:    callq ldexpf@PLT
-; CHECK-AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vmovd %xmm0, %eax
-; CHECK-AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; CHECK-AVX512F-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-AVX512F-NEXT:    vpunpckldq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; CHECK-AVX512F-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX512F-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-AVX512F-NEXT:    addq $72, %rsp
-; CHECK-AVX512F-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-AVX512F-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; CHECK-AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; CHECK-AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; CHECK-AVX512F-NEXT:    retq
   %r = call <8 x half> @llvm.ldexp.v8f16.v8i16(<8 x half> <half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000>, <8 x i16> %i)
   ret <8 x half> %r

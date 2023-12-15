@@ -2405,6 +2405,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i128, Custom);
   }
 
+  if (Subtarget.hasAVX512()) {
+    for (MVT VT : { MVT::f16, MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64 })
+      setOperationAction(ISD::FLDEXP, VT, Custom);
+
+    if (Subtarget.hasVLX())
+      for (MVT VT : { MVT::v8f32, MVT::v4f64, MVT::v16f32, MVT::v8f64 })
+        setOperationAction(ISD::FLDEXP, VT, Custom);
+  }
+
   // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
   // is. We should promote the value to 64-bits to solve this.
   // This is what the CRT headers do - `fmodf` is an inline header
@@ -31814,6 +31823,57 @@ static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
   return StringRef();
 }
 
+static SDValue LowerFLDEXP(SDValue Op, const X86Subtarget &Subtarget,
+                           SelectionDAG &DAG) {
+  SDValue X = Op.getOperand(0);
+  EVT XTy = X.getValueType();
+  SDValue Exp = Op.getOperand(1);
+  SDLoc DL(Op);
+  EVT XVT, ExpVT;
+  switch (Op.getSimpleValueType().SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::f16:
+    // TODO: Choose vscalefph when fp16 for ISD::FLDEXP is fully supported.
+    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X);
+    [[fallthrough]];
+  case MVT::f32:
+    XVT = MVT::v4f32;
+    ExpVT = MVT::v4f32;
+    break;
+  case MVT::f64:
+    XVT = MVT::v2f64;
+    ExpVT = MVT::v2f64;
+    break;
+  case MVT::v4f32:
+  case MVT::v2f64:
+    if (!Subtarget.hasVLX()) {
+      Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+      return DAG.getNode(X86ISD::SCALEFS, DL, XTy, X, Exp, X);
+    }
+  case MVT::v8f32:
+  case MVT::v4f64:
+  case MVT::v16f32:
+  case MVT::v8f64:
+    Exp = DAG.getNode(ISD::SINT_TO_FP, DL, XTy, Exp);
+    return DAG.getNode(X86ISD::SCALEF, DL, XTy, X, Exp, X);
+  }
+
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  Exp = DAG.getNode(ISD::SINT_TO_FP, DL, X.getValueType(), Exp);
+  SDValue VX =
+      DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, XVT, DAG.getUNDEF(XVT), X, Zero);
+  SDValue VExp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpVT,
+                             DAG.getUNDEF(ExpVT), Exp, Zero);
+  SDValue Scalef = DAG.getNode(X86ISD::SCALEFS, DL, XVT, VX, VExp, VX);
+  SDValue Final =
+      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, X.getValueType(), Scalef, Zero);
+  if (X.getValueType() != XTy)
+    Final = DAG.getNode(ISD::FP_ROUND, DL, XTy, Final,
+                        DAG.getIntPtrConstant(1, SDLoc(Op)));
+  return Final;
+}
+
 bool X86TargetLowering::isInlineAsmTargetBranch(
     const SmallVectorImpl<StringRef> &AsmStrs, unsigned OpNo) const {
   // In a __asm block, __asm inst foo where inst is CALL or JMP should be
@@ -31979,6 +32039,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
+  case ISD::FLDEXP:             return LowerFLDEXP(Op, Subtarget, DAG);
   }
 }
 
