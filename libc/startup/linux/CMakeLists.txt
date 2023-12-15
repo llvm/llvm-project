@@ -6,6 +6,7 @@
 # A crt object has arch-specific code and arch-agnostic code. To reduce code
 # duplication, the implementation is split into multiple units. As a result,
 # we need to merge them into a single relocatable object.
+# See also:  https://maskray.me/blog/2022-11-21-relocatable-linking
 function(merge_relocatable_object name)
   set(obj_list "")
   set(fq_link_libraries "")
@@ -24,7 +25,7 @@ function(merge_relocatable_object name)
     ${obj_list}
   )
   # Pass -r to the driver is much cleaner than passing -Wl,-r: the compiler knows it is
-  # a relocatable linking and will not passing other irrelevant flags to the linker.
+  # a relocatable linking and will not pass other irrelevant flags to the linker.
   target_link_options(${relocatable_target} PRIVATE -r)
   set_target_properties(
     ${relocatable_target}
