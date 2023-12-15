@@ -373,9 +373,8 @@ mlir::Value HlfirCountLowering::lowerImpl(
   mlir::Value dim = operands[1];
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-  mlir::Value kind = operands[2];
   mlir::Type resultType = computeResultType(array, stmtResultType);
-  return createOp<hlfir::CountOp>(resultType, array, dim, kind);
+  return createOp<hlfir::CountOp>(resultType, array, dim);
 }
 
 mlir::Value HlfirCharExtremumLowering::lowerImpl(
