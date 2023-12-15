@@ -167,7 +167,7 @@ FileHeader:
 # RUN: llvm-readelf --file-headers %t.osabi.amd.hsa | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDHSA-GNU
 
 # OSABI-AMDHSA-LLVM: OS/ABI: AMDGPU_HSA (0x40)
-# OSABI-AMDHSA-GNU:  OS/ABI: 40
+# OSABI-AMDHSA-GNU:  OS/ABI: AMDGPU - HSA
 
 # RUN: yaml2obj %s -DOSABI=ELFOSABI_AMDGPU_PAL -DMACHINE=EM_AMDGPU -o %t.osabi.amd.pal
 # RUN: llvm-readobj --file-headers %t.osabi.amd.pal | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDPAL-LLVM
