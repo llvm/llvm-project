@@ -864,6 +864,14 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       WarnIfMissingField &=
           SemaRef.getLangOpts().CPlusPlus || !hasAnyDesignatedInits(SForm);
 
+      if (OuterILE) {
+        InitListExpr *OuterSForm = OuterILE->isSyntacticForm()
+                                       ? OuterILE
+                                       : OuterILE->getSyntacticForm();
+        WarnIfMissingField &= SemaRef.getLangOpts().CPlusPlus ||
+                              !hasAnyDesignatedInits(OuterSForm);
+      }
+
       unsigned NumElems = numStructUnionElements(ILE->getType());
       if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
         ++NumElems;
