@@ -2436,8 +2436,6 @@ public:
     CurrentBitsIndex = 0;
   }
 
-  void advance(uint32_t BitsWidth) { CurrentBitsIndex += BitsWidth; }
-
   bool getNextBit() {
     assert(isValid());
     return Value & (1 << CurrentBitsIndex++);
