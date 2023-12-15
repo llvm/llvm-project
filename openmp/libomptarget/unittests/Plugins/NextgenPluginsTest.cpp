@@ -1,19 +1,29 @@
+//===------- unittests/Plugins/NextgenPluginsTest.cpp - Plugin tests ------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "Shared/PluginAPI.h"
 #include "omptarget.h"
 #include "gtest/gtest.h"
 
-const int DEVICE_ID = 0, DEVICE_TWO = 1;
-bool setup_map[DEVICE_TWO + 1];
+#include <unordered_set>
+
+const int DEVICE_ID = 0;
+std::unordered_set<int> setup_map;
 
 int init_test_device(int ID) {
-  if (setup_map[ID]) {
+  if (setup_map.find(ID) != setup_map.end()) {
     return OFFLOAD_SUCCESS;
   }
   if (__tgt_rtl_init_plugin() == OFFLOAD_FAIL ||
       __tgt_rtl_init_device(ID) == OFFLOAD_FAIL) {
     return OFFLOAD_FAIL;
   }
-  setup_map[ID] = true;
+  setup_map.insert(ID);
   return OFFLOAD_SUCCESS;
 }
 
@@ -59,40 +69,44 @@ TEST(NextgenPluginsTest, PluginAsyncAlloc) {
   int32_t test_value = 47;
   int32_t host_value = -1;
   int64_t var_size = sizeof(int32_t);
-  __tgt_async_info info;
+  __tgt_async_info *info;
 
   // Init plugin and device
   EXPECT_EQ(OFFLOAD_SUCCESS, init_test_device(DEVICE_ID));
 
-  // Allocate memory
-  void *device_ptr =
-      __tgt_rtl_data_alloc(DEVICE_ID, var_size, nullptr, TARGET_ALLOC_DEFAULT);
+  // Check if device supports async
+  // Platforms like x86_64 don't support it
+  if (__tgt_rtl_init_async_info(DEVICE_ID, &info) == OFFLOAD_SUCCESS) {
+    // Allocate memory
+    void *device_ptr =
+        __tgt_rtl_data_alloc(DEVICE_ID, var_size, nullptr, TARGET_ALLOC_DEFAULT);
 
-  // Check that the result is not null
-  EXPECT_NE(device_ptr, nullptr);
+    // Check that the result is not null
+    EXPECT_NE(device_ptr, nullptr);
 
-  // Submit data to device asynchronously
-  EXPECT_EQ(OFFLOAD_SUCCESS,
-            __tgt_rtl_data_submit_async(DEVICE_ID, device_ptr, &test_value,
-                                        var_size, &info));
+    // Submit data to device asynchronously
+    EXPECT_EQ(OFFLOAD_SUCCESS,
+              __tgt_rtl_data_submit_async(DEVICE_ID, device_ptr, &test_value,
+                                          var_size, info));
 
-  // Wait for async request to process
-  EXPECT_EQ(OFFLOAD_SUCCESS, __tgt_rtl_synchronize(DEVICE_ID, &info));
+    // Wait for async request to process
+    EXPECT_EQ(OFFLOAD_SUCCESS, __tgt_rtl_synchronize(DEVICE_ID, info));
 
-  // Read data from device
-  EXPECT_EQ(OFFLOAD_SUCCESS,
-            __tgt_rtl_data_retrieve_async(DEVICE_ID, &host_value, device_ptr,
-                                          var_size, &info));
+    // Read data from device
+    EXPECT_EQ(OFFLOAD_SUCCESS,
+              __tgt_rtl_data_retrieve_async(DEVICE_ID, &host_value, device_ptr,
+                                            var_size, info));
 
-  // Wait for async request to process
-  EXPECT_EQ(OFFLOAD_SUCCESS, __tgt_rtl_synchronize(DEVICE_ID, &info));
+    // Wait for async request to process
+    EXPECT_EQ(OFFLOAD_SUCCESS, __tgt_rtl_synchronize(DEVICE_ID, info));
 
-  // Compare values
-  EXPECT_EQ(host_value, test_value);
+    // Compare values
+    EXPECT_EQ(host_value, test_value);
 
-  // Cleanup data
-  EXPECT_EQ(OFFLOAD_SUCCESS,
-            __tgt_rtl_data_delete(DEVICE_ID, device_ptr, TARGET_ALLOC_DEFAULT));
+    // Cleanup data
+    EXPECT_EQ(OFFLOAD_SUCCESS,
+              __tgt_rtl_data_delete(DEVICE_ID, device_ptr, TARGET_ALLOC_DEFAULT));
+  }
 }
 
 // Test GPU data exchange
@@ -101,10 +115,18 @@ TEST(NextgenPluginsTest, PluginDataSwap) {
   int32_t host_value = -1;
   int64_t var_size = sizeof(int32_t);
 
+  // Look for compatible device
+  int DEVICE_TWO = -1;
+  for (int i = 1; i < __tgt_rtl_number_of_devices(); i++) {
+    if (__tgt_rtl_is_data_exchangable(DEVICE_ID, i)) {
+      DEVICE_TWO = i;
+      break;
+    }
+  }
+
   // Only run test if we have multiple GPUs to test
   // GPUs must be compatible for test to work
-  if (__tgt_rtl_number_of_devices() > 1 &&
-      __tgt_rtl_is_data_exchangable(DEVICE_ID, DEVICE_TWO)) {
+  if (DEVICE_TWO >= 1) {
     // Init both GPUs
     EXPECT_EQ(OFFLOAD_SUCCESS, init_test_device(DEVICE_ID));
     EXPECT_EQ(OFFLOAD_SUCCESS, init_test_device(DEVICE_TWO));
