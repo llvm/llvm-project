@@ -7129,6 +7129,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
+  bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -7148,7 +7149,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (BaseOpcode->Atomic) {
     VData = Op.getOperand(2);
 
-    bool Is64Bit = VData.getValueType() == MVT::i64;
+    bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
       SDValue VData2 = Op.getOperand(3);
       VData = DAG.getBuildVector(Is64Bit ? MVT::v2i64 : MVT::v2i32, DL,
@@ -7308,9 +7309,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
   //
-  // Partial NSA is allowed on GFX11 where the final register is a contiguous
+  // Partial NSA is allowed on GFX11+ where the final register is a contiguous
   // set of the remaining addresses.
-  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const unsigned NSAMaxSize = ST->getNSAMaxSize(BaseOpcode->Sampler);
   const bool HasPartialNSAEncoding = ST->hasPartialNSAEncoding();
   const bool UseNSA = ST->hasNSAEncoding() &&
                       VAddrs.size() >= ST->getNSAThreshold(MF) &&
@@ -7387,7 +7388,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~AMDGPU::CPol::ALL)
+  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
     return Op;
 
   SmallVector<SDValue, 26> Ops;
@@ -7407,7 +7408,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
-  Ops.push_back(Unorm);
+  if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
+    Ops.push_back(Unorm);
   Ops.push_back(DAG.getTargetConstant(CPol, DL, MVT::i32));
   Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
@@ -7418,7 +7420,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   } else if (cast<ConstantSDNode>(TFE)->getZExtValue()) {
     report_fatal_error("TFE is not supported on this GPU");
   }
-  Ops.push_back(LWE); // lwe
+  if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
+    Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
@@ -7430,7 +7433,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX11Plus) {
+  if (IsGFX12Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX11Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx11NSA
                                           : AMDGPU::MIMGEncGfx11Default,
@@ -7748,7 +7754,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned CPol = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
-    if (CPol & ~AMDGPU::CPol::ALL)
+    if (CPol & ~((Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12)
+                     ? AMDGPU::CPol::ALL
+                     : AMDGPU::CPol::ALL_pregfx12))
       return Op;
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
                         DAG);
@@ -8518,14 +8526,17 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       return SDValue();
     }
 
+    const bool IsGFX11 = AMDGPU::isGFX11(*Subtarget);
     const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
+    const bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
     const bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
     const bool Is64 = NodePtr.getValueType() == MVT::i64;
     const unsigned NumVDataDwords = 4;
     const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
     const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
-    const bool UseNSA =
-        Subtarget->hasNSAEncoding() && NumVAddrs <= Subtarget->getNSAMaxSize();
+    const bool UseNSA = (Subtarget->hasNSAEncoding() &&
+                         NumVAddrs <= Subtarget->getNSAMaxSize()) ||
+                        IsGFX12Plus;
     const unsigned BaseOpcodes[2][2] = {
         {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
         {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -8533,15 +8544,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
+                                     IsGFX12Plus ? AMDGPU::MIMGEncGfx12
+                                     : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
                                                  : AMDGPU::MIMGEncGfx10NSA,
                                      NumVDataDwords, NumVAddrDwords);
     } else {
-      Opcode =
-          AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
-                                            : AMDGPU::MIMGEncGfx10Default,
-                                NumVDataDwords, NumVAddrDwords);
+      assert(!IsGFX12Plus);
+      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                     IsGFX11 ? AMDGPU::MIMGEncGfx11Default
+                                             : AMDGPU::MIMGEncGfx10Default,
+                                     NumVDataDwords, NumVAddrDwords);
     }
     assert(Opcode != -1);
 
@@ -14042,7 +14054,7 @@ static unsigned SubIdx2Lane(unsigned Idx) {
   }
 }
 
-/// Adjust the writemask of MIMG instructions
+/// Adjust the writemask of MIMG, VIMAGE or VSAMPLE instructions
 SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                           SelectionDAG &DAG) const {
   unsigned Opcode = Node->getMachineOpcode();
@@ -14060,7 +14072,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
   bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
-                  Node->getConstantOperandVal(LWEIdx))
+                  (int(LWEIdx) >= 0 && Node->getConstantOperandVal(LWEIdx)))
                      ? true
                      : false;
   unsigned TFCLane = 0;
@@ -14272,7 +14284,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   unsigned Opcode = Node->getMachineOpcode();
 
-  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
+  if (TII->isImage(Opcode) && !TII->get(Opcode).mayStore() &&
       !TII->isGather4(Opcode) &&
       AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::dmask)) {
     return adjustWritemask(Node, DAG);
@@ -14359,7 +14371,7 @@ void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
     return;
 
   unsigned TFEVal = TFE ? TFE->getImm() : 0;
-  unsigned LWEVal = LWE->getImm();
+  unsigned LWEVal = LWE ? LWE->getImm() : 0;
   unsigned D16Val = D16 ? D16->getImm() : 0;
 
   if (!TFEVal && !LWEVal)
@@ -14496,7 +14508,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   }
 
-  if (TII->isMIMG(MI)) {
+  if (TII->isImage(MI)) {
     if (!MI.mayStore())
       AddIMGInit(MI);
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::vaddr);
