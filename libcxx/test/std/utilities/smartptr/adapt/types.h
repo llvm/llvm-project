@@ -12,6 +12,29 @@
 #include <type_traits>
 #include <memory>
 
+template <typename T>
+class DefaultDeleter {
+  void operator()(T* p) const { delete p; }
+};
+
+template <typename T>
+struct CopyableMovableDeleter {
+  CopyableMovableDeleter()                              = default;
+  CopyableMovableDeleter(CopyableMovableDeleter const&) = default;
+  CopyableMovableDeleter(CopyableMovableDeleter&&)      = default;
+
+  void operator()(T* p) const { delete p; }
+};
+
+template <typename T>
+struct NotCopyAbleNotMovableDeleter {
+  NotCopyAbleNotMovableDeleter()                                    = default;
+  NotCopyAbleNotMovableDeleter(NotCopyAbleNotMovableDeleter const&) = delete; // not copyable
+  NotCopyAbleNotMovableDeleter(NotCopyAbleNotMovableDeleter&&)      = delete; // not movable either!
+
+  void operator()(T* p) const { delete p; }
+};
+
 struct ResetArg {};
 
 // Custom pointer types.

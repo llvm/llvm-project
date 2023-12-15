@@ -16,6 +16,8 @@
 
 #include <memory>
 
+#include "../types.h"
+
 int main(int, char**) {
   // `std::out_ptr<>` requires `std::shared_ptr<>` with a deleter.
   {
@@ -26,6 +28,25 @@ int main(int, char**) {
     // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::out_ptr_t<shared_ptr<int>, _Ptr>' (aka 'out_ptr_t<std::shared_ptr<int>, int *>')}}
     auto outSPtr2 = std::out_ptr<int*>(sPtr);
   }
+
+  // {
+  //   DefaultDeleter<int> del;
+  //   std::shared_ptr<int> sPtr;
+  //   auto outSPtr1 = std::out_ptr(sPtr, del);
+  //   auto outSPtr2 = std::out_ptr<int*>(sPtr, del);
+  // }
+
+  // {
+  //   std::shared_ptr<int> sPtr;
+  //   auto outSPtr1 = std::out_ptr(sPtr, CopyableMovableDeleter<int>{});
+  //   auto outSPtr2 = std::out_ptr<int*>(sPtr, CopyableMovableDeleter<int>{});
+  // }
+
+  // {
+  //   std::shared_ptr<int> sPtr;
+  //   auto outSPtr1 = std::out_ptr(sPtr, NotCopyAbleNotMovableDeleter<int>{});
+  //   auto outSPtr2 = std::out_ptr<int*>(sPtr, NotCopyAbleNotMovableDeleter<int>{});
+  // }
 
   return 0;
 }

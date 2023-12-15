@@ -292,7 +292,7 @@ using __pointer_of_or_t = typename __pointer_of_or<_Tp, _Up>::type;
 template <class _Smart>
 concept __resettable_smart_pointer = requires(_Smart __s) { __s.reset(); };
 
-template <class _Smart, class _Pointer = void, class... _Args>
+template <class _Smart, class _Pointer, class... _Args>
 concept __resettable_smart_pointer_with_args = requires(_Smart __s, _Pointer __p, _Args... __args) {
   __s.reset(static_cast<__pointer_of_or_t<_Smart, _Pointer>>(__p), std::forward<_Args>(__args)...);
 };

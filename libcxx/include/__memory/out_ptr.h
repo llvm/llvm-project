@@ -63,6 +63,8 @@ public:
       std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
     } else {
+      // static_assert(__resettable_smart_pointer_with_args<_Smart, _Pointer, _Args...>);
+      // static_assert(is_constructible_v<_Smart, _SP, _Args...>);
       static_assert(__resettable_smart_pointer_with_args<_Smart, _Pointer, _Args...> ||
                     is_constructible_v<_Smart, _SP, _Args...>);
     }
