@@ -436,10 +436,6 @@ public:
     StrOffsetsStream = std::make_unique<raw_svector_ostream>(*StrOffsetsBuffer);
   }
 
-  /// Initializes Buffer and Stream.
-  void initialize(const DWARFSection &StrOffsetsSection,
-                  const std::optional<StrOffsetsContributionDescriptor> Contr);
-
   /// Update Str offset in .debug_str in .debug_str_offsets.
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
@@ -455,9 +451,13 @@ public:
   }
 
 private:
+  /// Initializes Buffer and Stream.
+  void initialize(DWARFUnit &Unit);
+
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  std::vector<uint32_t> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
   bool StrOffsetSectionWasModified = false;
 };
