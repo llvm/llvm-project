@@ -755,35 +755,25 @@ static bool UpgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
       // These too are changed to accept a v2i1 instead of the old v4i1.
       if (Name.consume_back(".v4i1")) {
         // 'arm.mve.*.v4i1'.
-        if (Name.consume_back(".predicated.v2i64.v4i32")) {
+        if (Name.consume_back(".predicated.v2i64.v4i32"))
           // 'arm.mve.*.predicated.v2i64.v4i32.v4i1'
-          if (Name == "mull.int" || Name == "vqdmull")
-            return true;
-          return false; // No other 'arm.mve.*.predicated.v2i64.v4i32.v4i1'.
-        }
+          return Name == "mull.int" || Name == "vqdmull";
 
         if (Name.consume_back(".v2i64")) {
           // 'arm.mve.*.v2i64.v4i1'
           bool IsGather = Name.consume_front("vldr.gather.");
           if (IsGather || Name.consume_front("vstr.scatter.")) {
             if (Name.consume_front("base.")) {
+              // Optional 'wb.' prefix.
               Name.consume_front("wb.");
-              if (Name == "predicated.v2i64")
-                // 'arm.mve.(vldr.gather|vstr.scatter).base.(wb.)?
-                // predicated.v2i64.v2i64.v4i1'.
-                return true;
-              // No other 'arm.(vldr.gather|vstr.scatter).base.*.v2i64.v4i1'
-              return false;
+              // 'arm.mve.(vldr.gather|vstr.scatter).base.(wb.)?
+              // predicated.v2i64.v2i64.v4i1'.
+              return Name == "predicated.v2i64";
             }
 
-            if (Name.consume_front("offset.predicated.")) {
-              if (Name == (IsGather ? "v2i64.p0i64" : "p0i64.v2i64") ||
-                  Name == (IsGather ? "v2i64.p0" : "p0.v2i64"))
-                return true;
-              // No other 'arm.(vldr.gather|vstr.scatter).offset
-              // .predicated.*.v2i64.v4i1'
-              return false;
-            }
+            if (Name.consume_front("offset.predicated."))
+              return Name == (IsGather ? "v2i64.p0i64" : "p0i64.v2i64") ||
+                     Name == (IsGather ? "v2i64.p0" : "p0.v2i64");
 
             // No other 'arm.mve.(vldr.gather|vstr.scatter).*.v2i64.v4i1'.
             return false;
@@ -798,13 +788,11 @@ static bool UpgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 
     if (Name.consume_front("cde.vcx")) {
       // 'arm.cde.vcx*'.
-      if (Name.consume_back(".predicated.v2i64.v4i1")) {
+      if (Name.consume_back(".predicated.v2i64.v4i1"))
         // 'arm.cde.vcx*.predicated.v2i64.v4i1'.
-        if (Name == "1q" || Name == "1qa" || Name == "2q" || Name == "2qa" ||
-            Name == "3q" || Name == "3qa")
-          return true;
-        return false; // No other 'arm.cde.vcx*.predicated.v2i64.v4i1'.
-      }
+        return Name == "1q" || Name == "1qa" || Name == "2q" || Name == "2qa" ||
+               Name == "3q" || Name == "3qa";
+
       return false; // No other 'arm.cde.vcx*'.
     }
   } else {
