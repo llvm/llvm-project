@@ -1579,6 +1579,17 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
 
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+
+// "_soft" waitcnts are waitcnts that are either relaxed into their non-soft
+// counterpart, or completely removed.
+//
+// These are inserted by SIMemoryLegalizer to resolve memory dependencies
+// and later optimized by SIInsertWaitcnts
+// For example, a S_WAITCNT_soft 0 can be completely removed in a function
+// that doesn't access memory.
+def S_WAITCNT_soft : SOPP_Pseudo <"s_soft_waitcnt" , (ins SWaitCnt:$simm16), "$simm16">;
+def S_WAITCNT_VSCNT_soft : SOPK_WAITCNT<"s_soft_waitcnt_vscnt">;
+
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
