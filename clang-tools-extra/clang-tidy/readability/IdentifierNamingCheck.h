@@ -199,6 +199,19 @@ private:
 
   const FileStyle &getStyleForFile(StringRef FileName) const;
 
+  /// Find the style kind of a field in an anonymous record.
+  StyleKind findStyleKindForAnonField(
+      const FieldDecl *AnonField,
+      ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
+  StyleKind findStyleKindForField(
+      const FieldDecl *Field, QualType Type,
+      ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
+  StyleKind
+  findStyleKindForVar(const VarDecl *Var, QualType Type,
+                      ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
   /// Stores the style options as a vector, indexed by the specified \ref
   /// StyleKind, for a given directory.
   mutable llvm::StringMap<FileStyle> NamingStylesCache;
