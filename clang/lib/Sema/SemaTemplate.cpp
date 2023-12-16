@@ -39,7 +39,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/SaveAndRestore.h"
 
 #include <iterator>
 #include <optional>
@@ -3991,14 +3990,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Inst.isInvalid())
       return QualType();
 
-    {
-      Sema::ContextRAII SavedContext(*this, Pattern->getDeclContext());
-      if (RebuildingTypesInCurrentInstantiation)
-        SavedContext.pop();
-      CanonType =
-          SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
-                    AliasTemplate->getLocation(), AliasTemplate->getDeclName());
-    }
+    CanonType = SubstType(Pattern->getUnderlyingType(),
+                          TemplateArgLists, AliasTemplate->getLocation(),
+                          AliasTemplate->getDeclName());
     if (CanonType.isNull()) {
       // If this was enable_if and we failed to find the nested type
       // within enable_if in a SFINAE context, dig out the specific
@@ -11398,8 +11392,6 @@ TypeSourceInfo *Sema::RebuildTypeInCurrentInstantiation(TypeSourceInfo *T,
   if (!T || !T->getType()->isInstantiationDependentType())
     return T;
 
-  llvm::SaveAndRestore DisableContextSwitchForTypeAliases(
-      RebuildingTypesInCurrentInstantiation, true);
   CurrentInstantiationRebuilder Rebuilder(*this, Loc, Name);
   return Rebuilder.TransformType(T);
 }

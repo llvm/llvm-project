@@ -2102,7 +2102,7 @@ public:
                                  SourceLocation AttrLoc);
 
   CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
-  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+  bool CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs);
 
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
@@ -8737,7 +8737,7 @@ public:
                              SourceLocation IILoc,
                              bool DeducedTSTContext = true);
 
-  bool RebuildingTypesInCurrentInstantiation = false;
+
   TypeSourceInfo *RebuildTypeInCurrentInstantiation(TypeSourceInfo *T,
                                                     SourceLocation Loc,
                                                     DeclarationName Name);

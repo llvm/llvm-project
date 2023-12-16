@@ -846,6 +846,49 @@ enum {
 #include "ELFRelocs/AMDGPU.def"
 };
 
+// NVPTX specific e_flags.
+enum : unsigned {
+  // Processor selection mask for EF_CUDA_SM* values.
+  EF_CUDA_SM = 0xff,
+
+  // SM based processor values.
+  EF_CUDA_SM20 = 0x14,
+  EF_CUDA_SM21 = 0x15,
+  EF_CUDA_SM30 = 0x1e,
+  EF_CUDA_SM32 = 0x20,
+  EF_CUDA_SM35 = 0x23,
+  EF_CUDA_SM37 = 0x25,
+  EF_CUDA_SM50 = 0x32,
+  EF_CUDA_SM52 = 0x34,
+  EF_CUDA_SM53 = 0x35,
+  EF_CUDA_SM60 = 0x3c,
+  EF_CUDA_SM61 = 0x3d,
+  EF_CUDA_SM62 = 0x3e,
+  EF_CUDA_SM70 = 0x46,
+  EF_CUDA_SM72 = 0x48,
+  EF_CUDA_SM75 = 0x4b,
+  EF_CUDA_SM80 = 0x50,
+  EF_CUDA_SM86 = 0x56,
+  EF_CUDA_SM87 = 0x57,
+  EF_CUDA_SM89 = 0x59,
+  // The sm_90a variant uses the same machine flag.
+  EF_CUDA_SM90 = 0x5a,
+
+  // Unified texture binding is enabled.
+  EF_CUDA_TEXMODE_UNIFIED = 0x100,
+  // Independent texture binding is enabled.
+  EF_CUDA_TEXMODE_INDEPENDANT = 0x200,
+  // The target is using 64-bit addressing.
+  EF_CUDA_64BIT_ADDRESS = 0x400,
+  // Set when using the sm_90a processor.
+  EF_CUDA_ACCELERATORS = 0x800,
+  // Undocumented software feature.
+  EF_CUDA_SW_FLAG_V2 = 0x1000,
+
+  // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
+  EF_CUDA_VIRTUAL_SM = 0xff0000,
+};
+
 // ELF Relocation types for BPF
 enum {
 #include "ELFRelocs/BPF.def"

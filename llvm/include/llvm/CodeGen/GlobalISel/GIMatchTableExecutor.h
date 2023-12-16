@@ -690,7 +690,9 @@ protected:
   bool isObviouslySafeToFold(MachineInstr &MI, MachineInstr &IntoMI) const;
 
   template <typename Ty> static Ty readBytesAs(const uint8_t *MatchTable) {
-    return *reinterpret_cast<const Ty *>(MatchTable);
+    Ty Ret;
+    memcpy(&Ret, MatchTable, sizeof(Ret));
+    return Ret;
   }
 };
 

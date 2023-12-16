@@ -107,6 +107,13 @@ static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
   return addOperand(Inst, DAsm->decodeBoolReg(Val));
 }
 
+static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
+                                       uint64_t Addr,
+                                       const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeSplitBarrier(Val));
+}
+
 #define DECODE_OPERAND(StaticDecoderName, DecoderName)                         \
   static DecodeStatus StaticDecoderName(MCInst &Inst, unsigned Imm,            \
                                         uint64_t /*Addr*/,                     \
@@ -202,10 +209,12 @@ DECODE_OPERAND_REG_8(VReg_512)
 DECODE_OPERAND_REG_8(VReg_1024)
 
 DECODE_OPERAND_REG_7(SReg_32, OPW32)
+DECODE_OPERAND_REG_7(SReg_32_XEXEC, OPW32)
 DECODE_OPERAND_REG_7(SReg_32_XM0_XEXEC, OPW32)
 DECODE_OPERAND_REG_7(SReg_32_XEXEC_HI, OPW32)
 DECODE_OPERAND_REG_7(SReg_64, OPW64)
 DECODE_OPERAND_REG_7(SReg_64_XEXEC, OPW64)
+DECODE_OPERAND_REG_7(SReg_96, OPW96)
 DECODE_OPERAND_REG_7(SReg_128, OPW128)
 DECODE_OPERAND_REG_7(SReg_256, OPW256)
 DECODE_OPERAND_REG_7(SReg_512, OPW512)
@@ -1232,6 +1241,8 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
   case AMDGPU::TTMP_64RegClassID:
     shift = 1;
     break;
+  case AMDGPU::SGPR_96RegClassID:
+  case AMDGPU::TTMP_96RegClassID:
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::TTMP_128RegClassID:
   // ToDo: unclear if s[100:104] is available on VI. Can we use VCC as SGPR in
@@ -1745,6 +1756,10 @@ MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
   return STI.hasFeature(AMDGPU::FeatureWavefrontSize64)
              ? decodeSrcOp(OPW64, Val)
              : decodeSrcOp(OPW32, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeSplitBarrier(unsigned Val) const {
+  return decodeSrcOp(OPW32, Val);
 }
 
 bool AMDGPUDisassembler::isVI() const {
