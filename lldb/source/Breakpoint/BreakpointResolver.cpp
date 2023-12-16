@@ -113,23 +113,23 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   switch (resolver_type) {
   case FileLineResolver:
     result_sp = BreakpointResolverFileLine::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case AddressResolver:
     result_sp = BreakpointResolverAddress::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case NameResolver:
     result_sp = BreakpointResolverName::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case FileRegexResolver:
     result_sp = BreakpointResolverFileRegex::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case PythonResolver:
     result_sp = BreakpointResolverScripted::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case ExceptionResolver:
     error.SetErrorString("Exception resolvers are hard.");
