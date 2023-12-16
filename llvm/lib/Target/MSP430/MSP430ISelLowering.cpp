@@ -333,6 +333,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 SDValue MSP430TargetLowering::LowerOperation(SDValue Op,

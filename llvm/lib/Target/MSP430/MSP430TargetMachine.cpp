@@ -65,6 +65,7 @@ public:
     return getTM<MSP430TargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreEmitPass() override;
 };
@@ -79,6 +80,12 @@ MachineFunctionInfo *MSP430TargetMachine::createMachineFunctionInfo(
     const TargetSubtargetInfo *STI) const {
   return MSP430MachineFunctionInfo::create<MSP430MachineFunctionInfo>(Allocator,
                                                                       F, STI);
+}
+
+void MSP430PassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+
+  TargetPassConfig::addIRPasses();
 }
 
 bool MSP430PassConfig::addInstSelector() {
