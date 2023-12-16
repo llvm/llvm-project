@@ -2345,18 +2345,19 @@ multiclass VPatTruncSatClipMaxMinBase<string inst, VTypeInfo vti, VTypeInfo wti,
                                GetVTypePredicates<wti>.Predicates) in
   def : Pat<(vti.Vector (riscv_trunc_vector_vl
     (wti.Vector (op1
-        (wti.Vector (op2
-            (wti.Vector wti.RegClass:$rs1),
-            (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op2_value, (XLenVT srcvalue))),
-            (wti.Vector undef),(wti.Mask V0), VLOpFrag)),
-        (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op1_value, (XLenVT srcvalue))),
-        (wti.Vector undef), (wti.Mask V0), VLOpFrag)),
-    (vti.Mask V0), VLOpFrag)), (!cast<Instruction>(inst#"_WI_"#vti.LMul.MX#"_MASK")
+      (wti.Vector (op2
+        (wti.Vector wti.RegClass:$rs1),
+        (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op2_value, (XLenVT srcvalue))),
+        (wti.Vector undef),(wti.Mask V0), VLOpFrag)),
+      (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op1_value, (XLenVT srcvalue))),
+      (wti.Vector undef), (wti.Mask V0), VLOpFrag)),
+    (vti.Mask V0), VLOpFrag)),
+    (!cast<Instruction>(inst#"_WI_"#vti.LMul.MX#"_MASK")
       (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
       (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
 }
 
-multiclass VPatTruncSatClipUMin<VTypeInfo vti, VTypeInfo wti, int sminval> {
+multiclass VPatTruncSatClipUMin<VTypeInfo vti, VTypeInfo wti, int uminval> {
   let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                GetVTypePredicates<wti>.Predicates) in
   def : Pat<(vti.Vector (riscv_trunc_vector_vl
@@ -2384,12 +2385,12 @@ multiclass VPatTruncSatClip<VTypeInfo vti, VTypeInfo wti> {
   defvar sminval = !sub(!shl(1, !sub(sew, 1)), 1);
   defvar smaxval = !sub(0, !shl(1, !sub(sew, 1)));
 
-  defm : VPatTruncSatClipMaxMin<"PseudoVNCLIP", vti, wti, riscv_umax_vl,
+  defm : VPatTruncSatClipMaxMin<"PseudoVNCLIPU", vti, wti, riscv_umax_vl,
                                                 umaxval, riscv_umin_vl, uminval>;
-  defm : VPatTruncSatClipMaxMin<"PseudoVNCLIPU", vti, wti, riscv_smin_vl,
+  defm : VPatTruncSatClipMaxMin<"PseudoVNCLIP", vti, wti, riscv_smin_vl,
                                                 sminval, riscv_smax_vl, smaxval>;
 
-  defm : VPatTruncSatClipUMin<vti, wti, sminval>;
+  defm : VPatTruncSatClipUMin<vti, wti, uminval>;
 }
 
 foreach vtiToWti = AllWidenableIntVectors in
