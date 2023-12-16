@@ -1768,7 +1768,7 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     // "struct Foo {int x; char buff[1024];}" Assume the max-size flag is 1023.
     // All Foo type variables will be skipped. Ideally, we only skip the buff
     // array and still auto-init X in this example.
-    // TODO: Improve the size filtering to by member size. 
+    // TODO: Improve the size filtering to by member size.
     auto allocSize = CGM.getDataLayout().getTypeAllocSize(Loc.getElementType());
     switch (trivialAutoVarInit) {
     case LangOptions::TrivialAutoVarInitKind::Uninitialized:
