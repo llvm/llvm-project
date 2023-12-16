@@ -54,6 +54,9 @@ Inlay hints
 Diagnostics
 ^^^^^^^^^^^
 
+- Fixed a bug where the severity of diagnostics from clang-tidy modernize-* checks were
+  lowered to remarks.
+
 Semantic Highlighting
 ^^^^^^^^^^^^^^^^^^^^^
 

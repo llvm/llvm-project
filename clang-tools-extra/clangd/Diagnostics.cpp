@@ -474,8 +474,10 @@ void toLSPDiags(
   // We downgrade severity for certain noisy warnings, like deprecated
   // declartions. These already have visible decorations inside the editor and
   // most users find the extra clutter in the UI (gutter, minimap, diagnostics
-  // views) overwhelming.
-  if (D.Severity == DiagnosticsEngine::Warning) {
+  // views) overwhelming. Because clang-tidy's modernize checks get the
+  // `Deprecated` tag, guard against lowering clang-tidy diagnostic levels.
+  if (D.Severity == DiagnosticsEngine::Warning &&
+      D.Source != Diag::DiagSource::ClangTidy) {
     if (llvm::is_contained(D.Tags, DiagnosticTag::Deprecated))
       Main.severity = getSeverity(DiagnosticsEngine::Remark);
   }

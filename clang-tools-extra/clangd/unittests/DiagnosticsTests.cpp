@@ -1811,10 +1811,10 @@ TEST(ParsedASTTest, ModuleSawDiag) {
   TestTU TU;
 
   auto AST = TU.build();
-        #if 0
+#if 0
   EXPECT_THAT(AST.getDiagnostics(),
               testing::Contains(Diag(Code.range(), KDiagMsg.str())));
-        #endif
+#endif
 }
 
 TEST(Preamble, EndsOnNonEmptyLine) {
@@ -1880,6 +1880,16 @@ TEST(Diagnostics, DeprecatedDiagsAreHints) {
                Diag = std::move(LSPDiag);
              });
   EXPECT_EQ(Diag->severity, getSeverity(DiagnosticsEngine::Remark));
+  Diag.reset();
+
+  // Don't downgrade warnings from clang-tidy that have deprecated tags
+  D.Source = Diag::DiagSource::ClangTidy;
+  toLSPDiags(D, {}, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix>) {
+               Diag = std::move(LSPDiag);
+             });
+  EXPECT_EQ(Diag->severity, getSeverity(DiagnosticsEngine::Warning));
+  D.Source = Diag::DiagSource::Unknown;
   Diag.reset();
 
   // Preserve errors.
