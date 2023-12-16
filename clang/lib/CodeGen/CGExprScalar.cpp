@@ -1103,6 +1103,21 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
                 {Src, Dst});
 }
 
+static llvm::Value *EmitIsNegativeTestHelper(Value *V, QualType VType,
+                                             const char *Name,
+                                             CGBuilderTy &Builder) {
+  bool VSigned = VType->isSignedIntegerOrEnumerationType();
+  llvm::Type *VTy = V->getType();
+  if (!VSigned) {
+    // If the value is unsigned, then it is never negative.
+    return llvm::ConstantInt::getFalse(VTy->getContext());
+  }
+  llvm::Constant *Zero = llvm::ConstantInt::get(VTy, 0);
+  return Builder.CreateICmp(llvm::ICmpInst::ICMP_SLT, V, Zero,
+                            llvm::Twine(Name) + "." + V->getName() +
+                                ".negativitycheck");
+};
+
 // Should be called within CodeGenFunction::SanitizerScope RAII scope.
 // Returns 'i1 false' when the conversion Src -> Dst changed the sign.
 static std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
@@ -1127,30 +1142,12 @@ EmitIntegerSignChangeCheckHelper(Value *Src, QualType SrcType, Value *Dst,
   assert(((SrcBits != DstBits) || (SrcSigned != DstSigned)) &&
          "either the widths should be different, or the signednesses.");
 
-  // NOTE: zero value is considered to be non-negative.
-  auto EmitIsNegativeTest = [&Builder](Value *V, QualType VType,
-                                       const char *Name) -> Value * {
-    // Is this value a signed type?
-    bool VSigned = VType->isSignedIntegerOrEnumerationType();
-    llvm::Type *VTy = V->getType();
-    if (!VSigned) {
-      // If the value is unsigned, then it is never negative.
-      // FIXME: can we encounter non-scalar VTy here?
-      return llvm::ConstantInt::getFalse(VTy->getContext());
-    }
-    // Get the zero of the same type with which we will be comparing.
-    llvm::Constant *Zero = llvm::ConstantInt::get(VTy, 0);
-    // %V.isnegative = icmp slt %V, 0
-    // I.e is %V *strictly* less than zero, does it have negative value?
-    return Builder.CreateICmp(llvm::ICmpInst::ICMP_SLT, V, Zero,
-                              llvm::Twine(Name) + "." + V->getName() +
-                                  ".negativitycheck");
-  };
-
   // 1. Was the old Value negative?
-  llvm::Value *SrcIsNegative = EmitIsNegativeTest(Src, SrcType, "src");
+  llvm::Value *SrcIsNegative =
+      EmitIsNegativeTestHelper(Src, SrcType, "src", Builder);
   // 2. Is the new Value negative?
-  llvm::Value *DstIsNegative = EmitIsNegativeTest(Dst, DstType, "dst");
+  llvm::Value *DstIsNegative =
+      EmitIsNegativeTestHelper(Dst, DstType, "dst", Builder);
   // 3. Now, was the 'negativity status' preserved during the conversion?
   //    NOTE: conversion from negative to zero is considered to change the sign.
   //    (We want to get 'false' when the conversion changed the sign)
