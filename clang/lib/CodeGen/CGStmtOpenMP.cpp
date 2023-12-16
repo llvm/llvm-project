@@ -6516,10 +6516,6 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
                              IsPostfixUpdate, IsFailOnly, Loc);
     break;
   }
-  case OMPC_fail: {
-    //TODO
-    break;
-  }
   default:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
@@ -6527,6 +6523,8 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::Monotonic;
+  // Fail Memory Clause Ordering.
+  llvm::AtomicOrdering FO = llvm::AtomicOrdering::Monotonic;
   bool MemOrderingSpecified = false;
   if (S.getSingleClause<OMPSeqCstClause>()) {
     AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -6578,6 +6576,51 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
         AO = llvm::AtomicOrdering::Acquire;
       }
     }
+  }
+
+  if (KindsEncountered.contains(OMPC_compare) &&
+      KindsEncountered.contains(OMPC_fail)) {
+    Kind = OMPC_compare;
+    const OMPFailClause *fC = S.getSingleClause<OMPFailClause>();
+    if (fC) {
+      OpenMPClauseKind fP = fC->getFailParameter();
+      if (fP == llvm::omp::OMPC_relaxed)
+        FO = llvm::AtomicOrdering::Monotonic;
+      else if (fP == llvm::omp::OMPC_acquire)
+        FO = llvm::AtomicOrdering::Acquire;
+      else if (fP == llvm::omp::OMPC_seq_cst)
+        FO = llvm::AtomicOrdering::SequentiallyConsistent;
+    }
+
+    // Logic for 2 memory order clauses in the atomic directive.
+    // e.g. #pragma omp atomic compare capture release fail(seq_cst)
+    //      if(x > e) { x = j; } else { k = x; }
+    // To provide the Memory Order clause in atomic directive
+    // there are 2 instructions in LLVM IR atomicrmw & cmpxchgl.
+    // 1) atomicrmw can use only 1 memory order clause and can contain the
+    //    operator in if condition.
+    // 2) cmpxchgl can use 2 memory order clauses : Success memory order clause
+    //    & fail parameter memory clause. However, cmpxchgl uses only equality
+    //    operator.
+    // We need to change atomicrmw to contain the fail parameter clause or add
+    // a new instruction in LLVM IR. Changes in LLVM IR need to be done
+    // seperately and at present we will use the logic of using the more strict
+    // memory order clause of success or fail memory order clauses for the
+    // atomicrmw. The following logic takes care of this change in the memory
+    // order clause.
+    if (AO == llvm::AtomicOrdering::Monotonic)
+      AO = FO;
+    else if (FO == llvm::AtomicOrdering::Monotonic)
+      AO = AO;
+    else if (AO == llvm::AtomicOrdering::SequentiallyConsistent ||
+             FO == llvm::AtomicOrdering::SequentiallyConsistent)
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+    else if (AO == llvm::AtomicOrdering::Acquire)
+      AO = llvm::AtomicOrdering::Acquire;
+    else if (AO == llvm::AtomicOrdering::Release)
+      AO = llvm::AtomicOrdering::AcquireRelease;
+    else if (AO == llvm::AtomicOrdering::AcquireRelease)
+      AO = llvm::AtomicOrdering::AcquireRelease;
   }
 
   LexicalScope Scope(*this, S.getSourceRange());
