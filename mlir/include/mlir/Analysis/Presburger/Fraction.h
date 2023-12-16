@@ -129,6 +129,9 @@ inline Fraction operator-(const Fraction &x, const Fraction &y) {
   return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
 }
 
+// Find the integer nearest to a given fraction.
+inline MPInt round(const Fraction &f) { return floor(f + Fraction(1, 2)); }
+
 inline Fraction &operator+=(Fraction &x, const Fraction &y) {
   x = x + y;
   return x;
