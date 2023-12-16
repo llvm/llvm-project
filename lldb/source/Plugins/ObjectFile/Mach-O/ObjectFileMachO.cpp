@@ -2868,7 +2868,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         if (symbol_name && symbol_name[0] == '_' &&
                             symbol_name[1] == 'O') {
                           llvm::StringRef symbol_name_ref(symbol_name);
-                          if (symbol_name_ref.startswith(
+                          if (symbol_name_ref.starts_with(
                                   g_objc_v2_prefix_class)) {
                             symbol_name_non_abi_mangled = symbol_name + 1;
                             symbol_name =
@@ -2876,14 +2876,14 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             type = eSymbolTypeObjCClass;
                             demangled_is_synthesized = true;
 
-                          } else if (symbol_name_ref.startswith(
+                          } else if (symbol_name_ref.starts_with(
                                          g_objc_v2_prefix_metaclass)) {
                             symbol_name_non_abi_mangled = symbol_name + 1;
                             symbol_name =
                                 symbol_name + g_objc_v2_prefix_metaclass.size();
                             type = eSymbolTypeObjCMetaClass;
                             demangled_is_synthesized = true;
-                          } else if (symbol_name_ref.startswith(
+                          } else if (symbol_name_ref.starts_with(
                                          g_objc_v2_prefix_ivar)) {
                             symbol_name_non_abi_mangled = symbol_name + 1;
                             symbol_name =
@@ -3382,7 +3382,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                                 if (symbol_name) {
                                   llvm::StringRef symbol_name_ref(symbol_name);
-                                  if (symbol_name_ref.startswith("_OBJC_")) {
+                                  if (symbol_name_ref.starts_with("_OBJC_")) {
                                     llvm::StringRef
                                         g_objc_v2_prefix_class(
                                             "_OBJC_CLASS_$_");
@@ -3391,7 +3391,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                             "_OBJC_METACLASS_$_");
                                     llvm::StringRef
                                         g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
-                                    if (symbol_name_ref.startswith(
+                                    if (symbol_name_ref.starts_with(
                                             g_objc_v2_prefix_class)) {
                                       symbol_name_non_abi_mangled =
                                           symbol_name + 1;
@@ -3401,7 +3401,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                       type = eSymbolTypeObjCClass;
                                       demangled_is_synthesized = true;
                                     } else if (
-                                        symbol_name_ref.startswith(
+                                        symbol_name_ref.starts_with(
                                             g_objc_v2_prefix_metaclass)) {
                                       symbol_name_non_abi_mangled =
                                           symbol_name + 1;
@@ -3410,7 +3410,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                           g_objc_v2_prefix_metaclass.size();
                                       type = eSymbolTypeObjCMetaClass;
                                       demangled_is_synthesized = true;
-                                    } else if (symbol_name_ref.startswith(
+                                    } else if (symbol_name_ref.starts_with(
                                                    g_objc_v2_prefix_ivar)) {
                                       symbol_name_non_abi_mangled =
                                           symbol_name + 1;
@@ -3441,7 +3441,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 llvm::StringRef symbol_name_ref(symbol_name);
                                 llvm::StringRef
                                     g_objc_v1_prefix_class(".objc_class_name_");
-                                if (symbol_name_ref.startswith(
+                                if (symbol_name_ref.starts_with(
                                         g_objc_v1_prefix_class)) {
                                   symbol_name_non_abi_mangled = symbol_name;
                                   symbol_name = symbol_name +
