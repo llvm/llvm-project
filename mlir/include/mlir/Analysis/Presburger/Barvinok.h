@@ -72,13 +72,6 @@ public:
     return -1;
   }
 
-  bool operator==(const GeneratingFunction &gf) const {
-    if (signs != gf.signs || numerators != gf.numerators ||
-        denominators != gf.denominators)
-      return false;
-    return true;
-  }
-
   GeneratingFunction operator+(const GeneratingFunction &gf) {
     bool sameNumParams = (getNumParams() == -1) || (gf.getNumParams() == -1) ||
                          (getNumParams() == gf.getNumParams());
