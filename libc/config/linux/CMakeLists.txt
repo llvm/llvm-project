@@ -1,5 +1,7 @@
-add_header_library(
-  app_h
+add_object_library(
+  app
+  SRCS
+    app.cpp
   HDRS
     app.h
   DEPENDS

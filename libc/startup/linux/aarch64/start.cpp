@@ -37,8 +37,6 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #error "mmap and mmap2 syscalls not available."
 #endif
 
-AppProperties app;
-
 static ThreadAttributes main_thread_attrib;
 
 void init_tls(TLSDescriptor &tls_descriptor) {
