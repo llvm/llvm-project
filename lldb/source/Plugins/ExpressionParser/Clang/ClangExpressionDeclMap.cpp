@@ -1370,7 +1370,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (!namespace_decl)
     SearchPersistenDecls(context, name);
 
-  if (name.GetStringRef().startswith("$") && !namespace_decl) {
+  if (name.GetStringRef().starts_with("$") && !namespace_decl) {
     if (name == "$__lldb_class") {
       LookUpLldbClass(context);
       return;
@@ -1386,7 +1386,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     // any other $__lldb names should be weeded out now
-    if (name.GetStringRef().startswith("$__lldb"))
+    if (name.GetStringRef().starts_with("$__lldb"))
       return;
 
     // No ParserVars means we can't do register or variable lookup.
@@ -1401,7 +1401,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       return;
     }
 
-    assert(name.GetStringRef().startswith("$"));
+    assert(name.GetStringRef().starts_with("$"));
     llvm::StringRef reg_name = name.GetStringRef().substr(1);
 
     if (m_parser_vars->m_exe_ctx.GetRegisterContext()) {
