@@ -8231,8 +8231,8 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
                          AVL);
     // TUMA or TUMU: Currently we always emit tumu policy regardless of tuma.
     // It's fine because vmerge does not care mask policy.
-    return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, Mask, Vec,
-                       MaskedOff, MaskedOff, AVL);
+    return DAG.getNode(RISCVISD::VMERGE_VL, DL, VT, Mask, Vec, MaskedOff,
+                       MaskedOff, AVL);
   }
   }
 
@@ -10312,7 +10312,8 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
       if (MaskIdx) {
         if (*MaskIdx == OpIdx.index())
           Ops.push_back(DAG.getUNDEF(ContainerVT));
-      } else if (ISD::getVPExplicitVectorLengthIdx(Op.getOpcode()) == OpIdx.index()) {
+      } else if (ISD::getVPExplicitVectorLengthIdx(Op.getOpcode()) ==
+                 OpIdx.index()) {
         // For VP_MERGE, copy the false operand instead of an undef value.
         assert(Op.getOpcode() == ISD::VP_MERGE);
         Ops.push_back(Ops.back());
