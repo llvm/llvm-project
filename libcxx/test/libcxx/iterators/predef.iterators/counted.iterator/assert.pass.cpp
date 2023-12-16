@@ -18,7 +18,7 @@
 
 int main(int, char**) {
   using Iter = std::counted_iterator<int*>;
-  int a[]    = {1, 2, 3};
+  int a[] = {1, 2, 3};
   Iter valid_i(a, 1);
 
   {
