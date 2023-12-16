@@ -220,3 +220,7 @@ class TypesOp(TypesOp):
             constantTypes = []
         result = pdl.RangeType.get(pdl.TypeType.get())
         super().__init__(result, constantTypes=constantTypes, loc=loc, ip=ip)
+
+
+def op_t():
+    return OperationType.get()
