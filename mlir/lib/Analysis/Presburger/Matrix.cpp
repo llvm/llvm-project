@@ -594,12 +594,13 @@ FracMatrix FracMatrix::gramSchmidt() const {
 // We iterate starting from the second row to the last row.
 //
 // For the kth row, we first check μ_kj for all rows j < k.
-// If it is more than 1/2, we subtract b_j (scaled by μ_kj)
+// We subtract b_j (scaled by the integer nearest to μ_kj)
 // from b_k.
 //
 // Now, we update k.
-// If b_k and b_{k-1} satisfy the Lovasz condition, we are done
-// and we increment k.
+// If b_k and b_{k-1} satisfy the Lovasz condition
+//    |b_k|^2 ≥ (δ - μ_k{k-1}^2) |b_{k-1}|^2,
+// we are done and we increment k.
 // Otherwise, we swap b_k and b_{k-1} and decrement k.
 //
 // We repeat this until k = n and return.
@@ -623,9 +624,9 @@ void FracMatrix::LLL(Fraction delta) {
            dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
       if (abs(mu) > Fraction(1, 2)) {
         nearest = floor(mu + Fraction(1, 2));
-        // Subtract b_j scaled by μ_jk from b_k.
+        // Subtract b_j scaled by the integer nearest to μ_jk from b_k.
         addToRow(k, getRow(j), -Fraction(nearest, 1));
-        gsOrth = gramSchmidt(); // recomputation
+        gsOrth = gramSchmidt(); // Update orthogonalization.
       }
     }
     mu = dotProduct(getRow(k), gsOrth.getRow(k - 1)) /
@@ -637,10 +638,10 @@ void FracMatrix::LLL(Fraction delta) {
       // If it is satisfied, proceed to the next k.
       k += 1;
     else {
-      // If it is unsatisfied, decrement k (without
+      // If it is not satisfied, decrement k (without
       // going beyond the second row).
       swapRows(k, k - 1);
-      gsOrth = gramSchmidt(); // recomputation
+      gsOrth = gramSchmidt(); // Update orthogonalization.
       k = k > 1 ? k - 1 : 1;
     }
   }
