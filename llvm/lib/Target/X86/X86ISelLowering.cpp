@@ -30136,20 +30136,20 @@ X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 }
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
-// TODO: In 32-bit mode, use MOVLPS when SSE1 is available?
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   Type *MemType = LI->getType();
 
-  // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
-  // can use movq to do the load. If we have X87 we can load into an 80-bit
-  // X87 register and store it to a stack temporary.
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
       !Subtarget.useSoftFloat()) {
+    // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
+    // can use movq to do the load. If we have X87 we can load into an 80-bit
+    // X87 register and store it to a stack temporary.
     if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
         (Subtarget.hasSSE1() || Subtarget.hasX87()))
       return AtomicExpansionKind::None;
 
+    // If this is a 128-bit load with AVX, 128-bit SSE loads/stores are atomic.
     if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
         Subtarget.hasAVX())
       return AtomicExpansionKind::None;
@@ -31298,12 +31298,10 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
     SDValue Chain;
     // For illegal i128 atomic_store, when AVX is enabled, we can simply emit a
     // vector store.
-    if (VT == MVT::i128) {
-      if (Subtarget.is64Bit() && Subtarget.hasAVX()) {
-        SDValue VecVal = DAG.getBitcast(MVT::v2i64, Node->getVal());
-        Chain = DAG.getStore(Node->getChain(), dl, VecVal, Node->getBasePtr(),
-                             Node->getMemOperand());
-      }
+    if (VT == MVT::i128 && Subtarget.is64Bit() && Subtarget.hasAVX()) {
+      SDValue VecVal = DAG.getBitcast(MVT::v2i64, Node->getVal());
+      Chain = DAG.getStore(Node->getChain(), dl, VecVal, Node->getBasePtr(),
+                           Node->getMemOperand());
     }
 
     // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE

@@ -228,86 +228,32 @@ define void @widen_broadcast_unaligned(ptr %p0, i32 %v) {
 }
 
 define i128 @load_i128(ptr %ptr) {
-; CHECK-O0-CUR-LABEL: load_i128:
-; CHECK-O0-CUR:       # %bb.0:
-; CHECK-O0-CUR-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-O0-CUR-NEXT:    vmovq %xmm0, %rax
-; CHECK-O0-CUR-NEXT:    vpextrq $1, %xmm0, %rdx
-; CHECK-O0-CUR-NEXT:    retq
-;
-; CHECK-O3-CUR-LABEL: load_i128:
-; CHECK-O3-CUR:       # %bb.0:
-; CHECK-O3-CUR-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-O3-CUR-NEXT:    vmovq %xmm0, %rax
-; CHECK-O3-CUR-NEXT:    vpextrq $1, %xmm0, %rdx
-; CHECK-O3-CUR-NEXT:    retq
-;
-; CHECK-O0-EX-LABEL: load_i128:
-; CHECK-O0-EX:       # %bb.0:
-; CHECK-O0-EX-NEXT:    pushq %rbx
-; CHECK-O0-EX-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-EX-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O0-EX-NEXT:    xorl %eax, %eax
-; CHECK-O0-EX-NEXT:    movl %eax, %ebx
-; CHECK-O0-EX-NEXT:    movq %rbx, %rax
-; CHECK-O0-EX-NEXT:    movq %rbx, %rdx
-; CHECK-O0-EX-NEXT:    movq %rbx, %rcx
-; CHECK-O0-EX-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-O0-EX-NEXT:    popq %rbx
-; CHECK-O0-EX-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O0-EX-NEXT:    retq
-;
-; CHECK-O3-EX-LABEL: load_i128:
-; CHECK-O3-EX:       # %bb.0:
-; CHECK-O3-EX-NEXT:    pushq %rbx
-; CHECK-O3-EX-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-EX-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O3-EX-NEXT:    xorl %eax, %eax
-; CHECK-O3-EX-NEXT:    xorl %edx, %edx
-; CHECK-O3-EX-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-EX-NEXT:    xorl %ebx, %ebx
-; CHECK-O3-EX-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-O3-EX-NEXT:    popq %rbx
-; CHECK-O3-EX-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O3-EX-NEXT:    retq
+; CHECK-LABEL: load_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-NEXT:    vmovq %xmm0, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-NEXT:    retq
   %v = load atomic i128, ptr %ptr unordered, align 16
   ret i128 %v
 }
 
 define void @store_i128(ptr %ptr, i128 %v) {
-; CHECK-O0-CUR-LABEL: store_i128:
-; CHECK-O0-CUR:       # %bb.0:
-; CHECK-O0-CUR-NEXT:    vmovq %rsi, %xmm0
-; CHECK-O0-CUR-NEXT:    vmovq %rdx, %xmm1
-; CHECK-O0-CUR-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-O0-CUR-NEXT:    vmovdqa %xmm0, (%rdi)
-; CHECK-O0-CUR-NEXT:    retq
+; CHECK-O0-LABEL: store_i128:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    vmovq %rsi, %xmm0
+; CHECK-O0-NEXT:    vmovq %rdx, %xmm1
+; CHECK-O0-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-O0-NEXT:    vmovdqa %xmm0, (%rdi)
+; CHECK-O0-NEXT:    retq
 ;
-; CHECK-O3-CUR-LABEL: store_i128:
-; CHECK-O3-CUR:       # %bb.0:
-; CHECK-O3-CUR-NEXT:    vmovq %rdx, %xmm0
-; CHECK-O3-CUR-NEXT:    vmovq %rsi, %xmm1
-; CHECK-O3-CUR-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; CHECK-O3-CUR-NEXT:    vmovdqa %xmm0, (%rdi)
-; CHECK-O3-CUR-NEXT:    retq
-;
-; CHECK-O0-EX-LABEL: store_i128:
-; CHECK-O0-EX:       # %bb.0:
-; CHECK-O0-EX-NEXT:    pushq %rax
-; CHECK-O0-EX-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-EX-NEXT:    callq __sync_lock_test_and_set_16@PLT
-; CHECK-O0-EX-NEXT:    popq %rax
-; CHECK-O0-EX-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O0-EX-NEXT:    retq
-;
-; CHECK-O3-EX-LABEL: store_i128:
-; CHECK-O3-EX:       # %bb.0:
-; CHECK-O3-EX-NEXT:    pushq %rax
-; CHECK-O3-EX-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-EX-NEXT:    callq __sync_lock_test_and_set_16@PLT
-; CHECK-O3-EX-NEXT:    popq %rax
-; CHECK-O3-EX-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O3-EX-NEXT:    retq
+; CHECK-O3-LABEL: store_i128:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    vmovq %rdx, %xmm0
+; CHECK-O3-NEXT:    vmovq %rsi, %xmm1
+; CHECK-O3-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-O3-NEXT:    vmovdqa %xmm0, (%rdi)
+; CHECK-O3-NEXT:    retq
   store atomic i128 %v, ptr %ptr unordered, align 16
   ret void
 }
