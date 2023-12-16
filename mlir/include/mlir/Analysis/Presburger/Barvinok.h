@@ -56,9 +56,9 @@ using Point = SmallVector<Fraction>;
 //      is a vector (a generator).
 class GeneratingFunction {
 public:
-  GeneratingFunction(SmallVector<int, 16> s, std::vector<ParamPoint> nums,
+  GeneratingFunction(SmallVector<int, 16> signs, std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
-      : signs(s), numerators(nums), denominators(dens){};
+      : signs(signs), numerators(nums), denominators(dens) {}
 
   // Find the number of parameters involved in the function
   // from the dimensionality of the affine functions.
@@ -96,18 +96,18 @@ public:
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
     for (unsigned i = 0; i < signs.size(); i++) {
       if (signs[i] == 1)
-        os << "+";
+        os << " + ";
       else
-        os << "-";
+        os << " - ";
 
-      os << "*(x^[";
+      os << "(x^[";
       for (unsigned j = 0; j < numerators[i].size() - 1; j++)
         os << numerators[i][j] << ",";
-      os << numerators[i][numerators[i].size() - 1] << "])/";
+      os << numerators[i].back() << "])/";
 
       for (Point den : denominators[i]) {
         os << "(x^[";
-        for (unsigned j = 0; j < den.size(); j++)
+        for (unsigned j = 0; j < den.size() - 1; j++)
           os << den[j] << ",";
         os << den[den.size() - 1] << "])";
       }
@@ -115,7 +115,7 @@ public:
     return os;
   }
 
-  SmallVector<int, 16> signs;
+  SmallVector<int, 8> signs;
   std::vector<ParamPoint> numerators;
   std::vector<std::vector<Point>> denominators;
 };
@@ -130,9 +130,9 @@ class QuasiPolynomial {
 public:
   QuasiPolynomial(SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {})
-      : coefficients(coeffs), affine(aff){};
+      : coefficients(coeffs), affine(aff) {}
 
-  QuasiPolynomial(Fraction cons) : coefficients({cons}), affine({{}}){};
+  QuasiPolynomial(Fraction cons) : coefficients({cons}), affine({{}}) {}
 
   QuasiPolynomial(QuasiPolynomial const &) = default;
 
