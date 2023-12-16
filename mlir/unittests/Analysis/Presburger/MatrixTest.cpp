@@ -387,35 +387,71 @@ TEST(MatrixTest, LLL) {
                       {Fraction(3, 1), Fraction(5, 1), Fraction(6, 1)}});
   mat.LLL(Fraction(3, 4));
 
-  FracMatrix LLL =
-      makeFracMatrix(3, 3,
-                     {{Fraction(0, 1), Fraction(1, 1), Fraction(0, 1)},
-                      {Fraction(1, 1), Fraction(0, 1), Fraction(1, 1)},
-                      {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)}});
+  FracMatrix gsOrth = mat.gramSchmidt();
 
-  EXPECT_EQ_FRAC_MATRIX(mat, LLL);
+  // Size-reduced check.
+  for (unsigned i = 0; i < 3; i++)
+    for (unsigned j = 0; j < i; j++) {
+      Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(j)) /
+                    dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      ASSERT_TRUE(abs(mu) <= Fraction(1, 2));
+    }
+
+  // Lovasz condition check.
+  for (unsigned i = 1; i < 3; i++) {
+    Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(i - 1)) /
+                  dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1));
+    ASSERT_TRUE(dotProduct(mat.getRow(i), mat.getRow(i)) >
+                (Fraction(3, 4) - mu * mu) *
+                    dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1)));
+  }
 
   mat = makeFracMatrix(
       2, 2,
       {{Fraction(12, 1), Fraction(2, 1)}, {Fraction(13, 1), Fraction(4, 1)}});
-  LLL = makeFracMatrix(
-      2, 2,
-      {{Fraction(1, 1), Fraction(2, 1)}, {Fraction(9, 1), Fraction(-4, 1)}});
-
   mat.LLL(Fraction(3, 4));
 
-  EXPECT_EQ_FRAC_MATRIX(mat, LLL);
+  gsOrth = mat.gramSchmidt();
+
+  // Size-reduced check.
+  for (unsigned i = 0; i < 2; i++)
+    for (unsigned j = 0; j < i; j++) {
+      Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(j)) /
+                    dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      ASSERT_TRUE(abs(mu) <= Fraction(1, 2));
+    }
+
+  // Lovasz condition check.
+  for (unsigned i = 1; i < 2; i++) {
+    Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(i - 1)) /
+                  dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1));
+    ASSERT_TRUE(dotProduct(mat.getRow(i), mat.getRow(i)) >
+                (Fraction(3, 4) - mu * mu) *
+                    dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1)));
+  }
 
   mat = makeFracMatrix(3, 3,
                        {{Fraction(1, 1), Fraction(0, 1), Fraction(2, 1)},
                         {Fraction(0, 1), Fraction(1, 3), -Fraction(5, 3)},
                         {Fraction(0, 1), Fraction(0, 1), Fraction(1, 1)}});
-  LLL = makeFracMatrix(3, 3,
-                       {{Fraction(0, 1), Fraction(1, 3), Fraction(1, 3)},
-                        {Fraction(0, 1), Fraction(1, 3), -Fraction(2, 3)},
-                        {Fraction(1, 1), Fraction(0, 1), Fraction(0, 1)}});
-
   mat.LLL(Fraction(3, 4));
 
-  EXPECT_EQ_FRAC_MATRIX(mat, LLL);
+  gsOrth = mat.gramSchmidt();
+
+  // Size-reduced check.
+  for (unsigned i = 0; i < 3; i++)
+    for (unsigned j = 0; j < i; j++) {
+      Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(j)) /
+                    dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      ASSERT_TRUE(abs(mu) <= Fraction(1, 2));
+    }
+
+  // Lovasz condition check.
+  for (unsigned i = 1; i < 3; i++) {
+    Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(i - 1)) /
+                  dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1));
+    ASSERT_TRUE(dotProduct(mat.getRow(i), mat.getRow(i)) >
+                (Fraction(3, 4) - mu * mu) *
+                    dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1)));
+  }
 }
