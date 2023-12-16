@@ -14,14 +14,11 @@
 #include "llvm/Support/raw_socket_stream.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Threading.h"
 
 #ifndef _WIN32
 #include <sys/socket.h>
 #include <sys/un.h>
 #else
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 // winsock2.h must be included before afunix.h. Briefly turn off clang-format to
 // avoid error.

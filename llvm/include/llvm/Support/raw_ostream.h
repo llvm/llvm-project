@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Threading.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
