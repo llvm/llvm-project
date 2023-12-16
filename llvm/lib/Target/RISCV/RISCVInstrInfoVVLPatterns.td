@@ -2363,7 +2363,7 @@ multiclass VPatTruncSatClipUMin<VTypeInfo vti, VTypeInfo wti, int uminval> {
   def : Pat<(vti.Vector (riscv_trunc_vector_vl
     (wti.Vector (riscv_smin_vl
       (wti.Vector wti.RegClass:$rs1),
-      (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), sminval, (XLenVT srcvalue))),
+      (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), uminval, (XLenVT srcvalue))),
       (wti.Vector undef), (wti.Mask V0), VLOpFrag)),
     (vti.Mask V0), VLOpFrag)),
     (!cast<Instruction>("PseudoVNCLIPU_WI_"#vti.LMul.MX#"_MASK")
