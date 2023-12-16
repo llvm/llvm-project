@@ -2164,20 +2164,20 @@ static SymbolType GetSymbolType(const char *&symbol_name,
 
       if (symbol_name) {
         llvm::StringRef symbol_name_ref(symbol_name);
-        if (symbol_name_ref.startswith("OBJC_")) {
+        if (symbol_name_ref.starts_with("OBJC_")) {
           static const llvm::StringRef g_objc_v2_prefix_class("OBJC_CLASS_$_");
           static const llvm::StringRef g_objc_v2_prefix_metaclass(
               "OBJC_METACLASS_$_");
           static const llvm::StringRef g_objc_v2_prefix_ivar("OBJC_IVAR_$_");
-          if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+          if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
             symbol_name = symbol_name + g_objc_v2_prefix_class.size();
             type = eSymbolTypeObjCClass;
             demangled_is_synthesized = true;
-          } else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass)) {
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_metaclass)) {
             symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
             type = eSymbolTypeObjCMetaClass;
             demangled_is_synthesized = true;
-          } else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar)) {
+          } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
             symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
             type = eSymbolTypeObjCIVar;
             demangled_is_synthesized = true;
@@ -3789,18 +3789,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
           if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'O') {
             llvm::StringRef symbol_name_ref(symbol_name);
-            if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+            if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
               symbol_name_non_abi_mangled = symbol_name + 1;
               symbol_name = symbol_name + g_objc_v2_prefix_class.size();
               type = eSymbolTypeObjCClass;
               demangled_is_synthesized = true;
 
-            } else if (symbol_name_ref.startswith(g_objc_v2_prefix_metaclass)) {
+            } else if (symbol_name_ref.starts_with(
+                           g_objc_v2_prefix_metaclass)) {
               symbol_name_non_abi_mangled = symbol_name + 1;
               symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
               type = eSymbolTypeObjCMetaClass;
               demangled_is_synthesized = true;
-            } else if (symbol_name_ref.startswith(g_objc_v2_prefix_ivar)) {
+            } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
               symbol_name_non_abi_mangled = symbol_name + 1;
               symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
               type = eSymbolTypeObjCIVar;
@@ -4250,27 +4251,27 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                   if (symbol_name) {
                     llvm::StringRef symbol_name_ref(symbol_name);
-                    if (symbol_name_ref.startswith("_OBJC_")) {
+                    if (symbol_name_ref.starts_with("_OBJC_")) {
                       llvm::StringRef g_objc_v2_prefix_class(
                           "_OBJC_CLASS_$_");
                       llvm::StringRef g_objc_v2_prefix_metaclass(
                           "_OBJC_METACLASS_$_");
                       llvm::StringRef g_objc_v2_prefix_ivar(
                           "_OBJC_IVAR_$_");
-                      if (symbol_name_ref.startswith(g_objc_v2_prefix_class)) {
+                      if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
                         symbol_name =
                             symbol_name + g_objc_v2_prefix_class.size();
                         type = eSymbolTypeObjCClass;
                         demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.startswith(
+                      } else if (symbol_name_ref.starts_with(
                                      g_objc_v2_prefix_metaclass)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
                         symbol_name =
                             symbol_name + g_objc_v2_prefix_metaclass.size();
                         type = eSymbolTypeObjCMetaClass;
                         demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.startswith(
+                      } else if (symbol_name_ref.starts_with(
                                      g_objc_v2_prefix_ivar)) {
                         symbol_name_non_abi_mangled = symbol_name + 1;
                         symbol_name =
@@ -4297,7 +4298,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   llvm::StringRef symbol_name_ref(symbol_name);
                   llvm::StringRef g_objc_v1_prefix_class(
                       ".objc_class_name_");
-                  if (symbol_name_ref.startswith(g_objc_v1_prefix_class)) {
+                  if (symbol_name_ref.starts_with(g_objc_v1_prefix_class)) {
                     symbol_name_non_abi_mangled = symbol_name;
                     symbol_name = symbol_name + g_objc_v1_prefix_class.size();
                     type = eSymbolTypeObjCClass;
@@ -5163,10 +5164,10 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       std::string loader_path("@loader_path");
       std::string executable_path("@executable_path");
       for (auto &rpath : rpath_paths) {
-        if (llvm::StringRef(rpath).startswith(loader_path)) {
+        if (llvm::StringRef(rpath).starts_with(loader_path)) {
           rpath.erase(0, loader_path.size());
           rpath.insert(0, this_file_spec.GetDirectory().GetCString());
-        } else if (llvm::StringRef(rpath).startswith(executable_path)) {
+        } else if (llvm::StringRef(rpath).starts_with(executable_path)) {
           rpath.erase(0, executable_path.size());
           rpath.insert(0, this_file_spec.GetDirectory().GetCString());
         }
