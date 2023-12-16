@@ -2716,6 +2716,21 @@ public:
   /// expression and compare the result against zero, returning an Int1Ty value.
   llvm::Value *EvaluateExprAsBool(const Expr *E);
 
+  /// Retrieve the implicit cast expression of the rhs in a binary operator
+  /// expression by passing pointers to Value and QualType
+  /// This is used for implicit bitfield conversion checks, which
+  /// must compare with the value before potential truncation.
+  llvm::Value *EmitWithOriginalRHSBitfieldAssignment(const BinaryOperator *E,
+                                                     llvm::Value *Previous,
+                                                     QualType *SrcType);
+
+  /// Emit a check that an [implicit] conversion of a bitfield. It is not UB,
+  /// so we use the value after conversion.
+  void EmitBitfieldConversionCheck(llvm::Value *Src, QualType SrcType,
+                                   llvm::Value *Dst, QualType DstType,
+                                   const CGBitFieldInfo &Info,
+                                   SourceLocation Loc);
+
   /// EmitIgnoredExpr - Emit an expression in a context which ignores the result.
   void EmitIgnoredExpr(const Expr *E);
 
