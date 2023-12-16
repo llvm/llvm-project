@@ -40,6 +40,15 @@ void test_get_int_p() {
     assert(*uPtr == 84);
   }
 
+  {
+    MoveOnlyDeleter<int> del;
+    std::unique_ptr<int, MoveOnlyDeleter<int>> uPtr;
+
+    get_int_p(std::out_ptr(uPtr, std::move(del)));
+    assert(*uPtr == 84);
+    assert(uPtr.get_deleter().wasMoveInitilized == true);
+  }
+
   // std::shared_ptr
   {
     std::shared_ptr<int> sPtr;

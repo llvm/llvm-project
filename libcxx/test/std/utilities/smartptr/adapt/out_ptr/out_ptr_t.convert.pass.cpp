@@ -20,7 +20,6 @@
 #include <cassert>
 #include <concepts>
 #include <memory>
-#include <iostream>
 
 int main(int, char**) {
   {

@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "test_convertible.h"
+#include "../types.h"
 
 int main(int, char**) {
   {
@@ -29,6 +30,7 @@ int main(int, char**) {
     static_assert(
         !test_convertible<std::inout_ptr_t<std::unique_ptr<int>, int*>>(), "This constructor must be explicit");
   }
+
   {
     auto deleter = [](auto* p) { delete p; };
     std::unique_ptr<int, decltype(deleter)> uPtr;
@@ -37,6 +39,12 @@ int main(int, char**) {
 
     static_assert(!test_convertible<std::inout_ptr_t<std::unique_ptr<int, decltype(deleter)>, int*>>(),
                   "This constructor must be explicit");
+  }
+
+  {
+    std::unique_ptr<int, MoveOnlyDeleter<int>> uPtr;
+
+    std::inout_ptr_t<decltype(uPtr), int*, MoveOnlyDeleter<int>>{uPtr, MoveOnlyDeleter<int>{}};
   }
 
   return 0;

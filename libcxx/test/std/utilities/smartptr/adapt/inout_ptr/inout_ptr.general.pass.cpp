@@ -45,6 +45,15 @@ void test_replace_int_p() {
     assert(*uPtr == 84);
   }
 
+  {
+    MoveOnlyDeleter<int> del;
+    std::unique_ptr<int, MoveOnlyDeleter<int>> uPtr{new int{90}};
+
+    replace_int_p(std::inout_ptr(uPtr, std::move(del)));
+    assert(*uPtr == 84);
+    assert(uPtr.get_deleter().wasMoveInitilized == true);
+  }
+
   // pointer-like ConstructiblePtr
   {
     ConstructiblePtr<int> cPtr(new int{90});

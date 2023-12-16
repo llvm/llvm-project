@@ -12,10 +12,7 @@
 #include <type_traits>
 #include <memory>
 
-template <typename T>
-class DefaultDeleter {
-  void operator()(T* p) const { delete p; }
-};
+// Custom deleters.
 
 template <typename T>
 struct CopyableMovableDeleter {
@@ -27,6 +24,24 @@ struct CopyableMovableDeleter {
 };
 
 template <typename T>
+struct DefaultDeleter {
+  void operator()(T* p) const { delete p; }
+};
+
+template <typename T>
+struct MoveOnlyDeleter {
+  MoveOnlyDeleter()                                  = default;
+  MoveOnlyDeleter(const MoveOnlyDeleter&)            = delete;
+  MoveOnlyDeleter& operator=(const MoveOnlyDeleter&) = delete;
+  MoveOnlyDeleter(MoveOnlyDeleter&&) : wasMoveInitilized{true} {}
+  MoveOnlyDeleter& operator=(MoveOnlyDeleter&&) = default;
+
+  void operator()(T* p) const { delete p; }
+
+  bool wasMoveInitilized = false;
+};
+
+template <typename T>
 struct NotCopyAbleNotMovableDeleter {
   NotCopyAbleNotMovableDeleter()                                    = default;
   NotCopyAbleNotMovableDeleter(NotCopyAbleNotMovableDeleter const&) = delete; // not copyable
@@ -34,8 +49,6 @@ struct NotCopyAbleNotMovableDeleter {
 
   void operator()(T* p) const { delete p; }
 };
-
-struct ResetArg {};
 
 // Custom pointer types.
 
@@ -56,6 +69,8 @@ struct ConstructiblePtr {
 
 static_assert(std::is_same_v<std::__pointer_of_t< ConstructiblePtr<int>>, int* >);
 static_assert(std::is_constructible_v< ConstructiblePtr<int>, int* >);
+
+struct ResetArg {};
 
 template <typename _Tp>
 struct ResettablePtr {
@@ -88,13 +103,5 @@ struct NonConstructiblePtr : public ResettablePtr<_Tp> {
 
 static_assert(std::is_same_v<std::__pointer_of_t< NonConstructiblePtr<int>>, int* >);
 static_assert(!std::is_constructible_v< NonConstructiblePtr<int>, int* >);
-
-// Custom types.
-
-struct SomeInt {
-  int value;
-
-  constexpr explicit SomeInt(int val = 0) : value{val} {}
-};
 
 #endif // TEST_LIBCXX_UTILITIES_SMARTPTR_ADAPT_TYPES_H
