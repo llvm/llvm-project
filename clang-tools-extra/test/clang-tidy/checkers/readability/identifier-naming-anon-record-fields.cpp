@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.CheckAnonFieldInParent: true, \
 // RUN:     readability-identifier-naming.ClassConstantCase: CamelCase, \
 // RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
 // RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \

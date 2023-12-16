@@ -287,7 +287,9 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
                         HPTOpt.value_or(IdentifierNamingCheck::HPT_Off));
   }
   bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
-  return {std::move(Styles), std::move(HNOption), IgnoreMainLike};
+  bool CheckAnonFieldInParent = Options.get("CheckAnonFieldInParent", false);
+  return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
+          CheckAnonFieldInParent};
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
@@ -860,6 +862,8 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreFailedSplit", IgnoreFailedSplit);
   Options.store(Opts, "IgnoreMainLikeFunctions",
                 MainFileStyle->isIgnoringMainLikeFunction());
+  Options.store(Opts, "CheckAnonFieldInParent",
+                MainFileStyle->isCheckingAnonFieldInParentScope());
 }
 
 bool IdentifierNamingCheck::matchesStyle(
@@ -1112,7 +1116,7 @@ std::string IdentifierNamingCheck::fixupWithStyle(
 StyleKind IdentifierNamingCheck::findStyleKind(
     const NamedDecl *D,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
-    bool IgnoreMainLikeFunctions) const {
+    bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope) const {
   assert(D && D->getIdentifier() && !D->getName().empty() && !D->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
 
@@ -1186,9 +1190,11 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   }
 
   if (const auto *Decl = dyn_cast<FieldDecl>(D)) {
-    const RecordDecl *Record = Decl->getParent();
-    if (Record->isAnonymousStructOrUnion()) {
-      return findStyleKindForAnonField(Decl, NamingStyles);
+    if (CheckAnonFieldInParentScope) {
+      const RecordDecl *Record = Decl->getParent();
+      if (Record->isAnonymousStructOrUnion()) {
+        return findStyleKindForAnonField(Decl, NamingStyles);
+      }
     }
 
     return findStyleKindForField(Decl, Decl->getType(), NamingStyles);
@@ -1367,12 +1373,13 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
   if (!FileStyle.isActive())
     return std::nullopt;
 
-  return getFailureInfo(HungarianNotation.getDeclTypeName(Decl),
-                        Decl->getName(), Decl, Loc, FileStyle.getStyles(),
-                        FileStyle.getHNOption(),
-                        findStyleKind(Decl, FileStyle.getStyles(),
-                                      FileStyle.isIgnoringMainLikeFunction()),
-                        SM, IgnoreFailedSplit);
+  return getFailureInfo(
+      HungarianNotation.getDeclTypeName(Decl), Decl->getName(), Decl, Loc,
+      FileStyle.getStyles(), FileStyle.getHNOption(),
+      findStyleKind(Decl, FileStyle.getStyles(),
+                    FileStyle.isIgnoringMainLikeFunction(),
+                    FileStyle.isCheckingAnonFieldInParentScope()),
+      SM, IgnoreFailedSplit);
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
