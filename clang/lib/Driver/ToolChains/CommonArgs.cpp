@@ -303,7 +303,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
     A->claim();
 
     // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
+    assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
     auto Proc = getCPUName(D, Args, Triple);
@@ -317,7 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.startswith("no-");
+    bool IsNegative = Name.starts_with("no-");
     if (IsNegative)
       Name = Name.substr(3);
 
@@ -1116,60 +1116,91 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
+/// Determines if --whole-archive is active in the list of arguments.
+static bool isWholeArchivePresent(const ArgList &Args) {
+  bool WholeArchiveActive = false;
+  for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
+    if (Arg) {
+      for (StringRef ArgValue : Arg->getValues()) {
+        if (ArgValue == "--whole-archive")
+          WholeArchiveActive = true;
+        if (ArgValue == "--no-whole-archive")
+          WholeArchiveActive = false;
+      }
+    }
+  }
+
+  return WholeArchiveActive;
+}
+
+/// Add Fortran runtime libs for MSVC
+static void addFortranRuntimeLibsMSVC(const ArgList &Args,
+                                      llvm::opt::ArgStringList &CmdArgs) {
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
+    break;
+  }
+}
+
+// Add FortranMain runtime lib
+static void addFortranMain(const ToolChain &TC, const ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) {
+  // 1. MSVC
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    addFortranRuntimeLibsMSVC(Args, CmdArgs);
+    return;
+  }
+
+  // 2. GNU and similar
+  // The --whole-archive option needs to be part of the link line to make
+  // sure that the main() function from Fortran_main.a is pulled in by the
+  // linker. However, it shouldn't be used if it's already active.
+  // TODO: Find an equivalent of `--whole-archive` for Darwin.
+  if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX()) {
+    CmdArgs.push_back("--whole-archive");
+    CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back("--no-whole-archive");
+    return;
+  }
+
+  CmdArgs.push_back("-lFortran_main");
+}
+
+/// Add Fortran runtime libs
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // These are handled earlier on Windows by telling the frontend driver to add
-  // the correct libraries to link against as dependents in the object file.
+  // 1. Link FortranMain
+  // FortranMain depends on FortranRuntime, so needs to be listed first. If
+  // -fno-fortran-main has been passed, skip linking Fortran_main.a
+  if (!Args.hasArg(options::OPT_no_fortran_main))
+    addFortranMain(TC, Args, CmdArgs);
+
+  // 2. Link FortranRuntime and FortranDecimal
+  // These are handled earlier on Windows by telling the frontend driver to
+  // add the correct libraries to link against as dependents in the object
+  // file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    // The --whole-archive option needs to be part of the link line to
-    // make sure that the main() function from Fortran_main.a is pulled
-    // in by the linker.  Determine if --whole-archive is active when
-    // flang will try to link Fortran_main.a.  If it is, don't add the
-    // --whole-archive flag to the link line.  If it's not, add a proper
-    // --whole-archive/--no-whole-archive bracket to the link line.
-    bool WholeArchiveActive = false;
-    for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA))
-      if (Arg)
-        for (StringRef ArgValue : Arg->getValues()) {
-          if (ArgValue == "--whole-archive")
-            WholeArchiveActive = true;
-          if (ArgValue == "--no-whole-archive")
-            WholeArchiveActive = false;
-        }
-
-    if (!WholeArchiveActive)
-      CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lFortran_main");
-    if (!WholeArchiveActive)
-      CmdArgs.push_back("--no-whole-archive");
-
-    // Perform regular linkage of the remaining runtime libraries.
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
-  } else {
-    unsigned RTOptionID = options::OPT__SLASH_MT;
-    if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
-      RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
-                       .Case("static", options::OPT__SLASH_MT)
-                       .Case("static_dbg", options::OPT__SLASH_MTd)
-                       .Case("dll", options::OPT__SLASH_MD)
-                       .Case("dll_dbg", options::OPT__SLASH_MDd)
-                       .Default(options::OPT__SLASH_MT);
-    }
-    switch (RTOptionID) {
-    case options::OPT__SLASH_MT:
-      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
-      break;
-    case options::OPT__SLASH_MTd:
-      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
-      break;
-    case options::OPT__SLASH_MD:
-      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
-      break;
-    case options::OPT__SLASH_MDd:
-      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
-      break;
-    }
   }
 }
 
@@ -2330,20 +2361,20 @@ static void GetSDLFromOffloadArchive(
   llvm::Triple Triple(D.getTargetTriple());
   bool IsMSVC = Triple.isWindowsMSVCEnvironment();
   auto Ext = IsMSVC ? ".lib" : ".a";
-  if (!Lib.startswith(":") && !Lib.startswith("-l")) {
+  if (!Lib.starts_with(":") && !Lib.starts_with("-l")) {
     if (llvm::sys::fs::exists(Lib)) {
       ArchiveOfBundles = Lib;
       FoundAOB = true;
     }
   } else {
-    if (Lib.startswith("-l"))
+    if (Lib.starts_with("-l"))
       Lib = Lib.drop_front(2);
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
-      auto LibFile =
-          (Lib.startswith(":") ? Lib.drop_front()
-                               : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
-              .str();
+      auto LibFile = (Lib.starts_with(":") ? Lib.drop_front()
+                      : IsMSVC             ? Lib + Ext
+                                           : "lib" + Lib + Ext)
+                         .str();
       for (auto Prefix : {"/libdevice/", "/"}) {
         auto AOB = Twine(LPath + Prefix + LibFile).str();
         if (llvm::sys::fs::exists(AOB)) {

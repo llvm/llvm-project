@@ -35,7 +35,7 @@ using ZeroPaddedHexFmt = IntegerToString<
 // 3. The exponent is always 16 bits wide irrespective of the type of the
 //    floating encoding.
 template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
-  using UIntType = typename fputil::FPBits<T>::UIntType;
+  using StorageType = typename fputil::FPBits<T>::StorageType;
 
   if (x.is_nan())
     return "(NaN)";
@@ -46,24 +46,23 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
   cpp::string s;
 
-  const details::ZeroPaddedHexFmt<UIntType> bits(x.bits);
+  const details::ZeroPaddedHexFmt<StorageType> bits(x.bits);
   s += bits.view();
 
   s += " = (S: ";
   s += sign_char(x.get_sign());
 
   s += ", E: ";
-  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_unbiased_exponent());
+  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());
   s += exponent.view();
 
-  if constexpr (cpp::is_same_v<T, long double> &&
-                fputil::FloatProperties<long double>::MANTISSA_WIDTH == 63) {
+  if constexpr (fputil::get_fp_type<T>() == fputil::FPType::X86_Binary80) {
     s += ", I: ";
     s += sign_char(x.get_implicit_bit());
   }
 
   s += ", M: ";
-  const details::ZeroPaddedHexFmt<UIntType> mantissa(x.get_mantissa());
+  const details::ZeroPaddedHexFmt<StorageType> mantissa(x.get_mantissa());
   s += mantissa.view();
 
   s += ')';

@@ -149,6 +149,9 @@ private:
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;
+  bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
+  bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
+  bool selectSBarrierLeave(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
                                                    bool IsCanonicalizing = true,
@@ -288,6 +291,9 @@ private:
 
   bool selectMUBUFOffsetImpl(MachineOperand &Root, Register &RSrcReg,
                              Register &SOffset, int64_t &Offset) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectBUFSOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectMUBUFAddr64(MachineOperand &Root) const;

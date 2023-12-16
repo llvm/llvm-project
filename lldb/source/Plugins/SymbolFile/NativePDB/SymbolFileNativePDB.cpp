@@ -1717,24 +1717,33 @@ void SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
                                         bool include_inlines,
                                         SymbolContextList &sc_list) {}
 
-void SymbolFileNativePDB::FindTypes(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!name)
+void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
+                                    lldb_private::TypeResults &results) {
+
+  // Make sure we haven't already searched this SymbolFile before.
+  if (results.AlreadySearched(this))
     return;
 
-  searched_symbol_files.clear();
-  searched_symbol_files.insert(this);
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  // There is an assumption 'name' is not a regex
-  FindTypesByName(name.GetStringRef(), max_matches, types);
+  std::vector<TypeIndex> matches =
+      m_index->tpi().findRecordsByName(query.GetTypeBasename().GetStringRef());
+
+  for (TypeIndex type_idx : matches) {
+    TypeSP type_sp = GetOrCreateType(type_idx);
+    if (!type_sp)
+      continue;
+
+    // We resolved a type. Get the fully qualified name to ensure it matches.
+    ConstString name = type_sp->GetQualifiedName();
+    TypeQuery type_match(name.GetStringRef(), TypeQueryOptions::e_exact_match);
+    if (query.ContextMatches(type_match.GetContextRef())) {
+      results.InsertUnique(type_sp);
+      if (results.Done(query))
+        return;
+    }
+  }
 }
-
-void SymbolFileNativePDB::FindTypes(
-    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {}
 
 void SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
                                           uint32_t max_matches,

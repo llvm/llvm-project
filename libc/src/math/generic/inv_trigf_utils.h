@@ -40,18 +40,17 @@ LIBC_INLINE double atan_eval(double x) {
   using FPB = fputil::FPBits<double>;
   // Added some small value to umin and umax mantissa to avoid possible rounding
   // errors.
-  FPB::UIntType umin =
-      FPB::create_value(false, FPB::EXPONENT_BIAS - ATAN_T_BITS - 1,
+  FPB::StorageType umin =
+      FPB::create_value(false, FPB::EXP_BIAS - ATAN_T_BITS - 1,
                         0x100000000000UL)
           .uintval();
-  FPB::UIntType umax =
-      FPB::create_value(false, FPB::EXPONENT_BIAS + ATAN_T_BITS,
-                        0xF000000000000UL)
+  FPB::StorageType umax =
+      FPB::create_value(false, FPB::EXP_BIAS + ATAN_T_BITS, 0xF000000000000UL)
           .uintval();
 
   FPB bs(x);
   bool sign = bs.get_sign();
-  auto x_abs = bs.uintval() & FPB::FloatProp::EXP_MANT_MASK;
+  auto x_abs = bs.uintval() & FPB::EXP_MANT_MASK;
 
   if (x_abs <= umin) {
     double pe = LIBC_NAMESPACE::fputil::polyeval(
@@ -64,7 +63,8 @@ LIBC_INLINE double atan_eval(double x) {
     double one_over_x2 = one_over_x_m * one_over_x_m;
     double pe = LIBC_NAMESPACE::fputil::polyeval(
         one_over_x2, ATAN_K[0], ATAN_K[1], ATAN_K[2], ATAN_K[3]);
-    return fputil::multiply_add(pe, one_over_x_m, sign ? (-M_MATH_PI_2) : (M_MATH_PI_2));
+    return fputil::multiply_add(pe, one_over_x_m,
+                                sign ? (-M_MATH_PI_2) : (M_MATH_PI_2));
   }
 
   double pos_x = FPB(x_abs).get_val();

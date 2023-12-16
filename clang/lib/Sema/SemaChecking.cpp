@@ -1219,7 +1219,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     if (IsChkVariant) {
       FunctionName = FunctionName.drop_front(std::strlen("__builtin___"));
       FunctionName = FunctionName.drop_back(std::strlen("_chk"));
-    } else if (FunctionName.startswith("__builtin_")) {
+    } else if (FunctionName.starts_with("__builtin_")) {
       FunctionName = FunctionName.drop_front(std::strlen("__builtin_"));
     }
     return FunctionName;
@@ -5030,14 +5030,14 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),
                 diag::warn_atomic_op_has_invalid_memory_order)
-           << ArgExpr->getSourceRange();
+           << 0 << ArgExpr->getSourceRange();
   switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
   case llvm::AtomicOrderingCABI::relaxed:
   case llvm::AtomicOrderingCABI::consume:
     if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
       return Diag(ArgExpr->getBeginLoc(),
                   diag::warn_atomic_op_has_invalid_memory_order)
-             << ArgExpr->getSourceRange();
+             << 0 << ArgExpr->getSourceRange();
     break;
   case llvm::AtomicOrderingCABI::acquire:
   case llvm::AtomicOrderingCABI::release:
@@ -5082,12 +5082,10 @@ static bool CheckInvalidVLENandLMUL(const TargetInfo &TI, CallExpr *TheCall,
   assert((EGW == 128 || EGW == 256) && "EGW can only be 128 or 256 bits");
 
   // LMUL * VLEN >= EGW
-  unsigned ElemSize = Type->isRVVType(32, false) ? 32 : 64;
-  unsigned MinElemCount = Type->isRVVType(1)   ? 1
-                          : Type->isRVVType(2) ? 2
-                          : Type->isRVVType(4) ? 4
-                          : Type->isRVVType(8) ? 8
-                                               : 16;
+  ASTContext::BuiltinVectorTypeInfo Info =
+      S.Context.getBuiltinVectorTypeInfo(Type->castAs<BuiltinType>());
+  unsigned ElemSize = S.Context.getTypeSize(Info.ElementType);
+  unsigned MinElemCount = Info.EC.getKnownMinValue();
 
   unsigned EGS = EGW / ElemSize;
   // If EGS is less than or equal to the minimum number of elements, then the
@@ -5215,15 +5213,13 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vsmul_vx_tum:
   case RISCVVector::BI__builtin_rvv_vsmul_vv_tumu:
   case RISCVVector::BI__builtin_rvv_vsmul_vx_tumu: {
-    bool RequireV = false;
-    for (unsigned ArgNum = 0; ArgNum < TheCall->getNumArgs(); ++ArgNum)
-      RequireV |= TheCall->getArg(ArgNum)->getType()->isRVVType(
-          /* Bitwidth */ 64, /* IsFloat */ false);
+    ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(
+        TheCall->getType()->castAs<BuiltinType>());
 
-    if (RequireV && !TI.hasFeature("v"))
+    if (Context.getTypeSize(Info.ElementType) == 64 && !TI.hasFeature("v"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ false << TheCall->getSourceRange() << "v";
+             << /* IsExtension */ true << TheCall->getSourceRange() << "v";
 
     break;
   }
@@ -5327,9 +5323,9 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     QualType Op3Type = TheCall->getArg(2)->getType();
     uint64_t ElemSize = Op1Type->isRVVType(32, false) ? 32 : 64;
     if (ElemSize == 64 && !TI.hasFeature("experimental-zvknhb"))
-      return
-          Diag(TheCall->getBeginLoc(), diag::err_riscv_type_requires_extension)
-              << Op1Type << "experimental-zvknhb";
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_type_requires_extension)
+             << Op1Type << "zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, ElemSize << 2) ||
            CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, ElemSize << 2) ||
@@ -8181,13 +8177,31 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     break;
   }
 
+  // If the memory orders are constants, check they are valid.
   if (SubExprs.size() >= 2 && Form != Init) {
-    if (std::optional<llvm::APSInt> Result =
-            SubExprs[1]->getIntegerConstantExpr(Context))
-      if (!isValidOrderingForOp(Result->getSExtValue(), Op))
-        Diag(SubExprs[1]->getBeginLoc(),
-             diag::warn_atomic_op_has_invalid_memory_order)
-            << SubExprs[1]->getSourceRange();
+    std::optional<llvm::APSInt> Success =
+        SubExprs[1]->getIntegerConstantExpr(Context);
+    if (Success && !isValidOrderingForOp(Success->getSExtValue(), Op)) {
+      Diag(SubExprs[1]->getBeginLoc(),
+           diag::warn_atomic_op_has_invalid_memory_order)
+          << /*success=*/(Form == C11CmpXchg || Form == GNUCmpXchg)
+          << SubExprs[1]->getSourceRange();
+    }
+    if (SubExprs.size() >= 5) {
+      if (std::optional<llvm::APSInt> Failure =
+              SubExprs[3]->getIntegerConstantExpr(Context)) {
+        if (!llvm::is_contained(
+                {llvm::AtomicOrderingCABI::relaxed,
+                 llvm::AtomicOrderingCABI::consume,
+                 llvm::AtomicOrderingCABI::acquire,
+                 llvm::AtomicOrderingCABI::seq_cst},
+                (llvm::AtomicOrderingCABI)Failure->getSExtValue())) {
+          Diag(SubExprs[3]->getBeginLoc(),
+               diag::warn_atomic_op_has_invalid_memory_order)
+              << /*failure=*/2 << SubExprs[3]->getSourceRange();
+        }
+      }
+    }
   }
 
   if (auto ScopeModel = AtomicExpr::getScopeModel(Op)) {
@@ -18274,15 +18288,14 @@ static bool isSetterLikeSelector(Selector sel) {
 
   StringRef str = sel.getNameForSlot(0);
   while (!str.empty() && str.front() == '_') str = str.substr(1);
-  if (str.startswith("set"))
+  if (str.starts_with("set"))
     str = str.substr(3);
-  else if (str.startswith("add")) {
+  else if (str.starts_with("add")) {
     // Specially allow 'addOperationWithBlock:'.
-    if (sel.getNumArgs() == 1 && str.startswith("addOperationWithBlock"))
+    if (sel.getNumArgs() == 1 && str.starts_with("addOperationWithBlock"))
       return false;
     str = str.substr(3);
-  }
-  else
+  } else
     return false;
 
   if (str.empty()) return true;

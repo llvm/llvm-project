@@ -134,9 +134,6 @@ private:
   void splitScalar64BitUnaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                unsigned Opcode, bool Swap = false) const;
 
-  void splitScalar64BitAddSub(SIInstrWorklist &Worklist, MachineInstr &Inst,
-                              MachineDominatorTree *MDT = nullptr) const;
-
   void splitScalar64BitBinaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                 unsigned Opcode,
                                 MachineDominatorTree *MDT = nullptr) const;
@@ -549,6 +546,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DS;
   }
 
+  static bool isLDSDMA(const MachineInstr &MI) {
+    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+  }
+
+  bool isLDSDMA(uint16_t Opcode) {
+    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+  }
+
   static bool isGWS(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::GWS;
   }
@@ -668,6 +673,10 @@ public:
   bool isAtomic(uint16_t Opcode) const {
     return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
                                   SIInstrFlags::IsAtomicNoRet);
+  }
+
+  static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
+    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
   }
 
   static bool isWQM(const MachineInstr &MI) {
@@ -884,6 +893,32 @@ public:
 
   bool doesNotReadTiedSource(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
+  }
+
+  static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
+    if (isWaitcnt(Opcode))
+      return AMDGPU::S_WAITCNT;
+
+    if (isWaitcntVsCnt(Opcode))
+      return AMDGPU::S_WAITCNT_VSCNT;
+
+    llvm_unreachable("Expected opcode S_WAITCNT/S_WAITCNT_VSCNT");
+  }
+
+  static bool isWaitcnt(unsigned Opcode) {
+    return Opcode == AMDGPU::S_WAITCNT || Opcode == AMDGPU::S_WAITCNT_soft;
+  }
+
+  static bool isWaitcntVsCnt(unsigned Opcode) {
+    return Opcode == AMDGPU::S_WAITCNT_VSCNT ||
+           Opcode == AMDGPU::S_WAITCNT_VSCNT_soft;
+  }
+
+  // "Soft" waitcnt instructions can be relaxed/optimized out by
+  // SIInsertWaitcnts.
+  static bool isSoftWaitcnt(unsigned Opcode) {
+    return Opcode == AMDGPU::S_WAITCNT_soft ||
+           Opcode == AMDGPU::S_WAITCNT_VSCNT_soft;
   }
 
   bool isVGPRCopy(const MachineInstr &MI) const {
@@ -1240,11 +1275,9 @@ public:
   static bool isKillTerminator(unsigned Opcode);
   const MCInstrDesc &getKillTerminatorFromPseudo(unsigned Opcode) const;
 
-  static bool isLegalMUBUFImmOffset(unsigned Imm) {
-    return isUInt<12>(Imm);
-  }
+  bool isLegalMUBUFImmOffset(unsigned Imm) const;
 
-  static unsigned getMaxMUBUFImmOffset();
+  static unsigned getMaxMUBUFImmOffset(const GCNSubtarget &ST);
 
   bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
                         Align Alignment = Align(4)) const;
@@ -1260,6 +1293,9 @@ public:
   std::pair<int64_t, int64_t> splitFlatOffset(int64_t COffsetVal,
                                               unsigned AddrSpace,
                                               uint64_t FlatVariant) const;
+
+  /// Returns true if negative offsets are allowed for the given \p FlatVariant.
+  bool allowNegativeFlatOffset(uint64_t FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does
