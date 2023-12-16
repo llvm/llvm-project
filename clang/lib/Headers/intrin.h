@@ -228,7 +228,7 @@ unsigned __int64 _shlx_u64(unsigned __int64, unsigned int);
 unsigned __int64 _shrx_u64(unsigned __int64, unsigned int);
 __int64 __mulh(__int64, __int64);
 unsigned __int64 __umulh(unsigned __int64, unsigned __int64);
-__int64 _mul128(__int64, __int64, __int64*);
+__int64 _mul128(__int64, __int64, __int64 *);
 
 #endif /* __x86_64__ */
 

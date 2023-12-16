@@ -43,9 +43,8 @@ unsigned char _InterlockedCompareExchange128_rel(__int64 volatile *_Destination,
 #endif
 
 #ifdef __x86_64__
-unsigned __int64 _umul128(unsigned __int64,
-                          unsigned __int64,
-                          unsigned __int64*);
+unsigned __int64 _umul128(unsigned __int64, unsigned __int64,
+                          unsigned __int64 *);
 unsigned __int64 __shiftleft128(unsigned __int64 _LowPart,
                                 unsigned __int64 _HighPart,
                                 unsigned char _Shift);
@@ -70,7 +69,8 @@ unsigned char _BitScanForward64(unsigned long *_Index, unsigned __int64 _Mask);
 unsigned char _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask);
 #endif
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) ||            \
+    defined(__aarch64__)
 __int64 _InterlockedDecrement64(__int64 volatile *_Addend);
 __int64 _InterlockedExchange64(__int64 volatile *_Target, __int64 _Value);
 __int64 _InterlockedExchangeAdd64(__int64 volatile *_Addend, __int64 _Value);
@@ -94,9 +94,11 @@ short _InterlockedExchangeAdd16_rel(short volatile *_Addend, short _Value);
 long _InterlockedExchangeAdd_acq(long volatile *_Addend, long _Value);
 long _InterlockedExchangeAdd_nf(long volatile *_Addend, long _Value);
 long _InterlockedExchangeAdd_rel(long volatile *_Addend, long _Value);
-__int64 _InterlockedExchangeAdd64_acq(__int64 volatile *_Addend, __int64 _Value);
+__int64 _InterlockedExchangeAdd64_acq(__int64 volatile *_Addend,
+                                      __int64 _Value);
 __int64 _InterlockedExchangeAdd64_nf(__int64 volatile *_Addend, __int64 _Value);
-__int64 _InterlockedExchangeAdd64_rel(__int64 volatile *_Addend, __int64 _Value);
+__int64 _InterlockedExchangeAdd64_rel(__int64 volatile *_Addend,
+                                      __int64 _Value);
 /*----------------------------------------------------------------------------*\
 |* Interlocked Increment
 \*----------------------------------------------------------------------------*/
@@ -200,29 +202,31 @@ __int64 _InterlockedExchange64_rel(__int64 volatile *_Target, __int64 _Value);
 |* Interlocked Compare Exchange
 \*----------------------------------------------------------------------------*/
 char _InterlockedCompareExchange8_acq(char volatile *_Destination,
-                             char _Exchange, char _Comparand);
+                                      char _Exchange, char _Comparand);
 char _InterlockedCompareExchange8_nf(char volatile *_Destination,
-                             char _Exchange, char _Comparand);
+                                     char _Exchange, char _Comparand);
 char _InterlockedCompareExchange8_rel(char volatile *_Destination,
-                             char _Exchange, char _Comparand);
+                                      char _Exchange, char _Comparand);
 short _InterlockedCompareExchange16_acq(short volatile *_Destination,
-                              short _Exchange, short _Comparand);
+                                        short _Exchange, short _Comparand);
 short _InterlockedCompareExchange16_nf(short volatile *_Destination,
-                              short _Exchange, short _Comparand);
+                                       short _Exchange, short _Comparand);
 short _InterlockedCompareExchange16_rel(short volatile *_Destination,
-                              short _Exchange, short _Comparand);
+                                        short _Exchange, short _Comparand);
 long _InterlockedCompareExchange_acq(long volatile *_Destination,
-                              long _Exchange, long _Comparand);
-long _InterlockedCompareExchange_nf(long volatile *_Destination,
-                              long _Exchange, long _Comparand);
+                                     long _Exchange, long _Comparand);
+long _InterlockedCompareExchange_nf(long volatile *_Destination, long _Exchange,
+                                    long _Comparand);
 long _InterlockedCompareExchange_rel(long volatile *_Destination,
-                              long _Exchange, long _Comparand);
+                                     long _Exchange, long _Comparand);
 __int64 _InterlockedCompareExchange64_acq(__int64 volatile *_Destination,
-                              __int64 _Exchange, __int64 _Comparand);
+                                          __int64 _Exchange,
+                                          __int64 _Comparand);
 __int64 _InterlockedCompareExchange64_nf(__int64 volatile *_Destination,
-                              __int64 _Exchange, __int64 _Comparand);
+                                         __int64 _Exchange, __int64 _Comparand);
 __int64 _InterlockedCompareExchange64_rel(__int64 volatile *_Destination,
-                              __int64 _Exchange, __int64 _Comparand);
+                                          __int64 _Exchange,
+                                          __int64 _Comparand);
 #endif
 
 #ifdef __cplusplus
