@@ -393,9 +393,7 @@ TEST(MatrixTest, LLL) {
                       {Fraction(1, 1), Fraction(0, 1), Fraction(1, 1)},
                       {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)}});
 
-  for (unsigned row = 0; row < 3; row++)
-    for (unsigned col = 0; col < 3; col++)
-      EXPECT_EQ(mat(row, col), LLL(row, col));
+  EXPECT_EQ_FRAC_MATRIX(mat, LLL);
 
   mat = makeFracMatrix(
       2, 2,
@@ -406,9 +404,7 @@ TEST(MatrixTest, LLL) {
 
   mat.LLL(Fraction(3, 4));
 
-  for (unsigned row = 0; row < 2; row++)
-    for (unsigned col = 0; col < 2; col++)
-      EXPECT_EQ(mat(row, col), LLL(row, col));
+  EXPECT_EQ_FRAC_MATRIX(mat, LLL);
 
   mat = makeFracMatrix(3, 3,
                        {{Fraction(1, 1), Fraction(0, 1), Fraction(2, 1)},
@@ -421,7 +417,5 @@ TEST(MatrixTest, LLL) {
 
   mat.LLL(Fraction(3, 4));
 
-  for (unsigned row = 0; row < 3; row++)
-    for (unsigned col = 0; col < 3; col++)
-      EXPECT_EQ(mat(row, col), LLL(row, col));
+  EXPECT_EQ_FRAC_MATRIX(mat, LLL);
 }
