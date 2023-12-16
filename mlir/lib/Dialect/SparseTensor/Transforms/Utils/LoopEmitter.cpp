@@ -244,12 +244,12 @@ Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, TensorId tid,
 Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
                                   TensorId tid, Level lvl, Value pLo,
                                   Value pHi) {
-  SparseTensorLevel &level = *lvls[tid][lvl];
-  const Value sameCrd = level.peekCrdAt(builder, loc, pLo);
+  SparseTensorLevel &stl = *lvls[tid][lvl];
+  const Value sameCrd = stl.peekCrdAt(builder, loc, pLo);
   auto whileOp = builder.create<scf::WhileOp>(
       loc, builder.getIndexType(), pLo,
       /*beforeBuilder=*/
-      [pHi, &level, sameCrd](OpBuilder &builder, Location loc, ValueRange ivs) {
+      [pHi, &stl, sameCrd](OpBuilder &builder, Location loc, ValueRange ivs) {
         const auto pos = ivs[0];
         Value inBound = builder.create<arith::CmpIOp>(
             loc, arith::CmpIPredicate::ult, pos, pHi);
@@ -260,7 +260,7 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
           // Load the next coordinates only when inbound (to avoid OOB
           // accesses).
           builder.setInsertionPointToStart(ifInBound.thenBlock());
-          Value crd = level.peekCrdAt(builder, loc, pos);
+          Value crd = stl.peekCrdAt(builder, loc, pos);
           Value isSameCrd = builder.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::eq, crd, sameCrd);
           YIELD(isSameCrd);
@@ -1226,27 +1226,19 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
 
   const Value c0 = C_IDX(0);
   const Value c1 = C_IDX(1);
-  const Value c2 = C_IDX(2);
   // Either the first level, or the previous level has been set.
   /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
   assert(lvl == 0 || posits[tid][lvl - 1]);
-  if (isCompressedLT(lvlTp) || isLooseCompressedLT(lvlTp)) {
-    // TODO: eliminate the cast upon feature complete.
-    const Value mem =
-        isCompressedLT(lvlTp)
-            ? static_cast<CompressedLevel &>(*lvls[tid][lvl]).posBuffer
-            : static_cast<LooseCompressedLevel &>(*lvls[tid][lvl]).posBuffer;
+  if (isCompressedLT(lvlTp) || isLooseCompressedLT(lvlTp) ||
+      is2OutOf4LT(lvlTp)) {
 
-    Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
-    if (isLooseCompressedLT(lvlTp))
-      pLo = builder.create<arith::MulIOp>(loc, pLo, c2);
-    posits[tid][lvl] = genIndexLoad(builder, loc, mem, pLo);
-
-    const Value pHi = ADDI(pLo, c1);
-    highs[tid][lvl] = genIndexLoad(builder, loc, mem, pHi);
+    Value pos = lvl == 0 ? c0 : posits[tid][lvl - 1];
+    std::tie(posits[tid][lvl], highs[tid][lvl]) =
+        lvls[tid][lvl]->peekRangeAt(builder, loc, pos);
     return;
   }
   if (isSingletonLT(lvlTp)) {
+    // TODO: merge this as well when SparseTensorLevel support dedup.
     const Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
     posits[tid][lvl] = pLo;
 
@@ -1260,13 +1252,6 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
     highs[tid][lvl] = (!isUniqueLT(lvlTypes[tid][lvl - 1]) && parentSegHi)
                           ? parentSegHi
                           : ADDI(pLo, c1);
-    return;
-  }
-  if (is2OutOf4LT(lvlTp)) {
-    const Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
-    // Each 2:4 block has exactly two specified elements.
-    posits[tid][lvl] = MULI(pLo, c2);
-    highs[tid][lvl] = ADDI(posits[tid][lvl], c2);
     return;
   }
   llvm_unreachable("Unrecognized level-type!");
@@ -1824,18 +1809,11 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
   auto [nxSz, stride] = sliceMeta[tid][lvl][1];
   assert(stride == 1 && "Not yet implemented");
   Value sPtrBuf = slicePosBuffer[tid][lvl][0];
-  Value pHi, pLo;
-  if (lvl == 0) {
-    pLo = c0;
-    // TODO: eliminate the cast upon feature complete.pLo = c0;
-    Value pBuf = static_cast<CompressedLevel &>(*lvls[tid][0]).posBuffer;
-    pHi = genIndexLoad(builder, loc, pBuf, c1);
-  } else {
-    // TODO: eliminate the cast upon feature complete.} else {
-    Value pBuf = static_cast<CompressedLevel &>(*lvls[tid][lvl]).posBuffer;
-    pLo = genIndexLoad(builder, loc, pBuf, posits[tid][lvl - 1]);
-    pHi = genIndexLoad(builder, loc, pBuf, ADDI(posits[tid][lvl - 1], c1));
-  }
+  const SparseTensorLevel &stl = *lvls[tid][lvl];
+
+  Value p = lvl == 0 ? c0 : posits[tid][lvl - 1];
+  auto [pLo, pHi] = stl.peekRangeAt(builder, loc, p);
+
   // Fills out pIdxBuffer[tid][lvl][0] with [pLo, pHi]
   updateSlicePos(builder, loc, sPtrBuf, pLo, c0, SlicePosKind::kLo);
   updateSlicePos(builder, loc, sPtrBuf, pHi, c0, SlicePosKind::kHi);
@@ -1849,7 +1827,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
   // nonempty. though we assume that even on empty sparse tensors, a non-empty
   // ptr/idx buffer is allocated for each level so it would not cause OOB to
   // avoid generating a ifOp here.
-  Value minCrd = lvls[tid][lvl]->peekCrdAt(builder, loc, pLo);
+  Value minCrd = stl.peekCrdAt(builder, loc, pLo);
 
   // FIXME: We need the relative offset related to the base slice.
   Value absOffset = offsetFromMinCoord(builder, loc, minCrd, nxSz, isNonEmpty);
@@ -1879,7 +1857,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
 // }
 void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
                                           TensorId tid, Level lvl) {
-  Value c0 = C_IDX(0), c1 = C_IDX(1);
+  Value c0 = C_IDX(0);
   unsigned depth = levelReducedDep[tid][lvl];
   // The remaining slice size after reduction.
   Value remSz = sliceMeta[tid][lvl][depth + 1].first;
@@ -1929,17 +1907,14 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
 
   ValueRange result = genUnResolvedSliceTreeTraverse(
       builder, loc, tid, unResSlices, firstResLvl, reduc,
-      [this, c1, tid, lvl, sPtrBuf](OpBuilder &builder, Location loc, Value iv,
-                                    MutableArrayRef<Value> reduc) {
+      [this, tid, lvl, sPtrBuf](OpBuilder &builder, Location loc, Value iv,
+                                MutableArrayRef<Value> reduc) {
         Value &nonEmpty = reduc[0];
         Value &minCrd = reduc[1];
         Value &curTupleCnt = reduc[2];
 
-        Value pHi = ADDI(iv, c1);
-        // TODO: eliminate the cast upon feature complete.
-        Value pBuf = static_cast<CompressedLevel &>(*lvls[tid][lvl]).posBuffer;
-        Value sPLo = genIndexLoad(builder, loc, pBuf, iv);
-        Value sPHi = genIndexLoad(builder, loc, pBuf, pHi);
+        const SparseTensorLevel &stl = *lvls[tid][lvl];
+        auto [sPLo, sPHi] = stl.peekRangeAt(builder, loc, iv);
 
         // isNonEmpty = isNonEmpty || lvlNonEmpty, i.e., as long as there is
         // one non-empty lvl, the slice is non-empty.
@@ -1957,7 +1932,7 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
           // }
           OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPointToStart(ifNonEmpty.thenBlock());
-          Value curC = lvls[tid][lvl]->peekCrdAt(builder, loc, sPLo);
+          Value curC = stl.peekCrdAt(builder, loc, sPLo);
           Value isSmaller = CMPI(ult, curC, minCrd);
           Value newMin = SELECT(isSmaller, curC, minCrd);
           YIELD(newMin);

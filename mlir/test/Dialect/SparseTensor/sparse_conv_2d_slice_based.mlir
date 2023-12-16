@@ -27,11 +27,12 @@
 // CHECK-DAG:       %[[VAL_16:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8x8xi32, #sparse> to memref<?xi32>
 // CHECK-DAG:       %[[VAL_17:.*]] = memref.alloca() : memref<9xindex>
 // CHECK-DAG:       %[[VAL_18:.*]] = memref.alloca() : memref<3xindex>
-// CHECK-DAG:       %[[VAL_19:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_7]]] : memref<?xindex>
-// CHECK:           memref.store %[[VAL_8]], %[[VAL_18]]{{\[}}%[[VAL_8]]] : memref<3xindex>
-// CHECK:           memref.store %[[VAL_19]], %[[VAL_18]]{{\[}}%[[VAL_7]]] : memref<3xindex>
-// CHECK:           %[[VAL_20:.*]] = arith.cmpi ugt, %[[VAL_19]], %[[VAL_8]] : index
-// CHECK:           %[[VAL_21:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_8]]] : memref<?xindex>
+// CHECK-DAG:       %[[POS_LO:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_8]]] : memref<?xindex>
+// CHECK-DAG:       %[[POS_HI:.*]] = memref.load %[[VAL_12]]{{\[}}%[[VAL_7]]] : memref<?xindex>
+// CHECK:           memref.store %[[POS_LO]], %[[VAL_18]]{{\[}}%[[VAL_8]]] : memref<3xindex>
+// CHECK:           memref.store %[[POS_HI]], %[[VAL_18]]{{\[}}%[[VAL_7]]] : memref<3xindex>
+// CHECK:           %[[VAL_20:.*]] = arith.cmpi ult, %[[POS_LO]], %[[POS_HI]] : index
+// CHECK:           %[[VAL_21:.*]] = memref.load %[[VAL_13]]{{\[}}%[[POS_LO]]] : memref<?xindex>
 // CHECK:           %[[VAL_22:.*]] = arith.cmpi uge, %[[VAL_21]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_23:.*]] = arith.andi %[[VAL_20]], %[[VAL_22]] : i1
 // CHECK:           %[[VAL_24:.*]] = arith.addi %[[VAL_21]], %[[VAL_3]] : index
@@ -56,8 +57,8 @@
 // CHECK:               scf.condition(%[[VAL_44]]) %[[VAL_38]], %[[VAL_39]], %[[VAL_40]], %[[VAL_41]], %[[VAL_42]] : index, i1, index, index, index
 // CHECK:             } do {
 // CHECK:             ^bb0(%[[VAL_47:.*]]: index, %[[VAL_48:.*]]: i1, %[[VAL_49:.*]]: index, %[[VAL_50:.*]]: index, %[[VAL_51:.*]]: index):
-// CHECK:               %[[VAL_52:.*]] = arith.addi %[[VAL_47]], %[[VAL_7]] : index
-// CHECK:               %[[VAL_53:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_47]]] : memref<?xindex>
+// CHECK-DAG:           %[[VAL_52:.*]] = arith.addi %[[VAL_47]], %[[VAL_7]] : index
+// CHECK-DAG:           %[[VAL_53:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_47]]] : memref<?xindex>
 // CHECK:               %[[VAL_54:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_52]]] : memref<?xindex>
 // CHECK:               %[[VAL_55:.*]] = arith.cmpi ult, %[[VAL_53]], %[[VAL_54]] : index
 // CHECK:               %[[VAL_56:.*]] = arith.ori %[[VAL_55]], %[[VAL_48]] : i1
