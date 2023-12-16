@@ -1034,7 +1034,6 @@ public:
     return IsExpectedRecordDecl(E) ? E : nullptr;
   }
 
-  // "Pass This On" --The Knife
   Expr *VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     if (IsExpectedRecordDecl(E))
       return E;
@@ -1042,16 +1041,8 @@ public:
   }
   Expr *VisitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
   Expr *VisitParenExpr(ParenExpr *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitUnaryAddrOf(UnaryOperator *E) {
-    if (IsExpectedRecordDecl(E))
-      return E;
-    return Visit(E->getSubExpr());
-  }
-  Expr *VisitUnaryDeref(UnaryOperator *E) {
-    if (IsExpectedRecordDecl(E))
-      return E;
-    return Visit(E->getSubExpr());
-  }
+  Expr *VisitUnaryAddrOf(UnaryOperator *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitUnaryDeref(UnaryOperator *E) { return Visit(E->getSubExpr()); }
 };
 
 } // end anonymous namespace
@@ -1096,16 +1087,13 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
   if (NeedLoad)
     Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
                                     "struct.load");
-  return EmitCountedByFieldExprImpl(Res, CountedByRD, VD);
-}
 
-llvm::Value *CodeGenFunction::EmitCountedByFieldExprImpl(
-    llvm::Value *CountedByInst, const RecordDecl *RD, const ValueDecl *VD) {
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 8> Indices{Zero};
 
   if (const auto *FD = dyn_cast<FieldDecl>(VD)) {
-    unsigned Idx = CGM.getTypes().getCGRecordLayout(RD).getLLVMFieldNo(FD);
+    unsigned Idx =
+        CGM.getTypes().getCGRecordLayout(CountedByRD).getLLVMFieldNo(FD);
     Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, Idx));
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(VD)) {
     for (NamedDecl *ND : IFD->chain())
@@ -1117,12 +1105,10 @@ llvm::Value *CodeGenFunction::EmitCountedByFieldExprImpl(
   }
 
   llvm::Type *Ty =
-      CGM.getTypes().ConvertType(QualType(RD->getTypeForDecl(), 0));
-  CountedByInst =
-      Builder.CreateInBoundsGEP(Ty, CountedByInst, Indices, "counted_by.gep");
+      CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
+  Res = Builder.CreateInBoundsGEP(Ty, Res, Indices, "counted_by.gep");
   Ty = llvm::GetElementPtrInst::getIndexedType(Ty, Indices);
-  return Builder.CreateAlignedLoad(Ty, CountedByInst, getIntAlign(),
-                                   "counted_by.load");
+  return Builder.CreateAlignedLoad(Ty, Res, getIntAlign(), "counted_by.load");
 }
 
 const ValueDecl *CodeGenFunction::FindFlexibleArrayMemberField(
@@ -4094,6 +4080,32 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
 }
 
+static bool GetFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
+                                 const FieldDecl *FD, uint64_t &Offset) {
+  ASTContext &Ctx = CGF.getContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  unsigned FieldNo = 0;
+
+  for (const Decl *D : RD->decls()) {
+    if (const auto *Record = dyn_cast<RecordDecl>(D))
+      if (GetFieldOffsetInBits(CGF, Record, FD, Offset)) {
+        Offset += Layout.getFieldOffset(FieldNo);
+        return true;
+      }
+
+    if (const auto *Field = dyn_cast<FieldDecl>(D))
+      if (FD == Field) {
+        Offset += Layout.getFieldOffset(FieldNo);
+        return true;
+      }
+
+    if (isa<FieldDecl>(D))
+      ++FieldNo;
+  }
+
+  return false;
+}
+
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -4239,29 +4251,46 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         RecordDecl *RD = ME->getMemberDecl()
                              ->getDeclContext()
                              ->getOuterLexicalRecordContext();
+        if (const ValueDecl *VD = FindCountedByField(Array)) {
+          // Find the offset of the 'count' field.
+          const FieldDecl *FD = nullptr;
+          if (auto *F = dyn_cast<FieldDecl>(VD))
+            FD = F;
+          else if (auto *IFD = dyn_cast<IndirectFieldDecl>(VD))
+            FD = IFD->getAnonField();
 
-        if (Expr *StructBase =
-                StructAccessBase(RD).Visit(const_cast<MemberExpr *>(ME));
-            StructBase && StructBase->getType()->isPointerType()) {
-          if (const ValueDecl *VD = FindCountedByField(Array)) {
-            llvm::Type *StructBaseTy =
-                ConvertType(StructBase->getType()->getPointeeType());
-            llvm::Value *Res = ArrayLV.getPointer(*this);
+          uint64_t Offset = 0;
+          GetFieldOffsetInBits(*this, RD, FD, Offset);
+          CharUnits CountFieldOffset =
+              CGM.getContext().toCharUnitsFromBits(Offset);
 
-            while (auto *GEP = dyn_cast<llvm::GetElementPtrInst>(Res)) {
-              // Look through the GEPs to find the base pointer.
-              if (GEP->getSourceElementType() == StructBaseTy) {
-                Res = GEP->getPointerOperand();
-                break;
-              }
+          // Find the offset of the flexible array member field.
+          const ValueDecl *FAM = ME->getMemberDecl();
+          if (auto *F = dyn_cast<FieldDecl>(FAM))
+            FD = F;
+          else if (auto *IFD = dyn_cast<IndirectFieldDecl>(FAM))
+            FD = IFD->getAnonField();
 
-              Res = GEP->getPointerOperand();
-            }
+          Offset = 0;
+          GetFieldOffsetInBits(*this, RD, FD, Offset);
+          CharUnits FAMOffset = CGM.getContext().toCharUnitsFromBits(Offset);
 
-            Res = EmitCountedByFieldExprImpl(Res, RD, VD);
-            EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
-                                Array->getType(), Accessed);
-          }
+          // Create a GEP with an offset between the FAM and count and use
+          // that to load the count value.
+          Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+              ArrayLV.getAddress(*this), Int8PtrTy, Int8Ty);
+          Addr = Builder.CreateConstInBoundsByteGEP(
+              Addr, CountFieldOffset - FAMOffset, "counted_by.gep");
+          Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy,
+                                                             Int8Ty);
+
+          llvm::Value *Res = Builder.CreateAlignedLoad(
+              ConvertType(VD->getType()), Addr.getPointer(), getIntAlign(),
+              "counted_by.load");
+
+          // Now emit the bounds checking.
+          EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
+                              Array->getType(), Accessed);
         }
       }
     }

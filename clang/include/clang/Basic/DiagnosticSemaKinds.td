@@ -6436,6 +6436,8 @@ def err_flexible_array_counted_by_attr_field_not_integer : Error<
   "field %0 in 'counted_by' must be a non-boolean integer type">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
+def err_flexible_array_counted_by_in_substructure : Error<
+  "'counted_by' applied to flexible array in substructure">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

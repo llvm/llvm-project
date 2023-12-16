@@ -8522,6 +8522,22 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
     }
   }
 
+  // We don't support 'counted_by' on flexible array members in substructures.
+  const DeclContext *DC = FD->getParent();
+  while (const auto *RD = dyn_cast<RecordDecl>(DC)) {
+    if (!RD->isAnonymousStructOrUnion() ||
+        !isa<RecordDecl>(RD->getLexicalParent()))
+      break;
+    DC = RD->getLexicalParent();
+  }
+
+  if (DC != FD->getDeclContext()->getOuterLexicalRecordContext()) {
+    SourceRange SR = FD->getLocation();
+    Diag(SR.getBegin(), diag::err_flexible_array_counted_by_in_substructure)
+        << SR;
+    return true;
+  }
+
   return false;
 }
 

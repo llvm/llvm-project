@@ -19521,9 +19521,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
   // Check the "counted_by" attribute to ensure that the count field exists in
   // the struct. Make sure we're performing this check on the outer-most
-  // record.  This is a C-only feature.
-  if (!getLangOpts().CPlusPlus && Record &&
-      !isa<RecordDecl>(Record->getParent())) {
+  // record. This is a C-only feature.
+  if (!getLangOpts().CPlusPlus && Record && S->getDepth() == 1) {
     auto Pred = [](const Decl *D) {
       if (const auto *FD = dyn_cast_if_present<FieldDecl>(D))
         return FD->hasAttr<CountedByAttr>();

@@ -9,6 +9,17 @@ struct not_found {
   struct bar *fam[] __counted_by(bork); // expected-error {{use of undeclared identifier 'bork'}}
 };
 
+struct no_found_count_not_in_substruct {
+  unsigned long flags;
+  unsigned char count;
+  struct S {
+    struct {
+      int dummy;
+      int array[] __counted_by(count); // expected-error {{'counted_by' applied to flexible array in substructure}}
+    };
+  } s;
+};
+
 struct not_found_suggest {
   int bork; // expected-note {{'bork' declared here}}
   struct bar *fam[] __counted_by(blork); // expected-error {{use of undeclared identifier 'blork'; did you mean 'bork'?}}
