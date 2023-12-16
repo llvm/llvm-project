@@ -399,6 +399,9 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
+    if(LIBCXX_INSTALL_MODULE_INTERFACE_UNIT_SOURCES)
+      set(header_install_target install-cxx-modules)
+    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
