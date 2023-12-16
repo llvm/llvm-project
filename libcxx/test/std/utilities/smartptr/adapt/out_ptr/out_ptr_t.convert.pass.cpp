@@ -22,6 +22,7 @@
 #include <memory>
 
 int main(int, char**) {
+  // operator Pointer*() 
   {
     std::unique_ptr<int> uPtr;
 
@@ -32,6 +33,7 @@ int main(int, char**) {
 
     assert(*pPtr == nullptr);
   }
+
   {
     std::unique_ptr<int, std::default_delete<int>> uPtr;
 
@@ -42,6 +44,8 @@ int main(int, char**) {
 
     assert(*pPtr == nullptr);
   }
+
+  // operator void**()
   {
     std::unique_ptr<int> uPtr;
 

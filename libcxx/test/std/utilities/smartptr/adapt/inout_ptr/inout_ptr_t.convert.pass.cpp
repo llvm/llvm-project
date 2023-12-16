@@ -22,6 +22,7 @@
 #include <memory>
 
 int main(int, char**) {
+  // operator Pointer*()
   {
     std::unique_ptr<int> uPtr = std::make_unique<int>(84);
 
@@ -32,6 +33,19 @@ int main(int, char**) {
 
     assert(**pPtr == 84);
   }
+
+  {
+    std::unique_ptr<int, std::default_delete<int>> uPtr = std::make_unique<int>(84);
+
+    const std::inout_ptr_t<decltype(uPtr), int*, std::default_delete<int>> ioPtr{uPtr, std::default_delete<int>{}};
+
+    static_assert(noexcept(ioPtr.operator int**()));
+    std::same_as<int**> decltype(auto) pPtr = ioPtr.operator int**();
+
+    assert(**pPtr == 84);
+  }
+
+  // operator void**()
   {
     std::unique_ptr<int> uPtr = std::make_unique<int>(84);
 
