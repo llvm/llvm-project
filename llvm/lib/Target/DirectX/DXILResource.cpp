@@ -261,7 +261,7 @@ void UAVResource::parseSourceType(StringRef S) {
   S = S.substr(S.find("<") + 1);
 
   constexpr size_t PrefixLen = StringRef("vector<").size();
-  if (S.startswith("vector<"))
+  if (S.starts_with("vector<"))
     S = S.substr(PrefixLen, S.find(",") - PrefixLen);
   else
     S = S.substr(0, S.find(">"));

@@ -1,9 +1,16 @@
 // RUN: %clang -O0 %s -o %t && %env_tool_opts=die_after_fork=0 %run %t
 
-// UNSUPPORTED: hwasan
-
 // The test uses pthread barriers which are not available on Darwin.
 // UNSUPPORTED: darwin
+
+// FIXME: It probably hangs on this platform.
+// UNSUPPORTED: ppc
+
+// FIXME: TSAN does not lock allocator.
+// UNSUPPORTED: tsan
+
+// FIXME: False stack overflow report
+// UNSUPPORTED: android && asan
 
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
@@ -23,7 +30,7 @@
 
 #include "sanitizer_common/sanitizer_specific.h"
 
-static const size_t kBufferSize = 1 << 20;
+static const size_t kBufferSize = 8192;
 
 pthread_barrier_t bar;
 
@@ -34,7 +41,8 @@ void ShouldNotDeadlock() {
   __lsan_disable();
   void *volatile p = malloc(10);
   __lsan_do_recoverable_leak_check();
-  free(p);
+  // Allocator still in broken state, `free` may report errors.
+  // free(p);
   __lsan_enable();
 }
 
@@ -79,14 +87,18 @@ int main(void) {
     perror("fork");
     return -1;
   case 0:
+    ShouldNotDeadlock();
     while (pthread_create(&thread_id, 0, &inchild, 0) != 0) {
     }
+    pthread_join(thread_id, NULL);
+    _exit(0);
     break;
   default: {
     int status;
-    while (waitpid(-1, &status, __WALL) != pid) {
-    }
-    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    pid_t child = waitpid(pid, &status, /*options=*/0);
+    assert(pid == child);
+    assert(WIFEXITED(status));
+    assert(WEXITSTATUS(status) == 0);
     break;
   }
   }

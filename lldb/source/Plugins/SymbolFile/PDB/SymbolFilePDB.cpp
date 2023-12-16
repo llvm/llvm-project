@@ -1537,10 +1537,6 @@ void SymbolFilePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   while (auto result = results->getNext()) {
 
-    if (MSVCUndecoratedNameParser::DropScope(
-            result->getRawSymbol().getName()) != basename)
-      continue;
-
     switch (result->getSymTag()) {
     case PDB_SymType::Enum:
     case PDB_SymType::UDT:
@@ -1551,6 +1547,10 @@ void SymbolFilePDB::FindTypes(const lldb_private::TypeQuery &query,
       // as unnamed types such as arrays, pointers, etc.
       continue;
     }
+
+    if (MSVCUndecoratedNameParser::DropScope(
+            result->getRawSymbol().getName()) != basename)
+      continue;
 
     // This should cause the type to get cached and stored in the `m_types`
     // lookup.

@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
-#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
+#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_
+#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_
 
 #include <vector>
+
+#include "SparseTensorLevel.h"
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -22,7 +24,7 @@ namespace sparse_tensor {
 // A compressed <tensor id, level> pair.
 using TensorLevel = unsigned;
 
-//===----------------------------------------------------------------------===//
+//
 // SparseTensorLoopEmiter class, manages sparse tensors and helps to
 // generate loop structure to (co)-iterate sparse tensors.
 //
@@ -48,8 +50,7 @@ using TensorLevel = unsigned;
 // loopEmiter.exitCurrentLoop(); // exit k
 // loopEmiter.exitCurrentLoop(); // exit j
 // loopEmiter.exitCurrentLoop(); // exit i
-//===----------------------------------------------------------------------===//
-
+//
 class LoopEmitter {
 public:
   /// Optional callback function to setup dense output tensors when
@@ -242,12 +243,6 @@ public:
   const std::vector<std::vector<Value>> &getPosits() const { return posits; };
   const std::vector<std::vector<Value>> &getCoords() const { return coords; };
   const std::vector<std::vector<Value>> &getHighs() const { return highs; };
-  const std::vector<std::vector<Value>> &getPositionBuffers() const {
-    return positionsBuffers;
-  };
-  const std::vector<std::vector<Value>> &getCoordinateBuffers() const {
-    return coordinatesBuffers;
-  };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
   constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
@@ -649,8 +644,7 @@ private:
   std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  std::vector<std::vector<Value>> positionsBuffers;   // to_positions
-  std::vector<std::vector<Value>> coordinatesBuffers; // to_coordinates
+  std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
   std::vector<Value> valBuffer;                       // to_value
 
   //
@@ -705,4 +699,4 @@ private:
 } // namespace sparse_tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
+#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_

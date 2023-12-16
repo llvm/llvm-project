@@ -41,8 +41,8 @@ struct ScoredSymbolGreater {
 
 // Returns true if \p Query can be found as a sub-sequence inside \p Scope.
 bool approximateScopeMatch(llvm::StringRef Scope, llvm::StringRef Query) {
-  assert(Scope.empty() || Scope.endswith("::"));
-  assert(Query.empty() || Query.endswith("::"));
+  assert(Scope.empty() || Scope.ends_with("::"));
+  assert(Query.empty() || Query.ends_with("::"));
   while (!Scope.empty() && !Query.empty()) {
     auto Colons = Scope.find("::");
     assert(Colons != llvm::StringRef::npos);

@@ -10,11 +10,27 @@
 #include <iostream>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
+
 using namespace llvm;
 
 namespace {
 
+bool hasUnixSocketSupport() {
+#ifdef _WIN32
+  VersionTuple Ver = GetWindowsOSVersion();
+  if (Ver < VersionTuple(10, 0, 0, 17063))
+    return false;
+#endif
+  return true;
+}
+
 TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
+  if (!hasUnixSocketSupport())
+    GTEST_SKIP();
+
   SmallString<100> SocketPath;
   llvm::sys::fs::createUniquePath("test_raw_socket_stream.sock", SocketPath,
                                   true);
