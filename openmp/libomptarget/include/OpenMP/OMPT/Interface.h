@@ -381,6 +381,9 @@ private:
 /// Thread local state for target region and associated metadata
 extern thread_local Interface RegionInterface;
 
+/// Thread local variable holding the return address.
+extern thread_local void *ReturnAddress;
+
 template <typename FuncTy, typename ArgsTy, size_t... IndexSeq>
 void InvokeInterfaceFunction(FuncTy Func, ArgsTy Args,
                              std::index_sequence<IndexSeq...>) {

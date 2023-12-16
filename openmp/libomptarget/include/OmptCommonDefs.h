@@ -76,7 +76,12 @@
 #define OMPT_FRAME_POSITION_DEFAULT ompt_frame_framepointer
 #endif
 
-#define OMPT_GET_RETURN_ADDRESS(level) __builtin_return_address(level)
+// Allow 0 as the only argument to avoid unpredictable effects.
+// The setter stores the return address to a thread local variable.
+#define OMPT_SET_RETURN_ADDRESS                                                \
+  llvm::omp::target::ompt::ReturnAddress = __builtin_return_address(0)
+// The getter returns the address stored in the thread local variable.
+#define OMPT_GET_RETURN_ADDRESS llvm::omp::target::ompt::ReturnAddress
 
 #define OMPT_PTR_UNKNOWN ((void *)0)
 
