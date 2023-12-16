@@ -95,8 +95,6 @@ void test_exceptions() {
       std::ignore = arrSpan.at(arr.size() - 1);
       // pass
       assert(arrSpan.at(arr.size() - 1) == std::numeric_limits<int>::max());
-    } catch (const std::out_of_range&) {
-      assert(false);
     } catch (...) {
       assert(false);
     }
