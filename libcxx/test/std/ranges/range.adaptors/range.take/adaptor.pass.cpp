@@ -173,7 +173,7 @@ constexpr bool test() {
   {
     auto iota = std::views::iota(1, 8);
     // The second template argument of the resulting `iota_view` is same as the first.
-    using Result = std::ranges::iota_view<int, int>;
+    using Result                               = std::ranges::iota_view<int, int>;
     std::same_as<Result> decltype(auto) result = iota | std::views::take(3);
     assert(result.size() == 3);
   }
