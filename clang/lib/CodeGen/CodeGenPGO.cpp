@@ -959,8 +959,14 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
 
   unsigned Counter = (*RegionCounterMap)[S];
 
-  llvm::Value *Args[] = {FuncNameVar,
-                         Builder.getInt64(FunctionHash),
+  // Make sure that pointer to global is passed in with zero addrspace
+  // This is relevant during GPU profiling
+  auto *I8Ty = llvm::Type::getInt8Ty(CGM.getLLVMContext());
+  auto *I8PtrTy = llvm::PointerType::getUnqual(I8Ty);
+  auto *NormalizedPtr = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      FuncNameVar, I8PtrTy);
+
+  llvm::Value *Args[] = {NormalizedPtr, Builder.getInt64(FunctionHash),
                          Builder.getInt32(NumRegionCounters),
                          Builder.getInt32(Counter), StepV};
   if (!StepV)

@@ -1658,10 +1658,13 @@ void InstrLowerer::emitRegistration() {
   IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", RegisterF));
   for (Value *Data : CompilerUsedVars)
     if (!isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, Data);
+      // Check for addrspace cast when profiling GPU
+      IRB.CreateCall(RuntimeRegisterF,
+                     IRB.CreatePointerBitCastOrAddrSpaceCast(Data, VoidPtrTy));
   for (Value *Data : UsedVars)
     if (Data != NamesVar && !isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, Data);
+      IRB.CreateCall(RuntimeRegisterF,
+                     IRB.CreatePointerBitCastOrAddrSpaceCast(Data, VoidPtrTy));
 
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
@@ -1670,7 +1673,9 @@ void InstrLowerer::emitRegistration() {
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);
-    IRB.CreateCall(NamesRegisterF, {NamesVar, IRB.getInt64(NamesSize)});
+    IRB.CreateCall(NamesRegisterF, {IRB.CreatePointerBitCastOrAddrSpaceCast(
+                                        NamesVar, VoidPtrTy),
+                                    IRB.getInt64(NamesSize)});
   }
 
   IRB.CreateRetVoid();
