@@ -582,31 +582,31 @@ void FracMatrix::LLL(Fraction delta) {
   MPInt nearest;
   Fraction mu;
 
-  // `bStar` holds the Gram-Schmidt orthogonalisation
+  // `gsOrth` holds the Gram-Schmidt orthogonalisation
   // of the matrix at all times. It is recomputed every
   // time the matrix is modified during the algorithm.
-  FracMatrix bStar = gramSchmidt();
+  FracMatrix gsOrth = gramSchmidt();
 
   unsigned k = 1;
   while (k < getNumRows()) {
     for (unsigned j = k - 1; j < k; j--) {
-      mu = dotProduct(getRow(k), bStar.getRow(j)) /
-           dotProduct(bStar.getRow(j), bStar.getRow(j));
+      mu = dotProduct(getRow(k), gsOrth.getRow(j)) /
+           dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
       if (abs(mu) > Fraction(1, 2)) {
         nearest = floor(mu + Fraction(1, 2));
         addToRow(k, getRow(j), -Fraction(nearest, 1));
-        bStar = gramSchmidt();
+        gsOrth = gramSchmidt();
       }
     }
-    mu = dotProduct(getRow(k), bStar.getRow(k - 1)) /
-         dotProduct(bStar.getRow(k - 1), bStar.getRow(k - 1));
-    if (dotProduct(bStar.getRow(k), bStar.getRow(k)) >
+    mu = dotProduct(getRow(k), gsOrth.getRow(k - 1)) /
+         dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1));
+    if (dotProduct(gsOrth.getRow(k), gsOrth.getRow(k)) >
         (delta - mu * mu) *
-            dotProduct(bStar.getRow(k - 1), bStar.getRow(k - 1)))
+            dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1)))
       k += 1;
     else {
       swapRows(k, k - 1);
-      bStar = gramSchmidt();
+      gsOrth = gramSchmidt();
       k = k > 1 ? k - 1 : 1;
     }
   }
