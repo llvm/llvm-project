@@ -227,3 +227,13 @@ struct r6 {};
 
 using r6i = r6<int>;
 // expected-error@-1 {{constraints not satisfied for class template 'r6' [with T = int]}}
+
+namespace GH73885 {
+template <typename T> // expected-error {{extraneous template parameter list}}
+template <typename T> // expected-error {{'T' shadows template parameter}}
+                      // expected-note@-2 {{template parameter is declared here}}
+requires(T{})
+T e_v;
+double e = e_v<double>;
+// expected-error@-1 {{constraints not satisfied for variable template 'e_v' [with T = double]}}
+}

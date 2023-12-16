@@ -353,6 +353,10 @@ static ExprResult calculateConstraintSatisfaction(
           if (Inst.isInvalid())
             return ExprError();
 
+          // An empty expression for substitution failure messages.
+          if (Template && Template->isInvalidDecl())
+            return ExprEmpty();
+
           llvm::FoldingSetNodeID ID;
           if (Template &&
               DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, MLTAL)) {
