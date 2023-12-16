@@ -233,9 +233,8 @@ void ResourceBase::print(raw_ostream &OS, StringRef IDPrefix,
 }
 
 UAVResource::UAVResource(uint32_t I, FrontendResource R)
-    : ResourceBase(I, R),
-      Shape(static_cast<ResourceBase::Kinds>(R.getResourceKind())),
-      GloballyCoherent(false), HasCounter(false), IsROV(false), ExtProps() {
+    : ResourceBase(I, R), Shape(R.getResourceKind()), GloballyCoherent(false),
+      HasCounter(false), IsROV(R.getIsROV()), ExtProps() {
   parseSourceType(R.getSourceType());
 }
 
@@ -259,8 +258,6 @@ void UAVResource::print(raw_ostream &OS) const {
 // information we need to remove the source type string from here (See issue:
 // https://github.com/llvm/llvm-project/issues/57991).
 void UAVResource::parseSourceType(StringRef S) {
-  IsROV = S.startswith("RasterizerOrdered");
-
   S = S.substr(S.find("<") + 1);
 
   constexpr size_t PrefixLen = StringRef("vector<").size();

@@ -32,7 +32,7 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
   if (MangledName.empty())
     return ParseRet::Error;
 
-  if (MangledName.startswith(VFABI::_LLVM_)) {
+  if (MangledName.starts_with(VFABI::_LLVM_)) {
     MangledName = MangledName.drop_front(strlen(VFABI::_LLVM_));
     ISA = VFISAKind::LLVM;
   } else {
@@ -369,7 +369,7 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
 std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
-                                                 const CallInst &CI) {
+                                                 const FunctionType *FTy) {
   const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of
@@ -434,7 +434,7 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // demangled parameter types and the scalar function signature.
   std::optional<ElementCount> EC;
   if (ParsedVF.second) {
-    EC = getScalableECFromSignature(CI.getFunctionType(), ISA, Parameters);
+    EC = getScalableECFromSignature(FTy, ISA, Parameters);
     if (!EC)
       return std::nullopt;
   } else

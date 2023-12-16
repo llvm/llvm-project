@@ -301,6 +301,54 @@ def Math_CosOp : Math_FloatUnaryOp<"cos"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AcosOp
+//===----------------------------------------------------------------------===//
+
+def Math_AcosOp : Math_FloatUnaryOp<"acos"> {
+  let summary = "arcus cosine of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.acos` ssa-use `:` type
+    ```
+
+    The `acos` operation computes the arcus cosine of a given value. It takes one
+    operand of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type.  It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar arcus cosine value.
+    %a = math.acos %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CoshOp
+//===----------------------------------------------------------------------===//
+
+def Math_CoshOp : Math_FloatUnaryOp<"cosh"> {
+  let summary = "hyperbolic cosine of the specified value";
+  let description = [{
+    The `cosh` operation computes the hyperbolic cosine. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar hyperbolic cosine value.
+    %a = math.cosh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // SinOp
 //===----------------------------------------------------------------------===//
 
@@ -322,6 +370,27 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
     ```mlir
     // Scalar sine value.
     %a = math.sin %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SinhOp
+//===----------------------------------------------------------------------===//
+
+def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
+  let summary = "hyperbolic sine of the specified value";
+  let description = [{
+    The `sinh` operation computes the hyperbolic sine. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar hyperbolic sine value.
+    %a = math.sinh %b : f64
     ```
   }];
   let hasFolder = 1;

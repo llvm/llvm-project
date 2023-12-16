@@ -48,8 +48,8 @@ end function
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 2.000000e+00 : f32
-! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_4]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
-! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK:           %[[VAL_8:.*]] = fir.call @_QPcomplex(%[[VAL_6]]#1, %[[VAL_7]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f32>) -> f32
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<f32>, i1
@@ -71,8 +71,8 @@ end function
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 2.000000e+00 : f32
-! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_4]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
-! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK:           %[[VAL_8:.*]] = fir.call @_QPcomplex(%[[VAL_6]]#1, %[[VAL_7]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f32>) -> f32
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<f32>, i1
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<f32>, i1

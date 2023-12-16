@@ -32,6 +32,8 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::AShr:
   case Instruction::LShr:
     return cast<PossiblyExactOperator>(this)->isExact();
+  case Instruction::Or:
+    return cast<PossiblyDisjointInst>(this)->isDisjoint();
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
@@ -227,8 +229,8 @@ bool GEPOperator::collectOffset(
     // Insert an initial offset of 0 for V iff none exists already, then
     // increment the offset by IndexedSize.
     if (!IndexedSize.isZero()) {
-      VariableOffsets.insert({V, APInt(BitWidth, 0)});
-      VariableOffsets[V] += IndexedSize;
+      auto *It = VariableOffsets.insert({V, APInt(BitWidth, 0)}).first;
+      It->second += IndexedSize;
     }
   }
   return true;

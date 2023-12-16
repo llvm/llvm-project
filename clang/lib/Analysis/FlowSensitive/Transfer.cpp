@@ -703,20 +703,18 @@ public:
     // `InitListExpr`, all fields in the class, including those from base
     // classes, are included in the set of modeled fields. The code above
     // should therefore populate exactly the modeled fields.
-    assert([&]() {
-      auto ModeledFields =
-          Env.getDataflowAnalysisContext().getModeledFields(Type);
-      if (ModeledFields.size() != FieldLocs.size())
-        return false;
-      for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
-        if (!ModeledFields.contains(cast_or_null<FieldDecl>(Field)))
-          return false;
-      return true;
-    }());
+    assert(containsSameFields(
+        Env.getDataflowAnalysisContext().getModeledFields(Type), FieldLocs));
 
-    auto &Loc =
-        Env.getDataflowAnalysisContext().arena().create<RecordStorageLocation>(
-            Type, std::move(FieldLocs));
+    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
+    for (const auto &Entry :
+         Env.getDataflowAnalysisContext().getSyntheticFields(Type)) {
+      SyntheticFieldLocs.insert(
+          {Entry.getKey(), &Env.createObject(Entry.getValue())});
+    }
+
+    auto &Loc = Env.getDataflowAnalysisContext().createRecordStorageLocation(
+        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
     RecordValue &RecordVal = Env.create<RecordValue>(Loc);
 
     Env.setValue(Loc, RecordVal);

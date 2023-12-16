@@ -13,6 +13,8 @@
 #include "omptarget.h"
 #include "private.h"
 
+#include "Shared/Profile.h"
+
 EXTERN void __tgt_target_data_begin(int64_t DeviceId, int32_t ArgNum,
                                     void **ArgsBase, void **Args,
                                     int64_t *ArgSizes, int64_t *ArgTypes) {

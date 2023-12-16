@@ -42,7 +42,7 @@ define i16 @test1_trunc(i32 %i) {
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[I:%.*]], 24
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
-; CHECK-NEXT:    [[T5:%.*]] = or i32 [[T1]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
 ; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
 ;
@@ -59,7 +59,7 @@ define i16 @test1_trunc_extra_use(i32 %i) {
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[I:%.*]], 24
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
-; CHECK-NEXT:    [[T5:%.*]] = or i32 [[T1]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
 ; CHECK-NEXT:    call void @extra_use(i32 [[T5]])
 ; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
@@ -605,7 +605,7 @@ define i64 @bswap_and_mask_1(i64 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %2 = lshr i64 %0, 56
@@ -781,7 +781,7 @@ define i16 @trunc_bswap_i160(ptr %a0) {
 ; CHECK-NEXT:    [[SH_DIFF:%.*]] = lshr i160 [[LOAD]], 120
 ; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i160 [[SH_DIFF]] to i16
 ; CHECK-NEXT:    [[SHL:%.*]] = and i16 [[TR_SH_DIFF]], -256
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i16 [[AND1]], [[SHL]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %load = load i160, ptr %a0, align 4

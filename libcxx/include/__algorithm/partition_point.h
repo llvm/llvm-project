@@ -26,12 +26,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 partition_point(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
     typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
-    difference_type __len = _VSTD::distance(__first, __last);
+    difference_type __len = std::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = _VSTD::__half_positive(__len);
+        difference_type __l2 = std::__half_positive(__len);
         _ForwardIterator __m = __first;
-        _VSTD::advance(__m, __l2);
+        std::advance(__m, __l2);
         if (__pred(*__m))
         {
             __first = ++__m;

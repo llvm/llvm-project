@@ -153,6 +153,24 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addImm(16);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI);
+
+  BaseOps.clear();
+  MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                 MachineMemOperand::MOStore, 4, Align(4));
+  MI = BuildMI(*MF, DL, TII->get(RISCV::SW))
+           .addReg(RISCV::X3)
+           .addFrameIndex(2)
+           .addImm(4)
+           .addMemOperand(MMO);
+  Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
+                                           OffsetIsScalable, Width, TRI);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(BaseOps.size(), 1u);
+  ASSERT_TRUE(BaseOps.front()->isFI());
+  EXPECT_EQ(BaseOps.front()->getIndex(), 2);
+  EXPECT_EQ(Offset, 4);
+  EXPECT_FALSE(OffsetIsScalable);
+  EXPECT_EQ(Width, 4u);
 }
 
 } // namespace

@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -51,6 +50,7 @@ public:
     AppleA14,
     AppleA15,
     AppleA16,
+    AppleA17,
     Carmel,
     CortexA35,
     CortexA53,

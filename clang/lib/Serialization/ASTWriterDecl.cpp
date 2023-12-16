@@ -320,13 +320,8 @@ void ASTDeclWriter::Visit(Decl *D) {
 }
 
 void ASTDeclWriter::VisitDecl(Decl *D) {
-  Record.AddDeclRef(cast_or_null<Decl>(D->getDeclContext()));
-  if (D->getDeclContext() != D->getLexicalDeclContext())
-    Record.AddDeclRef(cast_or_null<Decl>(D->getLexicalDeclContext()));
-  else
-    Record.push_back(0);
-
   BitsPacker DeclBits;
+  DeclBits.addBit(D->getDeclContext() != D->getLexicalDeclContext());
   DeclBits.addBit(D->isInvalidDecl());
   DeclBits.addBit(D->hasAttrs());
   DeclBits.addBit(D->isImplicit());
@@ -336,6 +331,10 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
   DeclBits.addBits(D->getAccess(), /*BitWidth=*/2);
   DeclBits.addBits((uint64_t)D->getModuleOwnershipKind(), /*BitWidth=*/3);
   Record.push_back(DeclBits);
+
+  Record.AddDeclRef(cast_or_null<Decl>(D->getDeclContext()));
+  if (D->getDeclContext() != D->getLexicalDeclContext())
+    Record.AddDeclRef(cast_or_null<Decl>(D->getLexicalDeclContext()));
 
   if (D->hasAttrs())
     Record.AddAttributes(D->getAttrs());
@@ -450,19 +449,18 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
   TagDeclBits.addBit(D->isEmbeddedInDeclarator());
   TagDeclBits.addBit(D->isFreeStanding());
   TagDeclBits.addBit(D->isCompleteDefinitionRequired());
+  TagDeclBits.addBits(
+      D->hasExtInfo() ? 1 : (D->getTypedefNameForAnonDecl() ? 2 : 0),
+      /*BitWidth=*/2);
   Record.push_back(TagDeclBits);
 
   Record.AddSourceRange(D->getBraceRange());
 
   if (D->hasExtInfo()) {
-    Record.push_back(1);
     Record.AddQualifierInfo(*D->getExtInfo());
   } else if (auto *TD = D->getTypedefNameForAnonDecl()) {
-    Record.push_back(2);
     Record.AddDeclRef(TD);
     Record.AddIdentifierRef(TD->getDeclName().getAsIdentifierInfo());
-  } else {
-    Record.push_back(0);
   }
 }
 
@@ -702,7 +700,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(FunctionDeclBits);
 
   Record.AddSourceLocation(D->getEndLoc());
-  Record.AddSourceLocation(D->getDefaultLoc());
+  if (D->isExplicitlyDefaulted())
+    Record.AddSourceLocation(D->getDefaultLoc());
 
   Record.push_back(D->getODRHash());
 
@@ -1176,15 +1175,18 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   ParmVarDeclBits.addBit(D->isObjCMethodParameter());
   ParmVarDeclBits.addBits(D->getFunctionScopeDepth(), /*BitsWidth=*/7);
   ParmVarDeclBits.addBits(D->getFunctionScopeIndex(), /*BitsWidth=*/8);
+  // FIXME: stable encoding
+  ParmVarDeclBits.addBits(D->getObjCDeclQualifier(), /*BitsWidth=*/7);
   ParmVarDeclBits.addBit(D->isKNRPromoted());
   ParmVarDeclBits.addBit(D->hasInheritedDefaultArg());
   ParmVarDeclBits.addBit(D->hasUninstantiatedDefaultArg());
+  ParmVarDeclBits.addBit(D->getExplicitObjectParamThisLoc().isValid());
   Record.push_back(ParmVarDeclBits);
 
-  Record.push_back(D->getObjCDeclQualifier()); // FIXME: stable encoding
   if (D->hasUninstantiatedDefaultArg())
     Record.AddStmt(D->getUninstantiatedDefaultArg());
-  Record.AddSourceLocation(D->getExplicitObjectParamThisLoc());
+  if (D->getExplicitObjectParamThisLoc().isValid())
+    Record.AddSourceLocation(D->getExplicitObjectParamThisLoc());
   Code = serialization::DECL_PARM_VAR;
 
   // If the assumptions about the DECL_PARM_VAR abbrev are true, use it.  Here
@@ -2038,13 +2040,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_FIELD));
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2068,13 +2069,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_OBJC_IVAR));
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2103,13 +2103,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2122,11 +2121,11 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      7)); // Packed Tag Decl Bits: getTagKind, isCompleteDefinition,
-           // EmbeddedInDeclarator, IsFreeStanding, isCompleteDefinitionRequired
+      9)); // Packed Tag Decl Bits: getTagKind, isCompleteDefinition,
+           // EmbeddedInDeclarator, IsFreeStanding,
+           // isCompleteDefinitionRequired, ExtInfoKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
-  Abv->Add(BitCodeAbbrevOp(0));                         // ExtInfoKind
   // EnumDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // AddTypeRef
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IntegerType
@@ -2145,13 +2144,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2164,11 +2162,11 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      7)); // Packed Tag Decl Bits: getTagKind, isCompleteDefinition,
-           // EmbeddedInDeclarator, IsFreeStanding, isCompleteDefinitionRequired
+      9)); // Packed Tag Decl Bits: getTagKind, isCompleteDefinition,
+           // EmbeddedInDeclarator, IsFreeStanding,
+           // isCompleteDefinitionRequired, ExtInfoKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
-  Abv->Add(BitCodeAbbrevOp(0));                         // ExtInfoKind
   // RecordDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
@@ -2194,13 +2192,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2221,10 +2218,9 @@ void ASTWriter::WriteDeclAbbrevs() {
   // ParmVarDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      19)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
-            // ScopeIndex, KNRPromoted, HasInheritedDefaultArg
-  Abv->Add(BitCodeAbbrevOp(0));                       // ObjCDeclQualifier
-  Abv->Add(BitCodeAbbrevOp(0));                   // HasUninstantiatedDefaultArg
+      27)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
+            // ScopeIndex, ObjCDeclQualifier, KNRPromoted,
+            // HasInheritedDefaultArg, HasUninstantiatedDefaultArg
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
@@ -2236,13 +2232,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2262,13 +2257,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2303,13 +2297,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // FIXME: Implement abbreviation for other template kinds.
   Abv->Add(BitCodeAbbrevOp(FunctionDecl::TK_NonTemplate)); // TemplateKind
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                         // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(
-      BitCodeAbbrevOp::Fixed,
-      11)); // Packed DeclBits: isInvalidDecl, HasAttrs, isImplicit, isUsed,
-            // isReferenced, TopLevelDeclInObjCContainer, AccessSpecifier,
-            // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(DeclarationName::Identifier)); // NameKind
@@ -2346,16 +2339,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   DeclCXXMethodAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  unsigned ExprDependenceBits = llvm::BitWidth<ExprDependence>;
   // Abbreviation for EXPR_DECL_REF
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::EXPR_DECL_REF));
   //Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   //DeclRefExpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); //HasQualifier
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); //GetDeclFound
@@ -2374,9 +2365,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   //Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   //Integer Literal
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
   Abv->Add(BitCodeAbbrevOp(32));                      // Bit Width
@@ -2389,9 +2379,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   //Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   //Character Literal
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // getValue
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
@@ -2404,9 +2393,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   // CastExpr
   Abv->Add(BitCodeAbbrevOp(0)); // PathSize
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasFPFeatures

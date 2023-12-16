@@ -1,6 +1,9 @@
 @ RUN: llvm-mc -filetype=obj -triple=thumbv7 %s -o %t
 @ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=THUMB
 @ RUN: llvm-objdump -d --triple=thumbv7 %t | FileCheck %s --check-prefix=THUMB_ADDEND
+@ RUN: llvm-mc -filetype=obj --triple=thumbebv7-unknown-unknown %s -o %t
+@ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=THUMB
+@ RUN: llvm-objdump -d --triple=thumbebv7-unknown-unknown %t | FileCheck %s --check-prefix=THUMB_ADDEND
 
 @ All the ldr variants produce a relocation
 @ THUMB: R_ARM_THM_PC12
