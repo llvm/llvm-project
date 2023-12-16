@@ -60,9 +60,15 @@ public:
                      std::vector<std::vector<Point>> dens)
       : signs(s), numerators(nums), denominators(dens){};
 
+  // Find the number of parameters involved in the function
+  // from the dimensionality of the affine functions.
   unsigned getNumParams() {
     for (auto term : numerators)
+      // The number of elements in the affine function is
+      // one more than the number of parameters.
       return (term.getNumColumns() - 1);
+    // The polynomial can be treated as having any number
+    // of parameters.
     return -1;
   }
 
