@@ -68,8 +68,7 @@ void test_same() {
   auto snapshot_custom_v = v;
   std::sort(v.begin(), v.end());
   std::sort(snapshot_v.begin(), snapshot_v.end());
-  std::sort(snapshot_custom_v.begin(), snapshot_custom_v.end(),
-            [](const EqualType&, const EqualType&) { return false; });
+  std::sort(snapshot_custom_v.begin(), snapshot_custom_v.end(), std::less<EqualType>());
   bool all_equal = true;
   for (int i = 0; i < kSize; ++i) {
     if (v[i].value != snapshot_v[i].value || v[i].value != snapshot_custom_v[i].value) {
