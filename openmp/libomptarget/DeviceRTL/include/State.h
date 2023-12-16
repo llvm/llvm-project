@@ -16,7 +16,6 @@
 
 #include "Debug.h"
 #include "Mapping.h"
-#include "Platform.h"
 #include "Types.h"
 #include "Utils.h"
 

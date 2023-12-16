@@ -189,10 +189,17 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
+# Currently device libm functions are created by clang headers.  These do not
+# work for FORTRAN. The libm here  builds a libm device library by turning on
+# __BUILD_MATH_BUILTINS_LIB__ This converts the math functions in the clang
+# headers from static to extern to build device linkable libm for FORTRAN.
+# Eventually, we can make a linkable device libm for c and c++ and remove a
+# lot of header definitions that get compiled with every offload compilation.
+add_subdirectory(libm)
 
+add_subdirectory(hostexec)
 add_subdirectory(tools)
 set(PREP_TOOL $<TARGET_FILE:prep-libomptarget-bc>)
-add_subdirectory(hostexec)
 add_subdirectory(DeviceRTL)
 
 # Build target agnostic offloading library.

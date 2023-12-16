@@ -93,7 +93,6 @@ list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
 set(include_files
   ${include_directory}/Allocator.h
   ${include_directory}/Configuration.h
-  ${include_directory}/Platform.h
   ${include_directory}/Debug.h
   ${include_directory}/Interface.h
   ${include_directory}/LibC.h
@@ -112,7 +111,6 @@ set(src_files
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
   ${source_directory}/LibC.cpp
-  ${source_directory}/LibM.cpp
   ${source_directory}/Mapping.cpp
   ${source_directory}/Misc.cpp
   ${source_directory}/Parallelism.cpp
@@ -145,12 +143,9 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
-             -nogpuinc -nogpulib
+             -nocudalib -nogpulib -nostdinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
-             -I${CMAKE_BINARY_DIR}/openmp/runtime/src # Need omp.h for LibM.
-             -I${CMAKE_BINARY_DIR}/projects/openmp/runtime/src # Need omp.h for LibM.
-             -I${CMAKE_BINARY_DIR}/runtime/src
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
@@ -162,6 +157,82 @@ if(${LIBOMPTARGET_DEVICE_DEBUG})
 else()
   list(APPEND bc_flags -DOMPTARGET_DEBUG=0)
 endif()
+
+function(addAMDSpecificBcLibs touch_target gfxname bc_files local_depend_files)
+  # For amdgpu, the libomptarget bc is "all inclusive".
+  # During user compilation, the libomptarget bc is essentially the only
+  # non-user library linked. It is linked once in GPU link phase
+  # following llvm-link options: --internalize --only-needed
+  if(NOT amd_device_libs_found)
+    find_package(AMDDeviceLibs REQUIRED CONFIG
+      HINTS
+      ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+      ${CMAKE_INSTALL_PREFIX}
+      PATHS
+      /opt/rocm)
+    if(AMDDeviceLibs_DIR)
+      set(amd_device_libs_found ON)
+      libomptarget_say("DeviceRTLs ${gfxname}: Getting ROCm device libs from ${AMDDeviceLibs_DIR}")
+    else()
+      libomptarget_say("DeviceRTLs ${gfxname}: Not building AMDGCN device RTL: Could not find AMDDeviceLibs package")
+      return()
+    endif()
+  endif()
+  get_target_property(ockl_bc_file ockl LOCATION)
+  get_target_property(ocml_bc_file ocml LOCATION)
+  set(amdgpu_wfsz_is32 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
+  string(FIND "${amdgpu_wfsz_is32}" "${gfxname}" is_32bit)
+  if(NOT is_32bit EQUAL -1)
+    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_off LOCATION)
+  else()
+    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_on LOCATION)
+  endif()
+  string(LENGTH "${gfxname}" gfxlen)
+  if(gfxlen EQUAL 6)
+    string(SUBSTRING ${gfxname} 3 3 gfxnum)
+  else()
+    string(SUBSTRING ${gfxname} 3 4 gfxnum)
+  endif()
+  get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
+
+  # Add custom target so targets from other directories
+  # can be added as dependencies to ensure libm
+  # and libhostexec bc files have been built.
+  add_custom_target(${touch_target} ALL)
+  add_dependencies(${touch_target}
+    libm-target-${gfxname}
+    libhostexec-${gfxname}.bc
+  )
+
+  # TODO: Add back -amdgpu to the names below (maybe?).
+  list(APPEND bc_files
+    ${CMAKE_BINARY_DIR}/libm-${gfxname}.bc
+  #  ${CMAKE_BINARY_DIR}/openmp/libomptarget/hostexec/libhostexec-${gfxname}.bc
+  )
+  if(OPENMP_STANDALONE_BUILD)
+    list(APPEND bc_files
+      ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${gfxname}.bc
+    )
+  else()
+    list(APPEND bc_files
+      ${CMAKE_BINARY_DIR}/openmp/libomptarget/hostexec/libhostexec-${gfxname}.bc
+    )
+  endif()
+  if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
+    add_dependencies(${touch_target}
+      ockl ocml oclc_wavefrontsize64_on oclc_wavefrontsize64_off oclc_isa_version_${gfxnum})
+  endif()
+
+  # Add amdgcn-specific bc files to link command
+  list(APPEND bc_files ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file})
+
+  # Add touch-target-$(target_cpu) to local_depend_files so all $bc_files will exist or be created.
+  list(APPEND local_depend_files ${touch_target})
+
+  # Update these values in the caller:
+  set (bc_files ${bc_files} PARENT_SCOPE)
+  set (local_depend_files ${local_depend_files} PARENT_SCOPE)
+endfunction()
 
 # first create an object target
 add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
@@ -186,20 +257,6 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
     )
-
-    if(${outfile} MATCHES "State.cpp")
-      # Run the prep tool on the library to replace internal attribute with linkonce_odr for dm_alloc only.
-      set(outfile_prep "${outfile}-${target_cpu}-prep.bc")
-      add_custom_target(${outfile_prep}
-          COMMAND ${PREP_TOOL} -dm ${outfile}
-                          -o ${outfile_prep}
-          DEPENDS ${outfile}
-          COMMENT "Running ${PREP_TOOL} for ${outfile_prep}"
-      )
-      add_dependencies(${outfile_prep} ${outfile})
-      set(outfile ${outfile_prep})
-    endif()
-
     if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
       # Add a file-level dependency to ensure that clang is up-to-date.
       # By default, add_custom_command only builds clang if the
@@ -211,34 +268,21 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     list(APPEND bc_files ${outfile})
   endforeach()
 
-  # Link in the previously compiled 'hostexec' bitcode directly.
-  if("${target_name}" STREQUAL "amdgpu")
-    if(OPENMP_STANDALONE_BUILD)
-      list(APPEND extra_bc_files
-        ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${target_cpu}.bc
-      )
-    else()
-      list(APPEND extra_bc_files
-        ${CMAKE_BINARY_DIR}/openmp/libomptarget/hostexec/libhostexec-${target_cpu}.bc
-      )
-    endif()
-    add_custom_target(libhostexec-${target_cpu}
-      DEPENDS ${extra_bc_files}
-    )
-    add_dependencies(libhostexec-${target_cpu} libhostexec-${target_cpu}.bc)
-    set(extra_depends libhostexec-${target_cpu})
-  endif()
-
   set(bclib_name "libomptarget-${target_name}-${target_cpu}.bc")
+
+  set(local_depend_files ${bc_files})
+  if( ${target_name} STREQUAL "amdgpu" )
+    addAMDSpecificBcLibs("touch-target-${target_cpu}" ${target_cpu} "${bc_files}" "${local_depend_files}")
+  endif()
 
   # Link to a bitcode library.
   add_custom_target(linked_${bclib_name}
       COMMAND ${LINK_TOOL}
-        -o ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name} ${extra_bc_files} ${bc_files}
-      DEPENDS ${bc_files} ${extra_depends}
+        -o ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name} ${bc_files}
+      DEPENDS ${bc_files}
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
-  add_dependencies(linked_${bclib_name} ${bc_files} ${extra_depends})
+  add_dependencies(linked_${bclib_name} ${local_depend_files})
   if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
     add_dependencies(linked_${bclib_name} llvm-link)
   endif()
@@ -367,24 +411,8 @@ add_custom_target(omptarget.devicertl.nvptx)
 add_custom_target(omptarget.devicertl.amdgpu)
 foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
   if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
-    find_package(AMDDeviceLibs REQUIRED CONFIG
-                 HINTS ${CMAKE_INSTALL_PREFIX} 
-                       ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
-                 PATHS /opt/rocm
-    )
-    
-    # Link in the ROCm Device Libraries once the other files have been linked.
-    get_target_property(ocml_path ocml IMPORTED_LOCATION)
-    get_target_property(ockl_path ockl IMPORTED_LOCATION)
-
-    set(amd_options -Xclang -mcode-object-version=none
-                    -Xclang -mlink-builtin-bitcode -Xclang ${ocml_path}
-                    -Xclang -mlink-builtin-bitcode -Xclang ${ockl_path}
-                    -Wno-linker-warnings # Silence the empty host compilation.
-                    -Xclang -mcode-object-version=none
-    )
-
-    compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa ${amd_options})
+    set(clang_options -DLIBOMPTARGET_BC_TARGET -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=${gpu_arch} -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
+    compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none ${clang_options})
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
     compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx61)
   else()

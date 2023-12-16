@@ -455,12 +455,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
-  for (auto BCFile : getDeviceLibs(DriverArgs)) {
-    CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
-                                               : "-mlink-bitcode-file");
-    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
-  }
-
   ArgStringList LibraryPaths;
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.

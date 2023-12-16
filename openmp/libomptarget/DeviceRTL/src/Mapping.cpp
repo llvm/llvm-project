@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mapping.h"
-#include "Debug.h"
 #include "Interface.h"
 #include "State.h"
 #include "Types.h"
@@ -59,6 +58,7 @@ uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
     return __builtin_amdgcn_workgroup_size_z();
   };
   UNREACHABLE("Dim outside range!");
+  return 0; // removes compile warning
 }
 
 LaneMaskTy activemask() { return __builtin_amdgcn_read_exec(); }
@@ -97,6 +97,7 @@ uint32_t getThreadIdInBlock(int32_t Dim) {
     return __builtin_amdgcn_workitem_id_z();
   };
   UNREACHABLE("Dim outside range!");
+  return 0; // removes compile warning
 }
 
 uint32_t getNumberOfThreadsInKernel() {
@@ -114,6 +115,7 @@ uint32_t getBlockIdInKernel(int32_t Dim) {
     return __builtin_amdgcn_workgroup_id_z();
   };
   UNREACHABLE("Dim outside range!");
+  return 0; // removes compile warning
 }
 
 uint32_t getNumberOfBlocksInKernel(int32_t Dim) {
@@ -357,7 +359,8 @@ uint32_t mapping::getNumberOfProcessorElements() {
 
 // TODO: This is a workaround for initialization coming from kernels outside of
 //       the TU. We will need to solve this more correctly in the future.
-[[gnu::weak, gnu::used, gnu::retain]] int SHARED(IsSPMDMode);
+//       KEEP_ALIVE is needed for amdgpu
+[[gnu::weak]] int KEEP_ALIVE SHARED(IsSPMDMode);
 
 void mapping::init(bool IsSPMD) {
   if (mapping::isInitialThreadInLevel0(IsSPMD))

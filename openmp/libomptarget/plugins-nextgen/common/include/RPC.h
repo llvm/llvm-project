@@ -32,6 +32,21 @@ class DeviceImageTy;
 /// these routines will perform no action.
 struct RPCServerTy {
 public:
+  /// A wrapper around a single instance of the RPC server for a given device.
+  /// This is provided to simplify ownership of the underlying device.
+  struct RPCHandleTy {
+    RPCHandleTy(RPCServerTy &Server, plugin::GenericDeviceTy &Device)
+        : Server(Server), Device(Device) {}
+
+    llvm::Error runServer() { return Server.runServer(Device); }
+
+    llvm::Error deinitDevice() { return Server.deinitDevice(Device); }
+
+  private:
+    RPCServerTy &Server;
+    plugin::GenericDeviceTy &Device;
+  };
+
   RPCServerTy(uint32_t NumDevices);
 
   /// Check if this device image is using an RPC server. This checks for the
@@ -48,6 +63,9 @@ public:
                          plugin::GenericGlobalHandlerTy &Handler,
                          plugin::DeviceImageTy &Image);
 
+  /// Gets a reference to this server for a specific device.
+  llvm::Expected<RPCHandleTy *> getDevice(plugin::GenericDeviceTy &Device);
+
   /// Runs the RPC server associated with the \p Device until the pending work
   /// is cleared.
   llvm::Error runServer(plugin::GenericDeviceTy &Device);
@@ -57,7 +75,12 @@ public:
   llvm::Error deinitDevice(plugin::GenericDeviceTy &Device);
 
   ~RPCServerTy();
+
+private:
+  llvm::SmallVector<std::unique_ptr<RPCHandleTy>> Handles;
 };
+
+using RPCHandleTy = RPCServerTy::RPCHandleTy;
 
 } // namespace llvm::omp::target
 

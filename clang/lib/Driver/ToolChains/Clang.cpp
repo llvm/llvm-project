@@ -9151,9 +9151,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const char *LinkingOutput) const {
   bool isAMDGPU = false;
   auto offloadTC = C.getOffloadToolChains(Action::OFK_OpenMP);
-  const auto OpenMPTCs = llvm::make_range(offloadTC.first, offloadTC.second);
+  const auto openMPTCs = llvm::make_range(offloadTC.first, offloadTC.second);
   const ToolChain *TC;
-  for (auto &I : OpenMPTCs) {
+  for (auto &I : openMPTCs) {
     TC = I.second;
     if (TC->getTriple().isAMDGPU()) {
       isAMDGPU = true;
@@ -9161,7 +9161,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (!OpenMPTCs.empty() &&
+  if (!openMPTCs.empty() &&
       Args.hasFlag(options::OPT_opaque_offload_linker,
                    options::OPT_no_opaque_offload_linker, isAMDGPU)) {
     ConstructOpaqueJob(C, JA, Output, Inputs, Args, TC->getTriple(),
@@ -9184,6 +9184,35 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         if (CudaInstallation.isValid())
           CmdArgs.push_back(Args.MakeArgString(
               "--cuda-path=" + CudaInstallation.getInstallPath()));
+        break;
+      }
+      if (TC->getTriple().isAMDGPU()) {
+        RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true,
+                                                  true);
+        const llvm::Triple triple = TC->getTriple();
+        const auto GPUArch = TC->getTargetID().str();
+        const auto ArchKind = llvm::AMDGPU::parseArchAMDGCN(TC->getTargetID());
+
+        bool AsanGpuRT = Args.hasFlag(options::OPT_fgpu_sanitize,
+                                      options::OPT_fno_gpu_sanitize, true);
+
+        llvm::SmallVector<std::string, 12> BCLibs =
+            amdgpu::dlr::getCommonDeviceLibNames(
+                Args, D, GPUArch, /* isOpenMP */ true, RocmInstallation);
+
+        SmallVector<std::string> subarchs;
+        addSubArchsWithTargetID(C, Args, triple, subarchs);
+
+        std::set<std::string> bitcodeTarget;
+        for (const auto &sa : subarchs) {
+          bitcodeTarget.insert("openmp-" + triple.str() + "-" +
+                               getProcessorFromTargetID(triple, sa).str());
+        }
+
+        for (StringRef prefix : bitcodeTarget)
+          for (auto BCLib : BCLibs)
+            CmdArgs.push_back(Args.MakeArgString("--bitcode-library=" + prefix +
+                                                 "=" + BCLib));
         break;
       }
     }

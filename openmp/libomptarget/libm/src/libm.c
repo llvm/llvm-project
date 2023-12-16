@@ -1,43 +1,34 @@
-//===------- LibC.cpp - Simple implementation of libc functions --- C++ ---===//
+//===--------- libm/libm.c ------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-#pragma omp begin declare target device_type(nohost)
+// If the library needs to destinguish betwen different targets,
+// target specific macros for that GPU can be used.
+// For nvptx use __NVPTX__.  For amdgcn, use __AMDGCN__.
+// Example:
+//   #ifdef __AMDGCN__ && (__AMDGCN__ == 1000)
+//     double fast_sqrt(double __a) { ... }
+//   #endif
 
 #define __BUILD_MATH_BUILTINS_LIB__
 
-#include "Platform.h"
-
-using size_t = decltype(sizeof(char));
-
-// We cannot use variants as we need the "C" symbol names to be exported.
-#ifdef __AMDGPU__
-
+#ifdef __AMDGCN__
+#pragma omp declare target
 #define __OPENMP_AMDGCN__
-
-#pragma push_macro("__device__")
-#define __device__
-
-#include <__clang_hip_libdevice_declares.h>
-
-#pragma pop_macro("__device__")
-
 #include <__clang_cuda_complex_builtins.h>
 #include <__clang_hip_math.h>
-
-#undef __OPENMP_AMDGCN__
-
-extern "C" {
 
 #ifndef FORTRAN_NO_LONGER_NEEDS
 // Attach Fortran runtimes which are used by Classic Flang
 double __f90_dmodulov(double a, double p) {
   double d;
-  d = a - floor(a/p) * p;
+  d = fmod(a, p);
+  if (d != 0 && ((a < 0 && p > 0) || (a > 0 && p < 0)))
+    d += p;
   return d;
 }
 
@@ -75,32 +66,16 @@ int16_t __f90_imodulov(int16_t a, int16_t p) {
   }
   return r;
 }
-}
 
 #endif
 
-#endif // __AMDGPU__
+#pragma omp end declare target
+#endif
 
 #ifdef __NVPTX__
-
+#pragma omp declare target
 #define __CUDA__
 #define __OPENMP_NVPTX__
-
-#pragma push_macro("__device__")
-#define __device__
-
-#include <__clang_cuda_libdevice_declares.h>
-
-#include <__clang_cuda_device_functions.h>
-
-#pragma pop_macro("__device__")
-
-#include <__clang_cuda_complex_builtins.h>
 #include <__clang_cuda_math.h>
-
-#undef __OPENMP_NVPTX__
-#undef __CUDA__
-
-#endif // __NVPTX__
-
 #pragma omp end declare target
+#endif
