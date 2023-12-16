@@ -78,7 +78,7 @@ public:
     assert(
         sameNumParams &&
         "two generators with different numbers of parameters cannot be added!");
-    signs.insert(signs.end(), gf.signs.begin(), gf.signs.end());
+    signs.append(gf.signs);
     numerators.insert(numerators.end(), gf.numerators.begin(),
                       gf.numerators.end());
     denominators.insert(denominators.end(), gf.denominators.begin(),
