@@ -622,12 +622,10 @@ void FracMatrix::LLL(Fraction delta) {
       // Compute the Gram-Schmidt coefficient μ_jk.
       mu = dotProduct(getRow(k), gsOrth.getRow(j)) /
            dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
-      if (abs(mu) > Fraction(1, 2)) {
-        nearest = floor(mu + Fraction(1, 2));
-        // Subtract b_j scaled by the integer nearest to μ_jk from b_k.
-        addToRow(k, getRow(j), -Fraction(nearest, 1));
-        gsOrth = gramSchmidt(); // Update orthogonalization.
-      }
+      nearest = round(mu);
+      // Subtract b_j scaled by the integer nearest to μ_jk from b_k.
+      addToRow(k, getRow(j), -Fraction(nearest, 1));
+      gsOrth = gramSchmidt(); // Update orthogonalization.
     }
     mu = dotProduct(getRow(k), gsOrth.getRow(k - 1)) /
          dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1));
