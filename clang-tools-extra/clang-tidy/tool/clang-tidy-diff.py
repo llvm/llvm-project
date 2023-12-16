@@ -223,6 +223,12 @@ def main():
         default=[],
         help="Load the specified plugin in clang-tidy.",
     )
+    parser.add_argument(
+        "-config",
+        dest="config",
+        default=None,
+        help="Specifies a clang-tidy config file"
+    )
 
     clang_tidy_args = []
     argv = sys.argv[1:]
@@ -309,6 +315,8 @@ def main():
 
     # Form the common args list.
     common_clang_tidy_args = []
+    if args.config is not None:
+        common_clang_tidy_args.append("--config-file=" + args.config)
     if args.fix:
         common_clang_tidy_args.append("-fix")
     if args.checks != "":
