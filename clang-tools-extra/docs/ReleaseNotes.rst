@@ -128,6 +128,11 @@ Improvements to clang-tidy
   as a value for `-export-fixes` to export individual yaml files for each
   compilation unit.
 
+- A new option `readability-identifier-naming.CheckAnonFieldInParent` is added. When set
+  to `true`, fields of anonymous records (i.e. anonymous unions and structs) will be
+  treated either as a variable or as a field in the enclosing scope for the purpose of
+  name style checking.
+
 New checks
 ^^^^^^^^^^
 
