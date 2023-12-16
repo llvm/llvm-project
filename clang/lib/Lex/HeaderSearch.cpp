@@ -1671,7 +1671,7 @@ static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
     if (Filename == "module.map")
       Diags.Report(diag::warn_deprecated_module_dot_map)
           << PrivateFilename << 1
-          << File.getDir().getName().endswith(".framework");
+          << File.getDir().getName().ends_with(".framework");
   }
   return PMMFile;
 }
