@@ -29,7 +29,7 @@ int main(int, char**) {
 
     static_assert(!test_convertible<std::out_ptr_t<std::unique_ptr<int>, int*>>(), "This constructor must be explicit");
   }
-  
+
   {
     std::unique_ptr<int, std::default_delete<int>> uPtr;
 

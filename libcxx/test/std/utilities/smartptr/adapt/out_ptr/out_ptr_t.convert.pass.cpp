@@ -22,7 +22,7 @@
 #include <memory>
 
 int main(int, char**) {
-  // operator Pointer*() 
+  // operator Pointer*()
   {
     std::unique_ptr<int> uPtr;
 
