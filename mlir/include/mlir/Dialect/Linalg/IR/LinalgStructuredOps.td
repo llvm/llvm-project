@@ -389,7 +389,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 //===----------------------------------------------------------------------===//
 
 def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
-  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
+  [LinalgDepthwiseConvolutionOpInterface]> {
     
   let summary = [{
     Performs N-D depthwise convolution with switchable channel position; either first or last.
@@ -416,8 +416,9 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
   }];
 
     let arguments = (ins
-      Variadic<TensorOrMemref>:$inputs,
-      Variadic<TensorOrMemref>:$inits,
+      TensorOrMemref:$input,
+      TensorOrMemref:$filter,
+      TensorOrMemref:$init,
       DefaultValuedAttr<BoolAttr, "true">:$channel_first,
       OptionalAttr<I64ElementsAttr>:$strides,
       OptionalAttr<I64ElementsAttr>:$dilations
@@ -428,21 +429,21 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
     let skipDefaultBuilders = 1;
     let builders = [
       OpBuilder<
-      (ins "ValueRange":$inputs, "ValueRange":$inits, "bool":$channel_first,
+      (ins "Value":$input, "Value":$filter, "Value":$init, "bool":$channel_first,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
-        buildStructuredOp($_builder, $_state, std::nullopt, inputs, inits,
+        buildStructuredOp($_builder, $_state, std::nullopt, {input, filter}, init,
           attributes, DepthwiseConvNDOp::getRegionBuilder());
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-            "ValueRange":$inits, "bool":$channel_first,
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+            "Value":$init, "bool":$channel_first,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
         buildStructuredOp($_builder, $_state, resultTensorTypes,
-          inputs, inits, attributes, DepthwiseConvNDOp::getRegionBuilder());
+          {input, filter}, init, attributes, DepthwiseConvNDOp::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -454,14 +455,14 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
         (void)$_state.addRegion();
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-      "ValueRange":$inits, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, 
+      "Value":$init, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute("channel_first", channel_first);
         $_state.addAttribute("strides", strides);
         $_state.addAttribute("dilations", dilations);
-        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, inits,
+        buildStructuredOp($_builder, $_state, resultTensorTypes, {input, filter}, init,
           attributes, DepthwiseConvNDOp::getRegionBuilder());
       }]>
     ];
@@ -481,14 +482,14 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
         return detail::depthwise_convolution_impl::regionBuilder;
       }
       // Implement functions necessary for DestinationStyleOpInterface.
-      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+      MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
       // DepthwiseConvolutionInterface implementations
       bool isQuantized() {return false; }
     }];
 }
 
 def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
-  [AttrSizedOperandSegments, LinalgDepthwiseConvolutionOpInterface]> {
+  [LinalgDepthwiseConvolutionOpInterface]> {
     
   let summary = [{
     Performs quantized N-D depthwise convolution with switchable channel position; either first or last.
@@ -515,8 +516,10 @@ def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
   }];
 
     let arguments = (ins
-      Variadic<AnyType>:$inputs,
-      Variadic<TensorOrMemref>:$inits,
+      TensorOrMemref:$input,
+      TensorOrMemref:$filter,
+      Variadic<AnyType>:$zero_points,
+      TensorOrMemref:$init,
       DefaultValuedAttr<BoolAttr, "true">:$channel_first,
       OptionalAttr<I64ElementsAttr>:$strides,
       OptionalAttr<I64ElementsAttr>:$dilations
@@ -527,21 +530,25 @@ def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
     let skipDefaultBuilders = 1;
     let builders = [
       OpBuilder<
-      (ins "ValueRange":$inputs, "ValueRange":$inits, "bool":$channel_first,
+      (ins "Value":$input, "Value":$filter, "ValueRange":$zero_points, "Value":$init, "bool":$channel_first,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
-        buildStructuredOp($_builder, $_state, std::nullopt, inputs, inits,
+        SmallVector<Value> inputs({input, filter});
+        inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, init,
           attributes, DepthwiseConvNDQOp::getRegionBuilder());
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-            "ValueRange":$inits, "bool":$channel_first,
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter,
+          "ValueRange":$zero_points, "Value":$init, "bool":$channel_first,
             CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute(getChannelFirstAttrName($_state.name), $_builder.getBoolAttr(channel_first));
+        SmallVector<Value> inputs({input, filter});
+        inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
         buildStructuredOp($_builder, $_state, resultTensorTypes,
-          inputs, inits, attributes, DepthwiseConvNDQOp::getRegionBuilder());
+          inputs, init, attributes, DepthwiseConvNDQOp::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -553,14 +560,16 @@ def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
         (void)$_state.addRegion();
       }]>,
       OpBuilder<
-      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-      "ValueRange":$inits, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
+      (ins "TypeRange":$resultTensorTypes, "Value":$input, "Value":$filter, "ValueRange":$zero_points,
+      "Value":$init, "Attribute":$channel_first, "Attribute":$strides, "Attribute":$dilations,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addAttribute("channel_first", channel_first);
         $_state.addAttribute("strides", strides);
         $_state.addAttribute("dilations", dilations);
-        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, inits,
+        SmallVector<Value> inputs({input, filter});
+        inputs.insert(inputs.end(), zero_points.begin(), zero_points.end());
+        buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, init,
           attributes, DepthwiseConvNDQOp::getRegionBuilder());
       }]>
     ];
@@ -580,7 +589,7 @@ def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
         return detail::depthwise_convolution_impl::quantizedRegionBuilder;
       }
       // Implement functions necessary for DestinationStyleOpInterface.
-      MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+      MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
       // DepthwiseConvolutionInterface implementations
       bool isQuantized() { return true; }
     }];
