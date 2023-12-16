@@ -56,28 +56,24 @@ using Point = SmallVector<Fraction>;
 //      is a vector (a generator).
 class GeneratingFunction {
 public:
-  GeneratingFunction(SmallVector<int, 16> signs, std::vector<ParamPoint> nums,
+  GeneratingFunction(unsigned numParam, SmallVector<int, 8> signs,
+                     std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
-      : signs(signs), numerators(nums), denominators(dens) {}
+      : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
+    for (auto term : numerators)
+      assert(term.getNumColumns() - 1 == numParam &&
+             "dimensionality of numerator exponents does not match number of "
+             "parameters!");
+  }
 
   // Find the number of parameters involved in the function
   // from the dimensionality of the affine functions.
-  unsigned getNumParams() {
-    for (auto term : numerators)
-      // The number of elements in the affine function is
-      // one more than the number of parameters.
-      return (term.getNumColumns() - 1);
-    // The polynomial can be treated as having any number
-    // of parameters.
-    return -1;
-  }
+  unsigned getNumParams() { return numParam; }
 
   GeneratingFunction operator+(const GeneratingFunction &gf) {
-    bool sameNumParams = (getNumParams() == -1) || (gf.getNumParams() == -1) ||
-                         (getNumParams() == gf.getNumParams());
-    assert(
-        sameNumParams &&
-        "two generators with different numbers of parameters cannot be added!");
+    assert(numParam == gf.getNumParams() &&
+           "two generating functions with different numbers of parameters "
+           "cannot be added!");
     signs.append(gf.signs);
     numerators.insert(numerators.end(), gf.numerators.begin(),
                       gf.numerators.end());
@@ -111,6 +107,9 @@ public:
   SmallVector<int, 8> signs;
   std::vector<ParamPoint> numerators;
   std::vector<std::vector<Point>> denominators;
+
+private:
+  unsigned numParam;
 };
 
 // A class to describe the quasi-polynomials obtained by
@@ -121,38 +120,32 @@ public:
 // by the product of a set of affine functions on n parameters.
 class QuasiPolynomial {
 public:
-  QuasiPolynomial(SmallVector<Fraction> coeffs = {},
+  QuasiPolynomial(unsigned numParam, SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {})
-      : coefficients(coeffs), affine(aff) {}
+      : numParam(numParam), coefficients(coeffs), affine(aff) {
+    // Find the first term which involves some affine function.
+    for (auto term : affine)
+      if (term.size() == 0)
+        continue;
+    // The number of elements in the affine function is
+    // one more than the number of parameters.
+    assert(term[0].size() - 1 == numParam &&
+           "dimensionality of affine functions does not match number of "
+           "parameters!")
+  }
 
   QuasiPolynomial(Fraction cons) : coefficients({cons}), affine({{}}) {}
 
   QuasiPolynomial(QuasiPolynomial const &) = default;
 
-  SmallVector<Fraction> coefficients;
-  std::vector<std::vector<SmallVector<Fraction>>> affine;
-
   // Find the number of parameters involved in the polynomial
   // from the dimensionality of the affine functions.
-  unsigned getNumParams() {
-    // Find the first term which involves some affine function.
-    for (auto term : affine) {
-      if (term.size() == 0)
-        continue;
-      // The number of elements in the affine function is
-      // one more than the number of parameters.
-      return (term[0].size() - 1);
-    }
-    // The polynomial can be treated as having any number
-    // of parameters.
-    return -1;
-  }
+  unsigned getNumParams() { return numParam; }
 
   QuasiPolynomial operator+(const QuasiPolynomial &x) {
-    bool sameNumParams = (getNumParams() == -1) || (x.getNumParams() == -1) ||
-                         (getNumParams() == x.getNumParams());
-    assert(sameNumParams && "two quasi-polynomials with different numbers of "
-                            "parameters cannot be added!");
+    assert(numParam == x.getNumParams() &&
+           "two quasi-polynomials with different numbers of parameters cannot "
+           "be added!");
     coefficients.append(x.coefficients);
     affine.insert(affine.end(), x.affine.begin(), x.affine.end());
     return *this;
@@ -161,8 +154,9 @@ public:
   QuasiPolynomial operator-(const QuasiPolynomial &x) {
     bool sameNumParams = (getNumParams() == -1) || (x.getNumParams() == -1) ||
                          (getNumParams() == x.getNumParams());
-    assert(sameNumParams && "two quasi-polynomials with different numbers of "
-                            "parameters cannot be subtracted!");
+    assert(numParam == x.getNumParams() &&
+           "two quasi-polynomials with different numbers of parameters cannot "
+           "be subtracted!");
     QuasiPolynomial qp(x.coefficients, x.affine);
     for (unsigned i = 0; i < x.coefficients.size(); i++)
       qp.coefficients[i] = -qp.coefficients[i];
@@ -170,10 +164,9 @@ public:
   }
 
   QuasiPolynomial operator*(const QuasiPolynomial &x) {
-    bool sameNumParams = (getNumParams() == -1) || (x.getNumParams() == -1) ||
-                         (getNumParams() == x.getNumParams());
-    assert(sameNumParams && "two quasi-polynomials with different numbers of "
-                            "parameters cannot be multiplied!");
+    assert(numParam = x.getNumParams() &&
+                      "two quasi-polynomials with different numbers of "
+                      "parameters cannot be multiplied!");
     QuasiPolynomial qp();
     std::vector<SmallVector<Fraction>> product;
     for (unsigned i = 0; i < coefficients.size(); i++) {
@@ -220,6 +213,12 @@ public:
     }
     return QuasiPolynomial(newCoeffs, newAffine);
   }
+
+  SmallVector<Fraction> coefficients;
+  std::vector<std::vector<SmallVector<Fraction>>> affine;
+
+private:
+  unsigned numParam;
 };
 
 } // namespace presburger
