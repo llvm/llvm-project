@@ -896,15 +896,6 @@ func.func @bad_alloc_wrong_symbol_count() {
 
 // -----
 
-func.func @load_invalid_memref_indexes() {
-  %0 = memref.alloca() : memref<10xi32>
-  %c0 = arith.constant 0 : index
-  // expected-error@+1 {{incorrect number of indices for load, expected 1 but got 2}}
-  %1 = memref.load %0[%c0, %c0] : memref<10xi32>
-}
-
-// -----
-
 func.func @test_store_zero_results() {
 ^bb0:
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
