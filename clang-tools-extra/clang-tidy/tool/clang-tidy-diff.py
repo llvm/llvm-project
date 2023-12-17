@@ -227,7 +227,7 @@ def main():
         "-config",
         dest="config",
         default=None,
-        help="Specifies a clang-tidy config file"
+        help="Specifies a clang-tidy config file",
     )
 
     clang_tidy_args = []
