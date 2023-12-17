@@ -168,8 +168,8 @@ public:
            "two quasi-polynomials with different numbers of parameters cannot "
            "be subtracted!");
     QuasiPolynomial qp(x.coefficients, x.affine);
-    for (unsigned i = 0, e = x.coefficients.size(); i < e; i++)
-      qp.coefficients[i] = -qp.coefficients[i];
+    for (Fraction &coeff : qp.coefficients)
+      coeff = -coeff;
     return (*this + qp);
   }
 
