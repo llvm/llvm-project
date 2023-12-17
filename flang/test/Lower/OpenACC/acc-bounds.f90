@@ -116,4 +116,39 @@ contains
 ! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?x?x?xf32>>) bounds(%29, %33, %37) -> !fir.ref<!fir.array<?x?x?xf32>> {name = "a"}
 ! CHECK: acc.kernels dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<?x?x?xf32>>) {
 
+  subroutine acc_optional_data(a)
+    real, pointer, optional :: a(:)
+    !$acc data attach(a)
+    !$acc end data
+  end subroutine
+  
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_data(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a", fir.optional}) {
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<optional, pointer>, uniq_name = "_QMopenacc_boundsFacc_optional_dataEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0_DECL]]#1 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> i1
+! CHECK: %[[BOX:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>) {
+! CHECK:   %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:   fir.result %[[LOAD]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK: } else {
+! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:   fir.result %[[ABSENT]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK: }
+! CHECK: %[[RES:.*]]:5 = fir.if %[[IS_PRESENT]] -> (index, index, index, index, index) {
+! CHECK:   fir.result %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : index, index, index, index, index
+! CHECK: } else {
+! CHECK:   %[[C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[CM1:.*]] = arith.constant -1 : index
+! CHECK:   fir.result %[[C0]], %[[CM1]], %[[C0]], %[[C0]], %[[C0]] : index, index, index, index, index
+! CHECK: }
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[RES]]#0 : index) upperbound(%[[RES]]#1 : index) extent(%[[RES]]#2 : index) stride(%[[RES]]#3 : index) startIdx(%[[RES]]#4 : index) {strideInBytes = true}
+! CHECK: %[[BOX_ADDR:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.ptr<!fir.array<?xf32>>) {
+! CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>> 
+! CHECK:   fir.result %[[ADDR]] : !fir.ptr<!fir.array<?xf32>>
+! CHECK: } else {
+! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.ptr<!fir.array<?xf32>>
+! CHECK:   fir.result %[[ABSENT]] : !fir.ptr<!fir.array<?xf32>>
+! CHECK: }
+! CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[BOX_ADDR]] : !fir.ptr<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ptr<!fir.array<?xf32>> {name = "a"}
+! CHECK: acc.data dataOperands(%[[ATTACH]] : !fir.ptr<!fir.array<?xf32>>)
+
 end module

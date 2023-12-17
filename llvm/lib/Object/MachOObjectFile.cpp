@@ -2066,9 +2066,9 @@ bool MachOObjectFile::isDebugSection(DataRefImpl Sec) const {
     return false;
   }
   StringRef SectionName = SectionNameOrErr.get();
-  return SectionName.startswith("__debug") ||
-         SectionName.startswith("__zdebug") ||
-         SectionName.startswith("__apple") || SectionName == "__gdb_index" ||
+  return SectionName.starts_with("__debug") ||
+         SectionName.starts_with("__zdebug") ||
+         SectionName.starts_with("__apple") || SectionName == "__gdb_index" ||
          SectionName == "__swift_ast";
 }
 
@@ -2083,7 +2083,7 @@ ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
     return {};
   }
   auto &Segment = SegmentOrErr.get();
-  if (StringRef(Segment.segname, 16).startswith(SegmentName))
+  if (StringRef(Segment.segname, 16).starts_with(SegmentName))
     return arrayRefFromStringRef(Obj.getData().slice(
         Segment.fileoff, Segment.fileoff + Segment.filesize));
   return {};
@@ -2469,7 +2469,7 @@ StringRef MachOObjectFile::guessLibraryShortName(StringRef Name,
   if (c == Name.npos || c == 0)
     goto guess_library;
   V = Name.slice(c+1, Name.npos);
-  if (!V.startswith("Versions/"))
+  if (!V.starts_with("Versions/"))
     goto guess_library;
   d =  Name.rfind('/', c);
   if (d == Name.npos)

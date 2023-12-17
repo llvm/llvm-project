@@ -18,7 +18,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = float;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   uint64_t check(uint32_t start, uint32_t stop, mpfr::RoundingMode rounding) {
     // Range of the second input: [2^37, 2^48).

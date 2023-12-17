@@ -12910,7 +12910,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart))
+      const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
+      const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
+
+      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
+          isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
         return true;
 
       // (RHS > Start - 1) implies RHS >= Start.

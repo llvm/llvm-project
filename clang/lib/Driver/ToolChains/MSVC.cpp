@@ -302,7 +302,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (A.getOption().matches(options::OPT_l)) {
       StringRef Lib = A.getValue();
       const char *LinkLibArg;
-      if (Lib.endswith(".lib"))
+      if (Lib.ends_with(".lib"))
         LinkLibArg = Args.MakeArgString(Lib);
       else
         LinkLibArg = Args.MakeArgString(Lib + ".lib");
