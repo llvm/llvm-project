@@ -1101,17 +1101,21 @@ bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getNumOperands() != 2 || RHS->getNumOperands() != 2)
     return false;
 
-  Value *N1 = LHS->getIncomingValue(0);
-  Value *N2 = LHS->getIncomingValue(1);
-  Value *N3 = RHS->getIncomingValue(0);
-  Value *N4 = RHS->getIncomingValue(1);
+  BasicBlock *B0 = LHS->getIncomingBlock(0);
+  BasicBlock *B1 = LHS->getIncomingBlock(1);
 
-  BasicBlock *B1 = LHS->getIncomingBlock(0);
-  BasicBlock *B2 = LHS->getIncomingBlock(1);
-  BasicBlock *B3 = RHS->getIncomingBlock(0);
-  BasicBlock *B4 = RHS->getIncomingBlock(1);
+  bool RHSContainB0 = RHS->getBasicBlockIndex(B0) != -1;
+  bool RHSContainB1 = RHS->getBasicBlockIndex(B1) != -1;
 
-  return N1 == N4 && N2 == N3 && B1 == B3 && B2 == B4;
+  if (!RHSContainB0 || !RHSContainB1)
+    return false;
+
+  Value *N1 = LHS->getIncomingValueForBlock(B0);
+  Value *N2 = LHS->getIncomingValueForBlock(B1);
+  Value *N3 = RHS->getIncomingValueForBlock(B0);
+  Value *N4 = RHS->getIncomingValueForBlock(B1);
+
+  return N1 == N4 && N2 == N3;
 }
 
 Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
