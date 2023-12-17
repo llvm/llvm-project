@@ -17,6 +17,19 @@
 #include "min_allocator.h"
 #include "allocators.h"
 
+struct HasNonConstCopyAssignment {
+    HasNonConstCopyAssignment() = default;
+    HasNonConstCopyAssignment(HasNonConstCopyAssignment const&) = default;
+    HasNonConstCopyAssignment(HasNonConstCopyAssignment&) { assert(false); }
+    TEST_CONSTEXPR HasNonConstCopyAssignment& operator=(HasNonConstCopyAssignment const&) {
+        return *this;
+    }
+    HasNonConstCopyAssignment& operator=(HasNonConstCopyAssignment&) {
+        assert(false);
+        return *this;
+    }
+};
+
 TEST_CONSTEXPR_CXX20 bool tests() {
     {
         std::vector<int, test_allocator<int> > l(3, 2, test_allocator<int>(5));
@@ -31,6 +44,13 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         l2 = l;
         assert(l2 == l);
         assert(l2.get_allocator() == other_allocator<int>(5));
+    }
+    {
+        // Make sure we copy elements of the vector using the right copy assignment operator.
+        std::vector<HasNonConstCopyAssignment> v(5);
+        std::vector<HasNonConstCopyAssignment> v2;
+        v2 = v;
+        assert(v2.size() == 5);
     }
 #if TEST_STD_VER >= 11
     {

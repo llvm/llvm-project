@@ -1283,7 +1283,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(const vector& __x)
     : __end_cap_(nullptr, __alloc_traits::select_on_container_copy_construction(__x.__alloc()))
 {
-  __init_with_size(__x.__begin_, __x.__end_, __x.size());
+  __init_with_size(__x.begin(), __x.end(), __x.size());
 }
 
 template <class _Tp, class _Allocator>
@@ -1291,7 +1291,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 vector<_Tp, _Allocator>::vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
     : __end_cap_(nullptr, __a)
 {
-  __init_with_size(__x.__begin_, __x.__end_, __x.size());
+  __init_with_size(__x.begin(), __x.end(), __x.size());
 }
 
 template <class _Tp, class _Allocator>
@@ -1416,7 +1416,7 @@ vector<_Tp, _Allocator>::operator=(const vector& __x)
     if (this != std::addressof(__x))
     {
         __copy_assign_alloc(__x);
-        assign(__x.__begin_, __x.__end_);
+        assign(__x.begin(), __x.end());
     }
     return *this;
 }

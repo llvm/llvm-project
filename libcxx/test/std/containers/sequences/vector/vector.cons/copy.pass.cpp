@@ -18,6 +18,12 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
+struct HasNonConstCopyConstructor {
+    HasNonConstCopyConstructor() = default;
+    TEST_CONSTEXPR HasNonConstCopyConstructor(HasNonConstCopyConstructor const&) { }
+    HasNonConstCopyConstructor(HasNonConstCopyConstructor&) { assert(false); }
+};
+
 template <class C>
 TEST_CONSTEXPR_CXX20 void
 test(const C& x)
@@ -57,6 +63,12 @@ TEST_CONSTEXPR_CXX20 bool tests() {
         assert(is_contiguous_container_asan_correct(v));
         assert(is_contiguous_container_asan_correct(v2));
         assert(v2.empty());
+    }
+    {
+        // Make sure we copy elements of the vector using the right copy constructor.
+        std::vector<HasNonConstCopyConstructor> v(5);
+        std::vector<HasNonConstCopyConstructor> v2 = v;
+        assert(v2.size() == 5);
     }
 #if TEST_STD_VER >= 11
     {
