@@ -324,7 +324,7 @@ static void annotateNonNullAndDereferenceable(CallInst *CI, ArrayRef<unsigned> A
 static Value *copyFlags(const CallInst &Old, Value *New) {
   assert(!Old.isMustTailCall() && "do not copy musttail call flags");
   assert(!Old.isNoTailCall() && "do not copy notail call flags");
-  if (auto *NewCI = dyn_cast_or_null<CallInst>(New))
+  if (auto *NewCI = dyn_cast_if_present<CallInst>(New))
     NewCI->setTailCallKind(Old.getTailCallKind());
   return New;
 }

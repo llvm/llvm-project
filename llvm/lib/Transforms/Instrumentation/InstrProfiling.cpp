@@ -348,7 +348,7 @@ public:
       Value *Addr = cast<StoreInst>(Store)->getPointerOperand();
       Type *Ty = LiveInValue->getType();
       IRBuilder<> Builder(InsertPos);
-      if (auto *AddrInst = dyn_cast_or_null<IntToPtrInst>(Addr)) {
+      if (auto *AddrInst = dyn_cast_if_present<IntToPtrInst>(Addr)) {
         // If isRuntimeCounterRelocationEnabled() is true then the address of
         // the store instruction is computed with two instructions in
         // InstrProfiling::getCounterAddress(). We need to copy those
@@ -1066,7 +1066,7 @@ static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
 }
 
 static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
-  auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M.getModuleFlag(Flag));
+  auto *MD = dyn_cast_if_present<ConstantAsMetadata>(M.getModuleFlag(Flag));
   if (!MD)
     return 0;
 

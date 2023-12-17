@@ -990,7 +990,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       for (MachineMemOperand *MMO : I.memoperands()) {
         // We've replaced IR-level uses of the remapped allocas, so we only
         // need to replace direct uses here.
-        const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(MMO->getValue());
+        const AllocaInst *AI = dyn_cast_if_present<AllocaInst>(MMO->getValue());
         if (!AI)
           continue;
 
@@ -1046,7 +1046,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       for (MachineMemOperand *MMO : I.memoperands()) {
         // Collect MachineMemOperands which reference
         // FixedStackPseudoSourceValues with old frame indices.
-        if (const auto *FSV = dyn_cast_or_null<FixedStackPseudoSourceValue>(
+        if (const auto *FSV = dyn_cast_if_present<FixedStackPseudoSourceValue>(
                 MMO->getPseudoValue())) {
           int FI = FSV->getFrameIndex();
           auto To = SlotRemap.find(FI);
@@ -1069,7 +1069,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
                 // If this memory location comes from a known stack slot
                 // that is not remapped, we continue checking.
                 // Otherwise, we need to invalidate AA infomation.
-                const AllocaInst *AI = dyn_cast_or_null<AllocaInst>(V);
+                const AllocaInst *AI = dyn_cast_if_present<AllocaInst>(V);
                 if (AI && MergedAllocas.count(AI)) {
                   MayHaveConflictingAAMD = true;
                   break;

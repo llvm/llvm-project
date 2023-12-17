@@ -43,17 +43,17 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
       continue;
 
     // Determine if the current MDNode is DebugInfo
-    if (DINode *DIM = dyn_cast_or_null<DINode>(MD)) {
+    if (DINode *DIM = dyn_cast_if_present<DINode>(MD)) {
       // Scan operands and record attached tuples
       for (size_t I = 0; I < DIM->getNumOperands(); ++I)
-        if (MDTuple *MDT = dyn_cast_or_null<MDTuple>(DIM->getOperand(I)))
+        if (MDTuple *MDT = dyn_cast_if_present<MDTuple>(DIM->getOperand(I)))
           if (!Visited.count(MDT) && MDT->getNumOperands())
             Tuples.insert({DIM, I, MDT});
     }
 
     // Add all of the operands of the current node to the loop's todo list.
     for (Metadata *Op : MD->operands())
-      if (MDNode *OMD = dyn_cast_or_null<MDNode>(Op))
+      if (MDNode *OMD = dyn_cast_if_present<MDNode>(Op))
         ToLook.push_back(OMD);
 
     Visited.insert(MD);

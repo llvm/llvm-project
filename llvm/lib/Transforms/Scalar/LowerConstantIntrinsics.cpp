@@ -65,7 +65,7 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
                                   UnsimplifiedUsers.end());
 
   for (auto &VH : Worklist) {
-    BranchInst *BI = dyn_cast_or_null<BranchInst>(VH);
+    BranchInst *BI = dyn_cast_if_present<BranchInst>(VH);
     if (!BI)
       continue;
     if (BI->isUnconditional())

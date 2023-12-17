@@ -40,9 +40,9 @@ DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
   uint32_t Length = 1;
   std::unique_ptr<PDBSymbol> Symbol =
       Session->findSymbolByAddress(Address.Address, PDB_SymType::None);
-  if (auto Func = dyn_cast_or_null<PDBSymbolFunc>(Symbol.get())) {
+  if (auto Func = dyn_cast_if_present<PDBSymbolFunc>(Symbol.get())) {
     Length = Func->getLength();
-  } else if (auto Data = dyn_cast_or_null<PDBSymbolData>(Symbol.get())) {
+  } else if (auto Data = dyn_cast_if_present<PDBSymbolData>(Symbol.get())) {
     Length = Data->getLength();
   }
 
@@ -147,7 +147,7 @@ std::string PDBContext::getFunctionName(uint64_t Address,
 
   std::unique_ptr<PDBSymbol> FuncSymbol =
       Session->findSymbolByAddress(Address, PDB_SymType::Function);
-  auto *Func = dyn_cast_or_null<PDBSymbolFunc>(FuncSymbol.get());
+  auto *Func = dyn_cast_if_present<PDBSymbolFunc>(FuncSymbol.get());
 
   if (NameKind == DINameKind::LinkageName) {
     // It is not possible to get the mangled linkage name through a
@@ -155,7 +155,8 @@ std::string PDBContext::getFunctionName(uint64_t Address,
     // PDBSymbolPublicSymbol.
     auto PublicSym =
         Session->findSymbolByAddress(Address, PDB_SymType::PublicSymbol);
-    if (auto *PS = dyn_cast_or_null<PDBSymbolPublicSymbol>(PublicSym.get())) {
+    if (auto *PS =
+            dyn_cast_if_present<PDBSymbolPublicSymbol>(PublicSym.get())) {
       // If we also have a function symbol, prefer the use of public symbol name
       // only if it refers to the same address. The public symbol uses the
       // linkage name while the function does not.

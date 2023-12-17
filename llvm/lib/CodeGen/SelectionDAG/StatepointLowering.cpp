@@ -545,7 +545,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   SmallSet<SDValue, 8> LPadPointers;
   if (!UseRegistersForGCPointersInLandingPad)
     if (const auto *StInvoke =
-            dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
+            dyn_cast_if_present<InvokeInst>(SI.StatepointInstr)) {
       LandingPadInst *LPI = StInvoke->getLandingPadInst();
       for (const auto *Relocate : SI.GCRelocates)
         if (Relocate->getOperand(0) == LPI) {

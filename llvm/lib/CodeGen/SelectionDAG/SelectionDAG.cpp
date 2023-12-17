@@ -12581,32 +12581,32 @@ bool BuildVectorSDNode::getRepeatedSequence(SmallVectorImpl<SDValue> &Sequence,
 ConstantSDNode *
 BuildVectorSDNode::getConstantSplatNode(const APInt &DemandedElts,
                                         BitVector *UndefElements) const {
-  return dyn_cast_or_null<ConstantSDNode>(
+  return dyn_cast_if_present<ConstantSDNode>(
       getSplatValue(DemandedElts, UndefElements));
 }
 
 ConstantSDNode *
 BuildVectorSDNode::getConstantSplatNode(BitVector *UndefElements) const {
-  return dyn_cast_or_null<ConstantSDNode>(getSplatValue(UndefElements));
+  return dyn_cast_if_present<ConstantSDNode>(getSplatValue(UndefElements));
 }
 
 ConstantFPSDNode *
 BuildVectorSDNode::getConstantFPSplatNode(const APInt &DemandedElts,
                                           BitVector *UndefElements) const {
-  return dyn_cast_or_null<ConstantFPSDNode>(
+  return dyn_cast_if_present<ConstantFPSDNode>(
       getSplatValue(DemandedElts, UndefElements));
 }
 
 ConstantFPSDNode *
 BuildVectorSDNode::getConstantFPSplatNode(BitVector *UndefElements) const {
-  return dyn_cast_or_null<ConstantFPSDNode>(getSplatValue(UndefElements));
+  return dyn_cast_if_present<ConstantFPSDNode>(getSplatValue(UndefElements));
 }
 
 int32_t
 BuildVectorSDNode::getConstantFPSplatPow2ToLog2Int(BitVector *UndefElements,
                                                    uint32_t BitWidth) const {
   if (ConstantFPSDNode *CN =
-          dyn_cast_or_null<ConstantFPSDNode>(getSplatValue(UndefElements))) {
+          dyn_cast_if_present<ConstantFPSDNode>(getSplatValue(UndefElements))) {
     bool IsExact;
     APSInt IntVal(BitWidth);
     const APFloat &APF = CN->getValueAPF();

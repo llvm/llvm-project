@@ -131,7 +131,7 @@ getMinVisibility(GlobalValue::VisibilityTypes A,
 bool ModuleLinker::getComdatLeader(Module &M, StringRef ComdatName,
                                    const GlobalVariable *&GVar) {
   const GlobalValue *GVal = M.getNamedValue(ComdatName);
-  if (const auto *GA = dyn_cast_or_null<GlobalAlias>(GVal)) {
+  if (const auto *GA = dyn_cast_if_present<GlobalAlias>(GVal)) {
     GVal = GA->getAliaseeObject();
     if (!GVal)
       // We cannot resolve the size of the aliasee yet.
@@ -139,7 +139,7 @@ bool ModuleLinker::getComdatLeader(Module &M, StringRef ComdatName,
                        "': COMDAT key involves incomputable alias size.");
   }
 
-  GVar = dyn_cast_or_null<GlobalVariable>(GVal);
+  GVar = dyn_cast_if_present<GlobalVariable>(GVal);
   if (!GVar)
     return emitError(
         "Linking COMDATs named '" + ComdatName +

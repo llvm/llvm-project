@@ -264,7 +264,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
       // contains summaries from the source modules if they are being imported.
       // We might have a non-null VI and get here even in that case if the name
       // matches one in this module (e.g. weak or appending linkage).
-      auto *GVS = dyn_cast_or_null<GlobalVarSummary>(
+      auto *GVS = dyn_cast_if_present<GlobalVarSummary>(
           ImportIndex.findSummaryInModule(VI, M.getModuleIdentifier()));
       if (GVS &&
           (ImportIndex.isReadOnly(GVS) || ImportIndex.isWriteOnly(GVS))) {

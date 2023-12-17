@@ -99,7 +99,8 @@ TEST_P(DIELabelFixture, EmitValue) {
       .WillOnce(SaveArg<0>(&Arg0));
   Tst.emitValue(TestPrinter->getAP(), Form);
 
-  const MCSymbolRefExpr *ActualArg0 = dyn_cast_or_null<MCSymbolRefExpr>(Arg0);
+  const MCSymbolRefExpr *ActualArg0 =
+      dyn_cast_if_present<MCSymbolRefExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(&(ActualArg0->getSymbol()), Val);
 }

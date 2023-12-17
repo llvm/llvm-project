@@ -173,7 +173,8 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
+    if (BranchInst *BI =
+            dyn_cast_if_present<BranchInst>(Latch->getTerminator()))
       if (BI->isConditional())
         return dyn_cast<ICmpInst>(BI->getCondition());
 
@@ -233,7 +234,7 @@ ICmpInst::Predicate Loop::LoopBounds::getCanonicalPredicate() const {
   BasicBlock *Latch = L.getLoopLatch();
   assert(Latch && "Expecting valid latch");
 
-  BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator());
+  BranchInst *BI = dyn_cast_if_present<BranchInst>(Latch->getTerminator());
   assert(BI && BI->isConditional() && "Expecting conditional latch branch");
 
   ICmpInst *LatchCmpInst = dyn_cast<ICmpInst>(BI->getCondition());
@@ -413,7 +414,7 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   if (!getInductionDescriptor(SE, IndDesc))
     return false;
 
-  ConstantInt *Init = dyn_cast_or_null<ConstantInt>(IndDesc.getStartValue());
+  ConstantInt *Init = dyn_cast_if_present<ConstantInt>(IndDesc.getStartValue());
   if (!Init || !Init->isZero())
     return false;
 

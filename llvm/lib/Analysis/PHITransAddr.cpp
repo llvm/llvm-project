@@ -308,7 +308,7 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
 
   if (MustDominate)
     // Make sure the value is live in the predecessor.
-    if (Instruction *Inst = dyn_cast_or_null<Instruction>(Addr))
+    if (Instruction *Inst = dyn_cast_if_present<Instruction>(Addr))
       if (!DT->dominates(Inst->getParent(), PredBB))
         Addr = nullptr;
 

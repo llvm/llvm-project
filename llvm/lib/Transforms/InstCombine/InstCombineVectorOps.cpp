@@ -970,7 +970,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // FIXME: deal with multiple levels of PHI indirection?
 
     // Did we find an extraction?
-    auto *EVI = dyn_cast_or_null<ExtractValueInst>(Elt);
+    auto *EVI = dyn_cast_if_present<ExtractValueInst>(Elt);
     if (!EVI)
       return NotFound;
 

@@ -253,7 +253,7 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   // Parse the block scalar manually so that we can return unique pointer
   // without having to go trough YAML traits.
   if (const auto *BSN =
-          dyn_cast_or_null<yaml::BlockScalarNode>(In.getCurrentNode())) {
+          dyn_cast_if_present<yaml::BlockScalarNode>(In.getCurrentNode())) {
     SMDiagnostic Error;
     M = parseAssembly(MemoryBufferRef(BSN->getValue(), Filename), Error,
                       Context, &IRSlots, DataLayoutCallback);
@@ -826,7 +826,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     const AllocaInst *Alloca = nullptr;
     const yaml::StringValue &Name = Object.Name;
     if (!Name.Value.empty()) {
-      Alloca = dyn_cast_or_null<AllocaInst>(
+      Alloca = dyn_cast_if_present<AllocaInst>(
           F.getValueSymbolTable()->lookup(Name.Value));
       if (!Alloca)
         return error(Name.SourceRange.Start,
@@ -970,7 +970,7 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
       // FIXME: Support target-specific constant pools
       return error(YamlConstant.Value.SourceRange.Start,
                    "Can't parse target-specific constant pool entries yet");
-    const Constant *Value = dyn_cast_or_null<Constant>(
+    const Constant *Value = dyn_cast_if_present<Constant>(
         parseConstantValue(YamlConstant.Value.Value, Error, M));
     if (!Value)
       return error(Error, YamlConstant.Value.SourceRange);

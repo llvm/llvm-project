@@ -914,7 +914,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   // If we created a GEP with constant index, and the base is loop invariant,
   // then we swap the first one with it, so LICM can move constant GEP out
   // later.
-  auto *FirstGEP = dyn_cast_or_null<GetElementPtrInst>(FirstResult);
+  auto *FirstGEP = dyn_cast_if_present<GetElementPtrInst>(FirstResult);
   auto *SecondGEP = dyn_cast<GetElementPtrInst>(ResultPtr);
   if (isSwapCandidate && isLegalToSwapOperand(FirstGEP, SecondGEP, L))
     swapGEPOperand(FirstGEP, SecondGEP);

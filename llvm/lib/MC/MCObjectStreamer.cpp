@@ -227,7 +227,7 @@ static bool canReuseDataFragment(const MCDataFragment &F,
 
 MCDataFragment *
 MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
-  MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+  MCDataFragment *F = dyn_cast_if_present<MCDataFragment>(getCurrentFragment());
   if (!F || !canReuseDataFragment(*F, *Assembler, STI)) {
     F = new MCDataFragment();
     insert(F);
@@ -295,7 +295,7 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // If there is a current fragment, mark the symbol as pointing into it.
   // Otherwise queue the label and set its fragment pointer when we emit the
   // next fragment.
-  auto *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+  auto *F = dyn_cast_if_present<MCDataFragment>(getCurrentFragment());
   if (F && !(getAssembler().isBundlingEnabled() &&
              getAssembler().getRelaxAll())) {
     Symbol->setFragment(F);
@@ -329,7 +329,7 @@ void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
 
   MCStreamer::emitLabel(Symbol, Loc);
   getAssembler().registerSymbol(*Symbol);
-  auto *DF = dyn_cast_or_null<MCDataFragment>(F);
+  auto *DF = dyn_cast_if_present<MCDataFragment>(F);
   Symbol->setOffset(Offset);
   if (DF) {
     Symbol->setFragment(F);

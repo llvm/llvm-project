@@ -3448,12 +3448,12 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
 /// forward reference record if needed.
 BasicBlock *LLParser::PerFunctionState::getBB(const std::string &Name,
                                               LocTy Loc) {
-  return dyn_cast_or_null<BasicBlock>(
+  return dyn_cast_if_present<BasicBlock>(
       getVal(Name, Type::getLabelTy(F.getContext()), Loc));
 }
 
 BasicBlock *LLParser::PerFunctionState::getBB(unsigned ID, LocTy Loc) {
-  return dyn_cast_or_null<BasicBlock>(
+  return dyn_cast_if_present<BasicBlock>(
       getVal(ID, Type::getLabelTy(F.getContext()), Loc));
 }
 
@@ -3760,7 +3760,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (Label.Kind == ValID::t_LocalID)
         return error(Label.Loc, "cannot take address of numeric label after "
                                 "the function is defined");
-      BB = dyn_cast_or_null<BasicBlock>(
+      BB = dyn_cast_if_present<BasicBlock>(
           F->getValueSymbolTable()->lookup(Label.StrVal));
       if (!BB)
         return error(Label.Loc, "referenced value is not a basic block");

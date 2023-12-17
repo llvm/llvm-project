@@ -4081,7 +4081,7 @@ static bool areTwoInsertFromSameBuildVector(
       if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
         IE1 = nullptr;
       else
-        IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
+        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
     }
     if (IE2 && IE2 != VU) {
       unsigned Idx2 = getInsertIndex(IE2).value_or(*Idx1);
@@ -4090,7 +4090,7 @@ static bool areTwoInsertFromSameBuildVector(
       if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
         IE2 = nullptr;
       else
-        IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
+        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
     }
   } while (!IsReusedIdx && (IE1 || IE2));
   return false;
@@ -8951,7 +8951,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
-    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User)) {
+    if (auto *VU = dyn_cast_if_present<InsertElementInst>(EU.User)) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
         if (!UsedInserts.insert(VU).second)
           continue;
@@ -11223,7 +11223,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
               InsertMask[*InsertIdx] = *InsertIdx;
             if (!Ins->hasOneUse())
               break;
-            Ins = dyn_cast_or_null<InsertElementInst>(
+            Ins = dyn_cast_if_present<InsertElementInst>(
                 Ins->getUniqueUndroppableUser());
           } while (Ins);
           SmallBitVector UseMask =

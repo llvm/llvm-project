@@ -423,7 +423,7 @@ isRightAfterData(MCFragment *CurrentFragment,
   //       it, returns true.
   //     - Otherwise returns false.
   //   - If the fragment is not a DataFragment, returns false.
-  if (auto *DF = dyn_cast_or_null<MCDataFragment>(F))
+  if (auto *DF = dyn_cast_if_present<MCDataFragment>(F))
     return DF != PrevInstPosition.first ||
            DF->getContents().size() != PrevInstPosition.second;
 
@@ -561,7 +561,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst)
   PrevInst = Inst;
   MCFragment *CF = OS.getCurrentFragment();
   PrevInstPosition = std::make_pair(CF, getSizeForInstFragment(CF));
-  if (auto *F = dyn_cast_or_null<MCRelaxableFragment>(CF))
+  if (auto *F = dyn_cast_if_present<MCRelaxableFragment>(CF))
     F->setAllowAutoPadding(CanPadInst);
 
   if (!canPadBranches(OS))

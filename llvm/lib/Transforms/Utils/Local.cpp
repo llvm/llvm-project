@@ -551,7 +551,7 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     std::function<void(Value *)> AboutToDeleteCallback) {
   unsigned S = 0, E = DeadInsts.size(), Alive = 0;
   for (; S != E; ++S) {
-    auto *I = dyn_cast_or_null<Instruction>(DeadInsts[S]);
+    auto *I = dyn_cast_if_present<Instruction>(DeadInsts[S]);
     if (!I || !isInstructionTriviallyDead(I)) {
       DeadInsts[S] = nullptr;
       ++Alive;
@@ -1607,7 +1607,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
     assert(DII->getNumVariableLocationOps() == 1 &&
            "address of variable must have exactly 1 location operand.");
     if (auto *AI =
-            dyn_cast_or_null<AllocaInst>(DII->getVariableLocationOp(0))) {
+            dyn_cast_if_present<AllocaInst>(DII->getVariableLocationOp(0))) {
       if (std::optional<TypeSize> FragmentSize =
               AI->getAllocationSizeInBits(DL)) {
         return TypeSize::isKnownGE(ValueSize, *FragmentSize);
@@ -1633,7 +1633,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DPValue *DPV) {
     assert(DPV->getNumVariableLocationOps() == 1 &&
            "address of variable must have exactly 1 location operand.");
     if (auto *AI =
-            dyn_cast_or_null<AllocaInst>(DPV->getVariableLocationOp(0))) {
+            dyn_cast_if_present<AllocaInst>(DPV->getVariableLocationOp(0))) {
       if (std::optional<TypeSize> FragmentSize = AI->getAllocationSizeInBits(DL)) {
         return TypeSize::isKnownGE(ValueSize, *FragmentSize);
       }
@@ -1937,7 +1937,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
 
   auto LowerOne = [&](auto *DDI) {
     AllocaInst *AI =
-        dyn_cast_or_null<AllocaInst>(DDI->getVariableLocationOp(0));
+        dyn_cast_if_present<AllocaInst>(DDI->getVariableLocationOp(0));
     // If this is an alloca for a scalar variable, insert a dbg.value
     // at each load and store to the alloca and erase the dbg.declare.
     // The dbg.values allow tracking a variable even if it is not
@@ -2012,7 +2012,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   for (auto &I : *BB) {
     for (auto &DPV : I.getDbgValueRange()) {
       for (Value *V : DPV.location_ops())
-        if (auto *Loc = dyn_cast_or_null<PHINode>(V))
+        if (auto *Loc = dyn_cast_if_present<PHINode>(V))
           DbgValueMap.insert({Loc, &DPV});
     }
   }
@@ -2076,7 +2076,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   for (auto &I : *BB) {
     if (auto DbgII = dyn_cast<DbgVariableIntrinsic>(&I)) {
       for (Value *V : DbgII->location_ops())
-        if (auto *Loc = dyn_cast_or_null<PHINode>(V))
+        if (auto *Loc = dyn_cast_if_present<PHINode>(V))
           DbgValueMap.insert({Loc, DbgII});
     }
   }
@@ -3608,7 +3608,7 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(&C))
     if (CE->getOpcode() == Instruction::IntToPtr) {
       const Value *V = CE->getOperand(0);
-      if (auto CI = dyn_cast_or_null<ConstantInt>(V))
+      if (auto CI = dyn_cast_if_present<ConstantInt>(V))
         return createIntegerExpression(*CI);
     }
   return nullptr;

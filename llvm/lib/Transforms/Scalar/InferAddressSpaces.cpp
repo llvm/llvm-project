@@ -790,7 +790,7 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     Value *NewV = cloneInstructionWithNewAddressSpace(
         I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
-    if (Instruction *NewI = dyn_cast_or_null<Instruction>(NewV)) {
+    if (Instruction *NewI = dyn_cast_if_present<Instruction>(NewV)) {
       if (NewI->getParent() == nullptr) {
         NewI->insertBefore(I);
         NewI->takeName(I);

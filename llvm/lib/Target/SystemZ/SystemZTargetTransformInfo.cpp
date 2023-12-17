@@ -456,7 +456,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     if (const Constant *C = dyn_cast<Constant>(Args[1])) {
       const ConstantInt *CVal =
           (C->getType()->isVectorTy()
-               ? dyn_cast_or_null<const ConstantInt>(C->getSplatValue())
+               ? dyn_cast_if_present<const ConstantInt>(C->getSplatValue())
                : dyn_cast<const ConstantInt>(C));
       if (CVal && (CVal->getValue().isPowerOf2() ||
                    CVal->getValue().isNegatedPowerOf2()))

@@ -5159,7 +5159,7 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
   }
 
   auto CheckEltValue = [&](const Constant *C) {
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(C))
+    if (auto *CI = dyn_cast_if_present<ConstantInt>(C))
       return !CI->isZero();
     return false;
   };

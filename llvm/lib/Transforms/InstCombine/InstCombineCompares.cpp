@@ -4273,7 +4273,7 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
     return nullptr;
 
   // Can we fold (XShAmt+YShAmt) ?
-  auto *NewShAmt = dyn_cast_or_null<Constant>(
+  auto *NewShAmt = dyn_cast_if_present<Constant>(
       simplifyAddInst(XShAmt, YShAmt, /*isNSW=*/false,
                       /*isNUW=*/false, SQ.getWithInstruction(&I)));
   if (!NewShAmt)
@@ -6021,7 +6021,7 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<BranchInst>(BB->getTerminator());
+  auto *BI = dyn_cast_if_present<BranchInst>(BB->getTerminator());
   if (!BI || BI->getNumSuccessors() != 2)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());

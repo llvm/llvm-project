@@ -239,8 +239,8 @@ struct apint_match {
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI =
-                dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndef))) {
+        if (auto *CI = dyn_cast_if_present<ConstantInt>(
+                C->getSplatValue(AllowUndef))) {
           Res = &CI->getValue();
           return true;
         }
@@ -265,7 +265,7 @@ struct apfloat_match {
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         if (auto *CI =
-                dyn_cast_or_null<ConstantFP>(C->getSplatValue(AllowUndef))) {
+                dyn_cast_if_present<ConstantFP>(C->getSplatValue(AllowUndef))) {
           Res = &CI->getValueAPF();
           return true;
         }
@@ -337,7 +337,8 @@ struct cstval_pred_ty : public Predicate {
       return this->isValue(CV->getValue());
     if (const auto *VTy = dyn_cast<VectorType>(V->getType())) {
       if (const auto *C = dyn_cast<Constant>(V)) {
-        if (const auto *CV = dyn_cast_or_null<ConstantVal>(C->getSplatValue()))
+        if (const auto *CV =
+                dyn_cast_if_present<ConstantVal>(C->getSplatValue()))
           return this->isValue(CV->getValue());
 
         // Number of elements of a scalable vector unknown at compile time
@@ -390,7 +391,7 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
       }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue()))
+        if (auto *CI = dyn_cast_if_present<ConstantInt>(C->getSplatValue()))
           if (this->isValue(CI->getValue())) {
             Res = &CI->getValue();
             return true;
@@ -416,7 +417,7 @@ template <typename Predicate> struct apf_pred_ty : public Predicate {
       }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantFP>(
+        if (auto *CI = dyn_cast_if_present<ConstantFP>(
                 C->getSplatValue(/* AllowUndef */ true)))
           if (this->isValue(CI->getValue())) {
             Res = &CI->getValue();
@@ -812,7 +813,7 @@ struct specific_fpval {
       return CFP->isExactlyValue(Val);
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CFP = dyn_cast_or_null<ConstantFP>(C->getSplatValue()))
+        if (auto *CFP = dyn_cast_if_present<ConstantFP>(C->getSplatValue()))
           return CFP->isExactlyValue(Val);
     return false;
   }
@@ -851,7 +852,7 @@ template <bool AllowUndefs> struct specific_intval {
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndefs));
+        CI = dyn_cast_if_present<ConstantInt>(C->getSplatValue(AllowUndefs));
 
     return CI && APInt::isSameValue(CI->getValue(), Val);
   }

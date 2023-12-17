@@ -94,14 +94,14 @@ static std::pair<Value *, Value *> matchStridedConstant(Constant *StartC) {
   unsigned NumElts = cast<FixedVectorType>(StartC->getType())->getNumElements();
 
   // Check that the start value is a strided constant.
-  auto *StartVal =
-      dyn_cast_or_null<ConstantInt>(StartC->getAggregateElement((unsigned)0));
+  auto *StartVal = dyn_cast_if_present<ConstantInt>(
+      StartC->getAggregateElement((unsigned)0));
   if (!StartVal)
     return std::make_pair(nullptr, nullptr);
   APInt StrideVal(StartVal->getValue().getBitWidth(), 0);
   ConstantInt *Prev = StartVal;
   for (unsigned i = 1; i != NumElts; ++i) {
-    auto *C = dyn_cast_or_null<ConstantInt>(StartC->getAggregateElement(i));
+    auto *C = dyn_cast_if_present<ConstantInt>(StartC->getAggregateElement(i));
     if (!C)
       return std::make_pair(nullptr, nullptr);
 
@@ -552,7 +552,7 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
 
   // Remove any dead phis.
   while (!MaybeDeadPHIs.empty()) {
-    if (auto *Phi = dyn_cast_or_null<PHINode>(MaybeDeadPHIs.pop_back_val()))
+    if (auto *Phi = dyn_cast_if_present<PHINode>(MaybeDeadPHIs.pop_back_val()))
       RecursivelyDeleteDeadPHINode(Phi);
   }
 

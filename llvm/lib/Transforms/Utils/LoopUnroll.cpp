@@ -227,7 +227,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
     // identified. Any remaining should be cleaned up below.
     while (!DeadInsts.empty()) {
       Value *V = DeadInsts.pop_back_val();
-      if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
+      if (Instruction *Inst = dyn_cast_if_present<Instruction>(V))
         RecursivelyDeleteTriviallyDeadInstructions(Inst);
     }
   }

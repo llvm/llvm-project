@@ -778,7 +778,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
     // to achieve better register pressure.
     Q.CanUseUndef = false;
     for (WeakVH VH : AffectedPhis) {
-      if (auto Phi = dyn_cast_or_null<PHINode>(VH)) {
+      if (auto Phi = dyn_cast_if_present<PHINode>(VH)) {
         if (auto NewValue = simplifyInstruction(Phi, Q)) {
           Phi->replaceAllUsesWith(NewValue);
           Phi->eraseFromParent();

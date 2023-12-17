@@ -349,7 +349,7 @@ public:
                      const InstrProfCorrelator *Correlator,
                      std::function<void(Error)> Warn)
       : DataBuffer(std::move(DataBuffer)),
-        Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
+        Correlator(dyn_cast_if_present<const InstrProfCorrelatorImpl<IntPtrT>>(
             Correlator)),
         Warn(Warn) {}
   RawInstrProfReader(const RawInstrProfReader &) = delete;

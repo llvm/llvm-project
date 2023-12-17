@@ -1001,7 +1001,7 @@ Value *llvm::simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
                        const SimplifyQuery &Q, unsigned MaxRecurse) {
   Value *V = simplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
-  Constant *C = dyn_cast_or_null<Constant>(V);
+  Constant *C = dyn_cast_if_present<Constant>(V);
   return (C && C->isAllOnesValue());
 }
 

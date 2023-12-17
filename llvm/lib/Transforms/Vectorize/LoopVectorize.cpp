@@ -1116,7 +1116,7 @@ void InnerLoopVectorizer::collectPoisonGeneratingRecipes(
       if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(CurRec)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       } else {
-        Instruction *Instr = dyn_cast_or_null<Instruction>(
+        Instruction *Instr = dyn_cast_if_present<Instruction>(
             CurRec->getVPSingleValue()->getUnderlyingValue());
         (void)Instr;
         assert((!Instr || !Instr->hasPoisonGeneratingFlags()) &&
@@ -6758,7 +6758,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       Instruction *PtrDef =
-        dyn_cast_or_null<Instruction>(getLoadStorePointerOperand(&I));
+          dyn_cast_if_present<Instruction>(getLoadStorePointerOperand(&I));
       if (PtrDef && TheLoop->contains(PtrDef) &&
           getWideningDecision(&I, VF) != CM_GatherScatter)
         AddrDefs.insert(PtrDef);
@@ -8269,7 +8269,7 @@ VPRecipeOrVPValueTy VPRecipeBuilder::tryToBlend(PHINode *Phi,
   VPValue *InLoopVal = nullptr;
   for (unsigned In = 0; In < NumIncoming; In++) {
     PHINode *PhiOp =
-        dyn_cast_or_null<PHINode>(Operands[In]->getUnderlyingValue());
+        dyn_cast_if_present<PHINode>(Operands[In]->getUnderlyingValue());
     if (PhiOp && CM.isInLoopReduction(PhiOp)) {
       assert(!InLoopVal && "Found more than one in-loop reduction!");
       InLoopVal = Operands[In];
@@ -8861,7 +8861,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         RecipeBuilder.getRecipe(IG->getInsertPos()));
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
+      if (auto *SI = dyn_cast_if_present<StoreInst>(IG->getMember(i))) {
         auto *StoreR =
             cast<VPWidenMemoryInstructionRecipe>(RecipeBuilder.getRecipe(SI));
         StoredValues.push_back(StoreR->getStoredValue());

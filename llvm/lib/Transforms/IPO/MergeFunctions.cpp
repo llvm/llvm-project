@@ -574,7 +574,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
       if (DILocVar->isParameter()) {
         LLVM_DEBUG(dbgs() << "  Parameter: ");
         LLVM_DEBUG(DILocVar->print(dbgs()));
-        AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DDI->getAddress());
+        AllocaInst *AI = dyn_cast_if_present<AllocaInst>(DDI->getAddress());
         if (AI) {
           LLVM_DEBUG(dbgs() << "  Processing alloca users: ");
           LLVM_DEBUG(dbgs() << "\n");

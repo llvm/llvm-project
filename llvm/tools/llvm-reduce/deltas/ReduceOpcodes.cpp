@@ -250,7 +250,7 @@ static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
     for (BasicBlock &BB : F)
       for (Instruction &I : make_early_inc_range(BB)) {
         Instruction *Replacement =
-            dyn_cast_or_null<Instruction>(reduceInstruction(O, Mod, I));
+            dyn_cast_if_present<Instruction>(reduceInstruction(O, Mod, I));
         if (Replacement && Replacement != &I) {
           if (isa<FPMathOperator>(Replacement))
             Replacement->copyFastMathFlags(&I);

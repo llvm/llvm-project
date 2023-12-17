@@ -1360,7 +1360,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (shouldDisambiguateWarningLocation(IRB.getCurrentDebugLocation())) {
       // Try to create additional origin with debug info of the last origin
       // instruction. It may provide additional information to the user.
-      if (Instruction *OI = dyn_cast_or_null<Instruction>(Origin)) {
+      if (Instruction *OI = dyn_cast_if_present<Instruction>(Origin)) {
         assert(MS.TrackOrigins);
         auto NewDebugLoc = OI->getDebugLoc();
         // Origin update with missing or the same debug location provides no
@@ -2095,10 +2095,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         return;
       Origin = getOrigin(Val);
     } else {
-      Shadow = dyn_cast_or_null<Instruction>(getShadow(Val));
+      Shadow = dyn_cast_if_present<Instruction>(getShadow(Val));
       if (!Shadow)
         return;
-      Origin = dyn_cast_or_null<Instruction>(getOrigin(Val));
+      Origin = dyn_cast_if_present<Instruction>(getOrigin(Val));
     }
     insertShadowCheck(Shadow, Origin, OrigIns);
   }

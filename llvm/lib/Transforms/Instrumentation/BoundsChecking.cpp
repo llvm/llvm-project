@@ -113,7 +113,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 template <typename GetTrapBBT>
 static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   // check if the comparison is always false
-  ConstantInt *C = dyn_cast_or_null<ConstantInt>(Or);
+  ConstantInt *C = dyn_cast_if_present<ConstantInt>(Or);
   if (C) {
     ++ChecksSkipped;
     // If non-zero, nothing to do.

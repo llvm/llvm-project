@@ -88,17 +88,17 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   Updater.RewriteAllUses(&DT);
 
   // Check how %5 and %6 were rewritten.
-  PHINode *UpdatePhiA = dyn_cast_or_null<PHINode>(I1->getOperand(0));
+  PHINode *UpdatePhiA = dyn_cast_if_present<PHINode>(I1->getOperand(0));
   EXPECT_NE(UpdatePhiA, nullptr);
   EXPECT_EQ(UpdatePhiA->getIncomingValueForBlock(TrueBB), AddOp1);
   EXPECT_EQ(UpdatePhiA->getIncomingValueForBlock(FalseBB), AddOp2);
-  EXPECT_EQ(UpdatePhiA, dyn_cast_or_null<PHINode>(I1->getOperand(0)));
+  EXPECT_EQ(UpdatePhiA, dyn_cast_if_present<PHINode>(I1->getOperand(0)));
 
   // Check how %7 was rewritten.
-  PHINode *UpdatePhiB = dyn_cast_or_null<PHINode>(I3->getOperand(0));
+  PHINode *UpdatePhiB = dyn_cast_if_present<PHINode>(I3->getOperand(0));
   EXPECT_EQ(UpdatePhiB->getIncomingValueForBlock(TrueBB), SubOp1);
   EXPECT_EQ(UpdatePhiB->getIncomingValueForBlock(FalseBB), SubOp2);
-  EXPECT_EQ(UpdatePhiB, dyn_cast_or_null<PHINode>(I3->getOperand(1)));
+  EXPECT_EQ(UpdatePhiB, dyn_cast_if_present<PHINode>(I3->getOperand(1)));
 
   // Check that %8 was kept untouched.
   EXPECT_EQ(I4->getOperand(0), SubOp1);
@@ -187,7 +187,7 @@ TEST(SSAUpdaterBulk, Irreducible) {
   EXPECT_EQ(Return->getOperand(0), FirstArg);
 
   // I2 should use the new phi.
-  PHINode *UpdatePhi = dyn_cast_or_null<PHINode>(I2->getOperand(0));
+  PHINode *UpdatePhi = dyn_cast_if_present<PHINode>(I2->getOperand(0));
   EXPECT_NE(UpdatePhi, nullptr);
   EXPECT_EQ(UpdatePhi->getIncomingValueForBlock(LoopStartBB), AddOp2);
   EXPECT_EQ(UpdatePhi->getIncomingValueForBlock(IfBB), UndefValue::get(I32Ty));

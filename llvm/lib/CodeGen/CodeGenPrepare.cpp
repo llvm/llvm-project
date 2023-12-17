@@ -5585,8 +5585,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // non-integral pointers, so in that case bail out now.
     Type *BaseTy = AddrMode.BaseReg ? AddrMode.BaseReg->getType() : nullptr;
     Type *ScaleTy = AddrMode.Scale ? AddrMode.ScaledReg->getType() : nullptr;
-    PointerType *BasePtrTy = dyn_cast_or_null<PointerType>(BaseTy);
-    PointerType *ScalePtrTy = dyn_cast_or_null<PointerType>(ScaleTy);
+    PointerType *BasePtrTy = dyn_cast_if_present<PointerType>(BaseTy);
+    PointerType *ScalePtrTy = dyn_cast_if_present<PointerType>(ScaleTy);
     if (DL->isNonIntegralPointerType(Addr->getType()) ||
         (BasePtrTy && DL->isNonIntegralPointerType(BasePtrTy)) ||
         (ScalePtrTy && DL->isNonIntegralPointerType(ScalePtrTy)) ||
@@ -5629,7 +5629,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         // the original IR value was tossed in favor of a constant back when
         // the AddrMode was created we need to bail out gracefully if widths
         // do not match instead of extending it.
-        Instruction *I = dyn_cast_or_null<Instruction>(Result);
+        Instruction *I = dyn_cast_if_present<Instruction>(Result);
         if (I && (Result != AddrMode.BaseReg))
           I->eraseFromParent();
         return Modified;
@@ -5738,7 +5738,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
         return false;
       if (isa<VectorType>(C->getType()))
         C = C->getSplatValue();
-      auto *CI = dyn_cast_or_null<ConstantInt>(C);
+      auto *CI = dyn_cast_if_present<ConstantInt>(C);
       if (!CI || !CI->isZero())
         return false;
       // Scalarize the index if needed.
@@ -8460,7 +8460,7 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
   auto DbgProcessor = [&](auto *DbgItem, Instruction *Position) {
     SmallVector<Instruction *, 4> VIs;
     for (Value *V : DbgItem->location_ops())
-      if (Instruction *VI = dyn_cast_or_null<Instruction>(V))
+      if (Instruction *VI = dyn_cast_if_present<Instruction>(V))
         VIs.push_back(VI);
 
     // This item may depend on multiple instructions, complicating any

@@ -976,7 +976,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
 
   // Check that we have a compare of zero..
   auto *SplatValue =
-      dyn_cast_or_null<ConstantInt>(getSplatValue(II.getArgOperand(2)));
+      dyn_cast_if_present<ConstantInt>(getSplatValue(II.getArgOperand(2)));
   if (!SplatValue || !SplatValue->isZero())
     return std::nullopt;
 
@@ -1594,7 +1594,7 @@ static std::optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
 
   // Check whether OpIndices is a constant splat value < minimal element count
   // of result.
-  auto *SplatValue = dyn_cast_or_null<ConstantInt>(getSplatValue(OpIndices));
+  auto *SplatValue = dyn_cast_if_present<ConstantInt>(getSplatValue(OpIndices));
   if (!SplatValue ||
       SplatValue->getValue().uge(VTy->getElementCount().getKnownMinValue()))
     return std::nullopt;
@@ -1692,7 +1692,7 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   Value *DivVec = II.getOperand(2);
 
   Value *SplatValue = getSplatValue(DivVec);
-  ConstantInt *SplatConstantInt = dyn_cast_or_null<ConstantInt>(SplatValue);
+  ConstantInt *SplatConstantInt = dyn_cast_if_present<ConstantInt>(SplatValue);
   if (!SplatConstantInt)
     return std::nullopt;
   APInt Divisor = SplatConstantInt->getValue();
@@ -2167,15 +2167,16 @@ bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
   // Look for trunc/shl/add before trying to match the pattern.
   const Instruction *Add = ExtUser;
   auto *AddUser =
-      dyn_cast_or_null<Instruction>(Add->getUniqueUndroppableUser());
+      dyn_cast_if_present<Instruction>(Add->getUniqueUndroppableUser());
   if (AddUser && AddUser->getOpcode() == Instruction::Add)
     Add = AddUser;
 
-  auto *Shr = dyn_cast_or_null<Instruction>(Add->getUniqueUndroppableUser());
+  auto *Shr = dyn_cast_if_present<Instruction>(Add->getUniqueUndroppableUser());
   if (!Shr || Shr->getOpcode() != Instruction::LShr)
     return false;
 
-  auto *Trunc = dyn_cast_or_null<Instruction>(Shr->getUniqueUndroppableUser());
+  auto *Trunc =
+      dyn_cast_if_present<Instruction>(Shr->getUniqueUndroppableUser());
   if (!Trunc || Trunc->getOpcode() != Instruction::Trunc ||
       Src->getScalarSizeInBits() !=
           cast<CastInst>(Trunc)->getDestTy()->getScalarSizeInBits())

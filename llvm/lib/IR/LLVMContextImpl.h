@@ -378,8 +378,8 @@ template <> struct MDNodeKeyImpl<DISubrange> {
       if (Node1 == Node2)
         return true;
 
-      ConstantAsMetadata *MD1 = dyn_cast_or_null<ConstantAsMetadata>(Node1);
-      ConstantAsMetadata *MD2 = dyn_cast_or_null<ConstantAsMetadata>(Node2);
+      ConstantAsMetadata *MD1 = dyn_cast_if_present<ConstantAsMetadata>(Node1);
+      ConstantAsMetadata *MD2 = dyn_cast_if_present<ConstantAsMetadata>(Node2);
       if (MD1 && MD2) {
         ConstantInt *CV1 = cast<ConstantInt>(MD1->getValue());
         ConstantInt *CV2 = cast<ConstantInt>(MD2->getValue());
@@ -426,7 +426,7 @@ template <> struct MDNodeKeyImpl<DIGenericSubrange> {
   }
 
   unsigned getHashValue() const {
-    auto *MD = dyn_cast_or_null<ConstantAsMetadata>(CountNode);
+    auto *MD = dyn_cast_if_present<ConstantAsMetadata>(CountNode);
     if (CountNode && MD)
       return hash_combine(cast<ConstantInt>(MD->getValue())->getSExtValue(),
                           LowerBound, UpperBound, Stride);
@@ -577,7 +577,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
     // Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isODRMember().
     if (Tag == dwarf::DW_TAG_member && Name)
-      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+      if (auto *CT = dyn_cast_if_present<DICompositeType>(Scope))
         if (CT->getRawIdentifier())
           return hash_combine(Name, Scope);
 
@@ -610,7 +610,7 @@ template <> struct MDNodeSubsetEqualImpl<DIDerivedType> {
     if (Tag != dwarf::DW_TAG_member || !Name)
       return false;
 
-    auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+    auto *CT = dyn_cast_if_present<DICompositeType>(Scope);
     if (!CT || !CT->getRawIdentifier())
       return false;
 
@@ -823,7 +823,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
     if (!isDefinition() && LinkageName)
-      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+      if (auto *CT = dyn_cast_if_present<DICompositeType>(Scope))
         if (CT->getRawIdentifier())
           return hash_combine(LinkageName, Scope);
 
@@ -859,7 +859,7 @@ template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
     if (IsDefinition || !Scope || !LinkageName)
       return false;
 
-    auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+    auto *CT = dyn_cast_if_present<DICompositeType>(Scope);
     if (!CT || !CT->getRawIdentifier())
       return false;
 

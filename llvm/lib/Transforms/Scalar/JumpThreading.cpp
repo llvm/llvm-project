@@ -2195,7 +2195,7 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
     // If PredPred ends with IndirectBrInst, we can't handle it.
     if (isa<IndirectBrInst>(P->getTerminator()))
       continue;
-    if (ConstantInt *CI = dyn_cast_or_null<ConstantInt>(
+    if (ConstantInt *CI = dyn_cast_if_present<ConstantInt>(
             evaluateOnPredecessorEdge(BB, P, Cond))) {
       if (CI->isZero()) {
         ZeroCount++;

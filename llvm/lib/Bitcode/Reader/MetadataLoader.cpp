@@ -229,14 +229,14 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
 
 Metadata *BitcodeReaderMetadataList::getMetadataIfResolved(unsigned Idx) {
   Metadata *MD = lookup(Idx);
-  if (auto *N = dyn_cast_or_null<MDNode>(MD))
+  if (auto *N = dyn_cast_if_present<MDNode>(MD))
     if (!N->isResolved())
       return nullptr;
   return MD;
 }
 
 MDNode *BitcodeReaderMetadataList::getMDNodeFwdRefOrNull(unsigned Idx) {
-  return dyn_cast_or_null<MDNode>(getMetadataFwdRef(Idx));
+  return dyn_cast_if_present<MDNode>(getMetadataFwdRef(Idx));
 }
 
 void BitcodeReaderMetadataList::tryToResolveCycles() {
@@ -273,7 +273,7 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
   // Resolve any cycles.
   for (unsigned I : UnresolvedNodes) {
     auto &MD = MetadataPtrs[I];
-    auto *N = dyn_cast_or_null<MDNode>(MD);
+    auto *N = dyn_cast_if_present<MDNode>(MD);
     if (!N)
       continue;
 
@@ -295,7 +295,7 @@ void BitcodeReaderMetadataList::addTypeRef(MDString &UUID,
 }
 
 Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
-  auto *UUID = dyn_cast_or_null<MDString>(MaybeUUID);
+  auto *UUID = dyn_cast_if_present<MDString>(MaybeUUID);
   if (LLVM_LIKELY(!UUID))
     return MaybeUUID;
 
@@ -309,7 +309,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
 }
 
 Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
-  auto *Tuple = dyn_cast_or_null<MDTuple>(MaybeTuple);
+  auto *Tuple = dyn_cast_if_present<MDTuple>(MaybeTuple);
   if (!Tuple || Tuple->isDistinct())
     return MaybeTuple;
 
@@ -326,7 +326,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
 }
 
 Metadata *BitcodeReaderMetadataList::resolveTypeRefArray(Metadata *MaybeTuple) {
-  auto *Tuple = dyn_cast_or_null<MDTuple>(MaybeTuple);
+  auto *Tuple = dyn_cast_if_present<MDTuple>(MaybeTuple);
   if (!Tuple || Tuple->isDistinct())
     return MaybeTuple;
 
@@ -366,7 +366,7 @@ public:
         Temporaries.insert(ID);
         continue;
       }
-      auto *N = dyn_cast_or_null<MDNode>(MD);
+      auto *N = dyn_cast_if_present<MDNode>(MD);
       if (N && N->isTemporary())
         Temporaries.insert(ID);
     }
@@ -484,9 +484,9 @@ class MetadataLoader::MetadataLoaderImpl {
   /// Upgrade old-style CU <-> SP pointers to point from SP to CU.
   void upgradeCUSubprograms() {
     for (auto CU_SP : CUSubprograms)
-      if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
+      if (auto *SPs = dyn_cast_if_present<MDTuple>(CU_SP.second))
         for (auto &Op : SPs->operands())
-          if (auto *SP = dyn_cast_or_null<DISubprogram>(Op))
+          if (auto *SP = dyn_cast_if_present<DISubprogram>(Op))
             SP->replaceUnit(CU_SP.first);
     CUSubprograms.clear();
   }
@@ -500,10 +500,11 @@ class MetadataLoader::MetadataLoaderImpl {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu"))
       for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
         auto *CU = cast<DICompileUnit>(CUNodes->getOperand(I));
-        if (auto *GVs = dyn_cast_or_null<MDTuple>(CU->getRawGlobalVariables()))
+        if (auto *GVs =
+                dyn_cast_if_present<MDTuple>(CU->getRawGlobalVariables()))
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
-                    dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
+                    dyn_cast_if_present<DIGlobalVariable>(GVs->getOperand(I))) {
               auto *DGVE = DIGlobalVariableExpression::getDistinct(
                   Context, GV, DIExpression::get(Context, {}));
               GVs->replaceOperandWith(I, DGVE);
@@ -535,12 +536,12 @@ class MetadataLoader::MetadataLoaderImpl {
     DILocalScope *InitialScope = S;
     DenseSet<DILocalScope *> Visited;
     while (S && !isa<DISubprogram>(S)) {
-      S = dyn_cast_or_null<DILocalScope>(S->getScope());
+      S = dyn_cast_if_present<DILocalScope>(S->getScope());
       if (Visited.contains(S))
         break;
       Visited.insert(S);
     }
-    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
+    ParentSubprogram[InitialScope] = llvm::dyn_cast_if_present<DISubprogram>(S);
 
     return ParentSubprogram[InitialScope];
   }
@@ -559,7 +560,7 @@ class MetadataLoader::MetadataLoaderImpl {
           SetVector<Metadata *> EntitiesToRemove;
           for (Metadata *Op : CU->getImportedEntities()->operands()) {
             auto *IE = cast<DIImportedEntity>(Op);
-            if (dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+            if (dyn_cast_if_present<DILocalScope>(IE->getScope())) {
               EntitiesToRemove.insert(IE);
             }
           }
@@ -1869,7 +1870,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     // Upgrade sp->function mapping to function->sp mapping.
     if (HasFn) {
-      if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(CUorFn))
+      if (auto *CMD = dyn_cast_if_present<ConstantAsMetadata>(CUorFn))
         if (auto *F = dyn_cast<Function>(CMD->getValue())) {
           if (F->isMaterializable())
             // Defer until materialized; unmaterialized functions may not have
@@ -2044,7 +2045,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         AlignInBits = Record[11];
       }
       GlobalVariable *Attach = nullptr;
-      if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(Expr)) {
+      if (auto *CMD = dyn_cast_if_present<ConstantAsMetadata>(Expr)) {
         if (auto *GV = dyn_cast<GlobalVariable>(CMD->getValue())) {
           Attach = GV;
           Expr = nullptr;
@@ -2308,7 +2309,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseGlobalObjectAttachment(
     if (K == MDKindMap.end())
       return error("Invalid ID");
     MDNode *MD =
-        dyn_cast_or_null<MDNode>(getMetadataFwdRefOrLoad(Record[I + 1]));
+        dyn_cast_if_present<MDNode>(getMetadataFwdRefOrLoad(Record[I + 1]));
     if (!MD)
       return error("Invalid metadata attachment: expect fwd ref to MDNode");
     GO.addMetadata(K->second, *MD);
@@ -2386,7 +2387,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
           // Drop the attachment.  This used to be legal, but there's no
           // upgrade path.
           break;
-        MDNode *MD = dyn_cast_or_null<MDNode>(Node);
+        MDNode *MD = dyn_cast_if_present<MDNode>(Node);
         if (!MD)
           return error("Invalid metadata attachment");
 

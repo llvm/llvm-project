@@ -1865,7 +1865,7 @@ bool PolynomialMultiplyRecognize::recognize() {
         continue;
       Simplifier::Context C(SI);
       Value *T = PostSimp.simplify(C);
-      SelectInst *SelI = dyn_cast_or_null<SelectInst>(T);
+      SelectInst *SelI = dyn_cast_if_present<SelectInst>(T);
       if (SelI != SI) {
         Value *NewSel = C.materialize(LoopB, SI->getIterator());
         SI->replaceAllUsesWith(NewSel);

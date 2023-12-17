@@ -181,11 +181,11 @@ ARMConstantPoolConstant::Create(const Constant *C, unsigned ID,
 }
 
 const GlobalValue *ARMConstantPoolConstant::getGV() const {
-  return dyn_cast_or_null<GlobalValue>(CVal);
+  return dyn_cast_if_present<GlobalValue>(CVal);
 }
 
 const BlockAddress *ARMConstantPoolConstant::getBlockAddress() const {
-  return dyn_cast_or_null<BlockAddress>(CVal);
+  return dyn_cast_if_present<BlockAddress>(CVal);
 }
 
 int ARMConstantPoolConstant::getExistingMachineCPValue(MachineConstantPool *CP,

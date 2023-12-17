@@ -254,7 +254,7 @@ Register getSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 template <class T>
 T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
-  return dyn_cast_or_null<T>(DefMI);
+  return dyn_cast_if_present<T>(DefMI);
 }
 
 /// Returns an APFloat from Val converted to the appropriate size.

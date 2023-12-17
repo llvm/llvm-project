@@ -171,7 +171,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
-    if (PHINode *PN = dyn_cast_or_null<PHINode>(PHIs[i].operator Value*()))
+    if (PHINode *PN = dyn_cast_if_present<PHINode>(PHIs[i].operator Value *()))
       Changed |= RecursivelyDeleteDeadPHINode(PN, TLI, MSSAU);
 
   return Changed;
@@ -2122,7 +2122,7 @@ BasicBlock *llvm::CreateControlFlowHub(
 
   for (auto I : DeletionCandidates) {
     if (I->use_empty())
-      if (auto Inst = dyn_cast_or_null<Instruction>(I))
+      if (auto Inst = dyn_cast_if_present<Instruction>(I))
         Inst->eraseFromParent();
   }
 

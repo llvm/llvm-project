@@ -1550,7 +1550,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
   // Emit float ABI into GNU attribute
   Metadata *MD = M.getModuleFlag("float-abi");
-  MDString *FloatABI = dyn_cast_or_null<MDString>(MD);
+  MDString *FloatABI = dyn_cast_if_present<MDString>(MD);
   if (!FloatABI)
     return;
   StringRef flt = FloatABI->getString();

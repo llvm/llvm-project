@@ -192,21 +192,21 @@ static bool getOptionalVal(MDTuple *Tuple, unsigned &Idx, const char *Key,
 }
 
 ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
-  MDTuple *Tuple = dyn_cast_or_null<MDTuple>(MD);
+  MDTuple *Tuple = dyn_cast_if_present<MDTuple>(MD);
   if (!Tuple || Tuple->getNumOperands() < 8 || Tuple->getNumOperands() > 10)
     return nullptr;
 
   unsigned I = 0;
   auto &FormatMD = Tuple->getOperand(I++);
   ProfileSummary::Kind SummaryKind;
-  if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
+  if (isKeyValuePair(dyn_cast_if_present<MDTuple>(FormatMD), "ProfileFormat",
                      "SampleProfile"))
     SummaryKind = PSK_Sample;
-  else if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
-                          "InstrProf"))
+  else if (isKeyValuePair(dyn_cast_if_present<MDTuple>(FormatMD),
+                          "ProfileFormat", "InstrProf"))
     SummaryKind = PSK_Instr;
-  else if (isKeyValuePair(dyn_cast_or_null<MDTuple>(FormatMD), "ProfileFormat",
-                          "CSInstrProf"))
+  else if (isKeyValuePair(dyn_cast_if_present<MDTuple>(FormatMD),
+                          "ProfileFormat", "CSInstrProf"))
     SummaryKind = PSK_CSInstr;
   else
     return nullptr;

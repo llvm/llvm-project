@@ -906,8 +906,8 @@ bool VectorCombine::scalarizeBinopOrCmp(Instruction &I) {
 
   // Bail for single insertion if it is a load.
   // TODO: Handle this once getVectorInstrCost can cost for load/stores.
-  auto *I0 = dyn_cast_or_null<Instruction>(V0);
-  auto *I1 = dyn_cast_or_null<Instruction>(V1);
+  auto *I0 = dyn_cast_if_present<Instruction>(V0);
+  auto *I1 = dyn_cast_if_present<Instruction>(V1);
   if ((IsConst0 && I1 && I1->mayReadFromMemory()) ||
       (IsConst1 && I0 && I0->mayReadFromMemory()))
     return false;

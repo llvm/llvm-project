@@ -116,7 +116,7 @@ void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
 }
 
 DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
-  if (auto *LocalScope = dyn_cast_or_null<DILocalScope>(Scope))
+  if (auto *LocalScope = dyn_cast_if_present<DILocalScope>(Scope))
     return LocalScope->getSubprogram();
   return nullptr;
 }
@@ -386,7 +386,7 @@ void llvm::updateLoopMetadataDebugLocations(
 static bool isDILocationReachable(SmallPtrSetImpl<Metadata *> &Visited,
                                   SmallPtrSetImpl<Metadata *> &Reachable,
                                   Metadata *MD) {
-  MDNode *N = dyn_cast_or_null<MDNode>(MD);
+  MDNode *N = dyn_cast_if_present<MDNode>(MD);
   if (!N)
     return false;
   if (isa<DILocation>(N) || Reachable.count(N))
@@ -408,7 +408,7 @@ static bool isAllDILocation(SmallPtrSetImpl<Metadata *> &Visited,
                             SmallPtrSetImpl<Metadata *> &AllDILocation,
                             const SmallPtrSetImpl<Metadata *> &DIReachable,
                             Metadata *MD) {
-  MDNode *N = dyn_cast_or_null<MDNode>(MD);
+  MDNode *N = dyn_cast_if_present<MDNode>(MD);
   if (!N)
     return false;
   if (isa<DILocation>(N) || AllDILocation.count(N))
@@ -438,7 +438,7 @@ stripLoopMDLoc(const SmallPtrSetImpl<Metadata *> &AllDILocation,
   if (!DIReachable.count(MD))
     return MD;
 
-  MDNode *N = dyn_cast_or_null<MDNode>(MD);
+  MDNode *N = dyn_cast_if_present<MDNode>(MD);
   if (!N)
     return MD;
 
@@ -605,7 +605,7 @@ public:
 
     return M;
   }
-  MDNode *mapNode(Metadata *N) { return dyn_cast_or_null<MDNode>(map(N)); }
+  MDNode *mapNode(Metadata *N) { return dyn_cast_if_present<MDNode>(map(N)); }
 
   /// Recursively remap N and all its referenced children. Does a DF post-order
   /// traversal, so as to remap bottoms up.
@@ -769,7 +769,7 @@ void DebugTypeInfoRemoval::traverse(MDNode *N) {
       continue;
     }
     for (auto &I : N->operands())
-      if (auto *MDN = dyn_cast_or_null<MDNode>(I))
+      if (auto *MDN = dyn_cast_if_present<MDNode>(I))
         if (!Opened.count(MDN) && !Replacements.count(MDN) && !prune(N, MDN) &&
             !isa<DICompileUnit>(MDN))
           ToVisit.push_back(MDN);
@@ -842,7 +842,7 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
 
         // Remap DILocations in llvm.loop attachments.
         updateLoopMetadataDebugLocations(I, [&](Metadata *MD) -> Metadata * {
-          if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+          if (auto *Loc = dyn_cast_if_present<DILocation>(MD))
             return remapDebugLoc(Loc).get();
           return MD;
         });

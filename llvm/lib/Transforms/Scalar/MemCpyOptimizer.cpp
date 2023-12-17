@@ -718,7 +718,7 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
     // have been done on the source inside performCallSlotOptzn.
     if (auto *LoadClobber = dyn_cast<MemoryUseOrDef>(
             MSSA->getWalker()->getClobberingMemoryAccess(LI, BAA)))
-      return dyn_cast_or_null<CallInst>(LoadClobber->getMemoryInst());
+      return dyn_cast_if_present<CallInst>(LoadClobber->getMemoryInst());
     return nullptr;
   };
 
@@ -1322,7 +1322,7 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
   if (MSSA->isLiveOnEntryDef(Def))
     return isa<AllocaInst>(getUnderlyingObject(V));
 
-  if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
+  if (auto *II = dyn_cast_if_present<IntrinsicInst>(Def->getMemoryInst())) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
 
@@ -1707,7 +1707,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   // The memcpy must post-dom the memset, so limit this to the same basic
   // block. A non-local generalization is likely not worthwhile.
   if (auto *MD = dyn_cast<MemoryDef>(DestClobber))
-    if (auto *MDep = dyn_cast_or_null<MemSetInst>(MD->getMemoryInst()))
+    if (auto *MDep = dyn_cast_if_present<MemSetInst>(MD->getMemoryInst()))
       if (DestClobber->getBlock() == M->getParent())
         if (processMemSetMemCpyDependence(M, MDep, BAA))
           return true;
@@ -1825,7 +1825,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       CallAccess->getDefiningAccess(), Loc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-    MDep = dyn_cast_or_null<MemCpyInst>(MD->getMemoryInst());
+    MDep = dyn_cast_if_present<MemCpyInst>(MD->getMemoryInst());
 
   // If the byval argument isn't fed by a memcpy, ignore it.  If it is fed by
   // a memcpy, see if we can byval from the source of the memcpy instead of the
@@ -1922,7 +1922,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
       CallAccess->getDefiningAccess(), Loc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-    MDep = dyn_cast_or_null<MemCpyInst>(MD->getMemoryInst());
+    MDep = dyn_cast_if_present<MemCpyInst>(MD->getMemoryInst());
 
   // If the immut argument isn't fed by a memcpy, ignore it.  If it is fed by
   // a memcpy, check that the arg equals the memcpy dest.

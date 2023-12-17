@@ -832,7 +832,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       if (DefInit *LHSd = dyn_cast<DefInit>(LHS))
         return StringInit::get(RK, LHSd->getAsString());
 
-      if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
+      if (IntInit *LHSi = dyn_cast_if_present<IntInit>(
               LHS->convertInitializerTo(IntRecTy::get(RK))))
         return StringInit::get(RK, LHSi->getAsString());
 
@@ -882,7 +882,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
     break;
 
   case NOT:
-    if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
+    if (IntInit *LHSi = dyn_cast_if_present<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK))))
       return IntInit::get(RK, LHSi->getValue() ? 0 : 1);
     break;
@@ -937,7 +937,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
     break;
 
   case LOG2:
-    if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
+    if (IntInit *LHSi = dyn_cast_if_present<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK)))) {
       int64_t LHSv = LHSi->getValue();
       if (LHSv <= 0) {
@@ -1051,7 +1051,7 @@ static StringInit *interleaveIntList(const ListInit *List,
   RecordKeeper &RK = List->getRecordKeeper();
   if (List->size() == 0)
     return StringInit::get(RK, "");
-  IntInit *Element = dyn_cast_or_null<IntInit>(
+  IntInit *Element = dyn_cast_if_present<IntInit>(
       List->getElement(0)->convertInitializerTo(IntRecTy::get(RK)));
   if (!Element)
     return nullptr;
@@ -1059,7 +1059,7 @@ static StringInit *interleaveIntList(const ListInit *List,
 
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    IntInit *Element = dyn_cast_or_null<IntInit>(
+    IntInit *Element = dyn_cast_if_present<IntInit>(
         List->getElement(I)->convertInitializerTo(IntRecTy::get(RK)));
     if (!Element)
       return nullptr;
@@ -1098,9 +1098,9 @@ Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
 std::optional<bool> BinOpInit::CompareInit(unsigned Opc, Init *LHS,
                                            Init *RHS) const {
   // First see if we have two bit, bits, or int.
-  IntInit *LHSi = dyn_cast_or_null<IntInit>(
+  IntInit *LHSi = dyn_cast_if_present<IntInit>(
       LHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
-  IntInit *RHSi = dyn_cast_or_null<IntInit>(
+  IntInit *RHSi = dyn_cast_if_present<IntInit>(
       RHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
 
   if (LHSi && RHSi) {
@@ -1433,9 +1433,9 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case SHL:
   case SRA:
   case SRL: {
-    IntInit *LHSi = dyn_cast_or_null<IntInit>(
+    IntInit *LHSi = dyn_cast_if_present<IntInit>(
         LHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
-    IntInit *RHSi = dyn_cast_or_null<IntInit>(
+    IntInit *RHSi = dyn_cast_if_present<IntInit>(
         RHS->convertInitializerTo(IntRecTy::get(getRecordKeeper())));
     if (LHSi && RHSi) {
       int64_t LHSv = LHSi->getValue(), RHSv = RHSi->getValue();
@@ -1619,7 +1619,7 @@ static Init *FilterHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
       if (!Include)
         return nullptr;
       if (IntInit *IncludeInt =
-              dyn_cast_or_null<IntInit>(Include->convertInitializerTo(
+              dyn_cast_if_present<IntInit>(Include->convertInitializerTo(
                   IntRecTy::get(LHS->getRecordKeeper())))) {
         if (IncludeInt->getValue())
           NewList.push_back(Item);
@@ -1693,7 +1693,7 @@ Init *TernOpInit::Fold(Record *CurRec) const {
   }
 
   case IF: {
-    if (IntInit *LHSi = dyn_cast_or_null<IntInit>(
+    if (IntInit *LHSi = dyn_cast_if_present<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK)))) {
       if (LHSi->getValue())
         return MHS;
@@ -1839,7 +1839,7 @@ Init *TernOpInit::resolveReferences(Resolver &R) const {
   Init *lhs = LHS->resolveReferences(R);
 
   if (getOpcode() == IF && lhs != LHS) {
-    if (IntInit *Value = dyn_cast_or_null<IntInit>(
+    if (IntInit *Value = dyn_cast_if_present<IntInit>(
             lhs->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
       // Short-circuit
       if (Value->getValue())
@@ -2486,7 +2486,7 @@ Init *CondOpInit::Fold(Record *CurRec) const {
     Init *Cond = getCond(i);
     Init *Val = getVal(i);
 
-    if (IntInit *CondI = dyn_cast_or_null<IntInit>(
+    if (IntInit *CondI = dyn_cast_if_present<IntInit>(
             Cond->convertInitializerTo(IntRecTy::get(RK)))) {
       if (CondI->getValue())
         return Val->convertInitializerTo(getValType());

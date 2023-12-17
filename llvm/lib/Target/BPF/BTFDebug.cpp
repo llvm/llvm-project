@@ -702,7 +702,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
   for (int I = Elements.size() - 1; I >= 0; --I) {
-    if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
+    if (auto *Element = dyn_cast_if_present<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
         auto *CI = SR->getCount().dyn_cast<ConstantInt *>();

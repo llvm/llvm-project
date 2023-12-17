@@ -1011,7 +1011,7 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
 
   unsigned I = 0;
   for (StoreInst *V : {SA1, SB1, SA2, SB2, SA3, SB3}) {
-    MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
+    MemoryDef *MemDef = dyn_cast_if_present<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), false)
         << "Store " << I << " is optimized from the start?";
     if (V == SA1)
@@ -1063,7 +1063,7 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
 
   unsigned I = 0;
   for (StoreInst *V : Sts) {
-    MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
+    MemoryDef *MemDef = dyn_cast_if_present<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), false)
         << "Store " << I << " is optimized from the start?";
     ++I;
@@ -1074,7 +1074,7 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
 
   I = 0;
   for (StoreInst *V : Sts) {
-    MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
+    MemoryDef *MemDef = dyn_cast_if_present<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), true)
         << "Store " << I << " was not optimized";
     // EXPECT_EQ expands such that if we increment I above, it won't get

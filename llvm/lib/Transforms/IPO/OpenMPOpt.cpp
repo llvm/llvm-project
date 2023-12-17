@@ -3138,7 +3138,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       // Asummes and "assume-like" (dbg, lifetime, ...) are handled first, the
       // former is collected the latter is ignored.
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (auto *AI = dyn_cast_or_null<AssumeInst>(II)) {
+        if (auto *AI = dyn_cast_if_present<AssumeInst>(II)) {
           ED.addAssumeInst(A, *AI);
           continue;
         }

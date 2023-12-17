@@ -2443,7 +2443,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 
     if (const RecordVal *RV =
             NumberedInstruction->TheDef->getValue("EncodingInfos")) {
-      if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+      if (auto *DI = dyn_cast_if_present<DefInit>(RV->getValue())) {
         const CodeGenHwModes &HWM = Target.getHwModes();
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (auto &KV : EBM)
@@ -2461,7 +2461,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 
     if (const RecordVal *RV =
             NumberedInstruction->TheDef->getValue("EncodingInfos")) {
-      if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+      if (DefInit *DI = dyn_cast_if_present<DefInit>(RV->getValue())) {
         const CodeGenHwModes &HWM = Target.getHwModes();
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (auto &KV : EBM) {

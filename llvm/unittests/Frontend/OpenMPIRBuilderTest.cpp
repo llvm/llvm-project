@@ -3264,21 +3264,22 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
   OMPBuilder.createCopyinClauseBlocks(Builder.saveIP(), MasterAddress,
                                       PrivAddress, Int32, /*BranchtoEnd*/ true);
 
-  BranchInst *EntryBr = dyn_cast_or_null<BranchInst>(EntryBB->getTerminator());
+  BranchInst *EntryBr =
+      dyn_cast_if_present<BranchInst>(EntryBB->getTerminator());
 
   EXPECT_NE(EntryBr, nullptr);
   EXPECT_TRUE(EntryBr->isConditional());
 
   BasicBlock *NotMasterBB = EntryBr->getSuccessor(0);
   BasicBlock *CopyinEnd = EntryBr->getSuccessor(1);
-  CmpInst *CMP = dyn_cast_or_null<CmpInst>(EntryBr->getCondition());
+  CmpInst *CMP = dyn_cast_if_present<CmpInst>(EntryBr->getCondition());
 
   EXPECT_NE(CMP, nullptr);
   EXPECT_NE(NotMasterBB, nullptr);
   EXPECT_NE(CopyinEnd, nullptr);
 
   BranchInst *NotMasterBr =
-      dyn_cast_or_null<BranchInst>(NotMasterBB->getTerminator());
+      dyn_cast_if_present<BranchInst>(NotMasterBB->getTerminator());
   EXPECT_NE(NotMasterBr, nullptr);
   EXPECT_FALSE(NotMasterBr->isConditional());
   EXPECT_EQ(CopyinEnd, NotMasterBr->getSuccessor(0));
@@ -4908,9 +4909,9 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
 
   // Check that the values stored into the local array are privatized reduction
   // variables.
-  auto *FirstPrivatized = dyn_cast_or_null<AllocaInst>(
+  auto *FirstPrivatized = dyn_cast_if_present<AllocaInst>(
       findStoredValue<GetElementPtrInst>(FirstArrayElemPtr));
-  auto *SecondPrivatized = dyn_cast_or_null<AllocaInst>(
+  auto *SecondPrivatized = dyn_cast_if_present<AllocaInst>(
       findStoredValue<GetElementPtrInst>(SecondArrayElemPtr));
   ASSERT_NE(FirstPrivatized, nullptr);
   ASSERT_NE(SecondPrivatized, nullptr);
@@ -6530,9 +6531,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroupWithTasks) {
   ASSERT_EQ(TaskAllocFn->getNumUses(), 2u);
 
   CallInst *FirstTaskAllocCall =
-      dyn_cast_or_null<CallInst>(*TaskAllocFn->users().begin());
+      dyn_cast_if_present<CallInst>(*TaskAllocFn->users().begin());
   CallInst *SecondTaskAllocCall =
-      dyn_cast_or_null<CallInst>(*TaskAllocFn->users().begin()++);
+      dyn_cast_if_present<CallInst>(*TaskAllocFn->users().begin()++);
   ASSERT_NE(FirstTaskAllocCall, nullptr);
   ASSERT_NE(SecondTaskAllocCall, nullptr);
 

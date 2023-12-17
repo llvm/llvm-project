@@ -282,10 +282,10 @@ NaryReassociatePass::matchAndReassociateMinOrMax(Instruction *I,
           m_Value(LHS), m_Value(RHS));
   if (match(I, MinMaxMatcher)) {
     OrigSCEV = SE->getSCEV(I);
-    if (auto *NewMinMax = dyn_cast_or_null<Instruction>(
+    if (auto *NewMinMax = dyn_cast_if_present<Instruction>(
             tryReassociateMinOrMax(I, MinMaxMatcher, LHS, RHS)))
       return NewMinMax;
-    if (auto *NewMinMax = dyn_cast_or_null<Instruction>(
+    if (auto *NewMinMax = dyn_cast_if_present<Instruction>(
             tryReassociateMinOrMax(I, MinMaxMatcher, RHS, LHS)))
       return NewMinMax;
   }

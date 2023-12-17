@@ -965,7 +965,7 @@ static bool checkVariableImport(
   // linkonce_odr). In that case we cannot accurately do this checking.
   auto IsReadOrWriteOnlyVarNeedingImporting = [&](StringRef ModulePath,
                                                   const ValueInfo &VI) {
-    auto *GVS = dyn_cast_or_null<GlobalVarSummary>(
+    auto *GVS = dyn_cast_if_present<GlobalVarSummary>(
         Index.findSummaryInModule(VI, ModulePath));
     return GVS && (Index.isReadOnly(GVS) || Index.isWriteOnly(GVS)) &&
            !(GVS->linkage() == GlobalValue::AvailableExternallyLinkage ||
@@ -1477,7 +1477,7 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
     // Remove declarations from comdats, including available_externally
     // as this is a declaration for the linker, and will be dropped eventually.
     // It is illegal for comdats to contain declarations.
-    auto *GO = dyn_cast_or_null<GlobalObject>(&GV);
+    auto *GO = dyn_cast_if_present<GlobalObject>(&GV);
     if (GO && GO->isDeclarationForLinker() && GO->hasComdat()) {
       if (GO->getComdat()->getName() == GO->getName())
         NonPrevailingComdats.insert(GO->getComdat());

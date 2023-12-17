@@ -1449,8 +1449,8 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   // If they are not float/double, each function has to its
   // operand separately.
   double opr0 = 0.0, opr1 = 0.0;
-  ConstantFP *fpopr0 = dyn_cast_or_null<ConstantFP>(copr0);
-  ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
+  ConstantFP *fpopr0 = dyn_cast_if_present<ConstantFP>(copr0);
+  ConstantFP *fpopr1 = dyn_cast_if_present<ConstantFP>(copr1);
   if (fpopr0) {
     opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
              ? fpopr0->getValueAPF().convertToDouble()
@@ -1580,7 +1580,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
     return true;
 
   case AMDGPULibFunc::EI_POWN: {
-    if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
+    if (ConstantInt *iopr1 = dyn_cast_if_present<ConstantInt>(copr1)) {
       double val = (double)iopr1->getSExtValue();
       Res0 = pow(opr0, val);
       return true;
@@ -1589,7 +1589,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   }
 
   case AMDGPULibFunc::EI_ROOTN: {
-    if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
+    if (ConstantInt *iopr1 = dyn_cast_if_present<ConstantInt>(copr1)) {
       double val = (double)iopr1->getSExtValue();
       Res0 = pow(opr0, 1.0 / val);
       return true;
@@ -1637,8 +1637,8 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
       return false;
     }
   } else {
-    ConstantDataVector *CDV0 = dyn_cast_or_null<ConstantDataVector>(copr0);
-    ConstantDataVector *CDV1 = dyn_cast_or_null<ConstantDataVector>(copr1);
+    ConstantDataVector *CDV0 = dyn_cast_if_present<ConstantDataVector>(copr0);
+    ConstantDataVector *CDV1 = dyn_cast_if_present<ConstantDataVector>(copr1);
     for (int i = 0; i < FuncVecSize; ++i) {
       Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
       Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;

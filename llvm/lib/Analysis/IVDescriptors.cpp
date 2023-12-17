@@ -974,7 +974,7 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // in the header will be dominated by the original phi, but need to be moved
   // after the non-phi previous value.
   SmallPtrSet<PHINode *, 4> SeenPhis;
-  while (auto *PrevPhi = dyn_cast_or_null<PHINode>(Previous)) {
+  while (auto *PrevPhi = dyn_cast_if_present<PHINode>(Previous)) {
     if (PrevPhi->getParent() != Phi->getParent())
       return false;
     if (!SeenPhis.insert(PrevPhi).second)

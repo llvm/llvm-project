@@ -119,7 +119,7 @@ bool NVPTXLowerUnreachable::isLoweredToTrap(const UnreachableInst &I) const {
     return false;
   if (!NoTrapAfterNoreturn)
     return true;
-  const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
+  const CallInst *Call = dyn_cast_if_present<CallInst>(I.getPrevNode());
   return Call && Call->doesNotReturn();
 }
 

@@ -9612,7 +9612,7 @@ const SCEV *ScalarEvolution::computeExitCountExhaustively(const Loop *L,
   unsigned MaxIterations = MaxBruteForceIterations;   // Limit analysis.
   const DataLayout &DL = getDataLayout();
   for (unsigned IterationNum = 0; IterationNum != MaxIterations;++IterationNum){
-    auto *CondVal = dyn_cast_or_null<ConstantInt>(
+    auto *CondVal = dyn_cast_if_present<ConstantInt>(
         EvaluateExpression(Cond, L, CurrentIterVals, DL, &TLI));
 
     // Couldn't symbolically evaluate.

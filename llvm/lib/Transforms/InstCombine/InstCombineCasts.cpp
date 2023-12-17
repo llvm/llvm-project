@@ -1559,7 +1559,7 @@ static Type *shrinkFPConstantVector(Value *V) {
     if (isa<UndefValue>(CV->getAggregateElement(i)))
       continue;
 
-    auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+    auto *CFP = dyn_cast_if_present<ConstantFP>(CV->getAggregateElement(i));
     if (!CFP)
       return nullptr;
 

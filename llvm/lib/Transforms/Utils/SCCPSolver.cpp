@@ -406,7 +406,7 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
 private:
   ConstantInt *getConstantInt(const ValueLatticeElement &IV, Type *Ty) const {
-    return dyn_cast_or_null<ConstantInt>(getConstant(IV, Ty));
+    return dyn_cast_if_present<ConstantInt>(getConstant(IV, Ty));
   }
 
   // pushToWorkList - Helper for markConstant/markOverdefined
@@ -1085,7 +1085,7 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
   if (auto *IBR = dyn_cast<IndirectBrInst>(&TI)) {
     // Casts are folded by visitCastInst.
     ValueLatticeElement IBRValue = getValueState(IBR->getAddress());
-    BlockAddress *Addr = dyn_cast_or_null<BlockAddress>(
+    BlockAddress *Addr = dyn_cast_if_present<BlockAddress>(
         getConstant(IBRValue, IBR->getAddress()->getType()));
     if (!Addr) { // Overdefined or unknown condition?
       // All destinations are executable!
@@ -1462,7 +1462,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
                     ? getConstant(V2State, I.getOperand(1)->getType())
                     : I.getOperand(1);
     Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
-    auto *C = dyn_cast_or_null<Constant>(R);
+    auto *C = dyn_cast_if_present<Constant>(R);
     if (C) {
       // Conservatively assume that the result may be based on operands that may
       // be undef. Note that we use mergeInValue to combine the constant with

@@ -114,7 +114,7 @@ public:
   /// Returns the function called if this is a wrapping a direct call, and null
   /// otherwise.
   Function *getActualCalledFunction() const {
-    return dyn_cast_or_null<Function>(getActualCalledOperand());
+    return dyn_cast_if_present<Function>(getActualCalledOperand());
   }
 
   /// Return the type of the value returned by the call underlying the

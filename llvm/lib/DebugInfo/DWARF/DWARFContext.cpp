@@ -1341,7 +1341,7 @@ DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash))
-      return dyn_cast_or_null<DWARFTypeUnit>(
+      return dyn_cast_if_present<DWARFTypeUnit>(
           DWOUnits.getUnitForIndexEntry(*R));
     return nullptr;
   }
@@ -1357,7 +1357,7 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
 
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
-      return dyn_cast_or_null<DWARFCompileUnit>(
+      return dyn_cast_if_present<DWARFCompileUnit>(
           DWOUnits.getUnitForIndexEntry(*R));
     return nullptr;
   }
@@ -1505,7 +1505,7 @@ DWARFUnitVector &DWARFContext::getDWOUnits(bool Lazy) {
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint64_t Offset) {
-  return dyn_cast_or_null<DWARFCompileUnit>(
+  return dyn_cast_if_present<DWARFCompileUnit>(
       State->getNormalUnits().getUnitForOffset(Offset));
 }
 

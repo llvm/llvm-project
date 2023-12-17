@@ -2515,7 +2515,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(), TheLoop,
                                SymbolicStrides, UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
-    auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
+    auto *I = dyn_cast_if_present<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I) 
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
@@ -2550,7 +2550,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
-        auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
+        auto *I = dyn_cast_if_present<Instruction>(UncomputablePtr);
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
@@ -2640,7 +2640,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
 
   if (Instruction *I = Dep.getSource(*this)) {
     DebugLoc SourceLoc = I->getDebugLoc();
-    if (auto *DD = dyn_cast_or_null<Instruction>(getPointerOperand(I)))
+    if (auto *DD = dyn_cast_if_present<Instruction>(getPointerOperand(I)))
       SourceLoc = DD->getDebugLoc();
     if (SourceLoc)
       R << " Memory location is the same as accessed at "

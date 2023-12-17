@@ -1458,7 +1458,7 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   // alloca and handle that case.
   if (I.isArrayAllocation()) {
     Constant *Size = SimplifiedValues.lookup(I.getArraySize());
-    if (auto *AllocSize = dyn_cast_or_null<ConstantInt>(Size)) {
+    if (auto *AllocSize = dyn_cast_if_present<ConstantInt>(Size)) {
       // Sometimes a dynamic alloca could be converted into a static alloca
       // after this constant prop, and become a huge static alloca on an
       // unconditional CFG path. Avoid inlining if this is going to happen above
@@ -1671,7 +1671,7 @@ bool CallAnalyzer::simplifyIntrinsicCallIsConstant(CallBase &CB) {
   auto *C = dyn_cast<Constant>(Arg);
 
   if (!C)
-    C = dyn_cast_or_null<Constant>(SimplifiedValues.lookup(Arg));
+    C = dyn_cast_if_present<Constant>(SimplifiedValues.lookup(Arg));
 
   Type *RT = CB.getFunctionType()->getReturnType();
   SimplifiedValues[&CB] = ConstantInt::get(RT, C ? 1 : 0);
@@ -1686,7 +1686,7 @@ bool CallAnalyzer::simplifyIntrinsicCallObjectSize(CallBase &CB) {
 
   Value *V = lowerObjectSizeCall(&cast<IntrinsicInst>(CB), DL, nullptr,
                                  /*MustSucceed=*/true);
-  Constant *C = dyn_cast_or_null<Constant>(V);
+  Constant *C = dyn_cast_if_present<Constant>(V);
   if (C)
     SimplifiedValues[&CB] = C;
   return C;
@@ -2120,7 +2120,7 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
     SimpleV =
         simplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS, DL);
 
-  if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))
+  if (Constant *C = dyn_cast_if_present<Constant>(SimpleV))
     SimplifiedValues[&I] = C;
 
   if (SimpleV)
@@ -2151,7 +2151,7 @@ bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
   Value *SimpleV = simplifyFNegInst(
       COp ? COp : Op, cast<FPMathOperator>(I).getFastMathFlags(), DL);
 
-  if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))
+  if (Constant *C = dyn_cast_if_present<Constant>(SimpleV))
     SimplifiedValues[&I] = C;
 
   if (SimpleV)
@@ -2236,7 +2236,7 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
   for (Value *I : Call.args()) {
     Constant *C = dyn_cast<Constant>(I);
     if (!C)
-      C = dyn_cast_or_null<Constant>(SimplifiedValues.lookup(I));
+      C = dyn_cast_if_present<Constant>(SimplifiedValues.lookup(I));
     if (!C)
       return false; // This argument doesn't map to a constant.
 
@@ -2269,7 +2269,7 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     // Check if this happens to be an indirect function call to a known function
     // in this inline context. If not, we've done all we can.
     Value *Callee = Call.getCalledOperand();
-    F = dyn_cast_or_null<Function>(SimplifiedValues.lookup(Callee));
+    F = dyn_cast_if_present<Function>(SimplifiedValues.lookup(Callee));
     if (!F || F->getFunctionType() != Call.getFunctionType()) {
       onCallArgumentSetup(Call);
 
@@ -2370,7 +2370,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
   if (!FalseC)
     FalseC = SimplifiedValues.lookup(FalseVal);
   Constant *CondC =
-      dyn_cast_or_null<Constant>(SimplifiedValues.lookup(SI.getCondition()));
+      dyn_cast_if_present<Constant>(SimplifiedValues.lookup(SI.getCondition()));
 
   if (!CondC) {
     // Select C, X, X => X
@@ -2796,8 +2796,8 @@ InlineResult CallAnalyzer::analyze() {
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       if (BI->isConditional()) {
         Value *Cond = BI->getCondition();
-        if (ConstantInt *SimpleCond =
-                dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+        if (ConstantInt *SimpleCond = dyn_cast_if_present<ConstantInt>(
+                SimplifiedValues.lookup(Cond))) {
           BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
           BBWorklist.insert(NextBB);
           KnownSuccessors[BB] = NextBB;
@@ -2808,7 +2808,7 @@ InlineResult CallAnalyzer::analyze() {
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       Value *Cond = SI->getCondition();
       if (ConstantInt *SimpleCond =
-              dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+              dyn_cast_if_present<ConstantInt>(SimplifiedValues.lookup(Cond))) {
         BasicBlock *NextBB = SI->findCaseValue(SimpleCond)->getCaseSuccessor();
         BBWorklist.insert(NextBB);
         KnownSuccessors[BB] = NextBB;

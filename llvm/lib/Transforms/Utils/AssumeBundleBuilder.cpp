@@ -421,7 +421,7 @@ struct AssumeSimplify {
           }
           RetainedKnowledge RK =
             getKnowledgeFromBundle(cast<AssumeInst>(*Assume), BOI);
-          if (auto *Arg = dyn_cast_or_null<Argument>(RK.WasOn)) {
+          if (auto *Arg = dyn_cast_if_present<Argument>(RK.WasOn)) {
             bool HasSameKindAttr = Arg->hasAttribute(RK.AttrKind);
             if (HasSameKindAttr)
               if (!Attribute::isIntAttrKind(RK.AttrKind) ||
@@ -484,7 +484,7 @@ struct AssumeSimplify {
         if (!RK)
           continue;
         Builder.addKnowledge(RK);
-        if (auto *I = dyn_cast_or_null<Instruction>(RK.WasOn))
+        if (auto *I = dyn_cast_if_present<Instruction>(RK.WasOn))
           if (I->getParent() == InsertPt->getParent() &&
               (InsertPt->comesBefore(I) || InsertPt == I))
             InsertPt = I->getNextNode();

@@ -684,7 +684,7 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
       const Metadata *Op = Associated->getOperand(0).get();
       Check(Op, "associated metadata must have a global value", GO, Associated);
 
-      const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+      const auto *VM = dyn_cast_if_present<ValueAsMetadata>(Op);
       Check(VM, "associated metadata must be ValueAsMetadata", GO, Associated);
       if (VM) {
         Check(isa<PointerType>(VM->getValue()->getType()),
@@ -1187,8 +1187,8 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
 
   if (N.getTag() == dwarf::DW_TAG_set_type) {
     if (auto *T = N.getRawBaseType()) {
-      auto *Enum = dyn_cast_or_null<DICompositeType>(T);
-      auto *Basic = dyn_cast_or_null<DIBasicType>(T);
+      auto *Enum = dyn_cast_if_present<DICompositeType>(T);
+      auto *Basic = dyn_cast_if_present<DIBasicType>(T);
       CheckDI(
           (Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type) ||
               (Basic && (Basic->getEncoding() == dwarf::DW_ATE_unsigned ||
@@ -1352,7 +1352,7 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawEnumTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid enum list", &N, Array);
     for (Metadata *Op : N.getEnumTypes()->operands()) {
-      auto *Enum = dyn_cast_or_null<DICompositeType>(Op);
+      auto *Enum = dyn_cast_if_present<DICompositeType>(Op);
       CheckDI(Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type,
               "invalid enum type", &N, N.getEnumTypes(), Op);
     }
@@ -1427,7 +1427,7 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
     // There's no good way to cross the CU boundary to insert a nested
     // DISubprogram definition in one CU into a type defined in another CU.
-    auto *CT = dyn_cast_or_null<DICompositeType>(N.getRawScope());
+    auto *CT = dyn_cast_if_present<DICompositeType>(N.getRawScope());
     if (CT && CT->getRawIdentifier() &&
         M.getContext().isODRUniquingDebugTypes())
       CheckDI(N.getDeclaration(),
@@ -1640,7 +1640,7 @@ void Verifier::visitModuleIdents() {
   for (const MDNode *N : Idents->operands()) {
     Check(N->getNumOperands() == 1,
           "incorrect number of operands in llvm.ident metadata", N);
-    Check(dyn_cast_or_null<MDString>(N->getOperand(0)),
+    Check(dyn_cast_if_present<MDString>(N->getOperand(0)),
           ("invalid value for llvm.ident metadata entry operand"
            "(the operand should be a string)"),
           N->getOperand(0));
@@ -1658,7 +1658,7 @@ void Verifier::visitModuleCommandLines() {
   for (const MDNode *N : CommandLines->operands()) {
     Check(N->getNumOperands() == 1,
           "incorrect number of operands in llvm.commandline metadata", N);
-    Check(dyn_cast_or_null<MDString>(N->getOperand(0)),
+    Check(dyn_cast_if_present<MDString>(N->getOperand(0)),
           ("invalid value for llvm.commandline metadata entry operand"
            "(the operand should be a string)"),
           N->getOperand(0));
@@ -1713,7 +1713,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "invalid behavior operand in module flag (unexpected constant)",
           Op->getOperand(0));
   }
-  MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
+  MDString *ID = dyn_cast_if_present<MDString>(Op->getOperand(1));
   Check(ID, "invalid ID operand in module flag (expected metadata string)",
         Op->getOperand(1));
 
@@ -1812,11 +1812,11 @@ void Verifier::visitModuleFlagCGProfileEntry(const MDOperand &MDO) {
     Check(F && isa<Function>(F->getValue()->stripPointerCasts()),
           "expected a Function or null", FuncMDO);
   };
-  auto Node = dyn_cast_or_null<MDNode>(MDO);
+  auto Node = dyn_cast_if_present<MDNode>(MDO);
   Check(Node && Node->getNumOperands() == 3, "expected a MDNode triple", MDO);
   CheckFunction(Node->getOperand(0));
   CheckFunction(Node->getOperand(1));
-  auto Count = dyn_cast_or_null<ConstantAsMetadata>(Node->getOperand(2));
+  auto Count = dyn_cast_if_present<ConstantAsMetadata>(Node->getOperand(2));
   Check(Count && Count->getType()->isIntegerTy(),
         "expected an integer constant", Node->getOperand(2));
 }
@@ -2863,7 +2863,7 @@ void Verifier::visitFunction(const Function &F) {
   auto VisitDebugLoc = [&](const Instruction &I, const MDNode *Node) {
     // Be careful about using DILocation here since we might be dealing with
     // broken code (this is the Verifier after all).
-    const DILocation *DL = dyn_cast_or_null<DILocation>(Node);
+    const DILocation *DL = dyn_cast_if_present<DILocation>(Node);
     if (!DL)
       return;
     if (!Seen.insert(DL).second)
@@ -2896,7 +2896,7 @@ void Verifier::visitFunction(const Function &F) {
       // The llvm.loop annotations also contain two DILocations.
       if (auto MD = I.getMetadata(LLVMContext::MD_loop))
         for (unsigned i = 1; i < MD->getNumOperands(); ++i)
-          VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MD->getOperand(i)));
+          VisitDebugLoc(I, dyn_cast_if_present<MDNode>(MD->getOperand(i)));
       if (BrokenDebugInfo)
         return;
     }
@@ -3691,7 +3691,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   Instruction *Next = CI.getNextNode();
 
   // Handle the optional bitcast.
-  if (BitCastInst *BI = dyn_cast_or_null<BitCastInst>(Next)) {
+  if (BitCastInst *BI = dyn_cast_if_present<BitCastInst>(Next)) {
     Check(BI->getOperand(0) == RetVal,
           "bitcast following musttail call must use the call", BI);
     RetVal = BI;
@@ -3699,7 +3699,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   }
 
   // Check the return.
-  ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
+  ReturnInst *Ret = dyn_cast_if_present<ReturnInst>(Next);
   Check(Ret, "musttail call must precede a ret with an optional bitcast", &CI);
   Check(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal ||
             isa<UndefValue>(Ret->getReturnValue()),
@@ -6077,7 +6077,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *ColorFirstBB : CV)
-        if (dyn_cast_or_null<FuncletPadInst>(ColorFirstBB->getFirstNonPHI()))
+        if (dyn_cast_if_present<FuncletPadInst>(ColorFirstBB->getFirstNonPHI()))
           InEHFunclet = true;
 
       // Check for funclet operand bundle
@@ -6445,8 +6445,8 @@ void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {
 }
 
 void Verifier::verifyFragmentExpression(const DbgVariableIntrinsic &I) {
-  DILocalVariable *V = dyn_cast_or_null<DILocalVariable>(I.getRawVariable());
-  DIExpression *E = dyn_cast_or_null<DIExpression>(I.getRawExpression());
+  DILocalVariable *V = dyn_cast_if_present<DILocalVariable>(I.getRawVariable());
+  DIExpression *E = dyn_cast_if_present<DIExpression>(I.getRawExpression());
 
   // We don't know whether this intrinsic verified correctly.
   if (!V || !E || !E->isValid())
@@ -6516,7 +6516,7 @@ void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
 }
 
 void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
-  DIExpression *E = dyn_cast_or_null<DIExpression>(I.getRawExpression());
+  DIExpression *E = dyn_cast_if_present<DIExpression>(I.getRawExpression());
 
   // We don't know whether this intrinsic verified correctly.
   if (!E || !E->isValid())
@@ -6528,7 +6528,7 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
       return;
     // We allow EntryValues for swift async arguments, as they have an
     // ABI-guarantee to be turned into a specific register.
-    if (auto *ArgLoc = dyn_cast_or_null<Argument>(VarValue);
+    if (auto *ArgLoc = dyn_cast_if_present<Argument>(VarValue);
         ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
       return;
   }
@@ -6914,7 +6914,7 @@ static bool IsScalarTBAANodeImpl(const MDNode *MD,
       return false;
   }
 
-  auto *Parent = dyn_cast_or_null<MDNode>(MD->getOperand(1));
+  auto *Parent = dyn_cast_if_present<MDNode>(MD->getOperand(1));
   return Parent && Visited.insert(Parent).second &&
          (IsRootTBAANode(Parent) || IsScalarTBAANodeImpl(Parent, Visited));
 }
@@ -7002,8 +7002,8 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
             "Old-style TBAA is no longer allowed, use struct-path TBAA instead",
             &I);
 
-  MDNode *BaseNode = dyn_cast_or_null<MDNode>(MD->getOperand(0));
-  MDNode *AccessType = dyn_cast_or_null<MDNode>(MD->getOperand(1));
+  MDNode *BaseNode = dyn_cast_if_present<MDNode>(MD->getOperand(0));
+  MDNode *AccessType = dyn_cast_if_present<MDNode>(MD->getOperand(1));
 
   bool IsNewFormat = isNewFormatTBAATypeNode(AccessType);
 

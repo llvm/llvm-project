@@ -466,7 +466,7 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M) {
   const MDString *MemProfFilename =
-      dyn_cast_or_null<MDString>(M.getModuleFlag("MemProfProfileFilename"));
+      dyn_cast_if_present<MDString>(M.getModuleFlag("MemProfProfileFilename"));
   if (!MemProfFilename)
     return;
   assert(!MemProfFilename->getString().empty() &&

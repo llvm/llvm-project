@@ -3132,7 +3132,7 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       const SDValue TargetAddr = Node->getOperand(0).getOperand(1);
       StringRef Sym;
       if (const GlobalAddressSDNode *G =
-              dyn_cast_or_null<const GlobalAddressSDNode>(TargetAddr)) {
+              dyn_cast_if_present<const GlobalAddressSDNode>(TargetAddr)) {
         // We must not emit the R_MIPS_JALR relocation against data symbols
         // since this will cause run-time crashes if the linker replaces the
         // call instruction with a relative branch to the data symbol.
@@ -3142,9 +3142,9 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
           return;
         }
         Sym = G->getGlobal()->getName();
-      }
-      else if (const ExternalSymbolSDNode *ES =
-                   dyn_cast_or_null<const ExternalSymbolSDNode>(TargetAddr)) {
+      } else if (const ExternalSymbolSDNode *ES =
+                     dyn_cast_if_present<const ExternalSymbolSDNode>(
+                         TargetAddr)) {
         Sym = ES->getSymbol();
       }
 
@@ -3188,7 +3188,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       MipsCCState::getSpecialCallingConvForCallee(Callee.getNode(), Subtarget));
 
   const ExternalSymbolSDNode *ES =
-      dyn_cast_or_null<const ExternalSymbolSDNode>(Callee.getNode());
+      dyn_cast_if_present<const ExternalSymbolSDNode>(Callee.getNode());
 
   // There is one case where CALLSEQ_START..CALLSEQ_END can be nested, which
   // is during the lowering of a call with a byval argument which produces
@@ -3513,7 +3513,7 @@ SDValue MipsTargetLowering::LowerCallResult(
                      *DAG.getContext());
 
   const ExternalSymbolSDNode *ES =
-      dyn_cast_or_null<const ExternalSymbolSDNode>(CLI.Callee.getNode());
+      dyn_cast_if_present<const ExternalSymbolSDNode>(CLI.Callee.getNode());
   CCInfo.AnalyzeCallResult(Ins, RetCC_Mips, CLI.RetTy,
                            ES ? ES->getSymbol() : nullptr);
 

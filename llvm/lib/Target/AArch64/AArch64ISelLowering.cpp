@@ -5404,7 +5404,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue FnOp = Op.getOperand(1);
     SDValue IncomingFPOp = Op.getOperand(2);
     GlobalAddressSDNode *GSD = dyn_cast<GlobalAddressSDNode>(FnOp);
-    auto *Fn = dyn_cast_or_null<Function>(GSD ? GSD->getGlobal() : nullptr);
+    auto *Fn = dyn_cast_if_present<Function>(GSD ? GSD->getGlobal() : nullptr);
     if (!Fn)
       report_fatal_error(
           "llvm.eh.recoverfp must take a function as the first argument");
@@ -20641,8 +20641,8 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
   else
     return SDValue();
 
-  auto SrlOp1 =
-      dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Srl->getOperand(1)));
+  auto SrlOp1 = dyn_cast_if_present<ConstantSDNode>(
+      DAG.getSplatValue(Srl->getOperand(1)));
   if (!SrlOp1)
     return SDValue();
   unsigned ShiftValue = SrlOp1->getZExtValue();
@@ -20652,8 +20652,8 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
   SDValue Add = Srl->getOperand(0);
   if (Add->getOpcode() != ISD::ADD || !Add->hasOneUse())
     return SDValue();
-  auto AddOp1 =
-      dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Add->getOperand(1)));
+  auto AddOp1 = dyn_cast_if_present<ConstantSDNode>(
+      DAG.getSplatValue(Add->getOperand(1)));
   if (!AddOp1)
     return SDValue();
   uint64_t AddValue = AddOp1->getZExtValue();
@@ -21479,7 +21479,7 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
            Index.getOperand(0).getOpcode() == ISD::STEP_VECTOR) {
     SDValue RHS = Index.getOperand(1);
     if (auto *Shift =
-            dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(RHS))) {
+            dyn_cast_if_present<ConstantSDNode>(DAG.getSplatValue(RHS))) {
       int64_t Step = (int64_t)Index.getOperand(0).getConstantOperandVal(1);
       Stride = Step << Shift->getZExtValue();
     }

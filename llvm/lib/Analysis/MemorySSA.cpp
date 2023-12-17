@@ -307,13 +307,13 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     }
   }
 
-  if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
+  if (auto *CB = dyn_cast_if_present<CallBase>(UseInst)) {
     ModRefInfo I = AA.getModRefInfo(DefInst, CB);
     return isModOrRefSet(I);
   }
 
   if (auto *DefLoad = dyn_cast<LoadInst>(DefInst))
-    if (auto *UseLoad = dyn_cast_or_null<LoadInst>(UseInst))
+    if (auto *UseLoad = dyn_cast_if_present<LoadInst>(UseInst))
       return !areLoadsReorderable(UseLoad, DefLoad);
 
   ModRefInfo I = AA.getModRefInfo(DefInst, UseLoc);

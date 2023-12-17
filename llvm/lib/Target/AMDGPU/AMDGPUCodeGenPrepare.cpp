@@ -2140,7 +2140,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   // of reverse. If it worked like a normal combiner, the rsq would form before
   // we saw a sqrt call.
   auto *FDiv =
-      dyn_cast_or_null<FPMathOperator>(Sqrt.getUniqueUndroppableUser());
+      dyn_cast_if_present<FPMathOperator>(Sqrt.getUniqueUndroppableUser());
   if (FDiv && FDiv->getOpcode() == Instruction::FDiv &&
       FDiv->getFPAccuracy() >= 1.0f &&
       canOptimizeWithRsq(FPOp, FDiv->getFastMathFlags(), SqrtFMF) &&

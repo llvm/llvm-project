@@ -4370,7 +4370,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     // Upgrade from the old version that had an extra offset argument.
     assert(CI->arg_size() == 4);
     // Drop nonzero offsets instead of attempting to upgrade them.
-    if (auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1)))
+    if (auto *Offset = dyn_cast_if_present<Constant>(CI->getArgOperand(1)))
       if (Offset->isZeroValue()) {
         NewCall = Builder.CreateCall(
             NewFn,
@@ -4774,7 +4774,7 @@ static bool UpgradeRetainReleaseMarker(Module &M) {
   if (ModRetainReleaseMarker) {
     MDNode *Op = ModRetainReleaseMarker->getOperand(0);
     if (Op) {
-      MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(0));
+      MDString *ID = dyn_cast_if_present<MDString>(Op->getOperand(0));
       if (ID) {
         SmallVector<StringRef, 4> ValueComp;
         ID->getString().split(ValueComp, "#");
@@ -4928,7 +4928,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     MDNode *Op = ModFlags->getOperand(I);
     if (Op->getNumOperands() != 3)
       continue;
-    MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
+    MDString *ID = dyn_cast_if_present<MDString>(Op->getOperand(1));
     if (!ID)
       continue;
     auto SetBehavior = [&](Module::ModFlagBehavior B) {
@@ -4981,7 +4981,7 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     // section name so that llvm-lto will not complain about mismatching
     // module flags that is functionally the same.
     if (ID->getString() == "Objective-C Image Info Section") {
-      if (auto *Value = dyn_cast_or_null<MDString>(Op->getOperand(2))) {
+      if (auto *Value = dyn_cast_if_present<MDString>(Op->getOperand(2))) {
         SmallVector<StringRef, 4> ValueComp;
         Value->getString().split(ValueComp, " ");
         if (ValueComp.size() != 1) {
@@ -5118,12 +5118,12 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
-  auto *T = dyn_cast_or_null<MDTuple>(MD);
+  auto *T = dyn_cast_if_present<MDTuple>(MD);
   if (!T)
     return false;
   if (T->getNumOperands() < 1)
     return false;
-  auto *S = dyn_cast_or_null<MDString>(T->getOperand(0));
+  auto *S = dyn_cast_if_present<MDString>(T->getOperand(0));
   if (!S)
     return false;
   return S->getString().starts_with("llvm.vectorizer.");
@@ -5142,12 +5142,12 @@ static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
 }
 
 static Metadata *upgradeLoopArgument(Metadata *MD) {
-  auto *T = dyn_cast_or_null<MDTuple>(MD);
+  auto *T = dyn_cast_if_present<MDTuple>(MD);
   if (!T)
     return MD;
   if (T->getNumOperands() < 1)
     return MD;
-  auto *OldTag = dyn_cast_or_null<MDString>(T->getOperand(0));
+  auto *OldTag = dyn_cast_if_present<MDString>(T->getOperand(0));
   if (!OldTag)
     return MD;
   if (!OldTag->getString().starts_with("llvm.vectorizer."))

@@ -1066,7 +1066,7 @@ public:
   DIType *getClassType() const;
 
   DIObjCProperty *getObjCProperty() const {
-    return dyn_cast_or_null<DIObjCProperty>(getExtraData());
+    return dyn_cast_if_present<DIObjCProperty>(getExtraData());
   }
 
   uint32_t getVBPtrOffset() const;
@@ -1244,33 +1244,33 @@ public:
   }
   Metadata *getRawDataLocation() const { return getOperand(9); }
   DIVariable *getDataLocation() const {
-    return dyn_cast_or_null<DIVariable>(getRawDataLocation());
+    return dyn_cast_if_present<DIVariable>(getRawDataLocation());
   }
   DIExpression *getDataLocationExp() const {
-    return dyn_cast_or_null<DIExpression>(getRawDataLocation());
+    return dyn_cast_if_present<DIExpression>(getRawDataLocation());
   }
   Metadata *getRawAssociated() const { return getOperand(10); }
   DIVariable *getAssociated() const {
-    return dyn_cast_or_null<DIVariable>(getRawAssociated());
+    return dyn_cast_if_present<DIVariable>(getRawAssociated());
   }
   DIExpression *getAssociatedExp() const {
-    return dyn_cast_or_null<DIExpression>(getRawAssociated());
+    return dyn_cast_if_present<DIExpression>(getRawAssociated());
   }
   Metadata *getRawAllocated() const { return getOperand(11); }
   DIVariable *getAllocated() const {
-    return dyn_cast_or_null<DIVariable>(getRawAllocated());
+    return dyn_cast_if_present<DIVariable>(getRawAllocated());
   }
   DIExpression *getAllocatedExp() const {
-    return dyn_cast_or_null<DIExpression>(getRawAllocated());
+    return dyn_cast_if_present<DIExpression>(getRawAllocated());
   }
   Metadata *getRawRank() const { return getOperand(12); }
   ConstantInt *getRankConst() const {
-    if (auto *MD = dyn_cast_or_null<ConstantAsMetadata>(getRawRank()))
-      return dyn_cast_or_null<ConstantInt>(MD->getValue());
+    if (auto *MD = dyn_cast_if_present<ConstantAsMetadata>(getRawRank()))
+      return dyn_cast_if_present<ConstantInt>(MD->getValue());
     return nullptr;
   }
   DIExpression *getRankExp() const {
-    return dyn_cast_or_null<DIExpression>(getRawRank());
+    return dyn_cast_if_present<DIExpression>(getRawRank());
   }
 
   Metadata *getRawAnnotations() const { return getOperand(13); }

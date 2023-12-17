@@ -123,7 +123,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(DagInit *Result, unsigned AliasOpNo,
     if (!BI->isComplete())
       return false;
     // Convert the bits init to an integer and use that for the result.
-    IntInit *II = dyn_cast_or_null<IntInit>(
+    IntInit *II = dyn_cast_if_present<IntInit>(
         BI->convertInitializerTo(IntRecTy::get(BI->getRecordKeeper())));
     if (!II)
       return false;

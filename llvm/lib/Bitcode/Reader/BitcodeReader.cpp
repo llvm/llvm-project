@@ -3295,7 +3295,7 @@ Error BitcodeReader::parseConstants() {
         BaseType = getTypeByID(BaseTypeID);
       }
 
-      PointerType *OrigPtrTy = dyn_cast_or_null<PointerType>(BaseType);
+      PointerType *OrigPtrTy = dyn_cast_if_present<PointerType>(BaseType);
       if (!OrigPtrTy)
         return error("GEP base operand must be pointer or vector of pointer");
 
@@ -3325,8 +3325,7 @@ Error BitcodeReader::parseConstants() {
       if (Record.size() < 3)
         return error("Invalid extractelement constexpr record");
       unsigned OpTyID = Record[0];
-      VectorType *OpTy =
-        dyn_cast_or_null<VectorType>(getTypeByID(OpTyID));
+      VectorType *OpTy = dyn_cast_if_present<VectorType>(getTypeByID(OpTyID));
       if (!OpTy)
         return error("Invalid extractelement constexpr record");
       unsigned IdxRecord;
@@ -3377,7 +3376,7 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_CE_SHUFVEC_EX: { // [opty, opval, opval, opval]
       VectorType *RTy = dyn_cast<VectorType>(CurTy);
       VectorType *OpTy =
-        dyn_cast_or_null<VectorType>(getTypeByID(Record[0]));
+          dyn_cast_if_present<VectorType>(getTypeByID(Record[0]));
       if (Record.size() < 4 || !RTy || !OpTy)
         return error("Invalid shufflevector constexpr record");
       V = BitcodeConstant::create(
@@ -3491,7 +3490,8 @@ Error BitcodeReader::parseConstants() {
       if (Record.size() < 3)
         return error("Invalid inlineasm record");
       unsigned OpNum = 0;
-      auto *FnTy = dyn_cast_or_null<FunctionType>(getTypeByID(Record[OpNum]));
+      auto *FnTy =
+          dyn_cast_if_present<FunctionType>(getTypeByID(Record[OpNum]));
       ++OpNum;
       if (!FnTy)
         return error("Invalid inlineasm record");
@@ -4838,13 +4838,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
-        Scope = dyn_cast_or_null<MDNode>(
+        Scope = dyn_cast_if_present<MDNode>(
             MDLoader->getMetadataFwdRefOrLoad(ScopeID - 1));
         if (!Scope)
           return error("Invalid record");
       }
       if (IAID) {
-        IA = dyn_cast_or_null<MDNode>(
+        IA = dyn_cast_if_present<MDNode>(
             MDLoader->getMetadataFwdRefOrLoad(IAID - 1));
         if (!IA)
           return error("Invalid record");
@@ -5514,8 +5514,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       SwitchInst *SI = SwitchInst::Create(Cond, Default, NumCases);
       InstructionList.push_back(SI);
       for (unsigned i = 0, e = NumCases; i != e; ++i) {
-        ConstantInt *CaseVal = dyn_cast_or_null<ConstantInt>(
-            getFnValueByID(Record[3+i*2], OpTy, OpTyID, nullptr));
+        ConstantInt *CaseVal = dyn_cast_if_present<ConstantInt>(
+            getFnValueByID(Record[3 + i * 2], OpTy, OpTyID, nullptr));
         BasicBlock *DestBB = getBasicBlock(Record[1+3+i*2]);
         if (!CaseVal || !DestBB) {
           delete SI;
@@ -5579,7 +5579,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Callee is not a pointer");
       if (!FTy) {
         FTyID = getContainedTypeID(CalleeTypeID);
-        FTy = dyn_cast_or_null<FunctionType>(getTypeByID(FTyID));
+        FTy = dyn_cast_if_present<FunctionType>(getTypeByID(FTyID));
         if (!FTy)
           return error("Callee is not of pointer to function type");
       }
@@ -5657,7 +5657,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       FunctionType *FTy = nullptr;
       if ((CCInfo >> bitc::CALL_EXPLICIT_TYPE) & 1) {
         FTyID = Record[OpNum++];
-        FTy = dyn_cast_or_null<FunctionType>(getTypeByID(FTyID));
+        FTy = dyn_cast_if_present<FunctionType>(getTypeByID(FTyID));
         if (!FTy)
           return error("Explicit call type is not a function type");
       }
@@ -5673,7 +5673,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Callee is not a pointer type");
       if (!FTy) {
         FTyID = getContainedTypeID(CalleeTypeID);
-        FTy = dyn_cast_or_null<FunctionType>(getTypeByID(FTyID));
+        FTy = dyn_cast_if_present<FunctionType>(getTypeByID(FTyID));
         if (!FTy)
           return error("Callee is not of pointer to function type");
       }
@@ -6370,7 +6370,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       FunctionType *FTy = nullptr;
       if ((CCInfo >> bitc::CALL_EXPLICIT_TYPE) & 1) {
         FTyID = Record[OpNum++];
-        FTy = dyn_cast_or_null<FunctionType>(getTypeByID(FTyID));
+        FTy = dyn_cast_if_present<FunctionType>(getTypeByID(FTyID));
         if (!FTy)
           return error("Explicit call type is not a function type");
       }
@@ -6386,7 +6386,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Callee is not a pointer type");
       if (!FTy) {
         FTyID = getContainedTypeID(CalleeTypeID);
-        FTy = dyn_cast_or_null<FunctionType>(getTypeByID(FTyID));
+        FTy = dyn_cast_if_present<FunctionType>(getTypeByID(FTyID));
         if (!FTy)
           return error("Callee is not of pointer to function type");
       }
@@ -6545,7 +6545,8 @@ OutOfRecordLoop:
     if (!A->getParent()) {
       // We found at least one unresolved value.  Nuke them all to avoid leaks.
       for (unsigned i = ModuleValueListSize, e = ValueList.size(); i != e; ++i){
-        if ((A = dyn_cast_or_null<Argument>(ValueList[i])) && !A->getParent()) {
+        if ((A = dyn_cast_if_present<Argument>(ValueList[i])) &&
+            !A->getParent()) {
           A->replaceAllUsesWith(PoisonValue::get(A->getType()));
           delete A;
         }

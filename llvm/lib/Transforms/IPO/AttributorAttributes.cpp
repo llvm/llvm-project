@@ -1994,7 +1994,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     // We handle memory intrinsics explicitly, at least the first (=
     // destination) and second (=source) arguments as we know how they are
     // accessed.
-    if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
+    if (auto *MI = dyn_cast_if_present<MemIntrinsic>(getCtxI())) {
       ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
       int64_t LengthVal = AA::RangeTy::Unknown;
       if (Length)
@@ -4257,10 +4257,10 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
-    if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
+    if (auto *SI = dyn_cast_if_present<StoreInst>(I)) {
       if (!isDeadStore(A, *SI))
         return indicatePessimisticFixpoint();
-    } else if (auto *FI = dyn_cast_or_null<FenceInst>(I)) {
+    } else if (auto *FI = dyn_cast_if_present<FenceInst>(I)) {
       if (!isDeadFence(A, *FI))
         return indicatePessimisticFixpoint();
     } else {
@@ -6294,7 +6294,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       // Check if we need to adjust the insertion point to make sure the IR is
       // valid.
       Instruction *IP = dyn_cast<Instruction>(U.getUser());
-      if (auto *PHI = dyn_cast_or_null<PHINode>(IP))
+      if (auto *PHI = dyn_cast_if_present<PHINode>(IP))
         IP = PHI->getIncomingBlock(U)->getTerminator();
       if (auto *NewV = manifestReplacementValue(A, IP)) {
         LLVM_DEBUG(dbgs() << "[ValueSimplify] " << getAssociatedValue()
@@ -6818,7 +6818,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         A.getAssumedConstant(V, AA, UsedAssumedInformation);
     if (!SimpleV)
       return APInt(64, 0);
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(*SimpleV))
+    if (auto *CI = dyn_cast_if_present<ConstantInt>(*SimpleV))
       return CI->getValue();
     return std::nullopt;
   }
@@ -10838,7 +10838,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
                         Function *AnchorScope) const {
 
     IRPosition ValIRP = IRPosition::value(V);
-    if (auto *CB = dyn_cast_or_null<CallBase>(CtxI)) {
+    if (auto *CB = dyn_cast_if_present<CallBase>(CtxI)) {
       for (const auto &U : CB->args()) {
         if (U.get() != &V)
           continue;
@@ -11129,7 +11129,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     bool NoValueYet = !C.has_value();
     if (NoValueYet || isa_and_nonnull<UndefValue>(*C))
       return true;
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(*C)) {
+    if (auto *CI = dyn_cast_if_present<ConstantInt>(*C)) {
       if (CI->isZero())
         Worklist.push_back({{*SI.getFalseValue(), CtxI}, II.S});
       else

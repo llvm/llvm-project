@@ -557,7 +557,8 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
   if (!Bin)
     return static_cast<ObjectFile *>(nullptr);
 
-  if (MachOUniversalBinary *UB = dyn_cast_or_null<MachOUniversalBinary>(Bin)) {
+  if (MachOUniversalBinary *UB =
+          dyn_cast_if_present<MachOUniversalBinary>(Bin)) {
     auto I = ObjectForUBPathAndArch.find(std::make_pair(Path, ArchName));
     if (I != ObjectForUBPathAndArch.end())
       return I->second.get();

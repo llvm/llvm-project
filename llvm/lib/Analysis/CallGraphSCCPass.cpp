@@ -263,7 +263,7 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
 
       // If this call site is null, then the function pass deleted the call
       // entirely and the WeakTrackingVH nulled it out.
-      auto *Call = dyn_cast_or_null<CallBase>(*I->first);
+      auto *Call = dyn_cast_if_present<CallBase>(*I->first);
       if (!Call ||
           // If we've already seen this call site, then the FunctionPass RAUW'd
           // one call with another, which resulted in two "uses" in the edge

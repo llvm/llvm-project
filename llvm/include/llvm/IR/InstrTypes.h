@@ -1479,7 +1479,7 @@ public:
   /// Returns the function called, or null if this is an indirect function
   /// invocation or the function signature does not match the call signature.
   Function *getCalledFunction() const {
-    if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
+    if (auto *F = dyn_cast_if_present<Function>(getCalledOperand()))
       if (F->getValueType() == getFunctionType())
         return F;
     return nullptr;

@@ -96,7 +96,8 @@ TEST_F(AsmPrinterEmitDwarfSymbolReferenceTest, ELFDWARF32) {
       .WillOnce(SaveArg<0>(&Arg0));
   TestPrinter->getAP()->emitDwarfSymbolReference(Val, false);
 
-  const MCSymbolRefExpr *ActualArg0 = dyn_cast_or_null<MCSymbolRefExpr>(Arg0);
+  const MCSymbolRefExpr *ActualArg0 =
+      dyn_cast_if_present<MCSymbolRefExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(&(ActualArg0->getSymbol()), Val);
 }
@@ -119,7 +120,8 @@ TEST_F(AsmPrinterEmitDwarfSymbolReferenceTest, ELFDWARF64) {
       .WillOnce(SaveArg<0>(&Arg0));
   TestPrinter->getAP()->emitDwarfSymbolReference(Val, false);
 
-  const MCSymbolRefExpr *ActualArg0 = dyn_cast_or_null<MCSymbolRefExpr>(Arg0);
+  const MCSymbolRefExpr *ActualArg0 =
+      dyn_cast_if_present<MCSymbolRefExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(&(ActualArg0->getSymbol()), Val);
 }
@@ -158,7 +160,8 @@ TEST_F(AsmPrinterEmitDwarfStringOffsetTest, DWARF32) {
       .WillOnce(SaveArg<0>(&Arg0));
   TestPrinter->getAP()->emitDwarfStringOffset(Val);
 
-  const MCSymbolRefExpr *ActualArg0 = dyn_cast_or_null<MCSymbolRefExpr>(Arg0);
+  const MCSymbolRefExpr *ActualArg0 =
+      dyn_cast_if_present<MCSymbolRefExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(&(ActualArg0->getSymbol()), Val.Symbol);
 }
@@ -182,7 +185,8 @@ TEST_F(AsmPrinterEmitDwarfStringOffsetTest, DWARF64) {
       .WillOnce(SaveArg<0>(&Arg0));
   TestPrinter->getAP()->emitDwarfStringOffset(Val);
 
-  const MCSymbolRefExpr *ActualArg0 = dyn_cast_or_null<MCSymbolRefExpr>(Arg0);
+  const MCSymbolRefExpr *ActualArg0 =
+      dyn_cast_if_present<MCSymbolRefExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(&(ActualArg0->getSymbol()), Val.Symbol);
 }
@@ -221,17 +225,17 @@ TEST_F(AsmPrinterEmitDwarfOffsetTest, DWARF32) {
       .WillOnce(SaveArg<0>(&Arg0));
   TestPrinter->getAP()->emitDwarfOffset(Label, Offset);
 
-  const MCBinaryExpr *ActualArg0 = dyn_cast_or_null<MCBinaryExpr>(Arg0);
+  const MCBinaryExpr *ActualArg0 = dyn_cast_if_present<MCBinaryExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(ActualArg0->getOpcode(), MCBinaryExpr::Add);
 
   const MCSymbolRefExpr *ActualLHS =
-      dyn_cast_or_null<MCSymbolRefExpr>(ActualArg0->getLHS());
+      dyn_cast_if_present<MCSymbolRefExpr>(ActualArg0->getLHS());
   ASSERT_NE(ActualLHS, nullptr);
   EXPECT_EQ(&(ActualLHS->getSymbol()), Label);
 
   const MCConstantExpr *ActualRHS =
-      dyn_cast_or_null<MCConstantExpr>(ActualArg0->getRHS());
+      dyn_cast_if_present<MCConstantExpr>(ActualArg0->getRHS());
   ASSERT_NE(ActualRHS, nullptr);
   EXPECT_EQ(static_cast<uint64_t>(ActualRHS->getValue()), Offset);
 }
@@ -245,17 +249,17 @@ TEST_F(AsmPrinterEmitDwarfOffsetTest, DWARF64) {
       .WillOnce(SaveArg<0>(&Arg0));
   TestPrinter->getAP()->emitDwarfOffset(Label, Offset);
 
-  const MCBinaryExpr *ActualArg0 = dyn_cast_or_null<MCBinaryExpr>(Arg0);
+  const MCBinaryExpr *ActualArg0 = dyn_cast_if_present<MCBinaryExpr>(Arg0);
   ASSERT_NE(ActualArg0, nullptr);
   EXPECT_EQ(ActualArg0->getOpcode(), MCBinaryExpr::Add);
 
   const MCSymbolRefExpr *ActualLHS =
-      dyn_cast_or_null<MCSymbolRefExpr>(ActualArg0->getLHS());
+      dyn_cast_if_present<MCSymbolRefExpr>(ActualArg0->getLHS());
   ASSERT_NE(ActualLHS, nullptr);
   EXPECT_EQ(&(ActualLHS->getSymbol()), Label);
 
   const MCConstantExpr *ActualRHS =
-      dyn_cast_or_null<MCConstantExpr>(ActualArg0->getRHS());
+      dyn_cast_if_present<MCConstantExpr>(ActualArg0->getRHS());
   ASSERT_NE(ActualRHS, nullptr);
   EXPECT_EQ(static_cast<uint64_t>(ActualRHS->getValue()), Offset);
 }

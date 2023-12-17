@@ -4758,7 +4758,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
-    if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
+    if (auto *SI = dyn_cast_if_present<StoreInst>(I)) {
       // Store instruction with index and scale costs 2 Uops.
       // Check the preceding GEP to identify non-const indices.
       if (auto *GEP = dyn_cast<GetElementPtrInst>(SI->getPointerOperand())) {

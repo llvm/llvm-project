@@ -305,7 +305,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
 
     MemorySSA *MSSA = MSSAU->getMemorySSA();
     if (auto *MemUse =
-            dyn_cast_or_null<MemoryUse>(MSSA->getMemoryAccess(Inst))) {
+            dyn_cast_if_present<MemoryUse>(MSSA->getMemoryAccess(Inst))) {
       auto *DefiningAccess = MemUse->getDefiningAccess();
       // Get the first defining access before the loop.
       while (L.contains(DefiningAccess->getBlock())) {

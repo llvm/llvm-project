@@ -625,7 +625,7 @@ bool StructType::indexValid(const Value *V) const {
   const Constant *C = dyn_cast<Constant>(V);
   if (C && V->getType()->isVectorTy())
     C = C->getSplatValue();
-  const ConstantInt *CU = dyn_cast_or_null<ConstantInt>(C);
+  const ConstantInt *CU = dyn_cast_if_present<ConstantInt>(C);
   return CU && CU->getZExtValue() < getNumElements();
 }
 

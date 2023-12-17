@@ -43,7 +43,7 @@ static bool splitGlobal(GlobalVariable &GV) {
     return false;
 
   // We currently only know how to split ConstantStructs.
-  auto *Init = dyn_cast_or_null<ConstantStruct>(GV.getInitializer());
+  auto *Init = dyn_cast_if_present<ConstantStruct>(GV.getInitializer());
   if (!Init)
     return false;
 

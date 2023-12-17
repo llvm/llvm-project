@@ -515,7 +515,8 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
   if (!GA)
     return false;
 
-  const GlobalVariable *GV = dyn_cast_or_null<GlobalVariable>(GA->getGlobal());
+  const GlobalVariable *GV =
+      dyn_cast_if_present<GlobalVariable>(GA->getGlobal());
   if (!GV)
     return false;
 
@@ -741,7 +742,7 @@ static bool isThreadPointerAcquisitionNode(SDValue Base, SelectionDAG *CurDAG) {
 
   // The ADD_TLS note is explicitly acquiring the thread pointer (X13/R13).
   RegisterSDNode *AddFirstOpReg =
-      dyn_cast_or_null<RegisterSDNode>(ADDTLSOp1.getNode());
+      dyn_cast_if_present<RegisterSDNode>(ADDTLSOp1.getNode());
   if (AddFirstOpReg &&
       AddFirstOpReg->getReg() == Subtarget.getThreadPointerRegister())
       return true;

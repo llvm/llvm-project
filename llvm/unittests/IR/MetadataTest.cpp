@@ -1618,17 +1618,18 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankInt) {
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
   ASSERT_TRUE(isa<DIExpression *>(Lower));
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(LI), cast<DIExpression *>(Lower));
+  EXPECT_EQ(dyn_cast_if_present<DIExpression>(LI), cast<DIExpression *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
   ASSERT_TRUE(isa<DIExpression *>(Upper));
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(UI), cast<DIExpression *>(Upper));
+  EXPECT_EQ(dyn_cast_if_present<DIExpression>(UI), cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
   ASSERT_TRUE(isa<DIExpression *>(Stride));
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(SI), cast<DIExpression *>(Stride));
+  EXPECT_EQ(dyn_cast_if_present<DIExpression>(SI),
+            cast<DIExpression *>(Stride));
 
   EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LI, UI, SI));
 

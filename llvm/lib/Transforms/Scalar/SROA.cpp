@@ -1501,7 +1501,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = SI->getValueOperand()->getType();
     }
 
-    if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
+    if (IntegerType *UserITy = dyn_cast_if_present<IntegerType>(UserTy)) {
       // If the type is larger than the partition, skip it. We only encounter
       // this for split integer operations where we want to use the type of the
       // entity causing the split. Also skip if the type is not a byte width
@@ -5160,7 +5160,7 @@ bool SROA::deleteDeadInstructions(
     SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
   bool Changed = false;
   while (!DeadInsts.empty()) {
-    Instruction *I = dyn_cast_or_null<Instruction>(DeadInsts.pop_back_val());
+    Instruction *I = dyn_cast_if_present<Instruction>(DeadInsts.pop_back_val());
     if (!I)
       continue;
     LLVM_DEBUG(dbgs() << "Deleting dead instruction: " << *I << "\n");

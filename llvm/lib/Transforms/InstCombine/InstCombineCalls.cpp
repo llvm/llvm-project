@@ -2614,7 +2614,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Handle mul by one:
     if (Constant *CV1 = dyn_cast<Constant>(Arg1))
       if (ConstantInt *Splat =
-              dyn_cast_or_null<ConstantInt>(CV1->getSplatValue()))
+              dyn_cast_if_present<ConstantInt>(CV1->getSplatValue()))
         if (Splat->isOne())
           return CastInst::CreateIntegerCast(Arg0, II->getType(),
                                              /*isSigned=*/!Zext);
@@ -3392,7 +3392,8 @@ Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
   if (NFI && isIdenticalOrStrongerFence(NFI, &FI))
     return eraseInstFromFunction(FI);
 
-  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNonDebugInstruction()))
+  if (auto *PFI =
+          dyn_cast_if_present<FenceInst>(FI.getPrevNonDebugInstruction()))
     if (isIdenticalOrStrongerFence(PFI, &FI))
       return eraseInstFromFunction(FI);
   return nullptr;

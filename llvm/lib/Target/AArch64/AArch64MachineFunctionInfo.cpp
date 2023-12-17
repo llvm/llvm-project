@@ -126,7 +126,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     StringRef ProbeKind;
     if (F.hasFnAttribute("probe-stack"))
       ProbeKind = F.getFnAttribute("probe-stack").getValueAsString();
-    else if (const auto *PS = dyn_cast_or_null<MDString>(
+    else if (const auto *PS = dyn_cast_if_present<MDString>(
                  F.getParent()->getModuleFlag("probe-stack")))
       ProbeKind = PS->getString();
     if (ProbeKind.size()) {

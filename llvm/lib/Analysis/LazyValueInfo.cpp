@@ -1278,9 +1278,8 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
   // Check if Usr can be simplified to a constant.
   if (auto *CI = dyn_cast<CastInst>(Usr)) {
     assert(CI->getOperand(0) == Op && "Operand 0 isn't Op");
-    if (auto *C = dyn_cast_or_null<ConstantInt>(
-            simplifyCastInst(CI->getOpcode(), OpConst,
-                             CI->getDestTy(), DL))) {
+    if (auto *C = dyn_cast_if_present<ConstantInt>(
+            simplifyCastInst(CI->getOpcode(), OpConst, CI->getDestTy(), DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
   } else if (auto *BO = dyn_cast<BinaryOperator>(Usr)) {
@@ -1290,7 +1289,7 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
            "Operand 0 nor Operand 1 isn't a match");
     Value *LHS = Op0Match ? OpConst : BO->getOperand(0);
     Value *RHS = Op1Match ? OpConst : BO->getOperand(1);
-    if (auto *C = dyn_cast_or_null<ConstantInt>(
+    if (auto *C = dyn_cast_if_present<ConstantInt>(
             simplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
@@ -1719,7 +1718,7 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
   Constant *Res = nullptr;
   if (Val.isConstant()) {
     Res = ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL, TLI);
-    if (ConstantInt *ResCI = dyn_cast_or_null<ConstantInt>(Res))
+    if (ConstantInt *ResCI = dyn_cast_if_present<ConstantInt>(Res))
       return ResCI->isZero() ? LazyValueInfo::False : LazyValueInfo::True;
     return LazyValueInfo::Unknown;
   }

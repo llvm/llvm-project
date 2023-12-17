@@ -24,10 +24,9 @@ namespace llvm {
 namespace orc {
 
 CtorDtorIterator::CtorDtorIterator(const GlobalVariable *GV, bool End)
-  : InitList(
-      GV ? dyn_cast_or_null<ConstantArray>(GV->getInitializer()) : nullptr),
-    I((InitList && End) ? InitList->getNumOperands() : 0) {
-}
+    : InitList(GV ? dyn_cast_if_present<ConstantArray>(GV->getInitializer())
+                  : nullptr),
+      I((InitList && End) ? InitList->getNumOperands() : 0) {}
 
 bool CtorDtorIterator::operator==(const CtorDtorIterator &Other) const {
   assert(InitList == Other.InitList && "Incomparable iterators.");
@@ -58,10 +57,10 @@ CtorDtorIterator::Element CtorDtorIterator::operator*() const {
 
   // Extract function pointer, pulling off any casts.
   while (FuncC) {
-    if (Function *F = dyn_cast_or_null<Function>(FuncC)) {
+    if (Function *F = dyn_cast_if_present<Function>(FuncC)) {
       Func = F;
       break;
-    } else if (ConstantExpr *CE = dyn_cast_or_null<ConstantExpr>(FuncC)) {
+    } else if (ConstantExpr *CE = dyn_cast_if_present<ConstantExpr>(FuncC)) {
       if (CE->isCast())
         FuncC = CE->getOperand(0);
       else

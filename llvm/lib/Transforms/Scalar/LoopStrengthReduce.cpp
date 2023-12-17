@@ -2492,7 +2492,7 @@ LSRInstance::OptimizeLoopTermCond() {
               A = SE.getSignExtendExpr(A, B->getType());
           }
           if (const SCEVConstant *D =
-                dyn_cast_or_null<SCEVConstant>(getExactSDiv(B, A, SE))) {
+                  dyn_cast_if_present<SCEVConstant>(getExactSDiv(B, A, SE))) {
             const ConstantInt *C = D->getValue();
             // Stride of one or negative one can have reuse with non-addresses.
             if (C->isOne() || C->isMinusOne())
@@ -2738,15 +2738,12 @@ void LSRInstance::CollectInterestingTypesAndFactors() {
         else
           OldStride = SE.getSignExtendExpr(OldStride, NewStride->getType());
       }
-      if (const SCEVConstant *Factor =
-            dyn_cast_or_null<SCEVConstant>(getExactSDiv(NewStride, OldStride,
-                                                        SE, true))) {
+      if (const SCEVConstant *Factor = dyn_cast_if_present<SCEVConstant>(
+              getExactSDiv(NewStride, OldStride, SE, true))) {
         if (Factor->getAPInt().getSignificantBits() <= 64 && !Factor->isZero())
           Factors.insert(Factor->getAPInt().getSExtValue());
-      } else if (const SCEVConstant *Factor =
-                   dyn_cast_or_null<SCEVConstant>(getExactSDiv(OldStride,
-                                                               NewStride,
-                                                               SE, true))) {
+      } else if (const SCEVConstant *Factor = dyn_cast_if_present<SCEVConstant>(
+                     getExactSDiv(OldStride, NewStride, SE, true))) {
         if (Factor->getAPInt().getSignificantBits() <= 64 && !Factor->isZero())
           Factors.insert(Factor->getAPInt().getSExtValue());
       }

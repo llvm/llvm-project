@@ -873,7 +873,7 @@ struct DSEState {
         if (I.mayThrow() && !MA)
           ThrowingBlocks.insert(I.getParent());
 
-        auto *MD = dyn_cast_or_null<MemoryDef>(MA);
+        auto *MD = dyn_cast_if_present<MemoryDef>(MA);
         if (MD && MemDefs.size() < MemorySSADefsPerBlockLimit &&
             (getLocForWrite(&I) || isMemTerminatorInst(&I)))
           MemDefs.push_back(MD);
@@ -1854,7 +1854,8 @@ struct DSEState {
         Func != LibFunc_malloc)
       return false;
     // Gracefully handle malloc with unexpected memory attributes.
-    auto *MallocDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(Malloc));
+    auto *MallocDef =
+        dyn_cast_if_present<MemoryDef>(MSSA.getMemoryAccess(Malloc));
     if (!MallocDef)
       return false;
 

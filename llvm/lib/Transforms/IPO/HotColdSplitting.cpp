@@ -151,7 +151,7 @@ bool unlikelyExecuted(BasicBlock &BB) {
   // preceded by a call to a (possibly warm) noreturn call (e.g. longjmp).
   if (blockEndsInUnreachable(BB)) {
     if (auto *CI =
-            dyn_cast_or_null<CallInst>(BB.getTerminator()->getPrevNode()))
+            dyn_cast_if_present<CallInst>(BB.getTerminator()->getPrevNode()))
       if (CI->hasFnAttr(Attribute::NoReturn))
         return false;
     return true;

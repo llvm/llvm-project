@@ -1908,7 +1908,7 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   const char *UnsafeStackPtrVar = "__safestack_unsafe_stack_ptr";
   auto UnsafeStackPtr =
-      dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
+      dyn_cast_if_present<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
 
   Type *StackPtrTy = PointerType::getUnqual(M->getContext());
 
@@ -1999,7 +1999,7 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
     PointerType *PtrTy = PointerType::getUnqual(M.getContext());
     Constant *C = M.getOrInsertGlobal("__guard_local", PtrTy);
-    if (GlobalVariable *G = dyn_cast_or_null<GlobalVariable>(C))
+    if (GlobalVariable *G = dyn_cast_if_present<GlobalVariable>(C))
       G->setVisibility(GlobalValue::HiddenVisibility);
     return C;
   }

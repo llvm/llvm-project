@@ -304,7 +304,7 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
                                               const Twine &ErrMsg) {
-  const Instruction *I = dyn_cast_or_null<Instruction>(V);
+  const Instruction *I = dyn_cast_if_present<Instruction>(V);
   if (!V)
     return Ctx.emitError(ErrMsg);
 
@@ -3326,9 +3326,9 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
 
   // We may be able to ignore unreachable behind a noreturn call.
   if (DAG.getTarget().Options.NoTrapAfterNoreturn) {
-    if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode())) {
-      if (Call->doesNotReturn())
-        return;
+    if (const CallInst *Call = dyn_cast_if_present<CallInst>(I.getPrevNode())) {
+        if (Call->doesNotReturn())
+          return;
     }
   }
 
@@ -4124,7 +4124,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       if (C && isa<VectorType>(C->getType()))
         C = C->getSplatValue();
 
-      const auto *CI = dyn_cast_or_null<ConstantInt>(C);
+      const auto *CI = dyn_cast_if_present<ConstantInt>(C);
       if (CI && CI->isZero())
         continue;
       if (CI && !ElementScalable) {
@@ -7162,7 +7162,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     getUnderlyingObjects(ObjectPtr, Allocas);
 
     for (const Value *Alloca : Allocas) {
-      const AllocaInst *LifetimeObject = dyn_cast_or_null<AllocaInst>(Alloca);
+      const AllocaInst *LifetimeObject =
+          dyn_cast_if_present<AllocaInst>(Alloca);
 
       // Could not find an Alloca.
       if (!LifetimeObject)
@@ -9225,7 +9226,7 @@ public:
 static bool isFunction(SDValue Op) {
   if (Op && Op.getOpcode() == ISD::GlobalAddress) {
     if (auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
-      auto Fn = dyn_cast_or_null<Function>(GA->getGlobal());
+      auto Fn = dyn_cast_if_present<Function>(GA->getGlobal());
 
       // In normal "call dllimport func" instruction (non-inlineasm) it force
       // indirect access by specifing call opcode. And usually specially print

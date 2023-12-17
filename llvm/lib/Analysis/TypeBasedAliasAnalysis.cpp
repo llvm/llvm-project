@@ -167,7 +167,7 @@ public:
 
     if (Node->getNumOperands() < 2)
       return TBAANodeImpl<MDNodeTy>();
-    MDNodeTy *P = dyn_cast_or_null<MDNodeTy>(Node->getOperand(1));
+    MDNodeTy *P = dyn_cast_if_present<MDNodeTy>(Node->getOperand(1));
     if (!P)
       return TBAANodeImpl<MDNodeTy>();
     // Ok, this node has a valid parent. Return it.
@@ -220,11 +220,11 @@ public:
   }
 
   MDNodeTy *getBaseType() const {
-    return dyn_cast_or_null<MDNode>(Node->getOperand(0));
+    return dyn_cast_if_present<MDNode>(Node->getOperand(0));
   }
 
   MDNodeTy *getAccessType() const {
-    return dyn_cast_or_null<MDNode>(Node->getOperand(1));
+    return dyn_cast_if_present<MDNode>(Node->getOperand(1));
   }
 
   uint64_t getOffset() const {
@@ -323,7 +323,7 @@ public:
                 ? 0
                 : mdconst::extract<ConstantInt>(Operands[2])->getZExtValue();
         Offset -= Cur;
-        MDNode *P = dyn_cast_or_null<MDNode>(Operands[1]);
+        MDNode *P = dyn_cast_if_present<MDNode>(Operands[1]);
         if (!P)
           return TBAAStructTypeNode();
         return TBAAStructTypeNode(P);
@@ -353,7 +353,7 @@ public:
     uint64_t Cur =
         mdconst::extract<ConstantInt>(Operands[TheIdx + 1])->getZExtValue();
     Offset -= Cur;
-    MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
+    MDNode *P = dyn_cast_if_present<MDNode>(Operands[TheIdx]);
     if (!P)
       return TBAAStructTypeNode();
     return TBAAStructTypeNode(P);

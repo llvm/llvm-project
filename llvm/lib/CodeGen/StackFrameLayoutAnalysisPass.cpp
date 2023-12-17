@@ -220,7 +220,7 @@ struct StackFrameLayoutAnalysisPass : public MachineFunctionPass {
         for (MachineMemOperand *MO : MI.memoperands()) {
           if (!MO->isStore())
             continue;
-          auto *FI = dyn_cast_or_null<FixedStackPseudoSourceValue>(
+          auto *FI = dyn_cast_if_present<FixedStackPseudoSourceValue>(
               MO->getPseudoValue());
           if (!FI)
             continue;

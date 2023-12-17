@@ -966,7 +966,7 @@ TEST_F(IRBuilderTest, appendDebugInfo) {
     for (auto *IE : CU->getImportedEntities())
       Names.push_back(IE->getName());
     for (auto *Node : CU->getMacros())
-      if (auto *MN = dyn_cast_or_null<DIMacro>(Node))
+      if (auto *MN = dyn_cast_if_present<DIMacro>(Node))
         Names.push_back(MN->getName());
     return Names;
   };

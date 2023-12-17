@@ -594,7 +594,7 @@ void PruningFunctionCloner::CloneBlock(
       // Or is a known constant in the caller...
       if (!Cond) {
         Value *V = VMap.lookup(BI->getCondition());
-        Cond = dyn_cast_or_null<ConstantInt>(V);
+        Cond = dyn_cast_if_present<ConstantInt>(V);
       }
 
       // Constant fold to uncond branch!
@@ -610,7 +610,7 @@ void PruningFunctionCloner::CloneBlock(
     ConstantInt *Cond = dyn_cast<ConstantInt>(SI->getCondition());
     if (!Cond) { // Or known constant after constant prop in the callee...
       Value *V = VMap.lookup(SI->getCondition());
-      Cond = dyn_cast_or_null<ConstantInt>(V);
+      Cond = dyn_cast_if_present<ConstantInt>(V);
     }
     if (Cond) { // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
@@ -839,7 +839,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // Note that we must test the size on each iteration, the worklist can grow.
   for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
     const Value *OrigV = Worklist[Idx];
-    auto *I = dyn_cast_or_null<Instruction>(VMap.lookup(OrigV));
+    auto *I = dyn_cast_if_present<Instruction>(VMap.lookup(OrigV));
     if (!I)
       continue;
 

@@ -891,8 +891,8 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
   for (const auto &Entry : VMap) {
     // See if this is a call that has been inlined and remapped, and not
     // simplified away in the process.
-    auto *OrigCall = dyn_cast_or_null<CallBase>(Entry.first);
-    auto *ClonedCall = dyn_cast_or_null<CallBase>(Entry.second);
+    auto *OrigCall = dyn_cast_if_present<CallBase>(Entry.first);
+    auto *ClonedCall = dyn_cast_if_present<CallBase>(Entry.second);
     if (!OrigCall || !ClonedCall)
       continue;
     // If the inlined callsite did not have any callsite metadata, then it isn't
@@ -1390,7 +1390,7 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // Check that the cloned RetVal exists and is a call, otherwise we cannot
     // add the attributes on the cloned RetVal. Simplification during inlining
     // could have transformed the cloned instruction.
-    auto *NewRetVal = dyn_cast_or_null<CallBase>(VMap.lookup(RetVal));
+    auto *NewRetVal = dyn_cast_if_present<CallBase>(VMap.lookup(RetVal));
     if (!NewRetVal)
       continue;
     // Backward propagation of attributes to the returned value may be incorrect
@@ -1672,7 +1672,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     // reference inlined-at locations.
     auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
                               &IANodes](Metadata *MD) -> Metadata * {
-      if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+      if (auto *Loc = dyn_cast_if_present<DILocation>(MD))
         return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
       return MD;
     };
@@ -1905,7 +1905,7 @@ void llvm::updateProfileCallee(
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
     for (auto Entry : *VMap)
       if (isa<CallInst>(Entry.first))
-        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
+        if (auto *CI = dyn_cast_if_present<CallInst>(Entry.second))
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
   }
 
@@ -2296,7 +2296,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       SmallVector<OperandBundleDef, 2> OpDefs;
 
       for (auto &VH : InlinedFunctionInfo.OperandBundleCallSites) {
-        CallBase *ICS = dyn_cast_or_null<CallBase>(VH);
+        CallBase *ICS = dyn_cast_if_present<CallBase>(VH);
         if (!ICS)
           continue; // instruction was DCE'd or RAUW'ed to undef
 
@@ -2733,7 +2733,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
       // Delete the old return and any preceding bitcast.
       BasicBlock *CurBB = RI->getParent();
-      auto *OldCast = dyn_cast_or_null<BitCastInst>(RI->getReturnValue());
+      auto *OldCast = dyn_cast_if_present<BitCastInst>(RI->getReturnValue());
       RI->eraseFromParent();
       if (OldCast)
         OldCast->eraseFromParent();

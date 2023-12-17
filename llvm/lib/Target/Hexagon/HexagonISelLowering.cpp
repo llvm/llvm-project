@@ -3825,7 +3825,7 @@ bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
     return false;
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(BO.first)) {
     auto &HTM = static_cast<const HexagonTargetMachine&>(getTargetMachine());
-    const auto *GO = dyn_cast_or_null<const GlobalObject>(GA->getGlobal());
+    const auto *GO = dyn_cast_if_present<const GlobalObject>(GA->getGlobal());
     return !GO || !HTM.getObjFileLowering()->isGlobalInSmallSection(GO, HTM);
   }
   return true;

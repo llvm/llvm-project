@@ -3414,7 +3414,8 @@ static unsigned getHiPELiteral(NamedMDNode *HiPELiteralsMD,
     ValueAsMetadata *NodeVal = dyn_cast<ValueAsMetadata>(Node->getOperand(1));
     if (!NodeName || !NodeVal)
       continue;
-    ConstantInt *ValConst = dyn_cast_or_null<ConstantInt>(NodeVal->getValue());
+    ConstantInt *ValConst =
+        dyn_cast_if_present<ConstantInt>(NodeVal->getValue());
     if (ValConst && NodeName->getString() == LiteralName) {
       return ValConst->getZExtValue();
     }

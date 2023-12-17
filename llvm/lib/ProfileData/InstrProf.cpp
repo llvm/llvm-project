@@ -1312,7 +1312,8 @@ bool isIRPGOFlagSet(const Module *M) {
   if (!IRInstrVar->hasInitializer())
     return false;
 
-  auto *InitVal = dyn_cast_or_null<ConstantInt>(IRInstrVar->getInitializer());
+  auto *InitVal =
+      dyn_cast_if_present<ConstantInt>(IRInstrVar->getInitializer());
   if (!InitVal)
     return false;
   return (InitVal->getZExtValue() & VARIANT_MASK_IR_PROF) != 0;

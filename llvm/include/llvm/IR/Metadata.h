@@ -683,7 +683,7 @@ dyn_extract(Y &&MD) {
 template <class X, class Y>
 inline std::enable_if_t<detail::IsValidPointer<X, Y>::value, X *>
 dyn_extract_or_null(Y &&MD) {
-  if (auto *V = dyn_cast_or_null<ConstantAsMetadata>(MD))
+  if (auto *V = dyn_cast_if_present<ConstantAsMetadata>(MD))
     return dyn_cast<X>(V->getValue());
   return nullptr;
 }
@@ -1539,11 +1539,11 @@ public:
   const MDNode *getDomain() const {
     if (Node->getNumOperands() < 2)
       return nullptr;
-    return dyn_cast_or_null<MDNode>(Node->getOperand(1));
+    return dyn_cast_if_present<MDNode>(Node->getOperand(1));
   }
   StringRef getName() const {
     if (Node->getNumOperands() > 2)
-      if (MDString *N = dyn_cast_or_null<MDString>(Node->getOperand(2)))
+      if (MDString *N = dyn_cast_if_present<MDString>(Node->getOperand(2)))
         return N->getString();
     return StringRef();
   }

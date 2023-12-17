@@ -1456,7 +1456,7 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
       return false;
   } else {
     auto *CV = cast<ConstantDataVector>(Idxs[0]);
-    CI = dyn_cast_or_null<ConstantInt>(CV->getSplatValue());
+    CI = dyn_cast_if_present<ConstantInt>(CV->getSplatValue());
     if (!CI || !CI->isOne())
       return false;
   }

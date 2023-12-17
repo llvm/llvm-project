@@ -1198,7 +1198,7 @@ bool LoopVectorizationLegality::isInvariantAddressOfReduction(Value *V) {
 
 bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
   Value *In0 = const_cast<Value *>(V);
-  PHINode *PN = dyn_cast_or_null<PHINode>(In0);
+  PHINode *PN = dyn_cast_if_present<PHINode>(In0);
   if (!PN)
     return false;
 

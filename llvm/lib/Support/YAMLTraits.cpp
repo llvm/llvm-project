@@ -127,7 +127,7 @@ void Input::beginMapping() {
   if (EC)
     return;
   // CurrentNode can be null if the document is empty.
-  MapHNode *MN = dyn_cast_or_null<MapHNode>(CurrentNode);
+  MapHNode *MN = dyn_cast_if_present<MapHNode>(CurrentNode);
   if (MN) {
     MN->ValidKeys.clear();
   }
@@ -191,7 +191,7 @@ void Input::endMapping() {
   if (EC)
     return;
   // CurrentNode can be null if the document is empty.
-  MapHNode *MN = dyn_cast_or_null<MapHNode>(CurrentNode);
+  MapHNode *MN = dyn_cast_if_present<MapHNode>(CurrentNode);
   if (!MN)
     return;
   for (const auto &NN : MN->Mapping) {
@@ -431,7 +431,7 @@ Input::HNode *Input::createHNodes(Node *N) {
     auto mapHNode = new (MapHNodeAllocator.Allocate()) MapHNode(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
-      ScalarNode *Key = dyn_cast_or_null<ScalarNode>(KeyNode);
+      ScalarNode *Key = dyn_cast_if_present<ScalarNode>(KeyNode);
       Node *Value = KVN.getValue();
       if (!Key || !Value) {
         if (!Key)

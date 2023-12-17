@@ -31,7 +31,7 @@ static bool convertAnnotation2Metadata(Module &M) {
     return false;
 
   auto *Annotations = M.getGlobalVariable("llvm.global.annotations");
-  auto *C = dyn_cast_or_null<Constant>(Annotations);
+  auto *C = dyn_cast_if_present<Constant>(Annotations);
   if (!C || C->getNumOperands() != 1)
     return false;
 

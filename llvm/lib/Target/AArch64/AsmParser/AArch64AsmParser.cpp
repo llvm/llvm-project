@@ -4897,7 +4897,7 @@ bool AArch64AsmParser::parseImmExpr(int64_t &Out) {
   SMLoc L = getLoc();
   if (check(getParser().parseExpression(Expr), L, "expected expression"))
     return true;
-  const MCConstantExpr *Value = dyn_cast_or_null<MCConstantExpr>(Expr);
+  const MCConstantExpr *Value = dyn_cast_if_present<MCConstantExpr>(Expr);
   if (check(!Value, L, "expected constant expression"))
     return true;
   Out = Value->getValue();
@@ -6984,7 +6984,7 @@ bool AArch64AsmParser::parseDirectiveInst(SMLoc Loc) {
     const MCExpr *Expr = nullptr;
     if (check(getParser().parseExpression(Expr), L, "expected expression"))
       return true;
-    const MCConstantExpr *Value = dyn_cast_or_null<MCConstantExpr>(Expr);
+    const MCConstantExpr *Value = dyn_cast_if_present<MCConstantExpr>(Expr);
     if (check(!Value, L, "expected constant expression"))
       return true;
     getTargetStreamer().emitInst(Value->getValue());

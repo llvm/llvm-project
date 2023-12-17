@@ -6176,7 +6176,7 @@ bool ARMAsmParser::parseImmExpr(int64_t &Out) {
   SMLoc L = getParser().getTok().getLoc();
   if (check(getParser().parseExpression(Expr), L, "expected expression"))
     return true;
-  const MCConstantExpr *Value = dyn_cast_or_null<MCConstantExpr>(Expr);
+  const MCConstantExpr *Value = dyn_cast_if_present<MCConstantExpr>(Expr);
   if (check(!Value, L, "expected constant expression"))
     return true;
   Out = Value->getValue();
@@ -11939,7 +11939,7 @@ bool ARMAsmParser::parseDirectiveInst(SMLoc Loc, char Suffix) {
     const MCExpr *Expr;
     if (getParser().parseExpression(Expr))
       return true;
-    const MCConstantExpr *Value = dyn_cast_or_null<MCConstantExpr>(Expr);
+    const MCConstantExpr *Value = dyn_cast_if_present<MCConstantExpr>(Expr);
     if (!Value) {
       return Error(Loc, "expected constant expression");
     }

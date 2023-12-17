@@ -219,8 +219,8 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
            MMOI != EE; ++MMOI) {
         MachineMemOperand *MMO = *MMOI;
         if (const FixedStackPseudoSourceValue *FSV =
-            dyn_cast_or_null<FixedStackPseudoSourceValue>(
-                MMO->getPseudoValue())) {
+                dyn_cast_if_present<FixedStackPseudoSourceValue>(
+                    MMO->getPseudoValue())) {
           int FI = FSV->getFrameIndex();
           if (FI >= 0)
             SSRefs[FI].push_back(MMO);

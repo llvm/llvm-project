@@ -716,7 +716,7 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
   auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
-  if (auto FSPV = dyn_cast_or_null<FixedStackPseudoSourceValue>(PSV)) {
+  if (auto FSPV = dyn_cast_if_present<FixedStackPseudoSourceValue>(PSV)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     return commonAlignment(MFI.getObjectAlign(FSPV->getFrameIndex()),
                            MPO.Offset);

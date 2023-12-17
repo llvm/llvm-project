@@ -414,7 +414,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // be sure to emit its type and function declaration here. It will be hoisted
   // globally later.
   if (Info.Callee.isGlobal()) {
-    CF = dyn_cast_or_null<const Function>(Info.Callee.getGlobal());
+    CF = dyn_cast_if_present<const Function>(Info.Callee.getGlobal());
     // TODO: support constexpr casts and indirect calls.
     if (CF == nullptr)
       return false;

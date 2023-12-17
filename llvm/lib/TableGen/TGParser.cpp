@@ -972,7 +972,7 @@ bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
   if (!CurVal)
     CurVal = ParseValue(nullptr);
 
-  IntInit *II = dyn_cast_or_null<IntInit>(CurVal);
+  IntInit *II = dyn_cast_if_present<IntInit>(CurVal);
   if (!II)
     return TokError("expected integer or bitrange");
 
@@ -992,7 +992,7 @@ bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
     Lex.Lex(); // eat
 
     Init *I_End = ParseValue(nullptr);
-    IntInit *II_End = dyn_cast_or_null<IntInit>(I_End);
+    IntInit *II_End = dyn_cast_if_present<IntInit>(I_End);
     if (!II_End) {
       TokError("expected integer value as end of range");
       return true;

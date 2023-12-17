@@ -49,7 +49,7 @@ ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {
   auto TM = dyn_cast<ValueAsMetadata>(MD->getOperand(1));
   if (!TM)
     return nullptr;
-  auto C = dyn_cast_or_null<ConstantInt>(TM->getValue());
+  auto C = dyn_cast_if_present<ConstantInt>(TM->getValue());
   if (!C) return nullptr;
   // We are looking for i64 constants.
   if (C->getBitWidth() != 64) return nullptr;

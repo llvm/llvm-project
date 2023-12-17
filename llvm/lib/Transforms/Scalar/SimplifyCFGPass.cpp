@@ -187,7 +187,7 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
     // of the value computed by experimental_deoptimize.
     // I.e., we can not change `ret` to `br` for this block.
     if (auto *CI =
-            dyn_cast_or_null<CallInst>(Term->getPrevNonDebugInstruction())) {
+            dyn_cast_if_present<CallInst>(Term->getPrevNonDebugInstruction())) {
       if (Function *F = CI->getCalledFunction())
         if (Intrinsic::ID ID = F->getIntrinsicID())
           if (ID == Intrinsic::experimental_deoptimize)

@@ -166,7 +166,7 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
     for (auto &GlobSummary : GlobalList.second.SummaryList) {
-      auto *Summary = dyn_cast_or_null<FunctionSummary>(GlobSummary.get());
+      auto *Summary = dyn_cast_if_present<FunctionSummary>(GlobSummary.get());
       if (!Summary)
         // Ignore global variable, focus on functions
         continue;
@@ -481,7 +481,7 @@ static std::string fflagsToString(FunctionSummary::FFlags F) {
 
 // Get string representation of function instruction count and flags.
 static std::string getSummaryAttributes(GlobalValueSummary* GVS) {
-  auto *FS = dyn_cast_or_null<FunctionSummary>(GVS);
+  auto *FS = dyn_cast_if_present<FunctionSummary>(GVS);
   if (!FS)
     return "";
 
@@ -665,12 +665,12 @@ void ModuleSummaryIndex::exportToDot(
         Draw(SummaryIt.first, R.getGUID(),
              R.isWriteOnly() ? -1 : (R.isReadOnly() ? -2 : -3));
 
-      if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
+      if (auto *AS = dyn_cast_if_present<AliasSummary>(SummaryIt.second)) {
         Draw(SummaryIt.first, AS->getAliaseeGUID(), -4);
         continue;
       }
 
-      if (auto *FS = dyn_cast_or_null<FunctionSummary>(SummaryIt.second))
+      if (auto *FS = dyn_cast_if_present<FunctionSummary>(SummaryIt.second))
         for (auto &CGEdge : FS->calls())
           Draw(SummaryIt.first, CGEdge.first.getGUID(),
                static_cast<int>(CGEdge.second.Hotness));

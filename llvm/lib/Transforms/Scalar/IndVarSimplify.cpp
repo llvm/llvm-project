@@ -405,7 +405,7 @@ bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
 
   bool Changed = false;
   for (WeakTrackingVH &PHI : PHIs)
-    if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHI))
+    if (PHINode *PN = dyn_cast_if_present<PHINode>(&*PHI))
       Changed |= handleFloatingPointIV(L, PN);
 
   // If the loop previously had floating-point IV, ScalarEvolution
@@ -2015,9 +2015,9 @@ bool IndVarSimplify::run(Loop *L) {
   while (!DeadInsts.empty()) {
     Value *V = DeadInsts.pop_back_val();
 
-    if (PHINode *PHI = dyn_cast_or_null<PHINode>(V))
+    if (PHINode *PHI = dyn_cast_if_present<PHINode>(V))
       Changed |= RecursivelyDeleteDeadPHINode(PHI, TLI, MSSAU.get());
-    else if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
+    else if (Instruction *Inst = dyn_cast_if_present<Instruction>(V))
       Changed |=
           RecursivelyDeleteTriviallyDeadInstructions(Inst, TLI, MSSAU.get());
   }

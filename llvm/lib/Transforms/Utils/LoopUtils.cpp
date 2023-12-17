@@ -1888,7 +1888,7 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 
     InstToDuplicate.push_back(I);
     if (MemoryAccess *MA = MSSA.getMemoryAccess(I)) {
-      if (auto *MemUse = dyn_cast_or_null<MemoryUse>(MA)) {
+      if (auto *MemUse = dyn_cast_if_present<MemoryUse>(MA)) {
         // Queue the defining access to check for alias checks.
         AccessesToCheck.push_back(MemUse->getDefiningAccess());
         AccessedLocs.push_back(MemoryLocation::get(I));

@@ -563,7 +563,8 @@ public:
   /// ARM streamer overrides it to add the appropriate mapping symbol ($d) if
   /// necessary.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
-    if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
+    if (const MCSymbolRefExpr *SRE =
+            dyn_cast_if_present<MCSymbolRefExpr>(Value)) {
       if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
@@ -645,7 +646,7 @@ private:
       // This is a tentative symbol, it won't really be emitted until it's
       // actually needed.
       ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
-      auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+      auto *DF = dyn_cast_if_present<MCDataFragment>(getCurrentFragment());
       if (!DF)
         return;
       EMS->Loc = SMLoc();

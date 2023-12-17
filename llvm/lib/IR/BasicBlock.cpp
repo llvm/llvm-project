@@ -370,7 +370,7 @@ const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
   if (!RI || RI == &InstList.front())
     return nullptr;
 
-  if (auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode()))
+  if (auto *CI = dyn_cast_if_present<CallInst>(RI->getPrevNode()))
     if (Function *F = CI->getCalledFunction())
       if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize)
         return CI;

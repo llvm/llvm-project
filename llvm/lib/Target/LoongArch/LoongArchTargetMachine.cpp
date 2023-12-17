@@ -109,7 +109,7 @@ LoongArchTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     auto ABIName = Options.MCOptions.getABIName();
-    if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
+    if (const MDString *ModuleTargetABI = dyn_cast_if_present<MDString>(
             F.getParent()->getModuleFlag("target-abi"))) {
       auto TargetABI = LoongArchABI::getTargetABI(ABIName);
       if (TargetABI != LoongArchABI::ABI_Unknown &&

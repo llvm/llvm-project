@@ -1306,7 +1306,7 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // Treat memory accesses to promotable allocas as non-interesting since they
   // will not cause memory violations. This greatly speeds up the instrumented
   // executable at -O0.
-  if (auto AI = dyn_cast_or_null<AllocaInst>(Ptr))
+  if (auto AI = dyn_cast_if_present<AllocaInst>(Ptr))
     if (ClSkipPromotableAllocas && !isInterestingAlloca(*AI))
       return true;
 

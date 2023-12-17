@@ -708,7 +708,7 @@ void MDNode::Header::resizeSmallToLarge(size_t NumOps) {
 }
 
 static bool isOperandUnresolved(Metadata *Op) {
-  if (auto *N = dyn_cast_or_null<MDNode>(Op))
+  if (auto *N = dyn_cast_if_present<MDNode>(Op))
     return !N->isResolved();
   return false;
 }
@@ -805,7 +805,7 @@ void MDNode::resolveCycles() {
 
   // Resolve all operands.
   for (const auto &Op : operands()) {
-    auto *N = dyn_cast_or_null<MDNode>(Op);
+    auto *N = dyn_cast_if_present<MDNode>(Op);
     if (!N)
       continue;
 
@@ -1058,7 +1058,7 @@ void MDNode::setOperand(unsigned I, Metadata *New) {
 static MDNode *getOrSelfReference(LLVMContext &Context,
                                   ArrayRef<Metadata *> Ops) {
   if (!Ops.empty())
-    if (MDNode *N = dyn_cast_or_null<MDNode>(Ops[0]))
+    if (MDNode *N = dyn_cast_if_present<MDNode>(Ops[0]))
       if (N->getNumOperands() == Ops.size() && N == N->getOperand(0)) {
         for (unsigned I = 1, E = Ops.size(); I != E; ++I)
           if (Ops[I] != N->getOperand(I))

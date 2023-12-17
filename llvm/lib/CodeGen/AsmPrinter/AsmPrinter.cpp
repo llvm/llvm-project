@@ -3372,7 +3372,7 @@ static void emitGlobalConstantVector(const DataLayout &DL,
     // here, just use the existing code in ConstantFolding.
     Type *IntT =
         IntegerType::get(CV->getContext(), DL.getTypeSizeInBits(CV->getType()));
-    ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+    ConstantInt *CI = dyn_cast_if_present<ConstantInt>(ConstantFoldConstant(
         ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT), DL));
     if (!CI) {
       report_fatal_error(
@@ -3570,7 +3570,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   if (!AP.GlobalGOTEquivs.count(GOTEquivSym))
     return;
 
-  const GlobalValue *BaseGV = dyn_cast_or_null<GlobalValue>(BaseCst);
+  const GlobalValue *BaseGV = dyn_cast_if_present<GlobalValue>(BaseCst);
   if (!BaseGV)
     return;
 

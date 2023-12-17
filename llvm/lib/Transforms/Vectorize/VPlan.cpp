@@ -90,14 +90,14 @@ VPValue::~VPValue() {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+  if (const VPRecipeBase *R = dyn_cast_if_present<VPRecipeBase>(Def))
     R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
+  const VPRecipeBase *Instr = dyn_cast_if_present<VPRecipeBase>(this->Def);
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
@@ -105,7 +105,7 @@ void VPValue::dump() const {
 }
 
 void VPDef::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this);
+  const VPRecipeBase *Instr = dyn_cast_if_present<VPRecipeBase>(this);
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), "", SlotTracker);
@@ -1218,7 +1218,8 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);
 
-      auto *Inst = dyn_cast_or_null<Instruction>(VPInst->getUnderlyingValue());
+      auto *Inst =
+          dyn_cast_if_present<Instruction>(VPInst->getUnderlyingValue());
       if (!Inst)
         continue;
       auto *IG = IAI.getInterleaveGroup(Inst);

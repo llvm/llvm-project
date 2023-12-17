@@ -379,7 +379,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
       continue;
     }
 
-    auto *COp = dyn_cast_or_null<ConstantInt>(CElt);
+    auto *COp = dyn_cast_if_present<ConstantInt>(CElt);
     if (!COp)
       return nullptr;
 
@@ -1696,9 +1696,9 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
 
   // See if we're dealing with constant values.
   auto *C0 = dyn_cast<Constant>(Op0);
-  auto *CI0 =
-      C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
-         : nullptr;
+  auto *CI0 = C0 ? dyn_cast_if_present<ConstantInt>(
+                       C0->getAggregateElement((unsigned)0))
+                 : nullptr;
 
   // Attempt to constant fold.
   if (CILength && CIIndex) {
@@ -1830,12 +1830,12 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
   // See if we're dealing with constant values.
   auto *C0 = dyn_cast<Constant>(Op0);
   auto *C1 = dyn_cast<Constant>(Op1);
-  auto *CI00 =
-      C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
-         : nullptr;
-  auto *CI10 =
-      C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
-         : nullptr;
+  auto *CI00 = C0 ? dyn_cast_if_present<ConstantInt>(
+                        C0->getAggregateElement((unsigned)0))
+                  : nullptr;
+  auto *CI10 = C1 ? dyn_cast_if_present<ConstantInt>(
+                        C1->getAggregateElement((unsigned)0))
+                  : nullptr;
 
   // Constant Fold - insert bottom Length bits starting at the Index'th bit.
   if (CI00 && CI10) {
@@ -2538,12 +2538,12 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // See if we're dealing with constant values.
     auto *C1 = dyn_cast<Constant>(Op1);
-    auto *CILength =
-        C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
-           : nullptr;
-    auto *CIIndex =
-        C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
-           : nullptr;
+    auto *CILength = C1 ? dyn_cast_if_present<ConstantInt>(
+                              C1->getAggregateElement((unsigned)0))
+                        : nullptr;
+    auto *CIIndex = C1 ? dyn_cast_if_present<ConstantInt>(
+                             C1->getAggregateElement((unsigned)1))
+                       : nullptr;
 
     // Attempt to simplify to a constant, shuffle vector or EXTRQI call.
     if (Value *V = simplifyX86extrq(II, Op0, CILength, CIIndex, IC.Builder)) {
@@ -2603,9 +2603,9 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // See if we're dealing with constant values.
     auto *C1 = dyn_cast<Constant>(Op1);
-    auto *CI11 =
-        C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
-           : nullptr;
+    auto *CI11 = C1 ? dyn_cast_if_present<ConstantInt>(
+                          C1->getAggregateElement((unsigned)1))
+                    : nullptr;
 
     // Attempt to simplify to a constant, shuffle vector or INSERTQI call.
     if (CI11) {

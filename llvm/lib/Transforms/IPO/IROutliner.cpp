@@ -733,7 +733,7 @@ static void moveFunctionData(Function &Old, Function &New,
         // several locations.
         auto updateLoopInfoLoc = [&New](Metadata *MD) -> Metadata * {
           if (DISubprogram *SP = New.getSubprogram())
-            if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+            if (auto *Loc = dyn_cast_if_present<DILocation>(MD))
               return DILocation::get(New.getContext(), Loc->getLine(),
                                      Loc->getColumn(), SP, nullptr);
           return MD;

@@ -91,7 +91,7 @@ void getEquivalentPHIs(PHINodeTy &PN, VectorTy &PHIList) {
 
 static inline MDString *getRVInstMarker(Module &M) {
   const char *MarkerKey = getRVMarkerModuleFlagStr();
-  return dyn_cast_or_null<MDString>(M.getModuleFlag(MarkerKey));
+  return dyn_cast_if_present<MDString>(M.getModuleFlag(MarkerKey));
 }
 
 /// Create a call instruction with the correct funclet token. This should be

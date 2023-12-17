@@ -1017,7 +1017,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
       cast<FixedVectorType>(ValTy)->getNumElements() > 1) {
     FixedVectorType *VecValTy = cast<FixedVectorType>(ValTy);
-    FixedVectorType *VecCondTy = dyn_cast_or_null<FixedVectorType>(CondTy);
+    FixedVectorType *VecCondTy = dyn_cast_if_present<FixedVectorType>(CondTy);
     if (!VecCondTy)
       VecCondTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(VecValTy));
 

@@ -243,7 +243,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   int Levels = D->getLevels();
   for (int Level = 1; Level <= Levels; ++Level) {
     const SCEV *Distance = D->getDistance(Level);
-    const SCEVConstant *SCEVConst = dyn_cast_or_null<SCEVConstant>(Distance);
+    const SCEVConstant *SCEVConst = dyn_cast_if_present<SCEVConstant>(Distance);
 
     if (SCEVConst == nullptr) {
       LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: distance unknown\n");

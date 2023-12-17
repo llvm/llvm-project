@@ -6026,7 +6026,7 @@ static bool isNonZeroModBitWidthOrUndef(const MachineRegisterInfo &MRI,
       MRI, Reg,
       [=](const Constant *C) {
         // Null constant here means an undef.
-        const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(C);
+        const ConstantInt *CI = dyn_cast_if_present<ConstantInt>(C);
         return !CI || CI->getValue().urem(BW) != 0;
       },
       /*AllowUndefs*/ true);

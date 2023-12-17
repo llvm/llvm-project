@@ -2076,7 +2076,7 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
 
   // If the global has the toc-data attribute then fallback to DAG-ISEL.
   if (TM.getTargetTriple().isOSAIX())
-    if (const GlobalVariable *Var = dyn_cast_or_null<GlobalVariable>(GV))
+    if (const GlobalVariable *Var = dyn_cast_if_present<GlobalVariable>(GV))
       if (Var->hasAttribute("toc-data"))
         return false;
 

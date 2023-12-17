@@ -70,7 +70,7 @@ foo *bar::caz() { return cast_or_null<foo>(this); }
 
 foo *bar::daz() { return dyn_cast<foo>(this); }
 
-foo *bar::naz() { return dyn_cast_or_null<foo>(this); }
+foo *bar::naz() { return dyn_cast_if_present<foo>(this); }
 
 bar *fub();
 
@@ -233,13 +233,13 @@ TEST(CastingTest, dyn_cast) {
 // All these tests forward to dyn_cast_if_present, so they also provde an
 // effective test for its use cases.
 TEST(CastingTest, dyn_cast_or_null) {
-  const foo *F1 = dyn_cast_or_null<foo>(B2);
+  const foo *F1 = dyn_cast_if_present<foo>(B2);
   EXPECT_NE(F1, null_foo);
-  const foo *F2 = dyn_cast_or_null<foo>(B2);
+  const foo *F2 = dyn_cast_if_present<foo>(B2);
   EXPECT_NE(F2, null_foo);
-  const foo *F3 = dyn_cast_or_null<foo>(B4);
+  const foo *F3 = dyn_cast_if_present<foo>(B4);
   EXPECT_NE(F3, null_foo);
-  foo *F4 = dyn_cast_or_null<foo>(fub());
+  foo *F4 = dyn_cast_if_present<foo>(fub());
   EXPECT_EQ(F4, null_foo);
   foo *F5 = B1.naz();
   EXPECT_NE(F5, null_foo);
@@ -503,12 +503,12 @@ TEST(CastingTest, smart_dyn_cast) {
 }
 
 TEST(CastingTest, smart_dyn_cast_or_null) {
-  EXPECT_EQ(dyn_cast_or_null<pointer_wrappers::Derived>(MN), nullptr);
-  EXPECT_EQ(dyn_cast_or_null<pointer_wrappers::Derived>(CN), nullptr);
-  EXPECT_EQ(dyn_cast_or_null<pointer_wrappers::Derived>(MB), nullptr);
-  EXPECT_EQ(dyn_cast_or_null<pointer_wrappers::Derived>(CB), nullptr);
-  EXPECT_EQ(dyn_cast_or_null<pointer_wrappers::Derived>(MD), &D);
-  EXPECT_EQ(dyn_cast_or_null<pointer_wrappers::Derived>(CD), &D);
+  EXPECT_EQ(dyn_cast_if_present<pointer_wrappers::Derived>(MN), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<pointer_wrappers::Derived>(CN), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<pointer_wrappers::Derived>(MB), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<pointer_wrappers::Derived>(CB), nullptr);
+  EXPECT_EQ(dyn_cast_if_present<pointer_wrappers::Derived>(MD), &D);
+  EXPECT_EQ(dyn_cast_if_present<pointer_wrappers::Derived>(CD), &D);
 }
 
 } // end namespace pointer_wrappers

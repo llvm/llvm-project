@@ -133,7 +133,7 @@ bool LowerEmuTLS::addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   GlobalVariable *EmuTlsTmplVar = nullptr;
   if (InitValue) {
     std::string EmuTlsTmplName = ("__emutls_t." + GV->getName()).str();
-    EmuTlsTmplVar = dyn_cast_or_null<GlobalVariable>(
+    EmuTlsTmplVar = dyn_cast_if_present<GlobalVariable>(
         M.getOrInsertGlobal(EmuTlsTmplName, GVType));
     assert(EmuTlsTmplVar && "Failed to create emualted TLS initializer");
     EmuTlsTmplVar->setConstant(true);

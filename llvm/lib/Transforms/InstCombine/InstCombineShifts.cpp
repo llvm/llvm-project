@@ -106,7 +106,7 @@ Value *InstCombinerImpl::reassociateShiftAmtsOfTwoSameDirectionShifts(
     return nullptr;
 
   // Can we fold (ShAmt0+ShAmt1) ?
-  auto *NewShAmt = dyn_cast_or_null<Constant>(
+  auto *NewShAmt = dyn_cast_if_present<Constant>(
       simplifyAddInst(ShAmt0, ShAmt1, /*isNSW=*/false, /*isNUW=*/false,
                       SQ.getWithInstruction(Sh0)));
   if (!NewShAmt)
@@ -236,7 +236,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
       return nullptr;
 
     // Can we simplify (MaskShAmt+ShiftShAmt) ?
-    auto *SumOfShAmts = dyn_cast_or_null<Constant>(simplifyAddInst(
+    auto *SumOfShAmts = dyn_cast_if_present<Constant>(simplifyAddInst(
         MaskShAmt, ShiftShAmt, /*IsNSW=*/false, /*IsNUW=*/false, Q));
     if (!SumOfShAmts)
       return nullptr; // Did not simplify.
@@ -272,7 +272,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
       return nullptr;
 
     // Can we simplify (ShiftShAmt-MaskShAmt) ?
-    auto *ShAmtsDiff = dyn_cast_or_null<Constant>(simplifySubInst(
+    auto *ShAmtsDiff = dyn_cast_if_present<Constant>(simplifySubInst(
         ShiftShAmt, MaskShAmt, /*IsNSW=*/false, /*IsNUW=*/false, Q));
     if (!ShAmtsDiff)
       return nullptr; // Did not simplify.

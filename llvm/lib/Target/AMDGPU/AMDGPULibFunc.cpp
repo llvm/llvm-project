@@ -1006,8 +1006,8 @@ bool AMDGPULibFunc::isCompatibleSignature(const FunctionType *FuncTy) const {
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   std::string FuncName = fInfo.mangle();
-  Function *F = dyn_cast_or_null<Function>(
-    M->getValueSymbolTable().lookup(FuncName));
+  Function *F =
+      dyn_cast_if_present<Function>(M->getValueSymbolTable().lookup(FuncName));
   if (!F || F->isDeclaration())
     return nullptr;
 
@@ -1023,8 +1023,8 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
 FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
                                                   const AMDGPULibFunc &fInfo) {
   std::string const FuncName = fInfo.mangle();
-  Function *F = dyn_cast_or_null<Function>(
-    M->getValueSymbolTable().lookup(FuncName));
+  Function *F =
+      dyn_cast_if_present<Function>(M->getValueSymbolTable().lookup(FuncName));
 
   if (F) {
     if (F->hasFnAttribute(Attribute::NoBuiltin))

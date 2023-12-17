@@ -223,12 +223,12 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     if (!Region1->isReplicator())
       continue;
     auto *MiddleBasicBlock =
-        dyn_cast_or_null<VPBasicBlock>(Region1->getSingleSuccessor());
+        dyn_cast_if_present<VPBasicBlock>(Region1->getSingleSuccessor());
     if (!MiddleBasicBlock || !MiddleBasicBlock->empty())
       continue;
 
-    auto *Region2 =
-        dyn_cast_or_null<VPRegionBlock>(MiddleBasicBlock->getSingleSuccessor());
+    auto *Region2 = dyn_cast_if_present<VPRegionBlock>(
+        MiddleBasicBlock->getSingleSuccessor());
     if (!Region2 || !Region2->isReplicator())
       continue;
 
@@ -373,7 +373,7 @@ bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     auto *PredVPBB =
-        dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
+        dyn_cast_if_present<VPBasicBlock>(VPBB->getSinglePredecessor());
     if (PredVPBB && PredVPBB->getNumSuccessors() == 1)
       WorkList.push_back(VPBB);
   }
@@ -607,7 +607,8 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
 #ifndef NDEBUG
 static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
-  auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+  auto *Region =
+      dyn_cast_if_present<VPRegionBlock>(R->getParent()->getParent());
   if (Region && Region->isReplicator()) {
     assert(Region->getNumSuccessors() == 1 &&
            Region->getNumPredecessors() == 1 && "Expected SESE region!");
@@ -722,7 +723,7 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Fixed-order recurrences do not contain cycles, so this loop is guaranteed
     // to terminate.
     while (auto *PrevPhi =
-               dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
+               dyn_cast_if_present<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
       assert(PrevPhi->getParent() == FOR->getParent());
       assert(SeenPhis.insert(PrevPhi).second);
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
@@ -918,7 +919,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         for (VPValue *Op : R.operands()) {
           if (!Op->isLiveIn())
             continue;
-          auto *UV = dyn_cast_or_null<Instruction>(Op->getUnderlyingValue());
+          auto *UV = dyn_cast_if_present<Instruction>(Op->getUnderlyingValue());
           if (UV && MinBWs.contains(UV) && !ProcessedTruncs.contains(Op) &&
               all_of(Op->users(), [](VPUser *U) {
                 return !isa<VPWidenRecipe, VPWidenSelectRecipe>(U);

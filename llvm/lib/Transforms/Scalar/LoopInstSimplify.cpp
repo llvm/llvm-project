@@ -131,7 +131,7 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
         }
 
         if (MSSAU)
-          if (Instruction *SimpleI = dyn_cast_or_null<Instruction>(V))
+          if (Instruction *SimpleI = dyn_cast_if_present<Instruction>(V))
             if (MemoryAccess *MA = MSSA->getMemoryAccess(&I))
               if (MemoryAccess *ReplacementMA = MSSA->getMemoryAccess(SimpleI))
                 MA->replaceAllUsesWith(ReplacementMA);

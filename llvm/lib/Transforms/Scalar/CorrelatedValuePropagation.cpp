@@ -108,7 +108,7 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
     else
       C = LVI->getConstant(S->getCondition(), I);
 
-    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    auto *CI = dyn_cast_if_present<ConstantInt>(C);
     if (!CI)
       continue;
 

@@ -705,7 +705,7 @@ DIType *DIDerivedType::getClassType() const {
 uint32_t DIDerivedType::getVBPtrOffset() const {
   assert(getTag() == dwarf::DW_TAG_inheritance);
   if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
+    if (auto *CI = dyn_cast_if_present<ConstantInt>(CM->getValue()))
       return static_cast<uint32_t>(CI->getZExtValue());
   return 0;
 }

@@ -767,7 +767,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
   if (!Asm.CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-    MCDataFragment *Frag = dyn_cast_or_null<MCDataFragment>(
+    MCDataFragment *Frag = dyn_cast_if_present<MCDataFragment>(
         &*CGProfileSection->getFragmentList().begin());
     assert(Frag && "call graph profile section not reserved");
     Frag->getContents().clear();

@@ -206,7 +206,7 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
     return X86II::MO_COFFSTUB;
   }
 
-  const Function *F = dyn_cast_or_null<Function>(GV);
+  const Function *F = dyn_cast_if_present<Function>(GV);
 
   if (isTargetELF()) {
     if (is64Bit() && F && (CallingConv::X86_RegCall == F->getCallingConv()))

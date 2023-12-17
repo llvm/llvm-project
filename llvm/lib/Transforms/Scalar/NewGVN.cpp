@@ -1898,7 +1898,7 @@ NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
   // something from a previous comparison.
   for (const auto &Op : CI->operands()) {
     auto *PI = PredInfo->getPredicateInfoFor(Op);
-    if (const auto *PBranch = dyn_cast_or_null<PredicateBranch>(PI)) {
+    if (const auto *PBranch = dyn_cast_if_present<PredicateBranch>(PI)) {
       if (PI == LastPredInfo)
         continue;
       LastPredInfo = PI;
@@ -2148,7 +2148,7 @@ const MemoryAccess *NewGVN::getNextMemoryLeader(CongruenceClass *CC) const {
   // Make sure there will be a leader to find.
   assert(!CC->definesNoMemory() && "Can't get next leader if there is none");
   if (CC->getStoreCount() > 0) {
-    if (auto *NL = dyn_cast_or_null<StoreInst>(CC->getNextLeader().first))
+    if (auto *NL = dyn_cast_if_present<StoreInst>(CC->getNextLeader().first))
       return getMemoryAccess(NL);
     // Find the store with the minimum DFS number.
     auto *V = getMinDFSOfRange<Value>(make_filter_range(
@@ -2279,7 +2279,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
   // instructions before.
 
   // If it's not a memory use, set the MemoryAccess equivalence
-  auto *InstMA = dyn_cast_or_null<MemoryDef>(getMemoryAccess(I));
+  auto *InstMA = dyn_cast_if_present<MemoryDef>(getMemoryAccess(I));
   if (InstMA)
     moveMemoryToNewCongruenceClass(I, InstMA, OldClass, NewClass);
   ValueToClass[I] = NewClass;
@@ -2476,7 +2476,8 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
       if (auto *I = dyn_cast<Instruction>(Cond)) {
         SmallPtrSet<Value *, 4> Visited;
         auto Res = performSymbolicEvaluation(I, Visited);
-        if (const auto *CE = dyn_cast_or_null<ConstantExpression>(Res.Expr)) {
+        if (const auto *CE =
+                dyn_cast_if_present<ConstantExpression>(Res.Expr)) {
           CondEvaluated = CE->getConstantValue();
           addAdditionalUsers(Res, I);
         } else {
@@ -3611,7 +3612,7 @@ void NewGVN::convertClassToDFSOrdered(
     // If there is a phi node equivalent, add it
     if (auto *PN = RealToTemp.lookup(Def)) {
       auto *PHIE =
-          dyn_cast_or_null<PHIExpression>(ValueToExpression.lookup(Def));
+          dyn_cast_if_present<PHIExpression>(ValueToExpression.lookup(Def));
       if (PHIE) {
         VDDef.Def.setInt(false);
         VDDef.Def.setPointer(PN);
@@ -3879,7 +3880,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
     for (auto InstNum : BBPair.second) {
       auto *Inst = InstrFromDFSNum(InstNum);
       auto *PHI = dyn_cast<PHINode>(Inst);
-      PHI = PHI ? PHI : dyn_cast_or_null<PHINode>(RealToTemp.lookup(Inst));
+      PHI = PHI ? PHI : dyn_cast_if_present<PHINode>(RealToTemp.lookup(Inst));
       if (!PHI)
         continue;
       auto *BB = BBPair.first;
@@ -3962,7 +3963,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // We ignore void things because we can't get a value from them.
           if (Def && Def->getType()->isVoidTy())
             continue;
-          auto *DefInst = dyn_cast_or_null<Instruction>(Def);
+          auto *DefInst = dyn_cast_if_present<Instruction>(Def);
           if (DefInst && AllTempInstructions.count(DefInst)) {
             auto *PN = cast<PHINode>(DefInst);
 

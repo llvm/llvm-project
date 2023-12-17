@@ -163,7 +163,7 @@ bool ObjCARCContract::contractAutorelease(Function &F, Instruction *Autorelease,
   DependenceKind DK = Class == ARCInstKind::AutoreleaseRV
                           ? RetainAutoreleaseRVDep
                           : RetainAutoreleaseDep;
-  auto *Retain = dyn_cast_or_null<CallInst>(
+  auto *Retain = dyn_cast_if_present<CallInst>(
       findSingleDependency(DK, Arg, Autorelease->getParent(), Autorelease, PA));
 
   if (!Retain || GetBasicARCInstKind(Retain) != ARCInstKind::Retain ||

@@ -168,7 +168,7 @@ FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty) {
 // If it does not exist, return null.
 //
 Function *Module::getFunction(StringRef Name) const {
-  return dyn_cast_or_null<Function>(getNamedValue(Name));
+  return dyn_cast_if_present<Function>(getNamedValue(Name));
 }
 
 //===----------------------------------------------------------------------===//
@@ -185,7 +185,7 @@ Function *Module::getFunction(StringRef Name) const {
 GlobalVariable *Module::getGlobalVariable(StringRef Name,
                                           bool AllowLocal) const {
   if (GlobalVariable *Result =
-      dyn_cast_or_null<GlobalVariable>(getNamedValue(Name)))
+          dyn_cast_if_present<GlobalVariable>(getNamedValue(Name)))
     if (AllowLocal || !Result->hasLocalLinkage())
       return Result;
   return nullptr;
@@ -201,7 +201,7 @@ Constant *Module::getOrInsertGlobal(
     StringRef Name, Type *Ty,
     function_ref<GlobalVariable *()> CreateGlobalCallback) {
   // See if we have a definition for the specified global already.
-  GlobalVariable *GV = dyn_cast_or_null<GlobalVariable>(getNamedValue(Name));
+  GlobalVariable *GV = dyn_cast_if_present<GlobalVariable>(getNamedValue(Name));
   if (!GV)
     GV = CreateGlobalCallback();
   assert(GV && "The CreateGlobalCallback is expected to create a global");
@@ -226,11 +226,11 @@ Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
 // If it does not exist, return null.
 //
 GlobalAlias *Module::getNamedAlias(StringRef Name) const {
-  return dyn_cast_or_null<GlobalAlias>(getNamedValue(Name));
+  return dyn_cast_if_present<GlobalAlias>(getNamedValue(Name));
 }
 
 GlobalIFunc *Module::getNamedIFunc(StringRef Name) const {
-  return dyn_cast_or_null<GlobalIFunc>(getNamedValue(Name));
+  return dyn_cast_if_present<GlobalIFunc>(getNamedValue(Name));
 }
 
 /// getNamedMetadata - Return the first NamedMDNode in the module with the
@@ -279,7 +279,7 @@ bool Module::isValidModuleFlag(const MDNode &ModFlag, ModFlagBehavior &MFB,
     return false;
   if (!isValidModFlagBehavior(ModFlag.getOperand(0), MFB))
     return false;
-  MDString *K = dyn_cast_or_null<MDString>(ModFlag.getOperand(1));
+  MDString *K = dyn_cast_if_present<MDString>(ModFlag.getOperand(1));
   if (!K)
     return false;
   Key = K;
@@ -709,7 +709,7 @@ void Module::setFramePointer(FramePointerKind Kind) {
 
 StringRef Module::getStackProtectorGuard() const {
   Metadata *MD = getModuleFlag("stack-protector-guard");
-  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+  if (auto *MDS = dyn_cast_if_present<MDString>(MD))
     return MDS->getString();
   return {};
 }
@@ -721,7 +721,7 @@ void Module::setStackProtectorGuard(StringRef Kind) {
 
 StringRef Module::getStackProtectorGuardReg() const {
   Metadata *MD = getModuleFlag("stack-protector-guard-reg");
-  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+  if (auto *MDS = dyn_cast_if_present<MDString>(MD))
     return MDS->getString();
   return {};
 }
@@ -733,7 +733,7 @@ void Module::setStackProtectorGuardReg(StringRef Reg) {
 
 StringRef Module::getStackProtectorGuardSymbol() const {
   Metadata *MD = getModuleFlag("stack-protector-guard-symbol");
-  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+  if (auto *MDS = dyn_cast_if_present<MDString>(MD))
     return MDS->getString();
   return {};
 }
@@ -791,10 +791,10 @@ void Module::setSDKVersion(const VersionTuple &V) {
 }
 
 static VersionTuple getSDKVersionMD(Metadata *MD) {
-  auto *CM = dyn_cast_or_null<ConstantAsMetadata>(MD);
+  auto *CM = dyn_cast_if_present<ConstantAsMetadata>(MD);
   if (!CM)
     return {};
-  auto *Arr = dyn_cast_or_null<ConstantDataArray>(CM->getValue());
+  auto *Arr = dyn_cast_if_present<ConstantDataArray>(CM->getValue());
   if (!Arr)
     return {};
   auto getVersionComponent = [&](unsigned Index) -> std::optional<unsigned> {

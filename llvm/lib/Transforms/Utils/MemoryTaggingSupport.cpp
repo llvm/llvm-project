@@ -139,7 +139,7 @@ void StackInfoBuilder::visit(Instruction &Inst) {
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
     for (Value *V : DVI->location_ops()) {
-      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+      if (auto *AI = dyn_cast_if_present<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
           continue;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];

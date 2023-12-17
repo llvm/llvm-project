@@ -277,7 +277,7 @@ TEST(LoopInfoTest, CanonicalLoop) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -336,7 +336,7 @@ TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -395,7 +395,7 @@ TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -454,7 +454,7 @@ TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -513,7 +513,7 @@ TEST(LoopInfoTest, LoopWithLatchCmpNE) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -573,7 +573,7 @@ TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ubPlusOne");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -688,7 +688,7 @@ TEST(LoopInfoTest, LoopUnsignedBounds) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_ULT);
@@ -745,7 +745,7 @@ TEST(LoopInfoTest, DecreasingLoop) {
         EXPECT_EQ(Bounds->getInitialIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_EQ(StepValue, nullptr);
         ConstantInt *FinalIVValue =
             dyn_cast<ConstantInt>(&Bounds->getFinalIVValue());
@@ -867,7 +867,7 @@ TEST(LoopInfoTest, ZextIndVar) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "indvars.iv.next");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "wide.trip.count");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_NE);
@@ -928,7 +928,7 @@ TEST(LoopInfoTest, MultiExitingLoop) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -988,7 +988,7 @@ TEST(LoopInfoTest, MultiExitLoop) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -1040,7 +1040,7 @@ TEST(LoopInfoTest, UnguardedLoop) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -1098,7 +1098,7 @@ TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -1169,7 +1169,7 @@ TEST(LoopInfoTest, LoopNest) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc.outer");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -1194,7 +1194,8 @@ TEST(LoopInfoTest, LoopNest) {
             dyn_cast<ConstantInt>(&InnerBounds->getInitialIVValue());
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(InnerBounds->getStepInst().getName(), "inc");
-        StepValue = dyn_cast_or_null<ConstantInt>(InnerBounds->getStepValue());
+        StepValue =
+            dyn_cast_if_present<ConstantInt>(InnerBounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(InnerBounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(InnerBounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);
@@ -1262,7 +1263,7 @@ TEST(LoopInfoTest, AuxiliaryIV) {
         EXPECT_TRUE(InitialIVValue && InitialIVValue->isZero());
         EXPECT_EQ(Bounds->getStepInst().getName(), "inc");
         ConstantInt *StepValue =
-            dyn_cast_or_null<ConstantInt>(Bounds->getStepValue());
+            dyn_cast_if_present<ConstantInt>(Bounds->getStepValue());
         EXPECT_TRUE(StepValue && StepValue->isOne());
         EXPECT_EQ(Bounds->getFinalIVValue().getName(), "ub");
         EXPECT_EQ(Bounds->getCanonicalPredicate(), ICmpInst::ICMP_SLT);

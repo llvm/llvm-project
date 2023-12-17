@@ -87,7 +87,7 @@ static Constant *foldConstVectorToAPInt(APInt &Result, Type *DestTy,
       continue;
     }
 
-    auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
+    auto *ElementCI = dyn_cast_if_present<ConstantInt>(Element);
     if (!ElementCI)
       return ConstantExpr::getBitCast(C, DestTy);
 
@@ -222,7 +222,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
           Src = Constant::getNullValue(
               cast<VectorType>(C->getType())->getElementType());
         else
-          Src = dyn_cast_or_null<ConstantInt>(Src);
+          Src = dyn_cast_if_present<ConstantInt>(Src);
         if (!Src)  // Reject constantexpr elements.
           return ConstantExpr::getBitCast(C, DestTy);
 
@@ -2490,7 +2490,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::x86_sse2_cvtsd2si:
     case Intrinsic::x86_sse2_cvtsd2si64:
       if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+              dyn_cast_if_present<ConstantFP>(Op->getAggregateElement(0U)))
         return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                            /*roundTowardZero=*/false, Ty,
                                            /*IsSigned*/true);
@@ -2500,7 +2500,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::x86_sse2_cvttsd2si:
     case Intrinsic::x86_sse2_cvttsd2si64:
       if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+              dyn_cast_if_present<ConstantFP>(Op->getAggregateElement(0U)))
         return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                            /*roundTowardZero=*/true, Ty,
                                            /*IsSigned*/true);
@@ -2882,7 +2882,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::x86_avx512_vcvtsd2si32:
     case Intrinsic::x86_avx512_vcvtsd2si64:
       if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+              dyn_cast_if_present<ConstantFP>(Op->getAggregateElement(0U)))
         return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                            /*roundTowardZero=*/false, Ty,
                                            /*IsSigned*/true);
@@ -2892,7 +2892,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::x86_avx512_vcvtsd2usi32:
     case Intrinsic::x86_avx512_vcvtsd2usi64:
       if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+              dyn_cast_if_present<ConstantFP>(Op->getAggregateElement(0U)))
         return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                            /*roundTowardZero=*/false, Ty,
                                            /*IsSigned*/false);
@@ -2902,7 +2902,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::x86_avx512_cvttsd2si:
     case Intrinsic::x86_avx512_cvttsd2si64:
       if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+              dyn_cast_if_present<ConstantFP>(Op->getAggregateElement(0U)))
         return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                            /*roundTowardZero=*/true, Ty,
                                            /*IsSigned*/true);
@@ -2912,7 +2912,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::x86_avx512_cvttsd2usi:
     case Intrinsic::x86_avx512_cvttsd2usi64:
       if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+              dyn_cast_if_present<ConstantFP>(Op->getAggregateElement(0U)))
         return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
                                            /*roundTowardZero=*/true, Ty,
                                            /*IsSigned*/false);

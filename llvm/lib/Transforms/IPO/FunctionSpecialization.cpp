@@ -468,9 +468,9 @@ Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
     return nullptr;
 
   Constant *Const = LastVisited->second;
-  return dyn_cast_or_null<Constant>(Swap ?
-        simplifyBinOp(I.getOpcode(), Other, Const, SimplifyQuery(DL))
-      : simplifyBinOp(I.getOpcode(), Const, Other, SimplifyQuery(DL)));
+  return dyn_cast_if_present<Constant>(
+      Swap ? simplifyBinOp(I.getOpcode(), Other, Const, SimplifyQuery(DL))
+           : simplifyBinOp(I.getOpcode(), Const, Other, SimplifyQuery(DL)));
 }
 
 Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,

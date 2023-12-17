@@ -4348,7 +4348,7 @@ public:
       return;
 
     auto Track = [](Metadata *ScopeList, auto &Container) {
-      const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
+      const auto *MDScopeList = dyn_cast_if_present<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
         return;
       for (const auto &MDOperand : MDScopeList->operands())

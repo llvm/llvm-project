@@ -1730,7 +1730,7 @@ public:
       if (FOp) {
         if (ICA.getID() == Intrinsic::vp_load) {
           Align Alignment;
-          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          if (auto *VPI = dyn_cast_if_present<VPIntrinsic>(ICA.getInst()))
             Alignment = VPI->getPointerAlignment().valueOrOne();
           unsigned AS = 0;
           if (ICA.getArgs().size() > 1)
@@ -1742,7 +1742,7 @@ public:
         }
         if (ICA.getID() == Intrinsic::vp_store) {
           Align Alignment;
-          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          if (auto *VPI = dyn_cast_if_present<VPIntrinsic>(ICA.getInst()))
             Alignment = VPI->getPointerAlignment().valueOrOne();
           unsigned AS = 0;
           if (ICA.getArgs().size() >= 2)

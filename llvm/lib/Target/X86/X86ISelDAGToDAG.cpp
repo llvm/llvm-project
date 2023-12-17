@@ -96,7 +96,7 @@ namespace {
     bool isRIPRelative() const {
       if (BaseType != RegBase) return false;
       if (RegisterSDNode *RegNode =
-            dyn_cast_or_null<RegisterSDNode>(Base_Reg.getNode()))
+              dyn_cast_if_present<RegisterSDNode>(Base_Reg.getNode()))
         return RegNode->getReg() == X86::RIP;
       return false;
     }
@@ -388,8 +388,8 @@ namespace {
           // Don't count if the other operand is SP.
           RegisterSDNode *RegNode;
           if (OtherOp->getOpcode() == ISD::CopyFromReg &&
-              (RegNode = dyn_cast_or_null<RegisterSDNode>(
-                 OtherOp->getOperand(1).getNode())))
+              (RegNode = dyn_cast_if_present<RegisterSDNode>(
+                   OtherOp->getOperand(1).getNode())))
             if ((RegNode->getReg() == X86::ESP) ||
                 (RegNode->getReg() == X86::RSP))
               continue;

@@ -1840,7 +1840,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
       Constant *Element = CV->getAggregateElement(i);
       if (isa<PoisonValue>(Element))
         continue;
-      auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
+      auto *ElementCI = dyn_cast_if_present<ConstantInt>(Element);
       if (!ElementCI) {
         Known.resetAll();
         return;
@@ -3274,7 +3274,7 @@ static unsigned computeNumSignBitsVectorConstant(const Value *V,
     if (!DemandedElts[i])
       continue;
     // If we find a non-ConstantInt, bail out.
-    auto *Elt = dyn_cast_or_null<ConstantInt>(CV->getAggregateElement(i));
+    auto *Elt = dyn_cast_if_present<ConstantInt>(CV->getAggregateElement(i));
     if (!Elt)
       return 0;
 
@@ -3756,7 +3756,7 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     if (auto *CVFVTy = dyn_cast<FixedVectorType>(CV->getType())) {
       unsigned NumElts = CVFVTy->getNumElements();
       for (unsigned i = 0; i != NumElts; ++i) {
-        auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+        auto *CFP = dyn_cast_if_present<ConstantFP>(CV->getAggregateElement(i));
         if (!CFP)
           return false;
         if (CFP->getValueAPF().isNegative() &&
@@ -4349,7 +4349,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
-  if (auto *CFP = dyn_cast_or_null<ConstantFP>(V)) {
+  if (auto *CFP = dyn_cast_if_present<ConstantFP>(V)) {
     Known.KnownFPClasses = CFP->getValueAPF().classify();
     Known.SignBit = CFP->isNegative();
     return;
@@ -4391,7 +4391,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     KnownNotFromFlags |= Arg->getNoFPClass();
 
   const Operator *Op = dyn_cast<Operator>(V);
-  if (const FPMathOperator *FPOp = dyn_cast_or_null<FPMathOperator>(Op)) {
+  if (const FPMathOperator *FPOp = dyn_cast_if_present<FPMathOperator>(Op)) {
     if (FPOp->hasNoNaNs())
       KnownNotFromFlags |= fcNan;
     if (FPOp->hasNoInfs())
@@ -6548,7 +6548,7 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
     ShiftAmounts.push_back(C);
 
   bool Safe = llvm::all_of(ShiftAmounts, [](const Constant *C) {
-    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    auto *CI = dyn_cast_if_present<ConstantInt>(C);
     return CI && CI->getValue().ult(C->getType()->getIntegerBitWidth());
   });
 
@@ -6884,10 +6884,10 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
     auto *TI = Dominator->getBlock()->getTerminator();
 
     Value *Cond = nullptr;
-    if (auto BI = dyn_cast_or_null<BranchInst>(TI)) {
+    if (auto BI = dyn_cast_if_present<BranchInst>(TI)) {
       if (BI->isConditional())
         Cond = BI->getCondition();
-    } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
+    } else if (auto SI = dyn_cast_if_present<SwitchInst>(TI)) {
       Cond = SI->getCondition();
     }
 

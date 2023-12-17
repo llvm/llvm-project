@@ -786,7 +786,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   Namespace = R->getValueAsString("Namespace");
 
   if (const RecordVal *RV = R->getValue("RegInfos"))
-    if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
+    if (DefInit *DI = dyn_cast_if_present<DefInit>(RV->getValue()))
       RSI = RegSizeInfoByHwMode(DI->getDef(), RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
   assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&

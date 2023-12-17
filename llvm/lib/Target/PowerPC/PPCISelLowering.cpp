@@ -5438,7 +5438,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
       // ExternalSymbol's, then we pick up the user-declared version.
       const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
       if (const Function *F =
-              dyn_cast_or_null<Function>(Mod->getNamedValue(SymName)))
+              dyn_cast_if_present<Function>(Mod->getNamedValue(SymName)))
         return getAIXFuncEntryPointSymbolSDNode(F);
 
       // On AIX, direct function calls reference the symbol for the function's

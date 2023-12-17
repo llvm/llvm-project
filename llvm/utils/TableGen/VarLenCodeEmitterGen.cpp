@@ -235,7 +235,7 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
 
     // Setup alternative encodings according to HwModes
     if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-      if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
+      if (auto *DI = dyn_cast_if_present<DefInit>(RV->getValue())) {
         const CodeGenHwModes &HWM = Target.getHwModes();
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (auto &KV : EBM) {

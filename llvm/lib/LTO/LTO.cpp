@@ -281,7 +281,7 @@ void llvm::computeLTOCacheKey(
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.
-      if (auto *AS = dyn_cast_or_null<AliasSummary>(S))
+      if (auto *AS = dyn_cast_if_present<AliasSummary>(S))
         AddUsedThings(AS->getBaseObject());
     }
 

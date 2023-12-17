@@ -981,7 +981,7 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
     Symbols = *Doc.DynamicSymbols;
 
   ELFYAML::RawContentSection *RawSec =
-      dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
+      dyn_cast_if_present<ELFYAML::RawContentSection>(YAMLSec);
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     bool HasSymbolsDescription =
         (IsStatic && Doc.Symbols) || (!IsStatic && Doc.DynamicSymbols);
@@ -1042,7 +1042,7 @@ void ELFState<ELFT>::initStrtabSectionHeader(Elf_Shdr &SHeader, StringRef Name,
   SHeader.sh_addralign = YAMLSec ? (uint64_t)YAMLSec->AddressAlign : 1;
 
   ELFYAML::RawContentSection *RawSec =
-      dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
+      dyn_cast_if_present<ELFYAML::RawContentSection>(YAMLSec);
 
   SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign,
                                     YAMLSec ? YAMLSec->Offset : std::nullopt);
@@ -1102,7 +1102,7 @@ void ELFState<ELFT>::initDWARFSectionHeader(Elf_Shdr &SHeader, StringRef Name,
                                     YAMLSec ? YAMLSec->Offset : std::nullopt);
 
   ELFYAML::RawContentSection *RawSec =
-      dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
+      dyn_cast_if_present<ELFYAML::RawContentSection>(YAMLSec);
   if (Doc.DWARF && shouldEmitDWARF(*Doc.DWARF, Name)) {
     if (RawSec && (RawSec->Content || RawSec->Size))
       reportError("cannot specify section '" + Name +

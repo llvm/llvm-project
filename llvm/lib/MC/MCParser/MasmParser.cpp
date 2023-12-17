@@ -3478,7 +3478,7 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
 
   const MCConstantExpr *PrevValue =
-      Sym->isVariable() ? dyn_cast_or_null<MCConstantExpr>(
+      Sym->isVariable() ? dyn_cast_if_present<MCConstantExpr>(
                               Sym->getVariableValue(/*SetUsed=*/false))
                         : nullptr;
   if (Var.IsText || !PrevValue || PrevValue->getValue() != Value) {

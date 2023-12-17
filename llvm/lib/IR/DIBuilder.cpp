@@ -717,7 +717,7 @@ DIGenericSubrange *DIBuilder::getOrCreateGenericSubrange(
 static void checkGlobalVariableScope(DIScope *Context) {
 #ifndef NDEBUG
   if (auto *CT =
-          dyn_cast_or_null<DICompositeType>(getNonCompileUnitScope(Context)))
+          dyn_cast_if_present<DICompositeType>(getNonCompileUnitScope(Context)))
     assert(CT->getIdentifier().empty() &&
            "Context of a global variable should not be a type with identifier");
 #endif
@@ -1115,7 +1115,7 @@ void DIBuilder::replaceVTableHolder(DICompositeType *&T, DIType *VTableHolder) {
   // cycles underneath it.
   if (T->isResolved())
     for (const MDOperand &O : T->operands())
-      if (auto *N = dyn_cast_or_null<MDNode>(O))
+      if (auto *N = dyn_cast_if_present<MDNode>(O))
         trackIfUnresolved(N);
 }
 

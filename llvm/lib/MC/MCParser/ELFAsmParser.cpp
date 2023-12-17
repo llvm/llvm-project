@@ -486,7 +486,8 @@ bool ELFAsmParser::parseLinkedToSym(MCSymbolELF *&LinkedToSym) {
     }
     return TokError("invalid linked-to symbol");
   }
-  LinkedToSym = dyn_cast_or_null<MCSymbolELF>(getContext().lookupSymbol(Name));
+  LinkedToSym =
+      dyn_cast_if_present<MCSymbolELF>(getContext().lookupSymbol(Name));
   if (!LinkedToSym || !LinkedToSym->isInSection())
     return Error(StartLoc, "linked-to symbol is not in a section: " + Name);
   return false;

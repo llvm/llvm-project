@@ -82,7 +82,8 @@ bool PDBSymbolTypeFunctionSig::isCVarArgs() const {
   if (NumArgs == 0)
     return false;
   auto Last = SigArguments->getChildAtIndex(NumArgs - 1);
-  if (auto Builtin = llvm::dyn_cast_or_null<PDBSymbolTypeBuiltin>(Last.get())) {
+  if (auto Builtin =
+          llvm::dyn_cast_if_present<PDBSymbolTypeBuiltin>(Last.get())) {
     if (Builtin->getBuiltinType() == PDB_BuiltinType::None)
       return true;
   }

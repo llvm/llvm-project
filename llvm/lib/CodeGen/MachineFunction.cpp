@@ -114,7 +114,7 @@ void setUnsafeStackSize(const Function &F, MachineFrameInfo &FrameInfo) {
     return;
 
   auto *Existing =
-      dyn_cast_or_null<MDTuple>(F.getMetadata(LLVMContext::MD_annotation));
+      dyn_cast_if_present<MDTuple>(F.getMetadata(LLVMContext::MD_annotation));
 
   if (!Existing || Existing->getNumOperands() != 2)
     return;

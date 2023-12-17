@@ -66,8 +66,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
-    const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    const Instruction *I = dyn_cast_if_present<Instruction>(
+        getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayWriteToMemory()) &&
            "underlying instruction may write to memory");
@@ -100,8 +100,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
-    const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    const Instruction *I = dyn_cast_if_present<Instruction>(
+        getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayReadFromMemory()) &&
            "underlying instruction may read from memory");
@@ -141,8 +141,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
-    const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    const Instruction *I = dyn_cast_if_present<Instruction>(
+        getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayHaveSideEffects()) &&
            "underlying instruction has side-effects");
@@ -608,7 +608,8 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
     Value *Op1 = State.get(getOperand(2), Part);
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
     State.set(this, Sel, Part);
-    State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+    State.addMetadata(Sel,
+                      dyn_cast_if_present<Instruction>(getUnderlyingValue()));
   }
 }
 
@@ -704,7 +705,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
       // Use this vector value for all users of the original instruction.
       State.set(this, V, Part);
-      State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+      State.addMetadata(V,
+                        dyn_cast_if_present<Instruction>(getUnderlyingValue()));
     }
 
     break;
@@ -729,14 +731,15 @@ void VPWidenRecipe::execute(VPTransformState &State) {
       if (FCmp) {
         // Propagate fast math flags.
         IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-        if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
+        if (auto *I = dyn_cast_if_present<Instruction>(getUnderlyingValue()))
           Builder.setFastMathFlags(I->getFastMathFlags());
         C = Builder.CreateFCmp(getPredicate(), A, B);
       } else {
         C = Builder.CreateICmp(getPredicate(), A, B);
       }
       State.set(this, C, Part);
-      State.addMetadata(C, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+      State.addMetadata(C,
+                        dyn_cast_if_present<Instruction>(getUnderlyingValue()));
     }
 
     break;

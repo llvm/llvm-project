@@ -1095,8 +1095,8 @@ void WinEHPrepareImpl::removeImplausibleInstructions(Function &F) {
     std::vector<BasicBlock *> &BlocksInFunclet = Funclet.second;
     Instruction *FirstNonPHI = FuncletPadBB->getFirstNonPHI();
     auto *FuncletPad = dyn_cast<FuncletPadInst>(FirstNonPHI);
-    auto *CatchPad = dyn_cast_or_null<CatchPadInst>(FuncletPad);
-    auto *CleanupPad = dyn_cast_or_null<CleanupPadInst>(FuncletPad);
+    auto *CatchPad = dyn_cast_if_present<CatchPadInst>(FuncletPad);
+    auto *CleanupPad = dyn_cast_if_present<CleanupPadInst>(FuncletPad);
 
     for (BasicBlock *BB : BlocksInFunclet) {
       for (Instruction &I : *BB) {

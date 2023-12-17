@@ -306,7 +306,7 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
     // Place a clone of the optional bitcast after the new call site.
     Value *NewRetVal = NewInst;
     auto Next = OrigInst->getNextNode();
-    if (auto *BitCast = dyn_cast_or_null<BitCastInst>(Next)) {
+    if (auto *BitCast = dyn_cast_if_present<BitCastInst>(Next)) {
       assert(BitCast->getOperand(0) == OrigInst &&
              "bitcast following musttail call must use the call");
       auto NewBitCast = BitCast->clone();
@@ -317,7 +317,7 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
     }
 
     // Place a clone of the return instruction after the new call site.
-    ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
+    ReturnInst *Ret = dyn_cast_if_present<ReturnInst>(Next);
     assert(Ret && "musttail call must precede a ret with an optional bitcast");
     auto NewRet = Ret->clone();
     if (Ret->getReturnValue())

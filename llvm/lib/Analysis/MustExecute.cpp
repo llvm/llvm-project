@@ -145,7 +145,7 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
                                           IVStart, RHS,
                                           {DL, /*TLI*/ nullptr,
                                               DT, /*AC*/ nullptr, BI});
-  auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
+  auto *SimpleCst = dyn_cast_if_present<Constant>(SimpleValOrNull);
   if (!SimpleCst)
     return false;
   if (ExitBlock == BI->getSuccessor(0))

@@ -2229,8 +2229,8 @@ public:
                     Type *TruncResultTy)
       : VPRecipeBase(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
         VPValue(this), TruncResultTy(TruncResultTy), Kind(IndDesc.getKind()),
-        FPBinOp(dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())) {
-  }
+        FPBinOp(
+            dyn_cast_if_present<FPMathOperator>(IndDesc.getInductionBinOp())) {}
 
   ~VPDerivedIVRecipe() override = default;
 
@@ -2279,7 +2279,7 @@ public:
                         VPValue *Step)
       : VPScalarIVStepsRecipe(
             IV, Step, IndDesc.getInductionOpcode(),
-            dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
+            dyn_cast_if_present<FPMathOperator>(IndDesc.getInductionBinOp())
                 ? IndDesc.getInductionBinOp()->getFastMathFlags()
                 : FastMathFlags()) {}
 

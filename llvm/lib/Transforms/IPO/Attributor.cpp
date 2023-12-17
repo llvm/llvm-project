@@ -1416,7 +1416,7 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
                                  UsedAssumedInformation)) {
     if (Values.empty())
       return std::nullopt;
-    if (auto *C = dyn_cast_or_null<Constant>(
+    if (auto *C = dyn_cast_if_present<Constant>(
             AAPotentialValues::getSingleValue(*this, AA, IRP, Values)))
       return C;
   }
@@ -2443,7 +2443,7 @@ ChangeStatus Attributor::cleanupIR() {
 
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
-    if (auto *RI = dyn_cast_or_null<ReturnInst>(I)) {
+    if (auto *RI = dyn_cast_if_present<ReturnInst>(I)) {
       if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
         if (CI->isMustTailCall() && !ToBeDeletedInsts.count(CI))
           return;
@@ -2507,7 +2507,7 @@ ChangeStatus Attributor::cleanupIR() {
   }
 
   for (const auto &V : InvokeWithDeadSuccessor)
-    if (InvokeInst *II = dyn_cast_or_null<InvokeInst>(V)) {
+    if (InvokeInst *II = dyn_cast_if_present<InvokeInst>(V)) {
       assert(isRunOn(*II->getFunction()) &&
              "Cannot replace an invoke outside the current SCC!");
       bool UnwindBBIsDead = II->hasFnAttr(Attribute::NoUnwind);
@@ -2540,7 +2540,7 @@ ChangeStatus Attributor::cleanupIR() {
     ConstantFoldTerminator(I->getParent());
   }
   for (const auto &V : ToBeChangedToUnreachableInsts)
-    if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
+    if (Instruction *I = dyn_cast_if_present<Instruction>(V)) {
       LLVM_DEBUG(dbgs() << "[Attributor] Change to unreachable: " << *I
                         << "\n");
       assert(isRunOn(*I->getFunction()) &&
@@ -2550,7 +2550,7 @@ ChangeStatus Attributor::cleanupIR() {
     }
 
   for (const auto &V : ToBeDeletedInsts) {
-    if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
+    if (Instruction *I = dyn_cast_if_present<Instruction>(V)) {
       if (auto *CB = dyn_cast<CallBase>(I)) {
         assert((isa<IntrinsicInst>(CB) || isRunOn(*I->getFunction())) &&
                "Cannot delete an instruction outside the current SCC!");

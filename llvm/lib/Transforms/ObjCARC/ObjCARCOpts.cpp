@@ -2266,7 +2266,7 @@ bool ObjCARCOpt::OptimizeSequences(Function &F) {
 static CallInst *HasSafePathToPredecessorCall(const Value *Arg,
                                               Instruction *Retain,
                                               ProvenanceAnalysis &PA) {
-  auto *Call = dyn_cast_or_null<CallInst>(findSingleDependency(
+  auto *Call = dyn_cast_if_present<CallInst>(findSingleDependency(
       CanChangeRetainCount, Arg, Retain->getParent(), Retain, PA));
 
   // Check that the pointer is the return value of the call.
@@ -2287,7 +2287,7 @@ static CallInst *
 FindPredecessorRetainWithSafePath(const Value *Arg, BasicBlock *BB,
                                   Instruction *Autorelease,
                                   ProvenanceAnalysis &PA) {
-  auto *Retain = dyn_cast_or_null<CallInst>(
+  auto *Retain = dyn_cast_if_present<CallInst>(
       findSingleDependency(CanChangeRetainCount, Arg, BB, Autorelease, PA));
 
   // Check that we found a retain with the same argument.
@@ -2307,7 +2307,7 @@ FindPredecessorAutoreleaseWithSafePath(const Value *Arg, BasicBlock *BB,
                                        ReturnInst *Ret,
                                        ProvenanceAnalysis &PA) {
   SmallPtrSet<Instruction *, 4> DepInsts;
-  auto *Autorelease = dyn_cast_or_null<CallInst>(
+  auto *Autorelease = dyn_cast_if_present<CallInst>(
       findSingleDependency(NeedsPositiveRetainCount, Arg, BB, Ret, PA));
 
   if (!Autorelease)

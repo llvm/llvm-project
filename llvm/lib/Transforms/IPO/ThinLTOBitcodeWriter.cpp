@@ -305,7 +305,8 @@ void splitAndWriteThinLTOBitcode(
   // reference the global's section directly.
   auto HasTypeMetadata = [](const GlobalObject *GO) {
     if (MDNode *MD = GO->getMetadata(LLVMContext::MD_associated))
-      if (auto *AssocVM = dyn_cast_or_null<ValueAsMetadata>(MD->getOperand(0)))
+      if (auto *AssocVM =
+              dyn_cast_if_present<ValueAsMetadata>(MD->getOperand(0)))
         if (auto *AssocGO = dyn_cast<GlobalObject>(AssocVM->getValue()))
           if (AssocGO->hasMetadata(LLVMContext::MD_type))
             return true;
@@ -358,7 +359,7 @@ void splitAndWriteThinLTOBitcode(
         if (auto *F = dyn_cast<Function>(GV))
           return EligibleVirtualFns.count(F);
         if (auto *GVar =
-                dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
+                dyn_cast_if_present<GlobalVariable>(GV->getAliaseeObject()))
           return HasTypeMetadata(GVar);
         return false;
       }));
@@ -387,7 +388,8 @@ void splitAndWriteThinLTOBitcode(
   // Remove all globals with type metadata, globals with comdats that live in
   // MergedM, and aliases pointing to such globals from the thin LTO module.
   filterModule(&M, [&](const GlobalValue *GV) {
-    if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
+    if (auto *GVar =
+            dyn_cast_if_present<GlobalVariable>(GV->getAliaseeObject()))
       if (HasTypeMetadata(GVar))
         return false;
     if (const auto *C = GV->getComdat())

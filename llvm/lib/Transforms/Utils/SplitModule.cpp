@@ -91,7 +91,7 @@ static void addAllGlobalValueUsers(ClusterMapType &GVtoClusterMap,
 
 static const GlobalObject *getGVPartitioningRoot(const GlobalValue *GV) {
   const GlobalObject *GO = GV->getAliaseeObject();
-  if (const auto *GI = dyn_cast_or_null<GlobalIFunc>(GO))
+  if (const auto *GI = dyn_cast_if_present<GlobalIFunc>(GO))
     GO = GI->getResolverFunction();
   return GO;
 }

@@ -1053,15 +1053,15 @@ LLVMInstructionGetAllMetadataOtherThanDebugLoc(LLVMValueRef Value,
 
 /*--.. Conversion functions ................................................--*/
 
-#define LLVM_DEFINE_VALUE_CAST(name)                                       \
-  LLVMValueRef LLVMIsA##name(LLVMValueRef Val) {                           \
-    return wrap(static_cast<Value*>(dyn_cast_or_null<name>(unwrap(Val)))); \
+#define LLVM_DEFINE_VALUE_CAST(name)                                           \
+  LLVMValueRef LLVMIsA##name(LLVMValueRef Val) {                               \
+    return wrap(static_cast<Value *>(dyn_cast_if_present<name>(unwrap(Val)))); \
   }
 
 LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DEFINE_VALUE_CAST)
 
 LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val) {
-  if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))
+  if (auto *MD = dyn_cast_if_present<MetadataAsValue>(unwrap(Val)))
     if (isa<MDNode>(MD->getMetadata()) ||
         isa<ValueAsMetadata>(MD->getMetadata()))
       return Val;
@@ -1069,14 +1069,14 @@ LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val) {
 }
 
 LLVMValueRef LLVMIsAValueAsMetadata(LLVMValueRef Val) {
-  if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))
+  if (auto *MD = dyn_cast_if_present<MetadataAsValue>(unwrap(Val)))
     if (isa<ValueAsMetadata>(MD->getMetadata()))
       return Val;
   return nullptr;
 }
 
 LLVMValueRef LLVMIsAMDString(LLVMValueRef Val) {
-  if (auto *MD = dyn_cast_or_null<MetadataAsValue>(unwrap(Val)))
+  if (auto *MD = dyn_cast_if_present<MetadataAsValue>(unwrap(Val)))
     if (isa<MDString>(MD->getMetadata()))
       return Val;
   return nullptr;

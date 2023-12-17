@@ -707,7 +707,7 @@ entry:
   ret void
 }
 )IR");
-  auto *F = dyn_cast_or_null<Function>(M->getNamedValue("call"));
+  auto *F = dyn_cast_if_present<Function>(M->getNamedValue("call"));
   ASSERT_TRUE(F);
   auto *CI = dyn_cast<CallInst>(&F->front().front());
   ASSERT_TRUE(CI);

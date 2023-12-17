@@ -1387,7 +1387,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
       // Both operands of the CmpInst are Constant. So that we could evaluate
       // it immediately to get the destination.
       auto *ConstResult =
-          dyn_cast_or_null<ConstantInt>(ConstantFoldCompareInstOperands(
+          dyn_cast_if_present<ConstantInt>(ConstantFoldCompareInstOperands(
               CondCmp->getPredicate(), Cond0, Cond1, DL));
       if (!ConstResult)
         return false;

@@ -398,7 +398,7 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
 
   const DIScope *Scope = SP->getScope();
   TypeIndex TI;
-  if (const auto *Class = dyn_cast_or_null<DICompositeType>(Scope)) {
+  if (const auto *Class = dyn_cast_if_present<DICompositeType>(Scope)) {
     // If the scope is a DICompositeType, then this must be a method. Member
     // function types take some special handling, and require access to the
     // subprogram.
@@ -433,7 +433,7 @@ getFunctionOptions(const DISubroutineType *Ty,
 
   // Add CxxReturnUdt option to functions that return nontrivial record types
   // or methods that return record types.
-  if (auto *ReturnDCTy = dyn_cast_or_null<DICompositeType>(ReturnTy))
+  if (auto *ReturnDCTy = dyn_cast_if_present<DICompositeType>(ReturnTy))
     if (isNonTrivial(ReturnDCTy) || ClassTy)
       FO |= FunctionOptions::CxxReturnUdt;
 
@@ -2116,7 +2116,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   TypeIndex ThisTypeIndex;
   if (!IsStaticMethod && ReturnAndArgs.size() > Index) {
     if (const DIDerivedType *PtrTy =
-            dyn_cast_or_null<DIDerivedType>(ReturnAndArgs[Index])) {
+            dyn_cast_if_present<DIDerivedType>(ReturnAndArgs[Index])) {
       if (PtrTy->getTag() == dwarf::DW_TAG_pointer_type) {
         ThisTypeIndex = getTypeIndexForThisPtr(PtrTy, Ty);
         Index++;
@@ -2274,7 +2274,7 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
     for (const DINode *Element : Ty->getElements()) {
       // We assume that the frontend provides all members in source declaration
       // order, which is what MSVC does.
-      if (auto *Enumerator = dyn_cast_or_null<DIEnumerator>(Element)) {
+      if (auto *Enumerator = dyn_cast_if_present<DIEnumerator>(Element)) {
         // FIXME: Is it correct to always emit these as unsigned here?
         EnumeratorRecord ER(MemberAccess::Public,
                             APSInt(Enumerator->getValue(), true),
@@ -2601,8 +2601,8 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
         Member->getOffsetInBits() + MemberInfo.BaseOffset;
     if (Member->isBitField()) {
       uint64_t StartBitOffset = MemberOffsetInBits;
-      if (const auto *CI =
-              dyn_cast_or_null<ConstantInt>(Member->getStorageOffsetInBits())) {
+      if (const auto *CI = dyn_cast_if_present<ConstantInt>(
+              Member->getStorageOffsetInBits())) {
         MemberOffsetInBits = CI->getZExtValue() + MemberInfo.BaseOffset;
       }
       StartBitOffset -= MemberOffsetInBits;
@@ -3375,11 +3375,11 @@ void CodeViewDebug::emitStaticConstMemberList() {
 
     APSInt Value;
     if (const ConstantInt *CI =
-            dyn_cast_or_null<ConstantInt>(DTy->getConstant()))
+            dyn_cast_if_present<ConstantInt>(DTy->getConstant()))
       Value = APSInt(CI->getValue(),
                      DebugHandlerBase::isUnsignedDIType(DTy->getBaseType()));
     else if (const ConstantFP *CFP =
-                 dyn_cast_or_null<ConstantFP>(DTy->getConstant()))
+                 dyn_cast_if_present<ConstantFP>(DTy->getConstant()))
       Value = APSInt(CFP->getValueAPF().bitcastToAPInt(), true);
     else
       llvm_unreachable("cannot emit a constant without a value");
@@ -3413,7 +3413,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
 
   const DIScope *Scope = DIGV->getScope();
   // For static data members, get the scope from the declaration.
-  if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
+  if (const auto *MemberDecl = dyn_cast_if_present<DIDerivedType>(
           DIGV->getRawStaticDataMemberDeclaration()))
     Scope = MemberDecl->getScope();
   // For static local variables and Fortran, the scoping portion is elided

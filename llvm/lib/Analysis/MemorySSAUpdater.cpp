@@ -86,7 +86,7 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
 
     // Now try to simplify the ops to avoid placing a phi.
     // This may return null if we never created a phi yet, that's okay
-    MemoryPhi *Phi = dyn_cast_or_null<MemoryPhi>(MSSA->getMemoryAccess(BB));
+    MemoryPhi *Phi = dyn_cast_if_present<MemoryPhi>(MSSA->getMemoryAccess(BB));
 
     // See if we can avoid the phi by simplifying it.
     auto *Result = tryRemoveTrivialPhi(Phi, PhiOps);
@@ -445,14 +445,14 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     // We just inserted a phi into this block, so the incoming value will become
     // the phi anyway, so it does not matter what we pass.
     for (auto &MP : InsertedPHIs) {
-      MemoryPhi *Phi = dyn_cast_or_null<MemoryPhi>(MP);
+      MemoryPhi *Phi = dyn_cast_if_present<MemoryPhi>(MP);
       if (Phi)
         MSSA->renamePass(Phi->getBlock(), nullptr, Visited);
     }
     // Existing Phi blocks may need renaming too, if an access was previously
     // optimized and the inserted Defs "covers" the Optimized value.
     for (const auto &MP : ExistingPhis) {
-      MemoryPhi *Phi = dyn_cast_or_null<MemoryPhi>(MP);
+      MemoryPhi *Phi = dyn_cast_if_present<MemoryPhi>(MP);
       if (Phi)
         MSSA->renamePass(Phi->getBlock(), nullptr, Visited);
     }
@@ -463,7 +463,7 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<WeakVH> &Vars) {
   SmallPtrSet<const BasicBlock *, 8> Seen;
   SmallVector<const BasicBlock *, 16> Worklist;
   for (const auto &Var : Vars) {
-    MemoryAccess *NewDef = dyn_cast_or_null<MemoryAccess>(Var);
+    MemoryAccess *NewDef = dyn_cast_if_present<MemoryAccess>(Var);
     if (!NewDef)
       continue;
     // First, see if there is a local def after the operand.
@@ -620,7 +620,7 @@ void MemorySSAUpdater::cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
       // simplified, it may be a Use rather than a Def, so we cannot use MUD as
       // template. Calls coming from updateForClonedBlockIntoPred, ensure this.
       if (Instruction *NewInsn =
-              dyn_cast_or_null<Instruction>(VMap.lookup(Insn))) {
+              dyn_cast_if_present<Instruction>(VMap.lookup(Insn))) {
         MemoryAccess *NewUseOrDef = MSSA->createDefinedAccess(
             NewInsn,
             getNewDefiningAccessForClone(MUD->getDefiningAccess(), VMap,

@@ -46,7 +46,7 @@ bool Constant::isNegativeZeroValue() const {
 
   // Equivalent for a vector of -0.0's.
   if (getType()->isVectorTy())
-    if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
+    if (const auto *SplatCFP = dyn_cast_if_present<ConstantFP>(getSplatValue()))
       return SplatCFP->isNegativeZeroValue();
 
   // We've already handled true FP case; any other FP vectors can't represent -0.0.
@@ -66,7 +66,7 @@ bool Constant::isZeroValue() const {
 
   // Check for constant splat vectors of 1 values.
   if (getType()->isVectorTy())
-    if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
+    if (const auto *SplatCFP = dyn_cast_if_present<ConstantFP>(getSplatValue()))
       return SplatCFP->isZero();
 
   // Otherwise, just use +0.0.
@@ -203,7 +203,7 @@ bool Constant::isFiniteNonZeroFP() const {
 
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      auto *CFP = dyn_cast_or_null<ConstantFP>(getAggregateElement(I));
+      auto *CFP = dyn_cast_if_present<ConstantFP>(getAggregateElement(I));
       if (!CFP || !CFP->getValueAPF().isFiniteNonZero())
         return false;
     }
@@ -211,7 +211,7 @@ bool Constant::isFiniteNonZeroFP() const {
   }
 
   if (getType()->isVectorTy())
-    if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
+    if (const auto *SplatCFP = dyn_cast_if_present<ConstantFP>(getSplatValue()))
       return SplatCFP->isFiniteNonZeroFP();
 
   // It *may* contain finite non-zero, we can't tell.
@@ -224,7 +224,7 @@ bool Constant::isNormalFP() const {
 
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      auto *CFP = dyn_cast_or_null<ConstantFP>(getAggregateElement(I));
+      auto *CFP = dyn_cast_if_present<ConstantFP>(getAggregateElement(I));
       if (!CFP || !CFP->getValueAPF().isNormal())
         return false;
     }
@@ -232,7 +232,7 @@ bool Constant::isNormalFP() const {
   }
 
   if (getType()->isVectorTy())
-    if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
+    if (const auto *SplatCFP = dyn_cast_if_present<ConstantFP>(getSplatValue()))
       return SplatCFP->isNormalFP();
 
   // It *may* contain a normal fp value, we can't tell.
@@ -245,7 +245,7 @@ bool Constant::hasExactInverseFP() const {
 
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      auto *CFP = dyn_cast_or_null<ConstantFP>(getAggregateElement(I));
+      auto *CFP = dyn_cast_if_present<ConstantFP>(getAggregateElement(I));
       if (!CFP || !CFP->getValueAPF().getExactInverse(nullptr))
         return false;
     }
@@ -253,7 +253,7 @@ bool Constant::hasExactInverseFP() const {
   }
 
   if (getType()->isVectorTy())
-    if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
+    if (const auto *SplatCFP = dyn_cast_if_present<ConstantFP>(getSplatValue()))
       return SplatCFP->hasExactInverseFP();
 
   // It *may* have an exact inverse fp value, we can't tell.
@@ -266,7 +266,7 @@ bool Constant::isNaN() const {
 
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      auto *CFP = dyn_cast_or_null<ConstantFP>(getAggregateElement(I));
+      auto *CFP = dyn_cast_if_present<ConstantFP>(getAggregateElement(I));
       if (!CFP || !CFP->isNaN())
         return false;
     }
@@ -274,7 +274,7 @@ bool Constant::isNaN() const {
   }
 
   if (getType()->isVectorTy())
-    if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
+    if (const auto *SplatCFP = dyn_cast_if_present<ConstantFP>(getSplatValue()))
       return SplatCFP->isNaN();
 
   // It *may* be NaN, we can't tell.

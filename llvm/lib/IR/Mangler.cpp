@@ -145,7 +145,8 @@ void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
 
   // Mangle functions with Microsoft calling conventions specially.  Only do
   // this mangling for x86_64 vectorcall and 32-bit x86.
-  const Function *MSFunc = dyn_cast_or_null<Function>(GV->getAliaseeObject());
+  const Function *MSFunc =
+      dyn_cast_if_present<Function>(GV->getAliaseeObject());
 
   // Don't add byte count suffixes when '\01' or '?' are in the first
   // character.

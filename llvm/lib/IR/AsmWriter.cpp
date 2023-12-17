@@ -1137,7 +1137,7 @@ void SlotTracker::processInstructionMetadata(const Instruction &I) {
     if (Function *F = CI->getCalledFunction())
       if (F->isIntrinsic())
         for (auto &Op : I.operands())
-          if (auto *V = dyn_cast_or_null<MetadataAsValue>(Op))
+          if (auto *V = dyn_cast_if_present<MetadataAsValue>(Op))
             if (MDNode *N = dyn_cast<MDNode>(V->getMetadata()))
               CreateMetadataSlot(N);
 
@@ -1295,7 +1295,7 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
 
   // Recursively add any MDNodes referenced by operands.
   for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i)
-    if (const MDNode *Op = dyn_cast_or_null<MDNode>(N->getOperand(i)))
+    if (const MDNode *Op = dyn_cast_if_present<MDNode>(N->getOperand(i)))
       CreateMetadataSlot(Op);
 }
 
@@ -1932,7 +1932,7 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   MDFieldPrinter Printer(Out, WriterCtx);
 
   auto *Count = N->getRawCountNode();
-  if (auto *CE = dyn_cast_or_null<ConstantAsMetadata>(Count)) {
+  if (auto *CE = dyn_cast_if_present<ConstantAsMetadata>(Count)) {
     auto *CV = cast<ConstantInt>(CE->getValue());
     Printer.printInt("count", CV->getSExtValue(),
                      /* ShouldSkipZero */ false);
@@ -1942,7 +1942,7 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
   // A lowerBound of constant 0 should not be skipped, since it is different
   // from an unspecified lower bound (= nullptr).
   auto *LBound = N->getRawLowerBound();
-  if (auto *LE = dyn_cast_or_null<ConstantAsMetadata>(LBound)) {
+  if (auto *LE = dyn_cast_if_present<ConstantAsMetadata>(LBound)) {
     auto *LV = cast<ConstantInt>(LE->getValue());
     Printer.printInt("lowerBound", LV->getSExtValue(),
                      /* ShouldSkipZero */ false);
@@ -1950,7 +1950,7 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
     Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
 
   auto *UBound = N->getRawUpperBound();
-  if (auto *UE = dyn_cast_or_null<ConstantAsMetadata>(UBound)) {
+  if (auto *UE = dyn_cast_if_present<ConstantAsMetadata>(UBound)) {
     auto *UV = cast<ConstantInt>(UE->getValue());
     Printer.printInt("upperBound", UV->getSExtValue(),
                      /* ShouldSkipZero */ false);
@@ -1958,7 +1958,7 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
     Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
 
   auto *Stride = N->getRawStride();
-  if (auto *SE = dyn_cast_or_null<ConstantAsMetadata>(Stride)) {
+  if (auto *SE = dyn_cast_if_present<ConstantAsMetadata>(Stride)) {
     auto *SV = cast<ConstantInt>(SE->getValue());
     Printer.printInt("stride", SV->getSExtValue(), /* ShouldSkipZero */ false);
   } else
@@ -1973,7 +1973,7 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
   MDFieldPrinter Printer(Out, WriterCtx);
 
   auto IsConstant = [&](Metadata *Bound) -> bool {
-    if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
+    if (auto *BE = dyn_cast_if_present<DIExpression>(Bound)) {
       return BE->isConstant() &&
              DIExpression::SignedOrUnsignedConstant::SignedConstant ==
                  *BE->isConstant();
@@ -1983,7 +1983,7 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
 
   auto GetConstant = [&](Metadata *Bound) -> int64_t {
     assert(IsConstant(Bound) && "Expected constant");
-    auto *BE = dyn_cast_or_null<DIExpression>(Bound);
+    auto *BE = dyn_cast_if_present<DIExpression>(Bound);
     return static_cast<int64_t>(BE->getElement(1));
   };
 
@@ -4801,7 +4801,7 @@ static bool isReferencingMDNode(const Instruction &I) {
     if (Function *F = CI->getCalledFunction())
       if (F->isIntrinsic())
         for (auto &Op : I.operands())
-          if (auto *V = dyn_cast_or_null<MetadataAsValue>(Op))
+          if (auto *V = dyn_cast_if_present<MetadataAsValue>(Op))
             if (isa<MDNode>(V->getMetadata()))
               return true;
   return false;

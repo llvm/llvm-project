@@ -1658,7 +1658,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
     // Loop info metadata may contain line locations. Fix them up.
     auto updateLoopInfoLoc = [&Ctx, &Cache, NewSP](Metadata *MD) -> Metadata * {
-      if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+      if (auto *Loc = dyn_cast_if_present<DILocation>(MD))
         return DebugLoc::replaceInlinedAtSubprogram(Loc, *NewSP, Ctx, Cache);
       return MD;
     };
@@ -1904,7 +1904,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
   for (auto AssumeVH : AC->assumptions()) {
-    auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
+    auto *I = dyn_cast_if_present<CallInst>(AssumeVH);
     if (!I)
       continue;
 
@@ -1916,7 +1916,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     // that were previously in the old function, but that have now been moved
     // to the new function.
     for (auto AffectedValVH : AC->assumptionsFor(I->getOperand(0))) {
-      auto *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
+      auto *AffectedCI = dyn_cast_if_present<CallInst>(AffectedValVH);
       if (!AffectedCI)
         continue;
       if (AffectedCI->getFunction() != &OldFunc)

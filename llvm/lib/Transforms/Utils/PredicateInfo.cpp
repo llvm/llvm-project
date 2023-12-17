@@ -97,8 +97,8 @@ struct ValueDFS {
 
 // Perform a strict weak ordering on instructions and arguments.
 static bool valueComesBefore(const Value *A, const Value *B) {
-  auto *ArgA = dyn_cast_or_null<Argument>(A);
-  auto *ArgB = dyn_cast_or_null<Argument>(B);
+  auto *ArgA = dyn_cast_if_present<Argument>(A);
+  auto *ArgB = dyn_cast_if_present<Argument>(B);
   if (ArgA && !ArgB)
     return true;
   if (ArgB && !ArgA)
@@ -221,8 +221,8 @@ struct ValueDFS_Compare {
     // See if we have real values or uses. If we have real values, we are
     // guaranteed they are instructions or arguments. No matter what, we are
     // guaranteed they are in the same block if they are instructions.
-    auto *ArgA = dyn_cast_or_null<Argument>(ADef);
-    auto *ArgB = dyn_cast_or_null<Argument>(BDef);
+    auto *ArgA = dyn_cast_if_present<Argument>(ADef);
+    auto *ArgB = dyn_cast_if_present<Argument>(BDef);
 
     if (ArgA || ArgB)
       return valueComesBefore(ArgA, ArgB);
@@ -516,7 +516,7 @@ void PredicateInfoBuilder::buildPredicateInfo() {
     }
   }
   for (auto &Assume : AC.assumptions()) {
-    if (auto *II = dyn_cast_or_null<IntrinsicInst>(Assume))
+    if (auto *II = dyn_cast_if_present<IntrinsicInst>(Assume))
       if (DT.isReachableFromEntry(II->getParent()))
         processAssume(II, II->getParent(), OpsToRename);
   }

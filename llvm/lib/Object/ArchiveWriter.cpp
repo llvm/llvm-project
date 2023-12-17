@@ -548,7 +548,7 @@ uint16_t getAuxMaxAlignment(uint16_t AuxHeaderSize, AuxiliaryHeader *AuxHeader,
 // members. This ensures that when these members are loaded they are aligned in
 // memory.
 static uint32_t getMemberAlignment(SymbolicFile *SymObj) {
-  XCOFFObjectFile *XCOFFObj = dyn_cast_or_null<XCOFFObjectFile>(SymObj);
+  XCOFFObjectFile *XCOFFObj = dyn_cast_if_present<XCOFFObjectFile>(SymObj);
   if (!XCOFFObj)
     return MinBigArchiveMemDataAlign;
 

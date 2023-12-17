@@ -926,8 +926,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           // When emitting a variant part, wrap each member in
           // DW_TAG_variant.
           DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
-          if (const ConstantInt *CI =
-              dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
+          if (const ConstantInt *CI = dyn_cast_if_present<ConstantInt>(
+                  DDTy->getDiscriminantValue())) {
             if (DD->isUnsignedDIType(Discriminator->getBaseType()))
               addUInt(Variant, dwarf::DW_AT_discr_value, std::nullopt,
                       CI->getZExtValue());
@@ -1538,7 +1538,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   DINodeArray Elements = CTy->getElements();
   for (DINode *E : Elements) {
     // FIXME: Should this really be such a loose cast?
-    if (auto *Element = dyn_cast_or_null<DINode>(E)) {
+    if (auto *Element = dyn_cast_if_present<DINode>(E)) {
       if (Element->getTag() == dwarf::DW_TAG_subrange_type)
         constructSubrangeDIE(Buffer, cast<DISubrange>(Element), IdxTy);
       else if (Element->getTag() == dwarf::DW_TAG_generic_subrange)
@@ -1565,7 +1565,7 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
   // Add enumerators to enumeration type.
   for (const DINode *E : Elements) {
-    auto *Enum = dyn_cast_or_null<DIEnumerator>(E);
+    auto *Enum = dyn_cast_if_present<DIEnumerator>(E);
     if (Enum) {
       DIE &Enumerator = createAndAddDIE(dwarf::DW_TAG_enumerator, Buffer);
       StringRef Name = Enum->getName();
@@ -1729,9 +1729,11 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   // public if the parent is something else.
   addAccess(StaticMemberDIE, DT->getFlags());
 
-  if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(DT->getConstant()))
+  if (const ConstantInt *CI =
+          dyn_cast_if_present<ConstantInt>(DT->getConstant()))
     addConstantValue(StaticMemberDIE, CI, Ty);
-  if (const ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(DT->getConstant()))
+  if (const ConstantFP *CFP =
+          dyn_cast_if_present<ConstantFP>(DT->getConstant()))
     addConstantFPValue(StaticMemberDIE, CFP);
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
