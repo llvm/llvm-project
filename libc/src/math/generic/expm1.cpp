@@ -390,7 +390,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   // -2^(-hi)
   double one_scaled =
-      FPBits::create_value(true, FPBits::EXPONENT_BIAS - hi, 0).get_val();
+      FPBits::create_value(true, FPBits::EXP_BIAS - hi, 0).get_val();
 
   // 2^(mid1 + mid2) - 2^(-hi)
   DoubleDouble hi_part = x_sign ? fputil::exact_add(one_scaled, exp_mid.hi)
@@ -465,7 +465,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   if (LIBC_LIKELY(upper == lower)) {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -479,7 +479,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
 
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }

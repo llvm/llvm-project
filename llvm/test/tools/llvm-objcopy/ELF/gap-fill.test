@@ -23,66 +23,66 @@
 
 ## Test no gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary %t %t-default
-# RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT --match-full-lines
-# DEFAULT:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 00 a1 b2
-# DEFAULT-NEXT: 000010 c3 d4 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000020 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000030 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000040 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000050 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000060 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000070 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# DEFAULT-NEXT: 000080 00 00 89 ab cd ef
-# DEFAULT-NEXT: 000086
+# RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT --ignore-case --match-full-lines
+# DEFAULT:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba 00 a1 b2
+# DEFAULT-NEXT: {{0*}}10 c3 d4 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}20 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}40 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}50 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}60 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}70 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# DEFAULT-NEXT: {{0*}}80 00 00 89 ab cd ef
+# DEFAULT-NEXT: {{0*}}86
 
 ## Test gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL --match-full-lines
-# FULL:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
-# FULL-NEXT: 000010 c3 d4 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000020 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000030 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000040 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000050 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000060 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000070 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# FULL-NEXT: 000080 e9 e9 89 ab cd ef
-# FULL-NEXT: 000086
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL --ignore-case --match-full-lines
+# FULL:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
+# FULL-NEXT: {{0*}}10 c3 d4 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}20 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}30 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}40 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}50 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}60 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}70 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# FULL-NEXT: {{0*}}80 e9 e9 89 ab cd ef
+# FULL-NEXT: {{0*}}86
 
 ## Test gap fill with a decimal value.
 # RUN: llvm-objcopy -O binary --gap-fill=99 %t %t-filled-decimal
-# RUN: od -v -Ax -t x1 %t-filled-decimal | FileCheck %s --check-prefix=DEC --match-full-lines
-# DEC:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 63 a1 b2
-# DEC-NEXT: 000010 c3 d4 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000020 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000030 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000040 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000050 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000060 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000070 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
-# DEC-NEXT: 000080 63 63 89 ab cd ef
-# DEC-NEXT: 000086
+# RUN: od -v -Ax -t x1 %t-filled-decimal | FileCheck %s --check-prefix=DEC --ignore-case --match-full-lines
+# DEC:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba 63 a1 b2
+# DEC-NEXT: {{0*}}10 c3 d4 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}20 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}30 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}40 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}50 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}60 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}70 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: {{0*}}80 63 63 89 ab cd ef
+# DEC-NEXT: {{0*}}86
 
 ## Test gap fill with the last section removed, should be truncated.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 --remove-section=.foo %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-LAST-SECTION --match-full-lines
-# REMOVE-LAST-SECTION: 000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
-# REMOVE-LAST-SECTION-NEXT: 000010 c3 d4
-# REMOVE-LAST-SECTION-NEXT: 000012
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-LAST-SECTION --ignore-case --match-full-lines
+# REMOVE-LAST-SECTION: {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
+# REMOVE-LAST-SECTION-NEXT: {{0*}}10 c3 d4
+# REMOVE-LAST-SECTION-NEXT: {{0*}}12
 
 ## Test gap fill with the middle section removed, should be filled.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 --remove-section=.gap2 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-MIDDLE-SECTION --match-full-lines
-# REMOVE-MIDDLE-SECTION:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000010 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000020 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000030 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000040 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000050 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000060 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000070 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
-# REMOVE-MIDDLE-SECTION-NEXT: 000080 e9 e9 89 ab cd ef
-# REMOVE-MIDDLE-SECTION-NEXT: 000086
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-MIDDLE-SECTION --ignore-case --match-full-lines
+# REMOVE-MIDDLE-SECTION:      {{0*}}00 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}10 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}20 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}30 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}40 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}50 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}60 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}70 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}80 e9 e9 89 ab cd ef
+# REMOVE-MIDDLE-SECTION-NEXT: {{0*}}86
 
 --- !ELF
 FileHeader:
@@ -149,8 +149,8 @@ Sections:
 
 # RUN: yaml2obj --docnum=2 %s -o %t.2
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t.2 %t.2.filled
-# RUN: od -v -Ax -t x1 %t.2.filled | FileCheck --match-full-lines %s
-# CHECK: 000000 aa bb cc dd e9 e9 e9 e9 11 22 33 44
+# RUN: od -v -Ax -t x1 %t.2.filled | FileCheck --ignore-case --match-full-lines %s
+# CHECK: {{0*}}00 aa bb cc dd e9 e9 e9 e9 11 22 33 44
 
 --- !ELF
 FileHeader:

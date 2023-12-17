@@ -763,6 +763,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasPrefetch())
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+
   if (Subtarget->hasIEEEMinMax())
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
@@ -1046,12 +1049,20 @@ static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
 MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
   if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
     return MVT::v5i32;
+  if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+      DL.getPointerSizeInBits(AS) == 192)
+    return MVT::v6i32;
   return AMDGPUTargetLowering::getPointerTy(DL, AS);
 }
 /// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
 /// v8i32 when padding is added.
+/// The in-memory representation of a p9 is {p8, i32, i32}, which is
+/// also v8i32 with padding.
 MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
-  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+  if ((AMDGPUAS::BUFFER_FAT_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 160) ||
+      (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 192))
     return MVT::v8i32;
   return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
 }
@@ -1232,9 +1243,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_atomic_fadd:
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1317,6 +1332,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_global_atomic_csub: {
@@ -1376,7 +1393,8 @@ bool SITargetLowering::isLegalMUBUFAddressingMode(const AddrMode &AM) const {
   // assume those use MUBUF instructions. Scratch loads / stores are currently
   // implemented as mubuf instructions with offen bit set, so slightly
   // different than the normal addr64.
-  if (!SIInstrInfo::isLegalMUBUFImmOffset(AM.BaseOffs))
+  const SIInstrInfo *TII = Subtarget->getInstrInfo();
+  if (!TII->isLegalMUBUFImmOffset(AM.BaseOffs))
     return false;
 
   // FIXME: Since we can split immediate into soffset and immediate offset,
@@ -1413,7 +1431,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE) {
+      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
+      AS == AMDGPUAS::BUFFER_STRIDED_POINTER) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -3895,6 +3914,23 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
   return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
 }
 
+SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
+  if (Op->isDivergent())
+    return SDValue();
+
+  switch (cast<MemSDNode>(Op)->getAddressSpace()) {
+  case AMDGPUAS::FLAT_ADDRESS:
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    break;
+  default:
+    return SDValue();
+  }
+
+  return Op;
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5443,6 +5479,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
+  case ISD::PREFETCH:
+    return lowerPREFETCH(Op, DAG);
   }
   return SDValue();
 }
@@ -7156,6 +7194,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
+  bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -7175,7 +7214,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (BaseOpcode->Atomic) {
     VData = Op.getOperand(2);
 
-    bool Is64Bit = VData.getValueType() == MVT::i64;
+    bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
       SDValue VData2 = Op.getOperand(3);
       VData = DAG.getBuildVector(Is64Bit ? MVT::v2i64 : MVT::v2i32, DL,
@@ -7335,9 +7374,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
   //
-  // Partial NSA is allowed on GFX11 where the final register is a contiguous
+  // Partial NSA is allowed on GFX11+ where the final register is a contiguous
   // set of the remaining addresses.
-  const unsigned NSAMaxSize = ST->getNSAMaxSize();
+  const unsigned NSAMaxSize = ST->getNSAMaxSize(BaseOpcode->Sampler);
   const bool HasPartialNSAEncoding = ST->hasPartialNSAEncoding();
   const bool UseNSA = ST->hasNSAEncoding() &&
                       VAddrs.size() >= ST->getNSAThreshold(MF) &&
@@ -7414,7 +7453,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~AMDGPU::CPol::ALL)
+  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
     return Op;
 
   SmallVector<SDValue, 26> Ops;
@@ -7434,7 +7473,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
-  Ops.push_back(Unorm);
+  if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
+    Ops.push_back(Unorm);
   Ops.push_back(DAG.getTargetConstant(CPol, DL, MVT::i32));
   Ops.push_back(IsA16 &&  // r128, a16 for gfx9
                 ST->hasFeature(AMDGPU::FeatureR128A16) ? True : False);
@@ -7445,7 +7485,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   } else if (cast<ConstantSDNode>(TFE)->getZExtValue()) {
     report_fatal_error("TFE is not supported on this GPU");
   }
-  Ops.push_back(LWE); // lwe
+  if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
+    Ops.push_back(LWE); // lwe
   if (!IsGFX10Plus)
     Ops.push_back(DimInfo->DA ? True : False);
   if (BaseOpcode->HasD16)
@@ -7457,7 +7498,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX11Plus) {
+  if (IsGFX12Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX11Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx11NSA
                                           : AMDGPU::MIMGEncGfx11Default,
@@ -7775,7 +7819,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned CPol = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
-    if (CPol & ~AMDGPU::CPol::ALL)
+    if (CPol & ~((Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12)
+                     ? AMDGPU::CPol::ALL
+                     : AMDGPU::CPol::ALL_pregfx12))
       return Op;
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2), Op.getOperand(3),
                         DAG);
@@ -8547,14 +8593,17 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       return SDValue();
     }
 
+    const bool IsGFX11 = AMDGPU::isGFX11(*Subtarget);
     const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
+    const bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
     const bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
     const bool Is64 = NodePtr.getValueType() == MVT::i64;
     const unsigned NumVDataDwords = 4;
     const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
     const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
-    const bool UseNSA =
-        Subtarget->hasNSAEncoding() && NumVAddrs <= Subtarget->getNSAMaxSize();
+    const bool UseNSA = (Subtarget->hasNSAEncoding() &&
+                         NumVAddrs <= Subtarget->getNSAMaxSize()) ||
+                        IsGFX12Plus;
     const unsigned BaseOpcodes[2][2] = {
         {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
         {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -8562,15 +8611,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
+                                     IsGFX12Plus ? AMDGPU::MIMGEncGfx12
+                                     : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
                                                  : AMDGPU::MIMGEncGfx10NSA,
                                      NumVDataDwords, NumVAddrDwords);
     } else {
-      Opcode =
-          AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
-                                            : AMDGPU::MIMGEncGfx10Default,
-                                NumVDataDwords, NumVAddrDwords);
+      assert(!IsGFX12Plus);
+      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                     IsGFX11 ? AMDGPU::MIMGEncGfx11Default
+                                             : AMDGPU::MIMGEncGfx10Default,
+                                     NumVDataDwords, NumVAddrDwords);
     }
     assert(Opcode != -1);
 
@@ -8679,8 +8729,12 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax: {
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num: {
     MemSDNode *M = cast<MemSDNode>(Op);
     SDValue Ops[] = {
       M->getOperand(0), // Chain
@@ -8690,12 +8744,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Opcode = 0;
     switch (IntrID) {
     case Intrinsic::amdgcn_global_atomic_fmin:
-    case Intrinsic::amdgcn_flat_atomic_fmin: {
+    case Intrinsic::amdgcn_global_atomic_fmin_num:
+    case Intrinsic::amdgcn_flat_atomic_fmin:
+    case Intrinsic::amdgcn_flat_atomic_fmin_num: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMIN;
       break;
     }
     case Intrinsic::amdgcn_global_atomic_fmax:
-    case Intrinsic::amdgcn_flat_atomic_fmax: {
+    case Intrinsic::amdgcn_global_atomic_fmax_num:
+    case Intrinsic::amdgcn_flat_atomic_fmax:
+    case Intrinsic::amdgcn_flat_atomic_fmax_num: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMAX;
       break;
     }
@@ -9409,7 +9467,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
     SDValue Offset, SelectionDAG &DAG) const {
   SDLoc DL(Offset);
-  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset();
+  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
   SDValue N0 = Offset;
   ConstantSDNode *C1 = nullptr;
 
@@ -14092,7 +14150,7 @@ static unsigned SubIdx2Lane(unsigned Idx) {
   }
 }
 
-/// Adjust the writemask of MIMG instructions
+/// Adjust the writemask of MIMG, VIMAGE or VSAMPLE instructions
 SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                           SelectionDAG &DAG) const {
   unsigned Opcode = Node->getMachineOpcode();
@@ -14110,7 +14168,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
   bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
-                  Node->getConstantOperandVal(LWEIdx))
+                  (int(LWEIdx) >= 0 && Node->getConstantOperandVal(LWEIdx)))
                      ? true
                      : false;
   unsigned TFCLane = 0;
@@ -14322,7 +14380,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   unsigned Opcode = Node->getMachineOpcode();
 
-  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
+  if (TII->isImage(Opcode) && !TII->get(Opcode).mayStore() &&
       !TII->isGather4(Opcode) &&
       AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::dmask)) {
     return adjustWritemask(Node, DAG);
@@ -14409,7 +14467,7 @@ void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
     return;
 
   unsigned TFEVal = TFE ? TFE->getImm() : 0;
-  unsigned LWEVal = LWE->getImm();
+  unsigned LWEVal = LWE ? LWE->getImm() : 0;
   unsigned D16Val = D16 ? D16->getImm() : 0;
 
   if (!TFEVal && !LWEVal)
@@ -14546,7 +14604,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   }
 
-  if (TII->isMIMG(MI)) {
+  if (TII->isImage(MI)) {
     if (!MI.mayStore())
       AddIMGInit(MI);
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::vaddr);

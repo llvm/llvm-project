@@ -368,7 +368,8 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
-      AddrSpace == AMDGPUAS::BUFFER_RESOURCE) {
+      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
+      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
     return 512;
   }
 
@@ -1026,6 +1027,8 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1100,7 +1103,9 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
   case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
-  case Intrinsic::amdgcn_flat_atomic_fmin: {
+  case Intrinsic::amdgcn_flat_atomic_fmin:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num: {
     Type *DestTy = II->getType();
     Type *SrcTy = NewV->getType();
     unsigned NewAS = SrcTy->getPointerAddressSpace();

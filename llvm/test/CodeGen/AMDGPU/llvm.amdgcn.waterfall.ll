@@ -1980,14 +1980,17 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; VI-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_readfirstlane_b32 s8, v7
 ; VI-NEXT:    v_readfirstlane_b32 s9, v8
 ; VI-NEXT:    v_readfirstlane_b32 s10, v9
 ; VI-NEXT:    v_readfirstlane_b32 s11, v10
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v11
 ; VI-NEXT:    v_readfirstlane_b32 s13, v12
 ; VI-NEXT:    v_readfirstlane_b32 s14, v13
 ; VI-NEXT:    v_readfirstlane_b32 s15, v14
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s16, v15
 ; VI-NEXT:    v_readfirstlane_b32 s17, v16
 ; VI-NEXT:    v_readfirstlane_b32 s18, v17
@@ -2037,6 +2040,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX9-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v7
 ; GFX9-NEXT:    v_readfirstlane_b32 s9, v8
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v9
@@ -2045,6 +2049,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX9-NEXT:    v_readfirstlane_b32 s13, v12
 ; GFX9-NEXT:    v_readfirstlane_b32 s14, v13
 ; GFX9-NEXT:    v_readfirstlane_b32 s15, v14
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v15
 ; GFX9-NEXT:    v_readfirstlane_b32 s17, v16
 ; GFX9-NEXT:    v_readfirstlane_b32 s18, v17
@@ -2093,6 +2098,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v7
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v8
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v9
@@ -2101,6 +2107,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v12
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v13
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v14
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v15
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v16
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v17
@@ -2149,6 +2156,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v7
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v8
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v9
@@ -2157,6 +2165,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v12
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v13
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v14
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v15
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v16
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v17
@@ -2210,6 +2219,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX1150-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1150-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s8, v7
 ; GFX1150-NEXT:    v_readfirstlane_b32 s9, v8
 ; GFX1150-NEXT:    v_readfirstlane_b32 s10, v9
@@ -2218,6 +2228,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX1150-NEXT:    v_readfirstlane_b32 s13, v12
 ; GFX1150-NEXT:    v_readfirstlane_b32 s14, v13
 ; GFX1150-NEXT:    v_readfirstlane_b32 s15, v14
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s16, v15
 ; GFX1150-NEXT:    v_readfirstlane_b32 s17, v16
 ; GFX1150-NEXT:    v_readfirstlane_b32 s18, v17
@@ -2655,6 +2666,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; VI-NEXT:    s_and_saveexec_b64 s[16:17], s[12:13]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v5
 ; VI-NEXT:    v_readfirstlane_b32 s13, v6
 ; VI-NEXT:    v_readfirstlane_b32 s14, v7
@@ -2697,6 +2709,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; GFX9-NEXT:    s_and_saveexec_b64 s[16:17], s[12:13]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s12, v5
 ; GFX9-NEXT:    v_readfirstlane_b32 s13, v6
 ; GFX9-NEXT:    v_readfirstlane_b32 s14, v7
@@ -2738,6 +2751,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s10, s10
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s12, v5
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v6
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v7
@@ -2779,6 +2793,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[16:17], s[12:13]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s12, v5
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v6
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v7
@@ -2823,6 +2838,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; GFX1150-NEXT:    s_and_saveexec_b64 s[16:17], s[12:13]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s12, v5
 ; GFX1150-NEXT:    v_readfirstlane_b32 s13, v6
 ; GFX1150-NEXT:    v_readfirstlane_b32 s14, v7
@@ -2883,10 +2899,12 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
 ; VI-NEXT:    s_and_saveexec_b64 s[16:17], s[8:9]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s8, v5
 ; VI-NEXT:    v_readfirstlane_b32 s9, v6
 ; VI-NEXT:    v_readfirstlane_b32 s10, v7
 ; VI-NEXT:    v_readfirstlane_b32 s11, v8
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v9
 ; VI-NEXT:    v_readfirstlane_b32 s13, v10
 ; VI-NEXT:    v_readfirstlane_b32 s14, v11
@@ -2930,6 +2948,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
 ; GFX9-NEXT:    s_and_saveexec_b64 s[16:17], s[8:9]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX9-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v7
@@ -2977,6 +2996,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s6, s6
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3024,6 +3044,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[16:17], s[8:9]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3074,6 +3095,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
 ; GFX1150-NEXT:    s_and_saveexec_b64 s[16:17], s[8:9]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX1150-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX1150-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3139,14 +3161,17 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; VI-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_readfirstlane_b32 s8, v5
 ; VI-NEXT:    v_readfirstlane_b32 s9, v6
 ; VI-NEXT:    v_readfirstlane_b32 s10, v7
 ; VI-NEXT:    v_readfirstlane_b32 s11, v8
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v9
 ; VI-NEXT:    v_readfirstlane_b32 s13, v10
 ; VI-NEXT:    v_readfirstlane_b32 s14, v11
 ; VI-NEXT:    v_readfirstlane_b32 s15, v12
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s16, v13
 ; VI-NEXT:    v_readfirstlane_b32 s17, v14
 ; VI-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3191,6 +3216,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX9-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX9-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3199,6 +3225,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX9-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX9-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX9-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX9-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX9-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3242,6 +3269,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3250,6 +3278,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3293,6 +3322,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3301,6 +3331,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3348,6 +3379,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX1150-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1150-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX1150-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX1150-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3356,6 +3388,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX1150-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX1150-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX1150-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX1150-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX1150-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3417,14 +3450,17 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; VI-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_readfirstlane_b32 s8, v5
 ; VI-NEXT:    v_readfirstlane_b32 s9, v6
 ; VI-NEXT:    v_readfirstlane_b32 s10, v7
 ; VI-NEXT:    v_readfirstlane_b32 s11, v8
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v9
 ; VI-NEXT:    v_readfirstlane_b32 s13, v10
 ; VI-NEXT:    v_readfirstlane_b32 s14, v11
 ; VI-NEXT:    v_readfirstlane_b32 s15, v12
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s16, v13
 ; VI-NEXT:    v_readfirstlane_b32 s17, v14
 ; VI-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3469,6 +3505,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX9-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX9-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3477,6 +3514,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX9-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX9-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX9-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX9-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX9-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3520,6 +3558,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3528,6 +3567,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3571,6 +3611,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3579,6 +3620,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s18, v15
@@ -3626,6 +3668,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX1150-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1150-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX1150-NEXT:    v_readfirstlane_b32 s9, v6
 ; GFX1150-NEXT:    v_readfirstlane_b32 s10, v7
@@ -3634,6 +3677,7 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX1150-NEXT:    v_readfirstlane_b32 s13, v10
 ; GFX1150-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX1150-NEXT:    v_readfirstlane_b32 s15, v12
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s16, v13
 ; GFX1150-NEXT:    v_readfirstlane_b32 s17, v14
 ; GFX1150-NEXT:    v_readfirstlane_b32 s18, v15
@@ -4388,14 +4432,17 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v4, 0.5
+; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_readfirstlane_b32 s8, v10
 ; VI-NEXT:    v_readfirstlane_b32 s9, v11
 ; VI-NEXT:    v_readfirstlane_b32 s10, v12
 ; VI-NEXT:    v_readfirstlane_b32 s11, v13
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v14
 ; VI-NEXT:    v_readfirstlane_b32 s13, v15
 ; VI-NEXT:    v_readfirstlane_b32 s14, v16
 ; VI-NEXT:    v_readfirstlane_b32 s15, v17
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s16, v18
 ; VI-NEXT:    v_readfirstlane_b32 s17, v19
 ; VI-NEXT:    v_readfirstlane_b32 s18, v20
@@ -4633,6 +4680,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_mov_b32_e32 v4, 0.5
+; GFX1150-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s8, v10
 ; GFX1150-NEXT:    v_readfirstlane_b32 s9, v11
 ; GFX1150-NEXT:    v_readfirstlane_b32 s10, v12
@@ -4641,6 +4689,7 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
 ; GFX1150-NEXT:    v_readfirstlane_b32 s13, v15
 ; GFX1150-NEXT:    v_readfirstlane_b32 s14, v16
 ; GFX1150-NEXT:    v_readfirstlane_b32 s15, v17
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    v_readfirstlane_b32 s16, v18
 ; GFX1150-NEXT:    v_readfirstlane_b32 s17, v19
 ; GFX1150-NEXT:    v_readfirstlane_b32 s18, v20
