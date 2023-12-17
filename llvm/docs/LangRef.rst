@@ -1515,7 +1515,7 @@ Currently, only the following parameter attributes are defined:
     over-alignment specification through language attributes).
 
 ``allocalign``
-    The function parameter marked with this attribute is is the alignment in bytes of the
+    The function parameter marked with this attribute is the alignment in bytes of the
     newly allocated block returned by this function. The returned value must either have
     the specified alignment or be the null pointer. The return value MAY be more aligned
     than the requested alignment, but not less aligned.  Invalid (e.g. non-power-of-2)
@@ -22798,7 +22798,7 @@ Semantics:
 
 The '``llvm.vp.fcmp``' compares its first two operands according to the
 condition code given as the third operand. The operands are compared element by
-element on each enabled lane, where the the semantics of the comparison are
+element on each enabled lane, where the semantics of the comparison are
 defined :ref:`according to the condition code <fcmp_md_cc_sem>`. Masked-off
 lanes are ``poison``.
 
@@ -22856,7 +22856,7 @@ Semantics:
 
 The '``llvm.vp.icmp``' compares its first two operands according to the
 condition code given as the third operand. The operands are compared element by
-element on each enabled lane, where the the semantics of the comparison are
+element on each enabled lane, where the semantics of the comparison are
 defined :ref:`according to the condition code <icmp_md_cc_sem>`. Masked-off
 lanes are ``poison``.
 
