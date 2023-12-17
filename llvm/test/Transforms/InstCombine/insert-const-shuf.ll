@@ -92,6 +92,7 @@ define <3 x float> @twoShufUses(<3 x float> %x) {
 
 ; The inserted scalar constant index is out-of-bounds for the shuffle vector constant.
 
+; FIXME: This is a miscompilation
 define <5 x i8> @longerMask(<3 x i8> %x) {
 ; CHECK-LABEL: @longerMask(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> <i8 poison, i8 1, i8 poison>, <5 x i32> <i32 2, i32 1, i32 4, i32 poison, i32 poison>

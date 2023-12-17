@@ -2332,3 +2332,15 @@ define <2 x float> @uitofp_shuf_narrow(<4 x i32> %x, <4 x i32> %y) {
   %r = shufflevector <4 x float> %nx, <4 x float> %ny, <2 x i32> <i32 3, i32 5>
   ret <2 x float> %r
 }
+
+; FIXME: This is a miscompilation
+define <4 x i16> @blend_elements_from_load(ptr align 8 %_0) {
+; CHECK-LABEL: @blend_elements_from_load(
+; CHECK-NEXT:    [[LOAD:%.*]] = load <3 x i16>, ptr [[_0:%.*]], align 8
+; CHECK-NEXT:    [[RV:%.*]] = shufflevector <3 x i16> <i16 0, i16 poison, i16 poison>, <3 x i16> [[LOAD]], <4 x i32> <i32 0, i32 poison, i32 3, i32 5>
+; CHECK-NEXT:    ret <4 x i16> [[RV]]
+;
+  %load = load <3 x i16>, ptr %_0, align 8
+  %rv = shufflevector <3 x i16> <i16 0, i16 undef, i16 undef>, <3 x i16> %load, <4 x i32> <i32 0, i32 1, i32 3, i32 5>
+  ret <4 x i16> %rv
+}
