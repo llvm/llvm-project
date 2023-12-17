@@ -162,15 +162,13 @@ public:
   }
 
   QuasiPolynomial operator-(const QuasiPolynomial &x) {
-    bool sameNumParams = (getNumParams() == -1) || (x.getNumParams() == -1) ||
-                         (getNumParams() == x.getNumParams());
     assert(numParam == x.getNumParams() &&
            "two quasi-polynomials with different numbers of parameters cannot "
            "be subtracted!");
     QuasiPolynomial qp(x.coefficients, x.affine);
     for (Fraction &coeff : qp.coefficients)
       coeff = -coeff;
-    return (*this + qp);
+    return *this + qp;
   }
 
   QuasiPolynomial operator*(const QuasiPolynomial &x) {
@@ -205,18 +203,18 @@ public:
   QuasiPolynomial simplify() {
     SmallVector<Fraction> newCoeffs({});
     std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
-    bool prodIsNonz, sumIsNonz;
+    bool prodIsNonzero, sumIsNonzero;
     for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
-      prodIsNonz = true;
+      prodIsNonzero = true;
       for (unsigned j = 0, e = affine[i].size(); j < e; j++) {
-        sumIsNonz = false;
+        sumIsNonzero = false;
         for (unsigned k = 0, e = affine[i][j].size(); k < e; k++)
           if (affine[i][j][k] != Fraction(0, 1))
-            sumIsNonz = true;
-        if (sumIsNonz == false)
-          prodIsNonz = false;
+            sumIsNonzero = true;
+        if (sumIsNonzero == false)
+          prodIsNonzero = false;
       }
-      if (prodIsNonz && coefficients[i] != Fraction(0, 1)) {
+      if (prodIsNonzero && coefficients[i] != Fraction(0, 1)) {
         newCoeffs.append({coefficients[i]});
         newAffine.push_back({affine[i]});
       }
