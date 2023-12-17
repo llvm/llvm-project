@@ -336,7 +336,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::ROTL, ISD::ROTR}, MVT::i32, Custom);
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Custom);
   } else if (Subtarget.hasVendorXCVbitmanip()) {
-    setOperationAction({ISD::ROTL}, XLenVT, Expand);
+    setOperationAction(ISD::ROTL, XLenVT, Expand);
   } else {
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
