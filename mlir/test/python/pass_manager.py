@@ -281,3 +281,26 @@ def testPostPassOpInvalidation():
         # CHECK:   return
         # CHECK: }
         log(module)
+
+
+# Test -print-ir-after-all.
+# CHECK-LABEL: TEST: testPrintIrAfterAll
+@run
+def testPrintIrAfterAll():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing()
+        pm.run(module)
+        log(module)
+        # CHECK: IR Dump After Canonicalizer
