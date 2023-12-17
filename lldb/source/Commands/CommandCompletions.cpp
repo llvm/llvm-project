@@ -424,7 +424,7 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
     auto Name = path::filename(Entry.path());
 
     // Omit ".", ".."
-    if (Name == "." || Name == ".." || !Name.startswith(PartialItem))
+    if (Name == "." || Name == ".." || !Name.starts_with(PartialItem))
       continue;
 
     bool is_dir = Status->isDirectory();
@@ -608,7 +608,7 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
                                    CompletionRequest &request,
                                    SearchFilter *searcher) {
   std::string reg_prefix;
-  if (request.GetCursorArgumentPrefix().startswith("$"))
+  if (request.GetCursorArgumentPrefix().starts_with("$"))
     reg_prefix = "$";
 
   RegisterContext *reg_ctx =
