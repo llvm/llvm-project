@@ -38,25 +38,5 @@ int main(int, char**) {
     std::ignore = std::out_ptr<int*>(uPtr, del);
   }
 
-  {
-    CopyableMovableDeleter<int> del;
-    std::unique_ptr<int,  CopyableMovableDeleter<int>> uPtr;
-
-    // expected-error@*:* {{static assertion failed due to requirement 'is_constructible_v<std::unique_ptr<int, std::default_delete<int>>, int *, CopyableMovableDeleter<int> &>'}}
-    std::ignore = std::out_ptr(uPtr, del);
-    // expected-error@*:* {{static assertion failed due to requirement 'is_constructible_v<std::unique_ptr<int, std::default_delete<int>>, int *, CopyableMovableDeleter<int> &>'}}
-    std::ignore = std::out_ptr<int*>(uPtr, del);
-  }
-
-#if 0
-  {
-    NotCopyAbleNotMovableDeleter<int> del;
-    std::unique_ptr<int, NotCopyAbleNotMovableDeleter<int>> uPtr;
-
-    std::ignore = std::out_ptr(uPtr, del);
-    std::ignore = std::out_ptr<int*>(uPtr, del);
-  }
-#endif
-
   return 0;
 }

@@ -15,22 +15,6 @@
 // Custom deleters.
 
 template <typename T>
-struct CopyableMovableDeleter {
-  CopyableMovableDeleter()                                         = default;
-  CopyableMovableDeleter(CopyableMovableDeleter const&)            = default;
-  CopyableMovableDeleter& operator=(CopyableMovableDeleter const&) = default;
-  CopyableMovableDeleter(CopyableMovableDeleter&&)                 = default;
-  CopyableMovableDeleter& operator=(CopyableMovableDeleter&&)      = default;
-
-  void operator()(T* p) const { delete p; }
-};
-
-template <typename T>
-struct DefaultDeleter {
-  void operator()(T* p) const { delete p; }
-};
-
-template <typename T>
 struct MoveOnlyDeleter {
   MoveOnlyDeleter()                                  = default;
   MoveOnlyDeleter(const MoveOnlyDeleter&)            = delete;
@@ -41,15 +25,6 @@ struct MoveOnlyDeleter {
   void operator()(T* p) const { delete p; }
 
   bool wasMoveInitilized = false;
-};
-
-template <typename T>
-struct NotCopyAbleNotMovableDeleter {
-  NotCopyAbleNotMovableDeleter()                                    = default;
-  NotCopyAbleNotMovableDeleter(NotCopyAbleNotMovableDeleter const&) = delete; // not copyable
-  NotCopyAbleNotMovableDeleter(NotCopyAbleNotMovableDeleter&&)      = delete; // not movable either!
-
-  void operator()(T* p) const { delete p; }
 };
 
 // Custom pointer types.

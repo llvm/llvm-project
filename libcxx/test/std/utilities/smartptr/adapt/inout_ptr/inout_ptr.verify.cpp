@@ -30,25 +30,5 @@ int main(int, char**) {
     std::ignore = std::inout_ptr<int*>(sPtr);
   }
 
-  {
-    CopyableMovableDeleter<int> del;
-    std::unique_ptr<int, CopyableMovableDeleter<int>> uPtr;
-
-    std::ignore = std::inout_ptr(uPtr, del);
-    std::ignore = std::inout_ptr<int*>(uPtr, del);
-  }
-
-  {
-    NotCopyAbleNotMovableDeleter<int> del;
-    std::unique_ptr<int, NotCopyAbleNotMovableDeleter<int>> uPtr;
-
-    // -expected-error@*:* {{static assertion failed due to requirement 'is_constructible_v<std::unique_ptr<int, NotCopyAbleNotMovableDeleter<int>>, int *, NotCopyAbleNotMovableDeleter<int> &>'}}
-    // -expected-error@*:* {{object of type 'NotCopyAbleNotMovableDeleter<int>' cannot be assigned because its copy assignment operator is implicitly deleted}}
-    std::ignore = std::inout_ptr(uPtr, std::move(del));
-    // std::ignore = std::inout_ptr<int*>(uPtr, del);
-  }
-#if 0
-#endif
-
   return 0;
 }
