@@ -1,4 +1,4 @@
-//===- Barvinok.h - Barvinok's Algorithm -----------*- C++ -*-===//
+//===- Barvinok.h - Barvinok's Algorithm ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -54,13 +54,21 @@ using Point = SmallVector<Fraction>;
 // * a denominator, of the form (1 - x^{d1})...(1 - x^{dn}),
 //      where each dj, stored in `denominators[i][j]`,
 //      is a vector (a generator).
+//
+// Represents functions f : Q^n -> Q of the form
+//
+// f(x) = \sum_i s_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
+//
+// where s_i is ±1,
+// n_i \in (Q^d -> Q)^n is an n-vector of affine functions on d parameters, and
+// g_{ij} \in Q^n are vectors.
 class GeneratingFunction {
 public:
   GeneratingFunction(unsigned numParam, SmallVector<int, 8> signs,
                      std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
       : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
-    for (auto term : numerators)
+    for (const auto &term : numerators)
       assert(term.getNumColumns() - 1 == numParam &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
@@ -83,20 +91,20 @@ public:
   }
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
-    for (unsigned i = 0; i < signs.size(); i++) {
+    for (unsigned i = 0, e = signs.size(); i < e; i++) {
       if (signs[i] == 1)
         os << " + ";
       else
         os << " - ";
 
-      os << "(x^[";
-      for (unsigned j = 0; j < numerators[i].size() - 1; j++)
+      os << "x^[";
+      for (unsigned j = 0, e = numerators[i].size(); j < e - 1; j++)
         os << numerators[i][j] << ",";
-      os << numerators[i].back() << "])/";
+      os << numerators[i].back() << "]/";
 
       for (Point den : denominators[i]) {
         os << "(x^[";
-        for (unsigned j = 0; j < den.size() - 1; j++)
+        for (unsigned j = 0, e = den.size(); j < e - 1; j++)
           os << den[j] << ",";
         os << den[den.size() - 1] << "])";
       }
@@ -118,28 +126,30 @@ private:
 // Consists of a set of terms.
 // The ith term is a constant `coefficients[i]`, multiplied
 // by the product of a set of affine functions on n parameters.
+// Represents functions f : Q^n -> Q of the form
+//
+// f(x) = \sum_i c_i * \prod_j ⌊g_{ij}(x)⌋
+//
+// where c_i \in Q and
+// g_{ij} : Q^n -> Q are affine functionals.
 class QuasiPolynomial {
 public:
   QuasiPolynomial(unsigned numParam, SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {})
       : numParam(numParam), coefficients(coeffs), affine(aff) {
     // Find the first term which involves some affine function.
-    for (auto term : affine)
+    for (auto term : affine) {
       if (term.size() == 0)
         continue;
-    // The number of elements in the affine function is
-    // one more than the number of parameters.
-    assert(term[0].size() - 1 == numParam &&
-           "dimensionality of affine functions does not match number of "
-           "parameters!")
+      // The number of elements in the affine function is
+      // one more than the number of parameters.
+      assert(term[0].size() - 1 == numParam &&
+             "dimensionality of affine functions does not match number of "
+             "parameters!")
+    }
   }
 
-  QuasiPolynomial(Fraction cons) : coefficients({cons}), affine({{}}) {}
-
-  QuasiPolynomial(QuasiPolynomial const &) = default;
-
-  // Find the number of parameters involved in the polynomial
-  // from the dimensionality of the affine functions.
+  // Find the number of parameters involved in the polynomial.
   unsigned getNumParams() { return numParam; }
 
   QuasiPolynomial operator+(const QuasiPolynomial &x) {
@@ -158,7 +168,7 @@ public:
            "two quasi-polynomials with different numbers of parameters cannot "
            "be subtracted!");
     QuasiPolynomial qp(x.coefficients, x.affine);
-    for (unsigned i = 0; i < x.coefficients.size(); i++)
+    for (unsigned i = 0, e = x.coefficients.size(); i < e; i++)
       qp.coefficients[i] = -qp.coefficients[i];
     return (*this + qp);
   }
@@ -169,8 +179,8 @@ public:
                       "parameters cannot be multiplied!");
     QuasiPolynomial qp();
     std::vector<SmallVector<Fraction>> product;
-    for (unsigned i = 0; i < coefficients.size(); i++) {
-      for (unsigned j = 0; j < x.coefficients.size(); j++) {
+    for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
+      for (unsigned j = 0, e = x.coefficients.size(); j < e; j++) {
         qp.coefficients.append({coefficients[i] * x.coefficients[j]});
 
         product.clear();
@@ -186,27 +196,27 @@ public:
 
   QuasiPolynomial operator/(Fraction x) {
     assert(x != 0 && "division by zero!");
-    for (unsigned i = 0; i < coefficients.size(); i++)
-      coefficients[i] = coefficients[i] / x;
+    for (Fraction &coeff : coefficients)
+      coeff /= x;
     return *this;
   };
 
   // Removes terms which evaluate to zero from the expression.
-  QuasiPolynomial reduce() {
+  QuasiPolynomial simplify() {
     SmallVector<Fraction> newCoeffs({});
     std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
     bool prodIsNonz, sumIsNonz;
-    for (unsigned i = 0; i < coefficients.size(); i++) {
+    for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
       prodIsNonz = true;
-      for (unsigned j = 0; j < affine[i].size(); j++) {
+      for (unsigned j = 0, e = affine[i].size(); j < e; j++) {
         sumIsNonz = false;
-        for (unsigned k = 0; k < affine[i][j].size(); k++)
+        for (unsigned k = 0, e = affine[i][j].size(); k < e; k++)
           if (affine[i][j][k] != Fraction(0, 1))
             sumIsNonz = true;
         if (sumIsNonz == false)
           prodIsNonz = false;
       }
-      if (prodIsNonz == true && coefficients[i] != Fraction(0, 1)) {
+      if (prodIsNonz && coefficients[i] != Fraction(0, 1)) {
         newCoeffs.append({coefficients[i]});
         newAffine.push_back({affine[i]});
       }
