@@ -86,7 +86,7 @@ void test_exceptions() {
       assert(false);
     } catch (const std::out_of_range& e) {
       // pass
-      assert(e.what() == "span"s);
+      LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -109,7 +109,7 @@ void test_exceptions() {
       assert(false);
     } catch (const std::out_of_range& e) {
       // pass
-      assert(e.what() == "span"s);
+      LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -126,7 +126,7 @@ void test_exceptions() {
       assert(false);
     } catch (const std::out_of_range& e) {
       // pass
-      assert(e.what() == "span"s);
+      LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
@@ -134,8 +134,6 @@ void test_exceptions() {
     try {
       std::ignore = vecSpan.at(vec.size() - 1);
       assert(vecSpan.at(vec.size() - 1) == std::numeric_limits<int>::max());
-    } catch (const std::out_of_range& e) {
-      assert(false);
     } catch (...) {
       assert(false);
     }
@@ -150,7 +148,7 @@ void test_exceptions() {
       assert(false);
     } catch (const std::out_of_range& e) {
       // pass
-      assert(e.what() == "span"s);
+      LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
       assert(false);
     }
