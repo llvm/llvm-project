@@ -123,6 +123,9 @@ Branch the Git trunk using the following procedure:
    version bump.  The branch's name is release/X.x where ``X`` is the major version
    number and ``x`` is just the letter ``x``.
 
+#. On the newly-created release branch, immediately bump the version
+   to X.1.0git (where ``X`` is the major version of the branch.)
+
 #. All tags and branches need to be created in both the llvm/llvm-project and
    llvm/llvm-test-suite repos.
 
