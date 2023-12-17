@@ -68,7 +68,7 @@ public:
                      std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
       : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
-    for (const auto &term : numerators)
+    for (const ParamPoint &term : numerators)
       assert(term.getNumColumns() - 1 == numParam &&
              "dimensionality of numerator exponents does not match number of "
              "parameters!");
@@ -138,7 +138,7 @@ public:
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {})
       : numParam(numParam), coefficients(coeffs), affine(aff) {
     // Find the first term which involves some affine function.
-    for (auto term : affine) {
+    for (const std::vector<SmallVector<Fraction>> &term : affine) {
       if (term.size() == 0)
         continue;
       // The number of elements in the affine function is
