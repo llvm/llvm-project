@@ -616,7 +616,6 @@ void FracMatrix::LLL(Fraction delta) {
 
   // We start from the second row.
   unsigned k = 1;
-
   while (k < getNumRows()) {
     for (unsigned j = k - 1; j < k; j--) {
       // Compute the Gram-Schmidt coefficient μ_jk.
@@ -632,10 +631,10 @@ void FracMatrix::LLL(Fraction delta) {
     // Check the Lovasz condition for b_k and b_{k-1}.
     if (dotProduct(gsOrth.getRow(k), gsOrth.getRow(k)) >
         (delta - mu * mu) *
-            dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1)))
+            dotProduct(gsOrth.getRow(k - 1), gsOrth.getRow(k - 1))) {
       // If it is satisfied, proceed to the next k.
       k += 1;
-    else {
+    } else {
       // If it is not satisfied, decrement k (without
       // going beyond the second row).
       swapRows(k, k - 1);
