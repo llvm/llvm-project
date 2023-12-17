@@ -203,21 +203,18 @@ public:
   QuasiPolynomial simplify() {
     SmallVector<Fraction> newCoeffs({});
     std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
-    bool prodIsNonzero, sumIsNonzero;
     for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
-      prodIsNonzero = true;
-      for (unsigned j = 0, e = affine[i].size(); j < e; j++) {
-        sumIsNonzero = false;
-        for (unsigned k = 0, e = affine[i][j].size(); k < e; k++)
-          if (affine[i][j][k] != Fraction(0, 1))
-            sumIsNonzero = true;
-        if (sumIsNonzero == false)
-          prodIsNonzero = false;
-      }
-      if (prodIsNonzero && coefficients[i] != Fraction(0, 1)) {
-        newCoeffs.append({coefficients[i]});
-        newAffine.push_back({affine[i]});
-      }
+      // A term is zero if its coefficient is zero, or
+      if (coefficients[i] == Fraction(0, 1) ||
+              // if any of the affine functions in the product
+              llvm::any_of(affine[i], [](SmallVector<Fraction> affine_ij) {
+                // has all its coefficients as zero.
+                return llvm::all_of(affine_ij,
+                                    [](Fraction f) { return f == 0; });
+              });)
+        continue;
+      newCoeffs.append({coefficients[i]});
+      newAffine.push_back({affine[i]});
     }
     return QuasiPolynomial(newCoeffs, newAffine);
   }
