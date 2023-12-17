@@ -455,8 +455,9 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
 static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
   uint64_t debug_info_size = 0;
   llvm::StringRef section_name(section.GetName());
-  if (section_name.startswith(".debug") || section_name.startswith("__debug") ||
-      section_name.startswith(".apple") || section_name.startswith("__apple"))
+  if (section_name.starts_with(".debug") ||
+      section_name.starts_with("__debug") ||
+      section_name.starts_with(".apple") || section_name.starts_with("__apple"))
     debug_info_size += section.GetFileByteSize();
   size_t num_sub_sections = section.GetNumSubSections();
   for (size_t i = 0; i < num_sub_sections; i++) {

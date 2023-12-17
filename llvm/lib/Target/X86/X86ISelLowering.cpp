@@ -49946,12 +49946,10 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         }
         auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
                                ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
-          if (!UserUndefs.isSubsetOf(Undefs))
-            return false;
           for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
             if (Undefs[I])
               continue;
-            if (Bits[I] != UserBits[I])
+            if (UserUndefs[I] || Bits[I] != UserBits[I])
               return false;
           }
           return true;
@@ -49970,8 +49968,6 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
             if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
                 getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
                                               UserBits)) {
-              UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-              UserBits.truncate(Bits.size());
               if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
                 SDValue Extract = extractSubVector(
                     SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
