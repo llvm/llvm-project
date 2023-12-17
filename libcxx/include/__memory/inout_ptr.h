@@ -51,6 +51,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI inout_ptr_t(const inout_ptr_t&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI ~inout_ptr_t() {
+    // LWG-3897 inout_ptr will not update raw pointer to null
     if constexpr (!is_pointer_v<_Smart>) {
       if (!__p_) {
         return;
@@ -64,12 +65,10 @@ public:
     } else if constexpr (__resettable_smart_pointer_with_args<_Smart, _Pointer, _Args...>) {
       std::apply([&](auto&&... __args) { __s_.reset(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
-    } else if constexpr (is_constructible_v<_Smart, _SP, _Args...>) {
+    } else {
+      static_assert(is_constructible_v<_Smart, _SP, _Args...>);
       std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
-    } else {
-      static_assert(is_pointer_v<_Smart> || __resettable_smart_pointer_with_args<_Smart, _Pointer, _Args...> ||
-                    is_constructible_v<_Smart, _SP, _Args...>);
     }
   }
 

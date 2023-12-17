@@ -91,6 +91,7 @@ void test_replace_int_p_with_nullptr() {
 
   // raw pointer
   {
+    // LWG-3897 inout_ptr will not update raw pointer to null
     auto rPtr = new int{90};
 
     replace_int_p_with_nullptr(std::inout_ptr<int*>(rPtr));
