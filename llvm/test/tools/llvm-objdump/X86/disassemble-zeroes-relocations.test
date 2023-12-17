@@ -2,6 +2,7 @@
 
 ## Check we do not skip zeroes blocks if have relocations pointed to these places.
 # RUN: llvm-objdump -D --reloc -j .rodata %t | FileCheck %s
+# RUN: llvm-objdump -D --reloc -j .rodata --disassemble-symbols=rodata3 %t | FileCheck %s --check-prefix=CHECK2
 
 # CHECK:      0000000000000000 <rodata1>:
 # CHECK-NEXT:        0:       00 00   addb    %al, (%rax)
@@ -29,6 +30,12 @@
 # CHECK-NEXT:       41:       00 00   addb    %al, (%rax)
 # CHECK-NEXT:       43:       00 00   addb    %al, (%rax)
 # CHECK-NEXT:       45:       00 00   addb    %al, (%rax)
+
+# CHECK2:      Disassembly of section .rodata:
+# CHECK2-EMPTY:
+# CHECK2-NEXT: 0000000000000037 <rodata3>:
+# CHECK2-NEXT:                 ...
+# CHECK2-NOT:  {{.}}
 
 ## Check that without -reloc all zeroes would be omitted.
 # RUN: llvm-objdump -D %t | FileCheck %s --check-prefix=SKIP
