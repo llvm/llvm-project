@@ -15,7 +15,7 @@ namespace N {
   [[gsl::suppress]] int x;       // expected-error {{'suppress' attribute takes at least 1 argument}}
   [[gsl::suppress()]] int y;     // expected-error {{'suppress' attribute takes at least 1 argument}}
   int [[gsl::suppress("r")]] z;  // expected-error {{'suppress' attribute cannot be applied to types}}
-  [[gsl::suppress(f_)]] float f; // expected-error {{expected string literal as argument of 'suppress' attribute}}
+  [[gsl::suppress(f_)]] float f; // expected-error {{'suppress' attribute requires a string}}
 }
 
 union [[gsl::suppress("type.1")]] U {
@@ -52,7 +52,7 @@ namespace N {
   int [[clang::suppress("r")]] z;
   // expected-error@-1 {{'suppress' attribute cannot be applied to types}}
   [[clang::suppress(foo)]] float f;
-  // expected-error@-1 {{expected string literal as argument of 'suppress' attribute}}
+  // expected-error@-1 {{'suppress' attribute requires a string}}
 }
 
 class [[clang::suppress("type.1")]] V {
