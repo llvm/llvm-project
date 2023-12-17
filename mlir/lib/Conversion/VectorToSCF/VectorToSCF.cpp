@@ -369,7 +369,7 @@ struct Strategy<TransferReadOp> {
   /// Retrieve the indices of the current StoreOp that stores into the buffer.
   static void getBufferIndices(TransferReadOp xferOp,
                                SmallVector<Value, 8> &indices) {
-    memref::StoreOp storeOp = getStoreOp(xferOp);
+    auto storeOp = getStoreOp(xferOp);
     auto prevIndices = memref::StoreOpAdaptor(storeOp).getIndices();
     indices.append(prevIndices.begin(), prevIndices.end());
   }
@@ -591,8 +591,8 @@ struct PrepareTransferReadConversion
     if (checkPrepareXferOp(xferOp, options).failed())
       return failure();
 
-    BufferAllocs buffers = allocBuffers(rewriter, xferOp);
-    Operation *newXfer = rewriter.clone(*xferOp.getOperation());
+    auto buffers = allocBuffers(rewriter, xferOp);
+    auto *newXfer = rewriter.clone(*xferOp.getOperation());
     newXfer->setAttr(kPassLabel, rewriter.getUnitAttr());
     if (xferOp.getMask()) {
       dyn_cast<TransferReadOp>(newXfer).getMaskMutable().assign(
@@ -885,7 +885,8 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // If the xferOp has a mask: Find and cast mask buffer.
     Value castedMaskBuffer;
     if (xferOp.getMask()) {
-      Value maskBuffer = getMaskBuffer(xferOp);
+      auto maskBuffer = getMaskBuffer(xferOp);
+      auto maskBufferType = dyn_cast<MemRefType>(maskBuffer.getType());
       if (xferOp.isBroadcastDim(0) || xferOp.getMaskType().getRank() == 1) {
         // Do not unpack a dimension of the mask, if:
         // * To-be-unpacked transfer op dimension is a broadcast.
@@ -896,8 +897,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
       } else {
         // It's safe to assume the mask buffer can be unpacked if the data
         // buffer was unpacked.
-        auto maskBufferType = dyn_cast<MemRefType>(maskBuffer.getType());
-        MemRefType castedMaskType = *unpackOneDim(maskBufferType);
+        auto castedMaskType = *unpackOneDim(maskBufferType);
         castedMaskBuffer =
             locB.create<vector::TypeCastOp>(castedMaskType, maskBuffer);
       }
@@ -938,18 +938,11 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
                   b.setInsertionPoint(newXfer); // Insert load before newXfer.
 
                   SmallVector<Value, 8> loadIndices;
-                  if (auto memrefType =
-                          castedMaskBuffer.getType().dyn_cast<MemRefType>()) {
-                    // If castedMaskBuffer is a memref, then one dim was
-                    // unpacked; see above.
+                  Strategy<OpTy>::getBufferIndices(xferOp, loadIndices);
+                  // In case of broadcast: Use same indices to load from memref
+                  // as before.
+                  if (!xferOp.isBroadcastDim(0))
                     loadIndices.push_back(iv);
-                  } else {
-                    Strategy<OpTy>::getBufferIndices(xferOp, loadIndices);
-                    // In case of broadcast: Use same indices to load from
-                    // memref as before.
-                    if (!xferOp.isBroadcastDim(0))
-                      loadIndices.push_back(iv);
-                  }
 
                   auto mask = b.create<memref::LoadOp>(loc, castedMaskBuffer,
                                                        loadIndices);
