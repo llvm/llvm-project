@@ -2202,6 +2202,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
+  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
+    return replaceInstUsesWith(I, V);
+
   Value *X, *Y;
   if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
       match(Op1, m_One())) {
@@ -3378,6 +3381,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Concat = matchOrConcat(I, Builder))
     return replaceInstUsesWith(I, Concat);
 
+  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
+    return replaceInstUsesWith(I, V);
+
   if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
@@ -4500,6 +4506,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       Value *Or = Builder.CreateOr(X, ConstantExpr::getNot(C2));
       return BinaryOperator::CreateXor(Or, ConstantExpr::getNot(C1));
     }
+
+    if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
+      return replaceInstUsesWith(I, V);
 
     // Convert xor ([trunc] (ashr X, BW-1)), C =>
     //   select(X >s -1, C, ~C)

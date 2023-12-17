@@ -492,6 +492,11 @@ public:
   /// X % (C0 * C1)
   Value *SimplifyAddWithRemainder(BinaryOperator &I);
 
+  // Tries to fold (Binop phi(a, b) phi(b,a)) -> (Binop1 a, b)
+  // while Binop is commutative.
+  Value *SimplifyPhiCommutativeBinaryOp(BinaryOperator &I, Value *LHS,
+                                        Value *RHS);
+
   // Binary Op helper for select operations where the expression can be
   // efficiently reorganized.
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,

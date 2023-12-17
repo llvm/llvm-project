@@ -207,6 +207,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
+  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
+    return replaceInstUsesWith(I, V);
+
   Type *Ty = I.getType();
   const unsigned BitWidth = Ty->getScalarSizeInBits();
   const bool HasNSW = I.hasNoSignedWrap();
@@ -777,6 +780,9 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
 
   // (select A, B, C) * (select A, D, E) --> select A, (B*D), (C*E)
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
+    return replaceInstUsesWith(I, V);
+
+  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
 
   if (I.hasAllowReassoc())

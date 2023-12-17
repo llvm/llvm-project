@@ -1096,6 +1096,40 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
+Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
+                                                        Value *Op0,
+                                                        Value *Op1) {
+  assert(I.isCommutative() && "Instruction Should be commutative");
+
+  PHINode *LHS = dyn_cast<PHINode>(Op0);
+  PHINode *RHS = dyn_cast<PHINode>(Op1);
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (LHS->getNumOperands() != 2 || RHS->getNumOperands() != 2)
+    return nullptr;
+
+  Value *N1 = LHS->getIncomingValue(0);
+  Value *N2 = LHS->getIncomingValue(1);
+  Value *N3 = RHS->getIncomingValue(0);
+  Value *N4 = RHS->getIncomingValue(1);
+
+  BasicBlock *B1 = LHS->getIncomingBlock(0);
+  BasicBlock *B2 = LHS->getIncomingBlock(1);
+  BasicBlock *B3 = RHS->getIncomingBlock(0);
+  BasicBlock *B4 = RHS->getIncomingBlock(1);
+
+  if (N1 == N4 && N2 == N3 && B1 == B3 && B2 == B4) {
+    Value *BI = Builder.CreateBinOp(I.getOpcode(), N1, N2);
+    if (auto *BO = dyn_cast<BinaryOperator>(BI))
+      BO->copyIRFlags(&I);
+    return BI;
+  }
+
+  return nullptr;
+}
+
 Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                         Value *LHS,
                                                         Value *RHS) {

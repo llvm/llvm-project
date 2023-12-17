@@ -1505,6 +1505,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return Sub;
   }
 
+  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, LHS, RHS))
+    return replaceInstUsesWith(I, V);
+
   // A + -B  -->  A - B
   if (match(RHS, m_Neg(m_Value(B))))
     return BinaryOperator::CreateSub(LHS, B);
@@ -1907,6 +1910,9 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
 
   // Handle specials cases for FAdd with selects feeding the operation
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, LHS, RHS))
+    return replaceInstUsesWith(I, V);
+
+  if (Value *V = SimplifyPhiCommutativeBinaryOp(I, LHS, RHS))
     return replaceInstUsesWith(I, V);
 
   if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
