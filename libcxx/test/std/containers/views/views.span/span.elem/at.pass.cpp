@@ -84,7 +84,7 @@ void test_exceptions() {
     try {
       std::ignore = arrSpan.at(arr.size());
       assert(false);
-    } catch (const std::out_of_range& e) {
+    } catch ([[maybe_unused]] const std::out_of_range& e) {
       // pass
       LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
@@ -107,7 +107,7 @@ void test_exceptions() {
     try {
       std::ignore = arrSpan.at(0);
       assert(false);
-    } catch (const std::out_of_range& e) {
+    } catch ([[maybe_unused]] const std::out_of_range& e) {
       // pass
       LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
@@ -146,7 +146,7 @@ void test_exceptions() {
     try {
       std::ignore = vecSpan.at(0);
       assert(false);
-    } catch (const std::out_of_range& e) {
+    } catch ([[maybe_unused]] const std::out_of_range& e) {
       // pass
       LIBCPP_ASSERT(e.what() == "span"s);
     } catch (...) {
