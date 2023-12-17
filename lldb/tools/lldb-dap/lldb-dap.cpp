@@ -3094,7 +3094,7 @@ void request_setVariable(const llvm::json::Object &request) {
     lldb::SBValue container = g_dap.variables.GetVariable(variablesReference);
     variable = container.GetChildMemberWithName(name.data());
     if (!variable.IsValid()) {
-      if (name.startswith("[")) {
+      if (name.starts_with("[")) {
         llvm::StringRef index_str(name.drop_front(1));
         uint64_t index = 0;
         if (!index_str.consumeInteger(0, index)) {
