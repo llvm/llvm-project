@@ -124,6 +124,10 @@ Improvements to clang-tidy
   exporting fixes fails. It now accepts a directory as a value for
   `-export-fixes` to export individual yaml files for each compilation unit.
 
+- Improved :program:`clang-tidy-diff.py` script. It now accepts a `-config` option
+  to pass in a configuration file to :program:`clang-tidy`. This option corresponds
+  to the `--config-file` option in :program:`clang-tidy`.
+
 - Improved :program:`run-clang-tidy.py` script. It now accepts a directory
   as a value for `-export-fixes` to export individual yaml files for each
   compilation unit.
