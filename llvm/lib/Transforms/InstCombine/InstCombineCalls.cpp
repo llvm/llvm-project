@@ -1539,6 +1539,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *I = foldCommutativeIntrinsicOverSelects(*II))
       return I;
 
+    if (Instruction *I = foldCommutativeIntrinsicOverPhis(*II))
+      return I;
+
     if (CallInst *NewCall = canonicalizeConstantArg0ToArg1(CI))
       return NewCall;
   }
@@ -4232,6 +4235,25 @@ InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
             m_Select(m_Specific(A), m_Specific(C), m_Specific(B)))) {
     replaceOperand(II, 0, B);
     replaceOperand(II, 1, C);
+    return &II;
+  }
+
+  return nullptr;
+}
+
+Instruction *
+InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
+  assert(II.isCommutative());
+
+  PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
+  PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (matchSymmetricPhiNodesPair(LHS, RHS)) {
+    replaceOperand(II, 0, LHS->getIncomingValue(0));
+    replaceOperand(II, 1, LHS->getIncomingValue(1));
     return &II;
   }
 

@@ -1096,19 +1096,10 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
-Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
-                                                        Value *Op0,
-                                                        Value *Op1) {
-  assert(I.isCommutative() && "Instruction Should be commutative");
-
-  PHINode *LHS = dyn_cast<PHINode>(Op0);
-  PHINode *RHS = dyn_cast<PHINode>(Op1);
-
-  if (!LHS || !RHS)
-    return nullptr;
+bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
 
   if (LHS->getNumOperands() != 2 || RHS->getNumOperands() != 2)
-    return nullptr;
+    return false;
 
   Value *N1 = LHS->getIncomingValue(0);
   Value *N2 = LHS->getIncomingValue(1);
@@ -1120,8 +1111,23 @@ Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
   BasicBlock *B3 = RHS->getIncomingBlock(0);
   BasicBlock *B4 = RHS->getIncomingBlock(1);
 
-  if (N1 == N4 && N2 == N3 && B1 == B3 && B2 == B4) {
-    Value *BI = Builder.CreateBinOp(I.getOpcode(), N1, N2);
+  return N1 == N4 && N2 == N3 && B1 == B3 && B2 == B4;
+}
+
+Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
+                                                        Value *Op0,
+                                                        Value *Op1) {
+  assert(I.isCommutative() && "Instruction Should be commutative");
+
+  PHINode *LHS = dyn_cast<PHINode>(Op0);
+  PHINode *RHS = dyn_cast<PHINode>(Op1);
+
+  if (!LHS || !RHS)
+    return nullptr;
+
+  if (matchSymmetricPhiNodesPair(LHS, RHS)) {
+    Value *BI = Builder.CreateBinOp(I.getOpcode(), LHS->getIncomingValue(0),
+                                    LHS->getIncomingValue(1));
     if (auto *BO = dyn_cast<BinaryOperator>(BI))
       BO->copyIRFlags(&I);
     return BI;
