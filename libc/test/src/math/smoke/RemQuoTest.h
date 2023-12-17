@@ -18,7 +18,7 @@
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   const T zero = T(FPBits::zero());
   const T neg_zero = T(FPBits::neg_zero());

@@ -376,6 +376,27 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SinhOp
+//===----------------------------------------------------------------------===//
+
+def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
+  let summary = "hyperbolic sine of the specified value";
+  let description = [{
+    The `sinh` operation computes the hyperbolic sine. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar hyperbolic sine value.
+    %a = math.sinh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // CountLeadingZerosOp
 //===----------------------------------------------------------------------===//
 

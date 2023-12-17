@@ -265,9 +265,12 @@ InstructionContext RecognizableInstr::insnContext() const {
       }
     }
     // No L, no W
-    else if (OpPrefix == X86Local::PD)
-      insnContext = EVEX_KB(IC_EVEX_OPSIZE);
-    else if (OpPrefix == X86Local::XD)
+    else if (OpPrefix == X86Local::PD) {
+      if (AdSize == X86Local::AdSize32)
+        insnContext = IC_EVEX_OPSIZE_ADSIZE;
+      else
+        insnContext = EVEX_KB(IC_EVEX_OPSIZE);
+    } else if (OpPrefix == X86Local::XD)
       insnContext = EVEX_KB(IC_EVEX_XD);
     else if (OpPrefix == X86Local::XS)
       insnContext = EVEX_KB(IC_EVEX_XS);

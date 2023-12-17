@@ -1330,7 +1330,8 @@ static int getInstructionID(struct InternalInstruction *insn,
   //  any position.
   if ((insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0)) ||
       (insn->opcodeType == TWOBYTE && (insn->opcode == 0xAE)) ||
-      (insn->opcodeType == THREEBYTE_38 && insn->opcode == 0xF8)) {
+      (insn->opcodeType == THREEBYTE_38 && insn->opcode == 0xF8) ||
+      (insn->opcodeType == MAP4 && insn->opcode == 0xF8)) {
     // Make sure we observed the prefixes in any position.
     if (insn->hasAdSize)
       attrMask |= ATTR_ADSIZE;

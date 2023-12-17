@@ -105,6 +105,7 @@ protected:
             mlir::Type stmtResultType) override;
 };
 using HlfirMinlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MinlocOp>;
+using HlfirMaxlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MaxlocOp>;
 
 template <typename OP>
 class HlfirProductIntrinsic : public HlfirTransformationalIntrinsic {
@@ -373,9 +374,8 @@ mlir::Value HlfirCountLowering::lowerImpl(
   mlir::Value dim = operands[1];
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-  mlir::Value kind = operands[2];
   mlir::Type resultType = computeResultType(array, stmtResultType);
-  return createOp<hlfir::CountOp>(resultType, array, dim, kind);
+  return createOp<hlfir::CountOp>(resultType, array, dim);
 }
 
 mlir::Value HlfirCharExtremumLowering::lowerImpl(
@@ -428,6 +428,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
                                                    stmtResultType);
   if (name == "minloc")
     return HlfirMinlocLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "maxloc")
+    return HlfirMaxlocLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
