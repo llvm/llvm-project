@@ -103,7 +103,6 @@
 namespace llvm {
 
 class AsmPrinter;
-class DwarfUnit;
 class DwarfDebug;
 class DwarfTypeUnit;
 class MCSymbol;
