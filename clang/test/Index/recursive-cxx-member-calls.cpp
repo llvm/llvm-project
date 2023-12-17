@@ -99,7 +99,7 @@ using namespace clang;
 
 AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
   llvm::StringRef AttrName = Name->getName();
-  if (AttrName.starts_with("__") && AttrName.ends_with("__"))
+  if (AttrName.startswith("__") && AttrName.endswith("__"))
     AttrName = AttrName.substr(2, AttrName.size() - 4);
 
   return llvm::StringSwitch < AttributeList::Kind > (AttrName)
