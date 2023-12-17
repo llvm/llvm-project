@@ -1155,7 +1155,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
           block = arg.getOwner();
         else
           block = val.getDefiningOp()->getBlock();
-        if (!isNestedIn(block, forallOp))
+        if (!forallOp.getRegion().findAncestorBlockInRegion(*block))
           invariants.insert(val);
       }
     });
@@ -1208,15 +1208,6 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
   }
 
 private:
-  // Helper method to see if block appears in given loop.
-  static bool isNestedIn(Block *block, scf::ParallelOp forallOp) {
-    for (Operation *o = block->getParentOp(); o; o = o->getParentOp()) {
-      if (o == forallOp)
-        return true;
-    }
-    return false;
-  }
-
   unsigned numThreads;
 };
 
