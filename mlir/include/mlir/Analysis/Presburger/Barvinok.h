@@ -177,7 +177,7 @@ public:
     assert(numParam = x.getNumParams() &&
                       "two quasi-polynomials with different numbers of "
                       "parameters cannot be multiplied!");
-    QuasiPolynomial qp();
+    QuasiPolynomial qp(numParam);
     std::vector<SmallVector<Fraction>> product;
     for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
       for (unsigned j = 0, e = x.coefficients.size(); j < e; j++) {
