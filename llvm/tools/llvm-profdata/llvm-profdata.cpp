@@ -905,7 +905,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     for (const auto &Input : Inputs) {
       Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
                  Contexts[Ctx].get());
-      Ctx = (Ctx + 1) % NumThreads;
+      if (++Ctx >= NumThreads)
+        Ctx = 0;
     }
     Pool.wait();
 

@@ -6035,7 +6035,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
     auto *I1 = cast<Instruction>(VL.front());
     auto *I2 = cast<Instruction>(VL.back());
-    for (int Op = 0, E = S.MainOp->getNumOperands(); Op < E; ++Op)
+    for (unsigned Op = 0, E = S.MainOp->getNumOperands(); Op != E; ++Op)
       Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                              I2->getOperand(Op));
     if (static_cast<unsigned>(count_if(
@@ -6048,9 +6048,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (IsCommutative) {
       // Check permuted operands.
       Candidates.clear();
-      for (int Op = 0, E = S.MainOp->getNumOperands(); Op < E; ++Op)
-        Candidates.emplace_back().emplace_back(I1->getOperand(Op),
-                                               I2->getOperand((Op + 1) % E));
+      for (unsigned Op = 0, E = S.MainOp->getNumOperands(); Op != E; ++Op)
+        Candidates.emplace_back().emplace_back(
+            I1->getOperand(Op), I2->getOperand(Op + 1 == E ? 0 : Op + 1));
       if (any_of(
               Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
                 return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);

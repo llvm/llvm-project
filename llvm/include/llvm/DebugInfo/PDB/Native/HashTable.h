@@ -234,7 +234,8 @@ public:
         if (!isDeleted(I))
           break;
       }
-      I = (I + 1) % capacity();
+      if (++I == capacity())
+        I = 0;
     } while (I != H);
 
     // The only way FirstUnused would not be set is if every single entry in the
