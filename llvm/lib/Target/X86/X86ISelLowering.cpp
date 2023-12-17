@@ -49956,6 +49956,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
         };
         // See if we are loading a constant that matches in the lower
         // bits of a longer constant (but from a different constant pool ptr).
+        EVT UserVT = User->getValueType(0);
         SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
         const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
         const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
@@ -49965,9 +49966,12 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
             APInt Undefs, UserUndefs;
             SmallVector<APInt> Bits, UserBits;
-            if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-                getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                              UserBits)) {
+            unsigned NumBits = std::min(RegVT.getScalarSizeInBits(),
+                                        UserVT.getScalarSizeInBits());
+            if (getTargetConstantBitsFromNode(SDValue(N, 0), NumBits, Undefs,
+                                              Bits) &&
+                getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
+                                              UserUndefs, UserBits)) {
               if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
                 SDValue Extract = extractSubVector(
                     SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
