@@ -120,6 +120,7 @@
 ! HELP-NEXT: -pedantic               Warn on language extensions
 ! HELP-NEXT: -print-effective-triple Print the effective target triple
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
+! HELP-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-NEXT: -P                      Disable linemarker output in -E mode
 ! HELP-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression

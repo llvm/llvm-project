@@ -1,7 +1,7 @@
 ! Verify that certain linker flags are known to the frontend and are passed on
 ! to the linker.
 
-! RUN: %flang -### --target=x86_64-linux-gnu -rpath /path/to/dir -shared \
+! RUN: %flang -### --target=x86_64-linux-gnu -rpath /path/to/dir -shared -pthread \
 ! RUN:     -static %s 2>&1 | FileCheck \
 ! RUN:     --check-prefixes=GNU-LINKER-OPTIONS %s
 ! RUN: %flang -### --target=x86_64-windows-msvc -rpath /path/to/dir -shared \
@@ -13,6 +13,7 @@
 ! GNU-LINKER-OPTIONS-SAME: "-shared"
 ! GNU-LINKER-OPTIONS-SAME: "-static"
 ! GNU-LINKER-OPTIONS-SAME: "-rpath" "/path/to/dir"
+! GNU-LINKER-OPTIONS-SAME: "-lpthread"
 
 ! For MSVC, adding -static does not add any additional linker options.
 ! MSVC-LINKER-OPTIONS: "{{.*}}link{{(.exe)?}}"
