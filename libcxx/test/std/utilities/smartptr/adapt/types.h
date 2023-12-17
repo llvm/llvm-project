@@ -16,9 +16,11 @@
 
 template <typename T>
 struct CopyableMovableDeleter {
-  CopyableMovableDeleter()                              = default;
-  CopyableMovableDeleter(CopyableMovableDeleter const&) = default;
-  CopyableMovableDeleter(CopyableMovableDeleter&&)      = default;
+  CopyableMovableDeleter()                                         = default;
+  CopyableMovableDeleter(CopyableMovableDeleter const&)            = default;
+  CopyableMovableDeleter& operator=(CopyableMovableDeleter const&) = default;
+  CopyableMovableDeleter(CopyableMovableDeleter&&)                 = default;
+  CopyableMovableDeleter& operator=(CopyableMovableDeleter&&)      = default;
 
   void operator()(T* p) const { delete p; }
 };
