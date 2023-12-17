@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -116,13 +117,19 @@ public:
   /// Merge the specified alias set into this alias set.
   void mergeSetIn(AliasSet &AS, AliasSetTracker &AST, BatchAAResults &BatchAA);
 
-  // Alias Set iteration - Allow access to all of the pointers which are part of
-  // this alias set.
+  // Alias Set iteration - Allow access to all of the memory locations which are
+  // part of this alias set.
   using iterator = std::vector<MemoryLocation>::const_iterator;
   iterator begin() const { return MemoryLocs.begin(); }
   iterator end() const { return MemoryLocs.end(); }
 
   unsigned size() { return MemoryLocs.size(); }
+
+  /// Retrieve the pointer values for the memory locations in this alias set.
+  /// The order matches that of the memory locations, but duplicate pointer
+  /// values are omitted.
+  using PointerVector = SmallVector<const Value *, 8>;
+  PointerVector getPointers() const;
 
   void print(raw_ostream &OS) const;
   void dump() const;
