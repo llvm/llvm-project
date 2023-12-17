@@ -13,5 +13,6 @@ add_clang_library(MLIRCIR
   MLIRIR
   MLIRFuncDialect
   MLIRLLVMDialect
+  MLIRLoopLikeInterface
   MLIRSideEffectInterfaces
   )
