@@ -3079,12 +3079,14 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
                                     " is not within [-2147483648, 2147483647]");
       } else if (!Is16) {
         if (!isUInt<32>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
-          Warning(BaseLoc,
-                  "displacement " + Twine(Imm) + " shortened to signed 32-bit");
+          Warning(BaseLoc, "displacement " + Twine(Imm) +
+                               " shortened to 32-bit signed " +
+                               Twine(static_cast<int32_t>(Imm)));
         }
       } else if (!isUInt<16>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
-        Warning(BaseLoc,
-                "displacement " + Twine(Imm) + " shortened to signed 16-bit");
+        Warning(BaseLoc, "displacement " + Twine(Imm) +
+                             " shortened to 16-bit signed " +
+                             Twine(static_cast<int16_t>(Imm)));
       }
     }
   }
