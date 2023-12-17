@@ -467,7 +467,8 @@ TEST(GlobalCompilationDatabaseTest, InferenceWithResponseFile) {
       ]
       )cdb";
   FS.Files[testPath("compile_commands.json")] =
-      llvm::formatv(CDB, llvm::sys::path::convert_to_slash(testRoot()), Path);
+      llvm::formatv(CDB, llvm::sys::path::convert_to_slash(testRoot()),
+                    llvm::sys::path::convert_to_slash(Path));
 
   // File from CDB.
   EXPECT_THAT(Command("foo.cc"), Contains("-DXYZZY"));
