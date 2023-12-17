@@ -15,6 +15,7 @@
 //   auto out_ptr(Smart& s, Args&&... args);                   // since c++23
 
 #include <memory>
+#include <tuple>
 
 #include "../types.h"
 
@@ -23,30 +24,40 @@ int main(int, char**) {
   {
     std::shared_ptr<int> sPtr;
 
-    // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, std::shared_ptr> || sizeof...(_Args) > 0'{{.*}}Specialization of std::shared_ptr<> requires a deleter.}}
-    auto outSPtr1 = std::out_ptr(sPtr);
+    // expected-error-re@*:* {{static assertion failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, std::shared_ptr> || sizeof...(_Args) > 0'{{.*}}Specialization of std::shared_ptr<> requires a deleter.}}
+    std::ignore = std::out_ptr(sPtr);
     // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::out_ptr_t<shared_ptr<int>, _Ptr>' (aka 'out_ptr_t<std::shared_ptr<int>, int *>')}}
-    auto outSPtr2 = std::out_ptr<int*>(sPtr);
+    std::ignore = std::out_ptr<int*>(sPtr);
   }
 
-  // {
-  //   DefaultDeleter<int> del;
-  //   std::shared_ptr<int> sPtr;
-  //   auto outSPtr1 = std::out_ptr(sPtr, del);
-  //   auto outSPtr2 = std::out_ptr<int*>(sPtr, del);
-  // }
+#if 0
 
-  // {
-  //   std::shared_ptr<int> sPtr;
-  //   auto outSPtr1 = std::out_ptr(sPtr, CopyableMovableDeleter<int>{});
-  //   auto outSPtr2 = std::out_ptr<int*>(sPtr, CopyableMovableDeleter<int>{});
-  // }
+  {
+    DefaultDeleter<int> del;
+    std::unique_ptr<int> uPtr;
 
-  // {
-  //   std::shared_ptr<int> sPtr;
-  //   auto outSPtr1 = std::out_ptr(sPtr, NotCopyAbleNotMovableDeleter<int>{});
-  //   auto outSPtr2 = std::out_ptr<int*>(sPtr, NotCopyAbleNotMovableDeleter<int>{});
-  // }
+    std::ignore = std::out_ptr(uPtr, del);
+    std::ignore = std::out_ptr<int*>(uPtr, del);
+  }
+
+  {
+    CopyableMovableDeleter<int> del;
+    std::shared_ptr<int> uPtr;
+
+    // expected-error@*:* {{static assertion failed due to requirement 'is_constructible_v<std::unique_ptr<int, std::default_delete<int>>, int *, CopyableMovableDeleter<int> &>'}}
+    std::ignore = std::out_ptr(uPtr, del);
+    // expected-error@*:* {{static assertion failed due to requirement 'is_constructible_v<std::unique_ptr<int, std::default_delete<int>>, int *, CopyableMovableDeleter<int> &>'}}
+    std::ignore = std::out_ptr<int*>(uPtr, del);
+  }
+
+  {
+    NotCopyAbleNotMovableDeleter<int> del;
+    std::shared_ptr<int> uPtr;
+
+    std::ignore = std::out_ptr(uPtr, del);
+    std::ignore = std::out_ptr<int*>(uPtr, del);
+  }
+#endif
 
   return 0;
 }
