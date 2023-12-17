@@ -283,7 +283,6 @@ def testPostPassOpInvalidation():
         log(module)
 
 
-# Test -print-ir-after-all.
 # CHECK-LABEL: TEST: testPrintIrAfterAll
 @run
 def testPrintIrAfterAll():
@@ -308,8 +307,6 @@ def testPrintIrAfterAll():
         # CHECK:     return
         # CHECK:   }
         # CHECK: }
-        # CHECK: 
-        # CHECK: 
         # CHECK: // -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
         # CHECK: module {
         # CHECK:   func.func @main() {
@@ -317,4 +314,3 @@ def testPrintIrAfterAll():
         # CHECK:   }
         # CHECK: }
         pm.run(module)
-        # CHECK: IR Dump After Canonicalizer
