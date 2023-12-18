@@ -388,7 +388,7 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
 /// arbitrarily pick 64 bit as our canonical type.  The actual bitwidth doesn't
 /// matter, we just want a consistent type to simplify CSE.
 static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
-  const unsigned IndexBW = IndexC->getType()->getBitWidth();
+  const unsigned IndexBW = IndexC->getBitWidth();
   if (IndexBW == 64 || IndexC->getValue().getActiveBits() > 64)
     return nullptr;
   return ConstantInt::get(IndexC->getContext(),
@@ -581,20 +581,20 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
       // If the input vector has a single use, simplify it based on this use
       // property.
       if (SrcVec->hasOneUse()) {
-        APInt UndefElts(NumElts, 0);
+        APInt PoisonElts(NumElts, 0);
         APInt DemandedElts(NumElts, 0);
         DemandedElts.setBit(IndexC->getZExtValue());
         if (Value *V =
-                SimplifyDemandedVectorElts(SrcVec, DemandedElts, UndefElts))
+                SimplifyDemandedVectorElts(SrcVec, DemandedElts, PoisonElts))
           return replaceOperand(EI, 0, V);
       } else {
         // If the input vector has multiple uses, simplify it based on a union
         // of all elements used.
         APInt DemandedElts = findDemandedEltsByAllUsers(SrcVec);
         if (!DemandedElts.isAllOnes()) {
-          APInt UndefElts(NumElts, 0);
+          APInt PoisonElts(NumElts, 0);
           if (Value *V = SimplifyDemandedVectorElts(
-                  SrcVec, DemandedElts, UndefElts, 0 /* Depth */,
+                  SrcVec, DemandedElts, PoisonElts, 0 /* Depth */,
                   true /* AllowMultipleUsers */)) {
             if (V != SrcVec) {
               Worklist.addValue(SrcVec);
@@ -1713,9 +1713,10 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
   if (auto VecTy = dyn_cast<FixedVectorType>(VecOp->getType())) {
     unsigned VWidth = VecTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask, UndefElts)) {
+    if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask,
+                                              PoisonElts)) {
       if (V != &IE)
         return replaceInstUsesWith(IE, V);
       return &IE;
@@ -2639,7 +2640,7 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
     assert(NewInsIndex != -1 && "Did not fold shuffle with unused operand?");
 
     // Index is updated to the potentially translated insertion lane.
-    IndexC = ConstantInt::get(IndexC->getType(), NewInsIndex);
+    IndexC = ConstantInt::get(IndexC->getIntegerType(), NewInsIndex);
     return true;
   };
 
@@ -2855,9 +2856,9 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = foldCastShuffle(SVI, Builder))
     return I;
 
-  APInt UndefElts(VWidth, 0);
+  APInt PoisonElts(VWidth, 0);
   APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-  if (Value *V = SimplifyDemandedVectorElts(&SVI, AllOnesEltMask, UndefElts)) {
+  if (Value *V = SimplifyDemandedVectorElts(&SVI, AllOnesEltMask, PoisonElts)) {
     if (V != &SVI)
       return replaceInstUsesWith(SVI, V);
     return &SVI;

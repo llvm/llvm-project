@@ -2368,19 +2368,12 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
+  // TODO: Move this case into isKnownNonEqual().
   if (auto *C = dyn_cast<Constant>(X))
     if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Depth, Q))
       return true;
 
-  KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
-  if (XKnown.isUnknown())
-    return false;
-  KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
-  // If X != Y then X - Y is non zero.
-  std::optional<bool> ne = KnownBits::ne(XKnown, YKnown);
-  // If we are unable to compute if X != Y, we won't be able to do anything
-  // computing the knownbits of the sub expression so just return here.
-  return ne && *ne;
+  return ::isKnownNonEqual(X, Y, Depth, Q);
 }
 
 static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,

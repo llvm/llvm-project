@@ -173,14 +173,14 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
 }
 
 std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
-    IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts, APInt &UndefElts2,
-    APInt &UndefElts3,
+    IntrinsicInst &II, APInt DemandedElts, APInt &PoisonElts,
+    APInt &PoisonElts2, APInt &PoisonElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
     return TTI.simplifyDemandedVectorEltsIntrinsic(
-        *this, II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+        *this, II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
         SimplifyAndSetOp);
   }
   return std::nullopt;
@@ -2241,10 +2241,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // compile-time.
   if (auto *GEPFVTy = dyn_cast<FixedVectorType>(GEPType)) {
     auto VWidth = GEPFVTy->getNumElements();
-    APInt UndefElts(VWidth, 0);
+    APInt PoisonElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
     if (Value *V = SimplifyDemandedVectorElts(&GEP, AllOnesEltMask,
-                                              UndefElts)) {
+                                              PoisonElts)) {
       if (V != &GEP)
         return replaceInstUsesWith(GEP, V);
       return &GEP;

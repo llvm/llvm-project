@@ -13851,6 +13851,7 @@ private:
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool ParseSVEImmChecks(CallExpr *TheCall,
                          SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
+  bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckARMCoprocessorImmediate(const TargetInfo &TI, const Expr *CoprocArg,
