@@ -47,7 +47,7 @@ PluginAdaptorTy::create(const std::string &Name) {
       new PluginAdaptorTy(Name, std::move(LibraryHandler)));
   if (auto Err = PluginAdaptor->init())
     return Err;
-  return PluginAdaptor;
+  return std::move(PluginAdaptor);
 }
 
 PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,

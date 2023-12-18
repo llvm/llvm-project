@@ -829,7 +829,7 @@ define dso_local ptr @lea_static_fn() #0 {
 ;
 ; MEDIUM-STATIC-LABEL: lea_static_fn:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    leaq static_fn(%rip), %rax
+; MEDIUM-STATIC-NEXT:    movl $static_fn, %eax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: lea_static_fn:
@@ -882,7 +882,7 @@ define dso_local ptr @lea_global_fn() #0 {
 ;
 ; MEDIUM-STATIC-LABEL: lea_global_fn:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    leaq global_fn(%rip), %rax
+; MEDIUM-STATIC-NEXT:    movl $global_fn, %eax
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: lea_global_fn:

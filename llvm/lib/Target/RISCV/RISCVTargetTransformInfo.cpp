@@ -172,7 +172,9 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return ST->hasStdExtZbb() ? TTI::PSK_FastHardware : TTI::PSK_Software;
+  return ST->hasStdExtZbb() || ST->hasVendorXCVbitmanip()
+             ? TTI::PSK_FastHardware
+             : TTI::PSK_Software;
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
