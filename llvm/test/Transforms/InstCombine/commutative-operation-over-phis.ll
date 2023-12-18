@@ -32,6 +32,78 @@ end:
   ret i8 %ret
 }
 
+define i8 @fold_phi_mul_nsw_nuw(i1 %c, i8 %a, i8 %b)  {
+; CHECK-LABEL: define i8 @fold_phi_mul_nsw_nuw(
+; CHECK-SAME: i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = mul nuw nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi i8 [%a, %entry], [%b, %then]
+  %phi2 = phi i8 [%b, %entry], [%a, %then]
+  %ret = mul nsw nuw i8 %phi1, %phi2
+  ret i8 %ret
+}
+
+define <2 x i8> @fold_phi_mul_fix_vec(i1 %c, <2 x i8> %a, <2 x i8> %b)  {
+; CHECK-LABEL: define <2 x i8> @fold_phi_mul_fix_vec(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = mul <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi <2 x i8> [%a, %entry], [%b, %then]
+  %phi2 = phi <2 x i8> [%b, %entry], [%a, %then]
+  %ret = mul <2 x i8> %phi1, %phi2
+  ret <2 x i8> %ret
+}
+
+define <vscale x 2 x i8> @fold_phi_mul_scale_vec(i1 %c, <vscale x 2 x i8> %a, <vscale x 2 x i8> %b)  {
+; CHECK-LABEL: define <vscale x 2 x i8> @fold_phi_mul_scale_vec(
+; CHECK-SAME: i1 [[C:%.*]], <vscale x 2 x i8> [[A:%.*]], <vscale x 2 x i8> [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = mul <vscale x 2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi <vscale x 2 x i8> [%a, %entry], [%b, %then]
+  %phi2 = phi <vscale x 2 x i8> [%b, %entry], [%a, %then]
+  %ret = mul <vscale x 2 x i8> %phi1, %phi2
+  ret <vscale x 2 x i8> %ret
+}
+
 define i8 @fold_phi_mul_commute(i1 %c, i8 %a, i8 %b)  {
 ; CHECK-LABEL: define i8 @fold_phi_mul_commute(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
@@ -232,6 +304,30 @@ end:
   %phi1 = phi float [%a, %entry], [%b, %then]
   %phi2 = phi float [%b, %entry], [%a, %then]
   %ret = fadd float %phi1, %phi2
+  ret float %ret
+}
+
+define float @fold_phi_fadd_nnan(i1 %c, float %a, float %b)  {
+; CHECK-LABEL: define float @fold_phi_fadd_nnan(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = fadd nnan float [[A]], [[B]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi float [%a, %entry], [%b, %then]
+  %phi2 = phi float [%b, %entry], [%a, %then]
+  %ret = fadd nnan float %phi1, %phi2
   ret float %ret
 }
 
