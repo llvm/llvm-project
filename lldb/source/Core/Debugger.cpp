@@ -594,6 +594,20 @@ lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
                g_debugger_properties[idx].default_uint_value));
 }
 
+uint64_t Debugger::GetProgressUpdateFrequency() const {
+  const uint32_t idx = ePropertyProgressUpdateFrequency;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+uint64_t Debugger::GetProgressMinDuration() const {
+  const uint32_t idx = ePropertyProgressMinDuration;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+
+
 #pragma mark Debugger
 
 // const DebuggerPropertiesSP &
@@ -938,6 +952,7 @@ void Debugger::Clear() {
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
+    StopProgressThread();
     m_listener_sp->Clear();
     for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
@@ -1430,6 +1445,279 @@ void Debugger::SetDestroyCallback(
   m_destroy_callback_baton = baton;
 }
 
+
+  /// Notify the progress thread that there is new progress data.
+void Debugger::NotifyProgress(std::unique_ptr<ProgressEventData> &data_up) {
+  // Start the progress thread if it isn't already running.
+  if (!m_progress_thread.IsJoinable())
+    StartProgressThread();
+  // Scope to let the lock unlock before calling notify_one() to avoid
+  // the thread waking up an extra time.
+  {
+    std::unique_lock lock(m_progress_mutex);
+    Log *log = GetLog(LLDBLog::Progress);
+    if (log) {
+      if (data_up->GetCompleted() == 0)
+        LLDB_LOG(log, "NotifyProgress id = {1}, title = \"{2}\", type = start",
+                 data_up.get(), data_up->GetID(), data_up->GetTitle(),
+                 data_up->GetDetails());
+      else if (data_up->IsDone())
+        LLDB_LOG(log, "NotifyProgress id = {1}, title = \"{2}\", type = end",
+                 data_up.get(), data_up->GetID(), data_up->GetTitle(),
+                 data_up->GetDetails());
+      else if (data_up->GetDetails().empty())
+        LLDB_LOG(log, "NotifyProgress id = {1}, title = \"{2}\" {3}/{4}",
+                 data_up.get(), data_up->GetID(), data_up->GetTitle(),
+                 data_up->GetCompleted(), data_up->GetTotal());
+      else
+        LLDB_LOG(log, "NotifyProgress id = {1}, title = \"{2}\", "
+                 "detail = \"{3}\" {4}/{5}", data_up.get(), data_up->GetID(),
+                 data_up->GetTitle(), data_up->GetDetails(),
+                 data_up->GetCompleted(), data_up->GetTotal());
+    }
+
+    const uint64_t progress_id = data_up->GetID();
+    auto pos = m_progress_map.find(progress_id);
+    if (pos != m_progress_map.end()) {
+      // We have a progress info tracking this progress already. If we haven't
+      // sent any events yet, then keep the initial progress data as it
+      // signifies the start progress notification which we might send if the
+      // progress doesn't finish too quickly.
+      ProgressInfo &info = pos->second;
+      bool replace_data = false;
+      if (info.last_notification_time) {
+        LLDB_LOG(log, "NotifyProgress id = {0} replace_data = 1 (event sent "
+                 "already)", progress_id);
+        // We have sent an event for this already, always replace the progress
+        // data as this means we already sent a progress start event so we
+        // always want to send the most up to date information.
+        replace_data = true;
+      } else {
+        LLDB_LOG(log, "NotifyProgress id = {0} no event sent yet",
+                 progress_id);
+        // We haven't sent any notifications yet for this progress.
+        if (info.data_up) {
+          // If we are done already, then set the data so we don't send any
+          // events for this progress. But if we aren't done, we need to leave
+          // the original start progress notification in the progress info in
+          // case we send it.
+          replace_data = data_up->IsDone();
+          LLDB_LOG(log, "NotifyProgress id = {0} replace_data = {1} (only "
+                   "true if done)", progress_id, replace_data);
+        } else {
+          // There is no data in the ProgressInfo as it was sent in an event
+          // and the unique pointer was reset, so set the data.
+          LLDB_LOG(log, "NotifyProgress id = {0} replace_data = 1 ("
+                   "ProgressEventData is NULL)", progress_id, replace_data);
+          replace_data = true;
+        }
+      }
+      // Replace the data
+      if (replace_data)
+        pos->second.data_up.reset(data_up.release());
+    } else {
+      m_progress_map.emplace(
+          progress_id,
+          ProgressInfo(data_up.release(), GetProgressMinDuration()));
+    }
+    // Bump the progress update ID so the progress thread can wake up.
+    ++m_progress_update_id;
+  }
+  // After the scoped locker has unlocked the progress mutex, notify the
+  // progress condition variable. This avoids the progress thread from waking up
+  // multuple times.
+  m_progress_condition.notify_one();
+}
+
+lldb::thread_result_t Debugger::ProgressThread() {
+
+  Log *log = GetLog(LLDBLog::Progress);
+  LLDB_LOG(log, "ProgressThread thread started");
+
+  std::unique_lock lock(m_progress_mutex);
+  // We use this variable along with the mutex + condition to exit this thread.
+  m_progress_thread_running = true;
+
+  uint64_t update_id = 0;
+  // The predicate which will get us out of our waiting
+  // std::condition_variable::wait or std::condition_variable::wait_for calls
+  // below. Exit the std::condition_variable wait(...) or wait_for(...) calls if
+  // we haven't seen this update ID or if we want the thread to exit.
+  auto predicate = [this, &update_id]{
+    return update_id != m_progress_update_id || !m_progress_thread_running;
+  };
+  const uint32_t event_type = Debugger::eBroadcastBitProgress;
+  const ProgressDuration min_duration =
+      std::chrono::milliseconds(GetProgressMinDuration());
+  const ProgressDuration update_frequency =
+      std::chrono::milliseconds(GetProgressUpdateFrequency());
+
+  LLDB_LOG(log, "ProgressThread update_frequency = {0}", update_frequency);
+  LLDB_LOG(log, "ProgressThread min_duration = {0}", min_duration);
+
+  std::optional<ProgressDuration> opt_wait_duration;
+  while (m_progress_thread_running) {
+    if (opt_wait_duration.has_value()) {
+      LLDB_LOG(log, "ProgressThread wait_for(timeout = {0})", *opt_wait_duration);
+      m_progress_condition.wait_for(lock, *opt_wait_duration, predicate);
+    } else {
+      // We have no progress events or updates pending wait for a notification.
+      LLDB_LOG(log, "ProgressThread no active progresses, wait()");
+      m_progress_condition.wait(lock, predicate);
+    }
+    // Update our update_id so we only exit the wait or wait_for calls when it
+    // gets updated.
+    update_id = m_progress_update_id;
+
+    // We will sent our wait duration as needed. If it doesn't get set, then
+    // we will call wait() (no timeout) and if it does get set, it will be set
+    // to the minimum value needed to wait for the next ProcessEventData for a
+    // progress.
+    opt_wait_duration = std::nullopt;
+
+    LLDB_LOG(log, "ProgressThread wait returned (keep running thread = {0})",
+             m_progress_thread_running);
+    // Our m_progress_mutex is now locked and we can iterate over all progress
+    // events and see if we need to notify any or remove any if the progress is
+    // completed.
+    std::set<uint64_t> done_ids;
+    const auto now = ProgressClock::now();
+    for (auto &pair: m_progress_map) {
+      // If we send a notification and use a ProgressEventData, we will set the
+      // ProgressEventData unique pointer to NULL, so if we don't have current
+      // ProgressEventData, then skip to the next progress info as we are
+      // waiting for new progress updates or progress end notifications.
+      ProgressInfo &info = pair.second;
+      LLDB_LOG(log, "ProgressThread id = {0}", pair.first);
+      if (info.data_up) {
+        bool send_event = false;
+        bool is_done_event = info.data_up->IsDone();
+        if (is_done_event)
+          done_ids.insert(pair.first);
+
+        if (info.last_notification_time) {
+          // We have sent out a notification for this progress already, we need
+          // to check if we need to send out any update.
+          LLDB_LOG(log, "ProgressThread id = {0} already sent event",
+                   pair.first);
+          if (is_done_event) {
+            // Progress is done and can be removed and we need to send an event
+            // to signal we are done.
+            LLDB_LOG(log, "ProgressThread id = {0} send_event = 1 (done), "
+                    "elapsed_time = {1}", pair.first, now - info.start);
+            send_event = true;
+          } else {
+            // If we aren't done, check if we need to send updates for this. For
+            // finite progress dialogs, we update the "info.next_event_time"
+            // when we broadcast the first event using the update frequency
+            // setting. This keeps us from spamming too many events.
+            if (info.data_up->IsFinite()) {
+              send_event = now >= info.next_event_time;
+              if (!send_event) {
+                // We are not ready to send an event yet. Calculate how long
+                // we need to wait. If it is shorter than the current wait
+                // duration, or "opt_wait_duration" doesn't have a value, then
+                // set "opt_wait_duration".
+                ProgressDuration wait_duration = info.next_event_time - now;
+                if (!opt_wait_duration || *opt_wait_duration > wait_duration)
+                  opt_wait_duration = wait_duration;
+              }
+              LLDB_LOG(log, "ProgressThread id = {0} send_event = {1}} "
+                       "(update check)", pair.first, send_event);
+            }
+          }
+
+        } else {
+          // We haven't sent any progress notifications for this yet. We might
+          // need to send one if enough time has passed, or if the progress is
+          // finite (it has a valid total number of work items that we want to
+          // update) and our update frequency has been met.
+          LLDB_LOG(log, "ProgressThread id = {0} no events sent yet",
+                   pair.first);
+          if (is_done_event) {
+            // We are already done before we sent a start progress event, so
+            // nothing to do as the progress was too short be be displayed.
+            LLDB_LOG(log, "ProgressThread id = {0} send_event = 0, elapsed_time"
+                     " = {1} (less than minimum duration {2})", pair.first,
+                     now - info.start, min_duration);
+          } else {
+            // We will send our progress start event only if we exceed the
+            // minimum progress duration will cause us to enter this loop.
+            // Before the first event is broadcast, "info.next_event_time" is
+            // initialized to the progress start time + the minimum progress
+            // duration setting.
+            send_event = (now >= info.next_event_time);
+            if (!send_event) {
+              // Not enough time has elapsed to send a start event yet.
+              // Calculate how long we need to wait. If it is shorter than
+              // the current wait duration, or "opt_wait_duration" doesn't have
+              // a value, then set "opt_wait_duration".
+              ProgressDuration wait_duration = info.next_event_time - now;
+              if (!opt_wait_duration || *opt_wait_duration > wait_duration)
+                opt_wait_duration = wait_duration;
+            }
+            LLDB_LOG(log, "ProgressThread id = {0} send_event = {1} (min "
+                     "notify time check)", pair.first, send_event);
+          }
+        }
+
+        if (send_event) {
+          // We need to send a progress event, send the ProgressEventData that
+          // we have in our unique pointer and release the progress event data.
+          // Any subsequent updates to the progress will update the
+          // ProgressEventData unique pointer with the right info.
+          LLDB_LOG(log, "ProgressThread id = {0} broadcasting event",
+                   pair.first);
+          info.last_notification_time = now;
+          // If we are not done and have a finite progress, set the next event
+          // time so we know when to send an update for the progress.
+          if (!is_done_event && info.data_up->IsFinite())
+            info.next_event_time = now + update_frequency;
+          EventSP event_sp(new Event(event_type, info.data_up.release()));
+          GetBroadcaster().BroadcastEvent(event_sp);
+        }
+      } else {
+        LLDB_LOG(log, "ProgressThread id = {0} (waiting for updates)",
+                 pair.first);
+      }
+    }
+
+    // Remove any progress infos that are done.
+    for (uint64_t progress_id: done_ids)
+      m_progress_map.erase(progress_id);
+  }
+  LLDB_LOG(log, "ProgressThread thread exited");
+  return {};
+}
+
+bool Debugger::StartProgressThread() {
+  if (!m_progress_thread.IsJoinable()) {
+    llvm::Expected<HostThread> expected_thread = ThreadLauncher::LaunchThread(
+        "lldb.debugger.progress", [this] { return ProgressThread(); },
+        8 * 1024 * 1024); // Use 8MB stack for this thread
+    if (expected_thread) {
+      m_progress_thread = *expected_thread;
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), expected_thread.takeError(),
+                     "failed to launch progress thread: {0}");
+    }
+  }
+  return m_progress_thread.IsJoinable();
+}
+
+void Debugger::StopProgressThread() {
+  if (m_progress_thread.IsJoinable()) {
+    {
+      std::unique_lock lock(m_progress_mutex);
+      // Change the variable that allows the thread to loop to false and signal
+      // the progress thread so it exits.
+      m_progress_thread_running = false;
+    }
+    m_progress_condition.notify_one();
+    m_progress_thread.Join(nullptr);
+  }
+}
+
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
                                   std::string title, std::string details,
                                   uint64_t completed, uint64_t total,
@@ -1438,11 +1726,13 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
   const uint32_t event_type = Debugger::eBroadcastBitProgress;
   if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
     return;
-  EventSP event_sp(new Event(
-      event_type,
+
+  // Make a ProgressEventData and send it to the debugger. It will manage how
+  // and when to actually send progress update events to any listeners.
+  std::unique_ptr<ProgressEventData> data_up(
       new ProgressEventData(progress_id, std::move(title), std::move(details),
-                            completed, total, is_debugger_specific)));
-  debugger.GetBroadcaster().BroadcastEvent(event_sp);
+                            completed, total, is_debugger_specific));
+  debugger.NotifyProgress(data_up);
 }
 
 void Debugger::ReportProgress(uint64_t progress_id, std::string title,

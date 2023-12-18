@@ -64,6 +64,7 @@ static constexpr Log::Category g_categories[] = {
      {"log symbol on-demand related activities"},
      LLDBLog::OnDemand},
     {{"source"}, {"log source related activities"}, LLDBLog::Source},
+    {{"progress"}, {"log the progress event thread"}, LLDBLog::Progress},
 };
 
 static Log::Channel g_log_channel(g_categories,

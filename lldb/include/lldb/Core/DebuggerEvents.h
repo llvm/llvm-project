@@ -41,6 +41,7 @@ public:
   bool IsFinite() const { return m_total != UINT64_MAX; }
   uint64_t GetCompleted() const { return m_completed; }
   uint64_t GetTotal() const { return m_total; }
+  bool IsDone() const { return m_completed == m_total; }
   std::string GetMessage() const {
     std::string message = m_title;
     if (!m_details.empty()) {
