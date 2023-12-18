@@ -1341,6 +1341,18 @@ def SVWHILEHS_U32 : SInst<"svwhilege_{d}[_{1}]", "Pmm", "PUcPUsPUiPUl", MergeNon
 def SVWHILEHS_U64 : SInst<"svwhilege_{d}[_{1}]", "Pnn", "PUcPUsPUiPUl", MergeNone, "aarch64_sve_whilehs", [IsOverloadWhile, IsStreamingCompatible]>;
 }
 
+let TargetGuard = "sve2p1|sme2"  in {
+  def SVWHILEGE_S64_X2 : SInst<"svwhilege_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilege_x2">;
+  def SVWHILEGT_S64_X2 : SInst<"svwhilegt_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilegt_x2">;
+  def SVWHILEHI_U64_X2 : SInst<"svwhilegt_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilehi_x2">;
+  def SVWHILEHS_U64_X2 : SInst<"svwhilege_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilehs_x2">;
+  def SVWHILELE_S64_X2 : SInst<"svwhilele_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilele_x2">;
+  def SVWHILELT_S64_X2 : SInst<"svwhilelt_{d}[_{1}]_x2", "2ll", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelt_x2">;
+  def SVWHILELO_U64_X2 : SInst<"svwhilelt_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilelo_x2">;
+  def SVWHILELS_U64_X2 : SInst<"svwhilele_{d}[_{1}]_x2", "2nn", "PcPsPiPl",     MergeNone, "aarch64_sve_whilels_x2">;
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SVE2 - Uniform DSP operations
 
