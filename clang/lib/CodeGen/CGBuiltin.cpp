@@ -232,19 +232,19 @@ static Value *MakeBinaryAtomicValue(
 
 static Value *EmitNontemporalStore(CodeGenFunction &CGF, const CallExpr *E) {
   Value *Val = CGF.EmitScalarExpr(E->getArg(0));
-  Value *Address = CGF.EmitScalarExpr(E->getArg(1));
+  Address Addr = CGF.EmitPointerWithAlignment(E->getArg(1));
 
   Val = CGF.EmitToMemory(Val, E->getArg(0)->getType());
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(Address, E->getArg(0)->getType());
+  LValue LV = CGF.MakeAddrLValue(Addr, E->getArg(0)->getType());
   LV.setNontemporal(true);
   CGF.EmitStoreOfScalar(Val, LV, false);
   return nullptr;
 }
 
 static Value *EmitNontemporalLoad(CodeGenFunction &CGF, const CallExpr *E) {
-  Value *Address = CGF.EmitScalarExpr(E->getArg(0));
+  Address Addr = CGF.EmitPointerWithAlignment(E->getArg(0));
 
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(Address, E->getType());
+  LValue LV = CGF.MakeAddrLValue(Addr, E->getType());
   LV.setNontemporal(true);
   return CGF.EmitLoadOfScalar(LV, E->getExprLoc());
 }
