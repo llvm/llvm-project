@@ -183,8 +183,7 @@ constexpr void test_iterators() {
     int a[]            = {1, 2, 3, 4, 5};
     auto square_number = a | std::views::transform([](int x) { return x * x; });
     {
-      bool ret = std::ranges::contains(square_number.begin(),
-                                       square_number.end(), 16);
+      bool ret = std::ranges::contains(square_number.begin(), square_number.end(), 16);
       assert(ret);
     }
     {
