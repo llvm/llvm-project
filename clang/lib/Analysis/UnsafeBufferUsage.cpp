@@ -729,7 +729,7 @@ class DataInvocationGadget : public WarningGadget {
   constexpr static const char *const OpTag = "data_invocation_expr";
   const ExplicitCastExpr *Op;
 
-  public:
+public:
   DataInvocationGadget(const MatchFinder::MatchResult &Result)
       : WarningGadget(Kind::DataInvocation),
         Op(Result.Nodes.getNodeAs<ExplicitCastExpr>(OpTag)) {}
@@ -737,12 +737,13 @@ class DataInvocationGadget : public WarningGadget {
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::DataInvocation;
   }
- 
+
   static Matcher matcher() {
     return stmt(
-        explicitCastExpr(has(cxxMemberCallExpr(callee(
-               cxxMethodDecl(hasName("data"), ofClass(hasName("std::span"))))))).bind(OpTag));
-  }   
+        explicitCastExpr(has(cxxMemberCallExpr(callee(cxxMethodDecl(
+                             hasName("data"), ofClass(hasName("std::span")))))))
+            .bind(OpTag));
+  }
   const Stmt *getBaseStmt() const override { return Op; }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
@@ -2684,7 +2685,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     // every problematic operation and consider it done. No need to deal
     // with fixable gadgets, no need to group operations by variable.
     for (const auto &G : WarningGadgets) {
-      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false, 
+      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false,
                                     D->getASTContext());
     }
 
@@ -2920,8 +2921,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                   Tracker, Handler, VarGrpMgr);
 
   for (const auto &G : UnsafeOps.noVar) {
-    Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false
-                                  , D->getASTContext());
+    Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false,
+                                  D->getASTContext());
   }
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
@@ -2932,8 +2933,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                       : FixItList{},
                                       D);
     for (const auto &G : WarningGadgets) {
-      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true
-                                    , D->getASTContext());
+      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true,
+                                    D->getASTContext());
     }
   }
 }
