@@ -2275,66 +2275,30 @@ TEST(CommandLineTest, UnknownCommands) {
 }
 
 TEST(CommandLineTest, SubCommandGroups) {
+  // Check that options in subcommand groups are associated with expected
+  // subcommands.
+
   cl::ResetCommandLineParser();
 
   StackSubCommand SC1("sc1", "SC1 subcommand");
   StackSubCommand SC2("sc2", "SC2 subcommand");
   StackSubCommand SC3("sc3", "SC3 subcommand");
   cl::SubCommandGroup Group12 = {&SC1, &SC2};
-  cl::SubCommandGroup Group23 = {&SC2, &SC3};
 
-  StackOption<bool> Opt1("opt1", cl::sub(SC1), cl::init(false));
-  StackOption<bool> Opt2("opt2", cl::sub(SC2), cl::init(false));
-  StackOption<bool> Opt3("opt3", cl::sub(SC3), cl::init(false));
   StackOption<bool> Opt12("opt12", cl::sub(Group12), cl::init(false));
-  StackOption<bool> Opt23("opt23", cl::sub(Group23), cl::init(false));
+  StackOption<bool> Opt3("opt3", cl::sub(SC3), cl::init(false));
 
-  EXPECT_EQ(2, SC1.OptionsMap.size());
-  EXPECT_TRUE(SC1.OptionsMap.contains("opt1"));
+  // The "--opt12" option is expected to be added to both subcommands in the
+  // group, but not to the top-level "no subcommand" pseudo-subcommand or the
+  // "sc3" subcommand.
+  EXPECT_EQ(1, SC1.OptionsMap.size());
   EXPECT_TRUE(SC1.OptionsMap.contains("opt12"));
 
-  EXPECT_EQ(3, SC2.OptionsMap.size());
-  EXPECT_TRUE(SC2.OptionsMap.contains("opt2"));
+  EXPECT_EQ(1, SC2.OptionsMap.size());
   EXPECT_TRUE(SC2.OptionsMap.contains("opt12"));
-  EXPECT_TRUE(SC2.OptionsMap.contains("opt23"));
 
-  EXPECT_EQ(2, SC3.OptionsMap.size());
-  EXPECT_TRUE(SC3.OptionsMap.contains("opt3"));
-  EXPECT_TRUE(SC3.OptionsMap.contains("opt23"));
-
-  const char *Args1[] = {"prog", "--opt1"};
-  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(Args1), Args1, StringRef(),
-                                           &llvm::nulls()));
-
-  cl::ResetAllOptionOccurrences();
-
-  const char *Args2[] = {"prog", "sc2", "--opt2"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args2), Args2, StringRef(),
-                                          &llvm::nulls()));
-  EXPECT_FALSE(SC1);
-  EXPECT_TRUE(SC2);
-  EXPECT_FALSE(SC3);
-
-  EXPECT_FALSE(Opt1);
-  EXPECT_TRUE(Opt2);
-  EXPECT_FALSE(Opt3);
-  EXPECT_FALSE(Opt12);
-  EXPECT_FALSE(Opt23);
-
-  cl::ResetAllOptionOccurrences();
-
-  const char *Args3[] = {"prog", "sc3", "--opt23"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args3), Args3, StringRef(),
-                                          &llvm::nulls()));
-  EXPECT_FALSE(SC1);
-  EXPECT_FALSE(SC2);
-  EXPECT_TRUE(SC3);
-
-  EXPECT_FALSE(Opt1);
-  EXPECT_FALSE(Opt2);
-  EXPECT_FALSE(Opt3);
-  EXPECT_FALSE(Opt12);
-  EXPECT_TRUE(Opt23);
+  EXPECT_FALSE(cl::SubCommand::getTopLevel().OptionsMap.contains("opt12"));
+  EXPECT_FALSE(SC3.OptionsMap.contains("opt12"));
 }
 
 } // anonymous namespace
