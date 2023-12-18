@@ -108,7 +108,8 @@ define <4 x float> @test8(<4 x float> %x, <4 x float> %y) {
 ; different length then the second.
 define <4 x i8> @test9(<16 x i8> %t6) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[T9:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> undef, <4 x i32> <i32 13, i32 9, i32 4, i32 13>
+; CHECK-NEXT:    [[T7:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> undef, <4 x i32> <i32 13, i32 9, i32 4, i32 13>
+; CHECK-NEXT:    [[T9:%.*]] = shufflevector <4 x i8> [[T7]], <4 x i8> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    ret <4 x i8> [[T9]]
 ;
   %t7 = shufflevector <16 x i8> %t6, <16 x i8> undef, <4 x i32> < i32 13, i32 9, i32 4, i32 13 >
@@ -135,7 +136,8 @@ define <4 x i8> @test9a(<16 x i8> %t6) {
 ; different length then the second.
 define <4 x i8> @test9b(<4 x i8> %t6, <4 x i8> %t7) {
 ; CHECK-LABEL: @test9b(
-; CHECK-NEXT:    [[T9:%.*]] = shufflevector <4 x i8> [[T6:%.*]], <4 x i8> [[T7:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <4 x i8> [[T6:%.*]], <4 x i8> [[T7:%.*]], <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[T9:%.*]] = shufflevector <8 x i8> [[T1]], <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x i8> [[T9]]
 ;
   %t1 = shufflevector <4 x i8> %t6, <4 x i8> %t7, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 4, i32 5, i32 2, i32 3>
@@ -146,7 +148,8 @@ define <4 x i8> @test9b(<4 x i8> %t6, <4 x i8> %t7) {
 ; Redundant vector splats should be removed.  Radar 8597790.
 define <4 x i32> @test10(<4 x i32> %t5) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[T7:%.*]] = shufflevector <4 x i32> [[T5:%.*]], <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x i32> [[T5:%.*]], <4 x i32> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[T7:%.*]] = shufflevector <4 x i32> [[T6]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i32> [[T7]]
 ;
   %t6 = shufflevector <4 x i32> %t5, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -158,7 +161,9 @@ define <4 x i32> @test10(<4 x i32> %t5) {
 
 define <8 x i8> @test11(<16 x i8> %t6) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[T2:%.*]] = shufflevector <16 x i8> [[T6]], <16 x i8> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i8> [[T1]], <4 x i8> [[T2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x i8> [[T3]]
 ;
   %t1 = shufflevector <16 x i8> %t6, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

@@ -236,7 +236,7 @@ define <4 x float> @elts_test_vpermilvar_ps(<4 x float> %a0, i32 %a1) {
 
 define <8 x float> @elts_test_vpermilvar_ps_256(<8 x float> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: @elts_test_vpermilvar_ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 1, i32 poison, i32 6, i32 poison, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A0:%.*]], <8 x float> undef, <8 x i32> <i32 poison, i32 0, i32 poison, i32 1, i32 poison, i32 6, i32 poison, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %1 = shufflevector <8 x i32> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0>, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
@@ -270,7 +270,7 @@ define <2 x double> @elts_test_vpermilvar_pd(<2 x double> %a0, i64 %a1) {
 
 define <4 x double> @elts_test_vpermilvar_pd_256(<4 x double> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: @elts_test_vpermilvar_pd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A0:%.*]], <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 poison>
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = shufflevector <4 x i64> <i64 0, i64 2, i64 0, i64 2>, <4 x i64> %a1, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
