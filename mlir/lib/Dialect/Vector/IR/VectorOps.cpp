@@ -5657,30 +5657,79 @@ LogicalResult CreateMaskOp::verify() {
 
 namespace {
 
-// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
+/// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
+///
+/// Ex 1:
+///   %c2 = arith.constant 2 : index
+///   %c3 = arith.constant 3 : index
+///   %0 = vector.create_mask %c3, %c2 : vector<4x3xi1>
+/// Becomes:
+///    vector.constant_mask [3, 2] : vector<4x3xi1>
+///
+/// Ex 2:
+///   %c_neg_1 = arith.constant -1 : index
+///   %0 = vector.create_mask %c_neg_1 : vector<[8]xi1>
+/// becomes:
+///   vector.constant_mask [0] : vector<[8]xi1>
+///
+/// Ex 3:
+///   %c8 = arith.constant 8 : index
+///   %c16 = arith.constant 16 : index
+///   %0 = vector.vscale
+///   %1 = arith.muli %0, %c16 : index
+///   %10 = vector.create_mask %c8, %1 : vector<8x[16]xi1>
+/// becomes:
+///   %0 = vector.constant_mask [8, 16] : vector<8x[16]xi1>
 class CreateMaskFolder final : public OpRewritePattern<CreateMaskOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
-    // Return if any of 'createMaskOp' operands are not defined by a constant.
-    auto isNotDefByConstant = [](Value operand) {
-      return !getConstantIntValue(operand).has_value();
-    };
-    if (llvm::any_of(createMaskOp.getOperands(), isNotDefByConstant))
-      return failure();
+    VectorType retTy = createMaskOp.getResult().getType();
+    bool isScalable = retTy.isScalable();
 
-    // CreateMaskOp for scalable vectors can be folded only if all dimensions
-    // are negative or zero.
-    if (auto vType = llvm::dyn_cast<VectorType>(createMaskOp.getType())) {
-      if (vType.isScalable())
-        for (auto opDim : createMaskOp.getOperands()) {
-          APInt intVal;
-          if (matchPattern(opDim, m_ConstantInt(&intVal)) &&
-              intVal.isStrictlyPositive())
-            return failure();
-        }
+    // Check every mask operand
+    for (auto [opIdx, operand] : llvm::enumerate(createMaskOp.getOperands())) {
+      // Most basic case - this operand is a constant value. Note that for
+      // scalable dimensions, CreateMaskOp can be folded only if the
+      // corresponding operand is negative or zero.
+      if (auto op = getConstantIntValue(operand)) {
+        APInt intVal;
+        if (isScalable && !(matchPattern(operand, m_ConstantInt(&intVal)) ||
+                            intVal.isStrictlyPositive()))
+          return failure();
+
+        continue;
+      }
+
+      // Non-constant operands are not allowed for non-scalable vectors.
+      if (!isScalable)
+        return failure();
+
+      // For scalable vectors, "arith.muli %vscale, %dimSize" means an "all
+      // true" mask, so can also be treated as constant.
+      auto mul = llvm::dyn_cast_or_null<arith::MulIOp>(operand.getDefiningOp());
+      if (!mul)
+        return failure();
+      auto mulLHS = mul.getOperands()[0];
+      auto mulRHS = mul.getOperands()[1];
+      bool isOneOpVscale =
+          (isa<vector::VectorScaleOp>(mulLHS.getDefiningOp()) ||
+           isa<vector::VectorScaleOp>(mulRHS.getDefiningOp()));
+
+      auto isConstantValMatchingDim =
+          [=, dim = createMaskOp.getResult().getType().getShape()[opIdx]](
+              Value operand) {
+            auto constantVal = getConstantIntValue(operand);
+            return (constantVal.has_value() && constantVal.value() == dim);
+          };
+
+      bool isOneOpConstantMatchingDim =
+          isConstantValMatchingDim(mulLHS) || isConstantValMatchingDim(mulRHS);
+
+      if (!isOneOpVscale || !isOneOpConstantMatchingDim)
+        return failure();
     }
 
     // Gather constant mask dimension sizes.
@@ -5688,15 +5737,22 @@ public:
     maskDimSizes.reserve(createMaskOp->getNumOperands());
     for (auto [operand, maxDimSize] : llvm::zip_equal(
              createMaskOp.getOperands(), createMaskOp.getType().getShape())) {
-      int64_t dimSize = getConstantIntValue(operand).value();
-      dimSize = std::min(dimSize, maxDimSize);
+      auto dimSize = getConstantIntValue(operand);
+      if (not dimSize) {
+        // Although not a constant, it is safe to assume that `operand` is
+        // "vscale * maxDimSize".
+        maskDimSizes.push_back(maxDimSize);
+        continue;
+      }
+      int64_t dimSizeVal = std::min(dimSize.value(), maxDimSize);
       // If one of dim sizes is zero, set all dims to zero.
       if (dimSize <= 0) {
         maskDimSizes.assign(createMaskOp.getType().getRank(), 0);
         break;
       }
-      maskDimSizes.push_back(dimSize);
+      maskDimSizes.push_back(dimSizeVal);
     }
+
     // Replace 'createMaskOp' with ConstantMaskOp.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         createMaskOp, createMaskOp.getResult().getType(),
