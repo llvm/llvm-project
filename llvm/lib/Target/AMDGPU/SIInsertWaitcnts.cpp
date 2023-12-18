@@ -238,7 +238,7 @@ public:
 
   bool merge(const WaitcntBrackets &Other);
 
-  RegInterval getRegInterval(const MachineInstr *MI, const SIInstrInfo *TII,
+  RegInterval getRegInterval(const MachineInstr *MI,
                              const MachineRegisterInfo *MRI,
                              const SIRegisterInfo *TRI, unsigned OpNo) const;
 
@@ -500,7 +500,6 @@ public:
 } // end anonymous namespace
 
 RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
-                                            const SIInstrInfo *TII,
                                             const MachineRegisterInfo *MRI,
                                             const SIRegisterInfo *TRI,
                                             unsigned OpNo) const {
@@ -534,7 +533,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   else
     return {-1, -1};
 
-  const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
+  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
   Result.second = Result.first + ((Size + 16) / 32);
 
@@ -546,7 +545,7 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
                                   const SIRegisterInfo *TRI,
                                   const MachineRegisterInfo *MRI, unsigned OpNo,
                                   unsigned Val) {
-  RegInterval Interval = getRegInterval(MI, TII, MRI, TRI, OpNo);
+  RegInterval Interval = getRegInterval(MI, MRI, TRI, OpNo);
   assert(TRI->isVectorRegister(*MRI, MI->getOperand(OpNo).getReg()));
   for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
@@ -674,7 +673,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
        Inst.getOpcode() == AMDGPU::BUFFER_STORE_DWORDX4) {
     MachineOperand *MO = TII->getNamedOperand(Inst, AMDGPU::OpName::data);
     unsigned OpNo;//TODO: find the OpNo for this operand;
-    RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, OpNo);
+    RegInterval Interval = getRegInterval(&Inst, MRI, TRI, OpNo);
     for (int RegNo = Interval.first; RegNo < Interval.second;
     ++RegNo) {
       setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
@@ -686,7 +685,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       auto &Op = Inst.getOperand(I);
       if (!Op.isReg() || !Op.isDef())
         continue;
-      RegInterval Interval = getRegInterval(&Inst, TII, MRI, TRI, I);
+      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, I);
       if (T == VM_CNT) {
         if (Interval.first >= NUM_ALL_VGPRS)
           continue;
@@ -1140,7 +1139,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
       if (MI.getOperand(CallAddrOpIdx).isReg()) {
         RegInterval CallAddrOpInterval =
-          ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, CallAddrOpIdx);
+            ScoreBrackets.getRegInterval(&MI, MRI, TRI, CallAddrOpIdx);
 
         for (int RegNo = CallAddrOpInterval.first;
              RegNo < CallAddrOpInterval.second; ++RegNo)
@@ -1150,7 +1149,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
         if (RtnAddrOpIdx != -1) {
           RegInterval RtnAddrOpInterval =
-            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, RtnAddrOpIdx);
+              ScoreBrackets.getRegInterval(&MI, MRI, TRI, RtnAddrOpIdx);
 
           for (int RegNo = RtnAddrOpInterval.first;
                RegNo < RtnAddrOpInterval.second; ++RegNo)
@@ -1202,8 +1201,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (Op.isTied() && Op.isUse() && TII->doesNotReadTiedSource(MI))
           continue;
 
-        RegInterval Interval =
-            ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
+        RegInterval Interval = ScoreBrackets.getRegInterval(&MI, MRI, TRI, I);
 
         const bool IsVGPR = TRI->isVectorRegister(*MRI, Op.getReg());
         for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
@@ -1782,7 +1780,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
         MachineOperand &Op = MI.getOperand(I);
         if (!Op.isReg() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
-        RegInterval Interval = Brackets.getRegInterval(&MI, TII, MRI, TRI, I);
+        RegInterval Interval = Brackets.getRegInterval(&MI, MRI, TRI, I);
         // Vgpr use
         if (Op.isUse()) {
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {

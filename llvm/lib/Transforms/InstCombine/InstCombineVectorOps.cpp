@@ -1919,6 +1919,10 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask,
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
   Type *EltTy = V->getType()->getScalarType();
+
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(FixedVectorType::get(EltTy, Mask.size()));
+
   if (match(V, m_Undef()))
     return UndefValue::get(FixedVectorType::get(EltTy, Mask.size()));
 
@@ -3013,10 +3017,11 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   ShuffleVectorInst* LHSShuffle = dyn_cast<ShuffleVectorInst>(LHS);
   ShuffleVectorInst* RHSShuffle = dyn_cast<ShuffleVectorInst>(RHS);
   if (LHSShuffle)
-    if (!match(LHSShuffle->getOperand(1), m_Undef()) && !match(RHS, m_Undef()))
+    if (!match(LHSShuffle->getOperand(1), m_Poison()) &&
+        !match(RHS, m_Poison()))
       LHSShuffle = nullptr;
   if (RHSShuffle)
-    if (!match(RHSShuffle->getOperand(1), m_Undef()))
+    if (!match(RHSShuffle->getOperand(1), m_Poison()))
       RHSShuffle = nullptr;
   if (!LHSShuffle && !RHSShuffle)
     return MadeChange ? &SVI : nullptr;
@@ -3039,7 +3044,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value* newRHS = RHS;
   if (LHSShuffle) {
     // case 1
-    if (match(RHS, m_Undef())) {
+    if (match(RHS, m_Poison())) {
       newLHS = LHSOp0;
       newRHS = LHSOp1;
     }
