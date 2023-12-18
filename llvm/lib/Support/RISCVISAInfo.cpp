@@ -215,11 +215,12 @@ static void verifyTables() {
 #endif
 }
 
-static void PrintExtension(const std::string Name, const std::string Version,
-                           const std::string Description) {
-  outs() << "    "
-         << format(Description.empty() ? "%-20s%s\n" : "%-20s%-10s%s\n",
-                   Name.c_str(), Version.c_str(), Description.c_str());
+static void PrintExtension(StringRef Name, StringRef Version,
+                           StringRef Description) {
+  outs().indent(4);
+  unsigned VersionWidth = Description.empty() ? 0 : 10;
+  outs() << left_justify(Name, 20) << left_justify(Version, VersionWidth)
+         << Description << "\n";
 }
 
 void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
@@ -233,7 +234,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &E : ExtMap) {
     std::string Version = std::to_string(E.second.MajorVersion) + "." +
                           std::to_string(E.second.MinorVersion);
-    PrintExtension(E.first, Version, DescMap[E.first].str());
+    PrintExtension(E.first, Version, DescMap[E.first]);
   }
 
   outs() << "\nExperimental extensions\n";
@@ -243,7 +244,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &E : ExtMap) {
     std::string Version = std::to_string(E.second.MajorVersion) + "." +
                           std::to_string(E.second.MinorVersion);
-    PrintExtension(E.first, Version, DescMap["experimental-" + E.first].str());
+    PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
   }
 
   outs() << "\nUse -march to specify the target's extension.\n"
@@ -1013,7 +1014,7 @@ static const char *ImpliedExtsZfbfmin[] = {"f"};
 static const char *ImpliedExtsZfh[] = {"zfhmin"};
 static const char *ImpliedExtsZfhmin[] = {"f"};
 static const char *ImpliedExtsZfinx[] = {"zicsr"};
-static const char *ImpliedExtsZhinx[] = {"zfinx"};
+static const char *ImpliedExtsZhinx[] = {"zhinxmin"};
 static const char *ImpliedExtsZhinxmin[] = {"zfinx"};
 static const char *ImpliedExtsZicntr[] = {"zicsr"};
 static const char *ImpliedExtsZihpm[] = {"zicsr"};
@@ -1029,7 +1030,7 @@ static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
 static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
 static const char *ImpliedExtsZvfbfmin[] = {"zve32f", "zfbfmin"};
 static const char *ImpliedExtsZvfbfwma[] = {"zvfbfmin"};
-static const char *ImpliedExtsZvfh[] = {"zve32f", "zfhmin"};
+static const char *ImpliedExtsZvfh[] = {"zvfhmin", "zfhmin"};
 static const char *ImpliedExtsZvfhmin[] = {"zve32f"};
 static const char *ImpliedExtsZvkn[] = {"zvkb", "zvkned", "zvknhb", "zvkt"};
 static const char *ImpliedExtsZvknc[] = {"zvbc", "zvkn"};
