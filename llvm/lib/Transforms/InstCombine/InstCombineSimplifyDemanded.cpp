@@ -1350,8 +1350,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     return !isa<PoisonValue>(V) ? PoisonValue::get(V->getType()) : nullptr;
   }
 
-  if (match(V, m_Poison())) {
-    // If the entire vector is poison, just return this info.
+  if (match(V, m_Undef())) {
+    // If the entire vector is undef or poison, just return this info.
     PoisonElts = EltMask;
     return nullptr;
   }
