@@ -11368,6 +11368,8 @@ def err_openmp_vla_in_task_untied : Error<
 def warn_omp_unterminated_declare_target : Warning<
   "expected '#pragma omp end declare target' at end of file to match '#pragma omp %0'">,
   InGroup<SourceUsesOpenMP>;
+def err_ompx_bare_no_grid : Error<
+  "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
