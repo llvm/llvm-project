@@ -403,7 +403,7 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
     return PGOFuncName;
   // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
   // well.
-  if (PGOFuncName.startswith(FileName))
+  if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;
 }

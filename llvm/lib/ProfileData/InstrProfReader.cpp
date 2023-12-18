@@ -1015,7 +1015,7 @@ public:
     std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
     while (true) {
       Parts = Parts.second.split(kGlobalIdentifierDelimiter);
-      if (Parts.first.startswith("_Z"))
+      if (Parts.first.starts_with("_Z"))
         return Parts.first;
       if (Parts.second.empty())
         return Name;
