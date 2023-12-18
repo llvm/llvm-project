@@ -7,6 +7,11 @@ declare i32 @llvm.smax.i32(i32 %a, i32 %b)
 declare i32 @llvm.smin.i32(i32 %a, i32 %b)
 declare i32 @llvm.umax.i32(i32 %a, i32 %b)
 declare i32 @llvm.umin.i32(i32 %a, i32 %b)
+declare float @llvm.maxnum.f32(float %a, float %b)
+declare float @llvm.minnum.f32(float %a, float %b)
+declare float @llvm.maximum.f32(float %a, float %b)
+declare float @llvm.minimum.f32(float %a, float %b)
+declare float @llvm.pow.f32(float %a, float %b)
 
 define i8 @fold_phi_mul(i1 %c, i8 %a, i8 %b)  {
 ; CHECK-LABEL: define i8 @fold_phi_mul(
@@ -452,3 +457,127 @@ end:
   %ret = call i32 @llvm.umin.i32(i32  %phi1, i32 %phi2)
   ret i32 %ret
 }
+
+
+define float @fold_phi_maxnum(i1 %c, float %a, float %b)  {
+; CHECK-LABEL: define float @fold_phi_maxnum(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.maxnum.f32(float [[A]], float [[B]])
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi float [%a, %entry], [%b, %then]
+  %phi2 = phi float [%b, %entry], [%a, %then]
+  %ret = call float @llvm.maxnum.f32(float  %phi1, float %phi2)
+  ret float %ret
+}
+
+define float @fold_phi_pow(i1 %c, float %a, float %b)  {
+; CHECK-LABEL: define float @fold_phi_pow(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi float [ [[A]], [[ENTRY:%.*]] ], [ [[B]], [[THEN]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi float [ [[B]], [[ENTRY]] ], [ [[A]], [[THEN]] ]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.pow.f32(float [[PHI1]], float [[PHI2]])
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi float [%a, %entry], [%b, %then]
+  %phi2 = phi float [%b, %entry], [%a, %then]
+  %ret = call float @llvm.pow.f32(float  %phi1, float %phi2)
+  ret float %ret
+}
+
+define float @fold_phi_minnum(i1 %c, float %a, float %b)  {
+; CHECK-LABEL: define float @fold_phi_minnum(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.minnum.f32(float [[A]], float [[B]])
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi float [%a, %entry], [%b, %then]
+  %phi2 = phi float [%b, %entry], [%a, %then]
+  %ret = call float @llvm.minnum.f32(float  %phi1, float %phi2)
+  ret float %ret
+}
+
+define float @fold_phi_maximum(i1 %c, float %a, float %b)  {
+; CHECK-LABEL: define float @fold_phi_maximum(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.maximum.f32(float [[A]], float [[B]])
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi float [%a, %entry], [%b, %then]
+  %phi2 = phi float [%b, %entry], [%a, %then]
+  %ret = call float @llvm.maximum.f32(float  %phi1, float %phi2)
+  ret float %ret
+}
+
+define float @fold_phi_minimum(i1 %c, float %a, float %b)  {
+; CHECK-LABEL: define float @fold_phi_minimum(
+; CHECK-SAME: i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.minimum.f32(float [[A]], float [[B]])
+; CHECK-NEXT:    ret float [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %end
+then:
+  call void @dummy()
+  br label %end
+end:
+  %phi1 = phi float [%a, %entry], [%b, %then]
+  %phi2 = phi float [%b, %entry], [%a, %then]
+  %ret = call float @llvm.minimum.f32(float  %phi1, float %phi2)
+  ret float %ret
+}
+
