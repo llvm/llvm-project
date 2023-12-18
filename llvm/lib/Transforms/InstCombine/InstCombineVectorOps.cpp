@@ -388,7 +388,7 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
 /// arbitrarily pick 64 bit as our canonical type.  The actual bitwidth doesn't
 /// matter, we just want a consistent type to simplify CSE.
 static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
-  const unsigned IndexBW = IndexC->getType()->getBitWidth();
+  const unsigned IndexBW = IndexC->getBitWidth();
   if (IndexBW == 64 || IndexC->getValue().getActiveBits() > 64)
     return nullptr;
   return ConstantInt::get(IndexC->getContext(),
@@ -2640,7 +2640,7 @@ static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf,
     assert(NewInsIndex != -1 && "Did not fold shuffle with unused operand?");
 
     // Index is updated to the potentially translated insertion lane.
-    IndexC = ConstantInt::get(IndexC->getType(), NewInsIndex);
+    IndexC = ConstantInt::get(IndexC->getIntegerType(), NewInsIndex);
     return true;
   };
 
