@@ -210,7 +210,7 @@ define amdgpu_ps { float, float, float } @extract_elt0_elt1_elt2_buffer_load_v4f
 define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_3(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_buffer_load_v4f32_3(
 ; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[IDX:%.*]], i32 [[OFS:%.*]], i1 false, i1 false)
-; CHECK-NEXT:    [[INS1:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> undef, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[INS1:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 poison, i32 1>
 ; CHECK-NEXT:    [[RET:%.*]] = fadd <2 x float> [[INS1]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
@@ -228,7 +228,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_3(<4 x i3
 define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_4(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_buffer_load_v4f32_4(
 ; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[IDX:%.*]], i32 [[OFS:%.*]], i1 false, i1 false)
-; CHECK-NEXT:    [[INS1:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> undef, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[INS1:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[RET:%.*]] = fadd <2 x float> [[INS1]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
@@ -246,7 +246,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_4(<4 x i3
 define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_5(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_buffer_load_v4f32_5(
 ; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> [[RSRC:%.*]], i32 [[IDX:%.*]], i32 [[OFS:%.*]], i1 false, i1 false)
-; CHECK-NEXT:    [[INS1:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> undef, <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    [[INS1:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 2, i32 2>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[RET:%.*]] = fadd <2 x float> [[INS1]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
@@ -4872,7 +4872,7 @@ define amdgpu_ps float @extract_elt0_dmask_0111_image_sample_1d_v4f32_f32(float 
 define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0001_image_sample_1d_v4f32_f32(float %s, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_dmask_0001_image_sample_1d_v4f32_f32(
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <2 x float> undef, float [[DATA]], i64 0
+; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <2 x float> poison, float [[DATA]], i64 0
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
@@ -4913,7 +4913,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0101_image_sample_1d_v4f32
 define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0001_image_sample_1d_v4f32_f32(float %s, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_dmask_0001_image_sample_1d_v4f32_f32(
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <3 x float> undef, float [[DATA]], i64 0
+; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <3 x float> poison, float [[DATA]], i64 0
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)

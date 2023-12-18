@@ -5,9 +5,7 @@ define void @test_undef(ptr %in_ptr, ptr %out_ptr) {
 ; CHECK-LABEL: define void @test_undef(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], ptr [[OUT_PTR:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[IN_PTR]], align 16
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x float> [[B]], <4 x float> [[A]], <4 x i32> <i32 0, i32 1, i32 4, i32 poison>
-; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x float> [[C]], <4 x float> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+; CHECK-NEXT:    [[D:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[D]], ptr [[OUT_PTR]], align 16
 ; CHECK-NEXT:    ret void
 ;
