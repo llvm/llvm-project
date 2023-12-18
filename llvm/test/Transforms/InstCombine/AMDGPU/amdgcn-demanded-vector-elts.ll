@@ -238,7 +238,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_4(<4 x i3
   %elt2 = extractelement <4 x float> %data, i32 2
   %ins0 = insertelement <2 x float> undef, float %elt0, i32 0
   %ins1 = insertelement <2 x float> %ins0, float %elt2, i32 1
-  %shuf = shufflevector <4 x float> undef, <4 x float> %data, <2 x i32> <i32 5, i32 1>
+  %shuf = shufflevector <4 x float> poison, <4 x float> %data, <2 x i32> <i32 5, i32 1>
   %ret = fadd <2 x float> %ins1, %shuf
   ret <2 x float> %ret
 }
