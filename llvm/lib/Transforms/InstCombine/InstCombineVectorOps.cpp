@@ -2774,6 +2774,11 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (Instruction *I = simplifyBinOpSplats(SVI))
     return I;
 
+  // Canonicalize splat shuffle to use poison RHS. Handle this explicitly in
+  // order to support scalable vectors.
+  if (match(SVI.getShuffleMask(), m_ZeroMask()) && !isa<PoisonValue>(RHS))
+    return replaceOperand(SVI, 1, PoisonValue::get(RHS->getType()));
+
   if (isa<ScalableVectorType>(LHS->getType()))
     return nullptr;
 
