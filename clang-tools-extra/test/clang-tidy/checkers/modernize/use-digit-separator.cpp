@@ -80,6 +80,10 @@ float MinusNotFormattedFloat = -1234.56789;
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unformatted representation of integer literal '1234.56789' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.567'89
 
+double PostfixNotFormattedFloat = 1234.569F;
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of integer literal '1234.569F' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234.569F
+
 // FIXME:
 // error: expected ';' after top level declarator [clang-diagnostic-error]
 //   80 | int FormattedInteger = 1'234'567;
