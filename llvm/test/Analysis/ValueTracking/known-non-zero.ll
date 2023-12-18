@@ -1222,10 +1222,7 @@ define i1 @sub_via_non_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_via_non_eq(
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[X]], 3
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[SHL]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SUB]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ne = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %ne)
