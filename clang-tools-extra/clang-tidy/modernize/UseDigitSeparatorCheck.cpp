@@ -91,8 +91,11 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, 
   }
 
   // Get precision
-  const std::string::size_type OriginalDotPosition = OriginalLiteralString.find('.');
-  const llvm::StringRef OriginalFractionalSubString = OriginalLiteralString.substr(OriginalDotPosition + 1, OriginalLiteralString.size());
+  const std::string::size_type OriginalDotPosition =
+      OriginalLiteralString.find('.');
+  const llvm::StringRef OriginalFractionalSubString =
+      OriginalLiteralString.substr(OriginalDotPosition + 1,
+                                   OriginalLiteralString.size());
   int Precision = 0;
   for (const char &Character : OriginalFractionalSubString) {
     if (std::isdigit(Character)) {
@@ -104,7 +107,8 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, 
 
   // Get string representation of float value
   std::ostringstream StringStream;
-  StringStream << std::fixed << std::setprecision(Precision) << FloatValue.convertToDouble();
+  StringStream << std::fixed << std::setprecision(Precision)
+               << FloatValue.convertToDouble();
   const std::string FloatString = StringStream.str();
 
   // Get integer and fractional parts of float number
