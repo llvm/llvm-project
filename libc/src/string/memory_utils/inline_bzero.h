@@ -16,11 +16,13 @@
 
 namespace LIBC_NAMESPACE {
 
-LIBC_INLINE static void inline_bzero(Ptr dst, size_t count) {
+__attribute__((flatten)) LIBC_INLINE static void inline_bzero(Ptr dst,
+                                                              size_t count) {
   inline_memset(dst, 0, count);
 }
 
-LIBC_INLINE static void inline_bzero(void *dst, size_t count) {
+__attribute__((flatten)) LIBC_INLINE static void inline_bzero(void *dst,
+                                                              size_t count) {
   inline_bzero(reinterpret_cast<Ptr>(dst), count);
 }
 
