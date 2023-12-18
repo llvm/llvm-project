@@ -608,6 +608,10 @@ module std_private_node_handle       [system] {
   header "__node_handle"
   export *
 }
+module std_private_overridable_function [system] {
+  header "__overridable_function"
+  export *
+}
 module std_private_split_buffer      [system] {
   header "__split_buffer"
   export *
