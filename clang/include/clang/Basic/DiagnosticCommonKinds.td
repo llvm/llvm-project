@@ -349,7 +349,7 @@ def warn_invalid_feature_combination : Warning<
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
-def warn_knl_knm_target_supports_remove : Warning<
+def warn_knl_knm_target_support_removed : Warning<
   "KNL/KNM's feature support will be removed in LLVM 19.">;
 
 // Source manager
