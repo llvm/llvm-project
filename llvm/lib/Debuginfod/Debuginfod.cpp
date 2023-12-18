@@ -76,10 +76,10 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
     ReadGuard.unlock();
     std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
     DebuginfodUrls = SmallVector<StringRef>();
-    if (const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS")) {
-      StringRef(DebuginfodUrlsEnv)
-          .split(DebuginfodUrls.value(), " ", -1, false);
-    }
+    // if (const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS")) {
+    //   StringRef(DebuginfodUrlsEnv)
+    //       .split(DebuginfodUrls.value(), " ", -1, false);
+    // }
     WriteGuard.unlock();
     ReadGuard.lock();
   }
