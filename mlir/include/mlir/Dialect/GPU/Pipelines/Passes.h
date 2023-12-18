@@ -1,12 +1,8 @@
-//===- Passes.h - GPU NVVM pipeline entry points -----------*- C++ -*-===//
+//===- Passes.h - GPU NVVM pipeline entry points --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This header file defines prototypes of all sparse tensor pipelines.
 //
 //===----------------------------------------------------------------------===//
 

@@ -167,8 +167,10 @@ namespace gpu {
 void registerGPUToNVVMPipeline() {
   PassPipelineRegistration<GPUToNVVMPipelineOptions>(
       "gpu-lower-to-nvvm",
-      "An example of pipeline to lower the main dialects (arith, linalg, "
-      "memref, scf, vector) down to NVVM.",
+      "The default pipeline lowers main dialects (arith, linalg, memref, scf, "
+      "vector, gpu, and nvgpu) to NVVM. It starts by lowering GPU code to the "
+      "specified compilation target (default is fatbin) then lowers the host "
+      "code.",
       buildLowerToNVVMPassPipeline);
 }
 } // namespace gpu
