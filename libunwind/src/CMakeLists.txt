@@ -76,6 +76,9 @@ else()
     add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
   endif()
   add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
+endif()
+
+if (NOT APPLE)
   add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
 endif()
 
