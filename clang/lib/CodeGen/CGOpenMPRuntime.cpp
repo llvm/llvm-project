@@ -4485,12 +4485,12 @@ void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
       FlagsLVal);
 
   // Shift the address forward by one element.
-  Address ElementNext =
-      CGF.Builder.CreateConstGEP(Begin, /*Index=*/1, "omp.elementNext");
-  ElementPHI->addIncoming(ElementNext.getRawPointer(CGF),
-                          CGF.Builder.GetInsertBlock());
-  llvm::Value *IsEmpty = CGF.Builder.CreateICmpEQ(
-      ElementNext.getRawPointer(CGF), End, "omp.isempty");
+  llvm::Value *ElementNext =
+      CGF.Builder.CreateConstGEP(Begin, /*Index=*/1, "omp.elementNext")
+          .getRawPointer(CGF);
+  ElementPHI->addIncoming(ElementNext, CGF.Builder.GetInsertBlock());
+  llvm::Value *IsEmpty =
+      CGF.Builder.CreateICmpEQ(ElementNext, End, "omp.isempty");
   CGF.Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
   // Done.
   CGF.EmitBlock(DoneBB, /*IsFinished=*/true);
@@ -7314,9 +7314,10 @@ private:
                       CGF.EmitOMPSharedLValue(MC.getAssociatedExpression())
                           .getAddress(CGF);
                 }
-                Size = CGF.Builder.CreatePtrDiff(CGF.Int8Ty,
-                                                 ComponentLB.getRawPointer(CGF),
-                                                 LB.getRawPointer(CGF));
+                llvm::Value *ComponentLBPtr = ComponentLB.getRawPointer(CGF);
+                llvm::Value *LBPtr = LB.getRawPointer(CGF);
+                Size = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr,
+                                                 LBPtr);
                 break;
               }
             }
@@ -7339,9 +7340,10 @@ private:
           CombinedInfo.DevicePtrDecls.push_back(nullptr);
           CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
           CombinedInfo.Pointers.push_back(LB.getRawPointer(CGF));
+          llvm::Value *LBPtr = LB.getRawPointer(CGF);
           Size = CGF.Builder.CreatePtrDiff(
               CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).getRawPointer(CGF),
-              LB.getRawPointer(CGF));
+              LBPtr);
           CombinedInfo.Sizes.push_back(
               CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
           CombinedInfo.Types.push_back(Flags);

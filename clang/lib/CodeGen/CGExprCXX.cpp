@@ -1278,8 +1278,9 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
   // Enter a partial-destruction Cleanup if necessary.
   if (!CleanupDominator && needsEHCleanup(DtorKind)) {
-    pushRegularPartialArrayCleanup(BeginPtr.getRawPointer(*this),
-                                   CurPtr.getRawPointer(*this), ElementType,
+    llvm::Value *BeginPtrRaw = BeginPtr.getRawPointer(*this);
+    llvm::Value *CurPtrRaw = CurPtr.getRawPointer(*this);
+    pushRegularPartialArrayCleanup(BeginPtrRaw, CurPtrRaw, ElementType,
                                    ElementAlign, getDestroyer(DtorKind));
     Cleanup = EHStack.stable_begin();
     CleanupDominator = Builder.CreateUnreachable();

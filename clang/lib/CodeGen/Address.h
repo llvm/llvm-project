@@ -114,15 +114,9 @@ class Address {
   // The boolean flag indicates whether the pointer is known to be non-null.
   llvm::PointerIntPair<llvm::Value *, 1, bool> Pointer;
 
-  /// The expected IR type of the pointer. When the address is a raw pointer,
-  /// this is currently redundant with the pointer's type, but for signed
-  /// pointers it is useful if the pointer has been offsetted or cast from the
-  /// original type. In the long run, when LLVM adopts opaque pointer types,
-  /// this should become the notional element type of the address.
-  ///
-  /// Carrying accurate element type information in Address makes it more
-  /// convenient to work with Address values and allows frontend assertions to
-  /// catch simple mistakes even after LLVM adopts opaque pointer types.
+  /// The expected IR type of the pointer. Carrying accurate element type
+  /// information in Address makes it more convenient to work with Address
+  /// values and allows frontend assertions to catch simple mistakes.
   llvm::Type *ElementType = nullptr;
 
   CharUnits Alignment;

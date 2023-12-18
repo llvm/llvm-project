@@ -397,27 +397,27 @@ namespace {
 void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
   // Make sure the exception object is cleaned up if there's an
   // exception during initialization.
-    pushFullExprCleanup<FreeException>(EHCleanup, addr.getRawPointer(*this));
-    EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
+  pushFullExprCleanup<FreeException>(EHCleanup, addr.getRawPointer(*this));
+  EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
 
-    // __cxa_allocate_exception returns a void*;  we need to cast this
-    // to the appropriate type for the object.
-    llvm::Type *ty = ConvertTypeForMem(e->getType());
-    Address typedAddr = addr.withElementType(ty);
+  // __cxa_allocate_exception returns a void*;  we need to cast this
+  // to the appropriate type for the object.
+  llvm::Type *ty = ConvertTypeForMem(e->getType());
+  Address typedAddr = addr.withElementType(ty);
 
-    // FIXME: this isn't quite right!  If there's a final unelided call
-    // to a copy constructor, then according to [except.terminate]p1 we
-    // must call std::terminate() if that constructor throws, because
-    // technically that copy occurs after the exception expression is
-    // evaluated but before the exception is caught.  But the best way
-    // to handle that is to teach EmitAggExpr to do the final copy
-    // differently if it can't be elided.
-    EmitAnyExprToMem(e, typedAddr, e->getType().getQualifiers(),
-                     /*IsInit*/ true);
+  // FIXME: this isn't quite right!  If there's a final unelided call
+  // to a copy constructor, then according to [except.terminate]p1 we
+  // must call std::terminate() if that constructor throws, because
+  // technically that copy occurs after the exception expression is
+  // evaluated but before the exception is caught.  But the best way
+  // to handle that is to teach EmitAggExpr to do the final copy
+  // differently if it can't be elided.
+  EmitAnyExprToMem(e, typedAddr, e->getType().getQualifiers(),
+                   /*IsInit*/ true);
 
-    // Deactivate the cleanup block.
-    DeactivateCleanupBlock(
-        cleanup, cast<llvm::Instruction>(typedAddr.getRawPointer(*this)));
+  // Deactivate the cleanup block.
+  DeactivateCleanupBlock(
+      cleanup, cast<llvm::Instruction>(typedAddr.getRawPointer(*this)));
 }
 
 Address CodeGenFunction::getExceptionSlot() {

@@ -1511,10 +1511,11 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
       Ptr = Address(PhiSrc, Ptr.getElementType(), Ptr.getAlignment());
       ElemPtr =
           Address(PhiDest, ElemPtr.getElementType(), ElemPtr.getAlignment());
-      llvm::Value *PtrDiff =
-          Bld.CreatePtrDiff(CGF.Int8Ty, PtrEnd.getRawPointer(CGF),
-                            Bld.CreatePointerBitCastOrAddrSpaceCast(
-                                Ptr.getRawPointer(CGF), CGF.VoidPtrTy));
+      llvm::Value *PtrEndRaw = PtrEnd.getRawPointer(CGF);
+      llvm::Value *PtrRaw = Ptr.getRawPointer(CGF);
+      llvm::Value *PtrDiff = Bld.CreatePtrDiff(
+          CGF.Int8Ty, PtrEndRaw,
+          Bld.CreatePointerBitCastOrAddrSpaceCast(PtrRaw, CGF.VoidPtrTy));
       Bld.CreateCondBr(Bld.CreateICmpSGT(PtrDiff, Bld.getInt64(IntSize - 1)),
                        ThenBB, ExitBB);
       CGF.EmitBlock(ThenBB);

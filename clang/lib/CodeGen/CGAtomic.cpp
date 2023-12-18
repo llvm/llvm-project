@@ -1675,10 +1675,10 @@ std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
   if (shouldUseLibcall()) {
     // Produce a source address.
     Address ExpectedAddr = materializeRValue(Expected);
-    Address DesiredAddr = materializeRValue(Desired);
-    auto *Res = EmitAtomicCompareExchangeLibcall(
-        ExpectedAddr.getRawPointer(CGF), DesiredAddr.getRawPointer(CGF),
-        Success, Failure);
+    llvm::Value *ExpectedPtr = ExpectedAddr.getRawPointer(CGF);
+    llvm::Value *DesiredPtr = materializeRValue(Desired).getRawPointer(CGF);
+    auto *Res = EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr,
+                                                 Success, Failure);
     return std::make_pair(
         convertAtomicTempToRValue(ExpectedAddr, AggValueSlot::ignored(),
                                   SourceLocation(), /*AsValue=*/false),
@@ -1773,9 +1773,10 @@ void AtomicInfo::EmitAtomicUpdateLibcall(
                                            AggValueSlot::ignored(),
                                            SourceLocation(), /*AsValue=*/false);
   EmitAtomicUpdateValue(CGF, *this, OldRVal, UpdateOp, DesiredAddr);
-  auto *Res = EmitAtomicCompareExchangeLibcall(ExpectedAddr.getRawPointer(CGF),
-                                               DesiredAddr.getRawPointer(CGF),
-                                               AO, Failure);
+  llvm::Value *ExpectedPtr = ExpectedAddr.getRawPointer(CGF);
+  llvm::Value *DesiredPtr = DesiredAddr.getRawPointer(CGF);
+  auto *Res =
+      EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr, AO, Failure);
   CGF.Builder.CreateCondBr(Res, ExitBB, ContBB);
   CGF.EmitBlock(ExitBB, /*IsFinished=*/true);
 }
@@ -1855,9 +1856,10 @@ void AtomicInfo::EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO,
     CGF.Builder.CreateStore(OldVal, DesiredAddr);
   }
   EmitAtomicUpdateValue(CGF, *this, UpdateRVal, DesiredAddr);
-  auto *Res = EmitAtomicCompareExchangeLibcall(ExpectedAddr.getRawPointer(CGF),
-                                               DesiredAddr.getRawPointer(CGF),
-                                               AO, Failure);
+  llvm::Value *ExpectedPtr = ExpectedAddr.getRawPointer(CGF);
+  llvm::Value *DesiredPtr = DesiredAddr.getRawPointer(CGF);
+  auto *Res =
+      EmitAtomicCompareExchangeLibcall(ExpectedPtr, DesiredPtr, AO, Failure);
   CGF.Builder.CreateCondBr(Res, ExitBB, ContBB);
   CGF.EmitBlock(ExitBB, /*IsFinished=*/true);
 }

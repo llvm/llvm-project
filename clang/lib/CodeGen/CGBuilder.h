@@ -363,33 +363,33 @@ public:
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(getRawPointerFromAddress(Dest),
-                        Dest.getAlignment().getAsAlign(),
-                        getRawPointerFromAddress(Src),
+    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    return CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                         Src.getAlignment().getAsAlign(), Size, IsVolatile);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(getRawPointerFromAddress(Dest),
-                        Dest.getAlignment().getAsAlign(),
-                        getRawPointerFromAddress(Src),
+    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    return CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                         Src.getAlignment().getAsAlign(), Size, IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemCpyInline;
   llvm::CallInst *CreateMemCpyInline(Address Dest, Address Src, uint64_t Size) {
-    return CreateMemCpyInline(getRawPointerFromAddress(Dest),
-                              Dest.getAlignment().getAsAlign(),
-                              getRawPointerFromAddress(Src),
+    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    return CreateMemCpyInline(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                               Src.getAlignment().getAsAlign(), getInt64(Size));
   }
 
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
-    return CreateMemMove(getRawPointerFromAddress(Dest),
-                         Dest.getAlignment().getAsAlign(),
-                         getRawPointerFromAddress(Src),
+    llvm::Value *DestPtr = getRawPointerFromAddress(Dest);
+    llvm::Value *SrcPtr = getRawPointerFromAddress(Src);
+    return CreateMemMove(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
                          Src.getAlignment().getAsAlign(), Size, IsVolatile);
   }
 
