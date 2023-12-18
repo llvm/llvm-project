@@ -4,33 +4,29 @@
 define i32 @lower_lshr(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %g, <4 x i32> %h) {
 ; CHECK-LABEL: lower_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addv s16, v0.4s
-; CHECK-NEXT:    addv s0, v1.4s
-; CHECK-NEXT:    addv s1, v2.4s
-; CHECK-NEXT:    addv s3, v3.4s
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    addv s1, v1.4s
 ; CHECK-NEXT:    addv s4, v4.4s
 ; CHECK-NEXT:    addv s5, v5.4s
+; CHECK-NEXT:    addv s2, v2.4s
 ; CHECK-NEXT:    addv s6, v6.4s
-; CHECK-NEXT:    addv s7, v7.4s
-; CHECK-NEXT:    mov v2.16b, v16.16b
-; CHECK-NEXT:    mov v16.h[1], v0.h[0]
-; CHECK-NEXT:    mov v17.16b, v4.16b
-; CHECK-NEXT:    mov v2.s[1], v0.s[0]
-; CHECK-NEXT:    mov v16.h[2], v1.h[0]
-; CHECK-NEXT:    mov v17.s[1], v5.s[0]
-; CHECK-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-NEXT:    mov v16.h[3], v3.h[0]
-; CHECK-NEXT:    mov v17.s[2], v6.s[0]
-; CHECK-NEXT:    mov v2.s[3], v3.s[0]
-; CHECK-NEXT:    mov v16.h[4], v4.h[0]
-; CHECK-NEXT:    mov v17.s[3], v7.s[0]
-; CHECK-NEXT:    mov v16.h[5], v5.h[0]
-; CHECK-NEXT:    uzp2 v2.8h, v2.8h, v17.8h
-; CHECK-NEXT:    mov v16.h[6], v6.h[0]
-; CHECK-NEXT:    mov v16.h[7], v7.h[0]
-; CHECK-NEXT:    uhadd v2.8h, v16.8h, v2.8h
-; CHECK-NEXT:    uaddlv s2, v2.8h
-; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    addv s1, v3.4s
+; CHECK-NEXT:    addv s3, v7.4s
+; CHECK-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    mov v4.s[2], v6.s[0]
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    mov v4.s[3], v3.s[0]
+; CHECK-NEXT:    xtn v2.4h, v0.4s
+; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-NEXT:    xtn v1.4h, v4.4s
+; CHECK-NEXT:    shrn v3.4h, v4.4s, #16
+; CHECK-NEXT:    uhadd v0.4h, v2.4h, v0.4h
+; CHECK-NEXT:    uhadd v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %l87  = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
   %l174 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %b)
@@ -59,25 +55,18 @@ define i32 @lower_lshr(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <
 define <8 x i16> @lower_trunc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; CHECK-LABEL: lower_trunc:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s0, w4
 ; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    fmov s2, w4
-; CHECK-NEXT:    mov v0.h[1], w1
+; CHECK-NEXT:    mov v0.s[1], w5
 ; CHECK-NEXT:    mov v1.s[1], w1
-; CHECK-NEXT:    mov v2.s[1], w5
-; CHECK-NEXT:    mov v0.h[2], w2
+; CHECK-NEXT:    mov v0.s[2], w6
 ; CHECK-NEXT:    mov v1.s[2], w2
-; CHECK-NEXT:    mov v2.s[2], w6
-; CHECK-NEXT:    mov v0.h[3], w3
+; CHECK-NEXT:    mov v0.s[3], w7
 ; CHECK-NEXT:    mov v1.s[3], w3
-; CHECK-NEXT:    mov v2.s[3], w7
-; CHECK-NEXT:    mov v0.h[4], w4
-; CHECK-NEXT:    add v2.4s, v2.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v1.4s
-; CHECK-NEXT:    mov v0.h[5], w5
-; CHECK-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    mov v0.h[6], w6
-; CHECK-NEXT:    mov v0.h[7], w7
+; CHECK-NEXT:    add v2.4s, v0.4s, v0.4s
+; CHECK-NEXT:    add v3.4s, v1.4s, v1.4s
+; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i32> poison, i32 %a, i32 0
