@@ -18215,6 +18215,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     //             D = A * B + C
     // We need to specify one type for matrices AB and one for matrices CD.
     SmallVector<unsigned, 2> ArgsForMatchingMatrixTypes;
+    // Some intrinsics expect "false" as an extra bool argument.
+    bool AppendExtraBoolArg = false;
     unsigned BuiltinWMMAOp;
 
     switch (BuiltinID) {
@@ -18232,17 +18234,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ArgsForMatchingMatrixTypes = {0, 2};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_bf16;
       break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
-    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12:
+      AppendExtraBoolArg = true;
+      LLVM_FALLTHROUGH;
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
       ArgsForMatchingMatrixTypes = {0, 2};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16;
       break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
-    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12:
+      AppendExtraBoolArg = true;
+      LLVM_FALLTHROUGH;
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
       ArgsForMatchingMatrixTypes = {0, 2};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16;
       break;
@@ -18355,6 +18361,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *, 6> Args;
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
+    if (AppendExtraBoolArg)
+      Args.push_back(Builder.getFalse());
 
     SmallVector<llvm::Type *, 6> ArgTypes;
     for (auto ArgIdx : ArgsForMatchingMatrixTypes)
