@@ -126,18 +126,18 @@ const std::string &CIndexer::getClangResourcesPath() {
 #elif defined(_AIX)
   getClangResourcesPathImplAIX(LibClangPath);
 #else
-  bool pathFound = false;
+  bool PathFound = false;
 #if defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
   Dl_info info;
   // This silly cast below avoids a C++ warning.
   if (dladdr((void *)(uintptr_t)clang_createTranslationUnit, &info) != 0) {
     // We now have the CIndex directory, locate clang relative to it.
     LibClangPath += info.dli_fname;
-    pathFound = true;
+    PathFound = true;
   }
 #endif
   std::string Path;
-  if (!pathFound) {
+  if (!PathFound) {
     if (!(Path = llvm::sys::fs::getMainExecutable(nullptr, nullptr)).empty()) {
       // If we can't get the path using dladdr, try to get the main executable
       // path. This may be needed when we're statically linking libclang with
