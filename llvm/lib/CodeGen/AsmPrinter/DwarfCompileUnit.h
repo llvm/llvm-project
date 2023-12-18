@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Casting.h"
-#include <cassert>
 #include <cstdint>
 #include <memory>
 
