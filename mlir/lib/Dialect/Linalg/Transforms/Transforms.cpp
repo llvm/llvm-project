@@ -380,12 +380,11 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
   if (!unPackOp.getOuterDimsPerm().empty())
     return rewriter.notifyMatchFailure(unPackOp, "outer dims perm NYI");
 
-  RankedTensorType packedTensorType = unPackOp.getSourceType();
-
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
 
+  RankedTensorType packedTensorType = unPackOp.getSourceType();
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
@@ -430,20 +429,13 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
   RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
       stripMinedTensorType, packingMetadata.reassociations);
 
-  // Get dynamic dims from input tensor in order of stripMinedTensor
-  // `tensor.empty` op
+  // Get dynamic dims from input tensor based on lastDimsToInsertPositionsPerm
+  // permutation
   SmallVector<OpFoldResult, 4> dims =
       tensor::getMixedSizes(rewriter, loc, unPackOp.getSource());
   applyPermutationToVector(dims, lastDimsToInsertPositionsPerm);
-  SmallVector<Value, 4> dynDims;
-  dynDims.reserve(stripMinedTensorType.getNumDynamicDims());
-  for (int64_t i = 0; i < stripMinedTensorType.getRank(); i++) {
-    if (stripMinedTensorType.isDynamicDim(i))
-      dynDims.push_back(cast<Value>(dims[i]));
-  }
-
-  auto emptyOp =
-      rewriter.create<tensor::EmptyOp>(loc, stripMinedTensorType, dynDims);
+  auto emptyOp = rewriter.create<tensor::EmptyOp>(
+      loc, dims, stripMinedTensorType.getElementType());
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
       loc, unPackOp.getSource(), emptyOp, lastDimsToInsertPositionsPerm);
 
