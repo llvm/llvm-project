@@ -133,7 +133,8 @@ public:
   // Number of non-fatal errors seen.
   unsigned ErrCount = 0;
 
-  Checker(llvm::StringRef File, const ClangdLSPServer::Options &Opts, const ClangdCheckOptions &CheckOpts)
+  Checker(llvm::StringRef File, const ClangdLSPServer::Options &Opts,
+          const ClangdCheckOptions &CheckOpts)
       : File(File), Opts(Opts), CheckOpts(CheckOpts) {}
 
   // Read compilation database and choose a compile command for the file.
@@ -473,8 +474,7 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
     }
 
   public:
-    OverrideConfigProvider(bool CheckTidyTime)
-        : CheckTidyTime(CheckTidyTime) {}
+    OverrideConfigProvider(bool CheckTidyTime) : CheckTidyTime(CheckTidyTime) {}
 
   } OverrideConfig{CheckOpts.CheckTidyTime.has_value()};
 

@@ -573,8 +573,7 @@ llvm::cl::opt<bool> CheckCompletion{
     llvm::cl::desc("Run code-completion at each point (slow)"),
     llvm::cl::init(false)};
 llvm::cl::opt<bool> CheckWarnings{
-    "check-warnings",
-    llvm::cl::desc("Print warnings as well as errors"),
+    "check-warnings", llvm::cl::desc("Print warnings as well as errors"),
     llvm::cl::init(false)};
 
 /// Supports a test URI scheme with relaxed constraints for lit tests.
@@ -1002,7 +1001,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
     ClangdCheckOptions CheckOpts;
     if (CheckTidyTime.getNumOccurrences())
-        CheckOpts.CheckTidyTime= std::make_optional(CheckTidyTime.ValueStr);
+      CheckOpts.CheckTidyTime = std::make_optional(CheckTidyTime.ValueStr);
 
     CheckOpts.CheckFileLines = CheckFileLines;
     CheckOpts.CheckCompletion = CheckCompletion;
