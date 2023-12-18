@@ -15777,8 +15777,6 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
         }
-        if (I1->getOpcode() == I2->getOpcode())
-          continue;
         InstructionsState S = getSameOpcode({I1, I2}, TLI);
         if (S.getOpcode() && (IsCompatibility || !S.isAltShuffle()))
           continue;
