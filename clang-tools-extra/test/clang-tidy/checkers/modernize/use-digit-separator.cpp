@@ -84,6 +84,14 @@ double PostfixNotFormattedFloat = 1234.569F;
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of integer literal '1234.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569F
 
+double ScientificNotFormattedFloat = 1.2345678e10;
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of integer literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8e10
+
+double ScientificNotFormattedFloat1 = 1.2345678E10;
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of integer literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8E10
+
 // FIXME:
 // error: expected ';' after top level declarator [clang-diagnostic-error]
 //   80 | int FormattedInteger = 1'234'567;

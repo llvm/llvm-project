@@ -20,6 +20,8 @@
 using namespace clang::ast_matchers;
 
 namespace {
+std::string getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString);
+
 std::vector<std::basic_string<char>>
 splitStringByGroupSize(const std::basic_string<char> &String, size_t GroupSize) {
   std::vector<std::basic_string<char>> Result;
@@ -83,16 +85,7 @@ std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString
 
 std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, const llvm::APFloat FloatValue) {
   if (OriginalLiteralString.contains('E') || OriginalLiteralString.contains('e')) {
-    // Split string to mantissa and exponent
-    const std::string::size_type EPosition = OriginalLiteralString.str().find('E') != std::string::npos ? OriginalLiteralString.str().find('E') : OriginalLiteralString.str().find('e');
-    const llvm::StringRef MantissaSubString = OriginalLiteralString.substr(0, EPosition);
-    const llvm::StringRef ExponentSubString =
-        OriginalLiteralString.substr(EPosition + 1, OriginalLiteralString.size());
-
-    // Get formatting literal text
-    const std::string FormatedMantissaString = getFormatedFloatString(MantissaSubString, llvm::APFloat(std::stod(MantissaSubString.str())));
-    const std::string FormatedExponentString = getFormatedIntegerString(ExponentSubString, llvm::APInt(128, std::stoll(ExponentSubString.str())));
-    return FormatedMantissaString + (OriginalLiteralString.str().find('E') != std::string::npos ? 'E' : 'e') + FormatedExponentString;
+    return getFormatedScientificFloatString(OriginalLiteralString);
   }
 
   // Configure formatting
@@ -143,6 +136,19 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, 
       FormatedIntegerSubString + '.' + FormatedFractionalSubString + Postfix;
 
   return FormatedLiteralString;
+}
+
+std::string getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString) {
+  // Split string to mantissa and exponent
+  const std::string::size_type EPosition = OriginalLiteralString.str().find('E') != std::string::npos ? OriginalLiteralString.str().find('E') : OriginalLiteralString.str().find('e');
+  const llvm::StringRef MantissaSubString = OriginalLiteralString.substr(0, EPosition);
+  const llvm::StringRef ExponentSubString =
+      OriginalLiteralString.substr(EPosition + 1, OriginalLiteralString.size());
+
+  // Get formatting literal text
+  const std::string FormatedMantissaString = getFormatedFloatString(MantissaSubString, llvm::APFloat(std::stod(MantissaSubString.str())));
+  const std::string FormatedExponentString = getFormatedIntegerString(ExponentSubString, llvm::APInt(128, std::stoll(ExponentSubString.str())));
+  return FormatedMantissaString + (OriginalLiteralString.str().find('E') != std::string::npos ? 'E' : 'e') + FormatedExponentString;
 }
 } // namespace
 
