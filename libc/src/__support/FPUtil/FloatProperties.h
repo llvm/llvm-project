@@ -129,15 +129,16 @@ public:
   // *mantissa* but its use is generally discouraged :
   // https://en.wikipedia.org/wiki/Significand#Terminology
   //
-  // For virtually all of the floating point number formats the bit ranges are
-  // in this exact order : `sign`, `exponent` and `significand`.
+  // For virtually all of the floating point number formats (and for the purpose
+  // of this library) the bit ranges are in this exact order : `sign`,
+  // `exponent` and `significand`.
   //
   // e.g. Depiction of 'IEEE754 Float16'
   //
-  // sign   exponent          significand
-  //    |  ┌───────┐  ┌─────────────────┐
-  //    0  0 1 1 0 0  0 1 0 0 0 0 0 0 0 0
-  //   15 14      10  9                 0
+  //      | sign   exponent          significand
+  //      |    |  ┌───────┐  ┌─────────────────┐
+  //      |    0  0 1 1 0 0  0 1 0 0 0 0 0 0 0 0
+  //  bit |   15 14      10  9                 0
   //
   //---------------------------------------------------------------------------
   // Types
@@ -206,33 +207,56 @@ public:
   // Semantic layer
   //
   // At this level, we define properties and methods of the floating point
-  // number and regardless of how it's encoded. In this layer, the signficand is
-  // always returned in its normal form and the exponent is always a signed
-  // integer.
+  // number - regardless of how it's encoded. We typically find methods to
+  // extract the 'sign', 'exponent' and 'significand' of the number or whether
+  // it represents peculiar values like 'infinity' or 'NaN'.
   //
-  // * Normal form : A significand is in a *normalized form* when the leading
-  // `1` is at the position of the most significant bit.
+  // A central notion when interacting with the physical layer is the concept of
+  // 'normalized number'. A normalized number is the association of an exponent
+  // and a significand in a _normalized form_, that is,  when its leading `1` is
+  // at the position of the most significant bit.
   //
   // e.g., Here is the `1.01` normalized significand stored in an `uint16_t`.
+  // The leading '1' is at the most significant bit position.
+  //
   //    ┌──────────────────────────────┐
   //     1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0
   //    15                             0
   //
-  // It is always possible to normalize a (non-zero) significand by decreasing
-  // its associated exponent. For instance, the value `0.000000000000001p0` can
-  // be rewritten `1p-15`.
+  // Note that it is always possible to normalize a (non-zero) number by
+  // decreasing its associated exponent. For instance, the value `0.001p0` can
+  // be rewritten `1p-3`. Likewise `100p0` can be rewritten `1p2`. It becomes
+  // obvious that the same number can be represented in a number of ways, hence
+  // the importance of a normalized representation.
   //
-  // * Significant working format : By definition `StorageType` can store all of
-  // the bits for the floating point format (`sign` + `exponent` +
-  // `significand`). In the Semantic layer we also use the `StorageType` to
-  // manipulate the `significand`, this means that the number of bits for the
-  // fraction part is greater in the Semantic layer than in the underlying
-  // floating point format.
-  //
-  //
+  // Because 'significand' and 'exponent' usually need to be processed together
+  // they are paired together in the 'Number' type below. This type
+
+  //---------------------------------------------------------------------------
+  // Type
+  //---------------------------------------------------------------------------
+
+  // This is a working format to represent an unsigned floating point number.
+  // Note that numbers expressed in this format have a greater precision than
+  // the physical format:
+  // - The exponent is always 32-bit, this is always greater than 'EXP_LEN' (at
+  //   most 15-bit).
+  // - The significand is 'STORAGE_LEN'-bit, this is greater than 'SIG_LEN' by
+  //   'EXP_LEN' bits for IEEE754 format, and by `EXP_LEN + 1` bits for
+  //   X86_ExtendedPrecision.
+  struct Number {
+    StorageType significant = 0;
+    int32_t exponent = 0;
+
+    // Returns this Number in a normalized form, i.e., if non-zero, the leading
+    // one is at the most significant bit position.
+    Number normalize() const;
+  };
+
   //---------------------------------------------------------------------------
   // Properties
   //---------------------------------------------------------------------------
+
 private:
   LIBC_INLINE_VAR static constexpr StorageType QNAN_MASK =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
@@ -243,6 +267,7 @@ private:
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
           : bit_at(SIG_LEN - 2);                      // 0b0100...
+
 public:
   // The number of bits after the decimal dot when the number is in normal form.
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN =
@@ -262,6 +287,7 @@ public:
   // Observers
   //---------------------------------------------------------------------------
 
+  // Returns whether the 'value' represents a negative number.
   LIBC_INLINE static constexpr bool sign(StorageType value) {
     return value & SIGN_MASK;
   }
@@ -270,6 +296,7 @@ public:
   // Modifiers
   //---------------------------------------------------------------------------
 
+  // Returns the absolute value of 'value'.
   LIBC_INLINE static constexpr StorageType abs(StorageType value) {
     return value & EXP_SIG_MASK;
   }
