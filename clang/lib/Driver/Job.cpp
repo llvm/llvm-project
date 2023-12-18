@@ -79,7 +79,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     .Default(false);
   if (IsInclude)
     return !HaveCrashVFS;
-  if (StringRef(Flag).startswith("-index-store-path"))
+  if (StringRef(Flag).starts_with("-index-store-path"))
     return true;
 
   // The remaining flags are treated as a single argument.
@@ -102,7 +102,7 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     return !HaveCrashVFS;
   if (FlagRef.starts_with("-fmodules-cache-path="))
     return true;
-  if (FlagRef.startswith("-fapinotes-cache-path="))
+  if (FlagRef.starts_with("-fapinotes-cache-path="))
     return true;
 
   SkipNum = 0;

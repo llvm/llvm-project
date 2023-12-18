@@ -1017,9 +1017,9 @@ findSelectionLocInSource(StringRef Buffer, StringRef Label) {
   StringRef LineString = LocParts.first;
   unsigned Line, Column;
   enum ExprKind { Literal, Add, Sub };
-  ExprKind Expr = LineString.startswith("+")
+  ExprKind Expr = LineString.starts_with("+")
                       ? Add
-                      : LineString.startswith("-") ? Sub : Literal;
+                      : LineString.starts_with("-") ? Sub : Literal;
   if (LineString.drop_front(Expr != Literal ? 1 : 0).getAsInteger(10, Line))
     return std::nullopt;
   if (Expr == Add)

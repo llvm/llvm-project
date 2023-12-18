@@ -109,7 +109,7 @@ private:
   }
 
   static bool isPathInDir(StringRef dir, StringRef path) {
-    if (dir.empty() || !path.startswith(dir))
+    if (dir.empty() || !path.starts_with(dir))
       return false;
     StringRef rest = path.drop_front(dir.size());
     return !rest.empty() && sys::path::is_separator(rest.front());

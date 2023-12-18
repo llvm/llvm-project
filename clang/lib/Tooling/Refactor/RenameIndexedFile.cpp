@@ -59,7 +59,7 @@ enum class MatchKind {
 
 static bool isSetterNameEqualToPropName(StringRef SetterName,
                                         StringRef PropertyName) {
-  assert(SetterName.startswith("set") && "invalid setter name");
+  assert(SetterName.starts_with("set") && "invalid setter name");
   SetterName = SetterName.drop_front(3);
   return SetterName[0] == toUppercase(PropertyName[0]) &&
          SetterName.drop_front() == PropertyName.drop_front();
@@ -106,7 +106,7 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
   // FIXME: Verify that the previous token is a '.' to be sure.
   if (AllowObjCSetterProp &&
       Occurrence.Kind == IndexedOccurrence::IndexedObjCMessageSend &&
-      SymbolNameStart.startswith("set") &&
+      SymbolNameStart.starts_with("set") &&
       isSetterNameEqualToPropName(SymbolNameStart, Tok.getRawIdentifier()))
     return MatchKind::SourcePropSetterMatch;
   return MatchKind::MacroExpansion;

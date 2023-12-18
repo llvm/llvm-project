@@ -36,7 +36,7 @@ protected:
                                 ArrayRef<char> Data);
 
   static bool isValid(const ObjectProxy &Node) {
-    return Node.getData().startswith(NodeT::getNodeKind());
+    return Node.getData().starts_with(NodeT::getNodeKind());
   }
 
   friend NodeT;

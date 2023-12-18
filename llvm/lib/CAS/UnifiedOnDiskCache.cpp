@@ -134,7 +134,7 @@ static Error getAllDBDirs(StringRef Path,
     if (DirI->type() != sys::fs::file_type::directory_file)
       continue;
     StringRef SubDir = sys::path::filename(DirI->path());
-    if (!SubDir.startswith(DBDirPrefix))
+    if (!SubDir.starts_with(DBDirPrefix))
       continue;
     uint64_t Order;
     if (SubDir.substr(DBDirPrefix.size()).getAsInteger(10, Order))

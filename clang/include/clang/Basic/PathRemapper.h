@@ -44,7 +44,7 @@ public:
   /// otherwise the original path is returned.
   std::string remapPath(StringRef Path) const {
     for (const auto &Mapping : PathMappings)
-      if (Path.startswith(Mapping.first))
+      if (Path.starts_with(Mapping.first))
         return (Twine(Mapping.second) +
                 Path.substr(Mapping.first.size())).str();
     return Path.str();

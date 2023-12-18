@@ -583,7 +583,7 @@ private:
   }
 
   bool isInSysroot(StringRef Filename) {
-    return !SysrootPath.empty() && Filename.startswith(SysrootPath);
+    return !SysrootPath.empty() && Filename.starts_with(SysrootPath);
   }
 };
 
@@ -712,7 +712,7 @@ static std::string getClangVersion() {
   std::string RepositoryPath = getClangRepositoryPath();
   StringRef BuildNumber = StringRef(RepositoryPath);
   size_t DashOffset = BuildNumber.find('-');
-  if (BuildNumber.startswith("clang") && DashOffset != StringRef::npos) {
+  if (BuildNumber.starts_with("clang") && DashOffset != StringRef::npos) {
     BuildNumber = BuildNumber.substr(DashOffset + 1);
     return std::string(BuildNumber);
   }
@@ -917,7 +917,7 @@ public:
           // Ignore module map files, they are not as important to track as
           // source files and they may be auto-generated which would create an
           // undesirable dependency on an intermediate build byproduct.
-          if (FE->getName().endswith("module.modulemap"))
+          if (FE->getName().ends_with("module.modulemap"))
             return;
 
           visitor(*FE, isSystem);

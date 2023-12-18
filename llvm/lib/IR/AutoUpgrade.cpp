@@ -1183,7 +1183,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
           {F->arg_begin()->getType(), F->getArg(1)->getType()});
       return true;
     }
-    if (Name.startswith("ptrauth.")) {
+    if (Name.starts_with("ptrauth.")) {
       Name = Name.substr(strlen("ptrauth."));
       // Remove intptr overload.
       Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Name)

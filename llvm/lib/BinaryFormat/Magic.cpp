@@ -34,7 +34,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
   if (Magic.size() < 4)
     return file_magic::unknown;
   // BEGIN MCCAS
-  if (Magic.startswith(casidObjectMagicPrefix))
+  if (Magic.starts_with(casidObjectMagicPrefix))
     return file_magic::cas_id;
   // END MCCAS
   switch ((unsigned char)Magic[0]) {

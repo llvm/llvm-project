@@ -19,7 +19,7 @@ static bool isPathNestedIn(StringRef Path, StringRef ParentPath) {
   assert(sys::path::is_absolute(Path));
   if (Path.size() <= ParentPath.size())
     return false;
-  if (!Path.startswith(ParentPath))
+  if (!Path.starts_with(ParentPath))
     return false;
   return sys::path::is_separator(Path.drop_front(ParentPath.size()).front());
 }
@@ -86,7 +86,7 @@ cmake_file_api::Index::fromPath(StringRef CMakeBuildPath) {
   for (sys::fs::directory_iterator DirIt(ReplyPath, EC), DirE;
        !EC && DirIt != DirE; DirIt.increment(EC)) {
     StringRef Filename = sys::path::filename(DirIt->path());
-    if (Filename.startswith("index-") && Filename.endswith(".json")) {
+    if (Filename.starts_with("index-") && Filename.ends_with(".json")) {
       if (!RecentIndexPath || sys::path::filename(*RecentIndexPath) < Filename)
         RecentIndexPath = DirIt->path();
     }
