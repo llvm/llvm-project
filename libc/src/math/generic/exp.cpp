@@ -174,11 +174,10 @@ DoubleDouble exp_double_double(double x, double kd,
 // |x| <= 2^-53 or x < log(2^-1075) or x >= 0x1.6232bdd7abcd3p+9
 double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
-  uint64_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint64_t x_abs = xbits.abs().uintval();
 
   // |x| <= 2^-53
   if (x_abs <= 0x3ca0'0000'0000'0000ULL) {
