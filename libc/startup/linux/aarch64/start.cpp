@@ -126,12 +126,7 @@ static void call_fini_array_callbacks() {
 } // namespace LIBC_NAMESPACE
 
 using LIBC_NAMESPACE::app;
-
-// TODO: Would be nice to use the aux entry structure from elf.h when available.
-struct AuxEntry {
-  uint64_t type;
-  uint64_t value;
-};
+using LIBC_NAMESPACE::AuxEntry;
 
 __attribute__((noinline)) static void do_start() {
   auto tid = LIBC_NAMESPACE::syscall_impl<long>(SYS_gettid);
@@ -155,9 +150,9 @@ __attribute__((noinline)) static void do_start() {
   // denoted by an AT_NULL entry.
   Elf64_Phdr *program_hdr_table = nullptr;
   uintptr_t program_hdr_count;
-  for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
-       aux_entry->type != AT_NULL; ++aux_entry) {
-    switch (aux_entry->type) {
+  app.auxv_ptr = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
+  for (auto *aux_entry = app.auxv_ptr; aux_entry->id != AT_NULL; ++aux_entry) {
+    switch (aux_entry->id) {
     case AT_PHDR:
       program_hdr_table = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
       break;
