@@ -439,6 +439,27 @@ struct TestVectorChainedReductionFoldingPatterns
   }
 };
 
+struct TestVectorBreakDownReductionPatterns
+    : public PassWrapper<TestVectorBreakDownReductionPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorBreakDownReductionPatterns)
+
+  StringRef getArgument() const final {
+    return "test-vector-break-down-reduction-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to break down vector reductions into arith "
+           "reductions";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateBreakDownVectorReductionPatterns(patterns,
+                                             /*maxNumElementsToExtract=*/2);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestFlattenVectorTransferPatterns
     : public PassWrapper<TestFlattenVectorTransferPatterns,
                          OperationPass<func::FuncOp>> {
@@ -826,6 +847,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
 
   PassRegistration<TestVectorChainedReductionFoldingPatterns>();
+
+  PassRegistration<TestVectorBreakDownReductionPatterns>();
 
   PassRegistration<TestFlattenVectorTransferPatterns>();
 
