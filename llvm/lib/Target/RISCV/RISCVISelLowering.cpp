@@ -6860,7 +6860,7 @@ RISCVTargetLowering::getGeneralDynamicTLSDescAddr(GlobalAddressSDNode *N,
   // addi  a0, tX, %tlsdesc_lo_add(label)  // R_RISCV_TLSDESC_ADD_LO12_I(label)
   // jalr  t0, tY                          // R_RISCV_TLSDESC_CALL(label)
   SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
-  return DAG.getNode(RISCVISD::LA_TLSDESC, DL, Ty, Addr);
+  return SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLSDESC, DL, Ty, Addr), 0);
 }
 
 SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,

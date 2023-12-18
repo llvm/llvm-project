@@ -1727,12 +1727,6 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32, isCodeGenOnly = 0,
 def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tlsdesc", "$dst, $src">;
 
-
-def : Pat<(riscv_la_tlsdesc tglobaltlsaddr:$in),
-          (PseudoLA_TLSDESC  tglobaltlsaddr:$in)>;
-def : Pat<(riscv_la_tlsdesc texternalsym:$in),
-          (PseudoLA_TLSDESC  texternalsym:$in)>;
-
 def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";

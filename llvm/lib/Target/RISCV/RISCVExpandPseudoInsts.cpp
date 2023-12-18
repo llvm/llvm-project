@@ -578,12 +578,10 @@ bool RISCVPreRAExpandPseudo::expandLoadTLSDescAddress(
       .addImm(0)
       .addSym(AUIPCSymbol, RISCVII::MO_TLSDESC_CALL);
 
-  MachineInstr *TPAdd = BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), FinalReg)
-                            .addReg(RISCV::X10)
-                            .addReg(RISCV::X4);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), FinalReg)
+      .addReg(RISCV::X10)
+      .addReg(RISCV::X4);
 
-  if (MI.hasOneMemOperand())
-    TPAdd->addMemOperand(*MF, *MI.memoperands_begin());
   MI.eraseFromParent();
   return true;
 }

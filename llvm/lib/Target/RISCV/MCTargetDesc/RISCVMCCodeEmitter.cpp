@@ -158,7 +158,8 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
-void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI, SmallVectorImpl<char> &CB,
+void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
+                                           SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   MCOperand SrcSymbol = MI.getOperand(3);
@@ -180,7 +181,7 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI, SmallVectorImpl<cha
       MCInstBuilder(RISCV::JALR).addReg(Link).addReg(Dest).addImm(Imm);
 
   uint32_t Binary = getBinaryCodeForInstr(Call, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
 // Expand PseudoAddTPRel to a simple ADD with the correct relocation.
