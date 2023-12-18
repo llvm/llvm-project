@@ -190,9 +190,6 @@ public:
   void setStatus(RRStatusTy Status) { this->Status = Status; }
   bool isSaveOutputEnabled() const { return ReplaySaveOutput; }
 
-  constexpr RecordReplayTy()
-      : Status(RRStatusTy::RRDeactivated), ReplaySaveOutput(false) {}
-
   void saveImage(const char *Name, const DeviceImageTy &Image) {
     SmallString<128> ImageName = {Name, ".image"};
     std::error_code EC;
