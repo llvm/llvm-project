@@ -336,6 +336,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                                           inconvertibleErrorCode()),
                   FileName);
 
+  // Process the raw profile.
+  if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
+    return E;
+
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
   std::unique_ptr<DIContext> Context = DWARFContext::create(
       *Object, DWARFContext::ProcessDebugRelocations::Process);
@@ -345,13 +352,6 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   if (!SOFOr)
     return report(SOFOr.takeError(), FileName);
   auto Symbolizer = std::move(SOFOr.get());
-
-  // Process the raw profile.
-  if (Error E = readRawProfile(std::move(DataBuffer)))
-    return E;
-
-  if (Error E = setupForSymbolization())
-    return E;
 
   // The symbolizer ownership is moved into symbolizeAndFilterStackFrames so
   // that it is freed automatically at the end, when it is no longer used. This
