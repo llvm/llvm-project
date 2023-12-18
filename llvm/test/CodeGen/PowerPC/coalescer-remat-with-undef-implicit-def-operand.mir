@@ -3,76 +3,25 @@
 ---
 name:            _Z13testTransposeIfLj31ELj17EEvv
 alignment:       16
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHCatchret:   false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
-tracksDebugUserValues: false
-registers:
-  - { id: 3968, class: vsrc, preferred-register: '' }
-  - { id: 3974, class: vsrc, preferred-register: '' }
-  - { id: 5081, class: vssrc, preferred-register: '' }
-liveins:         []
 frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
   maxAlignment:    128
-  adjustsStack:    false
-  hasCalls:        false
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 4294967295
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
-fixedStack:      []
 stack:
-  - { id: 0, name: '', type: default, offset: 0, size: 128, alignment: 128, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      local-offset: -128, debug-info-variable: '', debug-info-expression: '', 
-      debug-info-location: '' }
-  - { id: 1, name: '', type: default, offset: 0, size: 4096, alignment: 16, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
-      local-offset: -4224, debug-info-variable: '', debug-info-expression: '', 
-      debug-info-location: '' }
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
+  - { id: 0, size: 128, alignment: 128, local-offset: -128 }
+  - { id: 1, size: 4096, alignment: 16, local-offset: -4224 }
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name:            _Z13testTransposeIfLj31ELj17EEvv
   ; CHECK: undef %[[REG:[0-9]+]].sub_64:vsrc = IMPLICIT_DEF implicit-def %[[REG]]
   bb.0:
-    successors: %bb.2(0x80000000)
     liveins: $x2
   
-    %5081:vssrc = IMPLICIT_DEF
+    %2:vssrc = IMPLICIT_DEF
     B %bb.2
   
   bb.1:
-    %3968:vsrc = SUBREG_TO_REG 1, killed %5081, %subreg.sub_64
-    %3974:vsrc = XXPERMDI killed undef %3968, killed %3968, 0
+    %0:vsrc = SUBREG_TO_REG 1, killed %2, %subreg.sub_64
+    %1:vsrc = XXPERMDI killed undef %0, killed %0, 0
     BLR8 implicit $lr8, implicit $rm
   
   bb.2:
