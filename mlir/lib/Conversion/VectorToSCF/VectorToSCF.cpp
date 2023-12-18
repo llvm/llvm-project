@@ -870,7 +870,6 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
                             Value iv, ValueRange loopState,
                             Value castedMaskBuffer, PatternRewriter &rewriter,
                             Location loc) const {
-    // Create new transfer op.
     OpTy newXfer = Strategy<OpTy>::rewriteOp(b, this->options, xferOp,
                                              castedDataBuffer, iv, loopState);
 
