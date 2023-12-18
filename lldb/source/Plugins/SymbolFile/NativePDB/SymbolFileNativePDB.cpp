@@ -1379,7 +1379,7 @@ bool SymbolFileNativePDB::ParseSupportFiles(CompileUnit &comp_unit,
 
   for (llvm::StringRef f : cci->m_file_list) {
     FileSpec::Style style =
-        f.startswith("/") ? FileSpec::Style::posix : FileSpec::Style::windows;
+        f.starts_with("/") ? FileSpec::Style::posix : FileSpec::Style::windows;
     FileSpec spec(f, style);
     support_files.Append(spec);
   }

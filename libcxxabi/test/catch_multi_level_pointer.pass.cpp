@@ -11,6 +11,10 @@
 // 1b00fc5d8133 made it in the dylib in macOS 10.11
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10}}
 
+// mps2-an385 machine used for testing of picolibc has just 4 MB of "flash"
+// memory and this test requires almost 5 MB
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>

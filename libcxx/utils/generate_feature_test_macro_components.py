@@ -486,7 +486,9 @@ feature_test_macros = [
             "values": {
                 "c++20": 202311  # DR P2909R4 Fix formatting of code units as integers
             },
-            "headers": [""],  # Note not in format
+            "headers": [
+                "format"  # TODO verify this entry since the paper was underspecified.
+            ],
         },
         {
             "name": "__cpp_lib_formatters",
@@ -660,7 +662,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ios_noreplace",
-            "values": { "c++23": 202207 },
+            "values": {"c++23": 202207},
             "headers": ["ios"],
         },
         {
@@ -1010,7 +1012,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [""],  # Note not in <numerics>
+            "headers": [
+                "numeric"  # TODO verify this entry since the paper was underspecified.
+            ],
             "unimplemented": True,
         },
         {

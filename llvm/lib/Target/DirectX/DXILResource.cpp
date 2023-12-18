@@ -236,8 +236,8 @@ void UAVResource::print(raw_ostream &OS) const {
 
   OS << right_justify("UAV", 10);
 
-  printElementType(
-      Shape, ExtProps.ElementType.value_or(ElementType::Invalid), 8, OS);
+  printElementType(Shape, ExtProps.ElementType.value_or(ElementType::Invalid),
+                   8, OS);
 
   // FIXME: support SampleCount.
   // See https://github.com/llvm/llvm-project/issues/58175
