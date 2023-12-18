@@ -193,9 +193,9 @@ constexpr bool test() {
     int projection_count = 0;
     {
       std::string a[] = {str1, str1, str, str1, str1};
-      auto whole      =
+      auto whole =
         std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
-      bool ret        = std::ranges::contains(whole.begin(), whole.end(), "hello world", [&](const std::string i) {
+      bool ret = std::ranges::contains(whole.begin(), whole.end(), "hello world", [&](const std::string i) {
         ++projection_count;
         return i;
       });
@@ -205,9 +205,9 @@ constexpr bool test() {
     }
     {
       std::string a[] = {str1, str1, str, str1, str1};
-      auto whole      =
+      auto whole =
         std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
-      bool ret        = std::ranges::contains(whole, "hello world", [&](const std::string i) {
+      bool ret = std::ranges::contains(whole, "hello world", [&](const std::string i) {
         ++projection_count;
         return i;
       });
@@ -239,9 +239,9 @@ constexpr bool test() {
   }
 
   { // check invocations of the projection for views::transform
-    int a[]               = {1, 2, 3, 4, 5};
-    int projection_count  = 0;
-    auto square_number    = a | std::views::transform([](int x) { return x * x; });
+    int a[]              = {1, 2, 3, 4, 5};
+    int projection_count = 0;
+    auto square_number   = a | std::views::transform([](int x) { return x * x; });
     {
       bool ret = std::ranges::contains(square_number.begin(), square_number.end(), 16, [&](int i) {
         ++projection_count;
@@ -266,7 +266,7 @@ constexpr bool test() {
 
 // count invocations of the projection for std::list
 bool test_nonconstexpr() {
-  std::list<int> a = {7, 5, 0, 16, 8};
+  std::list<int> a     = {7, 5, 0, 16, 8};
   int projection_count = 0;
   {
     bool ret = std::ranges::contains(a.begin(), a.end(), 0, [&](int i) {
