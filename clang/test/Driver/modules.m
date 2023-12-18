@@ -57,6 +57,14 @@
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=foo.map"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=bar.map"
 
+// Verify that the driver propagates -fmodule-name and -fmodule-map-file flags even with
+// -fno-modules.  We rely on this behavior for layering check.
+// RUN: %clang -fno-modules -fmodule-name=foo -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-PROPAGATE-MODULE-NAME %s
+// CHECK-PROPAGATE-MODULE-NAME: -fmodule-name=foo
+
+// RUN: %clang -fno-modules -fmodule-map-file=foo.map -c -### %s 2>&1 | FileCheck -check-prefix=CHECK-PROPAGATE-MODULE-MAPS %s
+// CHECK-PROPAGATE-MODULE-MAPS: -fmodule-map-file=foo.map
+
 // RUN: %clang -fmodules -fbuiltin-module-map -### %s 2>&1 | FileCheck -check-prefix=CHECK-BUILTIN-MODULE-MAP %s
 // CHECK-BUILTIN-MODULE-MAP: "-fmodules"
 // CHECK-BUILTIN-MODULE-MAP: "-fmodule-map-file={{.*}}include{{/|\\\\}}module.modulemap"
