@@ -688,6 +688,9 @@ Bug Fixes in This Version
   (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
   (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
+- Fix an issue where clang doesn't respect detault template arguments that
+  are added in a later redeclaration for CTAD.
+  Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
