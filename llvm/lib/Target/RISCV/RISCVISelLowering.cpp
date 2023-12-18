@@ -20506,6 +20506,14 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
+bool RISCVTargetLowering::shouldInsertFencesForAtomic(const Instruction *I) const {
+  if (Subtarget.hasStdExtZalasr()) {
+    return false;
+  } else {
+    return isa<LoadInst>(I) || isa<StoreInst>(I);
+  }
+}
+
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // GISel support is in progress or complete for G_ADD, G_SUB, G_AND, G_OR, and

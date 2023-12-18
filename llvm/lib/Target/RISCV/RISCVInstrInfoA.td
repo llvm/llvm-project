@@ -105,22 +105,63 @@ defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-// Atomic load/store are available under both +a and +force-atomics.
-// Fences will be inserted for atomic load/stores according to the logic in
-// RISCVTargetLowering::{emitLeadingFence,emitTrailingFence}.
-let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_8,  LB>;
-  def : LdPat<atomic_load_16, LH>;
-  def : LdPat<atomic_load_32, LW>;
+// An atomic load operation that does not need either acquire or release
+// semantics.
+class relaxed_load<PatFrags base>
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingMonotonic = 1;
+}
 
-  def : StPat<atomic_store_8,  SB, GPR, XLenVT>;
-  def : StPat<atomic_store_16, SH, GPR, XLenVT>;
-  def : StPat<atomic_store_32, SW, GPR, XLenVT>;
+// A atomic load operation that actually needs acquire semantics.
+class acquiring_load<PatFrags base>
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingAcquire = 1;
+}
+
+// An atomic load operation that needs sequential consistency.
+class seq_cst_load<PatFrags base>
+  : PatFrag<(ops node:$ptr), (base node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingSequentiallyConsistent = 1;
+}
+
+// An atomic store operation that doesn't actually need to be atomic on RISCV.
+class relaxed_store<PatFrag base>
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingMonotonic = 1;
+}
+
+// A store operation that actually needs release semantics.
+class releasing_store<PatFrag base>
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingRelease = 1;
+}
+
+// A store operation that actually needs sequential consistency.
+class seq_cst_store<PatFrag base>
+  : PatFrag<(ops node:$ptr, node:$val), (base node:$val, node:$ptr)> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingSequentiallyConsistent = 1;
+}
+
+// Atomic load/store are available under both +a and +force-atomics.
+let Predicates = [HasAtomicLdSt] in {
+  def : LdPat<relaxed_load<atomic_load_8>,  LB>;
+  def : LdPat<relaxed_load<atomic_load_16>, LH>;
+  def : LdPat<relaxed_load<atomic_load_32>, LW>;
+
+  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, XLenVT>;
+  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, XLenVT>;
+  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, XLenVT>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_64, LD, i64>;
-  def : StPat<atomic_store_64, SD, GPR, i64>;
+  def : LdPat<relaxed_load<atomic_load_64>, LD, i64>;
+  def : StPat<relaxed_store<atomic_store_64>, SD, GPR, i64>;
 }
 
 /// AMOs

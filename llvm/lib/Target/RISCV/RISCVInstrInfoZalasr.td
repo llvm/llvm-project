@@ -63,4 +63,36 @@ defm SD_RL : SRL_r_aq_rl<0b011, "sd">;
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-// Future work: Work out mapping with leading/trailing fences, &c
+class PatLAQ<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(vt (OpNode (vt GPRMemZeroOffset:$rs1))), (Inst GPRMemZeroOffset:$rs1)>;
+
+class PatSRL<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
+    : Pat<(OpNode (vt GPR:$rs2), (vt GPRMemZeroOffset:$rs1)), (Inst GPR:$rs2, GPRMemZeroOffset:$rs1)>;
+
+let Predicates = [HasStdExtZalasr] in {
+  def : PatLAQ<acquiring_load<atomic_load_8>, LB_AQ_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_8>, LB_AQ_AQ_RL>;
+
+  def : PatLAQ<acquiring_load<atomic_load_16>, LH_AQ_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_16>, LH_AQ_AQ_RL>;
+
+  def : PatLAQ<acquiring_load<atomic_load_32>, LW_AQ_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_32>, LW_AQ_AQ_RL>;
+
+  def : PatSRL<releasing_store<atomic_store_8>, SB_RL_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL_AQ_RL>;
+
+  def : PatSRL<releasing_store<atomic_store_16>, SH_RL_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL_AQ_RL>;
+
+  def : PatSRL<releasing_store<atomic_store_32>, SW_RL_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL_AQ_RL>;
+} // Predicates HasStdExtZalasr
+
+let Predicates = [HasStdExtZalasr, IsRV64] in {
+  def : PatLAQ<acquiring_load<atomic_load_64>, LD_AQ_AQ>;
+  def : PatLAQ<seq_cst_load<atomic_load_64>, LD_AQ_AQ_RL>;
+
+  def : PatSRL<releasing_store<atomic_store_64>, SD_RL_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL_AQ_RL>;
+} // Predicates HasStdExtZalasr, IsRV64
