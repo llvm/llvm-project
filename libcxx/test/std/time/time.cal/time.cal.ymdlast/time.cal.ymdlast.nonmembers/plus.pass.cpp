@@ -49,29 +49,37 @@ constexpr bool test() {
 
   { // year_month_day_last + months
     year_month_day_last ym{year{1234}, month_day_last{January}};
-    for (int i = 0; i <= 10; ++i) // TODO test wrap-around
-    {
-      year_month_day_last ym1 = ym + months{i};
-      year_month_day_last ym2 = months{i} + ym;
-      assert(static_cast<int>(ym1.year()) == 1234);
-      assert(static_cast<int>(ym2.year()) == 1234);
-      assert(ym1.month() == month(1 + i));
-      assert(ym2.month() == month(1 + i));
-      assert(ym1 == ym2);
+    for (int i = 0; i <= 10; ++i) {
+      year_month_day_last ymdl1 = ym + months{i};
+      year_month_day_last ymdl2 = months{i} + ym;
+      assert(static_cast<int>(ymdl1.year()) == 1234);
+      assert(static_cast<int>(ymdl2.year()) == 1234);
+      assert(ymdl1.month() == month(1 + i));
+      assert(ymdl2.month() == month(1 + i));
+      assert(ymdl1 == ymdl2);
+    }
+    // Test the year wraps around.
+    for (int i = 12; i <= 15; ++i) {
+      year_month_day_last ymdl1 = ym + months{i};
+      year_month_day_last ymdl2 = months{i} + ym;
+      assert(static_cast<int>(ymdl1.year()) == 1235);
+      assert(static_cast<int>(ymdl2.year()) == 1235);
+      assert(ymdl1.month() == month(1 + i - 12));
+      assert(ymdl2.month() == month(1 + i - 12));
+      assert(ymdl1 == ymdl2);
     }
   }
 
   { // year_month_day_last + years
-
     year_month_day_last ym{year{1234}, month_day_last{January}};
     for (int i = 0; i <= 10; ++i) {
-      year_month_day_last ym1 = ym + years{i};
-      year_month_day_last ym2 = years{i} + ym;
-      assert(static_cast<int>(ym1.year()) == i + 1234);
-      assert(static_cast<int>(ym2.year()) == i + 1234);
-      assert(ym1.month() == std::chrono::January);
-      assert(ym2.month() == std::chrono::January);
-      assert(ym1 == ym2);
+      year_month_day_last ymdl1 = ym + years{i};
+      year_month_day_last ymdl2 = years{i} + ym;
+      assert(static_cast<int>(ymdl1.year()) == i + 1234);
+      assert(static_cast<int>(ymdl2.year()) == i + 1234);
+      assert(ymdl1.month() == std::chrono::January);
+      assert(ymdl2.month() == std::chrono::January);
+      assert(ymdl1 == ymdl2);
     }
   }
 

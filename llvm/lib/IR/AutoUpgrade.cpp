@@ -582,7 +582,7 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 
   if (Name.consume_front("xop.")) {
     Intrinsic::ID ID = Intrinsic::not_intrinsic;
-    if (Name.startswith("vpermil2")) { // Added in 3.9
+    if (Name.starts_with("vpermil2")) { // Added in 3.9
       // Upgrade any XOP PERMIL2 index operand still using a float/double
       // vector.
       auto Idx = F->getFunctionType()->getParamType(2);
@@ -1293,7 +1293,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
 
   auto *ST = dyn_cast<StructType>(F->getReturnType());
-  if (ST && (!ST->isLiteral() || ST->isPacked())) {
+  if (ST && (!ST->isLiteral() || ST->isPacked()) &&
+      F->getIntrinsicID() != Intrinsic::not_intrinsic) {
     // Replace return type with literal non-packed struct. Only do this for
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be
@@ -5206,10 +5207,12 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // This goes before adding new address spaces to prevent incoherent string
     // values.
     if (!DL.contains("-ni") && !DL.starts_with("ni"))
-      Res.append("-ni:7:8");
-    // Update ni:7 to ni:7:8.
+      Res.append("-ni:7:8:9");
+    // Update ni:7 to ni:7:8:9.
     if (DL.ends_with("ni:7"))
-      Res.append(":8");
+      Res.append(":8:9");
+    if (DL.ends_with("ni:7:8"))
+      Res.append(":9");
 
     // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
     // resources) An empty data layout has already been upgraded to G1 by now.
@@ -5217,6 +5220,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
       Res.append("-p7:160:256:256:32");
     if (!DL.contains("-p8") && !DL.starts_with("p8"))
       Res.append("-p8:128:128");
+    if (!DL.contains("-p9") && !DL.starts_with("p9"))
+      Res.append("-p9:192:256:256:32");
 
     return Res;
   }

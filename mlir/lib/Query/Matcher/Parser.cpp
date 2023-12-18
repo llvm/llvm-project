@@ -384,7 +384,7 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &nameToken,
 // completions minus the prefix.
 void Parser::addCompletion(const TokenInfo &compToken,
                            const MatcherCompletion &completion) {
-  if (llvm::StringRef(completion.typedText).startswith(compToken.text)) {
+  if (llvm::StringRef(completion.typedText).starts_with(compToken.text)) {
     completions.emplace_back(completion.typedText.substr(compToken.text.size()),
                              completion.matcherDecl);
   }

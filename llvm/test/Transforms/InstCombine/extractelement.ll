@@ -269,7 +269,7 @@ define i16 @bitcasted_inselt_from_FP_uses2(double %x) {
 
 define float @bitcasted_inselt_to_and_from_FP(double %x) {
 ; ANY-LABEL: @bitcasted_inselt_to_and_from_FP(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i64 0
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> poison, double [[X:%.*]], i64 0
 ; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <4 x float>
 ; ANY-NEXT:    [[R:%.*]] = extractelement <4 x float> [[B]], i64 1
 ; ANY-NEXT:    ret float [[R]]

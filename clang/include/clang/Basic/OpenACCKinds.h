@@ -53,7 +53,7 @@ enum class OpenACCDirectiveKind {
   Shutdown,
   Set,
   Update,
-  // FIXME: wait construct.
+  Wait,
 
   // Procedure Calls in Compute Regions.
   Routine,

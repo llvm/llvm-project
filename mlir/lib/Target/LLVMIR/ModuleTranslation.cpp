@@ -161,7 +161,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
   }
   layoutStream.flush();
   StringRef layoutSpec(llvmDataLayout);
-  if (layoutSpec.startswith("-"))
+  if (layoutSpec.starts_with("-"))
     layoutSpec = layoutSpec.drop_front();
 
   return llvm::DataLayout(layoutSpec);
@@ -795,7 +795,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
 
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
-              dyn_cast<llvm::DICompileUnit>(diGlobalVar->getScope())) {
+              dyn_cast_if_present<llvm::DICompileUnit>(
+                  diGlobalVar->getScope())) {
         // Update the compile unit with this incoming global variable expression
         // during the finalizing step later.
         allGVars[compileUnit].push_back(diGlobalExpr);
@@ -964,6 +965,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
   else if (func.getArmLocallyStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_body");
+  else if (func.getArmStreamingCompatible())
+    llvmFunc->addFnAttr("aarch64_pstate_sm_compatible");
 
   if (func.getArmNewZa())
     llvmFunc->addFnAttr("aarch64_pstate_za_new");

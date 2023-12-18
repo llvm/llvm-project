@@ -1205,6 +1205,38 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
+  // (X * Y) / (X * Z) --> Y / Z (and commuted variants)
+  if (match(Op0, m_Mul(m_Value(X), m_Value(Y)))) {
+    auto OB0HasNSW = cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap();
+    auto OB0HasNUW = cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap();
+
+    auto CreateDivOrNull = [&](Value *A, Value *B) -> Instruction * {
+      auto OB1HasNSW = cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap();
+      auto OB1HasNUW =
+          cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap();
+      const APInt *C1, *C2;
+      if (IsSigned && OB0HasNSW) {
+        if (OB1HasNSW && match(B, m_APInt(C1)) && !C1->isAllOnes())
+          return BinaryOperator::CreateSDiv(A, B);
+      }
+      if (!IsSigned && OB0HasNUW) {
+        if (OB1HasNUW)
+          return BinaryOperator::CreateUDiv(A, B);
+        if (match(A, m_APInt(C1)) && match(B, m_APInt(C2)) && C2->ule(*C1))
+          return BinaryOperator::CreateUDiv(A, B);
+      }
+      return nullptr;
+    };
+
+    if (match(Op1, m_c_Mul(m_Specific(X), m_Value(Z)))) {
+      if (auto *Val = CreateDivOrNull(Y, Z))
+        return Val;
+    }
+    if (match(Op1, m_c_Mul(m_Specific(Y), m_Value(Z)))) {
+      if (auto *Val = CreateDivOrNull(X, Z))
+        return Val;
+    }
+  }
   return nullptr;
 }
 
@@ -1375,20 +1407,7 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   if (Instruction *NarrowDiv = narrowUDivURem(I, *this))
     return NarrowDiv;
 
-  // If the udiv operands are non-overflowing multiplies with a common operand,
-  // then eliminate the common factor:
-  // (A * B) / (A * X) --> B / X (and commuted variants)
-  // TODO: The code would be reduced if we had m_c_NUWMul pattern matching.
-  // TODO: If -reassociation handled this generally, we could remove this.
   Value *A, *B;
-  if (match(Op0, m_NUWMul(m_Value(A), m_Value(B)))) {
-    if (match(Op1, m_NUWMul(m_Specific(A), m_Value(X))) ||
-        match(Op1, m_NUWMul(m_Value(X), m_Specific(A))))
-      return BinaryOperator::CreateUDiv(B, X);
-    if (match(Op1, m_NUWMul(m_Specific(B), m_Value(X))) ||
-        match(Op1, m_NUWMul(m_Value(X), m_Specific(B))))
-      return BinaryOperator::CreateUDiv(A, X);
-  }
 
   // Look through a right-shift to find the common factor:
   // ((Op1 *nuw A) >> B) / Op1 --> A >> B

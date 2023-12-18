@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -1793,27 +1794,28 @@ bool ClauseProcessor::processMap(
              std::get<Fortran::parser::OmpObjectList>(mapClause->v.t).v) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
-          mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
-              Fortran::parser::OmpObject, mlir::omp::DataBoundsType,
-              mlir::omp::DataBoundsOp>(
-              converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
-              clauseLocation, asFortran, bounds, treatIndexAsSection);
+          Fortran::lower::AddrAndBoundsInfo info =
+              Fortran::lower::gatherDataOperandAddrAndBounds<
+                  Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
+                  mlir::omp::DataBoundsType>(
+                  converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+                  clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
           mlir::Value mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, baseAddr, asFortran, bounds,
+              firOpBuilder, clauseLocation, info.addr, asFortran, bounds,
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, baseAddr.getType());
+              mlir::omp::VariableCaptureKind::ByRef, info.addr.getType());
 
           mapOperands.push_back(mapOp);
           if (mapSymTypes)
-            mapSymTypes->push_back(baseAddr.getType());
+            mapSymTypes->push_back(info.addr.getType());
           if (mapSymLocs)
-            mapSymLocs->push_back(baseAddr.getLoc());
+            mapSymLocs->push_back(info.addr.getLoc());
           if (mapSymbols)
             mapSymbols->push_back(getOmpObjectSymbol(ompObject));
         }
@@ -2117,12 +2119,8 @@ static void createBodyOfOp(
     for (const Fortran::semantics::Symbol *arg : args)
       loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-    llvm::SmallVector<mlir::Type> tiv;
-    llvm::SmallVector<mlir::Location> locs;
-    for (int i = 0; i < (int)args.size(); i++) {
-      tiv.push_back(loopVarType);
-      locs.push_back(loc);
-    }
+    llvm::SmallVector<mlir::Type> tiv(args.size(), loopVarType);
+    llvm::SmallVector<mlir::Location> locs(args.size(), loc);
     firOpBuilder.createBlock(&op.getRegion(), {}, tiv, locs);
     int argIndex = 0;
     // The argument is not currently in memory, so make a temporary for the
@@ -2658,20 +2656,20 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
         fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
         name << sym.name().ToString();
 
-        mlir::Value baseAddr =
+        Fortran::lower::AddrAndBoundsInfo info =
             getDataOperandBaseAddr(converter, converter.getFirOpBuilder(), sym,
                                    converter.getCurrentLocation());
-        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::BaseBoxType>())
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>())
           bounds =
               Fortran::lower::genBoundsOpsFromBox<mlir::omp::DataBoundsOp,
                                                   mlir::omp::DataBoundsType>(
                   converter.getFirOpBuilder(), converter.getCurrentLocation(),
-                  converter, dataExv, baseAddr);
-        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::SequenceType>())
+                  converter, dataExv, info);
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>())
           bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
                                                     mlir::omp::DataBoundsType>(
               converter.getFirOpBuilder(), converter.getCurrentLocation(),
-              converter, dataExv, baseAddr);
+              converter, dataExv);
 
         llvm::omp::OpenMPOffloadMappingFlags mapFlag =
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
@@ -3388,27 +3386,12 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   }
 }
 
-//===----------------------------------------------------------------------===//
-// Public functions
-//===----------------------------------------------------------------------===//
-
-void Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
-                                         mlir::Operation *op,
-                                         mlir::Location loc) {
-  if (mlir::isa<mlir::omp::WsLoopOp, mlir::omp::ReductionDeclareOp,
-                mlir::omp::AtomicUpdateOp, mlir::omp::SimdLoopOp>(op))
-    builder.create<mlir::omp::YieldOp>(loc);
-  else
-    builder.create<mlir::omp::TerminatorOp>(loc);
-}
-
-void Fortran::lower::genOpenMPConstruct(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semanticsContext,
-    Fortran::lower::pft::Evaluation &eval,
-    const Fortran::parser::OpenMPConstruct &ompConstruct) {
+static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenMPConstruct &ompConstruct) {
   std::visit(
-      common::visitors{
+      Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPStandaloneConstruct
                   &standaloneConstruct) {
             genOMP(converter, eval, semanticsContext, standaloneConstruct);
@@ -3449,12 +3432,12 @@ void Fortran::lower::genOpenMPConstruct(
       ompConstruct.u);
 }
 
-void Fortran::lower::genOpenMPDeclarativeConstruct(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &eval,
-    const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
   std::visit(
-      common::visitors{
+      Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPDeclarativeAllocate
                   &declarativeAllocate) {
             TODO(converter.getCurrentLocation(), "OpenMPDeclarativeAllocate");
@@ -3485,6 +3468,92 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
           },
       },
       ompDeclConstruct.u);
+}
+
+//===----------------------------------------------------------------------===//
+// Public functions
+//===----------------------------------------------------------------------===//
+
+void Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
+                                         mlir::Operation *op,
+                                         mlir::Location loc) {
+  if (mlir::isa<mlir::omp::WsLoopOp, mlir::omp::ReductionDeclareOp,
+                mlir::omp::AtomicUpdateOp, mlir::omp::SimdLoopOp>(op))
+    builder.create<mlir::omp::YieldOp>(loc);
+  else
+    builder.create<mlir::omp::TerminatorOp>(loc);
+}
+
+void Fortran::lower::genOpenMPConstruct(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symTable,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::OpenMPConstruct &omp) {
+
+  symTable.pushScope();
+  genOMP(converter, semanticsContext, eval, omp);
+
+  const Fortran::parser::OpenMPLoopConstruct *ompLoop =
+      std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
+  const Fortran::parser::OpenMPBlockConstruct *ompBlock =
+      std::get_if<Fortran::parser::OpenMPBlockConstruct>(&omp.u);
+
+  // If loop is part of an OpenMP Construct then the OpenMP dialect
+  // workshare loop operation has already been created. Only the
+  // body needs to be created here and the do_loop can be skipped.
+  // Skip the number of collapsed loops, which is 1 when there is a
+  // no collapse requested.
+
+  Fortran::lower::pft::Evaluation *curEval = &eval;
+  const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
+  if (ompLoop) {
+    loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
+        std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
+    int64_t collapseValue = Fortran::lower::getCollapseValue(*loopOpClauseList);
+
+    curEval = &curEval->getFirstNestedEvaluation();
+    for (int64_t i = 1; i < collapseValue; i++) {
+      curEval = &*std::next(curEval->getNestedEvaluations().begin());
+    }
+  }
+
+  for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
+    converter.genEval(e);
+
+  if (ompLoop) {
+    genOpenMPReduction(converter, *loopOpClauseList);
+  } else if (ompBlock) {
+    const auto &blockStart =
+        std::get<Fortran::parser::OmpBeginBlockDirective>(ompBlock->t);
+    const auto &blockClauses =
+        std::get<Fortran::parser::OmpClauseList>(blockStart.t);
+    genOpenMPReduction(converter, blockClauses);
+  }
+
+  symTable.popScope();
+}
+
+void Fortran::lower::genOpenMPDeclarativeConstruct(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval,
+    const Fortran::parser::OpenMPDeclarativeConstruct &omp) {
+  genOMP(converter, eval, omp);
+  for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
+    converter.genEval(e);
+}
+
+void Fortran::lower::genOpenMPSymbolProperties(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var) {
+  assert(var.hasSymbol() && "Expecting Symbol");
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+
+  if (sym.test(Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+    Fortran::lower::genThreadprivateOp(converter, var);
+
+  if (sym.test(Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
+    Fortran::lower::genDeclareTargetIntGlobal(converter, var);
 }
 
 int64_t Fortran::lower::getCollapseValue(

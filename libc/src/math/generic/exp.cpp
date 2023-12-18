@@ -382,7 +382,7 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
     if (LIBC_LIKELY(upper == lower)) {
       // to multiply by 2^hi, a fast way is to simply add hi to the exponent
       // field.
-      int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+      int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::FRACTION_LEN;
       double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
       return r;
     }
@@ -400,7 +400,7 @@ LLVM_LIBC_FUNCTION(double, exp, (double x)) {
     double lower_dd = r_dd.hi + (r_dd.lo - ERR_DD);
 
     if (LIBC_LIKELY(upper_dd == lower_dd)) {
-      int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+      int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::FRACTION_LEN;
       double r =
           cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
       return r;

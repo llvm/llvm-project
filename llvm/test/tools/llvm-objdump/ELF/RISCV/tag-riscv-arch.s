@@ -11,7 +11,7 @@ vsetvli a3, a2, e8, m8, tu, mu
 # CHECK: fadd.s fs10, fs11, ft8
 fadd.s f26, f27, f28
 
-# CHECK: fld ft0, 12(a0)
+# CHECK: fld ft0, 0xc(a0)
 fld f0, 12(a0)
 
 # CHECK: fmul.d ft0, ft1, ft2, dyn

@@ -1566,7 +1566,7 @@ void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
            "Expect existing attachment to be mapped");
 
     auto &InstVec = InstrsIt->second;
-    auto *InstIt = std::find(InstVec.begin(), InstVec.end(), this);
+    auto *InstIt = llvm::find(InstVec, this);
     assert(InstIt != InstVec.end() &&
            "Expect instruction to be mapped to attachment");
     // The vector contains a ptr to this. If this is the only element in the

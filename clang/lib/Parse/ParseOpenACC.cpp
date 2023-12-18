@@ -56,6 +56,7 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(Token Tok) {
           .Case("shutdown", OpenACCDirectiveKind::Shutdown)
           .Case("set", OpenACCDirectiveKind::Shutdown)
           .Case("update", OpenACCDirectiveKind::Update)
+          .Case("wait", OpenACCDirectiveKind::Wait)
           .Default(OpenACCDirectiveKind::Invalid);
 
   if (DirKind != OpenACCDirectiveKind::Invalid)
@@ -80,6 +81,27 @@ OpenACCAtomicKind getOpenACCAtomicKind(Token Tok) {
       .Case("update", OpenACCAtomicKind::Update)
       .Case("capture", OpenACCAtomicKind::Capture)
       .Default(OpenACCAtomicKind::Invalid);
+}
+
+enum class OpenACCSpecialTokenKind {
+  ReadOnly,
+  DevNum,
+  Queues,
+};
+
+bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
+  if (!Tok.is(tok::identifier))
+    return false;
+
+  switch (Kind) {
+  case OpenACCSpecialTokenKind::ReadOnly:
+    return Tok.getIdentifierInfo()->isStr("readonly");
+  case OpenACCSpecialTokenKind::DevNum:
+    return Tok.getIdentifierInfo()->isStr("devnum");
+  case OpenACCSpecialTokenKind::Queues:
+    return Tok.getIdentifierInfo()->isStr("queues");
+  }
+  llvm_unreachable("Unknown 'Kind' Passed");
 }
 
 bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
@@ -123,6 +145,8 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("set");
   case OpenACCDirectiveKind::Update:
     return Tok.getIdentifierInfo()->isStr("update");
+  case OpenACCDirectiveKind::Wait:
+    return Tok.getIdentifierInfo()->isStr("wait");
   case OpenACCDirectiveKind::Invalid:
     return false;
   }
@@ -182,7 +206,7 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
 
   // Just #pragma acc can get us immediately to the end, make sure we don't
   // introspect on the spelling before then.
-  if (FirstTok.isAnnotation()) {
+  if (FirstTok.isNot(tok::identifier)) {
     P.Diag(FirstTok, diag::err_acc_missing_directive);
     return OpenACCDirectiveKind::Invalid;
   }
@@ -200,11 +224,8 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   if (ExDirKind >= OpenACCDirectiveKindEx::Invalid) {
     switch (ExDirKind) {
     case OpenACCDirectiveKindEx::Invalid: {
-      if (!FirstTok.is(tok::identifier))
-        P.Diag(FirstTok, diag::err_expected) << tok::identifier;
-      else
-        P.Diag(FirstTok, diag::err_acc_invalid_directive)
-            << 0 << FirstTok.getIdentifierInfo();
+      P.Diag(FirstTok, diag::err_acc_invalid_directive)
+          << 0 << FirstTok.getIdentifierInfo();
       return OpenACCDirectiveKind::Invalid;
     }
     case OpenACCDirectiveKindEx::Enter:
@@ -250,6 +271,67 @@ void ParseOpenACCClauseList(Parser &P) {
 }
 
 } // namespace
+
+/// OpenACC 3.3, section 2.16:
+/// In this section and throughout the specification, the term wait-argument
+/// means:
+/// [ devnum : int-expr : ] [ queues : ] async-argument-list
+bool Parser::ParseOpenACCWaitArgument() {
+  // [devnum : int-expr : ]
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::DevNum, Tok) &&
+      NextToken().is(tok::colon)) {
+    // Consume devnum.
+    ConsumeToken();
+    // Consume colon.
+    ConsumeToken();
+
+    ExprResult IntExpr =
+        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    if (IntExpr.isInvalid())
+      return true;
+
+    if (ExpectAndConsume(tok::colon))
+      return true;
+  }
+
+  // [ queues : ]
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Queues, Tok) &&
+      NextToken().is(tok::colon)) {
+    // Consume queues.
+    ConsumeToken();
+    // Consume colon.
+    ConsumeToken();
+  }
+
+  // OpenACC 3.3, section 2.16:
+  // the term 'async-argument' means a nonnegative scalar integer expression, or
+  // one of the special values 'acc_async_noval' or 'acc_async_sync', as defined
+  // in the C header file and the Fortran opacc module.
+  //
+  // We are parsing this simply as list of assignment expressions (to avoid
+  // comma being troublesome), and will ensure it is an integral type.  The
+  // 'special' types are defined as macros, so we can't really check those
+  // (other than perhaps as values at one point?), but the standard does say it
+  // is implementation-defined to use any other negative value.
+  //
+  //
+  bool FirstArg = true;
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    if (!FirstArg) {
+      if (ExpectAndConsume(tok::comma))
+        return true;
+    }
+    FirstArg = false;
+
+    ExprResult CurArg =
+        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+
+    if (CurArg.isInvalid())
+      return true;
+  }
+
+  return false;
+}
 
 ExprResult Parser::ParseOpenACCIDExpression() {
   ExprResult Res;
@@ -340,8 +422,7 @@ void Parser::ParseOpenACCCacheVarList() {
   // specifications.  First, see if we have `readonly:`, else we back-out and
   // treat it like the beginning of a reference to a potentially-existing
   // `readonly` variable.
-  if (getCurToken().is(tok::identifier) &&
-      getCurToken().getIdentifierInfo()->isStr("readonly") &&
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::ReadOnly, Tok) &&
       NextToken().is(tok::colon)) {
     // Consume both tokens.
     ConsumeToken();
@@ -398,6 +479,13 @@ void Parser::ParseOpenACCDirective() {
       // The ParseOpenACCCacheVarList function manages to recover from failures,
       // so we can always consume the close.
       T.consumeClose();
+      break;
+    case OpenACCDirectiveKind::Wait:
+      // OpenACC has an optional paren-wrapped 'wait-argument'.
+      if (ParseOpenACCWaitArgument())
+        T.skipToEnd();
+      else
+        T.consumeClose();
       break;
     }
   } else if (DirKind == OpenACCDirectiveKind::Cache) {

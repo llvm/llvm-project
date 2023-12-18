@@ -484,12 +484,6 @@ struct ConvertArmSMEToSCFPass
     target.addLegalDialect<arm_sme::ArmSMEDialect, vector::VectorDialect,
                            arith::ArithDialect, scf::SCFDialect>();
     target.addIllegalOp<arm_sme::TileLoadOp, arm_sme::TileStoreOp>();
-    target.addDynamicallyLegalOp<vector::PrintOp>([](vector::PrintOp op) {
-      if (!op.getSource())
-        return true;
-      VectorType vectorType = dyn_cast<VectorType>(op.getPrintType());
-      return !vectorType || !arm_sme::isValidSMETileVectorType(vectorType);
-    });
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();

@@ -22,7 +22,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
   constexpr uint32_t COUNT = 100'000;
 
   FPBits bits(0.0l);
-  bits.set_unbiased_exponent(FPBits::MAX_EXPONENT);
+  bits.set_biased_exponent(FPBits::MAX_EXPONENT);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent has the max value and the implicit bit is 0,
     // then the number is a NaN for all values of mantissa.
@@ -43,7 +43,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     ASSERT_TRUE(bits.is_nan());
   }
 
-  bits.set_unbiased_exponent(1);
+  bits.set_biased_exponent(1);
   bits.set_implicit_bit(0);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is non-zero and also not max, and the implicit bit is 0,
@@ -54,7 +54,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     ASSERT_TRUE(bits.is_nan());
   }
 
-  bits.set_unbiased_exponent(1);
+  bits.set_biased_exponent(1);
   bits.set_implicit_bit(1);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is non-zero and also not max, and the implicit bit is 1,
@@ -65,7 +65,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     ASSERT_FALSE(bits.is_nan());
   }
 
-  bits.set_unbiased_exponent(0);
+  bits.set_biased_exponent(0);
   bits.set_implicit_bit(1);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is zero, then the number is a valid but denormal value.
@@ -75,7 +75,7 @@ TEST(LlvmLibcX86LongDoubleTest, is_nan) {
     ASSERT_FALSE(bits.is_nan());
   }
 
-  bits.set_unbiased_exponent(0);
+  bits.set_biased_exponent(0);
   bits.set_implicit_bit(0);
   for (unsigned int i = 0; i < COUNT; ++i) {
     // If exponent is zero, then the number is a valid but denormal value.

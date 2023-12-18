@@ -1633,7 +1633,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         // DICompositeType flag specifying whether template parameters are
         // required on declarations of this type.
         StringRef NameStr = Name->getString();
-        if (!NameStr.contains('<') || NameStr.startswith("_STN|"))
+        if (!NameStr.contains('<') || NameStr.starts_with("_STN|"))
           TemplateParams = getMDOrNull(Record[14]);
       }
     } else {
