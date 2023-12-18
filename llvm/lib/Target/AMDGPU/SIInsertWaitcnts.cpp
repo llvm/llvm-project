@@ -1935,6 +1935,17 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
   } while (Repeat);
 
+  // Promote all soft waitcnts.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (SIInstrInfo::isSoftWaitcnt(MI.getOpcode())) {
+        MI.setDesc(
+            TII->get(SIInstrInfo::getNonSoftWaitcntOpcode(MI.getOpcode())));
+        Modified = true;
+      }
+    }
+  }
+
   if (ST->hasScalarStores()) {
     SmallVector<MachineBasicBlock *, 4> EndPgmBlocks;
     bool HaveScalarStores = false;
