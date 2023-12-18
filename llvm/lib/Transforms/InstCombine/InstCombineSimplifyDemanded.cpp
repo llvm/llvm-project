@@ -1345,15 +1345,15 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   APInt EltMask(APInt::getAllOnes(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 
+  if (DemandedElts.isZero()) { // If nothing is demanded, provide poison.
+    PoisonElts = EltMask;
+    return !isa<PoisonValue>(V) ? PoisonValue::get(V->getType()) : nullptr;
+  }
+
   if (match(V, m_Undef())) {
     // If the entire vector is undef or poison, just return this info.
     PoisonElts = EltMask;
     return nullptr;
-  }
-
-  if (DemandedElts.isZero()) { // If nothing is demanded, provide poison.
-    PoisonElts = EltMask;
-    return PoisonValue::get(V->getType());
   }
 
   PoisonElts = 0;
