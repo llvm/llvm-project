@@ -1010,8 +1010,8 @@ typedef __char32_t char32_t;
 #  endif
 
 #  ifndef _LIBCPP_HAS_NO_ASAN
-    extern "C" _LIBCPP_EXPORTED_FROM_ABI void
-    __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
+extern "C" _LIBCPP_EXPORTED_FROM_ABI void
+__sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
 extern "C" _LIBCPP_EXPORTED_FROM_ABI void __sanitizer_annotate_double_ended_contiguous_container(
     const void*, const void*, const void*, const void*, const void*, const void*);
 extern "C" _LIBCPP_EXPORTED_FROM_ABI int
