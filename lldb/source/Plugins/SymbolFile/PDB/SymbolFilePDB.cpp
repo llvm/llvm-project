@@ -1446,24 +1446,6 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   symtab.Finalize();
 }
 
-void SymbolFilePDB::FindTypes(
-    lldb_private::ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    lldb_private::TypeMap &types) {
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!name)
-    return;
-  if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-    return;
-
-  searched_symbol_files.clear();
-  searched_symbol_files.insert(this);
-
-  // There is an assumption 'name' is not a regex
-  FindTypesByName(name.GetStringRef(), parent_decl_ctx, max_matches, types);
-}
-
 void SymbolFilePDB::DumpClangAST(Stream &s) {
   auto type_system_or_err =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
@@ -1536,26 +1518,24 @@ void SymbolFilePDB::FindTypesByRegex(
   }
 }
 
-void SymbolFilePDB::FindTypesByName(
-    llvm::StringRef name,
-    const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches, lldb_private::TypeMap &types) {
+void SymbolFilePDB::FindTypes(const lldb_private::TypeQuery &query,
+                              lldb_private::TypeResults &type_results) {
+
+  // Make sure we haven't already searched this SymbolFile before.
+  if (type_results.AlreadySearched(this))
+    return;
+
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
   std::unique_ptr<IPDBEnumSymbols> results;
-  if (name.empty())
+  llvm::StringRef basename = query.GetTypeBasename().GetStringRef();
+  if (basename.empty())
     return;
   results = m_global_scope_up->findAllChildren(PDB_SymType::None);
   if (!results)
     return;
 
-  uint32_t matches = 0;
-
   while (auto result = results->getNext()) {
-    if (max_matches > 0 && matches >= max_matches)
-      break;
-
-    if (MSVCUndecoratedNameParser::DropScope(
-            result->getRawSymbol().getName()) != name)
-      continue;
 
     switch (result->getSymTag()) {
     case PDB_SymType::Enum:
@@ -1568,27 +1548,28 @@ void SymbolFilePDB::FindTypesByName(
       continue;
     }
 
+    if (MSVCUndecoratedNameParser::DropScope(
+            result->getRawSymbol().getName()) != basename)
+      continue;
+
     // This should cause the type to get cached and stored in the `m_types`
     // lookup.
     if (!ResolveTypeUID(result->getSymIndexId()))
       continue;
 
-    if (parent_decl_ctx.IsValid() &&
-        GetDeclContextContainingUID(result->getSymIndexId()) != parent_decl_ctx)
-      continue;
-
     auto iter = m_types.find(result->getSymIndexId());
     if (iter == m_types.end())
       continue;
-    types.Insert(iter->second);
-    ++matches;
+    // We resolved a type. Get the fully qualified name to ensure it matches.
+    ConstString name = iter->second->GetQualifiedName();
+    TypeQuery type_match(name.GetStringRef(), TypeQueryOptions::e_exact_match);
+    if (query.ContextMatches(type_match.GetContextRef())) {
+      type_results.InsertUnique(iter->second);
+      if (type_results.Done(query))
+        return;
+    }
   }
 }
-
-void SymbolFilePDB::FindTypes(
-    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-    lldb_private::TypeMap &types) {}
 
 void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                                          uint32_t type_mask,

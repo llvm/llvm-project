@@ -13,10 +13,9 @@ def setup_passes(mlir_module):
     """Setup pass pipeline parameters for benchmark functions."""
     opt = (
         "parallelization-strategy=none"
-        " vectorization-strategy=none vl=1 enable-simd-index32=False"
     )
-    pipeline = f"sparsifier{{{opt}}}"
-    PassManager.parse(pipeline).run(mlir_module)
+    pipeline = f"builtin.module(sparsifier{{{opt}}})"
+    PassManager.parse(pipeline).run(mlir_module.operation)
 
 
 def create_sparse_np_tensor(dimensions, number_of_elements):
@@ -73,7 +72,7 @@ def emit_benchmark_wrapped_main_func(kernel_func, timer_func):
     create a "time measuring" variant of a function.
     """
     i64_type = ir.IntegerType.get_signless(64)
-    memref_of_i64_type = ir.MemRefType.get([-1], i64_type)
+    memref_of_i64_type = ir.MemRefType.get([ir.ShapedType.get_dynamic_size()], i64_type)
     wrapped_func = func.FuncOp(
         # Same signature and an extra buffer of indices to save timings.
         "main",
@@ -86,7 +85,7 @@ def emit_benchmark_wrapped_main_func(kernel_func, timer_func):
     with ir.InsertionPoint(wrapped_func.add_entry_block()):
         timer_buffer = wrapped_func.arguments[-1]
         zero = arith.ConstantOp.create_index(0)
-        n_iterations = memref.DimOp(ir.IndexType.get(), timer_buffer, zero)
+        n_iterations = memref.DimOp(timer_buffer, zero)
         one = arith.ConstantOp.create_index(1)
         iter_args = list(wrapped_func.arguments[-num_results - 1 : -1])
         loop = scf.ForOp(zero, n_iterations, one, iter_args)

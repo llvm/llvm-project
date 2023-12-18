@@ -292,6 +292,11 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
+  void setNonKernelFunctionInitialState() {
+    setScoreUB(VS_CNT, getWaitCountMax(VS_CNT));
+    PendingEvents |= WaitEventMaskForInst[VS_CNT];
+  }
+
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
 
@@ -364,7 +369,6 @@ private:
   const MachineRegisterInfo *MRI = nullptr;
   AMDGPU::IsaVersion IV;
 
-  DenseSet<MachineInstr *> TrackedWaitcntSet;
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
   DenseMap<MachineBasicBlock *, bool> PreheadersToFlush;
   MachineLoopInfo *MLI;
@@ -452,7 +456,9 @@ public:
   // FLAT instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
-    if (!ST->hasVscnt())
+    // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
+    // these should use VM_CNT.
+    if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
       return VMEM_ACCESS;
     if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst)) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
@@ -486,6 +492,9 @@ public:
                                MachineInstr &OldWaitcntInstr,
                                AMDGPU::Waitcnt &Wait,
                                MachineBasicBlock::instr_iterator It) const;
+
+  // Transform a soft waitcnt into a normal one.
+  bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
 };
 
 } // end anonymous namespace
@@ -542,14 +551,6 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
   for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
     setRegScore(RegNo, EXP_CNT, Val);
   }
-}
-
-// MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS written
-// can be accessed. A load from LDS to VMEM does not need a wait.
-static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-  return SIInstrInfo::isVALU(MI) &&
-         (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI)) &&
-         MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
 }
 
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
@@ -703,7 +704,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         setRegScore(RegNo, T, CurrScore);
       }
     }
-    if (Inst.mayStore() && (TII->isDS(Inst) || mayWriteLDSThroughDMA(Inst))) {
+    if (Inst.mayStore() &&
+        (TII->isDS(Inst) || TII->mayWriteLDSThroughDMA(Inst))) {
+      // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS
+      // written can be accessed. A load from LDS to VMEM does not need a wait.
       setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
     }
   }
@@ -870,6 +874,15 @@ static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
   return true;
 }
 
+bool SIInsertWaitcnts::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
+  unsigned Opcode = Waitcnt->getOpcode();
+  if (!SIInstrInfo::isSoftWaitcnt(Opcode))
+    return false;
+
+  Waitcnt->setDesc(TII->get(SIInstrInfo::getNonSoftWaitcntOpcode(Opcode)));
+  return true;
+}
+
 /// Combine consecutive waitcnt instructions that precede \p It and follow
 /// \p OldWaitcntInstr and apply any extra wait from waitcnt that were added
 /// by previous passes. Currently this pass conservatively assumes that these
@@ -886,86 +899,77 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(
     if (II.isMetaInstruction())
       continue;
 
-    if (II.getOpcode() == AMDGPU::S_WAITCNT) {
-      // Conservatively update required wait if this waitcnt was added in an
-      // earlier pass. In this case it will not exist in the tracked waitcnt
-      // set.
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned IEnc = II.getOperand(0).getImm();
-        AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
-        Wait = Wait.combined(OldWait);
-      }
+    unsigned Opcode = II.getOpcode();
+    bool IsSoft = SIInstrInfo::isSoftWaitcnt(Opcode);
+
+    if (SIInstrInfo::isWaitcnt(Opcode)) {
+      // Update required wait count. If this is a soft waitcnt (= it was added
+      // by an earlier pass), it may be entirely removed.
+      unsigned IEnc = II.getOperand(0).getImm();
+      AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait);
+      Wait = Wait.combined(OldWait);
 
       // Merge consecutive waitcnt of the same type by erasing multiples.
-      if (!WaitcntInstr) {
-        WaitcntInstr = &II;
-      } else {
+      if (WaitcntInstr || (!Wait.hasWaitExceptVsCnt() && IsSoft)) {
         II.eraseFromParent();
         Modified = true;
-      }
+      } else
+        WaitcntInstr = &II;
 
     } else {
-      assert(II.getOpcode() == AMDGPU::S_WAITCNT_VSCNT);
+      assert(SIInstrInfo::isWaitcntVsCnt(Opcode));
       assert(II.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
-      if (!TrackedWaitcntSet.count(&II)) {
-        unsigned OldVSCnt =
-            TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-        Wait.VsCnt = std::min(Wait.VsCnt, OldVSCnt);
-      }
 
-      if (!WaitcntVsCntInstr) {
-        WaitcntVsCntInstr = &II;
-      } else {
+      unsigned OldVSCnt =
+          TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+      if (IsSoft)
+        ScoreBrackets.simplifyWaitcnt(InstCounterType::VS_CNT, OldVSCnt);
+      Wait.VsCnt = std::min(Wait.VsCnt, OldVSCnt);
+
+      if (WaitcntVsCntInstr || (!Wait.hasWaitVsCnt() && IsSoft)) {
         II.eraseFromParent();
         Modified = true;
-      }
+      } else
+        WaitcntVsCntInstr = &II;
     }
   }
 
   // Updated encoding of merged waitcnt with the required wait.
   if (WaitcntInstr) {
-    if (Wait.hasWaitExceptVsCnt()) {
-      Modified |=
-          updateOperandIfDifferent(*WaitcntInstr, AMDGPU::OpName::simm16,
-                                   AMDGPU::encodeWaitcnt(IV, Wait));
-      ScoreBrackets.applyWaitcnt(Wait);
-      Wait.VmCnt = ~0u;
-      Wait.LgkmCnt = ~0u;
-      Wait.ExpCnt = ~0u;
+    Modified |= updateOperandIfDifferent(*WaitcntInstr, AMDGPU::OpName::simm16,
+                                         AMDGPU::encodeWaitcnt(IV, Wait));
+    Modified |= promoteSoftWaitCnt(WaitcntInstr);
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: " << *WaitcntInstr
-                              << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntInstr << '\n');
+    ScoreBrackets.applyWaitcnt(Wait);
+    Wait.VmCnt = ~0u;
+    Wait.LgkmCnt = ~0u;
+    Wait.ExpCnt = ~0u;
 
-    } else {
-      WaitcntInstr->eraseFromParent();
-      Modified = true;
-    }
+    LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
+                   ? dbgs()
+                         << "applyPreexistingWaitcnt\n"
+                         << "New Instr at block end: " << *WaitcntInstr << '\n'
+                   : dbgs() << "applyPreexistingWaitcnt\n"
+                            << "Old Instr: " << *It
+                            << "New Instr: " << *WaitcntInstr << '\n');
   }
 
   if (WaitcntVsCntInstr) {
-    if (Wait.hasWaitVsCnt()) {
-      assert(ST->hasVscnt());
-      Modified |= updateOperandIfDifferent(*WaitcntVsCntInstr,
-                                           AMDGPU::OpName::simm16, Wait.VsCnt);
-      ScoreBrackets.applyWaitcnt(Wait);
-      Wait.VsCnt = ~0u;
+    Modified |= updateOperandIfDifferent(*WaitcntVsCntInstr,
+                                         AMDGPU::OpName::simm16, Wait.VsCnt);
+    Modified |= promoteSoftWaitCnt(WaitcntVsCntInstr);
+    ScoreBrackets.applyWaitcnt(Wait);
+    Wait.VsCnt = ~0u;
 
-      LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
-                     ? dbgs() << "applyPreexistingWaitcnt\n"
-                              << "New Instr at block end: "
-                              << *WaitcntVsCntInstr << '\n'
-                     : dbgs() << "applyPreexistingWaitcnt\n"
-                              << "Old Instr: " << *It
-                              << "New Instr: " << *WaitcntVsCntInstr << '\n');
-    } else {
-      WaitcntVsCntInstr->eraseFromParent();
-      Modified = true;
-    }
+    LLVM_DEBUG(It == OldWaitcntInstr.getParent()->end()
+                   ? dbgs() << "applyPreexistingWaitcnt\n"
+                            << "New Instr at block end: " << *WaitcntVsCntInstr
+                            << '\n'
+                   : dbgs() << "applyPreexistingWaitcnt\n"
+                            << "Old Instr: " << *It
+                            << "New Instr: " << *WaitcntVsCntInstr << '\n');
   }
 
   return Modified;
@@ -1178,7 +1182,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
           continue;
         // No need to wait before load from VMEM to LDS.
-        if (mayWriteLDSThroughDMA(MI))
+        if (TII->mayWriteLDSThroughDMA(MI))
           continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         // VM_CNT is only relevant to vgpr or LDS.
@@ -1315,9 +1319,8 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   // instruction was modified to handle the required wait.
   if (Wait.hasWaitExceptVsCnt()) {
     unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
-    auto SWaitInst =
+    [[maybe_unused]] auto SWaitInst =
         BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
-    TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1328,10 +1331,9 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   if (Wait.hasWaitVsCnt()) {
     assert(ST->hasVscnt());
 
-    auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
+    [[maybe_unused]] auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
                          .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                          .addImm(Wait.VsCnt);
-    TrackedWaitcntSet.insert(SWaitInst);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1504,6 +1506,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       break;
     case AMDGPU::S_MEMTIME:
     case AMDGPU::S_MEMREALTIME:
+    case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
+    case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
+    case AMDGPU::S_BARRIER_LEAVE:
+    case AMDGPU::S_GET_BARRIER_STATE_M0:
+    case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
       break;
     }
@@ -1574,9 +1581,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 }
 
 static bool isWaitInstr(MachineInstr &Inst) {
-  return Inst.getOpcode() == AMDGPU::S_WAITCNT ||
-         (Inst.getOpcode() == AMDGPU::S_WAITCNT_VSCNT &&
-          Inst.getOperand(0).isReg() &&
+  auto Opcode = Inst.getOpcode();
+  return SIInstrInfo::isWaitcnt(Opcode) ||
+         (SIInstrInfo::isWaitcntVsCnt(Opcode) && Inst.getOperand(0).isReg() &&
           Inst.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
 }
 
@@ -1845,7 +1852,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       TRI->getEncodingValue(AMDGPU::SGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
 
-  TrackedWaitcntSet.clear();
   BlockInfos.clear();
   bool Modified = false;
 
@@ -1862,6 +1868,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
          I != E && (I->isPHI() || I->isMetaInstruction()); ++I)
       ;
     BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
+
+    auto NonKernelInitialState =
+        std::make_unique<WaitcntBrackets>(ST, Limits, Encoding);
+    NonKernelInitialState->setNonKernelFunctionInitialState();
+    BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
   }

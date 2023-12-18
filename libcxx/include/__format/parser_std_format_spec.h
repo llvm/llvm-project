@@ -92,7 +92,7 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
   // This means the 128-bit will not be valid anymore.
   // TODO FMT Verify this resolution is accepted and add a test to verify
   //          128-bit integrals fail and switch to visit_format_arg.
-  return _VSTD::__visit_format_arg(
+  return std::__visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
         if constexpr (same_as<_Type, monostate>)
@@ -1158,7 +1158,7 @@ __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __col
   // When Unicode isn't supported assume ASCII and every code unit is one code
   // point. In ASCII the estimated column width is always one. Thus there's no
   // need for rounding.
-  size_t __width_ = _VSTD::min(__str.size(), __maximum);
+  size_t __width_ = std::min(__str.size(), __maximum);
   return {__width_, __str.begin() + __width_};
 }
 

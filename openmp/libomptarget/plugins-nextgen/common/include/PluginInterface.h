@@ -21,6 +21,8 @@
 
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Shared/EnvironmentVar.h"
+#include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
 #include "GlobalHandler.h"
@@ -288,7 +290,7 @@ struct GenericKernelTy {
   /// Return true if this kernel is a constructor or destructor.
   bool isCtorOrDtor() const {
     // TODO: This is not a great solution and should be revisited.
-    return StringRef(Name).endswith("tor");
+    return StringRef(Name).ends_with("tor");
   }
 
   /// Get the kernel image.

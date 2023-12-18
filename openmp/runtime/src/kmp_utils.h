@@ -48,9 +48,6 @@ public:
       __kmp_free(HeapBuffer);
   }
 
-  const T &operator[](std::size_t Idx) const noexcept { return Ptr[Idx]; }
-  T &operator[](std::size_t Idx) noexcept { return Ptr[Idx]; }
-
   operator T *() noexcept { return Ptr; }
   operator const T *() const noexcept { return Ptr; }
 };

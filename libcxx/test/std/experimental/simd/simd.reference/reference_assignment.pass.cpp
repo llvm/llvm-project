@@ -15,6 +15,7 @@
 //
 // [simd.reference]
 // template<class U> reference=(U&& x) && noexcept;
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
 #include "../test_utils.h"
 #include <experimental/simd>

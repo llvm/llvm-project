@@ -79,7 +79,7 @@ class _LIBCPP_EXPORTED_FROM_ABI logic_error
 {
 #ifndef _LIBCPP_ABI_VCRUNTIME
 private:
-    _VSTD::__libcpp_refstring __imp_;
+    std::__libcpp_refstring __imp_;
 public:
     explicit logic_error(const string&);
     explicit logic_error(const char*);
@@ -92,8 +92,8 @@ public:
     const char* what() const _NOEXCEPT override;
 #else
 public:
-    explicit logic_error(const _VSTD::string&); // Symbol uses versioned std::string
-    _LIBCPP_INLINE_VISIBILITY explicit logic_error(const char* __s) : exception(__s) {}
+    explicit logic_error(const std::string&); // Symbol uses versioned std::string
+    _LIBCPP_HIDE_FROM_ABI explicit logic_error(const char* __s) : exception(__s) {}
 #endif
 };
 
@@ -102,7 +102,7 @@ class _LIBCPP_EXPORTED_FROM_ABI runtime_error
 {
 #ifndef _LIBCPP_ABI_VCRUNTIME
 private:
-    _VSTD::__libcpp_refstring __imp_;
+    std::__libcpp_refstring __imp_;
 public:
     explicit runtime_error(const string&);
     explicit runtime_error(const char*);
@@ -115,8 +115,8 @@ public:
     const char* what() const _NOEXCEPT override;
 #else
 public:
-   explicit runtime_error(const _VSTD::string&); // Symbol uses versioned std::string
-   _LIBCPP_INLINE_VISIBILITY explicit runtime_error(const char* __s) : exception(__s) {}
+   explicit runtime_error(const std::string&); // Symbol uses versioned std::string
+   _LIBCPP_HIDE_FROM_ABI explicit runtime_error(const char* __s) : exception(__s) {}
 #endif // _LIBCPP_ABI_VCRUNTIME
 };
 
@@ -124,8 +124,8 @@ class _LIBCPP_EXPORTED_FROM_ABI domain_error
     : public logic_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit domain_error(const string& __s) : logic_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit domain_error(const char* __s)   : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit domain_error(const string& __s) : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit domain_error(const char* __s)   : logic_error(__s) {}
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI domain_error(const domain_error&) _NOEXCEPT = default;
@@ -138,8 +138,8 @@ class _LIBCPP_EXPORTED_FROM_ABI invalid_argument
     : public logic_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit invalid_argument(const string& __s) : logic_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit invalid_argument(const char* __s)   : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit invalid_argument(const string& __s) : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit invalid_argument(const char* __s)   : logic_error(__s) {}
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI invalid_argument(const invalid_argument&) _NOEXCEPT = default;
@@ -152,8 +152,8 @@ class _LIBCPP_EXPORTED_FROM_ABI length_error
     : public logic_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit length_error(const string& __s) : logic_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit length_error(const char* __s)   : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit length_error(const string& __s) : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit length_error(const char* __s)   : logic_error(__s) {}
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI length_error(const length_error&) _NOEXCEPT = default;
     _LIBCPP_HIDE_FROM_ABI length_error& operator=(const length_error&) _NOEXCEPT = default;
@@ -165,8 +165,8 @@ class _LIBCPP_EXPORTED_FROM_ABI out_of_range
     : public logic_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit out_of_range(const string& __s) : logic_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit out_of_range(const char* __s)   : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit out_of_range(const string& __s) : logic_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit out_of_range(const char* __s)   : logic_error(__s) {}
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI out_of_range(const out_of_range&) _NOEXCEPT = default;
@@ -179,8 +179,8 @@ class _LIBCPP_EXPORTED_FROM_ABI range_error
     : public runtime_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit range_error(const string& __s) : runtime_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit range_error(const char* __s)   : runtime_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit range_error(const string& __s) : runtime_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit range_error(const char* __s)   : runtime_error(__s) {}
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI range_error(const range_error&) _NOEXCEPT = default;
@@ -193,8 +193,8 @@ class _LIBCPP_EXPORTED_FROM_ABI overflow_error
     : public runtime_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit overflow_error(const string& __s) : runtime_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit overflow_error(const char* __s)   : runtime_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit overflow_error(const string& __s) : runtime_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit overflow_error(const char* __s)   : runtime_error(__s) {}
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI overflow_error(const overflow_error&) _NOEXCEPT = default;
@@ -207,8 +207,8 @@ class _LIBCPP_EXPORTED_FROM_ABI underflow_error
     : public runtime_error
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit underflow_error(const string& __s) : runtime_error(__s) {}
-    _LIBCPP_INLINE_VISIBILITY explicit underflow_error(const char* __s)   : runtime_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit underflow_error(const string& __s) : runtime_error(__s) {}
+    _LIBCPP_HIDE_FROM_ABI explicit underflow_error(const char* __s)   : runtime_error(__s) {}
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI underflow_error(const underflow_error&) _NOEXCEPT = default;
@@ -224,7 +224,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // in the dylib
 _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_runtime_error(const char*);
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_logic_error(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -234,7 +234,7 @@ void __throw_logic_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_domain_error(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -244,7 +244,7 @@ void __throw_domain_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_invalid_argument(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -254,7 +254,7 @@ void __throw_invalid_argument(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_length_error(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -264,7 +264,7 @@ void __throw_length_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_out_of_range(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -274,7 +274,7 @@ void __throw_out_of_range(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_range_error(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -284,7 +284,7 @@ void __throw_range_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_overflow_error(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -294,7 +294,7 @@ void __throw_overflow_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI
 void __throw_underflow_error(const char*__msg)
 {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS

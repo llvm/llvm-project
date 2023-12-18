@@ -38,6 +38,7 @@ public:
   using Base::Base;
   using ValueType = mlir::Type;
 
+  static constexpr llvm::StringLiteral name = "fir.type_is";
   static constexpr llvm::StringRef getAttrName() { return "type_is"; }
   static ExactTypeAttr get(mlir::Type value);
 
@@ -51,6 +52,7 @@ public:
   using Base::Base;
   using ValueType = mlir::Type;
 
+  static constexpr llvm::StringLiteral name = "fir.class_is";
   static constexpr llvm::StringRef getAttrName() { return "class_is"; }
   static SubclassAttr get(mlir::Type value);
 
@@ -63,6 +65,7 @@ class MustBeHeapAttr : public mlir::BoolAttr {
 public:
   using BoolAttr::BoolAttr;
 
+  static constexpr llvm::StringLiteral name = "fir.must_be_heap";
   static constexpr llvm::StringRef getAttrName() { return "fir.must_be_heap"; }
 };
 
@@ -78,6 +81,7 @@ class ClosedIntervalAttr
 public:
   using Base::Base;
 
+  static constexpr llvm::StringLiteral name = "fir.interval";
   static constexpr llvm::StringRef getAttrName() { return "interval"; }
   static ClosedIntervalAttr get(mlir::MLIRContext *ctxt);
 };
@@ -92,6 +96,7 @@ class UpperBoundAttr
 public:
   using Base::Base;
 
+  static constexpr llvm::StringLiteral name = "fir.upper";
   static constexpr llvm::StringRef getAttrName() { return "upper"; }
   static UpperBoundAttr get(mlir::MLIRContext *ctxt);
 };
@@ -106,6 +111,7 @@ class LowerBoundAttr
 public:
   using Base::Base;
 
+  static constexpr llvm::StringLiteral name = "fir.lower";
   static constexpr llvm::StringRef getAttrName() { return "lower"; }
   static LowerBoundAttr get(mlir::MLIRContext *ctxt);
 };
@@ -120,6 +126,7 @@ class PointIntervalAttr
 public:
   using Base::Base;
 
+  static constexpr llvm::StringLiteral name = "fir.point";
   static constexpr llvm::StringRef getAttrName() { return "point"; }
   static PointIntervalAttr get(mlir::MLIRContext *ctxt);
 };
@@ -135,6 +142,7 @@ public:
   using Base::Base;
   using ValueType = std::pair<int, llvm::APFloat>;
 
+  static constexpr llvm::StringLiteral name = "fir.real";
   static constexpr llvm::StringRef getAttrName() { return "real"; }
   static RealAttr get(mlir::MLIRContext *ctxt, const ValueType &key);
 

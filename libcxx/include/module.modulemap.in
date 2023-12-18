@@ -665,6 +665,7 @@ module std_private_algorithm_find_end                                    [system
 module std_private_algorithm_find_first_of                               [system] { header "__algorithm/find_first_of.h" }
 module std_private_algorithm_find_if                                     [system] { header "__algorithm/find_if.h" }
 module std_private_algorithm_find_if_not                                 [system] { header "__algorithm/find_if_not.h" }
+module std_private_algorithm_find_segment_if                             [system] { header "__algorithm/find_segment_if.h" }
 module std_private_algorithm_for_each                                    [system] { header "__algorithm/for_each.h" }
 module std_private_algorithm_for_each_n                                  [system] { header "__algorithm/for_each_n.h" }
 module std_private_algorithm_for_each_segment                            [system] { header "__algorithm/for_each_segment.h" }
@@ -2019,6 +2020,7 @@ module std_private_type_traits_unwrap_ref                                [system
 module std_private_type_traits_void_t                                    [system] { header "__type_traits/void_t.h" }
 
 module std_private_utility_as_const               [system] { header "__utility/as_const.h" }
+module std_private_utility_as_lvalue              [system] { header "__utility/as_lvalue.h" }
 module std_private_utility_auto_cast              [system] {
   header "__utility/auto_cast.h"
   export std_private_type_traits_decay

@@ -4,16 +4,18 @@
 !ALL-LABEL: func.func @_QPread_write_section(
 !ALL:  %[[ITER:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFread_write_sectionEi"}
 !ALL:  %[[READ:.*]] = fir.address_of(@_QFread_write_sectionEsp_read) : !fir.ref<!fir.array<10xi32>>
+!ALL:  %[[C10:.*]] = arith.constant 10 : index
 !ALL:  %[[WRITE:.*]] = fir.address_of(@_QFread_write_sectionEsp_write) : !fir.ref<!fir.array<10xi32>>
+!ALL:  %[[C10_0:.*]] = arith.constant 10 : index
 !ALL:  %[[C1:.*]] = arith.constant 1 : index
 !ALL:  %[[C2:.*]] = arith.constant 1 : index
 !ALL:  %[[C3:.*]] = arith.constant 4 : index
-!ALL:  %[[BOUNDS0:.*]] = omp.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
+!ALL:  %[[BOUNDS0:.*]] = omp.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
 !ALL:  %[[MAP0:.*]] = omp.map_info var_ptr(%[[READ]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
 !ALL:  %[[C4:.*]] = arith.constant 1 : index
 !ALL:  %[[C5:.*]] = arith.constant 1 : index
 !ALL:  %[[C6:.*]] = arith.constant 4 : index
-!ALL:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
+!ALL:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) extent(%[[C10_0]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
 !ALL:  %[[MAP1:.*]] = omp.map_info var_ptr(%[[WRITE]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
 !ALL:  %[[MAP2:.*]] = omp.map_info var_ptr(%[[ITER]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
 !ALL: omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, !fir.ref<i32>) {
@@ -36,10 +38,12 @@ contains
 !ALL: %[[ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMassumed_array_routinesFassumed_shape_arrayEi"}
 !ALL: %[[C0:.*]] = arith.constant 1 : index
 !ALL: %[[C1:.*]] = arith.constant 0 : index
-!ALL: %[[C2:.*]]:3 = fir.box_dims %arg0, %[[C1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+!ALL: %[[DIMS0:.*]]:3 = fir.box_dims %arg0, %[[C1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 !ALL: %[[C3:.*]] = arith.constant 1 : index
 !ALL: %[[C4:.*]] = arith.constant 4 : index
-!ALL: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) stride(%[[C2]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
+!ALL: %[[C0_1:.*]] = arith.constant 0 : index
+!ALL: %[[DIMS1:.*]]:3 = fir.box_dims %arg0, %[[C0_1]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+!ALL: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C3]] : index) upper_bound(%[[C4]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) start_idx(%[[C0]] : index) {stride_in_bytes = true}
 !ALL: %[[ADDROF:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 !ALL: %[[MAP:.*]] = omp.map_info var_ptr(%[[ADDROF]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !ALL: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ALLOCA]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
@@ -61,7 +65,9 @@ contains
 !ALL: %[[C0:.*]] = arith.constant 1 : index
 !ALL: %[[C1:.*]] = arith.constant 1 : index
 !ALL: %[[C2:.*]] = arith.constant 4 : index
-!ALL: %[[BOUNDS:.*]]  = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) stride(%[[C0]] : index) start_idx(%[[C0]] : index)
+!ALL: %[[DIFF:.*]] = arith.subi %[[C2]], %[[C1]] : index
+!ALL: %[[EXT:.*]] = arith.addi %[[DIFF]], %[[C0]] : index
+!ALL: %[[BOUNDS:.*]]  = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) extent(%[[EXT]] : index) stride(%[[C0]] : index) start_idx(%[[C0]] : index)
 !ALL: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG0]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !ALL: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ALLOCA]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
 !ALL: omp.target map_entries(%[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {

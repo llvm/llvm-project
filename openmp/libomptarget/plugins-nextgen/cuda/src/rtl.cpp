@@ -1055,11 +1055,8 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'nvptx-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    GlobalTy Global(KernelName, sizeof(void *));
-    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
-      consumeError(std::move(Err));
+    if (!Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
-    }
 
     // The Nvidia backend cannot handle creating the ctor / dtor array
     // automatically so we must create it ourselves. The backend will emit
@@ -1307,7 +1304,7 @@ struct CUDAPluginTy final : public GenericPluginTy {
 
       StringRef ArchStr(Info->Arch);
       StringRef PrefixStr("sm_");
-      if (!ArchStr.startswith(PrefixStr))
+      if (!ArchStr.starts_with(PrefixStr))
         return Plugin::error("Unrecognized image arch %s", ArchStr.data());
 
       int32_t ImageMajor = ArchStr[PrefixStr.size() + 0] - '0';

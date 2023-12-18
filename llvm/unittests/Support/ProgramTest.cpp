@@ -96,7 +96,7 @@ protected:
 
     while (*EnvP != nullptr) {
       auto S = prepareEnvVar(*EnvP);
-      if (!StringRef(S).startswith("GTEST_"))
+      if (!StringRef(S).starts_with("GTEST_"))
         EnvTable.emplace_back(S);
       ++EnvP;
     }
@@ -130,7 +130,7 @@ TEST_F(ProgramEnvTest, CreateProcessLongPath) {
   // prefix.
   sys::path::native(MyAbsExe, sys::path::Style::windows_backslash);
   std::string MyExe;
-  if (!StringRef(MyAbsExe).startswith("\\\\?\\"))
+  if (!StringRef(MyAbsExe).starts_with("\\\\?\\"))
     MyExe.append("\\\\?\\");
   MyExe.append(std::string(MyAbsExe.begin(), MyAbsExe.end()));
 

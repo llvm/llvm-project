@@ -735,7 +735,7 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
-  int x_e = -FPBits_t::EXPONENT_BIAS;
+  int x_e = -FPBits_t::EXP_BIAS;
 
   if (LIBC_UNLIKELY(x_u == 0x3FF0'0000'0000'0000ULL)) {
     // log10(1.0) = +0.0
@@ -770,7 +770,7 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
   // Range reduction for log10(x_m):
   // For each x_m, we would like to find r such that:
   //   -2^-8 <= r * x_m - 1 < 2^-7
-  int shifted = x_u >> 45;
+  int shifted = static_cast<int>(x_u >> 45);
   int index = shifted & 0x7F;
   double r = RD[index];
 

@@ -8,8 +8,8 @@
 // UNSUPPORTED: no-threads
 // XFAIL: availability-synchronization_library-missing
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 //  void notify_all() volatile noexcept;
 //  void notify_all() noexcept;
@@ -37,7 +37,7 @@ void test_impl() {
   // should x87 80bit long double work at all?
   if constexpr (!std::same_as<T, long double>) {
     for (auto i = 0; i < 100; ++i) {
-      const T old = 3.1;
+      const T old = T(3.1);
       MaybeVolatile<std::atomic<T>> a(old);
 
       bool done                      = false;
@@ -93,7 +93,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }

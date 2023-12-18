@@ -50,6 +50,8 @@ entry:
   ret void
 }
 
+; ASM:        .csect ..text..[PR],5
+; ASM-NEXT:   .rename ..text..[PR],""
 ; ASM:        .csect .foo[PR],5
 ; ASM-NEXT:  	.globl	foo[DS]                         # -- Begin function foo
 ; ASM-NEXT:  	.globl	.foo[PR]
