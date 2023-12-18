@@ -290,9 +290,9 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckDummy(S, OpPC, Ptr))
-    return false;
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
