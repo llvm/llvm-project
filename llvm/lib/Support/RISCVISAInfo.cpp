@@ -215,11 +215,12 @@ static void verifyTables() {
 #endif
 }
 
-static void PrintExtension(const std::string Name, const std::string Version,
-                           const std::string Description) {
-  outs() << "    "
-         << format(Description.empty() ? "%-20s%s\n" : "%-20s%-10s%s\n",
-                   Name.c_str(), Version.c_str(), Description.c_str());
+static void PrintExtension(StringRef Name, StringRef Version,
+                           StringRef Description) {
+  outs().indent(4);
+  unsigned VersionWidth = Description.empty() ? 0 : 10;
+  outs() << left_justify(Name, 20) << left_justify(Version, VersionWidth)
+         << Description << "\n";
 }
 
 void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
@@ -233,7 +234,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &E : ExtMap) {
     std::string Version = std::to_string(E.second.MajorVersion) + "." +
                           std::to_string(E.second.MinorVersion);
-    PrintExtension(E.first, Version, DescMap[E.first].str());
+    PrintExtension(E.first, Version, DescMap[E.first]);
   }
 
   outs() << "\nExperimental extensions\n";
@@ -243,7 +244,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &E : ExtMap) {
     std::string Version = std::to_string(E.second.MajorVersion) + "." +
                           std::to_string(E.second.MinorVersion);
-    PrintExtension(E.first, Version, DescMap["experimental-" + E.first].str());
+    PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
   }
 
   outs() << "\nUse -march to specify the target's extension.\n"
