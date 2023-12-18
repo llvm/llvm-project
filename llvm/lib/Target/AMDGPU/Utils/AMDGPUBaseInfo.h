@@ -1537,8 +1537,9 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID);
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
                                            const MCRegisterInfo &MRI);
 
-/// \returns true if a physical register \p Reg is one of v0-v255.
-bool isLo256VGPR(MCPhysReg Reg, const MCRegisterInfo &MRI);
+/// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
+/// physical register \p Reg.
+unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
