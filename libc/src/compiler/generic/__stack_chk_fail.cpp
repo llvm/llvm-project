@@ -18,4 +18,3 @@ LLVM_LIBC_FUNCTION(void, __stack_chk_fail, (void)) {
 }
 
 } // namespace LIBC_NAMESPACE
-
