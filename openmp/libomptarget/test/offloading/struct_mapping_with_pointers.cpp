@@ -2,6 +2,8 @@
 // RUN: %libomptarget-compilexx-generic && env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 | %fcheck-generic
 // clang-format on
 
+// REQUIRES: libomptarget-debug
+
 #include <stdio.h>
 #include <stdlib.h>
 
