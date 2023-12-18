@@ -10,8 +10,8 @@
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 
 #include "clang/APINotes/APINotesOptions.h"
-#include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/DebugOptions.h"
+// #include "clang/Basic/CodeGenOptions.h"
+// #include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
@@ -47,6 +47,8 @@ class FileSystem;
 
 namespace clang {
 
+class CodeGenOptions;
+class DebugOptions;
 class DiagnosticsEngine;
 class HeaderSearchOptions;
 class PreprocessorOptions;

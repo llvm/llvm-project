@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ARCMigrate/ARCMTActions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Options.h"
