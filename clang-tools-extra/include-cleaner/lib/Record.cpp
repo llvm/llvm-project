@@ -205,7 +205,7 @@ public:
           std::unique(It.getSecond().begin(), It.getSecond().end()),
           It.getSecond().end());
     }
-    Out->Arena = std::move(Arena);
+    Out->Arena.emplace_back(std::move(Arena));
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
