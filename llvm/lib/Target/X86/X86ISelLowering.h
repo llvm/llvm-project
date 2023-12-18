@@ -933,11 +933,8 @@ namespace llvm {
 
     /// Returns true of the given offset can be
     /// fit into displacement field of the instruction.
-    /// GV can be null if not referencing a GlobalValue (e.g. constant pool,
-    /// jump table, etc.).
-    bool isOffsetSuitableForCodeModel(int64_t Offset, const TargetMachine &TM,
-                                      const GlobalValue *GV,
-                                      bool HasSymbolicDisplacement);
+    bool isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model M,
+                                      bool hasSymbolicDisplacement);
 
     /// Determines whether the callee is required to pop its
     /// own arguments. Callee pop is necessary to support tail calls.

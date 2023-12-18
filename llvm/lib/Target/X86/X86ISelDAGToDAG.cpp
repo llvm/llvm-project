@@ -1738,7 +1738,7 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
 
   if (Subtarget->is64Bit()) {
     if (Val != 0 && !X86::isOffsetSuitableForCodeModel(
-                        Val, TM, AM.GV, AM.hasSymbolicDisplacement()))
+                        Val, TM.getCodeModel(), AM.hasSymbolicDisplacement()))
       return true;
     // In addition to the checks required for a register base, check that
     // we do not try to use an unsafe Disp with a frame index.

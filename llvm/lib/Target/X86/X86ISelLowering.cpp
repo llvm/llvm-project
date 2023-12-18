@@ -2674,8 +2674,7 @@ SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy(DAG.getDataLayout()));
 }
 
-bool X86::isOffsetSuitableForCodeModel(int64_t Offset, const TargetMachine &TM,
-                                       const GlobalValue *GV,
+bool X86::isOffsetSuitableForCodeModel(int64_t Offset, CodeModel::Model CM,
                                        bool HasSymbolicDisplacement) {
   // Offset should fit into 32 bit immediate field.
   if (!isInt<32>(Offset))
@@ -2686,16 +2685,15 @@ bool X86::isOffsetSuitableForCodeModel(int64_t Offset, const TargetMachine &TM,
   if (!HasSymbolicDisplacement)
     return true;
 
-  // We can fold offsets in cases where we have a 64-bit relocation, but it
-  // doesn't really help.
-  if (TM.getCodeModel() == CodeModel::Large ||
-      (GV && TM.isLargeGlobalValue(GV)))
-    return false;
+  // We can fold large offsets in the large code model because we always use
+  // 64-bit offsets.
+  if (CM == CodeModel::Large)
+    return true;
 
   // For kernel code model we know that all object resist in the negative half
   // of 32bits address space. We may not accept negative offsets, since they may
   // be just off and we may accept pretty large positive ones.
-  if (TM.getCodeModel() == CodeModel::Kernel)
+  if (CM == CodeModel::Kernel)
     return Offset >= 0;
 
   // For other non-large code models we assume that latest small object is 16MB
@@ -18454,8 +18452,8 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
     // relocation will compute to a negative value, which is invalid.
     int64_t GlobalOffset = 0;
     if (OpFlags == X86II::MO_NO_FLAG && Offset >= 0 &&
-        X86::isOffsetSuitableForCodeModel(Offset, getTargetMachine(), GV,
-                                          true)) {
+        X86::isOffsetSuitableForCodeModel(
+            Offset, getTargetMachine().getCodeModel(), true)) {
       std::swap(GlobalOffset, Offset);
     }
     Result = DAG.getTargetGlobalAddress(GV, dl, PtrVT, GlobalOffset, OpFlags);
@@ -33519,8 +33517,7 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   CodeModel::Model M = getTargetMachine().getCodeModel();
 
   // X86 allows a sign-extended 32-bit immediate field as a displacement.
-  if (!X86::isOffsetSuitableForCodeModel(AM.BaseOffs, getTargetMachine(),
-                                         AM.BaseGV, AM.BaseGV != nullptr))
+  if (!X86::isOffsetSuitableForCodeModel(AM.BaseOffs, M, AM.BaseGV != nullptr))
     return false;
 
   if (AM.BaseGV) {
