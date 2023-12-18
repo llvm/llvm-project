@@ -56,7 +56,7 @@ XcodeSDK::XcodeSDK(XcodeSDK::Info info) : m_name(GetName(info.type).str()) {
 
 XcodeSDK &XcodeSDK::operator=(const XcodeSDK &other) = default;
 
-bool XcodeSDK::operator==(const XcodeSDK &other) {
+bool XcodeSDK::operator==(const XcodeSDK &other) const {
   return m_name == other.m_name;
 }
 
@@ -152,7 +152,7 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
     *this = other;
   else {
     // The Internal flag always wins.
-    if (llvm::StringRef(m_name).endswith(".sdk"))
+    if (llvm::StringRef(m_name).ends_with(".sdk"))
       if (!l.internal && r.internal)
         m_name =
             m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
@@ -291,7 +291,7 @@ std::string XcodeSDK::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   // .app. If the next component is Contents then we've found the Contents
   // directory.
   for (auto it = begin; it != end; ++it) {
-    if (it->endswith(".app")) {
+    if (it->ends_with(".app")) {
       auto next = it;
       if (++next != end && *next == "Contents") {
         llvm::SmallString<128> buffer;

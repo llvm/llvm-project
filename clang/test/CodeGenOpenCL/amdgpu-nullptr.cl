@@ -606,7 +606,8 @@ int test_and_ptr(private char* p1, local char* p2) {
 // NOOPT: store ptr addrspace(1) null, ptr addrspace(5) %glob, align 8
 // NOOPT: %{{.*}} = sub i64 %{{.*}}, 0
 // NOOPT: call void @test_fold_callee
-// NOOPT: %{{.*}} = add nsw i64 %1, sext (i32 ptrtoint (ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)) to i32) to i64)
+// NOOPT: %[[SEXT:.*]] = sext i32 ptrtoint (ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)) to i32) to i64
+// NOOPT: %{{.*}} = add nsw i64 %1, %[[SEXT]]
 // NOOPT: %{{.*}} = sub nsw i64 %{{.*}}, 1
 void test_fold_callee(void);
 void test_fold_private(void) {
@@ -621,7 +622,8 @@ void test_fold_private(void) {
 // NOOPT: store ptr addrspace(1) null, ptr addrspace(5) %glob, align 8
 // NOOPT: %{{.*}} = sub i64 %{{.*}}, 0
 // NOOPT: call void @test_fold_callee
-// NOOPT: %{{.*}} = add nsw i64 %{{.*}}, sext (i32 ptrtoint (ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)) to i32) to i64)
+// NOOPT: %[[SEXT:.*]] = sext i32 ptrtoint (ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)) to i32) to i64
+// NOOPT: %{{.*}} = add nsw i64 %{{.*}}, %[[SEXT]]
 // NOOPT: %{{.*}} = sub nsw i64 %{{.*}}, 1
 void test_fold_local(void) {
   global int* glob = (test_fold_callee(), (global int*)(generic char*)0);

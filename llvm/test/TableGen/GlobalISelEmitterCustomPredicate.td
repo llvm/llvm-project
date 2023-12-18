@@ -5,6 +5,7 @@
 // CHECK: // PatFrag predicates.
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICXXPred_MI_Predicate_and_or_pat = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_mul_pat,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_oneuse,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_patfrags_test_pat,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_sub3_pat,
@@ -14,6 +15,8 @@
 //
 // CHECK: bool MyTargetInstructionSelector::testMIPredicate_MI(
 // CHECK:    case GICXXPred_MI_Predicate_and_or_pat: {
+// CHECK:      return doesComplexCheck(MI);
+// CHECK:    case GICXXPred_MI_Predicate_mul_pat: {
 // CHECK:      return doesComplexCheck(MI);
 // CHECK:    case GICXXPred_MI_Predicate_or_oneuse: {
 // CHECK:      return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
@@ -49,6 +52,7 @@ def D0 : MyReg<"d0", [S0, S1]>;
 def DRegs : MyClass<32, [i32], (sequence "D%u", 0, 0)>;
 def DOP : RegisterOperand<DRegs>;
 def AND_OR : I<(outs DRegs:$dst), (ins DOP:$src0, DOP:$src1, DOP:$src2), []>;
+def MUL_OR : I<(outs DRegs:$dst), (ins DOP:$src0, DOP:$src1, DOP:$src2), []>;
 
 def or_oneuse : PatFrag<
   (ops node:$x, node:$y),
@@ -69,65 +73,65 @@ def and_or_pat : PatFrag<
   let PredicateCodeUsesOperands = 1;
 }
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 0*/ 99, // Rule ID 6 //
-// CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
-// CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_AND,
-// CHECK-NEXT: // MIs[0] dst
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[0] src2
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/0, /*Op*/1, /*StoreIdx*/2, // Name : pred:3:z
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[0] Operand 2
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2, // MIs[1]
-// CHECK-NEXT: GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
-// CHECK-NEXT: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_OR,
-// CHECK-NEXT: // MIs[1] Operand 0
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: // MIs[1] src0
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/1, /*StoreIdx*/0, // Name : pred:3:x
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[1] src1
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:3:y
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_and_or_pat,
-// CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT: // (and:{ *:[i32] } DOP:{ *:[i32] }:$src2:$pred:3:z, (or:{ *:[i32] } DOP:{ *:[i32] }:$src0:$pred:3:x, DOP:{ *:[i32] }:$src1:$pred:3:y))<<P:3:Predicate_and_or_pat>>  =>  (AND_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::AND_OR,
+// CHECK:      GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(110), // Rule ID 7 //
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:   // MIs[0] DstI[dst]
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] src2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/1, /*StoreIdx*/2, // Name : pred:3:z
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] Operand 2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2, // MIs[1]
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_OR),
+// CHECK-NEXT:   // MIs[1] Operand 0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   // MIs[1] src0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/1, /*Op*/1, /*StoreIdx*/0, // Name : pred:3:x
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[1] src1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:3:y
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_and_or_pat),
+// CHECK-NEXT:   GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:   // (and:{ *:[i32] } DOP:{ *:[i32] }:$src2:$pred:3:z, (or:{ *:[i32] } DOP:{ *:[i32] }:$src0:$pred:3:x, DOP:{ *:[i32] }:$src1:$pred:3:y))<<P:3:Predicate_and_or_pat>>  =>  (AND_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
+// CHECK-NEXT:   GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::AND_OR),
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 1*/ 198, // Rule ID 3 //
-// CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
-// CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_AND,
-// CHECK-NEXT: // MIs[0] dst
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[0] Operand 1
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT: GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
-// CHECK-NEXT: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_OR,
-// CHECK-NEXT: // MIs[1] Operand 0
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: // MIs[1] src0
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/1, /*StoreIdx*/0, // Name : pred:3:x
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[1] src1
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:3:y
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[0] src2
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/2, // Name : pred:3:z
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_and_or_pat,
-// CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT: // (and:{ *:[i32] } (or:{ *:[i32] } DOP:{ *:[i32] }:$src0:$pred:3:x, DOP:{ *:[i32] }:$src1:$pred:3:y), DOP:{ *:[i32] }:$src2:$pred:3:z)<<P:3:Predicate_and_or_pat>>  =>  (AND_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::AND_OR,
+// CHECK:      GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(220), // Rule ID 3 //
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:   // MIs[0] DstI[dst]
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] Operand 1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_OR),
+// CHECK-NEXT:   // MIs[1] Operand 0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   // MIs[1] src0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/1, /*Op*/1, /*StoreIdx*/0, // Name : pred:3:x
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[1] src1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:3:y
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] src2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/2, // Name : pred:3:z
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_and_or_pat),
+// CHECK-NEXT:   GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:   // (and:{ *:[i32] } (or:{ *:[i32] } DOP:{ *:[i32] }:$src0:$pred:3:x, DOP:{ *:[i32] }:$src1:$pred:3:y), DOP:{ *:[i32] }:$src2:$pred:3:z)<<P:3:Predicate_and_or_pat>>  =>  (AND_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
+// CHECK-NEXT:   GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::AND_OR),
 
 // Test commutative, standalone pattern.
 def : Pat<
@@ -135,6 +139,79 @@ def : Pat<
   (AND_OR DOP:$src0, DOP:$src1, DOP:$src2)
 >;
 
+def mul_pat : PatFrag<
+  (ops node:$x, node:$y),
+  (mul node:$x, node:$y), [{ return foo(); }]> {
+  let GISelPredicateCode = [{
+    return doesComplexCheck(MI);
+  }];
+  let PredicateCodeUsesOperands = 1;
+}
+
+// CHECK:      GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(326), // Rule ID 4 //
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
+// CHECK-NEXT:   // MIs[0] DstI[dst]
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] Operand 1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/1, /*StoreIdx*/0, // Name : pred:4:x
+// CHECK-NEXT:   GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_OR),
+// CHECK-NEXT:   // MIs[1] Operand 0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   // MIs[1] src0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[1] src1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] src2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/1, // Name : pred:4:y
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_mul_pat),
+// CHECK-NEXT:   GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:   // (mul:{ *:[i32] } (or:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1):$pred:4:x, DOP:{ *:[i32] }:$src2:$pred:4:y)<<P:4:Predicate_mul_pat>>  =>  (MUL_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
+// CHECK-NEXT:   GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MUL_OR),
+
+// CHECK:      GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(432), // Rule ID 8 //
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
+// CHECK-NEXT:   // MIs[0] DstI[dst]
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] src2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/1, /*StoreIdx*/1, // Name : pred:4:y
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] Operand 2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/0, // Name : pred:4:x
+// CHECK-NEXT:   GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2, // MIs[1]
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_OR),
+// CHECK-NEXT:   // MIs[1] Operand 0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   // MIs[1] src0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[1] src1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_mul_pat),
+// CHECK-NEXT:   GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:   // (mul:{ *:[i32] } DOP:{ *:[i32] }:$src2:$pred:4:y, (or:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1):$pred:4:x)<<P:4:Predicate_mul_pat>>  =>  (MUL_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
+// CHECK-NEXT:   GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MUL_OR),
+
+// Test commutative patterns where named operands in the source pattern are not
+// directly bound to PatFrag's operands.
+def : Pat<
+  (i32 (mul_pat (or DOP:$src0, DOP:$src1), DOP:$src2)),
+  (MUL_OR DOP:$src0, DOP:$src1, DOP:$src2)
+>;
 
 def sub3_pat : PatFrag<
   (ops node:$x, node:$y, node:$z),
@@ -146,32 +223,32 @@ def sub3_pat : PatFrag<
   let PredicateCodeUsesOperands = 1;
 }
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 2*/ 285, // Rule ID 0 //
-// CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
-// CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SUB,
-// CHECK-NEXT: // MIs[0] dst
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: // MIs[0] Operand 1
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT: GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
-// CHECK-NEXT: GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_SUB,
-// CHECK-NEXT: // MIs[1] Operand 0
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: // MIs[1] src0
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/1, /*StoreIdx*/0, // Name : pred:1:x
-// CHECK-NEXT: // MIs[1] src1
-// CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:1:y
-// CHECK-NEXT: // MIs[0] src2
-// CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/2, // Name : pred:1:z
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_sub3_pat,
-// CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT: // (sub:{ *:[i32] } (sub:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:1:x, i32:{ *:[i32] }:$src1:$pred:1:y), i32:{ *:[i32] }:$src2:$pred:1:z)<<P:1:Predicate_sub3_pat>>  =>  (SUB3:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
-// CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SUB3,
+// CHECK:      GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(527), // Rule ID 0 //
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
+// CHECK-NEXT:   // MIs[0] DstI[dst]
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(Test::DRegsRegClassID),
+// CHECK-NEXT:   // MIs[0] Operand 1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
+// CHECK-NEXT:   GIM_CheckNumOperands, /*MI*/1, /*Expected*/3,
+// CHECK-NEXT:   GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_SUB),
+// CHECK-NEXT:   // MIs[1] Operand 0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:   // MIs[1] src0
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/1, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/1, /*Op*/1, /*StoreIdx*/0, // Name : pred:1:x
+// CHECK-NEXT:   // MIs[1] src1
+// CHECK-NEXT:   GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:1:y
+// CHECK-NEXT:   // MIs[0] src2
+// CHECK-NEXT:   GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:   GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/2, // Name : pred:1:z
+// CHECK-NEXT:   GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_sub3_pat),
+// CHECK-NEXT:   GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:   // (sub:{ *:[i32] } (sub:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:1:x, i32:{ *:[i32] }:$src1:$pred:1:y), i32:{ *:[i32] }:$src2:$pred:1:z)<<P:1:Predicate_sub3_pat>>  =>  (SUB3:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
+// CHECK-NEXT:   GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::SUB3)
 
 // Test a non-commutative pattern.
 def SUB3 : I<(outs DRegs:$dst),
@@ -192,16 +269,16 @@ def patfrags_test_pat : PatFrags<
   let PredicateCodeUsesOperands = 1;
 }
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 3*/ 372, // Rule ID 1 //
+// CHECK: GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(622), // Rule ID 1 //
 // CHECK: // (xor:{ *:[i32] } (add:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:2:x, i32:{ *:[i32] }:$src1:$pred:2:y), i32:{ *:[i32] }:$src2:$pred:2:z)<<P:2:Predicate_patfrags_test_pat>>  =>  (PATFRAGS:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 4*/ 459, // Rule ID 2 //
+// CHECK: GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(717), // Rule ID 2 //
 // CHECK: // (xor:{ *:[i32] } (sub:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:2:x, i32:{ *:[i32] }:$src1:$pred:2:y), i32:{ *:[i32] }:$src2:$pred:2:z)<<P:2:Predicate_patfrags_test_pat>>  =>  (PATFRAGS:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 5*/ 546, // Rule ID 4 //
+// CHECK: GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(812), // Rule ID 5 //
 // CHECK: // (xor:{ *:[i32] } i32:{ *:[i32] }:$src2:$pred:2:z, (add:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:2:x, i32:{ *:[i32] }:$src1:$pred:2:y))<<P:2:Predicate_patfrags_test_pat>>  =>  (PATFRAGS:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 
-// CHECK: GIM_Try, /*On fail goto*//*Label 6*/ 633, // Rule ID 5 //
+// CHECK: GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(907), // Rule ID 6 //
 // CHECK: // (xor:{ *:[i32] } i32:{ *:[i32] }:$src2:$pred:2:z, (sub:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:2:x, i32:{ *:[i32] }:$src1:$pred:2:y))<<P:2:Predicate_patfrags_test_pat>>  =>  (PATFRAGS:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 
 

@@ -1,4 +1,4 @@
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPomp_task_simple() {
 subroutine omp_task_simple
@@ -39,34 +39,6 @@ subroutine omp_task_final(bar)
   !CHECK: omp.terminator
   !$omp end task
 end subroutine omp_task_final
-
-!===============================================================================
-! `untied` clause
-!===============================================================================
-
-!CHECK-LABEL: func @_QPomp_task_untied() {
-subroutine omp_task_untied()
-  !CHECK: omp.task untied {
-  !$omp task untied
-  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
-  call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_untied
-
-!===============================================================================
-! `mergeable` clause
-!===============================================================================
-
-!CHECK-LABEL: func @_QPomp_task_mergeable() {
-subroutine omp_task_mergeable()
-  !CHECK: omp.task mergeable {
-  !$omp task mergeable
-  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
-  call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_mergeable
 
 !===============================================================================
 ! `priority` clause
@@ -181,20 +153,23 @@ subroutine task_private
   integer :: x
   end type mytype
 
-  !CHECK: %[[int_var:.+]] = fir.alloca i32
-  !CHECK: %[[mytype_var:.+]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}>
+!CHECK: %[[INT_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "int_var", uniq_name = "_QFtask_privateEint_var"}
+!CHECK: %[[INT_VAR:.+]]:2 = hlfir.declare %[[INT_ALLOCA]] {uniq_name = "_QFtask_privateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[MYTYPE_ALLOCA:.*]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}> {bindc_name = "mytype_var", uniq_name = "_QFtask_privateEmytype_var"}
+!CHECK: %[[MYTYPE_VAR:.+]]:2 = hlfir.declare %[[MYTYPE_ALLOCA]] {uniq_name = "_QFtask_privateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>)
   integer :: int_var
   type(mytype) :: mytype_var
 
-  !CHECK: fir.call @_QPbar(%[[int_var]], %[[mytype_var]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
+  !CHECK: fir.call @_QPbar(%[[INT_VAR]]#1, %[[MYTYPE_VAR]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
   call bar(int_var, mytype_var)
 
   !CHECK: omp.task {
   !$omp task private(int_var, mytype_var)
-  !CHECK: %[[int_var_private:.+]] = fir.alloca i32
-  !CHECK: %[[mytype_var_private:.+]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}>
-
-  !CHECK: fir.call @_QPbar(%[[int_var_private]], %[[mytype_var_private]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
+!CHECK: %[[INT_PRIVATE_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "int_var", pinned, uniq_name = "_QFtask_privateEint_var"}
+!CHECK: %[[INT_VAR_PRIVATE:.+]]:2 = hlfir.declare %[[INT_PRIVATE_ALLOCA]] {uniq_name = "_QFtask_privateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[MYTYPE_PRIVATE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_privateTmytype{x:i32}> {bindc_name = "mytype_var", pinned, uniq_name = "_QFtask_privateEmytype_var"}
+!CHECK: %[[MYTYPE_VAR_PRIVATE:.+]]:2 = hlfir.declare %[[MYTYPE_PRIVATE_ALLOCA]] {uniq_name = "_QFtask_privateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>)
+!CHECK: fir.call @_QPbar(%[[INT_VAR_PRIVATE]]#1, %[[MYTYPE_VAR_PRIVATE]]#1) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
   call bar(int_var, mytype_var)
   !CHECK: omp.terminator
   !$omp end task
@@ -208,24 +183,26 @@ subroutine task_firstprivate
   type mytype
   integer :: x
   end type mytype
-
-  !CHECK: %[[int_var:.+]] = fir.alloca i32
-  !CHECK: %[[mytype_var:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}>
+ 
+  !CHECK: %[[INT_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "int_var", uniq_name = "_QFtask_firstprivateEint_var"}
+  !CHECK: %[[INT_VAR:.+]]:2 = hlfir.declare %[[INT_ALLOCA]] {uniq_name = "_QFtask_firstprivateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: %[[MYTYPE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}> {bindc_name = "mytype_var", uniq_name = "_QFtask_firstprivateEmytype_var"}
+  !CHECK: %[[MYTYPE_VAR:.+]]:2 = hlfir.declare %[[MYTYPE_ALLOCA]] {uniq_name = "_QFtask_firstprivateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>)
   integer :: int_var
   type(mytype) :: mytype_var
 
-  !CHECK: fir.call @_QPbaz(%[[int_var]], %[[mytype_var]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
+!CHECK: fir.call @_QPbaz(%[[INT_VAR]]#1, %[[MYTYPE_VAR]]#1) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
   call baz(int_var, mytype_var)
 
   !CHECK: omp.task {
   !$omp task firstprivate(int_var, mytype_var)
-  !CHECK: %[[int_var_firstprivate:.+]] = fir.alloca i32
-  !CHECK: %[[int_var_load:.+]] = fir.load %[[int_var]] : !fir.ref<i32>
-  !CHECK: fir.store %[[int_var_load]] to %[[int_var_firstprivate]] : !fir.ref<i32>
-  !CHECK: %[[mytype_var_firstprivate:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}>
-  !CHECK: %[[mytype_var_load:.+]] = fir.load %[[mytype_var]] : !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>
-  !CHECK: fir.store %[[mytype_var_load]] to %[[mytype_var_firstprivate]]
-  !CHECK: fir.call @_QPbaz(%[[int_var_firstprivate]], %[[mytype_var_firstprivate]]) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
+!CHECK: %[[INT_FIRSTPRIVATE_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "int_var", pinned, uniq_name = "_QFtask_firstprivateEint_var"}
+!CHECK: %[[INT_VAR_FIRSTPRIVATE:.+]]:2 = hlfir.declare %[[INT_FIRSTPRIVATE_ALLOCA]] {uniq_name = "_QFtask_firstprivateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[INT_VAR_LOAD:.+]] = fir.load %[[INT_VAR]]#0 : !fir.ref<i32>
+!CHECK: hlfir.assign %[[INT_VAR_LOAD]] to %[[INT_VAR_FIRSTPRIVATE]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK: %[[MYTYPE_FIRSTPRIVATE_ALLOCA:.+]] = fir.alloca !fir.type<_QFtask_firstprivateTmytype{x:i32}> {bindc_name = "mytype_var", pinned, uniq_name = "_QFtask_firstprivateEmytype_var"}
+!CHECK: %[[MYTYPE_VAR_FIRSTPRIVATE:.+]]:2 = hlfir.declare %[[MYTYPE_FIRSTPRIVATE_ALLOCA]] {uniq_name = "_QFtask_firstprivateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>)
+!CHECK: hlfir.assign %[[MYTYPE_VAR]]#0 to %[[MYTYPE_VAR_FIRSTPRIVATE]]#0 temporary_lhs : !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>
   call baz(int_var, mytype_var)
   !CHECK: omp.terminator
   !$omp end task
@@ -239,19 +216,24 @@ end subroutine task_firstprivate
 subroutine task_multiple_clauses()
   use omp_lib
 
-  !CHECK: %[[x:.+]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtask_multiple_clausesEx"}
-  !CHECK: %[[y:.+]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFtask_multiple_clausesEy"}
-  !CHECK: %[[z:.+]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFtask_multiple_clausesEz"}
+!CHECK: %[[X_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtask_multiple_clausesEx"}
+!CHECK: %[[X:.+]]:2 = hlfir.declare %[[X_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Y_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFtask_multiple_clausesEy"}
+!CHECK: %[[Y:.+]]:2 = hlfir.declare %[[Y_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Z_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "z", uniq_name = "_QFtask_multiple_clausesEz"}
+!CHECK: %[[Z:.+]]:2 = hlfir.declare %[[Z_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: x, y, z
   logical :: buzz
 
-  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) untied mergeable priority(%{{.+}}) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
-  !$omp task if(buzz) final(buzz) untied mergeable priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
+  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !$omp task if(buzz) final(buzz) priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
 
-  !CHECK: %[[x_priv:.+]] = fir.alloca i32
-  !CHECK: %[[y_priv:.+]] = fir.alloca i32
-  !CHECK: %[[y_load:.+]] = fir.load %[[y]] : !fir.ref<i32>
-  !CHECK: fir.store %[[y_load]] to %[[y_priv]] : !fir.ref<i32>
+!CHECK: %[[X_PRIV_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFtask_multiple_clausesEx"}
+!CHECK: %[[X_PRIV:.+]]:2 = hlfir.declare %[[X_PRIV_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Y_PRIV_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFtask_multiple_clausesEy"}
+!CHECK: %[[Y_PRIV:.+]]:2 = hlfir.declare %[[Y_PRIV_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[Y_LOAD:.+]] = fir.load %[[Y]]#0 : !fir.ref<i32>
+!CHECK: hlfir.assign %[[Y_LOAD]] to %[[Y_PRIV]]#0 temporary_lhs : i32, !fir.ref<i32>
 
   !CHECK: arith.addi
   x = x + 12

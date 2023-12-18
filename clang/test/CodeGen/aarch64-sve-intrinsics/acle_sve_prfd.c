@@ -221,15 +221,15 @@ void test_svprfd_11(svbool_t pg, const void *base)
 // CHECK-LABEL: @test_svprfd_vnum(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv2i1(<vscale x 2 x i1> [[TMP0]], ptr [[TMP2]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv2i1(<vscale x 2 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z16test_svprfd_vnumu10__SVBool_tPKvl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv2i1(<vscale x 2 x i1> [[TMP0]], ptr [[TMP2]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv2i1(<vscale x 2 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfd_vnum(svbool_t pg, const void *base, int64_t vnum)

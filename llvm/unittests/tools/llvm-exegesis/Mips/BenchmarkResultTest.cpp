@@ -20,11 +20,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using ::testing::AllOf;
-using ::testing::Eq;
-using ::testing::get;
 using ::testing::Pointwise;
-using ::testing::Property;
 
 using llvm::unittest::TempDir;
 

@@ -20,38 +20,49 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-struct ne {
-    TEST_CONSTEXPR ne (int val) : v(val) {}
-    TEST_CONSTEXPR bool operator () (int v2) const { return v != v2; }
-    int v;
-    };
+struct DifferentFrom {
+  int v;
+  TEST_CONSTEXPR DifferentFrom(int val) : v(val) {}
+  TEST_CONSTEXPR bool operator()(int other) const { return v != other; }
+};
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {1, 3, 5, 2, 4, 6};
-    int ib[] = {1, 2, 3, 7, 5, 6};
-    ne c(4);
-    return    (std::find_if_not(std::begin(ia), std::end(ia), c) == ia+4)
-           && (std::find_if_not(std::begin(ib), std::end(ib), c) == ib+6)
-           ;
+template <class Iter>
+TEST_CONSTEXPR_CXX17 void test_iter() {
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+  // We don't find what we're looking for in the range
+  {
+    {
+      Iter result = std::find_if_not(Iter(range), Iter(range), DifferentFrom(0));
+      assert(result == Iter(range));
     }
-#endif
+    {
+      Iter result = std::find_if_not(Iter(range), Iter(std::end(range)), DifferentFrom(999));
+      assert(result == Iter(std::end(range)));
+    }
+  }
 
-int main(int, char**)
-{
-    int ia[] = {0, 1, 2, 3, 4, 5};
-    const unsigned s = sizeof(ia)/sizeof(ia[0]);
-    cpp17_input_iterator<const int*> r = std::find_if_not(cpp17_input_iterator<const int*>(ia),
-                                                    cpp17_input_iterator<const int*>(ia+s),
-                                                    ne(3));
-    assert(*r == 3);
-    r = std::find_if_not(cpp17_input_iterator<const int*>(ia),
-                         cpp17_input_iterator<const int*>(ia+s),
-                         ne(10));
-    assert(r == cpp17_input_iterator<const int*>(ia+s));
+  // Tests with sub-ranges of various sizes
+  for (int size = 1; size != 10; ++size) {
+    for (int i = 0; i != size - 1; ++i) {
+      Iter result = std::find_if_not(Iter(range), Iter(range + size), DifferentFrom(i));
+      assert(result == Iter(range + i));
+    }
+  }
+}
 
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+TEST_CONSTEXPR_CXX17 bool test() {
+  test_iter<cpp17_input_iterator<int*> >();
+  test_iter<forward_iterator<int*> >();
+  test_iter<bidirectional_iterator<int*> >();
+  test_iter<random_access_iterator<int*> >();
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

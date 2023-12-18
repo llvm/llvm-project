@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(uint32_t, ntohl, (uint32_t netlong)) {
   if constexpr (Endian::IS_LITTLE)
@@ -19,4 +19,4 @@ LLVM_LIBC_FUNCTION(uint32_t, ntohl, (uint32_t netlong)) {
     return netlong;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

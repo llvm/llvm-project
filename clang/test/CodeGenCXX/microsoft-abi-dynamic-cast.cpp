@@ -94,9 +94,9 @@ void* test9(B* x) { return dynamic_cast<void*>(x); }
 // CHECK-NEXT:   [[VBTBL:%.*]] = load ptr, ptr [[VBPTR]], align 4
 // CHECK-NEXT:   [[VBOFFP:%.*]] = getelementptr inbounds i32, ptr [[VBTBL]], i32 1
 // CHECK-NEXT:   [[VBOFFS:%.*]] = load i32, ptr [[VBOFFP]], align 4
-// CHECK-NEXT:   [[DELTA:%.*]] = add nsw i32 [[VBOFFS]], 4
-// CHECK-NEXT:   [[ADJ:%.*]] = getelementptr inbounds i8, ptr %x, i32 [[DELTA]]
-// CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTCastToVoid(ptr nonnull [[ADJ]])
+// CHECK-NEXT:   [[BASE:%.*]] = getelementptr i8, ptr %x, i32 [[VBOFFS]]
+// CHECK-NEXT:   [[ADJ:%.*]] = getelementptr i8, ptr [[BASE]], i32 4
+// CHECK-NEXT:   [[CALL:%.*]] = tail call ptr @__RTCastToVoid(ptr [[ADJ]])
 // CHECK-NEXT:   br label
 // CHECK:        [[RET:%.*]] = phi ptr
 // CHECK-NEXT:   ret ptr [[RET]]

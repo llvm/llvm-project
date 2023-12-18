@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/string/memory_utils/op_generic.h"
@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
@@ -88,6 +88,6 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 #endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_BCMP_H

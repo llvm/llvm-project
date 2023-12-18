@@ -15,8 +15,6 @@
 #define DST_QUAD
 #include "fp_extend_impl.inc"
 
-COMPILER_RT_ABI long double __extendhftf2(_Float16 a) {
-  return __extendXfYf2__(a);
-}
+COMPILER_RT_ABI dst_t __extendhftf2(src_t a) { return __extendXfYf2__(a); }
 
 #endif

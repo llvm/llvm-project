@@ -158,3 +158,24 @@ TEST(PresburgerSpaceTest, convertVarKindLocals) {
   EXPECT_FALSE(space.getId(VarKind::Range, 0).hasValue());
   EXPECT_FALSE(space.getId(VarKind::Range, 1).hasValue());
 }
+
+TEST(PresburgerSpaceTest, convertVarKind2) {
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(0, 2, 2, 0);
+  space.resetIds();
+
+  // Attach identifiers.
+  int identifiers[4] = {0, 1, 2, 3};
+  space.getId(VarKind::Range, 0) = Identifier(&identifiers[0]);
+  space.getId(VarKind::Range, 1) = Identifier(&identifiers[1]);
+  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[2]);
+  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[3]);
+
+  // Convert Range variables to symbols.
+  space.convertVarKind(VarKind::Range, 0, 2, VarKind::Symbol, 1);
+
+  // Check if the identifiers are moved to symbols.
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[2]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 2), Identifier(&identifiers[1]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 3), Identifier(&identifiers[3]));
+}

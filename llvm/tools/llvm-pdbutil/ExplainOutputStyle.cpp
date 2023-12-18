@@ -66,9 +66,8 @@ Error ExplainOutputStyle::explainPdbFile() {
 }
 
 Error ExplainOutputStyle::explainBinaryFile() {
-  std::unique_ptr<BinaryByteStream> Stream =
-      std::make_unique<BinaryByteStream>(File.unknown().getBuffer(),
-                                          llvm::support::little);
+  std::unique_ptr<BinaryByteStream> Stream = std::make_unique<BinaryByteStream>(
+      File.unknown().getBuffer(), llvm::endianness::little);
   switch (opts::explain::InputType) {
   case opts::explain::InputFileType::DBIStream: {
     DbiStream Dbi(std::move(Stream));

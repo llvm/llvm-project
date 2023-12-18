@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
 // CHECK-LABEL: func.func @create_mask_2d_trailing_scalable(
 // CHECK-SAME: %[[arg:.*]]: index) -> vector<3x[4]xi1> {
@@ -29,12 +29,14 @@ func.func @cannot_create_mask_2d_leading_scalable(%a: index) -> vector<[4]x4xi1>
   return %mask : vector<[4]x4xi1>
 }
 
-transform.sequence failures(suppress) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_create_mask
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_create_mask
+    } : !transform.any_op
+    transform.yield
+  }
 }

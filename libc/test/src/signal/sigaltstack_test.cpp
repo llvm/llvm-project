@@ -24,8 +24,8 @@ constexpr int LOCAL_VAR_SIZE = 512;
 constexpr int ALT_STACK_SIZE = SIGSTKSZ + LOCAL_VAR_SIZE * 2;
 static uint8_t alt_stack[ALT_STACK_SIZE];
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 static bool good_stack;
 static void handler(int) {
@@ -48,21 +48,23 @@ static void handler(int) {
 TEST(LlvmLibcSignalTest, SigaltstackRunOnAltStack) {
   struct sigaction action;
   libc_errno = 0;
-  ASSERT_THAT(__llvm_libc::sigaction(SIGUSR1, nullptr, &action), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, nullptr, &action),
+              Succeeds(0));
   action.sa_handler = handler;
   // Indicate that the signal should be delivered on an alternate stack.
   action.sa_flags = SA_ONSTACK;
-  ASSERT_THAT(__llvm_libc::sigaction(SIGUSR1, &action, nullptr), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, &action, nullptr),
+              Succeeds(0));
 
   stack_t ss;
   ss.ss_sp = alt_stack;
   ss.ss_size = ALT_STACK_SIZE;
   ss.ss_flags = 0;
   // Setup the alternate stack.
-  ASSERT_THAT(__llvm_libc::sigaltstack(&ss, nullptr), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::sigaltstack(&ss, nullptr), Succeeds(0));
 
   good_stack = false;
-  __llvm_libc::raise(SIGUSR1);
+  LIBC_NAMESPACE::raise(SIGUSR1);
   EXPECT_TRUE(good_stack);
 }
 
@@ -72,8 +74,8 @@ TEST(LlvmLibcSignalTest, SigaltstackInvalidStack) {
   ss.ss_sp = alt_stack;
   ss.ss_size = 0;
   ss.ss_flags = SS_ONSTACK;
-  ASSERT_THAT(__llvm_libc::sigaltstack(&ss, nullptr), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::sigaltstack(&ss, nullptr), Fails(EINVAL));
 
   ss.ss_flags = 0;
-  ASSERT_THAT(__llvm_libc::sigaltstack(&ss, nullptr), Fails(ENOMEM));
+  ASSERT_THAT(LIBC_NAMESPACE::sigaltstack(&ss, nullptr), Fails(ENOMEM));
 }

@@ -83,8 +83,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: %ext:_(s32) = G_AND [[TRUNC]], [[C]]
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0

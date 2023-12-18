@@ -113,6 +113,21 @@ def ConvertAMDGPUToROCDL : Pass<"convert-amdgpu-to-rocdl"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAMDGPU
+//===----------------------------------------------------------------------===//
+def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
+  let summary = "Convert Arith operations to AMDGPU-specific implementations";
+  let description = [{
+    Convert `arith` operations (currently extf and truncf on 8-bit floats)
+    to operations in the `amdgpu` dialect. This pass is done in two steps
+    in order to avoid running a notional arith-to-rocdl and arith-to-llvm
+    simultaniously.
+  }];
+
+  let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -175,11 +190,6 @@ def ConvertAsyncToLLVMPass : Pass<"convert-async-to-llvm", "ModuleOp"> {
     "async::AsyncDialect",
     "LLVM::LLVMDialect",
     "func::FuncDialect",
-  ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-           /*default=*/"true", "Generate LLVM IR using opaque pointers "
-           "instead of typed pointers">,
   ];
 }
 
@@ -283,10 +293,7 @@ def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm", "ModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                   /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                   "instead of typed pointers">,
+           "Bitwidth of the index type, 0 to use size of machine word">
   ];
 }
 
@@ -373,8 +380,8 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     already present in the IR will be kept as is.
 
     An LLVM datalayout string can be attached as an attribute to the module on
-    which the pass anchors. Such an attribute is attached by calling the 
-    set-module-datalayout pass. If present, an llvm::DataLayout object is 
+    which the pass anchors. Such an attribute is attached by calling the
+    set-module-datalayout pass. If present, an llvm::DataLayout object is
     created from this attribute and used in the conversion to LLVM.
 
     #### Output IR
@@ -384,6 +391,10 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     1 value is returned, packed into an LLVM IR struct type. Function calls and
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
+
+    Note that until https://github.com/llvm/llvm-project/issues/70982 is resolved,
+    this pass includes patterns that lower `arith` and `cf` to LLVM. This is legacy
+    code due to when they were all converted in the same pass.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
@@ -394,9 +405,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                       /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                       "instead of typed pointers">,
   ];
 }
 
@@ -445,10 +453,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
     Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
                /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
                "Annotation attribute string for GPU binary"
-               >,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">,
+               >
   ];
 
   let dependentDialects = [
@@ -470,12 +475,6 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
     also converts the remaining Arithmetic, Func, and MemRef dialects into LLVM
     dialect, emitting C wrappers.
   }];
-
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">
-  ];
 
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
@@ -500,10 +499,7 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
-           "All memrefs must have static shape.">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                   /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                   "instead of typed pointers">,
+           "All memrefs must have static shape.">
   ];
 }
 
@@ -537,10 +533,7 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
             clEnumValN(::mlir::gpu::amd::Runtime::Unknown, "unknown", "Unknown (default)"),
             clEnumValN(::mlir::gpu::amd::Runtime::HIP, "HIP", "HIP"),
             clEnumValN(::mlir::gpu::amd::Runtime::OpenCL, "OpenCL", "OpenCL")
-          )}]>,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">,
+          )}]>
   ];
 }
 
@@ -563,13 +556,16 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
     to control the set and binding if wanted.
   }];
   let constructor = "mlir::createConvertGPUToSPIRVPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "func::FuncDialect",
+    "spirv::SPIRVDialect",
+  ];
   let options = [
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
     Option<"useCoopMatrixNV", "use-coop-matrix-nv",
-           "bool", /*default=*/"true",
+           "bool", /*default=*/"false",
            "Use the NV cooperative matrix extension insted of the KHR extension"
            " to lower GPU WMMA ops">,
   ];
@@ -597,12 +593,6 @@ def ConvertVulkanLaunchFuncToVulkanCallsPass
     This pass is only intended for the mlir-vulkan-runner.
   }];
 
-  let options = [
-     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-            /*default=*/"true", "Generate LLVM IR using opaque pointers "
-            "instead of typed pointers">
-  ];
-
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
@@ -626,6 +616,28 @@ def ConvertIndexToLLVMPass : Pass<"convert-index-to-llvm"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertIndexToSPIRVPass
+//===----------------------------------------------------------------------===//
+
+def ConvertIndexToSPIRVPass : Pass<"convert-index-to-spirv"> {
+  let summary = "Lower the `index` dialect to the `spirv` dialect.";
+  let description = [{
+    This pass lowers Index dialect operations to SPIR-V dialect operations.
+    Operation conversions are 1-to-1 except for the exotic divides: `ceildivs`,
+    `ceildivu`, and `floordivs`. The index bitwidth will be 32 or 64 as
+    specified by use-64bit-index.
+  }];
+
+  let dependentDialects = ["::mlir::spirv::SPIRVDialect"];
+
+  let options = [
+    Option<"use64bitIndex", "use-64bit-index",
+           "bool", /*default=*/"false",
+           "Use 64-bit integers to convert index types">
   ];
 }
 
@@ -737,10 +749,7 @@ def FinalizeMemRefToLLVMConversionPass :
            "bool",
            /*default=*/"false",
            "Use generic allocation and deallocation functions instead of the "
-           "classic 'malloc', 'aligned_alloc' and 'free' functions">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">
+           "classic 'malloc', 'aligned_alloc' and 'free' functions">
   ];
 }
 
@@ -777,14 +786,14 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertNVVMToLLVMPass : Pass<"convert-nvvm-to-llvm"> {
-  let summary = "Convert NVVM dialect to LLVM dialect";
+  let summary = "Convert NVVM to PTX with Inline Assembly in LLVM dialect";
   let description = [{
-    This pass generates inline assembly for the NVVM ops which is not 
-    implemented in LLVM core.
+    This pass generates PTX instructions using inline assembly for NVVM
+    operations implements `BasicPtxBuilderInterface`.
   }];
   let dependentDialects = [
     "NVVM::NVVMDialect",
-  ];  
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -799,11 +808,6 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
 
   let dependentDialects = [
     "NVVM::NVVMDialect",
-  ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-              /*default=*/"true", "Generate LLVM IR using opaque pointers "
-              "instead of typed pointers">
   ];
 }
 
@@ -883,9 +887,9 @@ def ConvertSCFToOpenMPPass : Pass<"convert-scf-to-openmp", "ModuleOp"> {
                 "constructs.";
 
   let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">
+    Option<"numThreads", "num-threads", "unsigned",
+           /*default=kUseOpenMPDefaultNumThreads*/"0",
+           "Number of threads to use">
   ];
 
   let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",
@@ -932,6 +936,16 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SCFToEmitC
+//===----------------------------------------------------------------------===//
+
+def SCFToEmitC : Pass<"convert-scf-to-emitc"> {
+  let summary = "Convert SCF dialect to EmitC dialect, maintaining structured"
+                " control flow";
+  let dependentDialects = ["emitc::EmitCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeToStandard
 //===----------------------------------------------------------------------===//
 
@@ -972,9 +986,6 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
   let dependentDialects = ["LLVM::LLVMDialect"];
 
   let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">,
     Option<"clientAPI", "client-api", "::mlir::spirv::ClientAPI",
 	   /*default=*/"::mlir::spirv::ClientAPI::Unknown",
 	   "Derive StorageClass to address space mapping from the client API",
@@ -1057,6 +1068,14 @@ def TosaToLinalg
   }];
 
   let constructor = "tosa::createTosaToLinalg()";
+  let options = [
+    Option<"disableTosaDecompositions", "disable-tosa-decompositions",
+           "bool", /*default=*/"false",
+           "Disable tosa decompositions pass">,
+    Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
+           "bool", /*default=*/"false",
+           "Always perform the reduce constant optimization">
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1071,7 +1090,26 @@ def TosaToLinalgNamed
     Linalg named operations.
   }];
 
+  let options = [
+      Option<"preferConv2DKernelLayoutHWCF", "prefer-conv2d-kernel-layout-hwcf",
+           "bool", /*default=*/"false",
+           "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">
+  ];
+
   let constructor = "tosa::createTosaToLinalgNamed()";
+}
+
+//===----------------------------------------------------------------------===//
+// TosaToMLProgram
+//===----------------------------------------------------------------------===//
+
+def TosaToMLProgram : Pass<"tosa-to-mlprogram", "ModuleOp"> {
+  let summary = "Lower TOSA to the MLProgram dialect";
+  let dependentDialects = ["ml_program::MLProgramDialect"];
+  let description = [{
+    Pass that converts TOSA's variable operator operations to the equivalent
+    MLProgram operations.
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1185,6 +1223,7 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
 def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
   let summary = "Lower the operations from the vector dialect into the ArmSME "
                 "dialect";
+  let constructor = "mlir::createConvertVectorToArmSMEPass()";
   let description = [{
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.
@@ -1205,6 +1244,20 @@ def ConvertArmSMEToSCF : Pass<"convert-arm-sme-to-scf"> {
     "arith::ArithDialect",
     "vector::VectorDialect",
     "arm_sme::ArmSMEDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// ArmSMEToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertArmSMEToLLVM : Pass<"convert-arm-sme-to-llvm"> {
+  let summary = "Lower the operations from the ArmSME dialect into the LLVM "
+                "dialect";
+  let constructor = "mlir::createConvertArmSMEToLLVMPass()";
+  let dependentDialects = [
+    "arm_sme::ArmSMEDialect",
+    "LLVM::LLVMDialect"
   ];
 }
 
@@ -1247,17 +1300,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of ArmSVE dialect while lowering the vector "
        "dialect.">,
-    Option<"armSME", "enable-arm-sme",
-           "bool", /*default=*/"false",
-           "Enables the use of ArmSME dialect while lowering the vector "
-       "dialect.">,
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">,
-	  Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">
+	   "dialect.">
   ];
 }
 

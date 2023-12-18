@@ -8,8 +8,8 @@ emitc.include "test.h"
 
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
-  %1 = "emitc.call"() {callee = "blah"} : () -> i64
-  emitc.call "foo" (%1) {args = [
+  %1 = "emitc.call_opaque"() {callee = "blah"} : () -> i64
+  emitc.call_opaque "foo" (%1) {args = [
     0 : index, dense<[0, 1]> : tensor<2xi32>, 0 : index
   ]} : (i64) -> ()
   return
@@ -95,5 +95,57 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   %12 = emitc.cmp ge, %arg5, %arg5 : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
   %13 = "emitc.cmp" (%arg6, %arg6) {predicate = 6} : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   %14 = emitc.cmp three_way, %arg6, %arg6 : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
+  return
+}
+
+func.func @test_if(%arg0: i1, %arg1: f32) {
+  emitc.if %arg0 {
+     %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
+  }
+  return
+}
+
+func.func @test_if_explicit_yield(%arg0: i1, %arg1: f32) {
+  emitc.if %arg0 {
+     %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
+     emitc.yield
+  }
+  return
+}
+
+func.func @test_if_else(%arg0: i1, %arg1: f32) {
+  emitc.if %arg0 {
+    %0 = emitc.call_opaque "func_true"(%arg1) : (f32) -> i32
+  } else {
+    %0 = emitc.call_opaque "func_false"(%arg1) : (f32) -> i32
+  }
+  return
+}
+
+func.func @test_assign(%arg1: f32) {
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  emitc.assign %arg1 : f32 to %v : f32
+  return
+}
+
+func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 {
+    %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
+  }
+  return
+}
+
+func.func @test_for_explicit_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 {
+    %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
+    emitc.yield
+  }
+  return
+}
+
+func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
+  emitc.for %i0 = %arg0 to %arg1 step %arg2 : i16 {
+    %0 = emitc.call_opaque "func_const"(%i0) : (i16) -> i32
+  }
   return
 }

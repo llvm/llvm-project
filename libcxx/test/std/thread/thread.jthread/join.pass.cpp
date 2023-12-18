@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -33,10 +34,10 @@ int main(int, char**) {
     constexpr auto numberOfThreads = 10u;
     jts.reserve(numberOfThreads);
     for (auto i = 0u; i < numberOfThreads; ++i) {
-      jts.emplace_back([&] {
+      jts.emplace_back(support::make_test_jthread([&] {
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         calledTimes.fetch_add(1, std::memory_order_relaxed);
-      });
+      }));
     }
 
     for (auto i = 0u; i < numberOfThreads; ++i) {
@@ -55,15 +56,15 @@ int main(int, char**) {
   // Synchronization: The completion of the thread represented by *this synchronizes with
   // ([intro.multithread]) the corresponding successful join() return.
   {
-    bool flag = false;
-    std::jthread jt{[&] { flag = true; }};
+    bool flag       = false;
+    std::jthread jt = support::make_test_jthread([&] { flag = true; });
     jt.join();
     assert(flag); // non atomic write is visible to the current thread
   }
 
   // Postconditions: The thread represented by *this has completed. get_id() == id().
   {
-    std::jthread jt{[] {}};
+    std::jthread jt = support::make_test_jthread([] {});
     assert(jt.get_id() != std::jthread::id());
     jt.join();
     assert(jt.get_id() == std::jthread::id());

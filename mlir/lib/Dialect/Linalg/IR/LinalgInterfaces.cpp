@@ -32,6 +32,7 @@ using namespace mlir::linalg;
 //===----------------------------------------------------------------------===//
 // Interface utility functions
 //===----------------------------------------------------------------------===//
+
 bool linalg::detail::canOpOperandsBeDroppedImpl(
     linalg::LinalgOp linalgOp, ArrayRef<OpOperand *> droppedOperands) {
   SmallVector<AffineMap> indexingMaps;
@@ -46,6 +47,27 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
     return linalgOp.getNumLoops() == 0;
   }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyOpInterface implementation
+//===----------------------------------------------------------------------===//
+
+bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
+  // Structural.
+  if (linalgOp.getNumParallelLoops() != linalgOp.getNumLoops())
+    return false;
+
+  // Operands and maps.
+  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
+    return false;
+  auto mapRange = linalgOp.getIndexingMapsArray();
+  if (mapRange.size() != 2 || !mapRange.front().isIdentity() ||
+      !mapRange.back().isIdentity()) {
+    return false;
+  }
+  // Region.
+  return llvm::hasSingleElement(linalgOp.getBlock()->getOperations());
 }
 
 //===----------------------------------------------------------------------===//
@@ -168,7 +190,7 @@ findPermutationsIndexingOperand(LinalgOp linalgOp, OpOperand *opOperand,
   assert(linalgOp == opOperand->getOwner() && "expected linalgOp owner");
   AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
   for (AffineExpr e : indexingMap.getResults()) {
-    if (auto d = e.dyn_cast<AffineDimExpr>()) {
+    if (auto d = dyn_cast<AffineDimExpr>(e)) {
       if (linalgOp.getIteratorTypesArray()[d.getPosition()] == iter &&
           llvm::count_if(indexingMap.getResults(), [d](AffineExpr e) {
             return e.isFunctionOfDim(d.getPosition());
@@ -226,9 +248,6 @@ mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
   llvm::SmallDenseSet<int64_t> rb = findPermutationsIndexingOperand(
       linalgOp, linalgOp.getDpsInputOperand(1), red);
   llvm::set_intersect(ra, rb);
-
-  if (ac.empty() || bc.empty() || ra.empty())
-    return failure();
 
   // Return each set in sorted order.
   ContractionDimensions dimensions{
@@ -344,8 +363,7 @@ LogicalResult mlir::linalg::detail::verifyContractionInterface(Operation *op) {
 /// preference over `rhs`)
 template <typename T>
 static T getAffineExprOfType(AffineExpr lhs, AffineExpr rhs) {
-  return lhs.isa<T>() ? lhs.cast<T>()
-                      : (rhs.isa<T>() ? rhs.cast<T>() : nullptr);
+  return isa<T>(lhs) ? cast<T>(lhs) : (isa<T>(rhs) ? cast<T>(rhs) : nullptr);
 }
 
 namespace {
@@ -418,7 +436,7 @@ struct ConvAccessExprWalker
   }
 
   FailureOr<int64_t> getDimExprOrMulExprDimPos(AffineExpr expr) {
-    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       int64_t dim = dimExpr.getPosition();
       if (convolvedDims.count(dim) || unConvolvedDims.count(dim))
         return failure();
@@ -428,7 +446,7 @@ struct ConvAccessExprWalker
       convolvedDims.insert(dim);
       return dim;
     }
-    if (auto symbolMulExpr = expr.dyn_cast<AffineBinaryOpExpr>()) {
+    if (auto symbolMulExpr = dyn_cast<AffineBinaryOpExpr>(expr)) {
       if (symbolMulExpr.getKind() != AffineExprKind::Mul)
         return failure();
       auto lhsExpr = symbolMulExpr.getLHS();
@@ -460,7 +478,7 @@ static llvm::SmallDenseSet<int64_t> getPreservedDims(AffineMap map) {
          "expected map to have projected permutations");
   llvm::SmallDenseSet<int64_t> preservedDims;
   for (auto expr : map.getResults())
-    preservedDims.insert(expr.cast<AffineDimExpr>().getPosition());
+    preservedDims.insert(cast<AffineDimExpr>(expr).getPosition());
   return preservedDims;
 }
 
@@ -468,7 +486,7 @@ static SmallVector<int64_t, 2>
 getConstantsFromExprList(SmallVector<AffineExpr, 2> exprs) {
   SmallVector<int64_t, 2> vals;
   for (auto e : exprs) {
-    auto constantExpr = e.dyn_cast<AffineConstantExpr>();
+    auto constantExpr = dyn_cast<AffineConstantExpr>(e);
     assert(constantExpr && "Found non-constant stride/dilation");
     vals.push_back(constantExpr.getValue());
   }
@@ -665,7 +683,7 @@ mlir::linalg::detail::isConvolutionInterfaceImpl(
   //   filter.
   llvm::SmallDenseSet<int64_t> allLoopDims;
   for (auto outputExpr : indexingMaps.back().getResults()) {
-    int64_t outputDim = outputExpr.cast<AffineDimExpr>().getPosition();
+    int64_t outputDim = cast<AffineDimExpr>(outputExpr).getPosition();
     if (inputExprWalker.unConvolvedDims.count(outputDim) &&
         !filterDims.count(outputDim)) {
       // Batch dimension.
@@ -702,7 +720,7 @@ mlir::linalg::detail::isConvolutionInterfaceImpl(
     return MatchConvolutionResult::NonConvolutionLoop;
   }
   for (auto filterExpr : indexingMaps[1].getResults()) {
-    int64_t filterDim = filterExpr.cast<AffineDimExpr>().getPosition();
+    int64_t filterDim = cast<AffineDimExpr>(filterExpr).getPosition();
     if (outputDims.count(filterDim) &&
         !inputExprWalker.unConvolvedDims.count(filterDim) &&
         !inputExprWalker.convolvedDims.count(filterDim)) {
@@ -852,7 +870,7 @@ SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
   SmallVector<Range, 4> res(numDims);
   for (unsigned idx = 0; idx < numRes; ++idx) {
     auto result = map.getResult(idx);
-    if (auto d = result.dyn_cast<AffineDimExpr>()) {
+    if (auto d = dyn_cast<AffineDimExpr>(result)) {
       if (res[d.getPosition()].offset)
         continue;
       res[d.getPosition()] =
@@ -869,7 +887,7 @@ SmallVector<int64_t, 4> LinalgOp::computeStaticLoopSizes() {
   SmallVector<int64_t, 4> res(numDims, 0);
   for (unsigned idx = 0; idx < numRes; ++idx) {
     auto result = map.getResult(idx);
-    if (auto d = result.dyn_cast<AffineDimExpr>())
+    if (auto d = dyn_cast<AffineDimExpr>(result))
       res[d.getPosition()] = allShapeSizes[idx];
   }
   return res;
@@ -904,8 +922,8 @@ getResultsPositionInLoopsToShapeMap(LinalgOp &op) {
   int64_t outputRankSum = 0;
   for (OpOperand *input : op.getDpsInputOperands())
     inputRankSum += op.getRank(input);
-  for (OpOperand *output : op.getDpsInitOperands())
-    outputRankSum += op.getRank(output);
+  for (OpOperand &output : op.getDpsInitsMutable())
+    outputRankSum += op.getRank(&output);
   return {inputRankSum, inputRankSum + outputRankSum};
 }
 
@@ -948,19 +966,18 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
           createFlatListOfOperandDims(b, loc));
   int64_t pos = 0;
   ArrayRef<AffineExpr> shapeExprs = resultShapesFromInputShapesMap.getResults();
-  for (OpOperand *opOperand : getDpsInitOperands()) {
+  for (OpOperand &opOperand : getDpsInitsMutable()) {
     SmallVector<OpFoldResult> shapes;
-    for (int64_t dim : llvm::seq<int64_t>(0, getRank(opOperand))) {
-      auto shapedType = llvm::cast<ShapedType>(opOperand->get().getType());
+    for (int64_t dim : llvm::seq<int64_t>(0, getRank(&opOperand))) {
+      auto shapedType = llvm::cast<ShapedType>(opOperand.get().getType());
       if (!shapedType.isDynamicDim(dim)) {
         // Static dim: Return IntegerAttr.
         shapes.push_back(b.getIndexAttr(shapedType.getDimSize(dim)));
       } else {
         // Dynamic dim: Return Value.
-        OpFoldResult ofr =
-            checkDimExpr.visit(shapeExprs[pos])
-                ? createOrFoldDimOp(b, loc, opOperand->get(), dim)
-                : allResultDimValues[pos];
+        OpFoldResult ofr = checkDimExpr.visit(shapeExprs[pos])
+                               ? createOrFoldDimOp(b, loc, opOperand.get(), dim)
+                               : allResultDimValues[pos];
         shapes.push_back(getValueOrCreateConstantIndexOp(b, loc, ofr));
       }
       pos++;
@@ -977,7 +994,7 @@ int64_t LinalgOp::getIndexingMapIndex(OpOperand *opOperand) {
   auto dpsIface = cast<DestinationStyleOpInterface>(*this->getOperation());
   if (!dpsIface.isDpsInput(opOperand))
     return operandNumber;
-  auto [start, end] = dpsIface.getDpsInitsPositionRange();
+  unsigned start = dpsIface.getDpsInits().getBeginOperandIndex();
   assert(!dpsIface.isDpsInit(opOperand));
   // Account for potential inputs that are not DPS and may not appear in
   // `indexingMaps`.
@@ -1075,7 +1092,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
                      "unexpected result less than 0 at expression #")
                  << dim << " in " << mapStr;
         }
-        if (indexingMap.getResult(dim).dyn_cast<AffineDimExpr>()) {
+        if (dyn_cast<AffineDimExpr>(indexingMap.getResult(dim))) {
           if (inferredDimSize != shape[dim]) {
             return op->emitOpError("inferred input/output operand #")
                    << opOperand.getOperandNumber() << " has shape's dimension #"
@@ -1112,7 +1129,9 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
                            "arguments as the number of input/output operands");
 
   for (OpOperand *opOperand : linalgOp.getOpOperandsMatchingBBargs()) {
-    Type elementType = getElementTypeOrSelf(opOperand->get());
+    Type elementType = opOperand->get().getType();
+    if (isa<MemRefType, RankedTensorType>(elementType))
+      elementType = getElementTypeOrSelf(opOperand->get().getType());
     Type argType = block.getArgument(opOperand->getOperandNumber()).getType();
     if (elementType != argType)
       return op->emitOpError("expected type of bb argument #")

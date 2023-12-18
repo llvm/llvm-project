@@ -440,7 +440,20 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       Reserved.set(SubReg);
   }
 
+  if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
+    for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
+         SubReg.isValid(); ++SubReg)
+      Reserved.set(*SubReg);
+  }
+
   markSuperRegs(Reserved, AArch64::FPCR);
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    markSuperRegs(Reserved, AArch64::X27);
+    markSuperRegs(Reserved, AArch64::X28);
+    markSuperRegs(Reserved, AArch64::W27);
+    markSuperRegs(Reserved, AArch64::W28);
+  }
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -558,8 +571,6 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   switch (CC) {
   default:
     report_fatal_error("Unsupported calling convention.");
-  case CallingConv::WebKit_JS:
-    return HasReg(CC_AArch64_WebKit_JS_ArgRegs, Reg);
   case CallingConv::GHC:
     return HasReg(CC_AArch64_GHC_ArgRegs, Reg);
   case CallingConv::C:
@@ -570,8 +581,18 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
-    if (STI.isTargetWindows() && IsVarArg)
-      return HasReg(CC_AArch64_Win64_VarArg_ArgRegs, Reg);
+    if (STI.isTargetWindows()) {
+      if (IsVarArg)
+        return HasReg(CC_AArch64_Win64_VarArg_ArgRegs, Reg);
+      switch (CC) {
+      default:
+        return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
+      case CallingConv::Swift:
+      case CallingConv::SwiftTail:
+        return HasReg(CC_AArch64_Win64PCS_Swift_ArgRegs, Reg) ||
+               HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
+      }
+    }
     if (!STI.isTargetDarwin()) {
       switch (CC) {
       default:
@@ -598,13 +619,15 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::Win64:
     if (IsVarArg)
       HasReg(CC_AArch64_Win64_VarArg_ArgRegs, Reg);
-    return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);
+    return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
   case CallingConv::CFGuard_Check:
     return HasReg(CC_AArch64_Win64_CFGuard_Check_ArgRegs, Reg);
   case CallingConv::AArch64_VectorCall:
   case CallingConv::AArch64_SVE_VectorCall:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
+    if (STI.isTargetWindows())
+      return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
     return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);
   }
 }
@@ -969,6 +992,8 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AArch64::FPR64_loRegClassID:
   case AArch64::FPR16_loRegClassID:
     return 16;
+  case AArch64::FPR128_0to7RegClassID:
+    return 8;
   }
 }
 

@@ -18,7 +18,7 @@
 extern "C" void *malloc(uint64_t);
 extern "C" void free(void *);
 
-using namespace __llvm_libc;
+using namespace LIBC_NAMESPACE;
 
 static void test_stream() {
   static const char str[] =

@@ -35,7 +35,7 @@ void *func(void *) {
   // Touch the thread local variable so that it gets initialized and a callback
   // for its destructor gets registered with __cxa_thread_atexit.
   thread_local_a.set(321);
-  __llvm_libc::pthread_exit(nullptr);
+  LIBC_NAMESPACE::pthread_exit(nullptr);
   return nullptr;
 }
 
@@ -43,11 +43,11 @@ TEST_MAIN() {
   pthread_t th;
   void *retval;
 
-  ASSERT_EQ(__llvm_libc::pthread_create(&th, nullptr, func, nullptr), 0);
-  ASSERT_EQ(__llvm_libc::pthread_join(th, &retval), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr, func, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, &retval), 0);
 
   ASSERT_TRUE(dtor_called);
-  __llvm_libc::pthread_exit(nullptr);
+  LIBC_NAMESPACE::pthread_exit(nullptr);
   return 0;
 }
 

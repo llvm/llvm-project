@@ -9,8 +9,8 @@
 #include "src/math/ceilf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, ceilf, (float x)) { return __builtin_ceilf(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

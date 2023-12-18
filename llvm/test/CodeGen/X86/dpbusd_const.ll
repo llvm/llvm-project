@@ -194,7 +194,7 @@ define i32 @mul_16xi8_zc(<16 x i8> %a, i32 %c) {
 ; AVX512VLVNNI-LABEL: mul_16xi8_zc:
 ; AVX512VLVNNI:       # %bb.0: # %entry
 ; AVX512VLVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLVNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512VLVNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; AVX512VLVNNI-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; AVX512VLVNNI-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512VLVNNI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
@@ -245,7 +245,7 @@ define i32 @mul_32xi8_zc(<32 x i8> %a, i32 %c) {
 ; AVX512VLVNNI-LABEL: mul_32xi8_zc:
 ; AVX512VLVNNI:       # %bb.0: # %entry
 ; AVX512VLVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLVNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512VLVNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
 ; AVX512VLVNNI-NEXT:    vextracti128 $1, %ymm1, %xmm0
 ; AVX512VLVNNI-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512VLVNNI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -287,7 +287,7 @@ define i32 @mul_64xi8_zc(<64 x i8> %a, i32 %c) {
 ; AVX512-LABEL: mul_64xi8_zc:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
+; AVX512-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
 ; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1

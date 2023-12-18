@@ -38,7 +38,7 @@ define void @sadd.sat() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %33 = call <vscale x 2 x i64> @llvm.sadd.sat.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %34 = call <vscale x 4 x i64> @llvm.sadd.sat.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %35 = call <vscale x 8 x i64> @llvm.sadd.sat.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.sadd.sat.i8(i8 undef, i8 undef)
   call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> undef, <2 x i8> undef)
@@ -115,7 +115,7 @@ define void @uadd.sat() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %33 = call <vscale x 2 x i64> @llvm.uadd.sat.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %34 = call <vscale x 4 x i64> @llvm.uadd.sat.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %35 = call <vscale x 8 x i64> @llvm.uadd.sat.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.uadd.sat.i8(i8 undef, i8 undef)
   call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> undef, <2 x i8> undef)
@@ -192,7 +192,7 @@ define void @usub.sat() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %33 = call <vscale x 2 x i64> @llvm.usub.sat.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %34 = call <vscale x 4 x i64> @llvm.usub.sat.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %35 = call <vscale x 8 x i64> @llvm.usub.sat.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.usub.sat.i8(i8 undef, i8 undef)
   call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> undef, <2 x i8> undef)
@@ -269,7 +269,7 @@ define void @ssub.sat() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %33 = call <vscale x 2 x i64> @llvm.ssub.sat.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %34 = call <vscale x 4 x i64> @llvm.ssub.sat.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %35 = call <vscale x 8 x i64> @llvm.ssub.sat.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.ssub.sat.i8(i8 undef, i8 undef)
   call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> undef, <2 x i8> undef)
@@ -346,7 +346,7 @@ define void @ushl.sat() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %33 = call <vscale x 2 x i64> @llvm.ushl.sat.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %34 = call <vscale x 4 x i64> @llvm.ushl.sat.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %35 = call <vscale x 8 x i64> @llvm.ushl.sat.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.ushl.sat.i8(i8 undef, i8 undef)
   call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> undef, <2 x i8> undef)
@@ -423,7 +423,7 @@ define void @sshl.sat() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %33 = call <vscale x 2 x i64> @llvm.sshl.sat.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %34 = call <vscale x 4 x i64> @llvm.sshl.sat.nxv4i64(<vscale x 4 x i64> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %35 = call <vscale x 8 x i64> @llvm.sshl.sat.nxv8i64(<vscale x 8 x i64> undef, <vscale x 8 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i8 @llvm.sshl.sat.i8(i8 undef, i8 undef)
   call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> undef, <2 x i8> undef)

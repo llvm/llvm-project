@@ -37,6 +37,9 @@ using namespace llvm;
 static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
                                   cl::desc("Use one trap block per function"));
 
+static cl::opt<bool> DebugTrapBB("bounds-checking-unique-traps",
+                                 cl::desc("Always use one trap per check"));
+
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
@@ -180,19 +183,27 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   // will create a fresh block every time it is called.
   BasicBlock *TrapBB = nullptr;
   auto GetTrapBB = [&TrapBB](BuilderTy &IRB) {
-    if (TrapBB && SingleTrapBB)
-      return TrapBB;
-
     Function *Fn = IRB.GetInsertBlock()->getParent();
-    // FIXME: This debug location doesn't make a lot of sense in the
-    // `SingleTrapBB` case.
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
+
+    if (TrapBB && SingleTrapBB && !DebugTrapBB)
+      return TrapBB;
+
     TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
     IRB.SetInsertPoint(TrapBB);
 
-    auto *F = Intrinsic::getDeclaration(Fn->getParent(), Intrinsic::trap);
-    CallInst *TrapCall = IRB.CreateCall(F, {});
+    Intrinsic::ID IntrID = DebugTrapBB ? Intrinsic::ubsantrap : Intrinsic::trap;
+    auto *F = Intrinsic::getDeclaration(Fn->getParent(), IntrID);
+
+    CallInst *TrapCall;
+    if (DebugTrapBB) {
+      TrapCall =
+          IRB.CreateCall(F, ConstantInt::get(IRB.getInt8Ty(), Fn->size()));
+    } else {
+      TrapCall = IRB.CreateCall(F, {});
+    }
+
     TrapCall->setDoesNotReturn();
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);

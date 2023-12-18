@@ -103,7 +103,7 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 
     ```
     %alloc = memref.alloc() : memref<10xf32>
-    memref.tensor_store %dest, %alloc : memref<10xf32>
+    bufferization.materialize_in_destination %dest in %alloc
     memref.store %f, %alloc[%pos] : memref<10xf32>
     %0 = bufferization.to_tensor %alloc restrict writable : memref<10xf32>
     ```
@@ -118,15 +118,16 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     An optional memory space attribute can be specified for the materialized
     buffer allocation.
 
-    If a memory copy is needed, a "memref.tensor_store" is used when possible.
-    This is an op with tensor semantics that will bufferize to a memory copy
-    later. Which concrete op will be used for the memory copy is up to the
-    bufferization framework. Alternatively, a custom memcpy op can be specified
-    via `memcpy_op`. Currently supported are "memref.copy" and "linalg.copy".
-    In that case, the source of each memcpy must not have a custom memory space.
-    Furthermore, because the future buffer layout unknown for a given tensor,
-    a fully dynamic layout is assumed for best compatibility. Users should use
-    "memref.tensor_store" when possible.
+    If a memory copy is needed, a "bufferization.materialize_in_destination" is
+    used when possible. This is an op with tensor semantics that will bufferize
+    to a memory copy later. Which concrete op will be used for the memory copy
+    is up to the bufferization framework. Alternatively, a custom memcpy op can
+    be specified via `memcpy_op`. Currently supported are "memref.copy" and
+    "linalg.copy". In that case, the source of each memcpy must not have a
+    custom memory space. Furthermore, because the future buffer layout unknown
+    for a given tensor, a fully dynamic layout is assumed for best
+    compatibility. Users should use "bufferization.materialize_in_destination"
+    when possible.
 
     "memref.alloc" is used for new buffer allocations. The buffer is deallocated
     at the end of the block if the "emit_dealloc" attribute is present. If this
@@ -148,7 +149,8 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        OptionalAttr<AnyAttr>:$memory_space,
-                       DefaultValuedAttr<StrAttr, "\"memref.tensor_store\"">:
+                       DefaultValuedAttr<StrAttr,
+                              "\"bufferization.materialize_in_destination\"">:
                            $memcpy_op,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
                            $alloc_op,
@@ -391,6 +393,43 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
 }
 
 //===----------------------------------------------------------------------===//
+// SpecializeOp
+//===----------------------------------------------------------------------===//
+
+def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Transforms a generic operation into the equivalent named form.
+
+    #### Return modes
+
+    This operation ignores non-Linalg ops and drops them in the return. If all
+    the operations referred to by the `target` handle specialize, the transform
+    succeeds; otherwise, the operation produces a silenceable failure.  The return
+    handle points to only the subset of successfully produced equivalent named
+    operations, which can be empty or contain the original ops if they were already
+    in named form. The supported specialization to named Linalg operations are:
+    - linalg.copy of any rank.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat =
+      "$target attr-dict `:` "
+      "custom<SemiFunctionType>(type($target), type($transformed))";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // InterchangeOp
 //===----------------------------------------------------------------------===//
 
@@ -535,6 +574,11 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
       - attribute: the matched op must have all specified attributes (with their
         specified values).
       - filter_result_type: the matched op must return exactly this one type.
+      - filter_operand_types: all the operands of the matched op must must be of
+        this type. If more than a type is specified, then the length of the list
+        must be equal to the number of operands in the matched op, and the match
+        will succeed only if the operand types match all the types in the list
+        in the order in which they are specified.
 
     Note: Only ops that satisfy all specified constraints are matched.
 
@@ -556,7 +600,8 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
                        OptionalAttr<StrArrayAttr>:$ops,
                        OptionalAttr<MatchInterfaceEnum>:$interface,
                        OptionalAttr<DictionaryAttr>:$op_attrs,
-                       OptionalAttr<TypeAttr>:$filter_result_type);
+                       OptionalAttr<TypeAttr>:$filter_result_type,
+                       OptionalAttr<TypeArrayAttr>:$filter_operand_types);
   // TODO: variadic results when needed.
   let results = (outs TransformHandleTypeInterface:$results);
 
@@ -570,6 +615,7 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
     (`interface` `{` $interface^ `}`)?
     (`attributes` $op_attrs^)?
     (`filter_result_type` `=` $filter_result_type^)?
+    (`filter_operand_types` `=` $filter_operand_types^)?
     `in` $target attr-dict
     `:` functional-type($target, results)
   }];
@@ -618,10 +664,10 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
                          !transform.param<i64>, !transform.param<i64>
     %low, %high = structured.split %target after %split { dimension = 1 }
                 : !transform.any_op, !transform.param<i64>
-    %tiled_low, %loop1 = structured.tile %low [0, %sz1]
+    %tiled_low, %loop1 = structured.tile_using_for %low [0, %sz1]
                        : (!transform.any_op, !transform.param<i64>)
                       -> (!transform.any_op, !transform.any_op)
-    %tiled_high, %loop2 = structured.tile %high [0, %sz2]
+    %tiled_high, %loop2 = structured.tile_using_for %high [0, %sz2]
                         : (!transform.any_op, !transform.param<i64>)
                        -> (!transform.any_op, !transform.any_op)
     %common = merge_handles %tiled_low, %tiled_high : !transform.any_op
@@ -1514,10 +1560,10 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
 }
 
 //===----------------------------------------------------------------------===//
-// TileReductionUsingScfOp
+// TileReductionUsingForOp
 //===----------------------------------------------------------------------===//
 
-def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_using_scf",
+def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_using_for",
        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
         TransformEachOpTrait, TransformOpInterface,
         ReportTrackingListenerFailuresOpTrait]> {
@@ -1536,11 +1582,11 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
 
     #### Return modes
 
-    This 4 returned handles point to:
-      - the parent for op,
+    Returns 4 handles associated with (in order):
       - the fill op used to initialize the neutral element,
       - the parallel tiled op and
-      - the result-combining op.
+      - the result-combining op,
+      - the parent `for` op.
 
     #### Example:
 
@@ -1590,13 +1636,13 @@ def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_u
     ```
   }];
 
-  // TODO: support mixed static-dynamic (see TileToForallOp).
+  // TODO: support mixed static-dynamic (see TileUsingForallOp).
   let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes);
-  let results = (outs TransformHandleTypeInterface:$for_op,
-                      TransformHandleTypeInterface:$fill_op,
+  let results = (outs TransformHandleTypeInterface:$fill_op,
                       TransformHandleTypeInterface:$split_linalg_op,
-                      TransformHandleTypeInterface:$combining_linalg_op);
+                      TransformHandleTypeInterface:$combining_linalg_op,
+                      TransformHandleTypeInterface:$for_op);
 
   let builders = [
     OpBuilder<(ins "Value":$target,
@@ -1644,11 +1690,11 @@ def TileReductionUsingForallOp :
 
     #### Return modes
 
-    This 4 returned handles point to:
-      - the parent forall op,
+    Returns 4 handles associated with (in order):
       - the fill op used to initialize the neutral element,
       - the parallel tiled op and
-      - the result-combining op.
+      - the result-combining op,
+      - the parent `forall` op.
 
     #### Example:
 
@@ -1694,15 +1740,15 @@ def TileReductionUsingForallOp :
     ```
   }];
 
-  // TODO: support mixed static-dynamic (see TileToForallOp).
+  // TODO: support mixed static-dynamic (see TileUsingForallOp).
   let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$num_threads,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
-  let results = (outs TransformHandleTypeInterface:$forall_op,
-                      TransformHandleTypeInterface:$fill_op,
+  let results = (outs TransformHandleTypeInterface:$fill_op,
                       TransformHandleTypeInterface:$split_linalg_op,
-                      TransformHandleTypeInterface:$combining_linalg_op);
+                      TransformHandleTypeInterface:$combining_linalg_op,
+                      TransformHandleTypeInterface:$forall_op);
 
   let builders = [
     OpBuilder<(ins "Value":$target,
@@ -1732,10 +1778,10 @@ def TileReductionUsingForallOp :
 }
 
 //===----------------------------------------------------------------------===//
-// TileOp
+// TileUsingForOp
 //===----------------------------------------------------------------------===//
 
-def TileOp : Op<Transform_Dialect, "structured.tile",
+def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
@@ -1820,11 +1866,11 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
 }
 
 //===----------------------------------------------------------------------===//
-// TileToForallOp
+// TileUsingForallOp
 //===----------------------------------------------------------------------===//
 
-def TileToForallOp :
-    Op<Transform_Dialect, "structured.tile_to_forall_op",
+def TileUsingForallOp :
+    Op<Transform_Dialect, "structured.tile_using_forall",
       [AttrSizedOperandSegments,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
@@ -1834,9 +1880,9 @@ def TileToForallOp :
     Tiling is applied by either specifying `num_threads` or `tile_size`. If
     `num_threads` is specified, then the tile size for each dimension `i` is
     calculated dynamically via `ceilDiv(dimSize[i], num_threads[i])`.
-    `num_threads` and `tile_size` can be either static index attributes or SSA
-    values of PDL operation handle type (or a mix thereof). Operation handles
-    must be mapped to exactly one op that has exactly one result of index type.
+    `num_threads` and `tile_size` can be either static index attributes or 
+    operation handles (or a mix thereof). Operation handles must be mapped to
+    exactly one op that has exactly one result of index type.
 
     Static zero tile sizes indicate that the dimension is not tiled and can be
     thought of as tiling by the full size of data.
@@ -1871,16 +1917,20 @@ def TileToForallOp :
     #### Example using `num_threads`
 
     ```
-    %0 = pdl_match @match_matmul in %arg1
-    %3:2 = transform.structured.tile_to_forall_op %0 num_threads [10, 20]
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+       : (!transform.any_op) -> !transform.any_op
+    %3:2 = transform.structured.tile_using_forall %0 num_threads [10, 20]
+       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     ```
 
     #### Example using `tile_sizes`
 
     ```
-    %0 = pdl_match @match_matmul in %arg1
-    %sz = pdl_match @match_size_op in %arg1
-    %3:2 = transform.structured.tile_to_forall_op %0 tile_sizes [0, %sz, 20]
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+       : (!transform.any_op) -> !transform.any_op
+    %sz = transform.structured.match ...
+    %3:2 = transform.structured.tile_using_forall %0 tile_sizes [0, %sz, 20]
+       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     ```
   }];
 
@@ -1892,8 +1942,8 @@ def TileToForallOp :
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
-  let results = (outs TransformHandleTypeInterface:$forall_op,
-                      TransformHandleTypeInterface:$tiled_op);
+  let results = (outs TransformHandleTypeInterface:$tiled_op,
+                      TransformHandleTypeInterface:$forall_op);
 
   let builders = [
     OpBuilder<(ins "Value":$target,
@@ -1947,37 +1997,39 @@ def TileToForallOp :
 }
 
 //===----------------------------------------------------------------------===//
-// VectorizeOp
+// VectorizeChildrenAndApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
-def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
+def VectorizeChildrenAndApplyPatternsOp :
+  Op<Transform_Dialect, "structured.vectorize_children_and_apply_patterns",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformEachOpTrait, TransformOpInterface,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Indicates that the given `target` op all the ops it contains should be
-    vectorized with the configuration specified by the attributes of this op.
-    This vectorization only handles structured ops that operate on shaped types
-    and does not vectorize loops or straight-line. Internally, it applies a
-    set of rewrite patterns, some of which enable vectorization and some of
-    which clean up the results. Therefore, it can only be applied to an op with
-    the "isolated from above property". If finer granularity is required, it can
-    be achieved by outlining the target part of the payload IR into, e.g., a
-    function, performing the transformation, and inlining it back. This
-    transformation only fails if the entire pattern rewriting failed, i.e., it
-    does **not** fail when no ops were vectorized.
+    Vectorizes all children contained in the given `target` using the
+    configuration specified by the attributes of this op. This only vectorizes
+    structured ops that operate on shaped types and does not vectorize loops or
+    straight-line. Internally, it applies a set of rewrite patterns, some of
+    which enable vectorization and some of which clean up the results.
+    Therefore, it can only be applied to an op with the "isolated from above"
+    property. This transformation only fails if the entire pattern rewriting
+    failed, i.e., it does **not** fail when no ops were vectorized.
 
-    Note that this transformation is invalidating the handles to any payload IR
+    Finer granularity can be achieved either with the `VectorizeOp` for
+    individual ops or by outlining the target part of the payload IR into, e.g.,
+    a function, performing this transformation, and inlining it back.
+
+    Note that this transformation invalidates the handles to any payload IR
     operation that is contained inside the vectorization target.
 
     This transformation supports the following attributes:
-      - `vectorize_padding`: a UnitAttr to activate the vectorization of
+    - `vectorize_padding`: a `UnitAttr` to activate the vectorization of
       `tensor.pad` ops. Different pipelines may prefer to lower such ops to
       loops.
-      - `disable_multi_reduction_to_contract_patterns`: a UnitAttr to deactivate
+    - `disable_multi_reduction_to_contract_patterns`: a `UnitAttr` to deactivate
       the rewrite of `vector.multi_reduction` to `vector.contract`. This is
       intended to be used in tests only.
-      - `disable_transfer_permutation_map_lowering_patterns`: a UnitAttr to
+    - `disable_transfer_permutation_map_lowering_patterns`: a `UnitAttr` to
       deactivate the rewrite of `vector.transfer` with permutation maps into
       explicit `vector.transpose` operations. This is intended to be used in
       tests only but may be promoted to a first class attribute in the future.
@@ -1993,6 +2045,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let arguments = (ins TransformHandleTypeInterface:$target,
                    UnitAttr:$vectorize_padding,
                    UnitAttr:$vectorize_nd_extract,
+                   UnitAttr:$flatten_1d_depthwise_conv,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs TransformHandleTypeInterface:$transformed);
@@ -2004,7 +2057,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let builders = [
     OpBuilder<(ins "Value":$target,
                CArg<"bool", "false">:$vectorizePadding,
-               CArg<"bool", "false">:$vectorizeNDExtract)>,
+               CArg<"bool", "false">:$vectorizeNDExtract,
+               CArg<"bool", "false">:$flatten1DDepthwise)>
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -2015,7 +2069,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   }];
 }
 
-def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
+def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -2029,9 +2083,9 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
     ```mlir
     # Masked vectorization - vector sizes are specified explicitly
-    transform.structured.masked_vectorize %target vector_sizes [1, 4] : !transform.any_op
+    transform.structured.vectorize %target vector_sizes [1, 4] : !transform.any_op
     # Regular vectorization - vector sizes are inferred from the target Op
-    transform.structured.masked_vectorize %target : !transform.any_op
+    transform.structured.vectorize %target : !transform.any_op
     ```
 
     The vector sizes can be either static or dynamic (SSA values). In case of
@@ -2209,50 +2263,49 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
 }
 
 //===----------------------------------------------------------------------===//
-// HoistRedundantTensorSubsetsOp
+// Transpose Conv2D
 //===----------------------------------------------------------------------===//
 
-def HoistRedundantTensorSubsetsOp :
-  Op<Transform_Dialect, "structured.hoist_redundant_tensor_subsets",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
+def TransposeConv2DOp : Op<Transform_Dialect,
+    "structured.transpose_conv2d",
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
      TransformOpInterface,
+     TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Hoists supported tensor subset extract/insert operation pairs out of
-    immediately enclosing loop iteratively, if the following conditions
-    are true:
-       1. The 2 ops access the same tensor subset.
-       2. All operands are invariant under the enclosing loop.
+    Convert linalg.conv_2d_nhwc_fhwc into linalg.conv_2d_nhwc_hwcf by introducing
+    a linalg.transpose on the filter tensor/memref.
 
-    The supported subset extract/insert operation pairs currently comprise:
-       - tensor.extract_slice / tensor.insert_slice
-       - vector.transfer_read / vector.transfer_write on tensors
+    Whilst the fhwc filter channel ordering can be desirable for certain targets
+    and is a more direct mapping to higher level dialects such as TOSA (which only
+    supports this ordering) hwcf is better suited for transformations such as
+    img2col which can make use of optimized BLAS routines such as GEMM.
 
-    Only scf.for loops are currently supported.
-
-    When applied to:
-       1. an scf.for loop, hoist out of this loop only.
-       2. a non-loop op, apply hoisting to all the contained loop ops.
+    Returns one handle:
+    - The final operation of the sequence that replaces the original
+      convolution.
 
     #### Return modes:
 
-    The operation always succeeds and returns nothing.
+    Returns a definite failure if target is not isolated from above.
+    Returns a silenceable failure if the pattern application failed.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type(operands, results)
-  }];
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type($target, results)";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::Operation *target,
+        ::mlir::linalg::LinalgOp target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

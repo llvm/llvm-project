@@ -21,6 +21,7 @@
     define void @dont_fold_unsized_type() { ret void }
     define void @dont_fold_thread_local() { ret void }
 ...
+# We should fold the offset 1 into the G_GLOBAL_VALUE.
 ---
 name:            one_ptr_add
 alignment:       4
@@ -30,13 +31,12 @@ body:             |
   bb.0:
     liveins: $x0
 
-    ; We should fold the offset 1 into the G_GLOBAL_VALUE.
-
     ; CHECK-LABEL: name: one_ptr_add
     ; CHECK: liveins: $x0
-    ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
-    ; CHECK: $x0 = COPY [[GV]](p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
+    ; CHECK-NEXT: $x0 = COPY [[GV]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
     %offset:_(s64) = G_CONSTANT i64 1
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -44,6 +44,8 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# We should fold the offset 1 into the G_GLOBAL_VALUE, resulting in a
+# final offset of 4.
 ---
 name:            add_to_offset
 alignment:       4
@@ -53,14 +55,12 @@ body:             |
   bb.0:
     liveins: $x0
 
-    ; We should fold the offset 1 into the G_GLOBAL_VALUE, resulting in a
-    ; final offset of 4.
-
     ; CHECK-LABEL: name: add_to_offset
     ; CHECK: liveins: $x0
-    ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 4
-    ; CHECK: $x0 = COPY [[GV]](p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 4
+    ; CHECK-NEXT: $x0 = COPY [[GV]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g + 3
     %offset:_(s64) = G_CONSTANT i64 1
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -68,6 +68,8 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# We're allowed to have more than one G_PTR_ADD use. We should fold 1 into
+# the G_GLOBAL_VALUE's offset.
 ---
 name:            two_ptr_adds_same_offset
 alignment:       4
@@ -77,17 +79,15 @@ body:             |
   bb.0:
     liveins: $x0, $x1
 
-    ; We're allowed to have more than one G_PTR_ADD use. We should fold 1 into
-    ; the G_GLOBAL_VALUE's offset.
-
     ; CHECK-LABEL: name: two_ptr_adds_same_offset
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: %val1:_(s64) = COPY $x0
-    ; CHECK: %val2:_(s64) = COPY $x1
-    ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
-    ; CHECK: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
-    ; CHECK: G_STORE %val2(s64), [[GV]](p0) :: (store (s64))
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %val2:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
+    ; CHECK-NEXT: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
+    ; CHECK-NEXT: G_STORE %val2(s64), [[GV]](p0) :: (store (s64))
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %val1:_(s64) = COPY $x0
     %val2:_(s64) = COPY $x1
     %global:_(p0) = G_GLOBAL_VALUE @g
@@ -99,6 +99,9 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# The lowest offset G_PTR_ADD (2) should be folded into the G_GLOBAL_VALUE.
+#
+# The other G_PTR_ADD should have its offset decremented by 2.
 ---
 name:            two_ptr_adds_different_offset
 alignment:       4
@@ -107,20 +110,18 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1
-    ; The lowest offset G_PTR_ADD (2) should be folded into the G_GLOBAL_VALUE.
-    ;
-    ; The other G_PTR_ADD should have its offset decremented by 2.
 
     ; CHECK-LABEL: name: two_ptr_adds_different_offset
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: %val1:_(s64) = COPY $x0
-    ; CHECK: %val2:_(s64) = COPY $x1
-    ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 2
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: %ptr_add2:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
-    ; CHECK: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
-    ; CHECK: G_STORE %val2(s64), %ptr_add2(p0) :: (store (s64))
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %val2:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: %ptr_add2:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
+    ; CHECK-NEXT: G_STORE %val1(s64), [[GV]](p0) :: (store (s64))
+    ; CHECK-NEXT: G_STORE %val2(s64), %ptr_add2(p0) :: (store (s64))
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %val1:_(s64) = COPY $x0
     %val2:_(s64) = COPY $x1
     %global:_(p0) = G_GLOBAL_VALUE @g
@@ -133,6 +134,11 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# We should be able to fold all of the G_PTR_ADDs, except for the last one
+# into the G_GLOBAL_VALUE.
+#
+# (TypeAllocSize = 4, so the offset on the G_GLOBAL_VALUE can't go above
+# that.)
 ---
 name:            ptr_add_chain
 alignment:       4
@@ -141,19 +147,15 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0
-    ; We should be able to fold all of the G_PTR_ADDs, except for the last one
-    ; into the G_GLOBAL_VALUE.
-    ;
-    ; (TypeAllocSize = 4, so the offset on the G_GLOBAL_VALUE can't go above
-    ; that.)
 
     ; CHECK-LABEL: name: ptr_add_chain
     ; CHECK: liveins: $x0
-    ; CHECK: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; CHECK: %dont_fold_me:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
-    ; CHECK: $x0 = COPY %dont_fold_me(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @g + 1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: %dont_fold_me:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY %dont_fold_me(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
     %offset:_(s64) = G_CONSTANT i64 1
     %ptr_add1:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -165,6 +167,7 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# Do not add negative offsets to G_GLOBAL_VALUE.
 ---
 name:            dont_fold_negative_offset
 alignment:       4
@@ -174,15 +177,14 @@ body:             |
   bb.0:
     liveins: $x0
 
-    ; Do not add negative offsets to G_GLOBAL_VALUE.
-
     ; CHECK-LABEL: name: dont_fold_negative_offset
     ; CHECK: liveins: $x0
-    ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %offset:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
-    ; CHECK: $x0 = COPY %ptr_add(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %global:_(p0) = G_GLOBAL_VALUE @g
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
     %offset:_(s64) = G_CONSTANT i64 -1
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -190,6 +192,7 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# Do not create smaller offsets. Ensures combine termination.
 ---
 name:            dont_min_offset_less_than_curr_offset
 alignment:       4
@@ -199,15 +202,14 @@ body:             |
   bb.0:
     liveins: $x0
 
-    ; Do not create smaller offsets. Ensures combine termination.
-
     ; CHECK-LABEL: name: dont_min_offset_less_than_curr_offset
     ; CHECK: liveins: $x0
-    ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @g + 3
-    ; CHECK: %offset:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
-    ; CHECK: $x0 = COPY %ptr_add(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %global:_(p0) = G_GLOBAL_VALUE @g + 3
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g + 3
     %offset:_(s64) = G_CONSTANT i64 -1
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -215,6 +217,8 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# 1 << 21 is the largest offset expressible in all object formats.
+# Don't fold it.
 ---
 name:            dont_fold_max_offset
 alignment:       4
@@ -224,16 +228,14 @@ body:             |
   bb.0:
     liveins: $x0
 
-    ; 1 << 21 is the largest offset expressible in all object formats.
-    ; Don't fold it.
-
     ; CHECK-LABEL: name: dont_fold_max_offset
     ; CHECK: liveins: $x0
-    ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %offset:_(s64) = G_CONSTANT i64 4292870144
-    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
-    ; CHECK: $x0 = COPY %ptr_add(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %global:_(p0) = G_GLOBAL_VALUE @g
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 4292870144
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
     %offset:_(s64) = G_CONSTANT i64 4292870144 ; 1 << 21
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -241,6 +243,7 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# Type alloc size = 4, offset = 16. Don't fold.
 ---
 name:            dont_fold_offset_larger_than_type_alloc
 alignment:       4
@@ -249,14 +252,12 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
 
-    ; Type alloc size = 4, offset = 16. Don't fold.
-
     ; CHECK-LABEL: name: dont_fold_offset_larger_than_type_alloc
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %offset:_(s64) = G_CONSTANT i64 16
-    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
-    ; CHECK: $x0 = COPY %ptr_add(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @g
     %offset:_(s64) = G_CONSTANT i64 16
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -264,6 +265,7 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# Check that we don't touch unsized globals.
 ---
 name:            dont_fold_unsized_type
 alignment:       4
@@ -271,14 +273,13 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Check that we don't touch unsized globals.
 
     ; CHECK-LABEL: name: dont_fold_unsized_type
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @unsized
-    ; CHECK: %offset:_(s64) = G_CONSTANT i64 16
-    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
-    ; CHECK: $x0 = COPY %ptr_add(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @unsized
     %offset:_(s64) = G_CONSTANT i64 16
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
@@ -286,6 +287,7 @@ body:             |
     RET_ReallyLR implicit $x0
 
 ...
+# Check that we don't touch thread-local globals.
 ---
 name:            dont_fold_thread_local
 alignment:       4
@@ -293,14 +295,13 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Check that we don't touch thread-local globals.
 
     ; CHECK-LABEL: name: dont_fold_thread_local
     ; CHECK: %global:_(p0) = G_GLOBAL_VALUE @thread_local
-    ; CHECK: %offset:_(s64) = G_CONSTANT i64 16
-    ; CHECK: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
-    ; CHECK: $x0 = COPY %ptr_add(p0)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: %offset:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)
+    ; CHECK-NEXT: $x0 = COPY %ptr_add(p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %global:_(p0) = G_GLOBAL_VALUE @thread_local
     %offset:_(s64) = G_CONSTANT i64 16
     %ptr_add:_(p0) = G_PTR_ADD %global, %offset(s64)

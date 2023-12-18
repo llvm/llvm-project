@@ -14,9 +14,9 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class ModfTest : public __llvm_libc::testing::Test {
+template <typename T> class ModfTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -84,17 +84,17 @@ public:
   }
 
   void testRange(ModfFunc func) {
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == T(0.0))
         continue;
 
       T integral;
       T frac = func(x, &integral);
-      ASSERT_TRUE(__llvm_libc::fputil::abs(frac) < 1.0l);
-      ASSERT_TRUE(__llvm_libc::fputil::trunc(x) == integral);
+      ASSERT_TRUE(LIBC_NAMESPACE::fputil::abs(frac) < 1.0l);
+      ASSERT_TRUE(LIBC_NAMESPACE::fputil::trunc(x) == integral);
       ASSERT_TRUE(integral + frac == x);
     }
   }

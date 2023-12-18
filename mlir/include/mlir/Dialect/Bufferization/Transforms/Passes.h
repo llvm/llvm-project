@@ -211,9 +211,6 @@ std::unique_ptr<Pass> createBufferizationBufferizePass();
 // Registration
 //===----------------------------------------------------------------------===//
 
-/// Register external models for AllocationOpInterface.
-void registerAllocationOpInterfaceExternalModels(DialectRegistry &registry);
-
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"

@@ -312,6 +312,10 @@ function(add_compiler_rt_runtime name type)
       set(COMPONENT_OPTION COMPONENT ${libname})
     endif()
 
+    if(type STREQUAL "SHARED")
+      list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
+    endif()
+
     if(type STREQUAL "OBJECT")
       if(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_TARGET)
         list(APPEND extra_cflags_${libname} "--target=${CMAKE_C_COMPILER_TARGET}")
@@ -621,6 +625,8 @@ macro(add_custom_libcxx name prefix)
   set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT Misc")
 
   set(PASSTHROUGH_VARIABLES
+    ANDROID
+    ANDROID_NATIVE_API_LEVEL
     CMAKE_C_COMPILER_TARGET
     CMAKE_CXX_COMPILER_TARGET
     CMAKE_SHARED_LINKER_FLAGS
@@ -637,6 +643,7 @@ macro(add_custom_libcxx name prefix)
     CMAKE_STRIP
     CMAKE_READELF
     CMAKE_SYSROOT
+    CMAKE_TOOLCHAIN_FILE
     LIBCXX_HAS_MUSL_LIBC
     LIBCXX_HAS_GCC_S_LIB
     LIBCXX_HAS_PTHREAD_LIB
@@ -663,6 +670,10 @@ macro(add_custom_libcxx name prefix)
   get_property(CXX_FLAGS CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
   set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} ${CXX_FLAGS}")
 
+  if(CMAKE_VERBOSE_MAKEFILE)
+    set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
@@ -670,6 +681,7 @@ macro(add_custom_libcxx name prefix)
     BINARY_DIR ${prefix}
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
+               ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release

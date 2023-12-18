@@ -14,7 +14,7 @@
 // Check that we ensure `size(r) == Extent`.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
+// UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
 
 #include <span>

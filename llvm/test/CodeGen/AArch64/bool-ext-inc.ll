@@ -29,10 +29,9 @@ define <4 x i32> @zextbool_sub_vector(<4 x i32> %c1, <4 x i32> %c2, <4 x i32> %x
 ;
 ; GISEL-LABEL: zextbool_sub_vector:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI1_0
+; GISEL-NEXT:    movi v3.4s, #1
 ; GISEL-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
+; GISEL-NEXT:    and v0.16b, v0.16b, v3.16b
 ; GISEL-NEXT:    sub v0.4s, v2.4s, v0.4s
 ; GISEL-NEXT:    ret
   %c = icmp eq <4 x i32> %c1, %c2

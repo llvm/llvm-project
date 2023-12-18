@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
-#include "omptargetplugin.h"
+
+#include "Shared/PluginAPI.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <cstdint>
 #include <cstdlib>
 
 using namespace llvm;
@@ -85,8 +88,10 @@ int main(int argc, char **argv) {
   auto *TgtArgOffsetsArray =
       JsonKernelInfo->getAsObject()->getArray("ArgOffsets");
   for (auto It : *TgtArgOffsetsArray)
-    TgtArgOffsets.push_back(
-        reinterpret_cast<ptrdiff_t>(It.getAsInteger().value()));
+    TgtArgOffsets.push_back(static_cast<ptrdiff_t>(It.getAsInteger().value()));
+
+  void *BAllocStart = reinterpret_cast<void *>(
+      JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
 
   __tgt_offload_entry KernelEntry = {nullptr, nullptr, 0, 0, 0};
   std::string KernelEntryName = KernelFunc.value().str();
@@ -126,8 +131,9 @@ int main(int argc, char **argv) {
 
   __tgt_register_lib(&Desc);
 
-  int Rc = __tgt_activate_record_replay(DeviceId, DeviceMemorySize, false,
-                                        VerifyOpt);
+  uint64_t ReqPtrArgOffset = 0;
+  int Rc = __tgt_activate_record_replay(DeviceId, DeviceMemorySize, BAllocStart,
+                                        false, VerifyOpt, ReqPtrArgOffset);
 
   if (Rc != OMP_TGT_SUCCESS) {
     report_fatal_error("Cannot activate record replay\n");
@@ -145,7 +151,19 @@ int main(int argc, char **argv) {
   uint8_t *recored_data = new uint8_t[DeviceMemoryMB.get()->getBufferSize()];
   std::memcpy(recored_data,
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
-              DeviceMemorySizeJson.value() * sizeof(uint8_t));
+              DeviceMemoryMB.get()->getBufferSize());
+
+  // If necessary, adjust pointer arguments.
+  if (ReqPtrArgOffset) {
+    for (auto *&Arg : TgtArgs) {
+      auto ArgInt = uintptr_t(Arg);
+      // Try to find pointer arguments.
+      if (ArgInt < uintptr_t(BAllocStart) ||
+          ArgInt >= uintptr_t(BAllocStart) + DeviceMemorySize)
+        continue;
+      Arg = reinterpret_cast<void *>(ArgInt - ReqPtrArgOffset);
+    }
+  }
 
   __tgt_target_kernel_replay(
       /* Loc */ nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,
@@ -178,10 +196,6 @@ int main(int argc, char **argv) {
   }
 
   delete[] recored_data;
-
-  // TODO: calling unregister lib causes plugin deinit error for nextgen
-  // plugins.
-  //__tgt_unregister_lib(&Desc);
 
   return 0;
 }

@@ -192,7 +192,9 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
   // - in addition, if new Nodes were created by a pass (e.g. CoroSplit),
   // they'd be adjacent to Nodes in the last SCC. So we just need to check the
   // boundary of Nodes in NodesInLastSCC for Nodes we haven't seen. We don't
-  // care about the nature of the Edge (call or ref).
+  // care about the nature of the Edge (call or ref). `FunctionLevels`-wise, we
+  // record them at the same level as the original node (this is a choice, may
+  // need revisiting).
   NodeCount -= static_cast<int64_t>(NodesInLastSCC.size());
   while (!NodesInLastSCC.empty()) {
     const auto *N = *NodesInLastSCC.begin();
@@ -204,12 +206,15 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
     }
     ++NodeCount;
     EdgeCount += getLocalCalls(N->getFunction());
+    const auto NLevel = FunctionLevels.at(N);
     for (const auto &E : *(*N)) {
       const auto *AdjNode = &E.getNode();
       assert(!AdjNode->isDead() && !AdjNode->getFunction().isDeclaration());
       auto I = AllNodes.insert(AdjNode);
-      if (I.second)
+      if (I.second) {
         NodesInLastSCC.insert(AdjNode);
+        FunctionLevels[AdjNode] = NLevel;
+      }
     }
   }
 
@@ -460,6 +465,12 @@ void MLInlineAdvisor::print(raw_ostream &OS) const {
     I.second.print(OS);
     OS << "\n";
   }
+  OS << "\n";
+  OS << "[MLInlineAdvisor] FuncLevels:\n";
+  for (auto I : FunctionLevels)
+    OS << (I.first->isDead() ? "<deleted>" : I.first->getFunction().getName())
+       << " : " << I.second << "\n";
+
   OS << "\n";
 }
 

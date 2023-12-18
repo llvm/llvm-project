@@ -12,4 +12,5 @@
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_DIFF(double, __llvm_libc::fmod, ::fmod, "fmod_diff.log")
+BINARY_OP_SINGLE_OUTPUT_DIFF(double, LIBC_NAMESPACE::fmod, ::fmod,
+                             "fmod_diff.log")

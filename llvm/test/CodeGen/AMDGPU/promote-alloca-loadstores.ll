@@ -43,9 +43,11 @@ define <4 x i64> @test_fullvec_out_of_bounds(<4 x i64> %arg) {
 ; CHECK-SAME: (<4 x i64> [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> <i64 undef, i64 poison, i64 poison, i64 poison>, i64 [[TMP0]], i64 1
-; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[ARG]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[ARG]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[ARG]], i64 3
+; CHECK-NEXT:    ret <4 x i64> poison
 ;
 entry:
   %stack = alloca [4 x i64], align 4, addrspace(5)
@@ -97,9 +99,7 @@ define ptr @alloca_load_store_ptr64_full_ivec(ptr %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARG]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <8 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; CHECK-NEXT:    ret ptr [[TMP3]]
+; CHECK-NEXT:    ret ptr [[ARG]]
 ;
 entry:
   %alloca = alloca [8 x i8], align 8, addrspace(5)
@@ -114,9 +114,7 @@ define ptr addrspace(3) @alloca_load_store_ptr32_full_ivec(ptr addrspace(3) %arg
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(3) [[ARG]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
-; CHECK-NEXT:    ret ptr addrspace(3) [[TMP3]]
+; CHECK-NEXT:    ret ptr addrspace(3) [[ARG]]
 ;
 entry:
   %alloca = alloca [4 x i8], align 8, addrspace(5)
@@ -147,9 +145,8 @@ define <8 x i16> @ptralloca_load_store_ints_full(<2 x i64> %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[ARG]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr <4 x i32> [[TMP0]] to <4 x ptr addrspace(5)>
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x ptr addrspace(5)> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <8 x i16>
-; CHECK-NEXT:    ret <8 x i16> [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP0]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
 entry:
   %stack = alloca [4 x ptr addrspace(5)], align 4, addrspace(5)
@@ -164,9 +161,9 @@ define void @alloca_load_store_ptr_mixed_ptrvec(<2 x ptr addrspace(3)> %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[ARG]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x ptr addrspace(3)>

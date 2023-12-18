@@ -23,8 +23,8 @@ using namespace CodeGen;
 
 namespace {
 llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
-  llvm::Type *ArgTypes[] = {llvm::Type::getInt8PtrTy(M.getContext()),
-                            llvm::Type::getInt8PtrTy(M.getContext())};
+  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(M.getContext()),
+                            llvm::PointerType::getUnqual(M.getContext())};
   llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
       llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
 
@@ -45,8 +45,8 @@ llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
 llvm::Function *GetOpenMPVprintfDeclaration(CodeGenModule &CGM) {
   const char *Name = "__llvm_omp_vprintf";
   llvm::Module &M = CGM.getModule();
-  llvm::Type *ArgTypes[] = {llvm::Type::getInt8PtrTy(M.getContext()),
-                            llvm::Type::getInt8PtrTy(M.getContext()),
+  llvm::Type *ArgTypes[] = {llvm::PointerType::getUnqual(M.getContext()),
+                            llvm::PointerType::getUnqual(M.getContext()),
                             llvm::Type::getInt32Ty(M.getContext())};
   llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
       llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
@@ -99,8 +99,9 @@ packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
   // Construct and fill the args buffer that we'll pass to vprintf.
   if (Args.size() <= 1) {
     // If there are no args, pass a null pointer and size 0
-    llvm::Value * BufferPtr = llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(Ctx));
-    return {BufferPtr, llvm::TypeSize::Fixed(0)};
+    llvm::Value *BufferPtr =
+        llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx));
+    return {BufferPtr, llvm::TypeSize::getFixed(0)};
   } else {
     llvm::SmallVector<llvm::Type *, 8> ArgTypes;
     for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I)
@@ -120,7 +121,7 @@ packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
       Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlign(Arg->getType()));
     }
     llvm::Value *BufferPtr =
-        Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
+        Builder.CreatePointerCast(Alloca, llvm::PointerType::getUnqual(Ctx));
     return {BufferPtr, DL.getTypeAllocSize(AllocaTy)};
   }
 }

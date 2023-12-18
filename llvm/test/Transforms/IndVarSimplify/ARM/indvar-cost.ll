@@ -13,6 +13,9 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T1-NEXT:    [[CMP41080:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-T1-NEXT:    br i1 [[CMP41080]], label [[WHILE_END13:%.*]], label [[WHILE_COND5_PREHEADER_PREHEADER:%.*]]
 ; CHECK-T1:       while.cond5.preheader.preheader:
+; CHECK-T1-NEXT:    [[TMP0:%.*]] = add i32 [[SRCALEN_SRCBLEN]], -2
+; CHECK-T1-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 2)
+; CHECK-T1-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[UMIN]], 2
 ; CHECK-T1-NEXT:    br label [[WHILE_COND5_PREHEADER:%.*]]
 ; CHECK-T1:       while.cond5.preheader:
 ; CHECK-T1-NEXT:    [[COUNT_01084:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_END:%.*]] ], [ 1, [[WHILE_COND5_PREHEADER_PREHEADER]] ]
@@ -26,11 +29,11 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T1-NEXT:    [[PY_11076:%.*]] = phi ptr [ [[INCDEC_PTR8:%.*]], [[WHILE_BODY7]] ], [ [[PY_01082]], [[WHILE_COND5_PREHEADER]] ]
 ; CHECK-T1-NEXT:    [[PX_11075:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY7]] ], [ [[PSRCB_PSRCA]], [[WHILE_COND5_PREHEADER]] ]
 ; CHECK-T1-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i16, ptr [[PX_11075]], i32 1
-; CHECK-T1-NEXT:    [[TMP0:%.*]] = load i16, ptr [[PX_11075]], align 2
-; CHECK-T1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
+; CHECK-T1-NEXT:    [[TMP2:%.*]] = load i16, ptr [[PX_11075]], align 2
+; CHECK-T1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-T1-NEXT:    [[INCDEC_PTR8]] = getelementptr inbounds i16, ptr [[PY_11076]], i32 -1
-; CHECK-T1-NEXT:    [[TMP1:%.*]] = load i16, ptr [[PY_11076]], align 2
-; CHECK-T1-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
+; CHECK-T1-NEXT:    [[TMP3:%.*]] = load i16, ptr [[PY_11076]], align 2
+; CHECK-T1-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-T1-NEXT:    [[MUL_I:%.*]] = mul nsw i32 [[CONV9]], [[CONV]]
 ; CHECK-T1-NEXT:    [[SHR3_I:%.*]] = ashr i32 [[CONV]], 16
 ; CHECK-T1-NEXT:    [[SHR4_I:%.*]] = ashr i32 [[CONV9]], 16
@@ -42,17 +45,15 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T1-NEXT:    br i1 [[CMP6]], label [[WHILE_END]], label [[WHILE_BODY7]]
 ; CHECK-T1:       while.end:
 ; CHECK-T1-NEXT:    [[ADD6_I_LCSSA:%.*]] = phi i32 [ [[ADD6_I]], [[WHILE_BODY7]] ]
-; CHECK-T1-NEXT:    [[TMP2:%.*]] = lshr i32 [[ADD6_I_LCSSA]], 15
-; CHECK-T1-NEXT:    [[CONV10:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-T1-NEXT:    [[TMP4:%.*]] = lshr i32 [[ADD6_I_LCSSA]], 15
+; CHECK-T1-NEXT:    [[CONV10:%.*]] = trunc i32 [[TMP4]] to i16
 ; CHECK-T1-NEXT:    [[INCDEC_PTR11]] = getelementptr inbounds i16, ptr [[POUT_01081]], i32 1
 ; CHECK-T1-NEXT:    store i16 [[CONV10]], ptr [[POUT_01081]], align 2
 ; CHECK-T1-NEXT:    [[ADD_PTR]] = getelementptr inbounds i16, ptr [[PSRCA_PSRCB]], i32 [[COUNT_01084]]
 ; CHECK-T1-NEXT:    [[INC]] = add nuw nsw i32 [[COUNT_01084]], 1
 ; CHECK-T1-NEXT:    [[DEC12]] = add i32 [[BLOCKSIZE1_01083]], -1
-; CHECK-T1-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[COUNT_01084]], 3
-; CHECK-T1-NEXT:    [[CMP4:%.*]] = icmp ne i32 [[DEC12]], 0
-; CHECK-T1-NEXT:    [[TMP3:%.*]] = and i1 [[CMP4]], [[CMP3]]
-; CHECK-T1-NEXT:    br i1 [[TMP3]], label [[WHILE_COND5_PREHEADER]], label [[WHILE_END13_LOOPEXIT:%.*]]
+; CHECK-T1-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[TMP1]]
+; CHECK-T1-NEXT:    br i1 [[EXITCOND]], label [[WHILE_COND5_PREHEADER]], label [[WHILE_END13_LOOPEXIT:%.*]]
 ; CHECK-T1:       while.end13.loopexit:
 ; CHECK-T1-NEXT:    [[INCDEC_PTR11_LCSSA:%.*]] = phi ptr [ [[INCDEC_PTR11]], [[WHILE_END]] ]
 ; CHECK-T1-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR]], [[WHILE_END]] ]
@@ -85,34 +86,34 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T1-NEXT:    [[PY_31056:%.*]] = phi ptr [ [[ADD_PTR_I884:%.*]], [[WHILE_BODY23]] ], [ [[PY_21070]], [[WHILE_BODY23_PREHEADER]] ]
 ; CHECK-T1-NEXT:    [[PX_31055:%.*]] = phi ptr [ [[ADD_PTR_I890:%.*]], [[WHILE_BODY23]] ], [ [[PSRCB_PSRCA]], [[WHILE_BODY23_PREHEADER]] ]
 ; CHECK-T1-NEXT:    [[ARRAYIDX_I907:%.*]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 1
-; CHECK-T1-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_I907]], align 2
-; CHECK-T1-NEXT:    [[TMP5:%.*]] = load i16, ptr [[PX_31055]], align 2
+; CHECK-T1-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX_I907]], align 2
+; CHECK-T1-NEXT:    [[TMP6:%.*]] = load i16, ptr [[PX_31055]], align 2
 ; CHECK-T1-NEXT:    [[ADD_PTR_I912:%.*]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 2
 ; CHECK-T1-NEXT:    [[ARRAYIDX_I901:%.*]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 1
-; CHECK-T1-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX_I901]], align 2
-; CHECK-T1-NEXT:    [[TMP7:%.*]] = load i16, ptr [[PY_31056]], align 2
+; CHECK-T1-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX_I901]], align 2
+; CHECK-T1-NEXT:    [[TMP8:%.*]] = load i16, ptr [[PY_31056]], align 2
 ; CHECK-T1-NEXT:    [[ADD_PTR_I906:%.*]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 -2
-; CHECK-T1-NEXT:    [[SHR_I892:%.*]] = sext i16 [[TMP5]] to i32
-; CHECK-T1-NEXT:    [[SHR1_I893:%.*]] = sext i16 [[TMP6]] to i32
+; CHECK-T1-NEXT:    [[SHR_I892:%.*]] = sext i16 [[TMP6]] to i32
+; CHECK-T1-NEXT:    [[SHR1_I893:%.*]] = sext i16 [[TMP7]] to i32
 ; CHECK-T1-NEXT:    [[MUL_I894:%.*]] = mul nsw i32 [[SHR1_I893]], [[SHR_I892]]
-; CHECK-T1-NEXT:    [[SHR2_I895:%.*]] = sext i16 [[TMP4]] to i32
-; CHECK-T1-NEXT:    [[SHR4_I897:%.*]] = sext i16 [[TMP7]] to i32
+; CHECK-T1-NEXT:    [[SHR2_I895:%.*]] = sext i16 [[TMP5]] to i32
+; CHECK-T1-NEXT:    [[SHR4_I897:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-T1-NEXT:    [[MUL5_I898:%.*]] = mul nsw i32 [[SHR4_I897]], [[SHR2_I895]]
 ; CHECK-T1-NEXT:    [[ADD_I899:%.*]] = add i32 [[MUL_I894]], [[SUM_11057]]
 ; CHECK-T1-NEXT:    [[ADD6_I900:%.*]] = add i32 [[ADD_I899]], [[MUL5_I898]]
 ; CHECK-T1-NEXT:    [[ARRAYIDX_I885:%.*]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 3
-; CHECK-T1-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX_I885]], align 2
-; CHECK-T1-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ADD_PTR_I912]], align 2
+; CHECK-T1-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX_I885]], align 2
+; CHECK-T1-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ADD_PTR_I912]], align 2
 ; CHECK-T1-NEXT:    [[ADD_PTR_I890]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 4
 ; CHECK-T1-NEXT:    [[ARRAYIDX_I879:%.*]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 -1
-; CHECK-T1-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX_I879]], align 2
-; CHECK-T1-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ADD_PTR_I906]], align 2
+; CHECK-T1-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ARRAYIDX_I879]], align 2
+; CHECK-T1-NEXT:    [[TMP12:%.*]] = load i16, ptr [[ADD_PTR_I906]], align 2
 ; CHECK-T1-NEXT:    [[ADD_PTR_I884]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 -4
-; CHECK-T1-NEXT:    [[SHR_I870:%.*]] = sext i16 [[TMP9]] to i32
-; CHECK-T1-NEXT:    [[SHR1_I871:%.*]] = sext i16 [[TMP10]] to i32
+; CHECK-T1-NEXT:    [[SHR_I870:%.*]] = sext i16 [[TMP10]] to i32
+; CHECK-T1-NEXT:    [[SHR1_I871:%.*]] = sext i16 [[TMP11]] to i32
 ; CHECK-T1-NEXT:    [[MUL_I872:%.*]] = mul nsw i32 [[SHR1_I871]], [[SHR_I870]]
-; CHECK-T1-NEXT:    [[SHR2_I873:%.*]] = sext i16 [[TMP8]] to i32
-; CHECK-T1-NEXT:    [[SHR4_I875:%.*]] = sext i16 [[TMP11]] to i32
+; CHECK-T1-NEXT:    [[SHR2_I873:%.*]] = sext i16 [[TMP9]] to i32
+; CHECK-T1-NEXT:    [[SHR4_I875:%.*]] = sext i16 [[TMP12]] to i32
 ; CHECK-T1-NEXT:    [[MUL5_I876:%.*]] = mul nsw i32 [[SHR4_I875]], [[SHR2_I873]]
 ; CHECK-T1-NEXT:    [[ADD_I877:%.*]] = add i32 [[ADD6_I900]], [[MUL_I872]]
 ; CHECK-T1-NEXT:    [[ADD6_I878]] = add i32 [[ADD_I877]], [[MUL5_I876]]
@@ -140,11 +141,11 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T1-NEXT:    [[PY_41064:%.*]] = phi ptr [ [[INCDEC_PTR39:%.*]], [[WHILE_BODY36]] ], [ [[ADD_PTR32]], [[WHILE_BODY36_PREHEADER]] ]
 ; CHECK-T1-NEXT:    [[PX_41063:%.*]] = phi ptr [ [[INCDEC_PTR37:%.*]], [[WHILE_BODY36]] ], [ [[PX_3_LCSSA]], [[WHILE_BODY36_PREHEADER]] ]
 ; CHECK-T1-NEXT:    [[INCDEC_PTR37]] = getelementptr inbounds i16, ptr [[PX_41063]], i32 1
-; CHECK-T1-NEXT:    [[TMP12:%.*]] = load i16, ptr [[PX_41063]], align 2
-; CHECK-T1-NEXT:    [[CONV38:%.*]] = sext i16 [[TMP12]] to i32
+; CHECK-T1-NEXT:    [[TMP13:%.*]] = load i16, ptr [[PX_41063]], align 2
+; CHECK-T1-NEXT:    [[CONV38:%.*]] = sext i16 [[TMP13]] to i32
 ; CHECK-T1-NEXT:    [[INCDEC_PTR39]] = getelementptr inbounds i16, ptr [[PY_41064]], i32 -1
-; CHECK-T1-NEXT:    [[TMP13:%.*]] = load i16, ptr [[PY_41064]], align 2
-; CHECK-T1-NEXT:    [[CONV40:%.*]] = sext i16 [[TMP13]] to i32
+; CHECK-T1-NEXT:    [[TMP14:%.*]] = load i16, ptr [[PY_41064]], align 2
+; CHECK-T1-NEXT:    [[CONV40:%.*]] = sext i16 [[TMP14]] to i32
 ; CHECK-T1-NEXT:    [[MUL_I863:%.*]] = mul nsw i32 [[CONV40]], [[CONV38]]
 ; CHECK-T1-NEXT:    [[SHR3_I864:%.*]] = ashr i32 [[CONV38]], 16
 ; CHECK-T1-NEXT:    [[SHR4_I865:%.*]] = ashr i32 [[CONV40]], 16
@@ -159,8 +160,8 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T1-NEXT:    br label [[WHILE_END43]]
 ; CHECK-T1:       while.end43:
 ; CHECK-T1-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[SUM_1_LCSSA]], [[WHILE_END31]] ], [ [[ADD6_I868_LCSSA]], [[WHILE_END43_LOOPEXIT]] ]
-; CHECK-T1-NEXT:    [[TMP14:%.*]] = lshr i32 [[SUM_2_LCSSA]], 15
-; CHECK-T1-NEXT:    [[CONV45:%.*]] = trunc i32 [[TMP14]] to i16
+; CHECK-T1-NEXT:    [[TMP15:%.*]] = lshr i32 [[SUM_2_LCSSA]], 15
+; CHECK-T1-NEXT:    [[CONV45:%.*]] = trunc i32 [[TMP15]] to i16
 ; CHECK-T1-NEXT:    [[INCDEC_PTR46]] = getelementptr inbounds i16, ptr [[POUT_11069]], i32 1
 ; CHECK-T1-NEXT:    store i16 [[CONV45]], ptr [[POUT_11069]], align 2
 ; CHECK-T1-NEXT:    [[SUB47:%.*]] = add i32 [[COUNT_11072]], -1
@@ -184,6 +185,9 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T2-NEXT:    [[CMP41080:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-T2-NEXT:    br i1 [[CMP41080]], label [[WHILE_END13:%.*]], label [[WHILE_COND5_PREHEADER_PREHEADER:%.*]]
 ; CHECK-T2:       while.cond5.preheader.preheader:
+; CHECK-T2-NEXT:    [[TMP0:%.*]] = add i32 [[SRCALEN_SRCBLEN]], -2
+; CHECK-T2-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 2)
+; CHECK-T2-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[UMIN]], 2
 ; CHECK-T2-NEXT:    br label [[WHILE_COND5_PREHEADER:%.*]]
 ; CHECK-T2:       while.cond5.preheader:
 ; CHECK-T2-NEXT:    [[COUNT_01084:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_END:%.*]] ], [ 1, [[WHILE_COND5_PREHEADER_PREHEADER]] ]
@@ -197,11 +201,11 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T2-NEXT:    [[PY_11076:%.*]] = phi ptr [ [[INCDEC_PTR8:%.*]], [[WHILE_BODY7]] ], [ [[PY_01082]], [[WHILE_COND5_PREHEADER]] ]
 ; CHECK-T2-NEXT:    [[PX_11075:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY7]] ], [ [[PSRCB_PSRCA]], [[WHILE_COND5_PREHEADER]] ]
 ; CHECK-T2-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i16, ptr [[PX_11075]], i32 1
-; CHECK-T2-NEXT:    [[TMP0:%.*]] = load i16, ptr [[PX_11075]], align 2
-; CHECK-T2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
+; CHECK-T2-NEXT:    [[TMP2:%.*]] = load i16, ptr [[PX_11075]], align 2
+; CHECK-T2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-T2-NEXT:    [[INCDEC_PTR8]] = getelementptr inbounds i16, ptr [[PY_11076]], i32 -1
-; CHECK-T2-NEXT:    [[TMP1:%.*]] = load i16, ptr [[PY_11076]], align 2
-; CHECK-T2-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP1]] to i32
+; CHECK-T2-NEXT:    [[TMP3:%.*]] = load i16, ptr [[PY_11076]], align 2
+; CHECK-T2-NEXT:    [[CONV9:%.*]] = sext i16 [[TMP3]] to i32
 ; CHECK-T2-NEXT:    [[MUL_I:%.*]] = mul nsw i32 [[CONV9]], [[CONV]]
 ; CHECK-T2-NEXT:    [[SHR3_I:%.*]] = ashr i32 [[CONV]], 16
 ; CHECK-T2-NEXT:    [[SHR4_I:%.*]] = ashr i32 [[CONV9]], 16
@@ -213,17 +217,15 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T2-NEXT:    br i1 [[CMP6]], label [[WHILE_END]], label [[WHILE_BODY7]]
 ; CHECK-T2:       while.end:
 ; CHECK-T2-NEXT:    [[ADD6_I_LCSSA:%.*]] = phi i32 [ [[ADD6_I]], [[WHILE_BODY7]] ]
-; CHECK-T2-NEXT:    [[TMP2:%.*]] = lshr i32 [[ADD6_I_LCSSA]], 15
-; CHECK-T2-NEXT:    [[CONV10:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-T2-NEXT:    [[TMP4:%.*]] = lshr i32 [[ADD6_I_LCSSA]], 15
+; CHECK-T2-NEXT:    [[CONV10:%.*]] = trunc i32 [[TMP4]] to i16
 ; CHECK-T2-NEXT:    [[INCDEC_PTR11]] = getelementptr inbounds i16, ptr [[POUT_01081]], i32 1
 ; CHECK-T2-NEXT:    store i16 [[CONV10]], ptr [[POUT_01081]], align 2
 ; CHECK-T2-NEXT:    [[ADD_PTR]] = getelementptr inbounds i16, ptr [[PSRCA_PSRCB]], i32 [[COUNT_01084]]
 ; CHECK-T2-NEXT:    [[INC]] = add nuw nsw i32 [[COUNT_01084]], 1
 ; CHECK-T2-NEXT:    [[DEC12]] = add i32 [[BLOCKSIZE1_01083]], -1
-; CHECK-T2-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[COUNT_01084]], 3
-; CHECK-T2-NEXT:    [[CMP4:%.*]] = icmp ne i32 [[DEC12]], 0
-; CHECK-T2-NEXT:    [[TMP3:%.*]] = and i1 [[CMP4]], [[CMP3]]
-; CHECK-T2-NEXT:    br i1 [[TMP3]], label [[WHILE_COND5_PREHEADER]], label [[WHILE_END13_LOOPEXIT:%.*]]
+; CHECK-T2-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[TMP1]]
+; CHECK-T2-NEXT:    br i1 [[EXITCOND]], label [[WHILE_COND5_PREHEADER]], label [[WHILE_END13_LOOPEXIT:%.*]]
 ; CHECK-T2:       while.end13.loopexit:
 ; CHECK-T2-NEXT:    [[INCDEC_PTR11_LCSSA:%.*]] = phi ptr [ [[INCDEC_PTR11]], [[WHILE_END]] ]
 ; CHECK-T2-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR]], [[WHILE_END]] ]
@@ -256,34 +258,34 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T2-NEXT:    [[PY_31056:%.*]] = phi ptr [ [[ADD_PTR_I884:%.*]], [[WHILE_BODY23]] ], [ [[PY_21070]], [[WHILE_BODY23_PREHEADER]] ]
 ; CHECK-T2-NEXT:    [[PX_31055:%.*]] = phi ptr [ [[ADD_PTR_I890:%.*]], [[WHILE_BODY23]] ], [ [[PSRCB_PSRCA]], [[WHILE_BODY23_PREHEADER]] ]
 ; CHECK-T2-NEXT:    [[ARRAYIDX_I907:%.*]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 1
-; CHECK-T2-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_I907]], align 2
-; CHECK-T2-NEXT:    [[TMP5:%.*]] = load i16, ptr [[PX_31055]], align 2
+; CHECK-T2-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX_I907]], align 2
+; CHECK-T2-NEXT:    [[TMP6:%.*]] = load i16, ptr [[PX_31055]], align 2
 ; CHECK-T2-NEXT:    [[ADD_PTR_I912:%.*]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 2
 ; CHECK-T2-NEXT:    [[ARRAYIDX_I901:%.*]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 1
-; CHECK-T2-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX_I901]], align 2
-; CHECK-T2-NEXT:    [[TMP7:%.*]] = load i16, ptr [[PY_31056]], align 2
+; CHECK-T2-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX_I901]], align 2
+; CHECK-T2-NEXT:    [[TMP8:%.*]] = load i16, ptr [[PY_31056]], align 2
 ; CHECK-T2-NEXT:    [[ADD_PTR_I906:%.*]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 -2
-; CHECK-T2-NEXT:    [[SHR_I892:%.*]] = sext i16 [[TMP5]] to i32
-; CHECK-T2-NEXT:    [[SHR1_I893:%.*]] = sext i16 [[TMP6]] to i32
+; CHECK-T2-NEXT:    [[SHR_I892:%.*]] = sext i16 [[TMP6]] to i32
+; CHECK-T2-NEXT:    [[SHR1_I893:%.*]] = sext i16 [[TMP7]] to i32
 ; CHECK-T2-NEXT:    [[MUL_I894:%.*]] = mul nsw i32 [[SHR1_I893]], [[SHR_I892]]
-; CHECK-T2-NEXT:    [[SHR2_I895:%.*]] = sext i16 [[TMP4]] to i32
-; CHECK-T2-NEXT:    [[SHR4_I897:%.*]] = sext i16 [[TMP7]] to i32
+; CHECK-T2-NEXT:    [[SHR2_I895:%.*]] = sext i16 [[TMP5]] to i32
+; CHECK-T2-NEXT:    [[SHR4_I897:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-T2-NEXT:    [[MUL5_I898:%.*]] = mul nsw i32 [[SHR4_I897]], [[SHR2_I895]]
 ; CHECK-T2-NEXT:    [[ADD_I899:%.*]] = add i32 [[MUL_I894]], [[SUM_11057]]
 ; CHECK-T2-NEXT:    [[ADD6_I900:%.*]] = add i32 [[ADD_I899]], [[MUL5_I898]]
 ; CHECK-T2-NEXT:    [[ARRAYIDX_I885:%.*]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 3
-; CHECK-T2-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX_I885]], align 2
-; CHECK-T2-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ADD_PTR_I912]], align 2
+; CHECK-T2-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX_I885]], align 2
+; CHECK-T2-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ADD_PTR_I912]], align 2
 ; CHECK-T2-NEXT:    [[ADD_PTR_I890]] = getelementptr inbounds i16, ptr [[PX_31055]], i32 4
 ; CHECK-T2-NEXT:    [[ARRAYIDX_I879:%.*]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 -1
-; CHECK-T2-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX_I879]], align 2
-; CHECK-T2-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ADD_PTR_I906]], align 2
+; CHECK-T2-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ARRAYIDX_I879]], align 2
+; CHECK-T2-NEXT:    [[TMP12:%.*]] = load i16, ptr [[ADD_PTR_I906]], align 2
 ; CHECK-T2-NEXT:    [[ADD_PTR_I884]] = getelementptr inbounds i16, ptr [[PY_31056]], i32 -4
-; CHECK-T2-NEXT:    [[SHR_I870:%.*]] = sext i16 [[TMP9]] to i32
-; CHECK-T2-NEXT:    [[SHR1_I871:%.*]] = sext i16 [[TMP10]] to i32
+; CHECK-T2-NEXT:    [[SHR_I870:%.*]] = sext i16 [[TMP10]] to i32
+; CHECK-T2-NEXT:    [[SHR1_I871:%.*]] = sext i16 [[TMP11]] to i32
 ; CHECK-T2-NEXT:    [[MUL_I872:%.*]] = mul nsw i32 [[SHR1_I871]], [[SHR_I870]]
-; CHECK-T2-NEXT:    [[SHR2_I873:%.*]] = sext i16 [[TMP8]] to i32
-; CHECK-T2-NEXT:    [[SHR4_I875:%.*]] = sext i16 [[TMP11]] to i32
+; CHECK-T2-NEXT:    [[SHR2_I873:%.*]] = sext i16 [[TMP9]] to i32
+; CHECK-T2-NEXT:    [[SHR4_I875:%.*]] = sext i16 [[TMP12]] to i32
 ; CHECK-T2-NEXT:    [[MUL5_I876:%.*]] = mul nsw i32 [[SHR4_I875]], [[SHR2_I873]]
 ; CHECK-T2-NEXT:    [[ADD_I877:%.*]] = add i32 [[ADD6_I900]], [[MUL_I872]]
 ; CHECK-T2-NEXT:    [[ADD6_I878]] = add i32 [[ADD_I877]], [[MUL5_I876]]
@@ -311,11 +313,11 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T2-NEXT:    [[PY_41064:%.*]] = phi ptr [ [[INCDEC_PTR39:%.*]], [[WHILE_BODY36]] ], [ [[ADD_PTR32]], [[WHILE_BODY36_PREHEADER]] ]
 ; CHECK-T2-NEXT:    [[PX_41063:%.*]] = phi ptr [ [[INCDEC_PTR37:%.*]], [[WHILE_BODY36]] ], [ [[PX_3_LCSSA]], [[WHILE_BODY36_PREHEADER]] ]
 ; CHECK-T2-NEXT:    [[INCDEC_PTR37]] = getelementptr inbounds i16, ptr [[PX_41063]], i32 1
-; CHECK-T2-NEXT:    [[TMP12:%.*]] = load i16, ptr [[PX_41063]], align 2
-; CHECK-T2-NEXT:    [[CONV38:%.*]] = sext i16 [[TMP12]] to i32
+; CHECK-T2-NEXT:    [[TMP13:%.*]] = load i16, ptr [[PX_41063]], align 2
+; CHECK-T2-NEXT:    [[CONV38:%.*]] = sext i16 [[TMP13]] to i32
 ; CHECK-T2-NEXT:    [[INCDEC_PTR39]] = getelementptr inbounds i16, ptr [[PY_41064]], i32 -1
-; CHECK-T2-NEXT:    [[TMP13:%.*]] = load i16, ptr [[PY_41064]], align 2
-; CHECK-T2-NEXT:    [[CONV40:%.*]] = sext i16 [[TMP13]] to i32
+; CHECK-T2-NEXT:    [[TMP14:%.*]] = load i16, ptr [[PY_41064]], align 2
+; CHECK-T2-NEXT:    [[CONV40:%.*]] = sext i16 [[TMP14]] to i32
 ; CHECK-T2-NEXT:    [[MUL_I863:%.*]] = mul nsw i32 [[CONV40]], [[CONV38]]
 ; CHECK-T2-NEXT:    [[SHR3_I864:%.*]] = ashr i32 [[CONV38]], 16
 ; CHECK-T2-NEXT:    [[SHR4_I865:%.*]] = ashr i32 [[CONV40]], 16
@@ -330,8 +332,8 @@ define dso_local arm_aapcscc void @arm_conv_fast_q15(ptr %pSrcA, i32 %srcALen, p
 ; CHECK-T2-NEXT:    br label [[WHILE_END43]]
 ; CHECK-T2:       while.end43:
 ; CHECK-T2-NEXT:    [[SUM_2_LCSSA:%.*]] = phi i32 [ [[SUM_1_LCSSA]], [[WHILE_END31]] ], [ [[ADD6_I868_LCSSA]], [[WHILE_END43_LOOPEXIT]] ]
-; CHECK-T2-NEXT:    [[TMP14:%.*]] = lshr i32 [[SUM_2_LCSSA]], 15
-; CHECK-T2-NEXT:    [[CONV45:%.*]] = trunc i32 [[TMP14]] to i16
+; CHECK-T2-NEXT:    [[TMP15:%.*]] = lshr i32 [[SUM_2_LCSSA]], 15
+; CHECK-T2-NEXT:    [[CONV45:%.*]] = trunc i32 [[TMP15]] to i16
 ; CHECK-T2-NEXT:    [[INCDEC_PTR46]] = getelementptr inbounds i16, ptr [[POUT_11069]], i32 1
 ; CHECK-T2-NEXT:    store i16 [[CONV45]], ptr [[POUT_11069]], align 2
 ; CHECK-T2-NEXT:    [[SUB47:%.*]] = add i32 [[COUNT_11072]], -1

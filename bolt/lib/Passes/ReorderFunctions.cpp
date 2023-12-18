@@ -42,7 +42,7 @@ cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
                           "use hfsort algorithm"),
                clEnumValN(bolt::ReorderFunctions::RT_HFSORT_PLUS, "hfsort+",
                           "use hfsort+ algorithm"),
-               clEnumValN(bolt::ReorderFunctions::RT_CDS, "cds",
+               clEnumValN(bolt::ReorderFunctions::RT_CDSORT, "cdsort",
                           "use cache-directed sort"),
                clEnumValN(bolt::ReorderFunctions::RT_PETTIS_HANSEN,
                           "pettis-hansen", "use Pettis-Hansen algorithm"),
@@ -322,7 +322,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_HFSORT_PLUS:
     Clusters = hfsortPlus(Cg);
     break;
-  case RT_CDS: {
+  case RT_CDSORT: {
     // It is required that the sum of incoming arc weights is not greater
     // than the number of samples for every function. Ensuring the call graph
     // obeys the property before running the algorithm.
@@ -331,23 +331,21 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     // Initialize CFG nodes and their data
     std::vector<uint64_t> FuncSizes;
     std::vector<uint64_t> FuncCounts;
-    using JumpT = std::pair<uint64_t, uint64_t>;
-    std::vector<std::pair<JumpT, uint64_t>> CallCounts;
+    std::vector<codelayout::EdgeCount> CallCounts;
     std::vector<uint64_t> CallOffsets;
     for (NodeId F = 0; F < Cg.numNodes(); ++F) {
       FuncSizes.push_back(Cg.size(F));
       FuncCounts.push_back(Cg.samples(F));
       for (NodeId Succ : Cg.successors(F)) {
         const Arc &Arc = *Cg.findArc(F, Succ);
-        auto It = std::make_pair(F, Succ);
-        CallCounts.push_back(std::make_pair(It, Arc.weight()));
+        CallCounts.push_back({F, Succ, uint64_t(Arc.weight())});
         CallOffsets.push_back(uint64_t(Arc.avgCallOffset()));
       }
     }
 
     // Run the layout algorithm.
-    std::vector<uint64_t> Result =
-        applyCDSLayout(FuncSizes, FuncCounts, CallCounts, CallOffsets);
+    std::vector<uint64_t> Result = codelayout::computeCacheDirectedLayout(
+        FuncSizes, FuncCounts, CallCounts, CallOffsets);
 
     // Create a single cluster from the computed order of hot functions.
     std::vector<CallGraph::NodeId> NodeOrder(Result.begin(), Result.end());
@@ -428,6 +426,8 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   }
 
   reorder(std::move(Clusters), BFs);
+
+  BC.HasFinalizedFunctionOrder = true;
 
   std::unique_ptr<std::ofstream> FuncsFile;
   if (!opts::GenerateFunctionOrderFile.empty()) {

@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 # Undef uses are illegal for generic vregs.

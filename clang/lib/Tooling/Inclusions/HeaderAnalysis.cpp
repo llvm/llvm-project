@@ -21,7 +21,7 @@ bool isIf(llvm::StringRef Line) {
   if (!Line.consume_front("#"))
     return false;
   Line = Line.ltrim();
-  return Line.startswith("if");
+  return Line.starts_with("if");
 }
 
 // Is Line an #error directive mentioning includes?
@@ -30,7 +30,7 @@ bool isErrorAboutInclude(llvm::StringRef Line) {
   if (!Line.consume_front("#"))
     return false;
   Line = Line.ltrim();
-  if (!Line.startswith("error"))
+  if (!Line.starts_with("error"))
     return false;
   return Line.contains_insensitive(
       "includ"); // Matches "include" or "including".
@@ -54,10 +54,10 @@ bool isImportLine(llvm::StringRef Line) {
   if (!Line.consume_front("#"))
     return false;
   Line = Line.ltrim();
-  return Line.startswith("import");
+  return Line.starts_with("import");
 }
 
-llvm::StringRef getFileContents(const FileEntry *FE, const SourceManager &SM) {
+llvm::StringRef getFileContents(FileEntryRef FE, const SourceManager &SM) {
   return const_cast<SourceManager &>(SM)
       .getMemoryBufferForFileOrNone(FE)
       .value_or(llvm::MemoryBufferRef())
@@ -66,9 +66,8 @@ llvm::StringRef getFileContents(const FileEntry *FE, const SourceManager &SM) {
 
 } // namespace
 
-bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
+bool isSelfContainedHeader(FileEntryRef FE, const SourceManager &SM,
                            const HeaderSearch &HeaderInfo) {
-  assert(FE);
   if (!HeaderInfo.isFileMultipleIncludeGuarded(FE) &&
       !HeaderInfo.hasFileBeenImported(FE) &&
       // Any header that contains #imports is supposed to be #import'd so no

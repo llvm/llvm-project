@@ -1,6 +1,6 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-fir -o "-" | FileCheck %s
+! RUN: bbc %s -fopenmp -emit-hlfir -o "-" | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
 ! CHECK:   br ^bb1
@@ -61,21 +61,24 @@ end
 ! CHECK-LABEL: func @_QPss3{{.*}} {
 ! CHECK:   omp.parallel {
 ! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
+! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned}
+! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned}
+! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:     br ^bb1
 ! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb3
 ! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
 ! CHECK:   ^bb2:  // pred: ^bb1
 ! CHECK:     omp.wsloop for (%[[ARG1:.*]]) : {{.*}} {
-! CHECK:       fir.store %[[ARG1]] to %[[ALLOCA_2]] : !fir.ref<i32>
+! CHECK:       fir.store %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#1 : !fir.ref<i32>
 ! CHECK:     @_FortranAioBeginExternalListOutput
-! CHECK:       %[[LOAD_1:.*]] = fir.load %[[ALLOCA_2]] : !fir.ref<i32>
+! CHECK:       %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
 ! CHECK:     @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
 ! CHECK:       omp.yield
 ! CHECK:     }
 ! CHECK:     omp.wsloop for (%[[ARG2:.*]]) : {{.*}} {
-! CHECK:       fir.store %[[ARG2]] to %[[ALLOCA_1]] : !fir.ref<i32>
+! CHECK:       fir.store %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
 ! CHECK:       br ^bb1
 ! CHECK:     ^bb2:  // 2 preds: ^bb1, ^bb5
 ! CHECK:       cond_br %{{[0-9]*}}, ^bb3, ^bb6
@@ -83,7 +86,7 @@ end
 ! CHECK:       cond_br %{{[0-9]*}}, ^bb4, ^bb5
 ! CHECK:     ^bb4:  // pred: ^bb3
 ! CHECK:       @_FortranAioBeginExternalListOutput
-! CHECK:       %[[LOAD_2:.*]] = fir.load %[[ALLOCA_K]] : !fir.ref<i32>
+! CHECK:       %[[LOAD_2:.*]] = fir.load %[[K_DECL]]#0 : !fir.ref<i32>
 ! CHECK:     @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_2]])
 ! CHECK:       br ^bb2
 ! CHECK:     ^bb6:  // 2 preds: ^bb2, ^bb4
@@ -117,13 +120,14 @@ end
 ! CHECK-LABEL: func @_QPss4{{.*}} {
 ! CHECK:       omp.parallel {
 ! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned}
+! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         omp.wsloop for (%[[ARG:.*]]) : {{.*}} {
-! CHECK:           fir.store %[[ARG]] to %[[ALLOCA]] : !fir.ref<i32>
+! CHECK:           fir.store %[[ARG]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
 ! CHECK:           %[[COND:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}}
 ! CHECK:           %[[COND_XOR:.*]] = arith.xori %[[COND]], %{{.*}}
 ! CHECK:          fir.if %[[COND_XOR]] {
 ! CHECK:           @_FortranAioBeginExternalListOutput
-! CHECK:           %[[LOAD:.*]] = fir.load %[[ALLOCA]] : !fir.ref<i32>
+! CHECK:           %[[LOAD:.*]] = fir.load %[[OMP_LOOP_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:           @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]])
 ! CHECK:          } else {
 ! CHECK:          }

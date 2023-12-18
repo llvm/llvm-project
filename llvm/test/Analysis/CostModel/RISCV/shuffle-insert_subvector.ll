@@ -16,7 +16,7 @@ define void @test_vXf64(<2 x double> %src128, <4 x double> %src256, <8 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_67 = shufflevector <8 x double> %src512, <8 x double> %src128_512, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V512_0123 = shufflevector <8 x double> %src512, <8 x double> %src256_512, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_4567 = shufflevector <8 x double> %src512, <8 x double> %src256_512, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %src128_256 = shufflevector <2 x double> %src128, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %src128_512 = shufflevector <2 x double> %src128, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -46,7 +46,7 @@ define void @test_vXi64(<2 x i64> %src128, <4 x i64> %src256, <8 x i64> %src512)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_67 = shufflevector <8 x i64> %src512, <8 x i64> %src128_512, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V512_0123 = shufflevector <8 x i64> %src512, <8 x i64> %src256_512, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_4567 = shufflevector <8 x i64> %src512, <8 x i64> %src256_512, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %src128_256 = shufflevector <2 x i64> %src128, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %src128_512 = shufflevector <2 x i64> %src128, <2 x i64> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -93,7 +93,7 @@ define void @test_vXf32(<2 x float> %src64, <4 x float> %src128, <8 x float> %sr
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_CDEF = shufflevector <16 x float> %src512, <16 x float> %src128_512, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V512_01234567 = shufflevector <16 x float> %src512, <16 x float> %src128_512, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_89ABCDEF = shufflevector <16 x float> %src512, <16 x float> %src128_512, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %src64_128  = shufflevector <2 x float> %src64,  <2 x float> undef,  <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %src64_256  = shufflevector <2 x float> %src64,  <2 x float> undef,  <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -159,7 +159,7 @@ define void @test_vXi32(<2 x i32> %src64, <4 x i32> %src128, <8 x i32> %src256, 
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_CDEF = shufflevector <16 x i32> %src512, <16 x i32> %src128_512, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V512_01234567 = shufflevector <16 x i32> %src512, <16 x i32> %src128_512, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_89ABCDEF = shufflevector <16 x i32> %src512, <16 x i32> %src128_512, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %src64_128  = shufflevector <2 x i32> %src64,  <2 x i32> undef,  <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %src64_256  = shufflevector <2 x i32> %src64,  <2 x i32> undef,  <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -229,7 +229,7 @@ define void @test_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src128, <
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V256_CDEF = shufflevector <16 x i16> %src256, <16 x i16> %src128_256, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V256_01234567 = shufflevector <16 x i16> %src256, <16 x i16> %src128_256, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V256_89ABCDEF = shufflevector <16 x i16> %src256, <16 x i16> %src128_256, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %src32_64   = shufflevector <2 x i16> %src32,   <2 x i16> undef,   <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %src32_128  = shufflevector <2 x i16> %src32,   <2 x i16> undef,   <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -309,7 +309,7 @@ define void @test_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <16x i
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V128_CDEF = shufflevector <16 x i8> %src128, <16 x i8> %src32_128, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V128_01234567 = shufflevector <16 x i8> %src128, <16 x i8> %src64_128, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V128_89ABCDEF = shufflevector <16 x i8> %src128, <16 x i8> %src64_128, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %src16_32   = shufflevector <2 x i8> %src16,   <2 x i8> undef,   <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %src16_64   = shufflevector <2 x i8> %src16,   <2 x i8> undef,   <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

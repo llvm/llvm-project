@@ -11,18 +11,18 @@
 
 #include "test/UnitTest/Test.h"
 
-// We want to test __llvm_libc::cpp::UInt<128> explicitly. So, for convenience,
-// we use a sugar which does not conflict with the UInt128 type which can
-// resolve to __uint128_t if the platform has it.
-using LL_UInt128 = __llvm_libc::cpp::UInt<128>;
-using LL_UInt192 = __llvm_libc::cpp::UInt<192>;
-using LL_UInt256 = __llvm_libc::cpp::UInt<256>;
-using LL_UInt320 = __llvm_libc::cpp::UInt<320>;
-using LL_UInt512 = __llvm_libc::cpp::UInt<512>;
-using LL_UInt1024 = __llvm_libc::cpp::UInt<1024>;
+// We want to test LIBC_NAMESPACE::cpp::UInt<128> explicitly. So, for
+// convenience, we use a sugar which does not conflict with the UInt128 type
+// which can resolve to __uint128_t if the platform has it.
+using LL_UInt128 = LIBC_NAMESPACE::cpp::UInt<128>;
+using LL_UInt192 = LIBC_NAMESPACE::cpp::UInt<192>;
+using LL_UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
+using LL_UInt320 = LIBC_NAMESPACE::cpp::UInt<320>;
+using LL_UInt512 = LIBC_NAMESPACE::cpp::UInt<512>;
+using LL_UInt1024 = LIBC_NAMESPACE::cpp::UInt<1024>;
 
-using LL_Int128 = __llvm_libc::cpp::Int<128>;
-using LL_Int192 = __llvm_libc::cpp::Int<192>;
+using LL_Int128 = LIBC_NAMESPACE::cpp::Int<128>;
+using LL_Int192 = LIBC_NAMESPACE::cpp::Int<192>;
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
   LL_UInt128 half_val(12345);

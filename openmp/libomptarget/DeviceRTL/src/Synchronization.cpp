@@ -272,7 +272,9 @@ void fenceSystem(atomic::OrderingTy Ordering) {
 }
 
 void syncWarp(__kmpc_impl_lanemask_t) {
-  // AMDGCN doesn't need to sync threads in a warp
+  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
+  // to enforce convergent behaviour between control flow graphs.
+  __builtin_amdgcn_wave_barrier();
 }
 
 void syncThreads(atomic::OrderingTy Ordering) {
@@ -523,13 +525,12 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
   impl::namedBarrier();
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
-                                                          int32_t TId) {
+[[clang::noinline]] void __kmpc_barrier_simple_spmd(IdentTy *Loc, int32_t TId) {
   synchronize::threadsAligned(atomic::OrderingTy::seq_cst);
 }
 
-__attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
-                                                             int32_t TId) {
+[[clang::noinline]] void __kmpc_barrier_simple_generic(IdentTy *Loc,
+                                                       int32_t TId) {
   synchronize::threads(atomic::OrderingTy::seq_cst);
 }
 

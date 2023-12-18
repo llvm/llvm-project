@@ -235,37 +235,6 @@ static_assert(std::is_trivially_copyable<OptionalFileEntryRef>::value,
 
 namespace llvm {
 
-template <> struct PointerLikeTypeTraits<clang::FileEntryRef> {
-  static inline void *getAsVoidPointer(clang::FileEntryRef File) {
-    return const_cast<clang::FileEntryRef::MapEntry *>(&File.getMapEntry());
-  }
-
-  static inline clang::FileEntryRef getFromVoidPointer(void *Ptr) {
-    return clang::FileEntryRef(
-        *reinterpret_cast<const clang::FileEntryRef::MapEntry *>(Ptr));
-  }
-
-  static constexpr int NumLowBitsAvailable = PointerLikeTypeTraits<
-      const clang::FileEntryRef::MapEntry *>::NumLowBitsAvailable;
-};
-
-template <> struct PointerLikeTypeTraits<clang::OptionalFileEntryRef> {
-  static inline void *getAsVoidPointer(clang::OptionalFileEntryRef File) {
-    if (!File)
-      return nullptr;
-    return PointerLikeTypeTraits<clang::FileEntryRef>::getAsVoidPointer(*File);
-  }
-
-  static inline clang::OptionalFileEntryRef getFromVoidPointer(void *Ptr) {
-    if (!Ptr)
-      return std::nullopt;
-    return PointerLikeTypeTraits<clang::FileEntryRef>::getFromVoidPointer(Ptr);
-  }
-
-  static constexpr int NumLowBitsAvailable =
-      PointerLikeTypeTraits<clang::FileEntryRef>::NumLowBitsAvailable;
-};
-
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
   static inline clang::FileEntryRef getEmptyKey() {
@@ -292,77 +261,23 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
     // It's safe to use operator==.
     return LHS == RHS;
   }
+
+  /// Support for finding `const FileEntry *` in a `DenseMap<FileEntryRef, T>`.
+  /// @{
+  static unsigned getHashValue(const clang::FileEntry *Val) {
+    return llvm::hash_value(Val);
+  }
+  static bool isEqual(const clang::FileEntry *LHS, clang::FileEntryRef RHS) {
+    if (RHS.isSpecialDenseMapKey())
+      return false;
+    return LHS == RHS;
+  }
+  /// @}
 };
 
 } // end namespace llvm
 
 namespace clang {
-
-/// Wrapper around OptionalFileEntryRef that degrades to 'const FileEntry*',
-/// facilitating incremental patches to propagate FileEntryRef.
-///
-/// This class can be used as return value or field where it's convenient for
-/// an OptionalFileEntryRef to degrade to a 'const FileEntry*'. The purpose
-/// is to avoid code churn due to dances like the following:
-/// \code
-/// // Old code.
-/// lvalue = rvalue;
-///
-/// // Temporary code from an incremental patch.
-/// OptionalFileEntryRef MaybeF = rvalue;
-/// lvalue = MaybeF ? &MaybeF.getFileEntry() : nullptr;
-///
-/// // Final code.
-/// lvalue = rvalue;
-/// \endcode
-///
-/// FIXME: Once FileEntryRef is "everywhere" and FileEntry::LastRef and
-/// FileEntry::getName have been deleted, delete this class and replace
-/// instances with OptionalFileEntryRef.
-class OptionalFileEntryRefDegradesToFileEntryPtr : public OptionalFileEntryRef {
-public:
-  OptionalFileEntryRefDegradesToFileEntryPtr() = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr(
-      const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(OptionalFileEntryRefDegradesToFileEntryPtr &&) = default;
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(const OptionalFileEntryRefDegradesToFileEntryPtr &) = default;
-
-  OptionalFileEntryRefDegradesToFileEntryPtr(std::nullopt_t) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(FileEntryRef Ref)
-      : OptionalFileEntryRef(Ref) {}
-  OptionalFileEntryRefDegradesToFileEntryPtr(OptionalFileEntryRef MaybeRef)
-      : OptionalFileEntryRef(MaybeRef) {}
-
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(std::nullopt_t) {
-    OptionalFileEntryRef::operator=(std::nullopt);
-    return *this;
-  }
-  OptionalFileEntryRefDegradesToFileEntryPtr &operator=(FileEntryRef Ref) {
-    OptionalFileEntryRef::operator=(Ref);
-    return *this;
-  }
-  OptionalFileEntryRefDegradesToFileEntryPtr &
-  operator=(OptionalFileEntryRef MaybeRef) {
-    OptionalFileEntryRef::operator=(MaybeRef);
-    return *this;
-  }
-
-  /// Degrade to 'const FileEntry *' to allow  FileEntry::LastRef and
-  /// FileEntry::getName have been deleted, delete this class and replace
-  /// instances with OptionalFileEntryRef
-  operator const FileEntry *() const {
-    return has_value() ? &(*this)->getFileEntry() : nullptr;
-  }
-};
-
-static_assert(
-    std::is_trivially_copyable<
-        OptionalFileEntryRefDegradesToFileEntryPtr>::value,
-    "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
 
 inline bool operator==(const FileEntry *LHS, const OptionalFileEntryRef &RHS) {
   return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
@@ -413,8 +328,8 @@ class FileEntry {
 
 public:
   ~FileEntry();
+  LLVM_DEPRECATED("Use FileEntryRef::getName() instead.", "")
   StringRef getName() const { return LastRef->getName(); }
-  FileEntryRef getLastRef() const { return *LastRef; }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }

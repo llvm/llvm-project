@@ -105,14 +105,14 @@ private:
     __node_pointer_type __ptr_ = nullptr;
     optional<allocator_type> __alloc_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __release_ptr()
     {
         __ptr_ = nullptr;
-        __alloc_ = _VSTD::nullopt;
+        __alloc_ = std::nullopt;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __destroy_node_pointer()
     {
         if (__ptr_ != nullptr)
@@ -126,7 +126,7 @@ private:
         }
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __basic_node_handle(__node_pointer_type __ptr,
                         allocator_type const& __alloc)
             : __ptr_(__ptr), __alloc_(__alloc)
@@ -134,23 +134,23 @@ private:
     }
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __basic_node_handle() = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __basic_node_handle(__basic_node_handle&& __other) noexcept
             : __ptr_(__other.__ptr_),
-              __alloc_(_VSTD::move(__other.__alloc_))
+              __alloc_(std::move(__other.__alloc_))
     {
         __other.__ptr_ = nullptr;
-        __other.__alloc_ = _VSTD::nullopt;
+        __other.__alloc_ = std::nullopt;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __basic_node_handle& operator=(__basic_node_handle&& __other)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
-            __alloc_ == _VSTD::nullopt ||
+            __alloc_ == std::nullopt ||
             __alloc_traits::propagate_on_container_move_assignment::value ||
             __alloc_ == __other.__alloc_,
             "node_type with incompatible allocator passed to "
@@ -160,41 +160,41 @@ public:
         __ptr_ = __other.__ptr_;
 
         if (__alloc_traits::propagate_on_container_move_assignment::value ||
-            __alloc_ == _VSTD::nullopt)
-            __alloc_ = _VSTD::move(__other.__alloc_);
+            __alloc_ == std::nullopt)
+            __alloc_ = std::move(__other.__alloc_);
 
         __other.__ptr_ = nullptr;
-        __other.__alloc_ = _VSTD::nullopt;
+        __other.__alloc_ = std::nullopt;
 
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     allocator_type get_allocator() const { return *__alloc_; }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit operator bool() const { return __ptr_ != nullptr; }
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     bool empty() const { return __ptr_ == nullptr; }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(__basic_node_handle& __other) noexcept(
         __alloc_traits::propagate_on_container_swap::value ||
         __alloc_traits::is_always_equal::value)
     {
-        using _VSTD::swap;
+        using std::swap;
         swap(__ptr_, __other.__ptr_);
         if (__alloc_traits::propagate_on_container_swap::value ||
-            __alloc_ == _VSTD::nullopt || __other.__alloc_ == _VSTD::nullopt)
+            __alloc_ == std::nullopt || __other.__alloc_ == std::nullopt)
             swap(__alloc_, __other.__alloc_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     friend void swap(__basic_node_handle& __a, __basic_node_handle& __b)
         noexcept(noexcept(__a.swap(__b))) { __a.swap(__b); }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~__basic_node_handle()
     {
         __destroy_node_pointer();
@@ -206,10 +206,10 @@ struct __set_node_handle_specifics
 {
     typedef typename _NodeType::__node_value_type value_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     value_type& value() const
     {
-        return static_cast<_Derived const*>(this)->__ptr_->__value_;
+        return static_cast<_Derived const*>(this)->__ptr_->__get_value();
     }
 };
 
@@ -219,18 +219,18 @@ struct __map_node_handle_specifics
     typedef typename _NodeType::__node_value_type::key_type key_type;
     typedef typename _NodeType::__node_value_type::mapped_type mapped_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     key_type& key() const
     {
         return static_cast<_Derived const*>(this)->
-            __ptr_->__value_.__ref().first;
+            __ptr_->__get_value().__ref().first;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     mapped_type& mapped() const
     {
         return static_cast<_Derived const*>(this)->
-            __ptr_->__value_.__ref().second;
+            __ptr_->__get_value().__ref().second;
     }
 };
 

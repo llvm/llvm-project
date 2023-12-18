@@ -152,7 +152,7 @@ public:
   void dump() { Reader->dump(); }
 
   using NodeRef = typename GraphTraits<FT *>::NodeRef;
-  using BT = typename std::remove_pointer<NodeRef>::type;
+  using BT = std::remove_pointer_t<NodeRef>;
   using InstructionT = typename afdo_detail::IRTraits<BT>::InstructionT;
   using BasicBlockT = typename afdo_detail::IRTraits<BT>::BasicBlockT;
   using BlockFrequencyInfoT =

@@ -672,3 +672,49 @@ foreach rounding = ["", "s", "d"] in {
   foreach size = [32, 64] in
     def F # !toupper(rounding) # MOV # size # fp_fp : MxFMove_FF<rounding, size>;
 }
+// Direction
+defvar MxFMove_FP_EA = false;
+defvar MxFMove_EA_FP = true;
+
+// Encoding scheme for FPSYS <-> R/M
+class MxEncFSysMove<bit dir, MxEncMemOp EAEnc, string fsys_reg> {
+  dag Value = (ascend
+    (descend 0b1111,
+      /*COPROCESSOR ID*/0b001,
+      0b000,
+      /*MODE + REGISTER*/
+      EAEnc.EA
+    ),
+    (descend 0b10, /*dir*/ dir,
+      /*REGISTER SELECT*/
+      (operand "$"#fsys_reg, 3, (encoder "encodeFPSYSSelect")),
+      0b0000000000
+    )
+  );
+}
+
+// FPSYS <-> R
+class MxFMove_FSYS_R<string src_reg,
+                     MxOpBundle SrcOpnd = !cast<MxOpBundle>("MxOp32AddrMode_"#src_reg),
+                     MxOpBundle DstOpnd = !cond(!eq(src_reg, "d"): MxOp32AddrMode_fpcs,
+                                                !eq(src_reg, "a"): MxOp32AddrMode_fpi),
+                     MxEncMemOp SrcEnc = !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#src_reg)>
+    : MxFMove<"l", (outs DstOpnd.Op:$dst), (ins SrcOpnd.Op:$src),
+              [(null_frag)]> {
+  let Inst = MxEncFSysMove<MxFMove_FP_EA, SrcEnc, "dst">.Value;
+}
+
+class MxFMove_R_FSYS<string dst_reg,
+                     MxOpBundle SrcOpnd = !cond(!eq(dst_reg, "d"): MxOp32AddrMode_fpcs,
+                                                !eq(dst_reg, "a"): MxOp32AddrMode_fpi),
+                     MxOpBundle DstOpnd = !cast<MxOpBundle>("MxOp32AddrMode_"#dst_reg),
+                     MxEncMemOp DstEnc = !cast<MxEncMemOp>("MxMoveDstOpEnc_"#dst_reg)>
+    : MxFMove<"l", (outs DstOpnd.Op:$dst), (ins SrcOpnd.Op:$src),
+              [(null_frag)]> {
+  let Inst = MxEncFSysMove<MxFMove_EA_FP, DstEnc, "src">.Value;
+}
+
+def FMOVE32fpcs_d : MxFMove_FSYS_R<"d">;
+def FMOVE32d_fpcs : MxFMove_R_FSYS<"d">;
+def FMOVE32fpi_a  : MxFMove_FSYS_R<"a">;
+def FMOVE32a_fpi  : MxFMove_R_FSYS<"a">;

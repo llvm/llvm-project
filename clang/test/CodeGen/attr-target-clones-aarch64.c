@@ -45,7 +45,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 0
 // CHECK-LABEL: @ftc.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 16512
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 16512
@@ -77,7 +77,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 1
 // CHECK-LABEL: @ftc_def.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 17592186048512
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 17592186048512
@@ -105,7 +105,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 2
 // CHECK-LABEL: @ftc_dup1.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4096
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4096
@@ -129,7 +129,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 3
 // CHECK-LABEL: @ftc_dup2.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1040
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1040
@@ -177,7 +177,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 [[ADD5]]
 // CHECK-LABEL: @ftc_inline1.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 18014535948435456
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 18014535948435456
@@ -205,7 +205,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_inline1
 // CHECK-LABEL: @ftc_inline2.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 549757911040
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 549757911040
@@ -225,7 +225,7 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_inline2
 // CHECK-LABEL: @ftc_inline3.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 70369817919488
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 70369817919488

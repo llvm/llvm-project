@@ -224,10 +224,10 @@ defm : X86WriteRes<WriteFStoreNT,      [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [SBPort23,SBPort4], 1, [1,1], 1>;
 
-defm : X86WriteRes<WriteFMaskedStore32,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteFMaskedStore64,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore32,  [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore64,  [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
 
 defm : X86WriteRes<WriteFMove,         [SBPort5], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [SBPort5], 1, [1], 1>;
@@ -294,9 +294,11 @@ defm : SBWriteResPair<WriteFSqrt64Y, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44
 defm : SBWriteResPair<WriteFSqrt64Z, [SBPort0,SBPort05,SBFPDivider], 45, [2,1,44], 3, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFSqrt80,  [SBPort0,SBFPDivider], 24, [1,24], 1, 6>;
 
-defm : SBWriteResPair<WriteDPPD,   [SBPort0,SBPort1,SBPort5],  9, [1,1,1], 3, 6>;
-defm : SBWriteResPair<WriteDPPS,   [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4, 6>;
-defm : SBWriteResPair<WriteDPPSY,  [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4, 7>;
+defm : SBWriteResPair<WriteDPPD,     [SBPort0,SBPort1,SBPort5],  9, [1,1,1], 3, 6>;
+defm : X86WriteRes<WriteDPPS,        [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4>;
+defm : X86WriteRes<WriteDPPSY,       [SBPort0,SBPort1,SBPort5], 12, [1,2,1], 4>;
+defm : X86WriteRes<WriteDPPSLd,      [SBPort0,SBPort1,SBPort5,SBPort23], 18, [1,2,2,1], 6>;
+defm : X86WriteRes<WriteDPPSYLd,     [SBPort0,SBPort1,SBPort5,SBPort23], 19, [1,2,2,1], 6>;
 defm : SBWriteResPair<WriteFSign,    [SBPort5], 1>;
 defm : SBWriteResPair<WriteFRnd,     [SBPort1], 3, [1], 1, 6>;
 defm : SBWriteResPair<WriteFRndY,    [SBPort1], 3, [1], 1, 7>;
@@ -382,10 +384,10 @@ defm : X86WriteRes<WriteVecStoreX,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreNT,      [SBPort23,SBPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SBPort23,SBPort4], 1, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [SBPort4,SBPort01,SBPort23], 5, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [SBPort4,SBPort01,SBPort23], 5, [1,2,1], 4>;
 defm : X86WriteRes<WriteVecMove,         [SBPort05], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SBPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SBPort05], 1, [1], 1>;
@@ -880,9 +882,7 @@ def SBWriteResGroup54 : SchedWriteRes<[SBPort23]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[SBWriteResGroup54], (instrs VBROADCASTSDYrm,
-                                         VBROADCASTSSYrm,
-                                         VMOVDDUPYrm,
+def: InstRW<[SBWriteResGroup54], (instrs VMOVDDUPYrm,
                                          VMOVSHDUPYrm,
                                          VMOVSLDUPYrm)>;
 

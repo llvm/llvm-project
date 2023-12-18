@@ -5,14 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H
 
 #include "src/__support/CPP/type_traits/is_void.h"
 #include "src/__support/CPP/utility/declval.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_convertible
 namespace detail {
@@ -40,6 +40,6 @@ template <class From, class To>
 LIBC_INLINE_VAR constexpr bool is_convertible_v =
     is_convertible<From, To>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_CONVERTIBLE_H

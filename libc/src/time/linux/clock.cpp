@@ -17,7 +17,7 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <time.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   struct timespec ts;
@@ -45,4 +45,4 @@ LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
                  ts.tv_nsec / (1000000000 / CLOCKS_PER_SEC));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

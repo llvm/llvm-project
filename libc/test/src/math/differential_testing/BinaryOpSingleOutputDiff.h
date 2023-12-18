@@ -11,28 +11,29 @@
 
 #include <fstream>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T> class BinaryOpSingleOutputDiff {
   using FPBits = fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  static constexpr UIntType MSBIT = UIntType(1) << (8 * sizeof(UIntType) - 1);
-  static constexpr UIntType UINTMAX = (MSBIT - 1) + MSBIT;
+  using StorageType = typename FPBits::StorageType;
+  static constexpr StorageType UIntMax =
+      cpp::numeric_limits<StorageType>::max();
 
 public:
   typedef T Func(T, T);
 
   static uint64_t run_diff_in_range(Func myFunc, Func otherFunc,
-                                    UIntType startingBit, UIntType endingBit,
-                                    UIntType N, std::ofstream &log) {
+                                    StorageType startingBit,
+                                    StorageType endingBit, StorageType N,
+                                    std::ofstream &log) {
     uint64_t result = 0;
     if (endingBit < startingBit) {
       return result;
     }
 
-    UIntType step = (endingBit - startingBit) / N;
-    for (UIntType bitsX = startingBit, bitsY = endingBit;;
+    StorageType step = (endingBit - startingBit) / N;
+    for (StorageType bitsX = startingBit, bitsY = endingBit;;
          bitsX += step, bitsY -= step) {
       T x = T(FPBits(bitsX));
       T y = T(FPBits(bitsY));
@@ -57,16 +58,16 @@ public:
   }
 
   static void run_perf_in_range(Func myFunc, Func otherFunc,
-                                UIntType startingBit, UIntType endingBit,
-                                UIntType N, std::ofstream &log) {
+                                StorageType startingBit, StorageType endingBit,
+                                StorageType N, std::ofstream &log) {
     auto runner = [=](Func func) {
       volatile T result;
       if (endingBit < startingBit) {
         return;
       }
 
-      UIntType step = (endingBit - startingBit) / N;
-      for (UIntType bitsX = startingBit, bitsY = endingBit;;
+      StorageType step = (endingBit - startingBit) / N;
+      for (StorageType bitsX = startingBit, bitsY = endingBit;;
            bitsX += step, bitsY -= step) {
         T x = T(FPBits(bitsX));
         T y = T(FPBits(bitsY));
@@ -107,7 +108,7 @@ public:
   static void run_perf(Func myFunc, Func otherFunc, const char *logFile) {
     std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
-    run_perf_in_range(myFunc, otherFunc, /* startingBit= */ UIntType(0),
+    run_perf_in_range(myFunc, otherFunc, /* startingBit= */ StorageType(0),
                       /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
     log << "\n Performance tests with inputs in normal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ FPBits::MIN_NORMAL,
@@ -124,7 +125,7 @@ public:
     std::ofstream log(logFile);
     log << " Diff tests with inputs in denormal range:\n";
     diffCount += run_diff_in_range(
-        myFunc, otherFunc, /* startingBit= */ UIntType(0),
+        myFunc, otherFunc, /* startingBit= */ StorageType(0),
         /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
     log << "\n Diff tests with inputs in normal range:\n";
     diffCount += run_diff_in_range(
@@ -141,18 +142,18 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define BINARY_OP_SINGLE_OUTPUT_DIFF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \
-    __llvm_libc::testing::BinaryOpSingleOutputDiff<T>::run_diff(               \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputDiff<T>::run_diff(            \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }
 
 #define BINARY_OP_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \
-    __llvm_libc::testing::BinaryOpSingleOutputDiff<T>::run_perf(               \
+    LIBC_NAMESPACE::testing::BinaryOpSingleOutputDiff<T>::run_perf(            \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }

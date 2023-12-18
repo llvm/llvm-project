@@ -127,6 +127,8 @@ public:
     return lldb::eLanguageTypeObjC;
   }
 
+  llvm::StringRef GetUserEntryPointName() const override { return "main"; }
+
   // Get all possible names for a method. Examples:
   // If method_name is "+[NSString(my_additions) myStringWithCString:]"
   //   variant_names[0] => "+[NSString myStringWithCString:]"

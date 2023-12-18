@@ -3,6 +3,7 @@ Test thread states.
 """
 
 
+import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -40,14 +41,14 @@ class ThreadStateTestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     @expectedFailureNetBSD
     # thread states not properly maintained
-    @expectedFailure("llvm.org/pr16712")
+    @unittest2.expectedFailure  # llvm.org/pr16712
     def test_state_after_expression(self):
         """Test thread state after expression."""
         self.build()
         self.thread_state_after_expression_test()
 
     # thread states not properly maintained
-    @expectedFailure("llvm.org/pr15824 and <rdar://problem/28557237>")
+    @unittest2.expectedFailure  # llvm.org/pr15824 and <rdar://problem/28557237>
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",

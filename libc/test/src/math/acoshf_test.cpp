@@ -17,44 +17,42 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits_t = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcAcoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAcoshfTest, SpecialNumbers) {
+TEST_F(LlvmLibcAcoshfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acoshf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acoshf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(0.0f));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::acoshf(1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::acoshf(1.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(inf, __llvm_libc::acoshf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::acoshf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::acoshf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST(LlvmLibcAcoshfTest, InFloatRange) {
+TEST_F(LlvmLibcAcoshfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits_t(v));
+    float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   __llvm_libc::acoshf(x), 0.5);
+                                   LIBC_NAMESPACE::acoshf(x), 0.5);
   }
 }
 
-TEST(LlvmLibcAcoshfTest, SpecificBitPatterns) {
+TEST_F(LlvmLibcAcoshfTest, SpecificBitPatterns) {
   constexpr int N = 12;
   constexpr uint32_t INPUTS[N] = {
       0x3f800000, // x = 1.0f
@@ -72,8 +70,8 @@ TEST(LlvmLibcAcoshfTest, SpecificBitPatterns) {
   };
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits_t(INPUTS[i]));
+    float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   __llvm_libc::acoshf(x), 0.5);
+                                   LIBC_NAMESPACE::acoshf(x), 0.5);
   }
 }

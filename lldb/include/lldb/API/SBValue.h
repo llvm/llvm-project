@@ -374,6 +374,52 @@ public:
   lldb::SBWatchpoint WatchPointee(bool resolve_location, bool read, bool write,
                                   SBError &error);
 
+  /// If this value represents a C++ class that has a vtable, return an value
+  /// that represents the virtual function table.
+  ///
+  /// SBValue::GetError() will be in the success state if this value represents
+  /// a C++ class with a vtable, or an appropriate error describing that the
+  /// object isn't a C++ class with a vtable or not a C++ class.
+  ///
+  /// SBValue::GetName() will be the demangled symbol name for the virtual
+  /// function table like "vtable for <classname>".
+  ///
+  /// SBValue::GetValue() will be the address of the first vtable entry if the
+  /// current SBValue is a class with a vtable, or nothing the current SBValue
+  /// is not a C++ class or not a C++ class that has a vtable.
+  ///
+  /// SBValue::GetValueAtUnsigned(...) will return the address of the first
+  /// vtable entry.
+  ///
+  /// SBValue::GetLoadAddress() will return the address of the vtable pointer
+  /// found in the parent SBValue.
+  ///
+  /// SBValue::GetNumChildren() will return the number of virtual function
+  /// pointers in the vtable, or zero on error.
+  ///
+  /// SBValue::GetChildAtIndex(...) will return each virtual function pointer
+  /// as a SBValue object.
+  ///
+  /// The child SBValue objects will have the following values:
+  ///
+  /// SBValue::GetError() will indicate success if the vtable entry was
+  /// successfully read from memory, or an error if not.
+  ///
+  /// SBValue::GetName() will be the vtable function index in the form "[%u]"
+  /// where %u is the index.
+  ///
+  /// SBValue::GetValue() will be the virtual function pointer value as a
+  /// string.
+  ///
+  /// SBValue::GetValueAtUnsigned(...) will return the virtual function
+  /// pointer value.
+  ///
+  /// SBValue::GetLoadAddress() will return the address of the virtual function
+  /// pointer.
+  ///
+  /// SBValue::GetNumChildren() returns 0
+  lldb::SBValue GetVTable();
+
 protected:
   friend class SBBlock;
   friend class SBFrame;

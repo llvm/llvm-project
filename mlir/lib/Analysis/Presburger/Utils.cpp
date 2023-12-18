@@ -13,8 +13,17 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <numeric>
 
 #include <numeric>
@@ -502,8 +511,8 @@ void DivisionRepr::print(raw_ostream &os) const {
   os << "Dividends:\n";
   dividends.print(os);
   os << "Denominators\n";
-  for (unsigned i = 0, e = denoms.size(); i < e; ++i)
-    os << denoms[i] << " ";
+  for (const MPInt &denom : denoms)
+    os << denom << " ";
   os << "\n";
 }
 
@@ -519,4 +528,13 @@ SmallVector<int64_t, 8> presburger::getInt64Vec(ArrayRef<MPInt> range) {
   SmallVector<int64_t, 8> result(range.size());
   std::transform(range.begin(), range.end(), result.begin(), int64FromMPInt);
   return result;
+}
+
+Fraction presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b) {
+  assert(a.size() == b.size() &&
+         "dot product is only valid for vectors of equal sizes!");
+  Fraction sum = 0;
+  for (unsigned i = 0, e = a.size(); i < e; i++)
+    sum += a[i] * b[i];
+  return sum;
 }

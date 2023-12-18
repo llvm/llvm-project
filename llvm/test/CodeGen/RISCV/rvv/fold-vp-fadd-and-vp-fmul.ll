@@ -62,9 +62,9 @@ define <vscale x 1 x double> @fma_reassociate(<vscale x 1 x double> %a, <vscale 
 ; CHECK-LABEL: fma_reassociate:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v12, v0.t
-; CHECK-NEXT:    vfmadd.vv v11, v10, v9, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vfmadd.vv v11, v10, v12, v0.t
+; CHECK-NEXT:    vfmadd.vv v9, v8, v11, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x i1> %m, i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %c, <vscale x 1 x double> %d, <vscale x 1 x i1> %m, i32 %vl)

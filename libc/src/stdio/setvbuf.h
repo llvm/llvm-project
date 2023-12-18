@@ -11,11 +11,11 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int setvbuf(::FILE *__restrict stream, char *__restrict buf, int type,
             size_t size);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SETVBUF_H

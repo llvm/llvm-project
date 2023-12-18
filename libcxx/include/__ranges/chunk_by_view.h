@@ -16,8 +16,6 @@
 #include <__config>
 #include <__functional/bind_back.h>
 #include <__functional/invoke.h>
-#include <__functional/not_fn.h>
-#include <__functional/reference_wrapper.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
@@ -69,10 +67,11 @@ class chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> __find_next(iterator_t<_View> __current) {
     _LIBCPP_ASSERT_UNCATEGORIZED(
         __pred_.__has_value(), "Trying to call __find_next() on a chunk_by_view that does not have a valid predicate.");
-
-    return ranges::next(ranges::adjacent_find(__current, ranges::end(__base_), std::not_fn(std::ref(*__pred_))),
-                        1,
-                        ranges::end(__base_));
+    auto __reversed_pred = [this]<class _Tp, class _Up>(_Tp&& __x, _Up&& __y) -> bool {
+      return !std::invoke(*__pred_, std::forward<_Tp>(__x), std::forward<_Up>(__y));
+    };
+    return ranges::next(
+        ranges::adjacent_find(__current, ranges::end(__base_), __reversed_pred), 1, ranges::end(__base_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> __find_prev(iterator_t<_View> __current)
@@ -85,7 +84,7 @@ class chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
 
     auto __first = ranges::begin(__base_);
     reverse_view __reversed{subrange{__first, __current}};
-    auto __reversed_pred = [this]<class _Tp, class _Up>(_Tp&& __x, _Up&& __y) {
+    auto __reversed_pred = [this]<class _Tp, class _Up>(_Tp&& __x, _Up&& __y) -> bool {
       return !std::invoke(*__pred_, std::forward<_Up>(__y), std::forward<_Tp>(__x));
     };
     return ranges::prev(ranges::adjacent_find(__reversed, __reversed_pred).base(), 1, std::move(__first));

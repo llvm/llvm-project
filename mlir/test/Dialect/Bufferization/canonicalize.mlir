@@ -351,3 +351,16 @@ func.func @dealloc_base_memref_extract_of_alloc(%arg0: memref<2xi32>) {
 //  CHECK-SAME:([[ARG0:%.+]]: memref<2xi32>)
 //   CHECK-NOT: memref.alloc(
 //       CHECK: bufferization.dealloc ([[ARG0]] : memref<2xi32>) if (%true
+
+// -----
+
+// CHECK-LABEL: func @negative_input
+func.func @negative_input() -> tensor<?x?x?xf16> {
+  %idx27 = index.constant 27
+  %idx-3 = index.constant -3  // negative integer?
+  %c10 = arith.constant 10 : index
+// CHECK: bufferization.alloc_tensor
+// CHECK-SAME: tensor<10x?x27xf16>
+  %11 = bufferization.alloc_tensor(%c10, %idx-3, %idx27) : tensor<?x?x?xf16>
+  return %11 : tensor<?x?x?xf16>
+}

@@ -53,5 +53,8 @@ LANGOPT(OpenMPNoThreadState, 1, 0)
 /// Assume that no thread in a parallel region will encounter a parallel region
 LANGOPT(OpenMPNoNestedParallelism, 1, 0)
 
+LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
+LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
+
 #undef LANGOPT
 #undef ENUM_LANGOPT

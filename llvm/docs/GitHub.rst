@@ -17,10 +17,11 @@ participate in the project using GitHub.
 
 Branches
 ========
-Do not create any branches in the llvm/llvm-project repository.  This repository
-is reserved for official project branches only.  We may relax this rule in
-the future if needed to support "stacked" pull request, but in that case only
-branches being used for "stacked" pull requests will be allowed.
+
+It is possible to create branches that starts with `users/<username>/`, however this is
+intended to be able to support "stacked" pull-request. Do not create any branches in the
+llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
+aren't associated with a pull-request **will be deleted**.
 
 Pull Requests
 =============
@@ -50,6 +51,9 @@ Create a local branch per commit you want to submit and then push that branch
 to your `fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks>`_
 of the llvm-project and
 `create a pull request from the fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_.
+As GitHub uses the first line of the commit message truncated to 72 characters
+as the pull request title, you may have to edit to reword or to undo this
+truncation.
 
 Creating Pull Requests with GitHub CLI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -156,7 +160,7 @@ merge:
 ::
 
   git push -f
-  gh pr merge --squash --delete branch
+  gh pr merge --squash --delete-branch
 
 This force push may ask if you intend to push hundreds, or potentially
 thousands of patches (depending on how long it's been since your pull request
@@ -248,7 +252,7 @@ checks:
   git push origin my_change -f
 
   # Now merge it
-  gh pr merge --squash --delete
+  gh pr merge --squash --delete-branch
 
 
 See more in-depth information about how to contribute in the following documentation:

@@ -825,7 +825,7 @@ ObjCMethodDecl::ObjCMethodDecl(
     QualType T, TypeSourceInfo *ReturnTInfo, DeclContext *contextDecl,
     bool isInstance, bool isVariadic, bool isPropertyAccessor,
     bool isSynthesizedAccessorStub, bool isImplicitlyDeclared, bool isDefined,
-    ImplementationControl impControl, bool HasRelatedResultType)
+    ObjCImplementationControl impControl, bool HasRelatedResultType)
     : NamedDecl(ObjCMethod, contextDecl, beginLoc, SelInfo),
       DeclContext(ObjCMethod), MethodDeclType(T), ReturnTInfo(ReturnTInfo),
       DeclEndLoc(endLoc) {
@@ -855,8 +855,8 @@ ObjCMethodDecl *ObjCMethodDecl::Create(
     Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
     DeclContext *contextDecl, bool isInstance, bool isVariadic,
     bool isPropertyAccessor, bool isSynthesizedAccessorStub,
-    bool isImplicitlyDeclared, bool isDefined, ImplementationControl impControl,
-    bool HasRelatedResultType) {
+    bool isImplicitlyDeclared, bool isDefined,
+    ObjCImplementationControl impControl, bool HasRelatedResultType) {
   return new (C, contextDecl) ObjCMethodDecl(
       beginLoc, endLoc, SelInfo, T, ReturnTInfo, contextDecl, isInstance,
       isVariadic, isPropertyAccessor, isSynthesizedAccessorStub,
@@ -931,8 +931,8 @@ void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
   unsigned Size = sizeof(ParmVarDecl *) * NumParams +
                   sizeof(SourceLocation) * SelLocs.size();
   ParamsAndSelLocs = C.Allocate(Size);
-  std::copy(Params.begin(), Params.end(), getParams());
-  std::copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
+  std::uninitialized_copy(Params.begin(), Params.end(), getParams());
+  std::uninitialized_copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
 }
 
 void ObjCMethodDecl::getSelectorLocs(
@@ -1194,7 +1194,7 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
     getSelfType(Context, OID, selfIsPseudoStrong, selfIsConsumed);
   auto *Self = ImplicitParamDecl::Create(Context, this, SourceLocation(),
                                          &Context.Idents.get("self"), selfTy,
-                                         ImplicitParamDecl::ObjCSelf);
+                                         ImplicitParamKind::ObjCSelf);
   setSelfDecl(Self);
 
   if (selfIsConsumed)
@@ -1205,7 +1205,7 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
 
   setCmdDecl(ImplicitParamDecl::Create(
       Context, this, SourceLocation(), &Context.Idents.get("_cmd"),
-      Context.getObjCSelType(), ImplicitParamDecl::ObjCCmd));
+      Context.getObjCSelType(), ImplicitParamKind::ObjCCmd));
 }
 
 ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {

@@ -322,6 +322,9 @@ CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Vals) {
     switch (Val->kind()) {
     case Formula::AtomRef:
       break;
+    case Formula::Literal:
+      CNF.addClause(Val->literal() ? posLit(Var) : negLit(Var));
+      break;
     case Formula::And: {
       const Variable LHS = GetVar(Val->operands()[0]);
       const Variable RHS = GetVar(Val->operands()[1]);

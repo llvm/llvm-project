@@ -20,16 +20,15 @@
 
 void mlir::bufferization::buildBufferDeallocationPipeline(
     OpPassManager &pm, const BufferDeallocationPipelineOptions &options) {
-  pm.addNestedPass<func::FuncOp>(
-      memref::createExpandReallocPass(/*emitDeallocs=*/false));
-  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
-  pm.addNestedPass<func::FuncOp>(createOwnershipBasedBufferDeallocationPass(
+  pm.addPass(memref::createExpandReallocPass(/*emitDeallocs=*/false));
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createOwnershipBasedBufferDeallocationPass(
       options.privateFunctionDynamicOwnership.getValue()));
-  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
-  pm.addNestedPass<func::FuncOp>(createBufferDeallocationSimplificationPass());
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createBufferDeallocationSimplificationPass());
   pm.addPass(createLowerDeallocationsPass());
-  pm.addNestedPass<func::FuncOp>(createCSEPass());
-  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+  pm.addPass(createCanonicalizerPass());
 }
 
 //===----------------------------------------------------------------------===//

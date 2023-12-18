@@ -15,8 +15,6 @@
 #define DST_HALF
 #include "fp_trunc_impl.inc"
 
-COMPILER_RT_ABI _Float16 __trunctfhf2(long double a) {
-  return __truncXfYf2__(a);
-}
+COMPILER_RT_ABI dst_t __trunctfhf2(src_t a) { return __truncXfYf2__(a); }
 
 #endif

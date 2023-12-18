@@ -3,6 +3,10 @@
 // RUN: %libomptarget-compilexx-generic -O3 -ffast-math && \
 // RUN:   %libomptarget-run-generic
 
+// FIXME: This fails to link due to missing math symbols. We should provide the
+//        needed math functions in the GPU `libm` and require the GPU C library.
+// UNSUPPORTED: amdgcn-amd-amdhsa
+
 #include <cassert>
 #include <complex>
 #include <iostream>

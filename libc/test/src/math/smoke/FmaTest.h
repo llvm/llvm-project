@@ -14,16 +14,16 @@
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class FmaTestTemplate : public __llvm_libc::testing::Test {
+class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
 private:
   using Func = T (*)(T, T, T);
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = T(FPBits::inf());
+  const T neg_inf = T(FPBits::neg_inf());
+  const T zero = T(FPBits::zero());
+  const T neg_zero = T(FPBits::neg_zero());
 
 public:
   void test_special_numbers(Func func) {
@@ -39,9 +39,9 @@ public:
     // Test underflow rounding up.
     EXPECT_FP_EQ(func(T(0.5), T(FPBits(FPBits::MIN_SUBNORMAL)),
                       T(FPBits(FPBits::MIN_SUBNORMAL))),
-                 T(FPBits(UIntType(2))));
+                 T(FPBits(StorageType(2))));
     // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + UIntType(1)));
+    T v = T(FPBits(FPBits::MIN_NORMAL + StorageType(1)));
     EXPECT_FP_EQ(func(T(1) / T(FPBits::MIN_NORMAL << 1), v,
                       T(FPBits(FPBits::MIN_NORMAL))),
                  v);

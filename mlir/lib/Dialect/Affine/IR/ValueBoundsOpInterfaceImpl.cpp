@@ -27,12 +27,22 @@ struct AffineApplyOpInterface
     assert(applyOp.getAffineMap().getNumResults() == 1 &&
            "expected single result");
 
+    // Fully compose this affine.apply with other ops because the folding logic
+    // can see opportunities for simplifying the affine map that
+    // `FlatLinearConstraints` can currently not see.
+    AffineMap map = applyOp.getAffineMap();
+    SmallVector<Value> operands = llvm::to_vector(applyOp.getOperands());
+    fullyComposeAffineMapAndOperands(&map, &operands);
+
     // Align affine map result with dims/symbols in the constraint set.
-    AffineExpr expr = applyOp.getAffineMap().getResult(0);
-    SmallVector<AffineExpr> dimReplacements = llvm::to_vector(llvm::map_range(
-        applyOp.getDimOperands(), [&](Value v) { return cstr.getExpr(v); }));
-    SmallVector<AffineExpr> symReplacements = llvm::to_vector(llvm::map_range(
-        applyOp.getSymbolOperands(), [&](Value v) { return cstr.getExpr(v); }));
+    AffineExpr expr = map.getResult(0);
+    SmallVector<AffineExpr> dimReplacements, symReplacements;
+    for (int64_t i = 0, e = map.getNumDims(); i < e; ++i)
+      dimReplacements.push_back(cstr.getExpr(operands[i]));
+    for (int64_t i = map.getNumDims(),
+                 e = map.getNumDims() + map.getNumSymbols();
+         i < e; ++i)
+      symReplacements.push_back(cstr.getExpr(operands[i]));
     AffineExpr bound =
         expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
     cstr.bound(value) == bound;
@@ -91,4 +101,28 @@ void mlir::affine::registerValueBoundsOpInterfaceExternalModels(
     AffineMaxOp::attachInterface<AffineMaxOpInterface>(*ctx);
     AffineMinOp::attachInterface<AffineMinOpInterface>(*ctx);
   });
+}
+
+FailureOr<int64_t>
+mlir::affine::fullyComposeAndComputeConstantDelta(Value value1, Value value2) {
+  assert(value1.getType().isIndex() && "expected index type");
+  assert(value2.getType().isIndex() && "expected index type");
+
+  // Subtract the two values/dimensions from each other. If the result is 0,
+  // both are equal.
+  Builder b(value1.getContext());
+  AffineMap map = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
+                                 b.getAffineDimExpr(0) - b.getAffineDimExpr(1));
+  // Fully compose the affine map with other ops because the folding logic
+  // can see opportunities for simplifying the affine map that
+  // `FlatLinearConstraints` can currently not see.
+  SmallVector<Value> mapOperands;
+  mapOperands.push_back(value1);
+  mapOperands.push_back(value2);
+  affine::fullyComposeAffineMapAndOperands(&map, &mapOperands);
+  ValueDimList valueDims;
+  for (Value v : mapOperands)
+    valueDims.push_back({v, std::nullopt});
+  return ValueBoundsConstraintSet::computeConstantBound(
+      presburger::BoundType::EQ, map, valueDims);
 }

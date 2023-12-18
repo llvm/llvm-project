@@ -190,7 +190,7 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   // LLVMScalarOrSameVectorWidth.
 
   Type *VecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
-  Type *PtrToVecTy = VecTy->getPointerTo();
+  Type *PtrToVecTy = Builder.getPtrTy();
   PredTy = VectorType::get(Builder.getInt1Ty(), 4, true);
 
   ArgTys.clear();
@@ -1040,21 +1040,6 @@ TEST_F(IRBuilderTest, CreateGlobalStringPtr) {
   EXPECT_TRUE(String1b->getType()->getPointerAddressSpace() == 0);
   EXPECT_TRUE(String2->getType()->getPointerAddressSpace() == 1);
   EXPECT_TRUE(String3->getType()->getPointerAddressSpace() == 2);
-}
-
-TEST_F(IRBuilderTest, CreateThreadLocalAddress) {
-  IRBuilder<> Builder(BB);
-
-  GlobalVariable *G = new GlobalVariable(*M, Builder.getInt64Ty(), /*isConstant*/true,
-                                         GlobalValue::ExternalLinkage, nullptr, "", nullptr,
-                                         GlobalValue::GeneralDynamicTLSModel);
-
-  Constant *CEBC = ConstantExpr::getBitCast(G, Builder.getInt8PtrTy());
-  // Tests that IRBuilder::CreateThreadLocalAddress wouldn't crash if its operand
-  // is BitCast ConstExpr. The case should be eliminated after we eliminate the
-  // abuse of constexpr.
-  CallInst *CI = Builder.CreateThreadLocalAddress(CEBC);
-  EXPECT_NE(CI, nullptr);
 }
 
 TEST_F(IRBuilderTest, DebugLoc) {

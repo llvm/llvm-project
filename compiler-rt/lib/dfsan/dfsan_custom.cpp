@@ -2246,7 +2246,8 @@ struct Formatter {
         fmt_start(fmt_),
         fmt_cur(fmt_),
         width(-1),
-        num_scanned(-1) {}
+        num_scanned(-1),
+        skip(false) {}
 
   int format() {
     char *tmp_fmt = build_format_string();
@@ -2347,6 +2348,7 @@ struct Formatter {
   const char *fmt_cur;
   int width;
   int num_scanned;
+  bool skip;
 };
 
 // Formats the input and propagates the input labels to the output. The output
@@ -2550,8 +2552,8 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
   while (*formatter.fmt_cur) {
     formatter.fmt_start = formatter.fmt_cur;
     formatter.width = -1;
-    int retval = 0;
-    dfsan_label l = 0;
+    formatter.skip = false;
+    int read_count = 0;
     void *dst_ptr = 0;
     size_t write_size = 0;
     if (*formatter.fmt_cur != '%') {
@@ -2560,9 +2562,9 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
       for (; *(formatter.fmt_cur + 1) && *(formatter.fmt_cur + 1) != '%';
            ++formatter.fmt_cur) {
       }
-      retval = formatter.scan();
+      read_count = formatter.scan();
       dfsan_set_label(0, formatter.str_cur(),
-                      formatter.num_written_bytes(retval));
+                      formatter.num_written_bytes(read_count));
     } else {
       // Conversion directive. Consume all the characters until a conversion
       // specifier or the end of the string.
@@ -2575,58 +2577,61 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
         case 'u':
         case 'x':
         case 'X':
-          switch (*(formatter.fmt_cur - 1)) {
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            switch (*(formatter.fmt_cur - 1)) {
             case 'h':
-            // Also covers the 'hh' case (since the size of the arg is still
-            // an int).
-            dst_ptr = va_arg(ap, int *);
-            retval = formatter.scan((int *)dst_ptr);
-            write_size = sizeof(int);
-            break;
+              // Also covers the 'hh' case (since the size of the arg is still
+              // an int).
+              dst_ptr = va_arg(ap, int *);
+              read_count = formatter.scan((int *)dst_ptr);
+              write_size = sizeof(int);
+              break;
             case 'l':
-            if (formatter.fmt_cur - formatter.fmt_start >= 2 &&
-                *(formatter.fmt_cur - 2) == 'l') {
-              dst_ptr = va_arg(ap, long long int *);
-              retval = formatter.scan((long long int *)dst_ptr);
-              write_size = sizeof(long long int);
-            } else {
-              dst_ptr = va_arg(ap, long int *);
-              retval = formatter.scan((long int *)dst_ptr);
-              write_size = sizeof(long int);
-            }
-            break;
+              if (formatter.fmt_cur - formatter.fmt_start >= 2 &&
+                  *(formatter.fmt_cur - 2) == 'l') {
+                dst_ptr = va_arg(ap, long long int *);
+                read_count = formatter.scan((long long int *)dst_ptr);
+                write_size = sizeof(long long int);
+              } else {
+                dst_ptr = va_arg(ap, long int *);
+                read_count = formatter.scan((long int *)dst_ptr);
+                write_size = sizeof(long int);
+              }
+              break;
             case 'q':
-            dst_ptr = va_arg(ap, long long int *);
-            retval = formatter.scan((long long int *)dst_ptr);
-            write_size = sizeof(long long int);
-            break;
+              dst_ptr = va_arg(ap, long long int *);
+              read_count = formatter.scan((long long int *)dst_ptr);
+              write_size = sizeof(long long int);
+              break;
             case 'j':
-            dst_ptr = va_arg(ap, intmax_t *);
-            retval = formatter.scan((intmax_t *)dst_ptr);
-            write_size = sizeof(intmax_t);
-            break;
+              dst_ptr = va_arg(ap, intmax_t *);
+              read_count = formatter.scan((intmax_t *)dst_ptr);
+              write_size = sizeof(intmax_t);
+              break;
             case 'z':
             case 't':
-            dst_ptr = va_arg(ap, size_t *);
-            retval = formatter.scan((size_t *)dst_ptr);
-            write_size = sizeof(size_t);
-            break;
+              dst_ptr = va_arg(ap, size_t *);
+              read_count = formatter.scan((size_t *)dst_ptr);
+              write_size = sizeof(size_t);
+              break;
             default:
-            dst_ptr = va_arg(ap, int *);
-            retval = formatter.scan((int *)dst_ptr);
-            write_size = sizeof(int);
-          }
-          // get the label associated with the string at the corresponding
-          // place
-          l = dfsan_read_label(formatter.str_cur(),
-                               formatter.num_written_bytes(retval));
-          if (str_origin == nullptr)
+              dst_ptr = va_arg(ap, int *);
+              read_count = formatter.scan((int *)dst_ptr);
+              write_size = sizeof(int);
+            }
+            // get the label associated with the string at the corresponding
+            // place
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
-          else {
+            if (str_origin != nullptr) {
             dfsan_set_label(l, dst_ptr, write_size);
-            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t scan_count = formatter.num_written_bytes(read_count);
             size_t size = scan_count > write_size ? write_size : scan_count;
             dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
           }
           end_fmt = true;
 
@@ -2640,104 +2645,119 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
         case 'F':
         case 'g':
         case 'G':
-          if (*(formatter.fmt_cur - 1) == 'L') {
-            dst_ptr = va_arg(ap, long double *);
-            retval = formatter.scan((long double *)dst_ptr);
-            write_size = sizeof(long double);
-          } else if (*(formatter.fmt_cur - 1) == 'l') {
-            dst_ptr = va_arg(ap, double *);
-            retval = formatter.scan((double *)dst_ptr);
-            write_size = sizeof(double);
+          if (formatter.skip) {
+            read_count = formatter.scan();
           } else {
+            if (*(formatter.fmt_cur - 1) == 'L') {
+            dst_ptr = va_arg(ap, long double *);
+            read_count = formatter.scan((long double *)dst_ptr);
+            write_size = sizeof(long double);
+            } else if (*(formatter.fmt_cur - 1) == 'l') {
+            dst_ptr = va_arg(ap, double *);
+            read_count = formatter.scan((double *)dst_ptr);
+            write_size = sizeof(double);
+            } else {
             dst_ptr = va_arg(ap, float *);
-            retval = formatter.scan((float *)dst_ptr);
+            read_count = formatter.scan((float *)dst_ptr);
             write_size = sizeof(float);
-          }
-          l = dfsan_read_label(formatter.str_cur(),
-                               formatter.num_written_bytes(retval));
-          if (str_origin == nullptr)
+            }
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
-          else {
+            if (str_origin != nullptr) {
             dfsan_set_label(l, dst_ptr, write_size);
-            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t scan_count = formatter.num_written_bytes(read_count);
             size_t size = scan_count > write_size ? write_size : scan_count;
             dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
           }
           end_fmt = true;
           break;
 
         case 'c':
-          dst_ptr = va_arg(ap, char *);
-          retval = formatter.scan((char *)dst_ptr);
-          write_size = sizeof(char);
-          l = dfsan_read_label(formatter.str_cur(),
-                               formatter.num_written_bytes(retval));
-          if (str_origin == nullptr)
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            dst_ptr = va_arg(ap, char *);
+            read_count = formatter.scan((char *)dst_ptr);
+            write_size = sizeof(char);
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
-          else {
-            dfsan_set_label(l, dst_ptr, write_size);
-            size_t scan_count = formatter.num_written_bytes(retval);
+            if (str_origin != nullptr) {
+            size_t scan_count = formatter.num_written_bytes(read_count);
             size_t size = scan_count > write_size ? write_size : scan_count;
             dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
           }
           end_fmt = true;
           break;
 
         case 's': {
-          dst_ptr = va_arg(ap, char *);
-          retval = formatter.scan((char *)dst_ptr);
-          if (1 == retval) {
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            dst_ptr = va_arg(ap, char *);
+            read_count = formatter.scan((char *)dst_ptr);
+            if (1 == read_count) {
             // special case: we have parsed a single string and we need to
-            // update retval with the string size
-            retval = strlen((char *)dst_ptr);
-          }
-          if (str_origin)
+            // update read_count with the string size
+            read_count = strlen((char *)dst_ptr);
+            }
+            if (str_origin)
             dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(),
-                                      formatter.num_written_bytes(retval));
-          va_labels++;
-          dfsan_mem_shadow_transfer(dst_ptr, formatter.str_cur(),
-                                    formatter.num_written_bytes(retval));
+                                      formatter.num_written_bytes(read_count));
+            va_labels++;
+            dfsan_mem_shadow_transfer(dst_ptr, formatter.str_cur(),
+                                      formatter.num_written_bytes(read_count));
+          }
           end_fmt = true;
           break;
         }
 
         case 'p':
-          dst_ptr = va_arg(ap, void *);
-          retval =
-              formatter.scan((int *)dst_ptr);  // note: changing void* to int*
-                                               // since we need to call sizeof
-          write_size = sizeof(int);
+          if (formatter.skip) {
+            read_count = formatter.scan();
+          } else {
+            dst_ptr = va_arg(ap, void *);
+            read_count =
+                formatter.scan((int *)dst_ptr);  // note: changing void* to int*
+                                                 // since we need to call sizeof
+            write_size = sizeof(int);
 
-          l = dfsan_read_label(formatter.str_cur(),
-                               formatter.num_written_bytes(retval));
-          if (str_origin == nullptr)
+            dfsan_label l = dfsan_read_label(
+                formatter.str_cur(), formatter.num_written_bytes(read_count));
             dfsan_set_label(l, dst_ptr, write_size);
-          else {
+            if (str_origin != nullptr) {
             dfsan_set_label(l, dst_ptr, write_size);
-            size_t scan_count = formatter.num_written_bytes(retval);
+            size_t scan_count = formatter.num_written_bytes(read_count);
             size_t size = scan_count > write_size ? write_size : scan_count;
             dfsan_mem_origin_transfer(dst_ptr, formatter.str_cur(), size);
+            }
           }
           end_fmt = true;
           break;
 
         case 'n': {
-          int *ptr = va_arg(ap, int *);
-          *ptr = (int)formatter.str_off;
-          va_labels++;
-          dfsan_set_label(0, ptr, sizeof(*ptr));
+          if (!formatter.skip) {
+            int *ptr = va_arg(ap, int *);
+            *ptr = (int)formatter.str_off;
+            *va_labels++ = 0;
+            dfsan_set_label(0, ptr, sizeof(*ptr));
+            if (str_origin != nullptr)
+            *str_origin++ = 0;
+          }
           end_fmt = true;
           break;
         }
 
         case '%':
-          retval = formatter.scan();
+          read_count = formatter.scan();
           end_fmt = true;
           break;
 
         case '*':
-          formatter.width = va_arg(ap, int);
-          va_labels++;
+          formatter.skip = true;
           break;
 
         default:
@@ -2746,12 +2766,13 @@ static int scan_buffer(char *str, size_t size, const char *fmt,
       }
     }
 
-    if (retval < 0) {
-      return retval;
+    if (read_count < 0) {
+      // There was an error.
+      return read_count;
     }
 
     formatter.fmt_cur++;
-    formatter.str_off += retval;
+    formatter.str_off += read_count;
   }
 
   (void)va_labels; // Silence unused-but-set-parameter warning

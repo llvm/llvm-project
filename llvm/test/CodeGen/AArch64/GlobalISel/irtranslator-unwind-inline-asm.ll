@@ -71,7 +71,7 @@ define void @test2() #0 personality ptr @__gcc_personality_v0 {
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY [[DEF]](p0)
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2555913 /* reguse:GPR64common */, [[COPY]]
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 2752521 /* reguse:GPR64common */, [[COPY]]
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}

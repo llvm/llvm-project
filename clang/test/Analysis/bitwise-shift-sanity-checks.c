@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core.BitwiseShift \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:    -analyzer-config core.BitwiseShift:Pedantic=true \
 // RUN:    -verify=expected,pedantic \
 // RUN:    -triple x86_64-pc-linux-gnu -x c %s \
@@ -6,7 +6,7 @@
 // RUN:    -Wno-shift-count-overflow -Wno-shift-overflow \
 // RUN:    -Wno-shift-sign-overflow
 //
-// RUN: %clang_analyze_cc1 -analyzer-checker=core.BitwiseShift \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:    -analyzer-config core.BitwiseShift:Pedantic=true \
 // RUN:    -verify=expected,pedantic \
 // RUN:    -triple x86_64-pc-linux-gnu -x c++ -std=c++14 %s \
@@ -14,7 +14,7 @@
 // RUN:    -Wno-shift-count-overflow -Wno-shift-overflow \
 // RUN:    -Wno-shift-sign-overflow
 //
-// RUN: %clang_analyze_cc1 -analyzer-checker=core.BitwiseShift \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:    -verify=expected \
 // RUN:    -triple x86_64-pc-linux-gnu -x c++ -std=c++20 %s \
 // RUN:    -Wno-shift-count-negative -Wno-shift-negative-value \
@@ -23,6 +23,8 @@
 
 // This test file verifies that the BitwiseShift checker does not crash or
 // report false positives (at least on the cases that are listed here...)
+// Other core checkers are also enabled to see interactions with e.g.
+// core.UndefinedBinaryOperatorResult.
 // For the sake of brevity, 'note' output is not checked in this file.
 
 // TEST OBVIOUSLY CORRECT CODE
@@ -115,4 +117,18 @@ void doubles_cast_to_integer(int *c) {
   *c = 1 << (int)1.5;          // no-crash
   *c = ((int)1.5) << 1;        // no-crash
   *c = ((int)1.5) << (int)1.5; // no-crash
+}
+
+// TEST CODE THAT WAS TRIGGERING BUGS IN EARLIER REVISIONS
+//===----------------------------------------------------------------------===//
+
+unsigned int strange_cast(unsigned short sh) {
+  // This testcase triggers a bug in the constant folding (it "forgets" the
+  // cast), which is silenced in SimpleSValBuilder::evalBinOpNN() with an ugly
+  // workaround, because otherwise it would lead to a false positive from
+  // core.UndefinedBinaryOperatorResult.
+  unsigned int i;
+  sh++;
+  for (i=0; i<sh; i++) {}
+  return (unsigned int) ( ((unsigned int) sh) << 16 ); // no-warning
 }

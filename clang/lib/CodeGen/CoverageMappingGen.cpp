@@ -31,10 +31,6 @@
 // is textually included.
 #define COVMAP_V3
 
-namespace llvm {
-extern cl::opt<bool> DebugInfoCorrelate;
-} // namespace llvm
-
 static llvm::cl::opt<bool> EmptyLineCommentCoverage(
     "emptyline-comment-coverage",
     llvm::cl::desc("Emit emptylines and comment lines as skipped regions (only "
@@ -1044,7 +1040,8 @@ struct CounterCoverageMappingBuilder
       for (auto *Initializer : Ctor->inits()) {
         if (Initializer->isWritten()) {
           auto *Init = Initializer->getInit();
-          propagateCounts(BodyCounter, Init);
+          if (getStart(Init).isValid() && getEnd(Init).isValid())
+            propagateCounts(BodyCounter, Init);
         }
       }
     }
@@ -1626,7 +1623,11 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       OS << "Gap,";
       break;
     case CounterMappingRegion::BranchRegion:
+    case CounterMappingRegion::MCDCBranchRegion:
       OS << "Branch,";
+      break;
+    case CounterMappingRegion::MCDCDecisionRegion:
+      OS << "Decision,";
       break;
     }
 
@@ -1731,13 +1732,11 @@ void CoverageMappingModuleGen::emitFunctionMappingRecord(
 void CoverageMappingModuleGen::addFunctionMappingRecord(
     llvm::GlobalVariable *NamePtr, StringRef NameValue, uint64_t FuncHash,
     const std::string &CoverageMapping, bool IsUsed) {
-  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   const uint64_t NameHash = llvm::IndexedInstrProf::ComputeHash(NameValue);
   FunctionRecords.push_back({NameHash, FuncHash, CoverageMapping, IsUsed});
 
   if (!IsUsed)
-    FunctionNames.push_back(
-        llvm::ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)));
+    FunctionNames.push_back(NamePtr);
 
   if (CGM.getCodeGenOpts().DumpCoverageMapping) {
     // Dump the coverage mapping data for this function by decoding the
@@ -1825,7 +1824,7 @@ void CoverageMappingModuleGen::emit() {
   CGM.addUsedGlobal(CovData);
   // Create the deferred function records array
   if (!FunctionNames.empty()) {
-    auto NamesArrTy = llvm::ArrayType::get(llvm::Type::getInt8PtrTy(Ctx),
+    auto NamesArrTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(Ctx),
                                            FunctionNames.size());
     auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames);
     // This variable will *NOT* be emitted to the object file. It is used
@@ -1833,22 +1832,6 @@ void CoverageMappingModuleGen::emit() {
     new llvm::GlobalVariable(CGM.getModule(), NamesArrTy, true,
                              llvm::GlobalValue::InternalLinkage, NamesArrVal,
                              llvm::getCoverageUnusedNamesVarName());
-  }
-  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  llvm::Type *IntTy64 = llvm::Type::getInt64Ty(Ctx);
-  uint64_t ProfileVersion = INSTR_PROF_RAW_VERSION;
-  if (llvm::DebugInfoCorrelate)
-    ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
-  auto *VersionVariable = new llvm::GlobalVariable(
-      CGM.getModule(), llvm::Type::getInt64Ty(Ctx), true,
-      llvm::GlobalValue::WeakAnyLinkage,
-      llvm::Constant::getIntegerValue(IntTy64, llvm::APInt(64, ProfileVersion)),
-      VarName);
-  VersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  llvm::Triple TT(CGM.getModule().getTargetTriple());
-  if (TT.supportsCOMDAT()) {
-    VersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    VersionVariable->setComdat(CGM.getModule().getOrInsertComdat(VarName));
   }
 }
 

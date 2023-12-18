@@ -73,10 +73,10 @@ class DataLayout {
 public:
   explicit DataLayout(DataLayoutOpInterface scope);
 
-  unsigned getTypeSize(Type type) const;
-  unsigned getTypeSizeInBits(Type type) const;
-  unsigned getTypeABIAlignment(Type type) const;
-  unsigned getTypePreferredAlignment(Type type) const;
+  llvm::TypeSize getTypeSize(Type type) const;
+  llvm::TypeSize getTypeSizeInBits(Type type) const;
+  uint64_t getTypeABIAlignment(Type type) const;
+  uint64_t getTypePreferredAlignment(Type type) const;
 };
 ```
 

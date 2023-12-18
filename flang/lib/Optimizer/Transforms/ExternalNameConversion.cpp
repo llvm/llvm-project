@@ -9,11 +9,13 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -38,11 +40,8 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
   if (result.first == fir::NameUniquer::NameKind::COMMON &&
       result.second.name.empty())
     return Fortran::common::blankCommonObjectName;
-
-  if (appendUnderscore)
-    return result.second.name + "_";
-
-  return result.second.name;
+  return Fortran::common::GetExternalAssemblyName(result.second.name,
+                                                  appendUnderscore);
 }
 
 /// Update the early outlining parent name
@@ -78,7 +77,8 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::LogicalResult ret = success();
     rewriter.startRootUpdate(op);
-    auto result = fir::NameUniquer::deconstruct(op.getSymName());
+    llvm::StringRef oldName = op.getSymName();
+    auto result = fir::NameUniquer::deconstruct(oldName);
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
       auto newSymbol =
           rewriter.getStringAttr(mangleExternalName(result, appendUnderscore));
@@ -89,6 +89,9 @@ public:
 
       op.setSymNameAttr(newSymbol);
       mlir::SymbolTable::setSymbolName(op, newSymbol);
+
+      op->setAttr(fir::getInternalFuncNameAttrName(),
+                  mlir::StringAttr::get(op->getContext(), oldName));
     }
 
     updateEarlyOutliningParentName(op, appendUnderscore);

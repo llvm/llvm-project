@@ -11,4 +11,4 @@
 #include "src/string/rindex.h"
 #include "test/UnitTest/Test.h"
 
-STRRCHR_TEST(Rindex, __llvm_libc::rindex)
+STRRCHR_TEST(Rindex, LIBC_NAMESPACE::rindex)

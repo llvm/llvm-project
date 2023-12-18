@@ -715,7 +715,7 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    buffer_store_dword v251, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v252, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v253, off, s[0:3], s32 ; 4-byte Folded Spill
-; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:440
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

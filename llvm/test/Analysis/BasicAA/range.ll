@@ -2,6 +2,7 @@
 
 %struct.S = type { i32, [2 x i32], i32 }
 %struct.S2 = type { i32, [4 x i32], [4 x i32] }
+@G = global [10 x i32] zeroinitializer, align 4
 
 ; CHECK: Function: t1
 ; CHECK: NoAlias: i32* %gep1, i32* %gep2
@@ -258,8 +259,19 @@ join:
   ret void
 }
 
-declare void @llvm.assume(i1)
 
+; CHECK-LABEL: Function: select_in_gep
+; CHECK: NoAlias: i32* %arrayidx, i32* getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 3)
+define i32 @select_in_gep(i1 %c)  {
+entry:
+  %select_ = select i1 %c, i64 2, i64 1
+  %arrayidx = getelementptr inbounds [10 x i32], ptr @G, i64 0, i64 %select_
+  store i32 42, ptr %arrayidx, align 4
+  %load_ = load i32, ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 3), align 4
+  ret i32 %load_
+}
+
+declare void @llvm.assume(i1)
 
 !0 = !{ i32 0, i32 2 }
 !1 = !{ i32 0, i32 1 }

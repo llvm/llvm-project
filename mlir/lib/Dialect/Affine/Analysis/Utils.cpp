@@ -20,6 +20,8 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/Interfaces/CallInterfaces.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -102,6 +104,132 @@ void Node::getLoadAndStoreMemrefSet(
     if (loadMemrefs.count(memref) > 0)
       loadAndStoreMemrefSet->insert(memref);
   }
+}
+
+// Initializes the data dependence graph by walking operations in `block`.
+// Assigns each node in the graph a node id based on program order in 'f'.
+bool MemRefDependenceGraph::init() {
+  LLVM_DEBUG(llvm::dbgs() << "--- Initializing MDG ---\n");
+  // Map from a memref to the set of ids of the nodes that have ops accessing
+  // the memref.
+  DenseMap<Value, SetVector<unsigned>> memrefAccesses;
+
+  DenseMap<Operation *, unsigned> forToNodeMap;
+  for (Operation &op : block) {
+    if (dyn_cast<AffineForOp>(op)) {
+      // Create graph node 'id' to represent top-level 'forOp' and record
+      // all loads and store accesses it contains.
+      LoopNestStateCollector collector;
+      collector.collect(&op);
+      // Return false if a region holding op other than 'affine.for' and
+      // 'affine.if' was found (not currently supported).
+      if (collector.hasNonAffineRegionOp)
+        return false;
+      Node node(nextNodeId++, &op);
+      for (auto *opInst : collector.loadOpInsts) {
+        node.loads.push_back(opInst);
+        auto memref = cast<AffineReadOpInterface>(opInst).getMemRef();
+        memrefAccesses[memref].insert(node.id);
+      }
+      for (auto *opInst : collector.storeOpInsts) {
+        node.stores.push_back(opInst);
+        auto memref = cast<AffineWriteOpInterface>(opInst).getMemRef();
+        memrefAccesses[memref].insert(node.id);
+      }
+      forToNodeMap[&op] = node.id;
+      nodes.insert({node.id, node});
+    } else if (dyn_cast<AffineReadOpInterface>(op)) {
+      // Create graph node for top-level load op.
+      Node node(nextNodeId++, &op);
+      node.loads.push_back(&op);
+      auto memref = cast<AffineReadOpInterface>(op).getMemRef();
+      memrefAccesses[memref].insert(node.id);
+      nodes.insert({node.id, node});
+    } else if (dyn_cast<AffineWriteOpInterface>(op)) {
+      // Create graph node for top-level store op.
+      Node node(nextNodeId++, &op);
+      node.stores.push_back(&op);
+      auto memref = cast<AffineWriteOpInterface>(op).getMemRef();
+      memrefAccesses[memref].insert(node.id);
+      nodes.insert({node.id, node});
+    } else if (op.getNumResults() > 0 && !op.use_empty()) {
+      // Create graph node for top-level producer of SSA values, which
+      // could be used by loop nest nodes.
+      Node node(nextNodeId++, &op);
+      nodes.insert({node.id, node});
+    } else if (!isMemoryEffectFree(&op) &&
+               (op.getNumRegions() == 0 || isa<RegionBranchOpInterface>(op))) {
+      // Create graph node for top-level op unless it is known to be
+      // memory-effect free. This covers all unknown/unregistered ops,
+      // non-affine ops with memory effects, and region-holding ops with a
+      // well-defined control flow. During the fusion validity checks, we look
+      // for non-affine ops on the path from source to destination, at which
+      // point we check which memrefs if any are used in the region.
+      Node node(nextNodeId++, &op);
+      nodes.insert({node.id, node});
+    } else if (op.getNumRegions() != 0) {
+      // Return false if non-handled/unknown region-holding ops are found. We
+      // won't know what such ops do or what its regions mean; for e.g., it may
+      // not be an imperative op.
+      LLVM_DEBUG(llvm::dbgs()
+                 << "MDG init failed; unknown region-holding op found!\n");
+      return false;
+    }
+  }
+
+  for (auto &idAndNode : nodes) {
+    LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
+                            << *(idAndNode.second.op) << "\n");
+    (void)idAndNode;
+  }
+
+  // Add dependence edges between nodes which produce SSA values and their
+  // users. Load ops can be considered as the ones producing SSA values.
+  for (auto &idAndNode : nodes) {
+    const Node &node = idAndNode.second;
+    // Stores don't define SSA values, skip them.
+    if (!node.stores.empty())
+      continue;
+    Operation *opInst = node.op;
+    for (Value value : opInst->getResults()) {
+      for (Operation *user : value.getUsers()) {
+        // Ignore users outside of the block.
+        if (block.getParent()->findAncestorOpInRegion(*user)->getBlock() !=
+            &block)
+          continue;
+        SmallVector<AffineForOp, 4> loops;
+        getAffineForIVs(*user, &loops);
+        // Find the surrounding affine.for nested immediately within the
+        // block.
+        auto *it = llvm::find_if(loops, [&](AffineForOp loop) {
+          return loop->getBlock() == &block;
+        });
+        if (it == loops.end())
+          continue;
+        assert(forToNodeMap.count(*it) > 0 && "missing mapping");
+        unsigned userLoopNestId = forToNodeMap[*it];
+        addEdge(node.id, userLoopNestId, value);
+      }
+    }
+  }
+
+  // Walk memref access lists and add graph edges between dependent nodes.
+  for (auto &memrefAndList : memrefAccesses) {
+    unsigned n = memrefAndList.second.size();
+    for (unsigned i = 0; i < n; ++i) {
+      unsigned srcId = memrefAndList.second[i];
+      bool srcHasStore =
+          getNode(srcId)->getStoreOpCount(memrefAndList.first) > 0;
+      for (unsigned j = i + 1; j < n; ++j) {
+        unsigned dstId = memrefAndList.second[j];
+        bool dstHasStore =
+            getNode(dstId)->getStoreOpCount(memrefAndList.first) > 0;
+        if (srcHasStore || dstHasStore)
+          addEdge(srcId, dstId, memrefAndList.first);
+      }
+    }
+  }
+  return true;
 }
 
 // Returns the graph node for 'id'.
@@ -508,8 +636,8 @@ void mlir::affine::getAffineForIVs(Operation &op,
   AffineForOp currAffineForOp;
   // Traverse up the hierarchy collecting all 'affine.for' operation while
   // skipping over 'affine.if' operations.
-  while (currOp) {
-    if (AffineForOp currAffineForOp = dyn_cast<AffineForOp>(currOp))
+  while (currOp && !currOp->hasTrait<OpTrait::AffineScope>()) {
+    if (auto currAffineForOp = dyn_cast<AffineForOp>(currOp))
       loops->push_back(currAffineForOp);
     currOp = currOp->getParentOp();
   }
@@ -523,7 +651,7 @@ void mlir::affine::getEnclosingAffineOps(Operation &op,
 
   // Traverse up the hierarchy collecting all `affine.for`, `affine.if`, and
   // affine.parallel operations.
-  while (currOp) {
+  while (currOp && !currOp->hasTrait<OpTrait::AffineScope>()) {
     if (isa<AffineIfOp, AffineForOp, AffineParallelOp>(currOp))
       ops->push_back(currOp);
     currOp = currOp->getParentOp();
@@ -635,12 +763,12 @@ std::optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
         // iteration (e.g., lbMap.getResult(0) = 0, ubMap.getResult(0) = 1).
         // Make sure we skip those cases by checking that the lb result is not
         // just a constant.
-        lbMap.getResult(0).isa<AffineConstantExpr>())
+        isa<AffineConstantExpr>(lbMap.getResult(0)))
       return std::nullopt;
 
     // Limited support: we expect the lb result to be just a loop dimension for
     // now.
-    AffineDimExpr result = lbMap.getResult(0).dyn_cast<AffineDimExpr>();
+    AffineDimExpr result = dyn_cast<AffineDimExpr>(lbMap.getResult(0));
     if (!result)
       return std::nullopt;
 
@@ -668,10 +796,10 @@ std::optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
     AffineExpr dstLbResult = dstLbMap.getResult(0);
     AffineExpr srcUbResult = srcUbMap.getResult(0);
     AffineExpr dstUbResult = dstUbMap.getResult(0);
-    if (!srcLbResult.isa<AffineConstantExpr>() ||
-        !srcUbResult.isa<AffineConstantExpr>() ||
-        !dstLbResult.isa<AffineConstantExpr>() ||
-        !dstUbResult.isa<AffineConstantExpr>())
+    if (!isa<AffineConstantExpr>(srcLbResult) ||
+        !isa<AffineConstantExpr>(srcUbResult) ||
+        !isa<AffineConstantExpr>(dstLbResult) ||
+        !isa<AffineConstantExpr>(dstUbResult))
       return std::nullopt;
 
     // Check if src and dst loop bounds are the same. If not, we can guarantee
@@ -1460,7 +1588,7 @@ static std::optional<uint64_t> getConstDifference(AffineMap lbMap,
   AffineExpr ubExpr(ubMap.getResult(0));
   auto loopSpanExpr = simplifyAffineExpr(ubExpr - lbExpr, lbMap.getNumDims(),
                                          lbMap.getNumSymbols());
-  auto cExpr = loopSpanExpr.dyn_cast<AffineConstantExpr>();
+  auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
   if (!cExpr)
     return std::nullopt;
   return cExpr.getValue();

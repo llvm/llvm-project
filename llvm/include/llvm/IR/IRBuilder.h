@@ -200,6 +200,14 @@ public:
       SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
+  /// This specifies that created instructions should be inserted at
+  /// the specified point, but also requires that \p IP is dereferencable.
+  void SetInsertPoint(BasicBlock::iterator IP) {
+    BB = IP->getParent();
+    InsertPt = IP;
+    SetCurrentDebugLocation(IP->getStableDebugLoc());
+  }
+
   /// This specifies that created instructions should inserted at the beginning
   /// end of the specified function, but after already existing static alloca
   /// instructions that are at the start.
@@ -554,11 +562,6 @@ public:
   /// Fetch the type representing a pointer.
   PointerType *getPtrTy(unsigned AddrSpace = 0) {
     return PointerType::get(Context, AddrSpace);
-  }
-
-  /// Fetch the type representing a pointer to an 8-bit integer value.
-  PointerType *getInt8PtrTy(unsigned AddrSpace = 0) {
-    return getPtrTy(AddrSpace);
   }
 
   /// Fetch the type of an integer with size at least as big as that of a
@@ -1994,8 +1997,16 @@ public:
     return CreateCast(Instruction::Trunc, V, DestTy, Name);
   }
 
-  Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "") {
-    return CreateCast(Instruction::ZExt, V, DestTy, Name);
+  Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "",
+                    bool IsNonNeg = false) {
+    if (V->getType() == DestTy)
+      return V;
+    if (Value *Folded = Folder.FoldCast(Instruction::ZExt, V, DestTy))
+      return Folded;
+    Instruction *I = Insert(new ZExtInst(V, DestTy), Name);
+    if (IsNonNeg)
+      I->setNonNeg();
+    return I;
   }
 
   Value *CreateSExt(Value *V, Type *DestTy, const Twine &Name = "") {
@@ -2096,39 +2107,36 @@ public:
     return CreateCast(Instruction::AddrSpaceCast, V, DestTy, Name);
   }
 
-  Value *CreateZExtOrBitCast(Value *V, Type *DestTy,
-                             const Twine &Name = "") {
-    if (V->getType() == DestTy)
-      return V;
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateZExtOrBitCast(VC, DestTy), Name);
-    return Insert(CastInst::CreateZExtOrBitCast(V, DestTy), Name);
+  Value *CreateZExtOrBitCast(Value *V, Type *DestTy, const Twine &Name = "") {
+    Instruction::CastOps CastOp =
+        V->getType()->getScalarSizeInBits() == DestTy->getScalarSizeInBits()
+            ? Instruction::BitCast
+            : Instruction::ZExt;
+    return CreateCast(CastOp, V, DestTy, Name);
   }
 
-  Value *CreateSExtOrBitCast(Value *V, Type *DestTy,
-                             const Twine &Name = "") {
-    if (V->getType() == DestTy)
-      return V;
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateSExtOrBitCast(VC, DestTy), Name);
-    return Insert(CastInst::CreateSExtOrBitCast(V, DestTy), Name);
+  Value *CreateSExtOrBitCast(Value *V, Type *DestTy, const Twine &Name = "") {
+    Instruction::CastOps CastOp =
+        V->getType()->getScalarSizeInBits() == DestTy->getScalarSizeInBits()
+            ? Instruction::BitCast
+            : Instruction::SExt;
+    return CreateCast(CastOp, V, DestTy, Name);
   }
 
-  Value *CreateTruncOrBitCast(Value *V, Type *DestTy,
-                              const Twine &Name = "") {
-    if (V->getType() == DestTy)
-      return V;
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateTruncOrBitCast(VC, DestTy), Name);
-    return Insert(CastInst::CreateTruncOrBitCast(V, DestTy), Name);
+  Value *CreateTruncOrBitCast(Value *V, Type *DestTy, const Twine &Name = "") {
+    Instruction::CastOps CastOp =
+        V->getType()->getScalarSizeInBits() == DestTy->getScalarSizeInBits()
+            ? Instruction::BitCast
+            : Instruction::Trunc;
+    return CreateCast(CastOp, V, DestTy, Name);
   }
 
   Value *CreateCast(Instruction::CastOps Op, Value *V, Type *DestTy,
                     const Twine &Name = "") {
     if (V->getType() == DestTy)
       return V;
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateCast(Op, VC, DestTy), Name);
+    if (Value *Folded = Folder.FoldCast(Op, V, DestTy))
+      return Folded;
     return Insert(CastInst::Create(Op, V, DestTy), Name);
   }
 
@@ -2141,6 +2149,9 @@ public:
     return Insert(CastInst::CreatePointerCast(V, DestTy), Name);
   }
 
+  // With opaque pointers enabled, this can be substituted with
+  // CreateAddrSpaceCast.
+  // TODO: Replace uses of this method and remove the method itself.
   Value *CreatePointerBitCastOrAddrSpaceCast(Value *V, Type *DestTy,
                                              const Twine &Name = "") {
     if (V->getType() == DestTy)
@@ -2157,11 +2168,11 @@ public:
 
   Value *CreateIntCast(Value *V, Type *DestTy, bool isSigned,
                        const Twine &Name = "") {
-    if (V->getType() == DestTy)
-      return V;
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateIntCast(VC, DestTy, isSigned), Name);
-    return Insert(CastInst::CreateIntegerCast(V, DestTy, isSigned), Name);
+    Instruction::CastOps CastOp =
+        V->getType()->getScalarSizeInBits() > DestTy->getScalarSizeInBits()
+            ? Instruction::Trunc
+            : (isSigned ? Instruction::SExt : Instruction::ZExt);
+    return CreateCast(CastOp, V, DestTy, Name);
   }
 
   Value *CreateBitOrPointerCast(Value *V, Type *DestTy,
@@ -2177,11 +2188,11 @@ public:
   }
 
   Value *CreateFPCast(Value *V, Type *DestTy, const Twine &Name = "") {
-    if (V->getType() == DestTy)
-      return V;
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateFPCast(VC, DestTy), Name);
-    return Insert(CastInst::CreateFPCast(V, DestTy), Name);
+    Instruction::CastOps CastOp =
+        V->getType()->getScalarSizeInBits() > DestTy->getScalarSizeInBits()
+            ? Instruction::FPTrunc
+            : Instruction::FPExt;
+    return CreateCast(CastOp, V, DestTy, Name);
   }
 
   CallInst *CreateConstrainedFPCast(

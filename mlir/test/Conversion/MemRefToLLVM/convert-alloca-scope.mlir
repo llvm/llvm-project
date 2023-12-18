@@ -1,4 +1,4 @@
-// RUN: mlir-opt -finalize-memref-to-llvm='use-opaque-pointers=1' %s | FileCheck %s
+// RUN: mlir-opt -finalize-memref-to-llvm  %s | FileCheck %s
 
 // CHECK-LABEL: @empty
 func.func @empty() {

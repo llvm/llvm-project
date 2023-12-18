@@ -12,9 +12,9 @@
 
 // CHECK-EN-LABEL: func @test_erase
 //  CHECK-EN-SAME:     pattern_driver_all_erased = true, pattern_driver_changed = true}
-//       CHECK-EN:   test.arg0
-//       CHECK-EN:   test.arg1
-//   CHECK-EN-NOT:   test.erase_op
+//       CHECK-EN:   "test.arg0"
+//       CHECK-EN:   "test.arg1"
+//   CHECK-EN-NOT:   "test.erase_op"
 func.func @test_erase() {
   %0 = "test.arg0"() : () -> (i32)
   %1 = "test.arg1"() : () -> (i32)
@@ -51,13 +51,13 @@ func.func @test_replace_with_new_op() {
 
 // CHECK-EN-LABEL: func @test_replace_with_erase_op
 //  CHECK-EN-SAME:     {pattern_driver_all_erased = true, pattern_driver_changed = true}
-//   CHECK-EN-NOT:   test.replace_with_new_op
-//   CHECK-EN-NOT:   test.erase_op
+//   CHECK-EN-NOT:   "test.replace_with_new_op"
+//   CHECK-EN-NOT:   "test.erase_op"
 
 // CHECK-EX-LABEL: func @test_replace_with_erase_op
 //  CHECK-EX-SAME:     {pattern_driver_all_erased = true, pattern_driver_changed = true}
-//   CHECK-EX-NOT:   test.replace_with_new_op
-//       CHECK-EX:   test.erase_op
+//   CHECK-EX-NOT:   "test.replace_with_new_op"
+//       CHECK-EX:   "test.erase_op"
 func.func @test_replace_with_erase_op() {
   "test.replace_with_new_op"() {create_erase_op} : () -> ()
   return
@@ -82,4 +82,150 @@ func.func @test_trigger_rewrite_through_block() {
   // this op being put on the worklist, which triggers ImplicitChangeOp, which,
   // in turn, replaces the successor with bb3.
   "test.implicit_change_op"() [^bb1] : () -> ()
+}
+
+// -----
+
+// CHECK-AN: notifyOperationRemoved: test.foo_b
+// CHECK-AN: notifyOperationRemoved: test.foo_a
+// CHECK-AN: notifyOperationRemoved: test.graph_region
+// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN-LABEL: func @test_remove_graph_region()
+//  CHECK-AN-NEXT:   return
+func.func @test_remove_graph_region() {
+  "test.erase_op"() ({
+    test.graph_region {
+      %0 = "test.foo_a"(%1) : (i1) -> (i1)
+      %1 = "test.foo_b"(%0) : (i1) -> (i1)
+    }
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.bar
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.foo
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.dummy_op
+// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN-LABEL: func @test_remove_cyclic_blocks()
+//  CHECK-AN-NEXT:   return
+func.func @test_remove_cyclic_blocks() {
+  "test.erase_op"() ({
+    %x = "test.dummy_op"() : () -> (i1)
+    cf.br ^bb1(%x: i1)
+  ^bb1(%arg0: i1):
+    "test.foo"(%x) : (i1) -> ()
+    cf.br ^bb2(%arg0: i1)
+  ^bb2(%arg1: i1):
+    "test.bar"(%x) : (i1) -> ()
+    cf.br ^bb1(%arg1: i1)
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-AN: notifyOperationRemoved: test.dummy_op
+// CHECK-AN: notifyOperationRemoved: test.bar
+// CHECK-AN: notifyOperationRemoved: test.qux
+// CHECK-AN: notifyOperationRemoved: test.qux_unreachable
+// CHECK-AN: notifyOperationRemoved: test.nested_dummy
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.foo
+// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN-LABEL: func @test_remove_dead_blocks()
+//  CHECK-AN-NEXT:   return
+func.func @test_remove_dead_blocks() {
+  "test.erase_op"() ({
+    "test.dummy_op"() : () -> (i1)
+  // The following blocks are not reachable. Still, ^bb2 should be deleted
+  // befire ^bb1.
+  ^bb1(%arg0: i1):
+    "test.foo"() : () -> ()
+    cf.br ^bb2(%arg0: i1)
+  ^bb2(%arg1: i1):
+    "test.nested_dummy"() ({
+      "test.qux"() : () -> ()
+    // The following block is unreachable.
+    ^bb3:
+      "test.qux_unreachable"() : () -> ()
+    }) : () -> ()
+    "test.bar"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// test.nested_* must be deleted before test.foo.
+// test.bar must be deleted before test.foo.
+
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.bar
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.nested_b
+// CHECK-AN: notifyOperationRemoved: test.nested_a
+// CHECK-AN: notifyOperationRemoved: test.nested_d
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.nested_e
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.nested_c
+// CHECK-AN: notifyOperationRemoved: test.foo
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.dummy_op
+// CHECK-AN: notifyOperationRemoved: test.erase_op
+// CHECK-AN-LABEL: func @test_remove_nested_ops()
+//  CHECK-AN-NEXT:   return
+func.func @test_remove_nested_ops() {
+  "test.erase_op"() ({
+    %x = "test.dummy_op"() : () -> (i1)
+    cf.br ^bb1(%x: i1)
+  ^bb1(%arg0: i1):
+    "test.foo"() ({
+      "test.nested_a"() : () -> ()
+      "test.nested_b"() : () -> ()
+    ^dead1:
+      "test.nested_c"() : () -> ()
+      cf.br ^dead3
+    ^dead2:
+      "test.nested_d"() : () -> ()
+    ^dead3:
+      "test.nested_e"() : () -> ()
+      cf.br ^dead2
+    }) : () -> ()
+    cf.br ^bb2(%arg0: i1)
+  ^bb2(%arg1: i1):
+    "test.bar"(%x) : (i1) -> ()
+    cf.br ^bb1(%arg1: i1)
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-AN: notifyOperationRemoved: test.qux
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.foo
+// CHECK-AN: notifyOperationRemoved: cf.br
+// CHECK-AN: notifyOperationRemoved: test.bar
+// CHECK-AN: notifyOperationRemoved: cf.cond_br
+// CHECK-AN-LABEL: func @test_remove_diamond(
+//  CHECK-AN-NEXT:   return
+func.func @test_remove_diamond(%c: i1) {
+  "test.erase_op"() ({
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    "test.foo"() : () -> ()
+    cf.br ^bb3
+  ^bb2:
+    "test.bar"() : () -> ()
+    cf.br ^bb3
+  ^bb3:
+    "test.qux"() : () -> ()
+  }) : () -> ()
+  return
 }

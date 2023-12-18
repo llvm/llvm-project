@@ -35,12 +35,12 @@ define i32 @PR48215(i32 %a0, i32 %a1)  {
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; AVX2-NEXT:    vmovd %edx, %xmm1
 ; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,1,2,3,4,5,6,7]
-; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,5,6,7]
-; AVX2-NEXT:    vpcmpgtd %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovmskps %ymm0, %ecx
-; AVX2-NEXT:    vmovmskps %xmm1, %eax
+; AVX2-NEXT:    xorl $255, %ecx
+; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX2-NEXT:    vmovmskps %xmm0, %eax
+; AVX2-NEXT:    xorl $15, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq

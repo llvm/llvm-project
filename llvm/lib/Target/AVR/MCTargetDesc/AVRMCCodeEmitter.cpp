@@ -285,7 +285,7 @@ void AVRMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   for (int64_t i = Size / 2 - 1; i >= 0; --i) {
     uint16_t Word = (BinaryOpCode >> (i * 16)) & 0xFFFF;
-    support::endian::write(CB, Word, support::endianness::little);
+    support::endian::write(CB, Word, llvm::endianness::little);
   }
 }
 

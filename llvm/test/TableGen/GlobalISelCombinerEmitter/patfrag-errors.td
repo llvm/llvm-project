@@ -271,6 +271,19 @@ def root_def_has_multi_defs : GICombineRule<
   (match (RootDefHasMultiDefs $root, (i32 10))),
   (apply (COPY $root, (i32 0)))>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: matching/writing MIFlags is only allowed on CodeGenInstruction patterns
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(DummyCXXPF ?:$x, (MIFlags FmArcp))'
+def miflags_in_pf : GICombineRule<
+  (defs root:$x),
+  (match (COPY $x, $y), (DummyCXXPF $x, (MIFlags FmArcp))),
+  (apply (COPY $x, $y))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: '$pf' does not refer to a CodeGenInstruction in MIFlags of '__badtype_for_flagref_in_apply_apply_0'
+def badtype_for_flagref_in_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src), (DummyCXXPF $src):$pf),
+  (apply (G_MUL $dst, $src, $src, (MIFlags $pf)))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -293,5 +306,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   patfrag_in_apply,
   patfrag_cannot_be_root,
   inconsistent_arg_type,
-  root_def_has_multi_defs
+  root_def_has_multi_defs,
+  miflags_in_pf,
+  badtype_for_flagref_in_apply
 ]>;

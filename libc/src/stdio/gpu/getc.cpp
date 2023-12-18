@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) {
   unsigned char c;
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, getc, (::FILE * stream)) {
   return c;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

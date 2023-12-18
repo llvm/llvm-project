@@ -31,9 +31,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
-#include <cassert>
 #include <deque>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -641,8 +639,7 @@ class TargetRegisterClass;
     /// vector.  If it is invalid, don't add anything to Ops. If hasMemory is
     /// true it means one of the asm constraint of the inline asm instruction
     /// being processed is 'm'.
-    void LowerAsmOperandForConstraint(SDValue Op,
-                                      std::string &Constraint,
+    void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 

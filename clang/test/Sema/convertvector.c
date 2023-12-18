@@ -8,7 +8,7 @@ vector8float foo1(vector4double x) {
 }
 
 float foo2(vector4double x) {
-  return __builtin_convertvector(x, float);  // expected-error {{must be a vector type}}
+  return __builtin_convertvector(x, float);  // expected-error {{second argument to __builtin_convertvector must be of vector type}}
 }
 
 vector8float foo3(double x) {

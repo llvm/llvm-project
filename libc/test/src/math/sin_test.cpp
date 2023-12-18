@@ -14,20 +14,20 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcSinTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
-DECLARE_SPECIAL_CONSTANTS(double)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST(LlvmLibcSinTest, Range) {
+TEST_F(LlvmLibcSinTest, Range) {
   static constexpr double _2pi = 6.283185307179586;
-  constexpr UIntType COUNT = 100'000;
-  constexpr UIntType STEP = UIntType(-1) / COUNT;
-  for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+  constexpr StorageType COUNT = 100'000;
+  constexpr StorageType STEP = STORAGE_MAX / COUNT;
+  for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     double x = double(FPBits(v));
     // TODO: Expand the range of testing after range reduction is implemented.
     if (isnan(x) || isinf(x) || x > _2pi || x < -_2pi)
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sin(x), 1.0);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sin(x), 1.0);
   }
 }

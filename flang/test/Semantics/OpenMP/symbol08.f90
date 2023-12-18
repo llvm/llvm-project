@@ -67,7 +67,7 @@ subroutine test_pardo
     do j=6,10
    !REF: /test_pardo/a
    a(1,1,1) = 0.
-   !DEF: /test_pardo/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_pardo/OtherConstruct1/k (OmpPrivate) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_pardo/a
     !REF: /test_pardo/OtherConstruct1/k
@@ -91,7 +91,7 @@ subroutine test_taskloop
 !$omp taskloop  private(j)
  !DEF: /test_taskloop/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate) HostAssoc INTEGER(4)
   !REF: /test_taskloop/OtherConstruct1/i
   do j=1,i
    !REF: /test_taskloop/a

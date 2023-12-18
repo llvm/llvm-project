@@ -101,10 +101,6 @@ public:
   /// and store them in `undefinedTensorUses`.
   void gatherUndefinedTensorUses(Operation *op);
 
-  /// Find all tensors that are yielded/returned from a block and store them in
-  /// `yieldedTensors`. Also include all aliasing tensors in the same block.
-  void gatherYieldedTensors(Operation *op);
-
   int64_t getStatNumTensorOutOfPlace() const { return statNumTensorOutOfPlace; }
   int64_t getStatNumTensorInPlace() const { return statNumTensorInPlace; }
 
@@ -113,10 +109,6 @@ public:
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpOperand &opOperand) const override;
-
-  /// Return true if the given tensor (or an aliasing tensor) is yielded from
-  /// the containing block. Also include all aliasing tensors in the same block.
-  bool isTensorYielded(Value tensor) const override;
 
   /// Return true if the buffer of the given tensor value is written to. Must
   /// not be called for values inside not yet analyzed functions.
@@ -260,10 +252,6 @@ private:
   // Bufferization statistics.
   int64_t statNumTensorOutOfPlace = 0;
   int64_t statNumTensorInPlace = 0;
-
-  /// A set of all tensors (and maybe aliasing tensors) that yielded from a
-  /// block.
-  DenseSet<Value> yieldedTensors;
 
   /// A set of uses of tensors that have undefined contents.
   DenseSet<OpOperand *> undefinedTensorUses;

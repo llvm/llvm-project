@@ -36,9 +36,8 @@ struct ReplayInlinerSettings;
 ///
 /// - Development mode, for training new models.
 /// In this mode, we trade off runtime performance for flexibility. This mode
-/// requires the full C Tensorflow API library, and evaluates models
-/// dynamically. This mode also permits generating training logs, for offline
-/// training.
+/// requires the TFLite library, and evaluates models dynamically. This mode
+/// also permits generating training logs, for offline training.
 ///
 /// - Dynamically load an advisor via a plugin (PluginInlineAdvisorAnalysis)
 enum class InliningAdvisorMode : int { Default, Release, Development };

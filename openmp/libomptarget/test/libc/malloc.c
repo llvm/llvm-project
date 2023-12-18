@@ -2,10 +2,6 @@
 
 // REQUIRES: libc
 
-// TODO: This requires async malloc on CUDA which is an 11.2 feature.
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-
 #include <stdio.h>
 #include <stdlib.h>
 

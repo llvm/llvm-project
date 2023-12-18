@@ -1,9 +1,6 @@
 ## This test is checking the handling of valid note entries for AMDGPU code
 ## object v2.
 
-## Big endian is not supported for AMDGPU targets.
-# XFAIL: host-byteorder-big-endian
-
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --match-full-lines --check-prefix=LLVM
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --match-full-lines --check-prefix=GNU
@@ -188,18 +185,18 @@ Sections:
     Type:     SHT_NOTE
     Notes:
       - Name: AMD
-        Type: NT_AMD_HSA_ISA_NAME 
+        Type: NT_AMD_HSA_ISA_NAME
         ## Check empty desc.
         Desc: ''
   - Name:     .note.nt_amd_hsa_isa_name_1
     Type:     SHT_NOTE
     Notes:
       - Name: AMD
-        Type: NT_AMD_HSA_ISA_NAME 
+        Type: NT_AMD_HSA_ISA_NAME
         Desc: '616263646566'
-  - Name:     .note.nt_amd_pal_metadata 
+  - Name:     .note.nt_amd_pal_metadata
     Type:     SHT_NOTE
     Notes:
       - Name: AMD
-        Type: NT_AMD_PAL_METADATA 
+        Type: NT_AMD_PAL_METADATA
         Desc: '020000000100000004000000020000000800000004000000'

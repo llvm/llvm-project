@@ -83,6 +83,7 @@ private:
   bool m_fpu_is_valid;
   bool m_sve_buffer_is_valid;
   bool m_mte_ctrl_is_valid;
+  bool m_zt_buffer_is_valid;
 
   bool m_sve_header_is_valid;
   bool m_za_buffer_is_valid;
@@ -96,7 +97,7 @@ private:
   RegisterInfoPOSIX_arm64::FPU
       m_fpr; // floating-point registers including extended register sets.
 
-  SVEState m_sve_state;
+  SVEState m_sve_state = SVEState::Unknown;
   struct sve::user_sve_header m_sve_header;
   std::vector<uint8_t> m_sve_ptrace_payload;
 
@@ -115,6 +116,7 @@ private:
   uint64_t m_mte_ctrl_reg;
 
   struct sme_pseudo_regs {
+    uint64_t ctrl_reg;
     uint64_t svg_reg;
   };
 
@@ -127,6 +129,9 @@ private:
   };
 
   struct tls_regs m_tls_regs;
+
+  // SME2's ZT is a 512 bit register.
+  std::array<uint8_t, 64> m_zt_reg;
 
   bool IsGPR(unsigned reg) const;
 
@@ -162,6 +167,13 @@ private:
   // Instead use WriteZA and ensure you have the correct ZA buffer size set
   // beforehand if you wish to disable it.
 
+  Status ReadZT();
+
+  Status WriteZT();
+
+  // SVCR is a pseudo register and we do not allow writes to it.
+  Status ReadSMEControl();
+
   bool IsSVE(unsigned reg) const;
   bool IsSME(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
@@ -186,6 +198,8 @@ private:
 
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
+  void *GetZTBuffer() { return m_zt_reg.data(); }
+
   void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
@@ -205,6 +219,8 @@ private:
   size_t GetTLSBufferSize() { return m_tls_size; }
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
+
+  size_t GetZTBufferSize() { return m_zt_reg.size(); }
 
   llvm::Error ReadHardwareDebugInfo() override;
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 
 // CHECK-DAG: #[[$map_p4:.*]] = affine_map<()[s0] -> (s0 + 4)>
@@ -132,11 +132,13 @@ func.func @split_vector_transfer_read_mem_space(%A: memref<?x8xf32, 3>, %i: inde
   return %1: vector<4x8xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -190,11 +192,13 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK:         }
 
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -252,11 +256,13 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK:           return
 // CHECK:         }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -285,11 +291,13 @@ func.func @split_vector_transfer_write_mem_space(%V: vector<4x8xf32>, %A: memref
 // CHECK-SAME:           {in_bounds = [true, true]} : vector<4x8xf32>, memref<?x8xf32, strided<[8, 1]>>
 
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 
@@ -328,9 +336,11 @@ func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub :
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

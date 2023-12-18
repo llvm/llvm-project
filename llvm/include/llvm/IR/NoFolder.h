@@ -107,14 +107,14 @@ public:
     return nullptr;
   }
 
+  Value *FoldCast(Instruction::CastOps Op, Value *V,
+                  Type *DestTy) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateCast(Instruction::CastOps Op, Constant *C,
-                          Type *DestTy) const override {
-    return CastInst::Create(Op, C, DestTy);
-  }
 
   Instruction *CreatePointerCast(Constant *C, Type *DestTy) const override {
     return CastInst::CreatePointerCast(C, DestTy);
@@ -123,39 +123,6 @@ public:
   Instruction *CreatePointerBitCastOrAddrSpaceCast(
       Constant *C, Type *DestTy) const override {
     return CastInst::CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  Instruction *CreateIntCast(Constant *C, Type *DestTy,
-                             bool isSigned) const override {
-    return CastInst::CreateIntegerCast(C, DestTy, isSigned);
-  }
-
-  Instruction *CreateFPCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateFPCast(C, DestTy);
-  }
-
-  Instruction *CreateBitCast(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::BitCast, C, DestTy);
-  }
-
-  Instruction *CreateIntToPtr(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::IntToPtr, C, DestTy);
-  }
-
-  Instruction *CreatePtrToInt(Constant *C, Type *DestTy) const override {
-    return CreateCast(Instruction::PtrToInt, C, DestTy);
-  }
-
-  Instruction *CreateZExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateZExtOrBitCast(C, DestTy);
-  }
-
-  Instruction *CreateSExtOrBitCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateSExtOrBitCast(C, DestTy);
-  }
-
-  Instruction *CreateTruncOrBitCast(Constant *C, Type *DestTy) const override {
-    return CastInst::CreateTruncOrBitCast(C, DestTy);
   }
 
   //===--------------------------------------------------------------------===//

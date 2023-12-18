@@ -31,7 +31,7 @@ public:
 
 static void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
   AttributeHeaderParser parser;
-  Error e = parser.parse(bytes, support::little);
+  Error e = parser.parse(bytes, llvm::endianness::little);
   EXPECT_STREQ(toString(std::move(e)).c_str(), msg);
 }
 

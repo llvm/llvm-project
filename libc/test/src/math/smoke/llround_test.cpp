@@ -10,4 +10,4 @@
 
 #include "src/math/llround.h"
 
-LIST_ROUND_TO_INTEGER_TESTS(double, long long, __llvm_libc::llround)
+LIST_ROUND_TO_INTEGER_TESTS(double, long long, LIBC_NAMESPACE::llround)

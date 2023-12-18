@@ -407,16 +407,14 @@ define void @ne_check_in_loop_no_zext_n_may_be_negative(ptr %ptr, ptr %lower, pt
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
-; CHECK-NEXT:    [[CMP_IV_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[GEP_IV]]
 ; CHECK-NEXT:    [[CMP_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_IV_LOWER]], [[CMP_IV_UPPER]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[CMP_IV_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[ADD]]
-; CHECK-NEXT:    [[CMP_IV_1_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[GEP_IV_1]]
 ; CHECK-NEXT:    [[CMP_IV_1_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV_1]]
-; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[CMP_IV_1_LOWER]], [[CMP_IV_1_UPPER]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, [[CMP_IV_1_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_IV]], align 4
@@ -491,16 +489,12 @@ define void @ne_check_in_loop_no_zext_n_positive_check(ptr %ptr, ptr %lower, ptr
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
-; CHECK-NEXT:    [[CMP_IV_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[GEP_IV]]
-; CHECK-NEXT:    [[CMP_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_IV_LOWER]], [[CMP_IV_UPPER]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[ADD]]
-; CHECK-NEXT:    [[CMP_IV_1_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[GEP_IV_1]]
-; CHECK-NEXT:    [[CMP_IV_1_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV_1]]
-; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[CMP_IV_1_LOWER]], [[CMP_IV_1_UPPER]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_IV]], align 4
@@ -577,16 +571,12 @@ define void @ne_check_in_loop_with_zext(ptr %ptr, ptr %lower, ptr %upper, i8 %n)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
-; CHECK-NEXT:    [[CMP_IV_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[GEP_IV]]
-; CHECK-NEXT:    [[CMP_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_IV_LOWER]], [[CMP_IV_UPPER]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[FOR_BODY_1:%.*]]
 ; CHECK:       for.body.1:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[ADD]]
-; CHECK-NEXT:    [[CMP_IV_1_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[GEP_IV_1]]
-; CHECK-NEXT:    [[CMP_IV_1_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[GEP_IV_1]]
-; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[CMP_IV_1_LOWER]], [[CMP_IV_1_UPPER]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 false, false
 ; CHECK-NEXT:    br i1 [[OR_1]], label [[TRAP]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_IV]], align 4

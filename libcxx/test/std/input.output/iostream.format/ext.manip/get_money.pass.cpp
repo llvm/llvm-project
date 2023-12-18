@@ -10,6 +10,9 @@
 
 // template <class moneyT> T7 get_money(moneyT& mon, bool intl = false);
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 
 #include <iomanip>

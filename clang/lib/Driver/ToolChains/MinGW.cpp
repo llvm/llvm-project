@@ -86,9 +86,9 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") ||
-        StringRef(Lib).startswith("ucrt") ||
-        StringRef(Lib).startswith("crtdll"))
+    if (StringRef(Lib).starts_with("msvcr") ||
+        StringRef(Lib).starts_with("ucrt") ||
+        StringRef(Lib).starts_with("crtdll"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -201,7 +201,6 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_s);
   Args.AddLastArg(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_u_Group);
-  Args.AddLastArg(CmdArgs, options::OPT_Z_Flag);
 
   // Add asan_dynamic as the first import lib before other libs. This allows
   // asan to be initialized as early as possible to increase its instrumentation
@@ -250,7 +249,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
-    addFortranRuntimeLibs(TC, CmdArgs);
+    addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
 
   // TODO: Add profile stuff here
@@ -709,8 +708,13 @@ void toolchains::MinGW::addClangTargetOptions(
     }
   }
 
-  if (Arg *A = DriverArgs.getLastArgNoClaim(options::OPT_mthreads))
-    A->ignoreTargetSpecific();
+  CC1Args.push_back("-fno-use-init-array");
+
+  for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
+                   options::OPT_mconsole, options::OPT_mdll}) {
+    if (Arg *A = DriverArgs.getLastArgNoClaim(Opt))
+      A->ignoreTargetSpecific();
+  }
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(

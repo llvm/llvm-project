@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -16,7 +16,7 @@
 #error "Invalid include"
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 LIBC_INLINE float nearest_integer(float x) {
@@ -32,6 +32,6 @@ LIBC_INLINE double nearest_integer(double x) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_NEAREST_INTEGER_H

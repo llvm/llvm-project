@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: system_clock_test
 subroutine system_clock_test()
@@ -53,13 +53,13 @@ subroutine ss(count)
   ! CHECK:     fir.store %[[V_29]] to %arg0 : !fir.ref<i64>
   ! CHECK:   }
   ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_9]] : (!fir.ptr<i64>) -> i64
-  ! CHECK:   %[[V_13:[0-9]+]] = arith.cmpi ne, %[[V_12]], %c0{{.*}}_i64 : i64
+  ! CHECK:   %[[V_13:[0-9]+]] = arith.cmpi ne, %[[V_12]], %c0{{.*}} : i64
   ! CHECK:   fir.if %[[V_13]] {
-  ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
+  ! CHECK:     %[[V_29:[0-9]+]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
   ! CHECK:     fir.store %[[V_29]] to %[[V_9]] : !fir.ptr<i64>
   ! CHECK:   }
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_10]] : (!fir.heap<i64>) -> i64
-  ! CHECK:   %[[V_15:[0-9]+]] = arith.cmpi ne, %[[V_14]], %c0{{.*}}_i64_0 : i64
+  ! CHECK:   %[[V_15:[0-9]+]] = arith.cmpi ne, %[[V_14]], %c0{{.*}} : i64
   ! CHECK:   fir.if %[[V_15]] {
   ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountMax(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
   ! CHECK:     fir.store %[[V_29]] to %[[V_10]] : !fir.heap<i64>
@@ -77,24 +77,24 @@ subroutine ss(count)
   ! CHECK:     %[[V_39:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_31]], %[[V_38]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
   ! CHECK:     %[[V_40:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_31]]) {{.*}}: (!fir.ref<i8>) -> i32
   ! CHECK:   } else {
-  ! CHECK:     %[[V_29]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
+  ! CHECK:     %[[V_29:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
   ! CHECK:     %[[V_30:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:     %[[V_31]] = fir.convert %[[V_29]] : (!fir.ptr<i64>) -> i64
-  ! CHECK:     %[[V_32]] = arith.cmpi ne, %[[V_31]], %c0{{.*}}_i64_3 : i64
+  ! CHECK:     %[[V_31:[0-9]+]] = fir.convert %[[V_29]] : (!fir.ptr<i64>) -> i64
+  ! CHECK:     %[[V_32:[0-9]+]] = arith.cmpi ne, %[[V_31]], %c0{{.*}} : i64
   ! CHECK:     fir.if %[[V_32]] {
   ! CHECK:       %[[V_45:[0-9]+]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
   ! CHECK:       fir.store %[[V_45]] to %[[V_29]] : !fir.ptr<i64>
   ! CHECK:     }
-  ! CHECK:     %[[V_33]] = fir.convert %[[V_30]] : (!fir.heap<i64>) -> i64
-  ! CHECK:     %[[V_34]] = arith.cmpi ne, %[[V_33]], %c0{{.*}}_i64_4 : i64
+  ! CHECK:     %[[V_33:[0-9]+]] = fir.convert %[[V_30]] : (!fir.heap<i64>) -> i64
+  ! CHECK:     %[[V_34:[0-9]+]] = arith.cmpi ne, %[[V_33]], %c0{{.*}} : i64
   ! CHECK:     fir.if %[[V_34]] {
   ! CHECK:       %[[V_45]] = fir.call @_FortranASystemClockCountMax(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
   ! CHECK:       fir.store %[[V_45]] to %[[V_30]] : !fir.heap<i64>
   ! CHECK:     }
-  ! CHECK:     %[[V_37]] = fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK:     %[[V_38]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:     %[[V_39]] = fir.load %[[V_38]] : !fir.ptr<i64>
-  ! CHECK:     %[[V_40]] = fir.call @_FortranAioOutputInteger64(%[[V_37]], %[[V_39]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
+  ! CHECK:     %[[V_37:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
+  ! CHECK:     %[[V_38:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
+  ! CHECK:     %[[V_39:[0-9]+]] = fir.load %[[V_38]] : !fir.ptr<i64>
+  ! CHECK:     %[[V_40:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_37]], %[[V_39]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
   ! CHECK:     %[[V_41:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
   ! CHECK:     %[[V_42:[0-9]+]] = fir.load %[[V_41]] : !fir.heap<i64>
   ! CHECK:     %[[V_43:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_37]], %[[V_42]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
@@ -120,13 +120,13 @@ subroutine ss(count)
   ! CHECK:     fir.store %[[V_29]] to %arg0 : !fir.ref<i64>
   ! CHECK:   }
   ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %[[V_21]] : (!fir.ptr<i64>) -> i64
-  ! CHECK:   %[[V_25:[0-9]+]] = arith.cmpi ne, %[[V_24]], %c0{{.*}}_i64_1 : i64
+  ! CHECK:   %[[V_25:[0-9]+]] = arith.cmpi ne, %[[V_24]], %c0{{.*}} : i64
   ! CHECK:   fir.if %[[V_25]] {
   ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
   ! CHECK:     fir.store %[[V_29]] to %[[V_21]] : !fir.ptr<i64>
   ! CHECK:   }
   ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_22]] : (!fir.heap<i64>) -> i64
-  ! CHECK:   %[[V_27:[0-9]+]] = arith.cmpi ne, %[[V_26]], %c0{{.*}}_i64_2 : i64
+  ! CHECK:   %[[V_27:[0-9]+]] = arith.cmpi ne, %[[V_26]], %c0{{.*}} : i64
   ! CHECK:   fir.if %[[V_27]] {
   ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountMax(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
   ! CHECK:     fir.store %[[V_29]] to %[[V_22]] : !fir.heap<i64>

@@ -26,6 +26,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//llvm:config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -298,6 +299,13 @@ cc_test(
         # keep one-per-line
         "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
     ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+        ],
+    }),
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -308,6 +316,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
@@ -359,6 +368,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Scalar",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//llvm:config",
@@ -759,6 +769,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//llvm:Vectorize",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

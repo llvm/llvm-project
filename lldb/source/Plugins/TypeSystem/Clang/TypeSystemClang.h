@@ -183,8 +183,6 @@ public:
 
   static void DumpDeclContextHiearchy(clang::DeclContext *decl_ctx);
 
-  static bool DeclsAreEquivalent(clang::Decl *lhs_decl, clang::Decl *rhs_decl);
-
   static bool GetCompleteDecl(clang::ASTContext *ast, clang::Decl *decl);
 
   void SetMetadataAsUserID(const clang::Decl *decl, lldb::user_id_t user_id);
@@ -218,6 +216,9 @@ public:
   static clang::DeclContext *GetDeclContextForType(clang::QualType type);
 
   static clang::DeclContext *GetDeclContextForType(const CompilerType &type);
+
+  CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type) override;
 
   uint32_t GetPointerByteSize() override;
 
@@ -514,7 +515,7 @@ public:
                                               size_t bit_size);
 
   // TypeSystem methods
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
   npdb::PdbAstBuilder *GetNativePDBParser() override;
 
@@ -555,6 +556,9 @@ public:
   CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                            size_t arg_idx) override;
 
+  std::vector<lldb_private::CompilerContext>
+  DeclGetCompilerContext(void *opaque_decl) override;
+
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
   // CompilerDeclContext override functions
@@ -583,6 +587,9 @@ public:
                                       void *other_opaque_decl_ctx) override;
 
   lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override;
+
+  std::vector<lldb_private::CompilerContext>
+  DeclContextGetCompilerContext(void *opaque_decl_ctx) override;
 
   // Clang specific clang::DeclContext functions
 
@@ -632,8 +639,7 @@ public:
 
   bool IsConst(lldb::opaque_compiler_type_t type) override;
 
-  bool IsCStringType(lldb::opaque_compiler_type_t type,
-                     uint32_t &length) override;
+  bool IsCStringType(lldb::opaque_compiler_type_t type, uint32_t &length);
 
   static bool IsCXXClassType(const CompilerType &type);
 
@@ -799,6 +805,10 @@ public:
 
   // Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
+
+  // Create a generic function prototype that can be used in ValuObject types
+  // to correctly display a function pointer with the right value and summary.
+  CompilerType CreateGenericFunctionPrototype() override;
 
   // Exploring the type
 
@@ -979,8 +989,8 @@ public:
       const char *name, // the full symbol name as seen in the symbol table
                         // (lldb::opaque_compiler_type_t type, "-[NString
                         // stringWithCString:]")
-      const CompilerType &method_compiler_type, lldb::AccessType access,
-      bool is_artificial, bool is_variadic, bool is_objc_direct_call);
+      const CompilerType &method_compiler_type, bool is_artificial,
+      bool is_variadic, bool is_objc_direct_call);
 
   static bool SetHasExternalStorage(lldb::opaque_compiler_type_t type,
                                     bool has_extern);
@@ -1029,22 +1039,11 @@ public:
   ///       The name of the symbol to dump, if it is empty dump all the symbols
   void DumpFromSymbolFile(Stream &s, llvm::StringRef symbol_name);
 
-  void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream &s, lldb::Format format, const DataExtractor &data,
-                 lldb::offset_t data_offset, size_t data_byte_size,
-                 uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                 bool show_types, bool show_summary, bool verbose,
-                 uint32_t depth) override;
-
   bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                      ExecutionContextScope *exe_scope) override;
-
-  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream &s, const DataExtractor &data,
-                   lldb::offset_t data_offset, size_t data_byte_size) override;
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,

@@ -332,6 +332,11 @@ public:
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);
 
+  /// Compute known bits results from subtracting RHS from LHS with 1-bit
+  /// Borrow.
+  static KnownBits computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
+                                       const KnownBits &Borrow);
+
   /// Compute knownbits resulting from llvm.sadd.sat(LHS, RHS)
   static KnownBits sadd_sat(const KnownBits &LHS, const KnownBits &RHS);
 

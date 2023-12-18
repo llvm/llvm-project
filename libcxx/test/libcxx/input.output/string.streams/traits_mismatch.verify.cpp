@@ -19,8 +19,8 @@
 #include <sstream>
 
 std::basic_stringbuf<char, std::char_traits<wchar_t> > sb;
-// expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
-// expected-error-re@string:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+// expected-error-re@streambuf:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
+// expected-error-re@string:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
 // expected-error@sstream:* {{only virtual member functions can be marked 'override'}}
 // expected-error@sstream:* {{only virtual member functions can be marked 'override'}}

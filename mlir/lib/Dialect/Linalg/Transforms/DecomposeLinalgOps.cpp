@@ -122,7 +122,7 @@ SmallVector<OpFoldResult> permuteValues(ArrayRef<OpFoldResult> values,
   SmallVector<OpFoldResult> permutedValues(values.size());
   for (const auto &position :
        llvm::enumerate(llvm::map_range(map.getResults(), [](AffineExpr expr) {
-         return expr.cast<AffineDimExpr>().getPosition();
+         return cast<AffineDimExpr>(expr).getPosition();
        })))
     permutedValues[position.value()] = values[position.index()];
   return permutedValues;
@@ -235,8 +235,8 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
     indexingMaps.push_back(
         peeledGenericOp.getIndexingMapMatchingResult(result));
   }
-  for (OpOperand *outOperand : genericOp.getDpsInitOperands())
-    indexingMaps.push_back(genericOp.getMatchingIndexingMap(outOperand));
+  for (OpOperand &outOperand : genericOp.getDpsInitsMutable())
+    indexingMaps.push_back(genericOp.getMatchingIndexingMap(&outOperand));
 
   auto indexingMapAttr = rewriter.getAffineMapArrayAttr(indexingMaps);
   return rewriter.create<GenericOp>(
@@ -263,8 +263,8 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
         genericOp, "only operations with tensor semantics are handled");
   }
 
-  if (llvm::any_of(genericOp.getDpsInitOperands(), [&](OpOperand *outOperand) {
-        return !genericOp.getMatchingIndexingMap(outOperand).isPermutation();
+  if (llvm::any_of(genericOp.getDpsInitsMutable(), [&](OpOperand &outOperand) {
+        return !genericOp.getMatchingIndexingMap(&outOperand).isPermutation();
       })) {
     return rewriter.notifyMatchFailure(
         genericOp, "unhandled decomposition of generic op with out operand not "

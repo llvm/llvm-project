@@ -151,6 +151,9 @@ def NoDuplicate : EnumAttr<"noduplicate", [FnAttr]>;
 /// Function does not deallocate memory.
 def NoFree : EnumAttr<"nofree", [FnAttr, ParamAttr]>;
 
+/// Argument is dead if the call unwinds.
+def DeadOnUnwind : EnumAttr<"dead_on_unwind", [ParamAttr]>;
+
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", [FnAttr]>;
 
@@ -199,6 +202,9 @@ def NoSanitizeCoverage : EnumAttr<"nosanitize_coverage", [FnAttr]>;
 
 /// Null pointer in address space zero is valid.
 def NullPointerIsValid : EnumAttr<"null_pointer_is_valid", [FnAttr]>;
+
+/// Select optimizations that give decent debug info.
+def OptimizeForDebugging : EnumAttr<"optdebug", [FnAttr]>;
 
 /// Select optimizations for best fuzzing signal.
 def OptForFuzzing : EnumAttr<"optforfuzzing", [FnAttr]>;
@@ -300,6 +306,9 @@ def VScaleRange : IntAttr<"vscale_range", [FnAttr]>;
 /// Function always comes back to callsite.
 def WillReturn : EnumAttr<"willreturn", [FnAttr]>;
 
+/// Pointer argument is writable.
+def Writable : EnumAttr<"writable", [ParamAttr]>;
+
 /// Function only writes to memory.
 def WriteOnly : EnumAttr<"writeonly", [ParamAttr]>;
 
@@ -311,6 +320,9 @@ def MustProgress : EnumAttr<"mustprogress", [FnAttr]>;
 
 /// Function is a presplit coroutine.
 def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
+
+/// The coroutine would only be destroyed when it is complete.
+def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

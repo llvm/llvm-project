@@ -13,14 +13,15 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class LogbTest : public __llvm_libc::testing::Test {
+template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+  static constexpr StorageType HIDDEN_BIT =
+      StorageType(1)
+      << LIBC_NAMESPACE::fputil::FloatProperties<T>::FRACTION_LEN;
 
 public:
   typedef T (*LogbFunc)(T);
@@ -71,16 +72,16 @@ public:
   }
 
   void testRange(LogbFunc func) {
-    using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 100'000;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+    using StorageType = typename FPBits::StorageType;
+    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = static_cast<T>(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0l)
         continue;
 
       int exponent;
-      __llvm_libc::fputil::frexp(x, exponent);
+      LIBC_NAMESPACE::fputil::frexp(x, exponent);
       ASSERT_FP_EQ(T(exponent), func(x) + T(1.0));
     }
   }

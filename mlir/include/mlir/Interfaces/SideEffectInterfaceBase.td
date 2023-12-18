@@ -149,10 +149,19 @@ class EffectOpInterfaceBase<string name, string baseEffect>
   string baseEffectName = baseEffect;
 }
 
+
+class EffectRange <bits<1> val> {
+  bits<1> Value = val;
+}
+
+def FullEffect : EffectRange<1>;
+def PartialEffect : EffectRange<0>;
+
 // This class is the general base side effect class. This is used by derived
 // effect interfaces to define their effects.
 class SideEffect<EffectOpInterfaceBase interface, string effectName,
-                 Resource resourceReference> : OpVariableDecorator {
+                 Resource resourceReference, int effectStage, EffectRange range>
+    : OpVariableDecorator {
   /// The name of the base effects class.
   string baseEffectName = interface.baseEffectName;
 
@@ -167,6 +176,13 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
 
   /// The resource that the effect is being applied to.
   string resource = resourceReference.name;
+
+  /// The stage of side effects, we use it to describe the sequence in which
+  /// effects occur.
+  int stage = effectStage;
+
+  // Does this side effect act on every single value of resource.
+  bit effectOnFullRegion = range.Value;
 }
 
 // This class is the base used for specifying effects applied to an operation.

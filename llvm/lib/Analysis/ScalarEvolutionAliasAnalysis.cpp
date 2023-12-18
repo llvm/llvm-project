@@ -55,10 +55,10 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
   if (canComputePointerDiff(SE, AS, BS)) {
     unsigned BitWidth = SE.getTypeSizeInBits(AS->getType());
     APInt ASizeInt(BitWidth, LocA.Size.hasValue()
-                                 ? LocA.Size.getValue()
+                                 ? static_cast<uint64_t>(LocA.Size.getValue())
                                  : MemoryLocation::UnknownSize);
     APInt BSizeInt(BitWidth, LocB.Size.hasValue()
-                                 ? LocB.Size.getValue()
+                                 ? static_cast<uint64_t>(LocB.Size.getValue())
                                  : MemoryLocation::UnknownSize);
 
     // Compute the difference between the two pointers.

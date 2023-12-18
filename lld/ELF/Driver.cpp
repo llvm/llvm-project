@@ -1094,6 +1094,17 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
   }
 }
 
+static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
+  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "cdsort");
+  if (s == "hfsort")
+    return CGProfileSortKind::Hfsort;
+  if (s == "cdsort")
+    return CGProfileSortKind::Cdsort;
+  if (s != "none")
+    error("unknown --call-graph-profile-sort= value: " + s);
+  return CGProfileSortKind::None;
+}
+
 static DebugCompressionType getCompressionType(StringRef s, StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
                                   .Case("zlib", DebugCompressionType::Zlib)
@@ -1229,6 +1240,7 @@ static void readConfigs(opt::InputArgList &args) {
     else if (arg->getOption().matches(OPT_Bsymbolic))
       config->bsymbolic = BsymbolicKind::All;
   }
+  config->callGraphProfileSort = getCGProfileSortKind(args);
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
@@ -1249,8 +1261,6 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
   config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
-  config->callGraphProfileSort = args.hasFlag(
-      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   config->entry = args.getLastArgValue(OPT_entry);
@@ -1669,7 +1679,7 @@ static void readConfigs(opt::InputArgList &args) {
       config->symbolOrderingFile = getSymbolOrderingFile(*buffer);
       // Also need to disable CallGraphProfileSort to prevent
       // LLD order symbols with CGProfile
-      config->callGraphProfileSort = false;
+      config->callGraphProfileSort = CGProfileSortKind::None;
     }
   }
 
@@ -2238,24 +2248,6 @@ static void replaceCommonSymbols() {
   }
 }
 
-// If all references to a DSO happen to be weak, the DSO is not added to
-// DT_NEEDED. If that happens, replace ShardSymbol with Undefined to avoid
-// dangling references to an unneeded DSO. Use a weak binding to avoid
-// --no-allow-shlib-undefined diagnostics. Similarly, demote lazy symbols.
-static void demoteSharedAndLazySymbols() {
-  llvm::TimeTraceScope timeScope("Demote shared and lazy symbols");
-  for (Symbol *sym : symtab.getSymbols()) {
-    auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
-      continue;
-
-    uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-    Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
-        .overwrite(*sym);
-    sym->versionId = VER_NDX_GLOBAL;
-  }
-}
-
 // The section referred to by `s` is considered address-significant. Set the
 // keepUnique flag on the section if appropriate.
 static void markAddrsig(Symbol *s) {
@@ -2304,7 +2296,7 @@ static void findKeepUniqueSections(opt::InputArgList &args) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err;
+        const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(f) + ": could not decode addrsig section: " + err);
@@ -3013,14 +3005,12 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   invokeELFT(markLive,);
-  demoteSharedAndLazySymbols();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
   copySectionsIntoPartitions();
 
-  if (config->emachine == EM_AARCH64 &&
-      config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+  if (canHaveMemtagGlobals()) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx.objectFiles);
   }
@@ -3072,7 +3062,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   // Read the callgraph now that we know what was gced or icfed
-  if (config->callGraphProfileSort) {
+  if (config->callGraphProfileSort != CGProfileSortKind::None) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);

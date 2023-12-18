@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace arith {
-#define GEN_PASS_DEF_ARITHEXPANDOPS
+#define GEN_PASS_DEF_ARITHEXPANDOPSPASS
 #include "mlir/Dialect/Arith/Transforms/Passes.h.inc"
 } // namespace arith
 } // namespace mlir
@@ -303,11 +303,8 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
 };
 
 struct ArithExpandOpsPass
-    : public arith::impl::ArithExpandOpsBase<ArithExpandOpsPass> {
-  ArithExpandOpsPass() = default;
-  ArithExpandOpsPass(const arith::ArithExpandOpsOptions& options) {
-    this->includeBf16 = options.includeBf16;
-  }
+    : public arith::impl::ArithExpandOpsPassBase<ArithExpandOpsPass> {
+  using ArithExpandOpsPassBase::ArithExpandOpsPassBase;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -371,13 +368,4 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
-}
-
-std::unique_ptr<Pass> mlir::arith::createArithExpandOpsPass() {
-  return std::make_unique<ArithExpandOpsPass>();
-}
-
-std::unique_ptr<Pass> mlir::arith::createArithExpandOpsPass(
-  const ArithExpandOpsOptions& options) {
-  return std::make_unique<ArithExpandOpsPass>(options);
 }

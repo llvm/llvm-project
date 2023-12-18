@@ -105,3 +105,147 @@ if.then:
 if.end:
   ret i32 1;
 }
+
+
+define <1 x float> @test_vselect_f32(<1 x float> %i105, <1 x float> %in) {
+; CHECK-LABEL: test_vselect_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    cset w8, vs
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    shl v2.2s, v2.2s, #31
+; CHECK-NEXT:    cmlt v2.2s, v2.2s, #0
+; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
+  %i179 = fcmp uno <1 x float> %i105, zeroinitializer
+  %i180 = select <1 x i1> %i179, <1 x float> %in, <1 x float> %i105
+  ret <1 x float> %i180
+}
+
+define <1 x half> @test_vselect_f16(<1 x half> %i105, <1 x half> %in) {
+; CHECK-LABEL: test_vselect_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fcvt s2, h0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-NEXT:    fcmp s2, s2
+; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+  %i179 = fcmp uno <1 x half> %i105, zeroinitializer
+  %i180 = select <1 x i1> %i179, <1 x half> %in, <1 x half> %i105
+  ret <1 x half> %i180
+}
+
+define <1 x half> @test_select_f16(half %a, half %b, <1 x half> %c, <1 x half> %d ) {
+; CHECK-LABEL: test_select_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    // kill: def $h3 killed $h3 def $s3
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $s2
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    fcsel s0, s2, s3, eq
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    ret
+  %cmp31 = fcmp oeq half %a, %b
+  %e = select i1 %cmp31, <1 x half> %c, <1 x half> %d
+  ret <1 x half> %e
+}
+
+define <1 x i16> @test_vselect_f16_i16(<1 x half> %i105, <1 x half> %in, <1 x i16> %x, <1 x i16> %y) {
+; CHECK-LABEL: test_vselect_f16_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    cset w8, vs
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
+; CHECK-NEXT:    ret
+  %i179 = fcmp uno <1 x half> %i105, zeroinitializer
+  %i180 = select <1 x i1> %i179, <1 x i16> %x, <1 x i16> %y
+  ret <1 x i16> %i180
+}
+
+define <1 x i16> @test_select_f16_i16(half %i105, half %in, <1 x i16> %x, <1 x i16> %y) {
+; CHECK-LABEL: test_select_f16_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    csetm w8, vs
+; CHECK-NEXT:    dup v0.4h, w8
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
+; CHECK-NEXT:    ret
+  %i179 = fcmp uno half %i105, zeroinitializer
+  %i180 = select i1 %i179, <1 x i16> %x, <1 x i16> %y
+  ret <1 x i16> %i180
+}
+
+define <1 x i32> @test_vselect_f16_i32(<1 x half> %i105, <1 x half> %in, <1 x i32> %x, <1 x i32> %y) {
+; CHECK-LABEL: test_vselect_f16_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    cset w8, vs
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    shl v0.2s, v0.2s, #31
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
+; CHECK-NEXT:    ret
+  %i179 = fcmp uno <1 x half> %i105, zeroinitializer
+  %i180 = select <1 x i1> %i179, <1 x i32> %x, <1 x i32> %y
+  ret <1 x i32> %i180
+}
+
+define i64 @test_sext_extr_cmp_half(<1 x half> %v1, <1 x half> %v2) {
+; CHECK-LABEL: test_sext_extr_cmp_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    ret
+  %1 = fcmp oeq <1 x half> %v1, %v2
+  %2 = extractelement <1 x i1> %1, i32 0
+  %vget_lane = sext i1 %2 to i64
+  ret i64 %vget_lane
+}
+
+define <1 x i64> @test_select_v1i1_half(half %lhs, half %rhs, <1 x i64> %v3) {
+; CHECK-LABEL: test_select_v1i1_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    bic v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    ret
+  %tst = fcmp oeq half %lhs, %rhs
+  %evil = insertelement <1 x i1> undef, i1 %tst, i32 0
+  %res = select <1 x i1> %evil, <1 x i64> zeroinitializer, <1 x i64> %v3
+  ret <1 x i64> %res
+}
+
+define i32 @test_br_extr_cmp_half(<1 x half> %v1, <1 x half> %v2) {
+; CHECK-LABEL: test_br_extr_cmp_half:
+; CHECK:       // %bb.0: // %common.ret
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %1 = fcmp oeq <1 x half> %v1, %v2
+  %2 = extractelement <1 x i1> %1, i32 0
+  br i1 %2, label %if.end, label %if.then
+
+if.then:
+  ret i32 0;
+
+if.end:
+  ret i32 1;
+}

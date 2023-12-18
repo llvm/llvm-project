@@ -11,7 +11,7 @@
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-ALIEN: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-ALIEN: declare extern_weak void @llvm.objc.release(ptr)
-// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr returned)
+// ARC-ALIEN: declare extern_weak ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.initWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-ALIEN: declare extern_weak ptr @llvm.objc.loadWeakRetained(ptr)
@@ -24,7 +24,7 @@
 // ARC-NATIVE: declare ptr @llvm.objc.autoreleaseReturnValue(ptr returned)
 // ARC-NATIVE: declare ptr @objc_msgSend(ptr, ptr, ...) [[NLB:#[0-9]+]]
 // ARC-NATIVE: declare void @llvm.objc.release(ptr)
-// ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr returned)
+// ARC-NATIVE: declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.initWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.storeWeak(ptr, ptr)
 // ARC-NATIVE: declare ptr @llvm.objc.loadWeakRetained(ptr)

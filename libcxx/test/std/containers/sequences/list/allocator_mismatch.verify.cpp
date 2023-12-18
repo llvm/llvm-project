@@ -12,4 +12,4 @@
 #include <list>
 
 std::list<int, std::allocator<long> > l;
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}Allocator::value_type must be same type as value_type}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}Allocator::value_type must be same type as value_type}}

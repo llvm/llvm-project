@@ -1110,6 +1110,75 @@ void applyUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   Observer.changedInstr(MI);
 }
 
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull OR
+// Match v2s64 mul instructions, which will then be scalarised later on
+// Doing these two matches in one function to ensure that the order of matching
+// will always be the same.
+// Try lowering MUL to MULL before trying to scalarize if needed.
+bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+
+  if (DstTy.isVector()) {
+    // If the source operands were EXTENDED before, then {U/S}MULL can be used
+    unsigned I1Opc = I1->getOpcode();
+    unsigned I2Opc = I2->getOpcode();
+    if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
+         (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
+        (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
+         MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
+        (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
+         MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
+      return true;
+    }
+    // If result type is v2s64, scalarise the instruction
+    else if (DstTy == LLT::fixed_vector(2, 64)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B, GISelChangeObserver &Observer) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL &&
+         "Expected a G_MUL instruction");
+
+  // Get the instructions that defined the source operand
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
+
+  // If the source operands were EXTENDED before, then {U/S}MULL can be used
+  unsigned I1Opc = I1->getOpcode();
+  unsigned I2Opc = I2->getOpcode();
+  if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
+       (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
+      (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
+       MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
+      (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
+       MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
+
+    B.setInstrAndDebugLoc(MI);
+    B.buildInstr(I1->getOpcode() == TargetOpcode::G_ZEXT ? AArch64::G_UMULL
+                                                         : AArch64::G_SMULL,
+                 {MI.getOperand(0).getReg()},
+                 {I1->getOperand(1).getReg(), I2->getOperand(1).getReg()});
+    MI.eraseFromParent();
+  }
+  // If result type is v2s64, scalarise the instruction
+  else if (DstTy == LLT::fixed_vector(2, 64)) {
+    LegalizerHelper Helper(*MI.getMF(), Observer, B);
+    B.setInstrAndDebugLoc(MI);
+    Helper.fewerElementsVector(
+        MI, 0,
+        DstTy.changeElementCount(
+            DstTy.getElementCount().divideCoefficientBy(2)));
+  }
+}
+
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
   // TODO: Make CombinerHelper methods const.

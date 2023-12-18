@@ -27,10 +27,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 // Constructor
-DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
-                               lldb_private::DWARFContext &context)
+DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf, DWARFContext &context)
     : m_dwarf(dwarf), m_context(context), m_units(), m_cu_aranges_up() {}
 
 const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {

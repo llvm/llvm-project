@@ -21,9 +21,12 @@ func.func @invalid_outerproduct(%src : memref<?xf32>) {
   %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
   %1 = vector.load %src[%idx] : memref<?xf32>, vector<4xf32>
 
-  // expected-error @+1 {{expected either all or none of vector operands #1 and #2 to be scalable}}
+  // expected-error @+1 {{expected either both or only #2 operand dim to be scalable}}
   %op = vector.outerproduct %0, %1 : vector<[4]xf32>, vector<4xf32>
+
+  return
 }
+
 // -----
 
 func.func @invalid_outerproduct1(%src : memref<?xf32>) {

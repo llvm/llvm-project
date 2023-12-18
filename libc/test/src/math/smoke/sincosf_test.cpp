@@ -16,35 +16,33 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
+TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
   libc_errno = 0;
   float sin, cos;
 
-  __llvm_libc::sincosf(aNaN, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(aNaN, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::sincosf(0.0f, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(0.0f, sin);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::sincosf(-0.0f, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(-0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(-0.0f, sin);
   EXPECT_MATH_ERRNO(0);
 
-  __llvm_libc::sincosf(inf, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_MATH_ERRNO(EDOM);
 
-  __llvm_libc::sincosf(neg_inf, &sin, &cos);
+  LIBC_NAMESPACE::sincosf(neg_inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
   EXPECT_MATH_ERRNO(EDOM);

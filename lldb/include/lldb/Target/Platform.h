@@ -407,6 +407,8 @@ public:
   virtual uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &proc_infos);
 
+  ProcessInstanceInfoList GetAllProcesses();
+
   virtual bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
   // Set a breakpoint on all functions that can end up creating a thread for
@@ -883,7 +885,7 @@ public:
   }
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
-  
+
   virtual Args GetExtraStartupCommands();
 
   typedef std::function<Status(const ModuleSpec &module_spec,

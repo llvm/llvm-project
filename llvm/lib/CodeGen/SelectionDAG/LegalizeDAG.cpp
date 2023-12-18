@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -324,7 +325,8 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
           TLI.isLoadExtLegal(ISD::EXTLOAD, OrigVT, SVT) &&
           TLI.ShouldShrinkFPConstant(OrigVT)) {
         Type *SType = SVT.getTypeForEVT(*DAG.getContext());
-        LLVMC = cast<ConstantFP>(ConstantExpr::getFPTrunc(LLVMC, SType));
+        LLVMC = cast<ConstantFP>(ConstantFoldCastOperand(
+            Instruction::FPTrunc, LLVMC, SType, DAG.getDataLayout()));
         VT = SVT;
         Extend = true;
       }
@@ -459,7 +461,8 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
     }
 
-    if (CFP->getValueType(0) == MVT::f64) {
+    if (CFP->getValueType(0) == MVT::f64 &&
+        !TLI.isFPImmLegal(CFP->getValueAPF(), MVT::f64)) {
       // If this target supports 64-bit registers, do a single 64-bit store.
       if (TLI.isTypeLegal(MVT::i64)) {
         SDValue Con = DAG.getConstant(CFP->getValueAPF().bitcastToAPInt().
@@ -480,7 +483,7 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
 
         Lo = DAG.getStore(Chain, dl, Lo, Ptr, ST->getPointerInfo(),
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
-        Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(4), dl);
+        Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(4), dl);
         Hi = DAG.getStore(Chain, dl, Hi, Ptr,
                           ST->getPointerInfo().getWithOffset(4),
                           ST->getOriginalAlign(), MMOFlags, AAInfo);
@@ -589,7 +592,8 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
 
       // Store the remaining ExtraWidth bits.
       IncrementSize = RoundWidth / 8;
-      Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(IncrementSize), dl);
+      Ptr =
+          DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(IncrementSize), dl);
       Hi = DAG.getNode(
           ISD::SRL, dl, Value.getValueType(), Value,
           DAG.getConstant(RoundWidth, dl,
@@ -802,7 +806,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
       // Load the remaining ExtraWidth bits.
       IncrementSize = RoundWidth / 8;
-      Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(IncrementSize), dl);
+      Ptr =
+          DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(IncrementSize), dl);
       Hi = DAG.getExtLoad(ExtType, dl, Node->getValueType(0), Chain, Ptr,
                           LD->getPointerInfo().getWithOffset(IncrementSize),
                           ExtraVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
@@ -830,7 +835,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
       // Load the remaining ExtraWidth bits.
       IncrementSize = RoundWidth / 8;
-      Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(IncrementSize), dl);
+      Ptr =
+          DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(IncrementSize), dl);
       Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, Node->getValueType(0), Chain, Ptr,
                           LD->getPointerInfo().getWithOffset(IncrementSize),
                           ExtraVT, LD->getOriginalAlign(), MMOFlags, AAInfo);
@@ -1519,7 +1525,8 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
 
     unsigned Offset = TypeByteSize*i;
 
-    SDValue Idx = DAG.getMemBasePlusOffset(FIPtr, TypeSize::Fixed(Offset), dl);
+    SDValue Idx =
+        DAG.getMemBasePlusOffset(FIPtr, TypeSize::getFixed(Offset), dl);
 
     if (Truncate)
       Stores.push_back(DAG.getTruncStore(DAG.getEntryNode(), dl,
@@ -1581,7 +1588,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
     // Advance the pointer so that the loaded byte will contain the sign bit.
     unsigned ByteOffset = (NumBits / 8) - 1;
     IntPtr =
-        DAG.getMemBasePlusOffset(StackPtr, TypeSize::Fixed(ByteOffset), DL);
+        DAG.getMemBasePlusOffset(StackPtr, TypeSize::getFixed(ByteOffset), DL);
     State.IntPointerInfo = MachinePointerInfo::getFixedStack(MF, FI,
                                                              ByteOffset);
   }
@@ -2251,7 +2258,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   // Also pass the return address of the remainder.
   SDValue FIPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = FIPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = isSigned;
   Entry.IsZExt = !isSigned;
   Args.push_back(Entry);
@@ -2342,7 +2349,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   // Pass the return address of sin.
   SDValue SinPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = SinPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = false;
   Entry.IsZExt = false;
   Args.push_back(Entry);
@@ -2350,7 +2357,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   // Also pass the return address of the cos.
   SDValue CosPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = CosPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = false;
   Entry.IsZExt = false;
   Args.push_back(Entry);
@@ -2650,7 +2657,8 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     SDValue Store1 = DAG.getStore(MemChain, dl, Lo, StackSlot,
                                   MachinePointerInfo());
     // Store the hi of the constructed double.
-    SDValue HiPtr = DAG.getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), dl);
+    SDValue HiPtr =
+        DAG.getMemBasePlusOffset(StackSlot, TypeSize::getFixed(4), dl);
     SDValue Store2 =
         DAG.getStore(MemChain, dl, Hi, HiPtr, MachinePointerInfo());
     MemChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
@@ -5023,6 +5031,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::SREM:
   case ISD::UDIV:
   case ISD::UREM:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
@@ -5039,11 +5051,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         break;
       case ISD::SDIV:
       case ISD::SREM:
+      case ISD::SMIN:
+      case ISD::SMAX:
         ExtOp = ISD::SIGN_EXTEND;
         break;
       case ISD::UDIV:
       case ISD::UREM:
         ExtOp = ISD::ZERO_EXTEND;
+        break;
+      case ISD::UMIN:
+      case ISD::UMAX:
+        if (TLI.isSExtCheaperThanZExt(OVT, NVT))
+          ExtOp = ISD::SIGN_EXTEND;
+        else
+          ExtOp = ISD::ZERO_EXTEND;
         break;
       }
       TruncOp = ISD::TRUNCATE;
@@ -5166,7 +5187,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
       ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
-      ExtOp = isSignedIntSetCC(CCCode) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      if (isSignedIntSetCC(CCCode) ||
+          TLI.isSExtCheaperThanZExt(Node->getOperand(0).getValueType(), NVT))
+        ExtOp = ISD::SIGN_EXTEND;
+      else
+        ExtOp = ISD::ZERO_EXTEND;
     }
     if (Node->isStrictFPOpcode()) {
       SDValue InChain = Node->getOperand(0);

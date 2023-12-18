@@ -18,6 +18,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include <future>
@@ -133,17 +134,6 @@ void SymbolFile::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,
     std::vector<ConstString> &mangled_names) {}
 
-void SymbolFile::FindTypes(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {}
-
-void SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                           LanguageSet languages,
-                           llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                           TypeMap &types) {}
-
 void SymbolFile::AssertModuleLock() {
   // The code below is too expensive to leave enabled in release builds. It's
   // enabled in debug builds or when the correct macro is set.
@@ -215,7 +205,7 @@ void SymbolFileCommon::SetCompileUnitAtIndex(uint32_t idx,
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t num_compile_units = GetNumCompileUnits();
   assert(idx < num_compile_units);
-  (void)num_compile_units;
+  UNUSED_IF_ASSERT_DISABLED(num_compile_units);
 
   // Fire off an assertion if this compile unit already exists for now. The
   // partial parsing should take care of only setting the compile unit

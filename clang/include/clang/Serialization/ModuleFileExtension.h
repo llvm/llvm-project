@@ -86,8 +86,7 @@ public:
   /// The default implementation of this function simply does nothing, so the
   /// presence/absence of this extension does not distinguish module files.
   using ExtensionHashBuilder =
-      llvm::HashBuilderImpl<llvm::MD5,
-                            llvm::support::endian::system_endianness()>;
+      llvm::HashBuilder<llvm::MD5, llvm::endianness::native>;
   virtual void hashExtension(ExtensionHashBuilder &HBuilder) const;
 
   /// Create a new module file extension writer, which will be

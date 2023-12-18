@@ -551,7 +551,7 @@ define i1 @uaddo_i8_increment_noncanonical_1(i8 %x, ptr %p) {
 ;
 ; RV64-LABEL: uaddo_i8_increment_noncanonical_1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a2, a0, 1
+; RV64-NEXT:    addi a2, a0, 1
 ; RV64-NEXT:    andi a0, a2, 255
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    sb a2, 0(a1)
@@ -594,7 +594,7 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, ptr %p) {
 ;
 ; RV64-LABEL: uaddo_i16_increment_noncanonical_3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a2, a0, 1
+; RV64-NEXT:    addi a2, a0, 1
 ; RV64-NEXT:    slli a0, a2, 48
 ; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    seqz a0, a0
@@ -672,7 +672,7 @@ define i1 @uaddo_i32_decrement_alt(i32 signext %x, ptr %p) {
 ; RV64-LABEL: uaddo_i32_decrement_alt:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    snez a2, a0
-; RV64-NEXT:    addiw a0, a0, -1
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    sw a0, 0(a1)
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
@@ -915,7 +915,7 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a2, a0, 48
 ; RV64-NEXT:    srli a2, a2, 48
-; RV64-NEXT:    addiw a3, a0, -44
+; RV64-NEXT:    addi a3, a0, -44
 ; RV64-NEXT:    sltiu a0, a2, 44
 ; RV64-NEXT:    sh a3, 0(a1)
 ; RV64-NEXT:    ret
@@ -939,7 +939,7 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a2, a0, 255
 ; RV64-NEXT:    sltiu a2, a2, 45
-; RV64-NEXT:    addiw a0, a0, -45
+; RV64-NEXT:    addi a0, a0, -45
 ; RV64-NEXT:    sb a0, 0(a1)
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
@@ -962,7 +962,7 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, ptr %p) {
 ; RV64-LABEL: usubo_eq_constant1_op1_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a2, a0
-; RV64-NEXT:    addiw a3, a0, -1
+; RV64-NEXT:    addi a3, a0, -1
 ; RV64-NEXT:    seqz a0, a2
 ; RV64-NEXT:    sw a3, 0(a1)
 ; RV64-NEXT:    ret

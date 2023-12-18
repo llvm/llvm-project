@@ -21,6 +21,7 @@
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
@@ -501,6 +502,7 @@ private:
   unsigned NumVirtualVGPRSpillLanes = 0;
   unsigned NumPhysicalVGPRSpillLanes = 0;
   SmallVector<Register, 2> SpillVGPRs;
+  SmallVector<Register, 2> SpillPhysVGPRs;
   using WWMSpillsMap = MapVector<Register, int>;
   // To track the registers used in instructions that can potentially modify the
   // inactive lanes. The WWM instructions and the writelane instructions for
@@ -592,6 +594,8 @@ public:
   const PrologEpilogSGPRSpillsMap &getPrologEpilogSGPRSpills() const {
     return PrologEpilogSGPRSpills;
   }
+
+  GCNUserSGPRUsageInfo &getUserSGPRInfo() { return UserSGPRInfo; }
 
   const GCNUserSGPRUsageInfo &getUserSGPRInfo() const { return UserSGPRInfo; }
 
@@ -727,6 +731,10 @@ public:
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
   Register addLDSKernelId();
+  SmallVectorImpl<MCRegister> *
+  addPreloadedKernArg(const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
+                      unsigned AllocSizeDWord, int KernArgIdx,
+                      int PaddingSGPRs);
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {
@@ -870,6 +878,10 @@ public:
 
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
+  }
+
+  unsigned getNumKernargPreloadedSGPRs() const {
+    return UserSGPRInfo.getNumKernargPreloadSGPRs();
   }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {

@@ -1,7 +1,7 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zfa,+d \
+# RUN: not llvm-mc -triple riscv32 -mattr=+zfa,+d \
 # RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXTZFH %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zfa,+d \
+# RUN: not llvm-mc -triple riscv64 -mattr=+zfa,+d \
 # RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXTZFH %s
 

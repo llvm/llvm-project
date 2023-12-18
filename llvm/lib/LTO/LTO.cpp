@@ -74,7 +74,6 @@ namespace llvm {
 cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
-}
 
 /// Indicate we are linking with an allocator that supports hot/cold operator
 /// new interfaces.
@@ -82,6 +81,7 @@ extern cl::opt<bool> SupportsHotColdNew;
 
 /// Enable MemProf context disambiguation for thin link.
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
+} // namespace llvm
 
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
@@ -610,13 +610,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    StringRef Name = Sym.getName();
-    // Strip the __imp_ prefix from COFF dllimport symbols (similar to the
-    // way they are handled by lld), otherwise we can end up with two
-    // global resolutions (one with and one for a copy of the symbol without).
-    if (TT.isOSBinFormatCOFF() && Name.startswith("__imp_"))
-      Name = Name.substr(strlen("__imp_"));
-    auto &GlobalRes = GlobalResolutions[Name];
+    auto &GlobalRes = GlobalResolutions[Sym.getName()];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
@@ -1260,7 +1254,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
                                   ConstantAggregateZero::get(Ty), "");
     GV->setAlignment(I.second.Alignment);
     if (OldGV) {
-      OldGV->replaceAllUsesWith(ConstantExpr::getBitCast(GV, OldGV->getType()));
+      OldGV->replaceAllUsesWith(GV);
       GV->takeName(OldGV);
       OldGV->eraseFromParent();
     } else {

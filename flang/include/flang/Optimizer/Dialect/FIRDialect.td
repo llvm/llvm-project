@@ -30,7 +30,9 @@ def fir_Dialect : Dialect {
   let dependentDialects = [
     // Arith dialect provides FastMathFlagsAttr
     // supported by some FIR operations.
-    "arith::ArithDialect"
+    "arith::ArithDialect",
+    // TBAA Tag types
+    "LLVM::LLVMDialect"
   ];
 }
 

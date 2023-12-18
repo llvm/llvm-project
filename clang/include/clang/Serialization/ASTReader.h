@@ -38,6 +38,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PagedVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -311,9 +312,6 @@ public:
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
-
-private:
-  void Error(const char *Msg);
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -487,7 +485,7 @@ private:
   ///
   /// When the pointer at index I is non-NULL, the type with
   /// ID = (I + 1) << FastQual::Width has already been loaded
-  std::vector<QualType> TypesLoaded;
+  llvm::PagedVector<QualType> TypesLoaded;
 
   using GlobalTypeMapType =
       ContinuousRangeMap<serialization::TypeID, ModuleFile *, 4>;
@@ -501,7 +499,7 @@ private:
   ///
   /// When the pointer at index I is non-NULL, the declaration with ID
   /// = I + 1 has already been loaded.
-  std::vector<Decl *> DeclsLoaded;
+  llvm::PagedVector<Decl *> DeclsLoaded;
 
   using GlobalDeclMapType =
       ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
@@ -1426,7 +1424,7 @@ private:
   RecordLocation TypeCursorForIndex(unsigned Index);
   void LoadedDecl(unsigned Index, Decl *D);
   Decl *ReadDeclRecord(serialization::DeclID ID);
-  void markIncompleteDeclChain(Decl *Canon);
+  void markIncompleteDeclChain(Decl *D);
 
   /// Returns the most recent declaration of a declaration (which must be
   /// of a redeclarable kind) that is either local or has already been loaded
@@ -1821,7 +1819,7 @@ public:
   SourceRange ReadSkippedRange(unsigned Index) override;
 
   /// Read the header file information for the given file entry.
-  HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;
+  HeaderFileInfo GetHeaderFileInfo(FileEntryRef FE) override;
 
   void ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag);
 
@@ -2095,7 +2093,7 @@ public:
            SmallVectorImpl<std::pair<Selector, SourceLocation>> &Sels) override;
 
   void ReadWeakUndeclaredIdentifiers(
-           SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WI) override;
+      SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo>> &WeakIDs) override;
 
   void ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) override;
 
@@ -2153,6 +2151,12 @@ public:
 
   /// Read the source location entry with index ID.
   bool ReadSLocEntry(int ID) override;
+  /// Get the index ID for the loaded SourceLocation offset.
+  int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override;
+  /// Try to read the offset of the SLocEntry at the given index in the given
+  /// module file.
+  llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
+                                                        unsigned Index);
 
   /// Retrieve the module import location and module name for the
   /// given source manager entry ID.
@@ -2199,7 +2203,7 @@ public:
 
   /// Retrieve the global selector ID that corresponds to this
   /// the local selector ID in a given module.
-  serialization::SelectorID getGlobalSelectorID(ModuleFile &F,
+  serialization::SelectorID getGlobalSelectorID(ModuleFile &M,
                                                 unsigned LocalID) const;
 
   /// Read the contents of a CXXCtorInitializer array.
@@ -2398,6 +2402,48 @@ public:
                                llvm::function_ref<void(FileEntryRef)> Visitor);
 
   bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
+};
+
+/// A simple helper class to unpack an integer to bits and consuming
+/// the bits in order.
+class BitsUnpacker {
+  constexpr static uint32_t BitsIndexUpbound = 32;
+
+public:
+  BitsUnpacker(uint32_t V) { updateValue(V); }
+  BitsUnpacker(const BitsUnpacker &) = delete;
+  BitsUnpacker(BitsUnpacker &&) = delete;
+  BitsUnpacker operator=(const BitsUnpacker &) = delete;
+  BitsUnpacker operator=(BitsUnpacker &&) = delete;
+  ~BitsUnpacker() = default;
+
+  void updateValue(uint32_t V) {
+    Value = V;
+    CurrentBitsIndex = 0;
+  }
+
+  bool getNextBit() {
+    assert(isValid());
+    return Value & (1 << CurrentBitsIndex++);
+  }
+
+  uint32_t getNextBits(uint32_t Width) {
+    assert(isValid());
+    assert(Width < BitsIndexUpbound);
+    uint32_t Ret = (Value >> CurrentBitsIndex) & ((1 << Width) - 1);
+    CurrentBitsIndex += Width;
+    return Ret;
+  }
+
+  bool canGetNextNBits(uint32_t Width) const {
+    return CurrentBitsIndex + Width < BitsIndexUpbound;
+  }
+
+private:
+  bool isValid() const { return CurrentBitsIndex < BitsIndexUpbound; }
+
+  uint32_t Value;
+  uint32_t CurrentBitsIndex = ~0;
 };
 
 } // namespace clang

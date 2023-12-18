@@ -1968,6 +1968,38 @@ bb7:
   ret void
 }
 
+define i32 @load_atomic_volatile_past_end() {
+; CHECK-LABEL: @load_atomic_volatile_past_end(
+; CHECK-NEXT:    [[A:%.*]] = alloca i1, align 1
+; CHECK-NEXT:    [[A_0_V:%.*]] = load atomic volatile i32, ptr [[A]] seq_cst, align 1
+; CHECK-NEXT:    ret i32 [[A_0_V]]
+;
+  %a = alloca i1, align 1
+  %v = load atomic volatile i32, ptr %a seq_cst, align 4
+  ret i32 %v
+}
+
+define i32 @load_volatile_past_end() {
+; CHECK-LABEL: @load_volatile_past_end(
+; CHECK-NEXT:    [[A:%.*]] = alloca i1, align 1
+; CHECK-NEXT:    [[A_0_V:%.*]] = load volatile i32, ptr [[A]], align 1
+; CHECK-NEXT:    ret i32 [[A_0_V]]
+;
+  %a = alloca i1, align 1
+  %v = load volatile i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define i32 @load_atomic_past_end() {
+; CHECK-LABEL: @load_atomic_past_end(
+; CHECK-NEXT:    [[A_0_LOAD_EXT:%.*]] = zext i1 undef to i32
+; CHECK-NEXT:    ret i32 [[A_0_LOAD_EXT]]
+;
+  %a = alloca i1, align 1
+  %v = load atomic i32, ptr %a seq_cst, align 4
+  ret i32 %v
+}
+
 !0 = !{!1, !1, i64 0, i64 200}
 !1 = !{!2, i64 1, !"type_0"}
 !2 = !{!"root"}

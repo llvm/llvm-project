@@ -17,7 +17,7 @@ define i32 @reduce_add_sext(<4 x i1> %x) {
 ; CHECK-LABEL: @reduce_add_sext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP1]]), !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i4 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i4 [[TMP2]] to i32
 ; CHECK-NEXT:    [[RES:%.*]] = sub nsw i32 0, [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -30,7 +30,7 @@ define i64 @reduce_add_zext(<8 x i1> %x) {
 ; CHECK-LABEL: @reduce_add_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
-; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i8 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext <8 x i1> %x to <8 x i64>
@@ -87,7 +87,7 @@ define i64 @reduce_add_zext_external_use(<8 x i1> %x) {
 ; CHECK-LABEL: @reduce_add_zext_external_use(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
-; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP2]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i8 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[TMP3]] to i64
 ; CHECK-NEXT:    store i64 [[EXT]], ptr @glob1, align 8

@@ -16,15 +16,15 @@
 #include <math.h>
 
 template <typename T>
-class RemQuoTestTemplate : public __llvm_libc::testing::Test {
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
 
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
+  const T zero = T(FPBits::zero());
+  const T neg_zero = T(FPBits::neg_zero());
+  const T inf = T(FPBits::inf());
+  const T neg_inf = T(FPBits::neg_inf());
+  const T nan = T(FPBits::build_quiet_nan(1));
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);

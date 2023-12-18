@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_VISIBILITY_H
 
 #include "clang/Basic/Linkage.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include <cassert>
 #include <cstdint>
 
@@ -56,10 +57,11 @@ class LinkageInfo {
 
   void setVisibility(Visibility V, bool E) { visibility_ = V; explicit_ = E; }
 public:
-  LinkageInfo() : linkage_(ExternalLinkage), visibility_(DefaultVisibility),
-                  explicit_(false) {}
+  LinkageInfo()
+      : linkage_(llvm::to_underlying(Linkage::External)),
+        visibility_(DefaultVisibility), explicit_(false) {}
   LinkageInfo(Linkage L, Visibility V, bool E)
-    : linkage_(L), visibility_(V), explicit_(E) {
+      : linkage_(llvm::to_underlying(L)), visibility_(V), explicit_(E) {
     assert(getLinkage() == L && getVisibility() == V &&
            isVisibilityExplicit() == E && "Enum truncated!");
   }
@@ -68,23 +70,23 @@ public:
     return LinkageInfo();
   }
   static LinkageInfo internal() {
-    return LinkageInfo(InternalLinkage, DefaultVisibility, false);
+    return LinkageInfo(Linkage::Internal, DefaultVisibility, false);
   }
   static LinkageInfo uniqueExternal() {
-    return LinkageInfo(UniqueExternalLinkage, DefaultVisibility, false);
+    return LinkageInfo(Linkage::UniqueExternal, DefaultVisibility, false);
   }
   static LinkageInfo none() {
-    return LinkageInfo(NoLinkage, DefaultVisibility, false);
+    return LinkageInfo(Linkage::None, DefaultVisibility, false);
   }
   static LinkageInfo visible_none() {
-    return LinkageInfo(VisibleNoLinkage, DefaultVisibility, false);
+    return LinkageInfo(Linkage::VisibleNone, DefaultVisibility, false);
   }
 
-  Linkage getLinkage() const { return (Linkage)linkage_; }
+  Linkage getLinkage() const { return static_cast<Linkage>(linkage_); }
   Visibility getVisibility() const { return (Visibility)visibility_; }
   bool isVisibilityExplicit() const { return explicit_; }
 
-  void setLinkage(Linkage L) { linkage_ = L; }
+  void setLinkage(Linkage L) { linkage_ = llvm::to_underlying(L); }
 
   void mergeLinkage(Linkage L) {
     setLinkage(minLinkage(getLinkage(), L));
@@ -96,10 +98,10 @@ public:
   void mergeExternalVisibility(Linkage L) {
     Linkage ThisL = getLinkage();
     if (!isExternallyVisible(L)) {
-      if (ThisL == VisibleNoLinkage)
-        ThisL = NoLinkage;
-      else if (ThisL == ExternalLinkage)
-        ThisL = UniqueExternalLinkage;
+      if (ThisL == Linkage::VisibleNone)
+        ThisL = Linkage::None;
+      else if (ThisL == Linkage::External)
+        ThisL = Linkage::UniqueExternal;
     }
     setLinkage(ThisL);
   }

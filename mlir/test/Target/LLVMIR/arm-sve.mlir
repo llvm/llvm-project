@@ -191,44 +191,44 @@ llvm.func @arm_sve_abs_diff(%arg0: vector<[4]xi32>,
 }
 
 // CHECK-LABEL: define void @memcopy
-llvm.func @memcopy(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
+llvm.func @memcopy(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                    %arg2: i64, %arg3: i64, %arg4: i64,
-                   %arg5: !llvm.ptr<f32>, %arg6: !llvm.ptr<f32>,
+                   %arg5: !llvm.ptr, %arg6: !llvm.ptr,
                    %arg7: i64, %arg8: i64, %arg9: i64,
                    %arg10: i64) {
-  %0 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %0 = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64,
                                        array<1 x i64>, array<1 x i64>)>
-  %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(ptr, ptr, i64,
                                                      array<1 x i64>,
                                                      array<1 x i64>)>
-  %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(ptr, ptr, i64,
                                                      array<1 x i64>,
                                                      array<1 x i64>)>
-  %3 = llvm.insertvalue %arg2, %2[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %3 = llvm.insertvalue %arg2, %2[2] : !llvm.struct<(ptr, ptr, i64,
                                                      array<1 x i64>,
                                                      array<1 x i64>)>
-  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm.struct<(ptr, ptr, i64,
                                                         array<1 x i64>,
                                                         array<1 x i64>)>
-  %5 = llvm.insertvalue %arg4, %4[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %5 = llvm.insertvalue %arg4, %4[4, 0] : !llvm.struct<(ptr, ptr, i64,
                                                         array<1 x i64>,
                                                         array<1 x i64>)>
-  %6 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %6 = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64,
                                        array<1 x i64>,
                                        array<1 x i64>)>
-  %7 = llvm.insertvalue %arg5, %6[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %7 = llvm.insertvalue %arg5, %6[0] : !llvm.struct<(ptr, ptr, i64,
                                                      array<1 x i64>,
                                                      array<1 x i64>)>
-  %8 = llvm.insertvalue %arg6, %7[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %8 = llvm.insertvalue %arg6, %7[1] : !llvm.struct<(ptr, ptr, i64,
                                                      array<1 x i64>,
                                                      array<1 x i64>)>
-  %9 = llvm.insertvalue %arg7, %8[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %9 = llvm.insertvalue %arg7, %8[2] : !llvm.struct<(ptr, ptr, i64,
                                                      array<1 x i64>,
                                                      array<1 x i64>)>
-  %10 = llvm.insertvalue %arg8, %9[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %10 = llvm.insertvalue %arg8, %9[3, 0] : !llvm.struct<(ptr, ptr, i64,
                                                          array<1 x i64>,
                                                          array<1 x i64>)>
-  %11 = llvm.insertvalue %arg9, %10[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %11 = llvm.insertvalue %arg9, %10[4, 0] : !llvm.struct<(ptr, ptr, i64,
                                                          array<1 x i64>,
                                                          array<1 x i64>)>
   %12 = llvm.mlir.constant(0 : index) : i64
@@ -243,23 +243,21 @@ llvm.func @memcopy(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
   llvm.cond_br %17, ^bb2, ^bb3
 ^bb2:
   // CHECK: extractvalue { ptr, ptr, i64, [1 x i64], [1 x i64] }
-  %18 = llvm.extractvalue %5[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %18 = llvm.extractvalue %5[1] : !llvm.struct<(ptr, ptr, i64,
                                                 array<1 x i64>,
                                                 array<1 x i64>)>
   // CHECK: getelementptr float, ptr
-  %19 = llvm.getelementptr %18[%16] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
-  %20 = llvm.bitcast %19 : !llvm.ptr<f32> to !llvm.ptr<vector<[4]xf32>>
+  %19 = llvm.getelementptr %18[%16] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   // CHECK: load <vscale x 4 x float>, ptr
-  %21 = llvm.load %20 : !llvm.ptr<vector<[4]xf32>>
+  %21 = llvm.load %19 : !llvm.ptr -> vector<[4]xf32>
   // CHECK: extractvalue { ptr, ptr, i64, [1 x i64], [1 x i64] }
-  %22 = llvm.extractvalue %11[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+  %22 = llvm.extractvalue %11[1] : !llvm.struct<(ptr, ptr, i64,
                                                  array<1 x i64>,
                                                  array<1 x i64>)>
   // CHECK: getelementptr float, ptr
-  %23 = llvm.getelementptr %22[%16] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
-  %24 = llvm.bitcast %23 : !llvm.ptr<f32> to !llvm.ptr<vector<[4]xf32>>
+  %23 = llvm.getelementptr %22[%16] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   // CHECK: store <vscale x 4 x float> %{{[0-9]+}}, ptr %{{[0-9]+}}
-  llvm.store %21, %24 : !llvm.ptr<vector<[4]xf32>>
+  llvm.store %21, %23 : vector<[4]xf32>, !llvm.ptr
   %25 = llvm.add %16, %15  : i64
   llvm.br ^bb1(%25 : i64)
 ^bb3:
@@ -271,4 +269,48 @@ llvm.func @get_vector_scale() -> i64 {
   // CHECK: call i64 @llvm.vscale.i64()
   %0 = "llvm.intr.vscale"() : () -> i64
   llvm.return %0 : i64
+}
+
+// CHECK-LABEL: @arm_sve_convert_from_svbool(
+// CHECK-SAME:                               <vscale x 16 x i1> %[[SVBOOL:[0-9]+]])
+llvm.func @arm_sve_convert_from_svbool(%nxv16i1 : vector<[16]xi1>) {
+  // CHECK: %[[RES0:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %[[SVBOOL]])
+  %res0 = "arm_sve.intr.convert.from.svbool"(%nxv16i1)
+    : (vector<[16]xi1>) -> vector<[8]xi1>
+  // CHECK: %[[RES1:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %[[SVBOOL]])
+  %res1 = "arm_sve.intr.convert.from.svbool"(%nxv16i1)
+    : (vector<[16]xi1>) -> vector<[4]xi1>
+  // CHECK: %[[RES2:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %[[SVBOOL]])
+  %res2 = "arm_sve.intr.convert.from.svbool"(%nxv16i1)
+    : (vector<[16]xi1>) -> vector<[2]xi1>
+  // CHECK: %[[RES3:.*]] = call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> %[[SVBOOL]])
+  %res3 = "arm_sve.intr.convert.from.svbool"(%nxv16i1)
+    : (vector<[16]xi1>) -> vector<[1]xi1>
+  llvm.return
+}
+
+// CHECK-LABEL: arm_sve_convert_to_svbool(
+// CHECK-SAME:                            <vscale x 8 x i1> %[[P8:[0-9]+]],
+// CHECK-SAME:                            <vscale x 4 x i1> %[[P4:[0-9]+]],
+// CHECK-SAME:                            <vscale x 2 x i1> %[[P2:[0-9]+]],
+// CHECK-SAME:                            <vscale x 1 x i1> %[[P1:[0-9]+]])
+llvm.func @arm_sve_convert_to_svbool(
+                                       %nxv8i1  : vector<[8]xi1>,
+                                       %nxv4i1  : vector<[4]xi1>,
+                                       %nxv2i1  : vector<[2]xi1>,
+                                       %nxv1i1  : vector<[1]xi1>
+) {
+  // CHECK-NEXT: %[[RES0:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %[[P8]])
+  %res0 = "arm_sve.intr.convert.to.svbool"(%nxv8i1)
+    : (vector<[8]xi1>) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[RES1:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %[[P4]])
+  %res1 = "arm_sve.intr.convert.to.svbool"(%nxv4i1)
+    : (vector<[4]xi1>) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[RES2:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %[[P2]])
+  %res2 = "arm_sve.intr.convert.to.svbool"(%nxv2i1)
+    : (vector<[2]xi1>) -> vector<[16]xi1>
+  // CHECK-NEXT: %[[RES3:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv1i1(<vscale x 1 x i1> %[[P1]])
+  %res3 = "arm_sve.intr.convert.to.svbool"(%nxv1i1)
+    : (vector<[1]xi1>) -> vector<[16]xi1>
+  llvm.return
 }

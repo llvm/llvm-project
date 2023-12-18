@@ -421,8 +421,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {
-      notifyOperationRemoved(op);
-      op->erase();
+      eraseOp(op);
       changed = true;
 
       LLVM_DEBUG(logResultWithLine("success", "operation is trivially dead"));
@@ -567,10 +566,8 @@ void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
     config.listener->notifyOperationRemoved(op);
 
   addOperandsToWorklist(op->getOperands());
-  op->walk([this](Operation *operation) {
-    worklist.remove(operation);
-    folder.notifyRemoval(operation);
-  });
+  worklist.remove(op);
+  folder.notifyRemoval(op);
 
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
     strictModeFilteredOps.erase(op);
@@ -584,9 +581,6 @@ void GreedyPatternRewriteDriver::notifyOperationReplaced(
   });
   if (config.listener)
     config.listener->notifyOperationReplaced(op, replacement);
-  for (auto result : op->getResults())
-    for (auto *user : result.getUsers())
-      addToWorklist(user);
 }
 
 LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(

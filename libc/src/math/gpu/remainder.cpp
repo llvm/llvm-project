@@ -9,10 +9,10 @@
 #include "src/math/remainder.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, remainder, (double x, double y)) {
   return __builtin_remainder(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

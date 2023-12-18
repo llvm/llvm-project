@@ -81,8 +81,6 @@ namespace clang {
     void VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D);
     void VisitVarTemplatePartialSpecializationDecl(
         VarTemplatePartialSpecializationDecl *D);
-    void VisitClassScopeFunctionSpecializationDecl(
-                                       ClassScopeFunctionSpecializationDecl *D);
     void VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D);
     void VisitValueDecl(ValueDecl *D);
     void VisitEnumConstantDecl(EnumConstantDecl *D);
@@ -322,21 +320,25 @@ void ASTDeclWriter::Visit(Decl *D) {
 }
 
 void ASTDeclWriter::VisitDecl(Decl *D) {
+  BitsPacker DeclBits;
+  DeclBits.addBit(D->getDeclContext() != D->getLexicalDeclContext());
+  DeclBits.addBit(D->isInvalidDecl());
+  DeclBits.addBit(D->hasAttrs());
+  DeclBits.addBit(D->isImplicit());
+  DeclBits.addBit(D->isUsed(false));
+  DeclBits.addBit(D->isReferenced());
+  DeclBits.addBit(D->isTopLevelDeclInObjCContainer());
+  DeclBits.addBits(D->getAccess(), /*BitWidth=*/2);
+  DeclBits.addBits((uint64_t)D->getModuleOwnershipKind(), /*BitWidth=*/3);
+  Record.push_back(DeclBits);
+
   Record.AddDeclRef(cast_or_null<Decl>(D->getDeclContext()));
   if (D->getDeclContext() != D->getLexicalDeclContext())
     Record.AddDeclRef(cast_or_null<Decl>(D->getLexicalDeclContext()));
-  else
-    Record.push_back(0);
-  Record.push_back(D->isInvalidDecl());
-  Record.push_back(D->hasAttrs());
+
   if (D->hasAttrs())
     Record.AddAttributes(D->getAttrs());
-  Record.push_back(D->isImplicit());
-  Record.push_back(D->isUsed(false));
-  Record.push_back(D->isReferenced());
-  Record.push_back(D->isTopLevelDeclInObjCContainer());
-  Record.push_back(D->getAccess());
-  Record.push_back((uint64_t)D->getModuleOwnershipKind());
+
   Record.push_back(Writer.getSubmoduleID(D->getOwningModule()));
 
   // If this declaration injected a name into a context different from its
@@ -433,35 +435,37 @@ void ASTDeclWriter::VisitTypeAliasDecl(TypeAliasDecl *D) {
 }
 
 void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
-  static_assert(DeclContext::NumTagDeclBits == 10,
+  static_assert(DeclContext::NumTagDeclBits == 23,
                 "You need to update the serializer after you change the "
                 "TagDeclBits");
 
   VisitRedeclarable(D);
   VisitTypeDecl(D);
   Record.push_back(D->getIdentifierNamespace());
-  Record.push_back((unsigned)D->getTagKind()); // FIXME: stable encoding
-  if (!isa<CXXRecordDecl>(D))
-    Record.push_back(D->isCompleteDefinition());
-  Record.push_back(D->isEmbeddedInDeclarator());
-  Record.push_back(D->isFreeStanding());
-  Record.push_back(D->isCompleteDefinitionRequired());
+
+  BitsPacker TagDeclBits;
+  TagDeclBits.addBits(llvm::to_underlying(D->getTagKind()), /*BitWidth=*/3);
+  TagDeclBits.addBit(!isa<CXXRecordDecl>(D) ? D->isCompleteDefinition() : 0);
+  TagDeclBits.addBit(D->isEmbeddedInDeclarator());
+  TagDeclBits.addBit(D->isFreeStanding());
+  TagDeclBits.addBit(D->isCompleteDefinitionRequired());
+  TagDeclBits.addBits(
+      D->hasExtInfo() ? 1 : (D->getTypedefNameForAnonDecl() ? 2 : 0),
+      /*BitWidth=*/2);
+  Record.push_back(TagDeclBits);
+
   Record.AddSourceRange(D->getBraceRange());
 
   if (D->hasExtInfo()) {
-    Record.push_back(1);
     Record.AddQualifierInfo(*D->getExtInfo());
   } else if (auto *TD = D->getTypedefNameForAnonDecl()) {
-    Record.push_back(2);
     Record.AddDeclRef(TD);
     Record.AddIdentifierRef(TD->getDeclName().getAsIdentifierInfo());
-  } else {
-    Record.push_back(0);
   }
 }
 
 void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
-  static_assert(DeclContext::NumEnumDeclBits == 20,
+  static_assert(DeclContext::NumEnumDeclBits == 43,
                 "You need to update the serializer after you change the "
                 "EnumDeclBits");
 
@@ -470,11 +474,15 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   if (!D->getIntegerTypeSourceInfo())
     Record.AddTypeRef(D->getIntegerType());
   Record.AddTypeRef(D->getPromotionType());
-  Record.push_back(D->getNumPositiveBits());
-  Record.push_back(D->getNumNegativeBits());
-  Record.push_back(D->isScoped());
-  Record.push_back(D->isScopedUsingClassTag());
-  Record.push_back(D->isFixed());
+
+  BitsPacker EnumDeclBits;
+  EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
+  EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
+  EnumDeclBits.addBit(D->isScoped());
+  EnumDeclBits.addBit(D->isScopedUsingClassTag());
+  EnumDeclBits.addBit(D->isFixed());
+  Record.push_back(EnumDeclBits);
+
   Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
@@ -508,23 +516,27 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
 }
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
-  static_assert(DeclContext::NumRecordDeclBits == 41,
+  static_assert(DeclContext::NumRecordDeclBits == 64,
                 "You need to update the serializer after you change the "
                 "RecordDeclBits");
 
   VisitTagDecl(D);
-  Record.push_back(D->hasFlexibleArrayMember());
-  Record.push_back(D->isAnonymousStructOrUnion());
-  Record.push_back(D->hasObjectMember());
-  Record.push_back(D->hasVolatileMember());
-  Record.push_back(D->isNonTrivialToPrimitiveDefaultInitialize());
-  Record.push_back(D->isNonTrivialToPrimitiveCopy());
-  Record.push_back(D->isNonTrivialToPrimitiveDestroy());
-  Record.push_back(D->hasNonTrivialToPrimitiveDefaultInitializeCUnion());
-  Record.push_back(D->hasNonTrivialToPrimitiveDestructCUnion());
-  Record.push_back(D->hasNonTrivialToPrimitiveCopyCUnion());
-  Record.push_back(D->isParamDestroyedInCallee());
-  Record.push_back(D->getArgPassingRestrictions());
+
+  BitsPacker RecordDeclBits;
+  RecordDeclBits.addBit(D->hasFlexibleArrayMember());
+  RecordDeclBits.addBit(D->isAnonymousStructOrUnion());
+  RecordDeclBits.addBit(D->hasObjectMember());
+  RecordDeclBits.addBit(D->hasVolatileMember());
+  RecordDeclBits.addBit(D->isNonTrivialToPrimitiveDefaultInitialize());
+  RecordDeclBits.addBit(D->isNonTrivialToPrimitiveCopy());
+  RecordDeclBits.addBit(D->isNonTrivialToPrimitiveDestroy());
+  RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDefaultInitializeCUnion());
+  RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDestructCUnion());
+  RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveCopyCUnion());
+  RecordDeclBits.addBit(D->isParamDestroyedInCallee());
+  RecordDeclBits.addBits(llvm::to_underlying(D->getArgPassingRestrictions()), 2);
+  Record.push_back(RecordDeclBits);
+
   // Only compute this for C/Objective-C, in C++ this is computed as part
   // of CXXRecordDecl.
   if (!isa<CXXRecordDecl>(D))
@@ -580,7 +592,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 31,
+  static_assert(DeclContext::NumFunctionDeclBits == 44,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -617,15 +629,9 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
 
     // Template args as written.
     Record.push_back(FTSInfo->TemplateArgumentsAsWritten != nullptr);
-    if (FTSInfo->TemplateArgumentsAsWritten) {
-      Record.push_back(FTSInfo->TemplateArgumentsAsWritten->NumTemplateArgs);
-      for (int i=0, e = FTSInfo->TemplateArgumentsAsWritten->NumTemplateArgs;
-             i!=e; ++i)
-        Record.AddTemplateArgumentLoc(
-            (*FTSInfo->TemplateArgumentsAsWritten)[i]);
-      Record.AddSourceLocation(FTSInfo->TemplateArgumentsAsWritten->LAngleLoc);
-      Record.AddSourceLocation(FTSInfo->TemplateArgumentsAsWritten->RAngleLoc);
-    }
+    if (FTSInfo->TemplateArgumentsAsWritten)
+      Record.AddASTTemplateArgumentListInfo(
+          FTSInfo->TemplateArgumentsAsWritten);
 
     Record.AddSourceLocation(FTSInfo->getPointOfInstantiation());
 
@@ -650,17 +656,16 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     DependentFunctionTemplateSpecializationInfo *
       DFTSInfo = D->getDependentSpecializationInfo();
 
-    // Templates.
-    Record.push_back(DFTSInfo->getNumTemplates());
-    for (int i=0, e = DFTSInfo->getNumTemplates(); i != e; ++i)
-      Record.AddDeclRef(DFTSInfo->getTemplate(i));
+    // Candidates.
+    Record.push_back(DFTSInfo->getCandidates().size());
+    for (FunctionTemplateDecl *FTD : DFTSInfo->getCandidates())
+      Record.AddDeclRef(FTD);
 
     // Templates args.
-    Record.push_back(DFTSInfo->getNumTemplateArgs());
-    for (int i=0, e = DFTSInfo->getNumTemplateArgs(); i != e; ++i)
-      Record.AddTemplateArgumentLoc(DFTSInfo->getTemplateArg(i));
-    Record.AddSourceLocation(DFTSInfo->getLAngleLoc());
-    Record.AddSourceLocation(DFTSInfo->getRAngleLoc());
+    Record.push_back(DFTSInfo->TemplateArgumentsAsWritten != nullptr);
+    if (DFTSInfo->TemplateArgumentsAsWritten)
+      Record.AddASTTemplateArgumentListInfo(
+          DFTSInfo->TemplateArgumentsAsWritten);
     break;
   }
   }
@@ -669,32 +674,34 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.AddDeclarationNameLoc(D->DNLoc, D->getDeclName());
   Record.push_back(D->getIdentifierNamespace());
 
-  // FunctionDecl's body is handled last at ASTWriterDecl::Visit,
-  // after everything else is written.
-  Record.push_back(
-      static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
-  Record.push_back(D->isInlineSpecified());
-  Record.push_back(D->isInlined());
-  Record.push_back(D->isVirtualAsWritten());
-  Record.push_back(D->isPure());
-  Record.push_back(D->hasInheritedPrototype());
-  Record.push_back(D->hasWrittenPrototype());
-  Record.push_back(D->isDeletedBit());
-  Record.push_back(D->isTrivial());
-  Record.push_back(D->isTrivialForCall());
-  Record.push_back(D->isDefaulted());
-  Record.push_back(D->isExplicitlyDefaulted());
-  Record.push_back(D->isIneligibleOrNotSelected());
-  Record.push_back(D->hasImplicitReturnZero());
-  Record.push_back(static_cast<uint64_t>(D->getConstexprKind()));
-  Record.push_back(D->usesSEHTry());
-  Record.push_back(D->hasSkippedBody());
-  Record.push_back(D->isMultiVersion());
-  Record.push_back(D->isLateTemplateParsed());
-  Record.push_back(D->FriendConstraintRefersToEnclosingTemplate());
-  Record.push_back(D->getLinkageInternal());
+  BitsPacker FunctionDeclBits;
+  // FIXME: stable encoding
+  FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
+  FunctionDeclBits.addBit(D->isInlineSpecified());
+  FunctionDeclBits.addBit(D->isInlined());
+  FunctionDeclBits.addBit(D->isVirtualAsWritten());
+  FunctionDeclBits.addBit(D->isPure());
+  FunctionDeclBits.addBit(D->hasInheritedPrototype());
+  FunctionDeclBits.addBit(D->hasWrittenPrototype());
+  FunctionDeclBits.addBit(D->isDeletedBit());
+  FunctionDeclBits.addBit(D->isTrivial());
+  FunctionDeclBits.addBit(D->isTrivialForCall());
+  FunctionDeclBits.addBit(D->isDefaulted());
+  FunctionDeclBits.addBit(D->isExplicitlyDefaulted());
+  FunctionDeclBits.addBit(D->isIneligibleOrNotSelected());
+  FunctionDeclBits.addBit(D->hasImplicitReturnZero());
+  FunctionDeclBits.addBits((uint64_t)(D->getConstexprKind()), /*BitWidth=*/2);
+  FunctionDeclBits.addBit(D->usesSEHTry());
+  FunctionDeclBits.addBit(D->hasSkippedBody());
+  FunctionDeclBits.addBit(D->isMultiVersion());
+  FunctionDeclBits.addBit(D->isLateTemplateParsed());
+  FunctionDeclBits.addBit(D->FriendConstraintRefersToEnclosingTemplate());
+  FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
+  Record.push_back(FunctionDeclBits);
+
   Record.AddSourceLocation(D->getEndLoc());
-  Record.AddSourceLocation(D->getDefaultLoc());
+  if (D->isExplicitlyDefaulted())
+    Record.AddSourceLocation(D->getDefaultLoc());
 
   Record.push_back(D->getODRHash());
 
@@ -735,7 +742,7 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
-  static_assert(DeclContext::NumObjCMethodDeclBits == 24,
+  static_assert(DeclContext::NumObjCMethodDeclBits == 37,
                 "You need to update the serializer after you change the "
                 "ObjCMethodDeclBits");
 
@@ -765,7 +772,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   }
 
   // FIXME: stable encoding for @required/@optional
-  Record.push_back(D->getImplementationControl());
+  Record.push_back(llvm::to_underlying(D->getImplementationControl()));
   // FIXME: stable encoding for in/out/inout/bycopy/byref/oneway/nullability
   Record.push_back(D->getObjCDeclQualifier());
   Record.push_back(D->hasRelatedResultType());
@@ -797,7 +804,7 @@ void ASTDeclWriter::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCContainerDecl(ObjCContainerDecl *D) {
-  static_assert(DeclContext::NumObjCContainerDeclBits == 51,
+  static_assert(DeclContext::NumObjCContainerDeclBits == 64,
                 "You need to update the serializer after you change the "
                 "ObjCContainerDeclBits");
 
@@ -1052,38 +1059,38 @@ void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
 void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   VisitRedeclarable(D);
   VisitDeclaratorDecl(D);
-  Record.push_back(D->getStorageClass());
-  Record.push_back(D->getTSCSpec());
-  Record.push_back(D->getInitStyle());
-  Record.push_back(D->isARCPseudoStrong());
+
+  BitsPacker VarDeclBits;
+  VarDeclBits.addBits(D->getStorageClass(), /*BitWidth=*/3);
+  VarDeclBits.addBits(D->getTSCSpec(), /*BitWidth=*/2);
+  VarDeclBits.addBits(D->getInitStyle(), /*BitWidth=*/2);
+  VarDeclBits.addBit(D->isARCPseudoStrong());
+
   bool HasDeducedType = false;
   if (!isa<ParmVarDecl>(D)) {
-    Record.push_back(D->isThisDeclarationADemotedDefinition());
-    Record.push_back(D->isExceptionVariable());
-    Record.push_back(D->isNRVOVariable());
-    Record.push_back(D->isCXXForRangeDecl());
-    Record.push_back(D->isObjCForDecl());
-    Record.push_back(D->isInline());
-    Record.push_back(D->isInlineSpecified());
-    Record.push_back(D->isConstexpr());
-    Record.push_back(D->isInitCapture());
-    Record.push_back(D->isPreviousDeclInSameBlockScope());
-    if (const auto *IPD = dyn_cast<ImplicitParamDecl>(D))
-      Record.push_back(static_cast<unsigned>(IPD->getParameterKind()));
-    else
-      Record.push_back(0);
-    Record.push_back(D->isEscapingByref());
-    HasDeducedType = D->getType()->getContainedDeducedType();
-    Record.push_back(HasDeducedType);
-  }
-  Record.push_back(D->getLinkageInternal());
+    VarDeclBits.addBit(D->isThisDeclarationADemotedDefinition());
+    VarDeclBits.addBit(D->isExceptionVariable());
+    VarDeclBits.addBit(D->isNRVOVariable());
+    VarDeclBits.addBit(D->isCXXForRangeDecl());
+    VarDeclBits.addBit(D->isObjCForDecl());
+    VarDeclBits.addBit(D->isInline());
+    VarDeclBits.addBit(D->isInlineSpecified());
+    VarDeclBits.addBit(D->isConstexpr());
+    VarDeclBits.addBit(D->isInitCapture());
+    VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
 
-  if (D->hasAttr<BlocksAttr>()) {
-    BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
-    Record.AddStmt(Init.getCopyExpr());
-    if (Init.getCopyExpr())
-      Record.push_back(Init.canThrow());
+    if (const auto *IPD = dyn_cast<ImplicitParamDecl>(D))
+      VarDeclBits.addBits(llvm::to_underlying(IPD->getParameterKind()),
+                          /*Width=*/3);
+    else
+      VarDeclBits.addBits(0, /*Width=*/3);
+
+    VarDeclBits.addBit(D->isEscapingByref());
+    HasDeducedType = D->getType()->getContainedDeducedType();
+    VarDeclBits.addBit(HasDeducedType);
   }
+
+  VarDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), /*BitWidth=*/3);
 
   bool ModulesCodegen = false;
   if (Writer.WritingModule && D->getStorageDuration() == SD_Static &&
@@ -1098,9 +1105,19 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
           Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
          Writer.Context->GetGVALinkageForVariable(D) >= GVA_StrongExternal;
   }
-  Record.push_back(ModulesCodegen);
+
+  VarDeclBits.addBit(ModulesCodegen);
+  Record.push_back(VarDeclBits);
+
   if (ModulesCodegen)
     Writer.ModularCodegenDecls.push_back(Writer.GetDeclRef(D));
+
+  if (D->hasAttr<BlocksAttr>()) {
+    BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
+    Record.AddStmt(Init.getCopyExpr());
+    if (Init.getCopyExpr())
+      Record.push_back(Init.canThrow());
+  }
 
   enum {
     VarNotTemplate = 0, VarTemplate, StaticDataMemberSpecialization
@@ -1153,37 +1170,37 @@ void ASTDeclWriter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
 
 void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   VisitVarDecl(D);
-  Record.push_back(D->isObjCMethodParameter());
-  Record.push_back(D->getFunctionScopeDepth());
-  Record.push_back(D->getFunctionScopeIndex());
-  Record.push_back(D->getObjCDeclQualifier()); // FIXME: stable encoding
-  Record.push_back(D->isKNRPromoted());
-  Record.push_back(D->hasInheritedDefaultArg());
-  Record.push_back(D->hasUninstantiatedDefaultArg());
+
+  BitsPacker ParmVarDeclBits;
+  ParmVarDeclBits.addBit(D->isObjCMethodParameter());
+  ParmVarDeclBits.addBits(D->getFunctionScopeDepth(), /*BitsWidth=*/7);
+  ParmVarDeclBits.addBits(D->getFunctionScopeIndex(), /*BitsWidth=*/8);
+  // FIXME: stable encoding
+  ParmVarDeclBits.addBits(D->getObjCDeclQualifier(), /*BitsWidth=*/7);
+  ParmVarDeclBits.addBit(D->isKNRPromoted());
+  ParmVarDeclBits.addBit(D->hasInheritedDefaultArg());
+  ParmVarDeclBits.addBit(D->hasUninstantiatedDefaultArg());
+  ParmVarDeclBits.addBit(D->getExplicitObjectParamThisLoc().isValid());
+  Record.push_back(ParmVarDeclBits);
+
   if (D->hasUninstantiatedDefaultArg())
     Record.AddStmt(D->getUninstantiatedDefaultArg());
+  if (D->getExplicitObjectParamThisLoc().isValid())
+    Record.AddSourceLocation(D->getExplicitObjectParamThisLoc());
   Code = serialization::DECL_PARM_VAR;
 
   // If the assumptions about the DECL_PARM_VAR abbrev are true, use it.  Here
   // we dynamically check for the properties that we optimize for, but don't
   // know are true of all PARM_VAR_DECLs.
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
-      !D->hasExtInfo() &&
-      !D->isImplicit() &&
-      !D->isUsed(false) &&
-      !D->isInvalidDecl() &&
-      !D->isReferenced() &&
-      D->getAccess() == AS_none &&
-      !D->isModulePrivate() &&
-      D->getStorageClass() == 0 &&
+  if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->hasExtInfo() && !D->isImplicit() && !D->isUsed(false) &&
+      !D->isInvalidDecl() && !D->isReferenced() && D->getAccess() == AS_none &&
+      !D->isModulePrivate() && D->getStorageClass() == 0 &&
       D->getInitStyle() == VarDecl::CInit && // Can params have anything else?
-      D->getFunctionScopeDepth() == 0 &&
-      D->getObjCDeclQualifier() == 0 &&
-      !D->isKNRPromoted() &&
-      !D->hasInheritedDefaultArg() &&
-      D->getInit() == nullptr &&
-      !D->hasUninstantiatedDefaultArg())  // No default expr.
+      D->getFunctionScopeDepth() == 0 && D->getObjCDeclQualifier() == 0 &&
+      !D->isKNRPromoted() && !D->isExplicitObjectParameter() &&
+      !D->hasInheritedDefaultArg() && D->getInit() == nullptr &&
+      !D->hasUninstantiatedDefaultArg()) // No default expr.
     AbbrevToUse = Writer.getDeclParmVarAbbrev();
 
   // Check things we know are true of *every* PARM_VAR_DECL, which is more than
@@ -1284,12 +1301,12 @@ void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
 }
 
 void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
-  static_assert(DeclContext::NumLinkageSpecDeclBits == 4,
+  static_assert(DeclContext::NumLinkageSpecDeclBits == 17,
                 "You need to update the serializer after you change the"
                 "LinkageSpecDeclBits");
 
   VisitDecl(D);
-  Record.push_back(D->getLanguage());
+  Record.push_back(llvm::to_underlying(D->getLanguage()));
   Record.AddSourceLocation(D->getExternLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
   Code = serialization::DECL_LINKAGE_SPEC;
@@ -1311,8 +1328,12 @@ void ASTDeclWriter::VisitLabelDecl(LabelDecl *D) {
 void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
   VisitRedeclarable(D);
   VisitNamedDecl(D);
-  Record.push_back(D->isInline());
-  Record.push_back(D->isNested());
+
+  BitsPacker NamespaceDeclBits;
+  NamespaceDeclBits.addBit(D->isInline());
+  NamespaceDeclBits.addBit(D->isNested());
+  Record.push_back(NamespaceDeclBits);
+
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
 
@@ -1495,7 +1516,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 20,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 64,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 
@@ -1746,17 +1767,6 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
   Code = serialization::DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
 
-void ASTDeclWriter::VisitClassScopeFunctionSpecializationDecl(
-                                    ClassScopeFunctionSpecializationDecl *D) {
-  VisitDecl(D);
-  Record.AddDeclRef(D->getSpecialization());
-  Record.push_back(D->hasExplicitTemplateArgs());
-  if (D->hasExplicitTemplateArgs())
-    Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
-  Code = serialization::DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION;
-}
-
-
 void ASTDeclWriter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   VisitRedeclarableTemplateDecl(D);
 
@@ -1987,7 +1997,7 @@ void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 2,
+  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 15,
                 "You need to update the serializer after you change the "
                 "NumOMPDeclareReductionDeclBits");
 
@@ -1999,7 +2009,7 @@ void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Record.AddStmt(D->getInitOrig());
   Record.AddStmt(D->getInitPriv());
   Record.AddStmt(D->getInitializer());
-  Record.push_back(D->getInitializerKind());
+  Record.push_back(llvm::to_underlying(D->getInitializerKind()));
   Record.AddDeclRef(D->getPrevDeclInScope());
   Code = serialization::DECL_OMP_DECLARE_REDUCTION;
 }
@@ -2030,16 +2040,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_FIELD));
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
-  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2063,16 +2069,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_OBJC_IVAR));
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
-  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2101,16 +2103,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
-  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2121,23 +2119,18 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type Ref
   // TagDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getTagKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCompleteDefinition
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // EmbeddedInDeclarator
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFreeStanding
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsCompleteDefinitionRequired
+  Abv->Add(BitCodeAbbrevOp(
+      BitCodeAbbrevOp::Fixed,
+      9)); // Packed Tag Decl Bits: getTagKind, isCompleteDefinition,
+           // EmbeddedInDeclarator, IsFreeStanding,
+           // isCompleteDefinitionRequired, ExtInfoKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
-  Abv->Add(BitCodeAbbrevOp(0));                         // ExtInfoKind
   // EnumDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // AddTypeRef
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IntegerType
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getPromotionType
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getNumPositiveBits
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getNumNegativeBits
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isScoped
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isScopedUsingClassTag
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isFixed
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 19)); // Enum Decl Bits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));// ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // InstantiatedMembEnum
   // DC
@@ -2151,16 +2144,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
-  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2171,36 +2160,24 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type Ref
   // TagDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getTagKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCompleteDefinition
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // EmbeddedInDeclarator
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFreeStanding
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsCompleteDefinitionRequired
+  Abv->Add(BitCodeAbbrevOp(
+      BitCodeAbbrevOp::Fixed,
+      9)); // Packed Tag Decl Bits: getTagKind, isCompleteDefinition,
+           // EmbeddedInDeclarator, IsFreeStanding,
+           // isCompleteDefinitionRequired, ExtInfoKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SourceLocation
-  Abv->Add(BitCodeAbbrevOp(0));                         // ExtInfoKind
   // RecordDecl
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // FlexibleArrayMember
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // AnonymousStructUnion
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // hasObjectMember
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // hasVolatileMember
-
-  // isNonTrivialToPrimitiveDefaultInitialize
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // isNonTrivialToPrimitiveCopy
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // isNonTrivialToPrimitiveDestroy
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // hasNonTrivialToPrimitiveDefaultInitializeCUnion
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // hasNonTrivialToPrimitiveDestructCUnion
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // hasNonTrivialToPrimitiveCopyCUnion
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // isParamDestroyedInCallee
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-  // getArgPassingRestrictions
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
+  Abv->Add(BitCodeAbbrevOp(
+      BitCodeAbbrevOp::Fixed,
+      13)); // Packed Record Decl Bits: FlexibleArrayMember,
+            // AnonymousStructUnion, hasObjectMember, hasVolatileMember,
+            // isNonTrivialToPrimitiveDefaultInitialize,
+            // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,
+            // hasNonTrivialToPrimitiveDefaultInitializeCUnion,
+            // hasNonTrivialToPrimitiveDestructCUnion,
+            // hasNonTrivialToPrimitiveCopyCUnion, isParamDestroyedInCallee,
+            // getArgPassingRestrictions
   // ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 26));
 
@@ -2215,16 +2192,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
-  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2237,21 +2210,17 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // VarDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // SClass
-  Abv->Add(BitCodeAbbrevOp(0));                       // TSCSpec
-  Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong
-  Abv->Add(BitCodeAbbrevOp(0));                       // Linkage
-  Abv->Add(BitCodeAbbrevOp(0));                       // ModulesCodegen
-  Abv->Add(BitCodeAbbrevOp(0));                       // VarKind (local enum)
+  Abv->Add(
+      BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                      12)); // Packed Var Decl bits: SClass, TSCSpec, InitStyle,
+                            // isARCPseudoStrong, Linkage, ModulesCodegen
+  Abv->Add(BitCodeAbbrevOp(0));                          // VarKind (local enum)
   // ParmVarDecl
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsObjCMethodParameter
-  Abv->Add(BitCodeAbbrevOp(0));                       // ScopeDepth
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ScopeIndex
-  Abv->Add(BitCodeAbbrevOp(0));                       // ObjCDeclQualifier
-  Abv->Add(BitCodeAbbrevOp(0));                       // KNRPromoted
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasInheritedDefaultArg
-  Abv->Add(BitCodeAbbrevOp(0));                   // HasUninstantiatedDefaultArg
+  Abv->Add(BitCodeAbbrevOp(
+      BitCodeAbbrevOp::Fixed,
+      27)); // Packed Parm Var Decl bits: IsObjCMethodParameter, ScopeDepth,
+            // ScopeIndex, ObjCDeclQualifier, KNRPromoted,
+            // HasInheritedDefaultArg, HasUninstantiatedDefaultArg
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
@@ -2263,16 +2232,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isUsed
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2292,16 +2257,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Redeclarable
   Abv->Add(BitCodeAbbrevOp(0));                       // No redeclaration
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
-  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
-  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
-  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
-  Abv->Add(BitCodeAbbrevOp(0));                   // TopLevelDeclInObjCContainer
-  Abv->Add(BitCodeAbbrevOp(AS_none));                 // C++ AccessSpecifier
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
@@ -2314,25 +2275,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
   // VarDecl
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // SClass
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // TSCSpec
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // InitStyle
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsThisDeclarationADemotedDefinition
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isExceptionVariable
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isNRVOVariable
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCXXForRangeDecl
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isObjCForDecl
-  Abv->Add(BitCodeAbbrevOp(0));                         // isInline
-  Abv->Add(BitCodeAbbrevOp(0));                         // isInlineSpecified
-  Abv->Add(BitCodeAbbrevOp(0));                         // isConstexpr
-  Abv->Add(BitCodeAbbrevOp(0));                         // isInitCapture
-  Abv->Add(BitCodeAbbrevOp(0));                         // isPrevDeclInSameScope
-  Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
-  Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
-  Abv->Add(BitCodeAbbrevOp(0));                         // HasDeducedType
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
-  Abv->Add(BitCodeAbbrevOp(0));                         // ModulesCodeGen
+  Abv->Add(BitCodeAbbrevOp(
+      BitCodeAbbrevOp::Fixed,
+      27)); // Packed Var Decl bits: SClass, TSCSpec, InitStyle,
+            // isARCPseudoStrong, IsThisDeclarationADemotedDefinition,
+            // isExceptionVariable, isNRVOVariable, isCXXForRangeDecl,
+            // isObjCForDecl, isInline, isInlineSpecified, isConstexpr,
+            // isInitCapture, isPrevDeclInSameScope, ImplicitParamKind,
+            // EscapingByref, HasDeducedType, Linkage, ModulesCodegen
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
@@ -2347,16 +2297,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // FIXME: Implement abbreviation for other template kinds.
   Abv->Add(BitCodeAbbrevOp(FunctionDecl::TK_NonTemplate)); // TemplateKind
   // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           12)); // Packed DeclBits: HasStandaloneLexicalDC,
+                                 // isInvalidDecl, HasAttrs, isImplicit, isUsed,
+                                 // isReferenced, TopLevelDeclInObjCContainer,
+                                 // AccessSpecifier, ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // DeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                         // LexicalDeclContext
-  Abv->Add(BitCodeAbbrevOp(0));                         // Invalid
-  Abv->Add(BitCodeAbbrevOp(0));                         // HasAttrs
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Implicit
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Used
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Referenced
-  Abv->Add(BitCodeAbbrevOp(0));                         // InObjCContainer
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // Access
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SubmoduleID
   // NamedDecl
   Abv->Add(BitCodeAbbrevOp(DeclarationName::Identifier)); // NameKind
@@ -2370,27 +2316,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TSIType
   // FunctionDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // StorageClass
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Inline
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InlineSpecified
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // VirtualAsWritten
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Pure
-  Abv->Add(BitCodeAbbrevOp(0));                         // HasInheritedProto
-  Abv->Add(BitCodeAbbrevOp(1));                         // HasWrittenProto
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Deleted
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Trivial
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // TrivialForCall
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Defaulted
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ExplicitlyDefaulted
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsIneligibleOrNotSelected
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ImplicitReturnZero
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // Constexpr
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // UsesSEHTry
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // SkippedBody
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // MultiVersion
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // LateParsed
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // FriendConstraintRefersToEnclosingTemplate
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
+  Abv->Add(BitCodeAbbrevOp(
+      BitCodeAbbrevOp::Fixed,
+      27)); // Packed Function Bits: StorageClass, Inline, InlineSpecified,
+            // VirtualAsWritten, Pure, HasInheritedProto, HasWrittenProto,
+            // Deleted, Trivial, TrivialForCall, Defaulted, ExplicitlyDefaulted,
+            // IsIneligibleOrNotSelected, ImplicitReturnZero, Constexpr,
+            // UsesSEHTry, SkippedBody, MultiVersion, LateParsed,
+            // FriendConstraintRefersToEnclosingTemplate, Linkage
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LocEnd
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // Default
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // ODRHash
@@ -2406,16 +2339,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   DeclCXXMethodAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  unsigned ExprDependenceBits = llvm::BitWidth<ExprDependence>;
   // Abbreviation for EXPR_DECL_REF
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::EXPR_DECL_REF));
   //Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   //DeclRefExpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); //HasQualifier
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); //GetDeclFound
@@ -2434,9 +2365,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   //Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   //Integer Literal
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
   Abv->Add(BitCodeAbbrevOp(32));                      // Bit Width
@@ -2449,9 +2379,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   //Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   //Character Literal
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // getValue
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location
@@ -2464,9 +2393,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // Stmt
   // Expr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, ExprDependenceBits));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetValueKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
+  // DependenceKind, ValueKind, ObjectKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 10));
   // CastExpr
   Abv->Add(BitCodeAbbrevOp(0)); // PathSize
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasFPFeatures
@@ -2503,7 +2431,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   // Named modules have different semantics than header modules. Every named
   // module units owns a translation unit. So the importer of named modules
   // doesn't need to deserilize everything ahead of time.
-  if (WritingModule && WritingModule->isModulePurview()) {
+  if (WritingModule && WritingModule->isNamedModule()) {
     // The PragmaCommentDecl and PragmaDetectMismatchDecl are MSVC's extension.
     // And the behavior of MSVC for such cases will leak this to the module
     // users. Given pragma is not a standard thing, the compiler has the space

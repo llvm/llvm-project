@@ -14,7 +14,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE static void inline_bzero(Ptr dst, size_t count) {
   inline_memset(dst, 0, count);
@@ -24,6 +24,6 @@ LIBC_INLINE static void inline_bzero(void *dst, size_t count) {
   inline_bzero(reinterpret_cast<Ptr>(dst), count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BZERO_H

@@ -277,7 +277,7 @@ __scan_keyword(_InputIterator& __b, _InputIterator __e,
                bool __case_sensitive = true)
 {
     typedef typename iterator_traits<_InputIterator>::value_type _CharT;
-    size_t __nkw = static_cast<size_t>(_VSTD::distance(__kb, __ke));
+    size_t __nkw = static_cast<size_t>(std::distance(__kb, __ke));
     const unsigned char __doesnt_match = '\0';
     const unsigned char __might_match = '\1';
     const unsigned char __does_match = '\2';
@@ -596,81 +596,81 @@ public:
     typedef _CharT char_type;
     typedef _InputIterator iter_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit num_get(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, bool& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, long long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned short& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned int& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, unsigned long long& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, float& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, double& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, long double& __v) const
     {
         return do_get(__b, __e, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, void*& __v) const
     {
@@ -821,23 +821,23 @@ __num_get_unsigned_integral(const char* __a, const char* __a_end,
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _Tp __do_strtod(const char* __a, char** __p2);
 
 template <>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 float __do_strtod<float>(const char* __a, char** __p2) {
     return strtof_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 double __do_strtod<double>(const char* __a, char** __p2) {
     return strtod_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 long double __do_strtod<long double>(const char* __a, char** __p2) {
     return strtold_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
@@ -899,7 +899,7 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.getloc());
     typedef typename numpunct<_CharT>::string_type string_type;
     const string_type __names[2] = {__np.truename(), __np.falsename()};
-    const string_type* __i = _VSTD::__scan_keyword(__b, __e, __names, __names+2,
+    const string_type* __i = std::__scan_keyword(__b, __e, __names, __names+2,
                                                    __ct, __err);
     __v = __i == __names;
     return __b;
@@ -1287,60 +1287,60 @@ public:
     typedef _CharT char_type;
     typedef _OutputIterator iter_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit num_put(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   bool __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   long long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   unsigned long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   unsigned long long __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   double __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   long double __v) const
     {
         return do_put(__s, __iob, __fl, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   const void* __v) const
     {
@@ -1696,7 +1696,7 @@ protected:
     virtual const string_type& __x() const;
     virtual const string_type& __X() const;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~__time_get_c_storage() {}
 };
 
@@ -1730,52 +1730,52 @@ public:
     typedef time_base::dateorder    dateorder;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_get(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     dateorder date_order() const
     {
         return this->do_date_order();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get_time(iter_type __b, iter_type __e, ios_base& __iob,
                        ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_time(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get_date(iter_type __b, iter_type __e, ios_base& __iob,
                        ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_date(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get_weekday(iter_type __b, iter_type __e, ios_base& __iob,
                           ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_weekday(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get_monthname(iter_type __b, iter_type __e, ios_base& __iob,
                             ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_monthname(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get_year(iter_type __b, iter_type __e, ios_base& __iob,
                        ios_base::iostate& __err, tm* __tm) const
     {
         return do_get_year(__b, __e, __iob, __err, __tm);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, ios_base& __iob,
                   ios_base::iostate& __err, tm *__tm,
                   char __fmt, char __mod = 0) const
@@ -1881,7 +1881,7 @@ time_get<_CharT, _InputIterator>::__get_weekdayname(int& __w,
 {
     // Note:  ignoring case comes from the POSIX strptime spec
     const string_type* __wk = this->__weeks();
-    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __wk, __wk+14, __ct, __err, false) - __wk;
+    ptrdiff_t __i = std::__scan_keyword(__b, __e, __wk, __wk+14, __ct, __err, false) - __wk;
     if (__i < 14)
         __w = __i % 7;
 }
@@ -1895,7 +1895,7 @@ time_get<_CharT, _InputIterator>::__get_monthname(int& __m,
 {
     // Note:  ignoring case comes from the POSIX strptime spec
     const string_type* __month = this->__months();
-    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __month, __month+24, __ct, __err, false) - __month;
+    ptrdiff_t __i = std::__scan_keyword(__b, __e, __month, __month+24, __ct, __err, false) - __month;
     if (__i < 24)
         __m = __i % 12;
 }
@@ -1907,7 +1907,7 @@ time_get<_CharT, _InputIterator>::__get_day(int& __d,
                                             ios_base::iostate& __err,
                                             const ctype<char_type>& __ct) const
 {
-    int __t = _VSTD::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && 1 <= __t && __t <= 31)
         __d = __t;
     else
@@ -2067,7 +2067,7 @@ time_get<_CharT, _InputIterator>::__get_am_pm(int& __h,
         __err |= ios_base::failbit;
         return;
     }
-    ptrdiff_t __i = _VSTD::__scan_keyword(__b, __e, __ap, __ap+2, __ct, __err, false) - __ap;
+    ptrdiff_t __i = std::__scan_keyword(__b, __e, __ap, __ap+2, __ct, __err, false) - __ap;
     if (__i == 0 && __h == 12)
         __h = 0;
     else if (__i == 1 && __h < 12)
@@ -2360,7 +2360,7 @@ protected:
     explicit __time_get_storage(const char* __nm);
     explicit __time_get_storage(const string& __nm);
 
-    _LIBCPP_INLINE_VISIBILITY ~__time_get_storage() {}
+    _LIBCPP_HIDE_FROM_ABI ~__time_get_storage() {}
 
     time_base::dateorder __do_date_order() const;
 
@@ -2399,11 +2399,11 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_get_byname(const char* __nm, size_t __refs = 0)
         : time_get<_CharT, _InputIterator>(__refs),
           __time_get_storage<_CharT>(__nm) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_get_byname(const string& __nm, size_t __refs = 0)
         : time_get<_CharT, _InputIterator>(__refs),
           __time_get_storage<_CharT>(__nm) {}
@@ -2431,7 +2431,7 @@ class _LIBCPP_EXPORTED_FROM_ABI __time_put
 {
     locale_t __loc_;
 protected:
-    _LIBCPP_INLINE_VISIBILITY __time_put() : __loc_(_LIBCPP_GET_C_LOCALE) {}
+    _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(_LIBCPP_GET_C_LOCALE) {}
     __time_put(const char* __nm);
     __time_put(const string& __nm);
     ~__time_put();
@@ -2452,14 +2452,14 @@ public:
     typedef _CharT char_type;
     typedef _OutputIterator iter_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_put(size_t __refs = 0)
         : locale::facet(__refs) {}
 
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl, const tm* __tm,
                   const char_type* __pb, const char_type* __pe) const;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, ios_base& __iob, char_type __fl,
                   const tm* __tm, char __fmt, char __mod = 0) const
     {
@@ -2473,11 +2473,11 @@ protected:
     virtual iter_type do_put(iter_type __s, ios_base&, char_type, const tm* __tm,
                              char __fmt, char __mod) const;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_put(const char* __nm, size_t __refs)
         : locale::facet(__refs),
           __time_put(__nm) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_put(const string& __nm, size_t __refs)
         : locale::facet(__refs),
           __time_put(__nm) {}
@@ -2535,7 +2535,7 @@ time_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base&,
     char_type* __nb = __nar;
     char_type* __ne = __nb + 100;
     __do_put(__nb, __ne, __tm, __fmt, __mod);
-    return _VSTD::copy(__nb, __ne, __s);
+    return std::copy(__nb, __ne, __s);
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<char>;
@@ -2548,11 +2548,11 @@ class _LIBCPP_TEMPLATE_VIS time_put_byname
     : public time_put<_CharT, _OutputIterator>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_put_byname(const char* __nm, size_t __refs = 0)
         : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit time_put_byname(const string& __nm, size_t __refs = 0)
         : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
 
@@ -2573,7 +2573,7 @@ public:
     enum part {none, space, symbol, sign, value};
     struct pattern {char field[4];};
 
-    _LIBCPP_INLINE_VISIBILITY money_base() {}
+    _LIBCPP_HIDE_FROM_ABI money_base() {}
 };
 
 // moneypunct
@@ -2587,19 +2587,19 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit moneypunct(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY char_type   decimal_point() const {return do_decimal_point();}
-    _LIBCPP_INLINE_VISIBILITY char_type   thousands_sep() const {return do_thousands_sep();}
-    _LIBCPP_INLINE_VISIBILITY string      grouping()      const {return do_grouping();}
-    _LIBCPP_INLINE_VISIBILITY string_type curr_symbol()   const {return do_curr_symbol();}
-    _LIBCPP_INLINE_VISIBILITY string_type positive_sign() const {return do_positive_sign();}
-    _LIBCPP_INLINE_VISIBILITY string_type negative_sign() const {return do_negative_sign();}
-    _LIBCPP_INLINE_VISIBILITY int         frac_digits()   const {return do_frac_digits();}
-    _LIBCPP_INLINE_VISIBILITY pattern     pos_format()    const {return do_pos_format();}
-    _LIBCPP_INLINE_VISIBILITY pattern     neg_format()    const {return do_neg_format();}
+    _LIBCPP_HIDE_FROM_ABI char_type   decimal_point() const {return do_decimal_point();}
+    _LIBCPP_HIDE_FROM_ABI char_type   thousands_sep() const {return do_thousands_sep();}
+    _LIBCPP_HIDE_FROM_ABI string      grouping()      const {return do_grouping();}
+    _LIBCPP_HIDE_FROM_ABI string_type curr_symbol()   const {return do_curr_symbol();}
+    _LIBCPP_HIDE_FROM_ABI string_type positive_sign() const {return do_positive_sign();}
+    _LIBCPP_HIDE_FROM_ABI string_type negative_sign() const {return do_negative_sign();}
+    _LIBCPP_HIDE_FROM_ABI int         frac_digits()   const {return do_frac_digits();}
+    _LIBCPP_HIDE_FROM_ABI pattern     pos_format()    const {return do_pos_format();}
+    _LIBCPP_HIDE_FROM_ABI pattern     neg_format()    const {return do_neg_format();}
 
     static locale::id id;
     static const bool intl = _International;
@@ -2646,11 +2646,11 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit moneypunct_byname(const char* __nm, size_t __refs = 0)
         : moneypunct<_CharT, _International>(__refs) {init(__nm);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit moneypunct_byname(const string& __nm, size_t __refs = 0)
         : moneypunct<_CharT, _International>(__refs) {init(__nm.c_str());}
 
@@ -2702,7 +2702,7 @@ protected:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY __money_get() {}
+    _LIBCPP_HIDE_FROM_ABI __money_get() {}
 
     static void __gather_info(bool __intl, const locale& __loc,
                               money_base::pattern& __pat, char_type& __dp,
@@ -2762,18 +2762,18 @@ public:
     typedef _InputIterator          iter_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit money_get(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, bool __intl, ios_base& __iob,
                   ios_base::iostate& __err, long double& __v) const
     {
         return do_get(__b, __e, __intl, __iob, __err, __v);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type get(iter_type __b, iter_type __e, bool __intl, ios_base& __iob,
                   ios_base::iostate& __err, string_type& __v) const
     {
@@ -3071,7 +3071,7 @@ money_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
         if (__neg)
             *__nc++ = '-';
         for (const char_type* __w = __wb.get(); __w < __wn; ++__w, ++__nc)
-            *__nc = __src[std::find(__atoms, _VSTD::end(__atoms), *__w) - __atoms];
+            *__nc = __src[std::find(__atoms, std::end(__atoms), *__w) - __atoms];
         *__nc = char();
         if (sscanf(__nbuf, "%Lf", &__v) != 1)
             __throw_runtime_error("money_get error");
@@ -3128,7 +3128,7 @@ protected:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY __money_put() {}
+    _LIBCPP_HIDE_FROM_ABI __money_put() {}
 
     static void __gather_info(bool __intl, bool __neg, const locale& __loc,
                               money_base::pattern& __pat, char_type& __dp,
@@ -3224,7 +3224,7 @@ __money_put<_CharT>::__format(char_type* __mb, char_type*& __mi, char_type*& __m
             break;
         case money_base::symbol:
             if (!__sym.empty() && (__flags & ios_base::showbase))
-                __me = _VSTD::copy(__sym.begin(), __sym.end(), __me);
+                __me = std::copy(__sym.begin(), __sym.end(), __me);
             break;
         case money_base::value:
             {
@@ -3283,7 +3283,7 @@ __money_put<_CharT>::__format(char_type* __mb, char_type*& __mi, char_type*& __m
     }
     // print rest of sign, if any
     if (__sn.size() > 1)
-        __me = _VSTD::copy(__sn.begin()+1, __sn.end(), __me);
+        __me = std::copy(__sn.begin()+1, __sn.end(), __me);
     // set alignment
     if ((__flags & ios_base::adjustfield) == ios_base::left)
         __mi = __me;
@@ -3306,18 +3306,18 @@ public:
     typedef _OutputIterator         iter_type;
     typedef basic_string<char_type> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit money_put(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, bool __intl, ios_base& __iob, char_type __fl,
                   long double __units) const
     {
         return do_put(__s, __intl, __iob, __fl, __units);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     iter_type put(iter_type __s, bool __intl, ios_base& __iob, char_type __fl,
                   const string_type& __digits) const
     {
@@ -3457,7 +3457,7 @@ class _LIBCPP_EXPORTED_FROM_ABI messages_base
 public:
     typedef intptr_t catalog;
 
-    _LIBCPP_INLINE_VISIBILITY messages_base() {}
+    _LIBCPP_HIDE_FROM_ABI messages_base() {}
 };
 
 template <class _CharT>
@@ -3469,24 +3469,24 @@ public:
     typedef _CharT               char_type;
     typedef basic_string<_CharT> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit messages(size_t __refs = 0)
         : locale::facet(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     catalog open(const basic_string<char>& __nm, const locale& __loc) const
     {
         return do_open(__nm, __loc);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     string_type get(catalog __c, int __set, int __msgid,
                     const string_type& __dflt) const
     {
         return do_get(__c, __set, __msgid, __dflt);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void close(catalog __c) const
     {
         do_close(__c);
@@ -3534,7 +3534,7 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid,
     char* __n = catgets(__cat, __set, __msgid, __ndflt.c_str());
     string_type __w;
     __widen_from_utf8<sizeof(char_type)*__CHAR_BIT__>()(std::back_inserter(__w),
-                                                        __n, __n + _VSTD::strlen(__n));
+                                                        __n, __n + std::strlen(__n));
     return __w;
 #else // !_LIBCPP_HAS_CATOPEN
     (void)__c;
@@ -3568,11 +3568,11 @@ public:
     typedef messages_base::catalog catalog;
     typedef basic_string<_CharT> string_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit messages_byname(const char*, size_t __refs = 0)
         : messages<_CharT>(__refs) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit messages_byname(const string&, size_t __refs = 0)
         : messages<_CharT>(__refs) {}
 
@@ -3607,51 +3607,51 @@ private:
     wstring_convert& operator=(const wstring_convert& __wc);
 public:
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     wstring_convert() : wstring_convert(new _Codecvt) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit wstring_convert(_Codecvt* __pcvt);
 #else
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_EXPLICIT_SINCE_CXX14
     wstring_convert(_Codecvt* __pcvt = new _Codecvt);
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     wstring_convert(_Codecvt* __pcvt, state_type __state);
     _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI wstring_convert(const byte_string& __byte_err,
                     const wide_string& __wide_err = wide_string());
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     wstring_convert(wstring_convert&& __wc);
 #endif
     _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     wide_string from_bytes(char __byte)
         {return from_bytes(&__byte, &__byte+1);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     wide_string from_bytes(const char* __ptr)
         {return from_bytes(__ptr, __ptr + char_traits<char>::length(__ptr));}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     wide_string from_bytes(const byte_string& __str)
         {return from_bytes(__str.data(), __str.data() + __str.size());}
     _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __first, const char* __last);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     byte_string to_bytes(_Elem __wchar)
         {return to_bytes(&__wchar, &__wchar+1);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     byte_string to_bytes(const _Elem* __wptr)
         {return to_bytes(__wptr, __wptr + char_traits<_Elem>::length(__wptr));}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     byte_string to_bytes(const wide_string& __wstr)
         {return to_bytes(__wstr.data(), __wstr.data() + __wstr.size());}
     _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const _Elem* __first, const _Elem* __last);
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t converted() const _NOEXCEPT {return __cvtcount_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     state_type state() const {return __cvtstate_;}
 };
 
@@ -3688,8 +3688,8 @@ template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline
 wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     wstring_convert(wstring_convert&& __wc)
-        : __byte_err_string_(_VSTD::move(__wc.__byte_err_string_)),
-          __wide_err_string_(_VSTD::move(__wc.__wide_err_string_)),
+        : __byte_err_string_(std::move(__wc.__byte_err_string_)),
+          __wide_err_string_(std::move(__wc.__wide_err_string_)),
           __cvtptr_(__wc.__cvtptr_),
           __cvtstate_(__wc.__cvtstate_), __cvtcount_(__wc.__cvtcount_)
 {
@@ -3903,9 +3903,9 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     streambuf* rdbuf() const {return __bufptr_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     streambuf* rdbuf(streambuf* __bytebuf)
     {
         streambuf* __r = __bufptr_;
@@ -3913,7 +3913,7 @@ public:
         return __r;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     state_type state() const {return __st_;}
 
 protected:
@@ -3981,7 +3981,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     int_type __c = traits_type::eof();
     if (this->gptr() == this->egptr())
     {
-        _VSTD::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
+        std::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
         if (__always_noconv_)
         {
             streamsize __nmemb = static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz);
@@ -3997,13 +3997,13 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         else
         {
              if (__extbufend_ != __extbufnext_) {
-                _LIBCPP_ASSERT_UNCATEGORIZED(__extbufnext_ != nullptr, "underflow moving from nullptr");
-                _LIBCPP_ASSERT_UNCATEGORIZED(__extbuf_ != nullptr, "underflow moving into nullptr");
-                _VSTD::memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
+                _LIBCPP_ASSERT_NON_NULL(__extbufnext_ != nullptr, "underflow moving from nullptr");
+                _LIBCPP_ASSERT_NON_NULL(__extbuf_ != nullptr, "underflow moving into nullptr");
+                std::memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
              }
             __extbufnext_ = __extbuf_ + (__extbufend_ - __extbufnext_);
             __extbufend_ = __extbuf_ + (__extbuf_ == __extbuf_min_ ? sizeof(__extbuf_min_) : __ebs_);
-            streamsize __nmemb = _VSTD::min(static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz),
+            streamsize __nmemb = std::min(static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz),
                                  static_cast<streamsize>(__extbufend_ - __extbufnext_));
             codecvt_base::result __r;
             // FIXME: Do we ever need to restore the state here?

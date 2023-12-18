@@ -166,7 +166,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  3      9     1.00                        dppd	$22, %xmm0, %xmm2
 # CHECK-NEXT:  4      15    1.00    *                   dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  4      12    2.00                        dpps	$22, %xmm0, %xmm2
-# CHECK-NEXT:  5      18    2.00    *                   dpps	$22, (%rax), %xmm2
+# CHECK-NEXT:  6      18    2.00    *                   dpps	$22, (%rax), %xmm2
 # CHECK-NEXT:  2      3     1.00                        extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  3      5     1.00           *            extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        insertps	$1, %xmm0, %xmm2
@@ -264,7 +264,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -      -     26.00  47.50  5.00   52.50  24.50  24.50
+# CHECK-NEXT:  -      -     26.00  47.50  5.00   53.50  24.50  24.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -279,7 +279,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00   1.00    -     1.00    -      -     dppd	$22, %xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00   1.00    -     1.00   0.50   0.50   dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00   2.00    -     1.00    -      -     dpps	$22, %xmm0, %xmm2
-# CHECK-NEXT:  -      -     1.00   2.00    -     1.00   0.50   0.50   dpps	$22, (%rax), %xmm2
+# CHECK-NEXT:  -      -     1.00   2.00    -     2.00   0.50   0.50   dpps	$22, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -     1.00    -      -     extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -     1.00   1.00   0.50   0.50   extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     insertps	$1, %xmm0, %xmm2

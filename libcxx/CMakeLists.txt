@@ -48,6 +48,10 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Basic options ---------------------------------------------------------------
+option(LIBCXX_ENABLE_ASSERTIONS
+  "Enable assertions inside the compiled library, and at the same time make it the
+   default when compiling user code. Note that assertions can be enabled or disabled
+   by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
@@ -55,8 +59,8 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened safe debug)
-set(LIBCXX_HARDENING_MODE "unchecked" CACHE STRING
+set(LIBCXX_SUPPORTED_HARDENING_MODES none fast extensive debug)
+set(LIBCXX_HARDENING_MODE "none" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
    compiled library and will be the default when compiling user code. Note that
    users can override this setting in their own code. This does not affect the
@@ -247,17 +251,18 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless
-# 'LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY' is on. This option is also
-# disabled when the ABI library is not specified or is specified to be "none".
-set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-      AND NOT LIBCXX_CXX_ABI STREQUAL "none"
-      AND Python3_EXECUTABLE
-      AND LIBCXX_ENABLE_SHARED)
-    set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+# on UNIX platforms other than Apple, and on the Fuchsia platform unless we
+# statically link libc++abi inside libc++.so, we don't build libc++.so at all
+# or we don't have any ABI library.
+if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
+    OR NOT LIBCXX_ENABLE_SHARED
+    OR LIBCXX_CXX_ABI STREQUAL "none")
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
+elseif((UNIX OR FUCHSIA) AND NOT APPLE)
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+else()
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 endif()
-
 option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       "Use and install a linker script for the given ABI library"
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
@@ -279,7 +284,9 @@ endif()
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI "Use run time type information." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
 option(LIBCXX_ENABLE_MONOTONIC_CLOCK
   "Build libc++ with support for a monotonic clock.
@@ -367,6 +374,13 @@ if (LIBCXX_HAS_PTHREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+endif()
+
+if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
+  message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
+                      " disabled, since that configuration is broken. See"
+                      " https://github.com/llvm/llvm-project/issues/66117"
+                      " for details.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
@@ -500,11 +514,10 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Require C++20 for all targets. C++17 is needed to use aligned allocation
-  # in the dylib. C++20 is needed to use char8_t.
+  # Use C++23 for all targets.
   set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED YES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     CXX_EXTENSIONS NO)
 
   # When building the dylib, don't warn for unavailable aligned allocation
@@ -617,10 +630,10 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
         append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
       endif()
     elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
             USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Thread")
       append_flags(SANITIZER_FLAGS -fsanitize=thread)
     elseif (USE_SANITIZER STREQUAL "DataFlow")
@@ -635,21 +648,26 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
 endfunction()
 
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+add_library(cxx-sanitizer-flags INTERFACE)
+target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
+
+# _LIBCPP_INSTRUMENTED_WITH_ASAN informs that library was built with ASan.
+# Defining _LIBCPP_INSTRUMENTED_WITH_ASAN while building the library with ASan is required.
+# Normally, the _LIBCPP_INSTRUMENTED_WITH_ASAN flag is used to keep information whether
+# dylibs are built with AddressSanitizer. However, when building libc++,
+# this flag needs to be defined so that the resulting dylib has all ASan functionalities guarded by this flag.
+# If the _LIBCPP_INSTRUMENTED_WITH_ASAN flag is not defined, then parts of the ASan instrumentation code in libc++
+# will not be compiled into it, resulting in false positives.
+# For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
+string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
+if (NOT "${building_with_asan}" STREQUAL "-1")
+  config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
+endif()
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
-
-# In order to remove just libc++ from the link step
-# we need to use -nostdlib++ whenever it is supported.
-# Unfortunately this cannot be used universally because for example g++ supports
-# only -nodefaultlibs in which case all libraries will be removed and
-# all libraries but c++ have to be added in manually.
-  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-    target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
-  else()
-    target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-    target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-    target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+  if (NOT MSVC)
+    target_link_libraries(${target} PRIVATE "-nostdlib++")
   endif()
 
   if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
@@ -659,35 +677,17 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
   endif()
 
-  if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PRIVATE System)
-  endif()
-
-  if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PRIVATE pthread)
-  endif()
-
-  if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PRIVATE c)
-  endif()
-
-  if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PRIVATE m)
-  endif()
-
-  if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PRIVATE rt)
-  endif()
-
-  if (LIBCXX_USE_COMPILER_RT)
-    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
-    if (LIBCXX_BUILTINS_LIBRARY)
-      target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
+  if (MSVC)
+    if (LIBCXX_USE_COMPILER_RT)
+      find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+      if (LIBCXX_BUILTINS_LIBRARY)
+        target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
+      endif()
+    elseif (LIBCXX_HAS_GCC_LIB)
+      target_link_libraries(${target} PRIVATE gcc)
+    elseif (LIBCXX_HAS_GCC_S_LIB)
+      target_link_libraries(${target} PRIVATE gcc_s)
     endif()
-  elseif (LIBCXX_HAS_GCC_LIB)
-    target_link_libraries(${target} PRIVATE gcc)
-  elseif (LIBCXX_HAS_GCC_S_LIB)
-    target_link_libraries(${target} PRIVATE gcc_s)
   endif()
 
   if (LIBCXX_HAS_ATOMIC_LIB)
@@ -775,27 +775,19 @@ config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTER
 config_define_if_not(LIBCXX_ENABLE_STD_MODULES _LIBCPP_HAS_NO_STD_MODULES)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
-if (LIBCXX_HARDENING_MODE STREQUAL "hardened")
-  config_define(1 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-elseif (LIBCXX_HARDENING_MODE STREQUAL "safe")
-  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(1 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
-  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(1 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
-  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-endif()
-# TODO(LLVM 19): Remove this after branching for LLVM 18, this is a simple
-# courtesy for vendors to be notified about this change.
+
+# TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been replaced by LIBCXX_HARDENING_MODE=safe")
+  set(LIBCXX_HARDENING_MODE "extensive")
+endif()
+if (LIBCXX_HARDENING_MODE STREQUAL "none")
+  config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")
+  config_define(4 _LIBCPP_HARDENING_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "extensive")
+  config_define(16 _LIBCPP_HARDENING_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
+  config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
 endif()
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")
@@ -855,6 +847,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
+  target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)
 endfunction()
 
 #===============================================================================

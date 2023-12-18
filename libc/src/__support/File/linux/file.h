@@ -8,7 +8,7 @@
 
 #include "src/__support/File/file.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 FileIOResult linux_file_write(File *, const void *, size_t);
 FileIOResult linux_file_read(File *, void *, size_t);
@@ -29,4 +29,4 @@ public:
   int get_fd() const { return fd; }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

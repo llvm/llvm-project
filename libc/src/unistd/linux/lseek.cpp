@@ -16,7 +16,7 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>      // For off_t.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(off_t, lseek, (int fd, off_t offset, int whence)) {
   auto result = internal::lseekimpl(fd, offset, whence);
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(off_t, lseek, (int fd, off_t offset, int whence)) {
   return result.value();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

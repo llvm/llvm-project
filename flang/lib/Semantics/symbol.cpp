@@ -733,22 +733,10 @@ bool GenericKind::IsOperator() const {
 
 std::string GenericKind::ToString() const {
   return common::visit(
-      common::visitors {
-        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
-            [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            [](const common::NumericOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::LogicalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::RelationalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-#else
-            [](const auto &x) { return std::string{common::EnumToString(x)}; },
-#endif
+      common::visitors{
+          [](const OtherKind &x) { return std::string{EnumToString(x)}; },
+          [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
+          [](const auto &x) { return std::string{common::EnumToString(x)}; },
       },
       u);
 }
@@ -800,6 +788,12 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
     break;
   case Symbol::Flag::OmpCopyPrivate:
     clauseName = "COPYPRIVATE";
+    break;
+  case Symbol::Flag::OmpIsDevicePtr:
+    clauseName = "IS_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpHasDeviceAddr:
+    clauseName = "HAS_DEVICE_ADDR";
     break;
   default:
     clauseName = "";

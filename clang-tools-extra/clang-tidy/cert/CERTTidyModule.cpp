@@ -328,6 +328,7 @@ public:
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
     Opts["cert-err33-c.CheckedFunctions"] = CertErr33CCheckedFunctions;
+    Opts["cert-err33-c.AllowCastToVoid"] = "true";
     Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "false";
     Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "false";
     return Options;

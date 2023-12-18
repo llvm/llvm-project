@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_GPU_NVPTX_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_GPU_NVPTX_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
 
 #include "src/__support/common.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace gpu {
 
 /// The number of threads that execute in lock-step in a warp.
@@ -160,6 +160,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 }
 
 } // namespace gpu
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

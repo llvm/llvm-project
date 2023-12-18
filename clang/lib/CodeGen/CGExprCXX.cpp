@@ -41,7 +41,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, GlobalDecl GD,
 
   assert(CE == nullptr || isa<CXXMemberCallExpr>(CE) ||
          isa<CXXOperatorCallExpr>(CE));
-  assert(MD->isInstance() &&
+  assert(MD->isImplicitObjectMemberFunction() &&
          "Trying to emit a member or operator call expr on a static method!");
 
   // Push the this ptr.
@@ -66,7 +66,12 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, GlobalDecl GD,
     Args.addFrom(*RtlArgs);
   } else if (CE) {
     // Special case: skip first argument of CXXOperatorCall (it is "this").
-    unsigned ArgsToSkip = isa<CXXOperatorCallExpr>(CE) ? 1 : 0;
+    unsigned ArgsToSkip = 0;
+    if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(CE)) {
+      if (const auto *M = dyn_cast<CXXMethodDecl>(Op->getCalleeDecl()))
+        ArgsToSkip =
+            static_cast<unsigned>(!M->isExplicitObjectMemberFunction());
+    }
     CGF.EmitCallArgs(Args, FPT, drop_begin(CE->arguments(), ArgsToSkip),
                      CE->getDirectCallee());
   } else {
@@ -484,7 +489,7 @@ RValue
 CodeGenFunction::EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
                                                const CXXMethodDecl *MD,
                                                ReturnValueSlot ReturnValue) {
-  assert(MD->isInstance() &&
+  assert(MD->isImplicitObjectMemberFunction() &&
          "Trying to emit a member call expr on a static method!");
   return EmitCXXMemberOrOperatorMemberCallExpr(
       E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
@@ -595,12 +600,12 @@ CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
   // already zeroed.
   if (E->requiresZeroInitialization() && !Dest.isZeroed()) {
     switch (E->getConstructionKind()) {
-    case CXXConstructExpr::CK_Delegating:
-    case CXXConstructExpr::CK_Complete:
+    case CXXConstructionKind::Delegating:
+    case CXXConstructionKind::Complete:
       EmitNullInitialization(Dest.getAddress(), E->getType());
       break;
-    case CXXConstructExpr::CK_VirtualBase:
-    case CXXConstructExpr::CK_NonVirtualBase:
+    case CXXConstructionKind::VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
       EmitNullBaseClassInitialization(*this, Dest.getAddress(),
                                       CD->getParent());
       break;
@@ -636,21 +641,21 @@ CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
     bool Delegating = false;
 
     switch (E->getConstructionKind()) {
-     case CXXConstructExpr::CK_Delegating:
+    case CXXConstructionKind::Delegating:
       // We should be emitting a constructor; GlobalDecl will assert this
       Type = CurGD.getCtorType();
       Delegating = true;
       break;
 
-     case CXXConstructExpr::CK_Complete:
+    case CXXConstructionKind::Complete:
       Type = Ctor_Complete;
       break;
 
-     case CXXConstructExpr::CK_VirtualBase:
+    case CXXConstructionKind::VirtualBase:
       ForVirtualBase = true;
       [[fallthrough]];
 
-     case CXXConstructExpr::CK_NonVirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
       Type = Ctor_Base;
      }
 
@@ -1101,9 +1106,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
       if (EndOfInit.isValid()) {
-        auto FinishedPtr =
-          Builder.CreateBitCast(CurPtr.getPointer(), BeginPtr.getType());
-        Builder.CreateStore(FinishedPtr, EndOfInit);
+        Builder.CreateStore(CurPtr.getPointer(), EndOfInit);
       }
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two

@@ -294,8 +294,8 @@ define void @call_floor(float %a) #0 {
 define float @call_floor2(float %a) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float [[A]]) #[[ATTR30:[0-9]+]]
+; CHECK-SAME: (float nofpclass(sub) [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[C:%.*]] = tail call nofpclass(sub) float @llvm.floor.f32(float nofpclass(sub) [[A]]) #[[ATTR30:[0-9]+]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -855,7 +855,7 @@ define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
-; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TRUETMP2:%.*]], [[FOR_END:%.*]] ]
+; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2:%.*]], [[FOR_END:%.*]] ]
 ; CHECK-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[INC:%.*]], [[FOR_END]] ]
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt i32 [[N_ADDR_0]], -1
 ; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP]], i32 [[N_ADDR_0]], i32 -1
@@ -863,12 +863,12 @@ define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[TRUETMP1:%.*]] = add i32 [[ANS_0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[ANS_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[TRUETMP2]] = add i32 [[TRUETMP1]], [[SMAX]]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[SMAX]]
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    unreachable
@@ -939,7 +939,7 @@ define i32 @nested_unbounded_loops(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
-; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TRUETMP1:%.*]], [[WHILE_END10:%.*]] ]
+; CHECK-NEXT:    [[ANS_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[WHILE_END10:%.*]] ]
 ; CHECK-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ -1, [[WHILE_END10]] ]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N_ADDR_0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END11:%.*]], label [[WHILE_BODY:%.*]]
@@ -957,7 +957,7 @@ define i32 @nested_unbounded_loops(i32 %n) {
 ; CHECK:       while.body8:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       while.end10:
-; CHECK-NEXT:    [[TRUETMP1]] = add i32 [[TMP]], [[ANS_0]]
+; CHECK-NEXT:    [[TMP1]] = add i32 [[TMP]], [[ANS_0]]
 ; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.end11:
 ; CHECK-NEXT:    [[ANS_0_LCSSA:%.*]] = phi i32 [ [[ANS_0]], [[WHILE_COND]] ]

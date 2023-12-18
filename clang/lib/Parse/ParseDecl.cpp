@@ -84,7 +84,7 @@ TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
 
 /// Normalizes an attribute name by dropping prefixed and suffixed __.
 static StringRef normalizeAttrName(StringRef Name) {
-  if (Name.size() >= 4 && Name.startswith("__") && Name.endswith("__"))
+  if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
     return Name.drop_front(2).drop_back(2);
   return Name;
 }
@@ -3288,17 +3288,6 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
   return false;
 }
 
-// Choose the apprpriate diagnostic error for why fixed point types are
-// disabled, set the previous specifier, and mark as invalid.
-static void SetupFixedPointError(const LangOptions &LangOpts,
-                                 const char *&PrevSpec, unsigned &DiagID,
-                                 bool &isInvalid) {
-  assert(!LangOpts.FixedPoint);
-  DiagID = diag::err_fixed_point_not_enabled;
-  PrevSpec = "";  // Not used by diagnostic
-  isInvalid = true;
-}
-
 /// ParseDeclarationSpecifiers
 ///       declaration-specifiers: [C99 6.7]
 ///         storage-class-specifier declaration-specifiers[opt]
@@ -4038,11 +4027,11 @@ void Parser::ParseDeclarationSpecifiers(
       isStorageClass = true;
       break;
     case tok::kw_auto:
-      if (getLangOpts().CPlusPlus11) {
+      if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-          if (!isInvalid)
+          if (!isInvalid && !getLangOpts().C23)
             Diag(Tok, diag::ext_auto_storage_class)
               << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
         } else
@@ -4076,8 +4065,15 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_thread_local:
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-      isInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS_thread_local, Loc,
-                                               PrevSpec, DiagID);
+      // We map thread_local to _Thread_local in C23 mode so it retains the C
+      // semantics rather than getting the C++ semantics.
+      // FIXME: diagnostics will show _Thread_local when the user wrote
+      // thread_local in source in C23 mode; we need some general way to
+      // identify which way the user spelled the keyword in source.
+      isInvalid = DS.SetStorageClassSpecThread(
+          getLangOpts().C23 ? DeclSpec::TSCS__Thread_local
+                            : DeclSpec::TSCS_thread_local,
+          Loc, PrevSpec, DiagID);
       isStorageClass = true;
       break;
     case tok::kw__Thread_local:
@@ -4120,7 +4116,11 @@ void Parser::ParseDeclarationSpecifiers(
           ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
           BalancedDelimiterTracker Tracker(*this, tok::l_paren);
           Tracker.consumeOpen();
-          ExplicitExpr = ParseConstantExpression();
+
+          EnterExpressionEvaluationContext ConstantEvaluated(
+              Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+          ExplicitExpr = ParseConstantExpressionInExprEvalContext();
           ConsumedEnd = Tok.getLocation();
           if (ExplicitExpr.isUsable()) {
             CloseParenLoc = Tok.getLocation();
@@ -4264,27 +4264,24 @@ void Parser::ParseDeclarationSpecifiers(
                                      DiagID, Policy);
       break;
     case tok::kw__Accum:
-      if (!getLangOpts().FixedPoint) {
-        SetupFixedPointError(getLangOpts(), PrevSpec, DiagID, isInvalid);
-      } else {
-        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_accum, Loc, PrevSpec,
-                                       DiagID, Policy);
-      }
+      assert(getLangOpts().FixedPoint &&
+             "This keyword is only used when fixed point types are enabled "
+             "with `-ffixed-point`");
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_accum, Loc, PrevSpec, DiagID,
+                                     Policy);
       break;
     case tok::kw__Fract:
-      if (!getLangOpts().FixedPoint) {
-        SetupFixedPointError(getLangOpts(), PrevSpec, DiagID, isInvalid);
-      } else {
-        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_fract, Loc, PrevSpec,
-                                       DiagID, Policy);
-      }
+      assert(getLangOpts().FixedPoint &&
+             "This keyword is only used when fixed point types are enabled "
+             "with `-ffixed-point`");
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_fract, Loc, PrevSpec, DiagID,
+                                     Policy);
       break;
     case tok::kw__Sat:
-      if (!getLangOpts().FixedPoint) {
-        SetupFixedPointError(getLangOpts(), PrevSpec, DiagID, isInvalid);
-      } else {
-        isInvalid = DS.SetTypeSpecSat(Loc, PrevSpec, DiagID);
-      }
+      assert(getLangOpts().FixedPoint &&
+             "This keyword is only used when fixed point types are enabled "
+             "with `-ffixed-point`");
+      isInvalid = DS.SetTypeSpecSat(Loc, PrevSpec, DiagID);
       break;
     case tok::kw___float128:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_float128, Loc, PrevSpec,
@@ -4517,6 +4514,9 @@ void Parser::ParseDeclarationSpecifiers(
       break;
 
     case tok::kw_groupshared:
+    case tok::kw_in:
+    case tok::kw_inout:
+    case tok::kw_out:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
@@ -4734,6 +4734,11 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       AccessSpecifier AS = AS_none;
       ParsedAttributes Attrs(AttrFactory);
       (void)ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
+      continue;
+    }
+
+    if (Tok.is(tok::annot_pragma_openacc)) {
+      ParseOpenACCDirectiveDecl();
       continue;
     }
 
@@ -5005,7 +5010,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
       BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
-      if (!getLangOpts().ObjC) {
+      if (!getLangOpts().ObjC && !getLangOpts().C23) {
         if (getLangOpts().CPlusPlus11)
           Diag(ColonLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type)
               << BaseRange;
@@ -5548,7 +5553,6 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___read_write:
   case tok::kw___write_only:
   case tok::kw___funcref:
-  case tok::kw_groupshared:
     return true;
 
   case tok::kw_private:
@@ -5557,6 +5561,13 @@ bool Parser::isTypeSpecifierQualifier() {
   // C11 _Atomic
   case tok::kw__Atomic:
     return true;
+
+  // HLSL type qualifiers
+  case tok::kw_groupshared:
+  case tok::kw_in:
+  case tok::kw_inout:
+  case tok::kw_out:
+    return getLangOpts().HLSL;
   }
 }
 
@@ -5831,8 +5842,7 @@ bool Parser::isDeclarationSpecifier(
 bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
                                      DeclSpec::FriendSpecified IsFriend,
                                      const ParsedTemplateInfo *TemplateInfo) {
-  TentativeParsingAction TPA(*this);
-
+  RevertingTentativeParsingAction TPA(*this);
   // Parse the C++ scope specifier.
   CXXScopeSpec SS;
   if (TemplateInfo && TemplateInfo->TemplateParams)
@@ -5841,7 +5851,6 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/true)) {
-    TPA.Revert();
     return false;
   }
 
@@ -5853,7 +5862,6 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   } else if (Tok.is(tok::annot_template_id)) {
     ConsumeAnnotationToken();
   } else {
-    TPA.Revert();
     return false;
   }
 
@@ -5863,7 +5871,6 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
   // Current class name must be followed by a left parenthesis.
   if (Tok.isNot(tok::l_paren)) {
-    TPA.Revert();
     return false;
   }
   ConsumeParen();
@@ -5872,7 +5879,6 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   // that we have a constructor.
   if (Tok.is(tok::r_paren) ||
       (Tok.is(tok::ellipsis) && NextToken().is(tok::r_paren))) {
-    TPA.Revert();
     return true;
   }
 
@@ -5881,7 +5887,6 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   if (getLangOpts().CPlusPlus11 &&
       isCXX11AttributeSpecifier(/*Disambiguate*/ false,
                                 /*OuterMightBeMessageSend*/ true)) {
-    TPA.Revert();
     return true;
   }
 
@@ -5902,9 +5907,17 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
   // If we parsed a scope specifier as well as friend,
   // we might be parsing a friend constructor.
   bool IsConstructor = false;
-  if (isDeclarationSpecifier(IsFriend && !SS.isSet()
-                                 ? ImplicitTypenameContext::No
-                                 : ImplicitTypenameContext::Yes))
+  ImplicitTypenameContext ITC = IsFriend && !SS.isSet()
+                                    ? ImplicitTypenameContext::No
+                                    : ImplicitTypenameContext::Yes;
+  // Constructors cannot have this parameters, but we support that scenario here
+  // to improve diagnostic.
+  if (Tok.is(tok::kw_this)) {
+    ConsumeToken();
+    return isDeclarationSpecifier(ITC);
+  }
+
+  if (isDeclarationSpecifier(ITC))
     IsConstructor = true;
   else if (Tok.is(tok::identifier) ||
            (Tok.is(tok::annot_cxxscope) && NextToken().is(tok::identifier))) {
@@ -5973,8 +5986,6 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
       break;
     }
   }
-
-  TPA.Revert();
   return IsConstructor;
 }
 
@@ -6056,6 +6067,9 @@ void Parser::ParseTypeQualifierListOpt(
       break;
 
     case tok::kw_groupshared:
+    case tok::kw_in:
+    case tok::kw_inout:
+    case tok::kw_out:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
@@ -7352,6 +7366,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 ///           '=' assignment-expression
 /// [GNU]   declaration-specifiers abstract-declarator[opt] attributes
 /// [C++11] attribute-specifier-seq parameter-declaration
+/// [C++2b] attribute-specifier-seq 'this' parameter-declaration
 ///
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
@@ -7416,9 +7431,16 @@ void Parser::ParseParameterDeclarationClause(
 
     SourceLocation DSStart = Tok.getLocation();
 
+    // Parse a C++23 Explicit Object Parameter
+    // We do that in all language modes to produce a better diagnostic.
+    SourceLocation ThisLoc;
+    if (getLangOpts().CPlusPlus && Tok.is(tok::kw_this))
+      ThisLoc = ConsumeToken();
+
     ParseDeclarationSpecifiers(DS, /*TemplateInfo=*/ParsedTemplateInfo(),
                                AS_none, DeclSpecContext::DSC_normal,
                                /*LateAttrs=*/nullptr, AllowImplicitTypename);
+
     DS.takeAttributesFrom(ArgDeclSpecAttrs);
 
     // Parse the declarator.  This is "PrototypeContext" or
@@ -7431,6 +7453,9 @@ void Parser::ParseParameterDeclarationClause(
                                   ? DeclaratorContext::LambdaExprParameter
                                   : DeclaratorContext::Prototype);
     ParseDeclarator(ParmDeclarator);
+
+    if (ThisLoc.isValid())
+      ParmDeclarator.SetRangeBegin(ThisLoc);
 
     // Parse GNU attributes, if present.
     MaybeParseGNUAttributes(ParmDeclarator);
@@ -7501,7 +7526,8 @@ void Parser::ParseParameterDeclarationClause(
       }
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
-      Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator);
+      Decl *Param =
+          Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator, ThisLoc);
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in
@@ -7687,7 +7713,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     // Parse the constant-expression or assignment-expression now (depending
     // on dialect).
     if (getLangOpts().CPlusPlus) {
-      NumElements = ParseConstantExpression();
+      NumElements = ParseArrayBoundExpression();
     } else {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
@@ -7828,7 +7854,7 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
 
   bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
   const IdentifierInfo *II = Tok.getIdentifierInfo();
-  if (getLangOpts().C23 && !II->getName().startswith("__"))
+  if (getLangOpts().C23 && !II->getName().starts_with("__"))
     Diag(Tok.getLocation(), diag::warn_c23_compat_keyword) << Tok.getName();
 
   Token OpTok = Tok;

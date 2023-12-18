@@ -163,7 +163,7 @@ lookupBuiltin(StringRef DemangledCall,
   // the information after angle brackets and return type removed.
   if (BuiltinName.find('<') && BuiltinName.back() == '>') {
     BuiltinName = BuiltinName.substr(0, BuiltinName.find('<'));
-    BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(" ") + 1);
+    BuiltinName = BuiltinName.substr(BuiltinName.find_last_of(' ') + 1);
   }
 
   // Check if the extracted name begins with "__spirv_ImageSampleExplicitLod"
@@ -872,8 +872,8 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     std::tie(GroupResultRegister, GroupResultType) =
         buildBoolRegister(MIRBuilder, Call->ReturnType, GR);
 
-  auto Scope = Builtin->Name.startswith("sub_group") ? SPIRV::Scope::Subgroup
-                                                     : SPIRV::Scope::Workgroup;
+  auto Scope = Builtin->Name.starts_with("sub_group") ? SPIRV::Scope::Subgroup
+                                                      : SPIRV::Scope::Workgroup;
   Register ScopeRegister = buildConstantIntReg(Scope, MIRBuilder, GR);
 
   // Build work/sub group instruction.
@@ -1999,69 +1999,15 @@ struct OpenCLType {
 //===----------------------------------------------------------------------===//
 
 static Type *parseTypeString(const StringRef Name, LLVMContext &Context) {
-  if (Name.startswith("void"))
+  if (Name.starts_with("void"))
     return Type::getVoidTy(Context);
-  else if (Name.startswith("int") || Name.startswith("uint"))
+  else if (Name.starts_with("int") || Name.starts_with("uint"))
     return Type::getInt32Ty(Context);
-  else if (Name.startswith("float"))
+  else if (Name.starts_with("float"))
     return Type::getFloatTy(Context);
-  else if (Name.startswith("half"))
+  else if (Name.starts_with("half"))
     return Type::getHalfTy(Context);
   llvm_unreachable("Unable to recognize type!");
-}
-
-static const TargetExtType *parseToTargetExtType(const Type *OpaqueType,
-                                                 MachineIRBuilder &MIRBuilder) {
-  assert(isSpecialOpaqueType(OpaqueType) &&
-         "Not a SPIR-V/OpenCL special opaque type!");
-  assert(!OpaqueType->isTargetExtTy() &&
-         "This already is SPIR-V/OpenCL TargetExtType!");
-
-  StringRef NameWithParameters = OpaqueType->getStructName();
-
-  // Pointers-to-opaque-structs representing OpenCL types are first translated
-  // to equivalent SPIR-V types. OpenCL builtin type names should have the
-  // following format: e.g. %opencl.event_t
-  if (NameWithParameters.startswith("opencl.")) {
-    const SPIRV::OpenCLType *OCLTypeRecord =
-        SPIRV::lookupOpenCLType(NameWithParameters);
-    if (!OCLTypeRecord)
-      report_fatal_error("Missing TableGen record for OpenCL type: " +
-                         NameWithParameters);
-    NameWithParameters = OCLTypeRecord->SpirvTypeLiteral;
-    // Continue with the SPIR-V builtin type...
-  }
-
-  // Names of the opaque structs representing a SPIR-V builtins without
-  // parameters should have the following format: e.g. %spirv.Event
-  assert(NameWithParameters.startswith("spirv.") &&
-         "Unknown builtin opaque type!");
-
-  // Parameterized SPIR-V builtins names follow this format:
-  // e.g. %spirv.Image._void_1_0_0_0_0_0_0, %spirv.Pipe._0
-  if (NameWithParameters.find('_') == std::string::npos)
-    return TargetExtType::get(OpaqueType->getContext(), NameWithParameters);
-
-  SmallVector<StringRef> Parameters;
-  unsigned BaseNameLength = NameWithParameters.find('_') - 1;
-  SplitString(NameWithParameters.substr(BaseNameLength + 1), Parameters, "_");
-
-  SmallVector<Type *, 1> TypeParameters;
-  bool HasTypeParameter = !isDigit(Parameters[0][0]);
-  if (HasTypeParameter)
-    TypeParameters.push_back(parseTypeString(
-        Parameters[0], MIRBuilder.getMF().getFunction().getContext()));
-  SmallVector<unsigned> IntParameters;
-  for (unsigned i = HasTypeParameter ? 1 : 0; i < Parameters.size(); i++) {
-    unsigned IntParameter = 0;
-    bool ValidLiteral = !Parameters[i].getAsInteger(10, IntParameter);
-    assert(ValidLiteral &&
-           "Invalid format of SPIR-V builtin parameter literal!");
-    IntParameters.push_back(IntParameter);
-  }
-  return TargetExtType::get(OpaqueType->getContext(),
-                            NameWithParameters.substr(0, BaseNameLength),
-                            TypeParameters, IntParameters);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2127,6 +2073,56 @@ static SPIRVType *getSampledImageType(const TargetExtType *OpaqueType,
 }
 
 namespace SPIRV {
+const TargetExtType *
+parseBuiltinTypeNameToTargetExtType(std::string TypeName,
+                                    MachineIRBuilder &MIRBuilder) {
+  StringRef NameWithParameters = TypeName;
+
+  // Pointers-to-opaque-structs representing OpenCL types are first translated
+  // to equivalent SPIR-V types. OpenCL builtin type names should have the
+  // following format: e.g. %opencl.event_t
+  if (NameWithParameters.starts_with("opencl.")) {
+    const SPIRV::OpenCLType *OCLTypeRecord =
+        SPIRV::lookupOpenCLType(NameWithParameters);
+    if (!OCLTypeRecord)
+      report_fatal_error("Missing TableGen record for OpenCL type: " +
+                         NameWithParameters);
+    NameWithParameters = OCLTypeRecord->SpirvTypeLiteral;
+    // Continue with the SPIR-V builtin type...
+  }
+
+  // Names of the opaque structs representing a SPIR-V builtins without
+  // parameters should have the following format: e.g. %spirv.Event
+  assert(NameWithParameters.starts_with("spirv.") &&
+         "Unknown builtin opaque type!");
+
+  // Parameterized SPIR-V builtins names follow this format:
+  // e.g. %spirv.Image._void_1_0_0_0_0_0_0, %spirv.Pipe._0
+  if (NameWithParameters.find('_') == std::string::npos)
+    return TargetExtType::get(MIRBuilder.getContext(), NameWithParameters);
+
+  SmallVector<StringRef> Parameters;
+  unsigned BaseNameLength = NameWithParameters.find('_') - 1;
+  SplitString(NameWithParameters.substr(BaseNameLength + 1), Parameters, "_");
+
+  SmallVector<Type *, 1> TypeParameters;
+  bool HasTypeParameter = !isDigit(Parameters[0][0]);
+  if (HasTypeParameter)
+    TypeParameters.push_back(parseTypeString(
+        Parameters[0], MIRBuilder.getMF().getFunction().getContext()));
+  SmallVector<unsigned> IntParameters;
+  for (unsigned i = HasTypeParameter ? 1 : 0; i < Parameters.size(); i++) {
+    unsigned IntParameter = 0;
+    bool ValidLiteral = !Parameters[i].getAsInteger(10, IntParameter);
+    assert(ValidLiteral &&
+           "Invalid format of SPIR-V builtin parameter literal!");
+    IntParameters.push_back(IntParameter);
+  }
+  return TargetExtType::get(MIRBuilder.getContext(),
+                            NameWithParameters.substr(0, BaseNameLength),
+                            TypeParameters, IntParameters);
+}
+
 SPIRVType *lowerBuiltinType(const Type *OpaqueType,
                             SPIRV::AccessQualifier::AccessQualifier AccessQual,
                             MachineIRBuilder &MIRBuilder,
@@ -2141,7 +2137,8 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
   // will be removed in the future release of LLVM.
   const TargetExtType *BuiltinType = dyn_cast<TargetExtType>(OpaqueType);
   if (!BuiltinType)
-    BuiltinType = parseToTargetExtType(OpaqueType, MIRBuilder);
+    BuiltinType = parseBuiltinTypeNameToTargetExtType(
+        OpaqueType->getStructName().str(), MIRBuilder);
 
   unsigned NumStartingVRegs = MIRBuilder.getMRI()->getNumVirtRegs();
 

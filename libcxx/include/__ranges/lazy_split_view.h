@@ -280,7 +280,7 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI
     friend constexpr bool operator==(const __outer_iterator& __x, default_sentinel_t) {
-      _LIBCPP_ASSERT_UNCATEGORIZED(__x.__parent_, "Cannot call comparison on a default-constructed iterator.");
+      _LIBCPP_ASSERT_NON_NULL(__x.__parent_ != nullptr, "Cannot call comparison on a default-constructed iterator.");
       return __x.__current() == ranges::end(__x.__parent_base()) && !__x.__trailing_empty_;
     }
   };
@@ -311,7 +311,7 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr bool __is_done() const {
-      _LIBCPP_ASSERT_UNCATEGORIZED(__i_.__parent_, "Cannot call comparison on a default-constructed iterator.");
+      _LIBCPP_ASSERT_NON_NULL(__i_.__parent_ != nullptr, "Cannot call comparison on a default-constructed iterator.");
 
       auto [__pcur, __pend] = ranges::subrange{__i_.__parent_->__pattern_};
       auto __end = ranges::end(__i_.__parent_->__base_);
@@ -437,7 +437,7 @@ lazy_split_view(_Range&&, range_value_t<_Range>)
 
 namespace views {
 namespace __lazy_split_view {
-struct __fn : __range_adaptor_closure<__fn> {
+struct __fn {
   template <class _Range, class _Pattern>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
   constexpr auto operator()(_Range&& __range, _Pattern&& __pattern) const

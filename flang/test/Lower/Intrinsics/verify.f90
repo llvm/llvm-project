@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPverify_test(
 ! CHECK-SAME: %[[VAL_0:.*]]: !fir.boxchar<1>{{.*}}, %[[VAL_1:.*]]: !fir.boxchar<1>{{.*}}) -> i32 {
@@ -14,7 +14,7 @@ integer function verify_test(s1, s2)
 ! CHECK: %[[VAL_10:.*]] = fir.zero_bits !fir.heap<i32>
 ! CHECK: %[[VAL_11:.*]] = fir.embox %[[VAL_10]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK: fir.store %[[VAL_11]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK: %[[VAL_12:.*]] = fir.address_of(@_QQcl.{{[0-9a-z]+}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK: %[[VAL_12:.*]] = fir.address_of(@_QQclX{{[0-9a-z]+}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 ! CHECK: %[[VAL_13:.*]] = arith.constant {{[0-9]+}} : i32
 ! CHECK: %[[VAL_14:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[VAL_15:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>

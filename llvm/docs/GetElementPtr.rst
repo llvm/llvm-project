@@ -200,7 +200,7 @@ fine:
 
   @MyVar = external global { i32, [40 x i32 ] }
   ...
-  %idx = getelementptr { [40 x i32] }, ptr @MyVal, i64 0, i32 1, i64 17
+  %idx = getelementptr { i32, [40 x i32] }, ptr @MyVar, i64 0, i32 1, i64 17
 
 In this case, the structure does not contain a pointer and the GEP instruction
 can index through the global variable, into the second field of the structure

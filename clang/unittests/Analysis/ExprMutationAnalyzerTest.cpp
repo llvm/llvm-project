@@ -284,6 +284,36 @@ TEST(ExprMutationAnalyzerTest, TypeDependentMemberCall) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.push_back(T())"));
 }
 
+TEST(ExprMutationAnalyzerTest, MemberPointerMemberCall) {
+  {
+    const auto AST =
+        buildASTFromCode("struct X {};"
+                         "using T = int (X::*)();"
+                         "void f(X &x, T m) { X &ref = x; (ref.*m)(); }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("ref")), AST->getASTContext());
+    EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(ref .* m)()"));
+  }
+  {
+    const auto AST =
+        buildASTFromCode("struct X {};"
+                         "using T = int (X::*)();"
+                         "void f(X &x, T const m) { X &ref = x; (ref.*m)(); }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("ref")), AST->getASTContext());
+    EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(ref .* m)()"));
+  }
+  {
+    const auto AST =
+        buildASTFromCode("struct X {};"
+                         "using T = int (X::*)() const;"
+                         "void f(X &x, T m) { X &ref = x; (ref.*m)(); }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("ref")), AST->getASTContext());
+    EXPECT_FALSE(isMutated(Results, AST.get()));
+  }
+}
+
 // Section: overloaded operators
 
 TEST(ExprMutationAnalyzerTest, NonConstOperator) {
@@ -311,6 +341,22 @@ TEST(ExprMutationAnalyzerTest, UnresolvedOperator) {
   const auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, DependentOperatorWithNonDependentOperand) {
+  // gh57297
+  // The expression to check may not be the dependent operand in a dependent
+  // operator.
+
+  // Explicitly not declaring a (templated) stream operator
+  // so the `<<` is a `binaryOperator` with a dependent type.
+  const auto AST = buildASTFromCodeWithArgs(
+      "struct Stream { };"
+      "template <typename T> void f() { T t; Stream x; x << t; }",
+      {"-fno-delayed-template-parsing"});
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x << t"));
 }
 
 // Section: expression as call argument

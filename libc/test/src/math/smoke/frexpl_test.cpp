@@ -10,4 +10,4 @@
 
 #include "src/math/frexpl.h"
 
-LIST_FREXP_TESTS(long double, __llvm_libc::frexpl)
+LIST_FREXP_TESTS(long double, LIBC_NAMESPACE::frexpl)

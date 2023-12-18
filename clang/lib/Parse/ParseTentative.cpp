@@ -1529,6 +1529,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 
     // HLSL address space qualifiers
   case tok::kw_groupshared:
+  case tok::kw_in:
+  case tok::kw_inout:
+  case tok::kw_out:
 
     // GNU
   case tok::kw_restrict:
@@ -1571,6 +1574,17 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw___vector:
     return TPResult::True;
 
+  case tok::kw_this: {
+    // Try to parse a C++23 Explicit Object Parameter
+    // We do that in all language modes to produce a better diagnostic.
+    if (getLangOpts().CPlusPlus) {
+      RevertingTentativeParsingAction PA(*this);
+      ConsumeToken();
+      return isCXXDeclarationSpecifier(AllowImplicitTypename, BracedCastResult,
+                                       InvalidAsDeclSpec);
+    }
+    return TPResult::False;
+  }
   case tok::annot_template_id: {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     // If lookup for the template-name found nothing, don't assume we have a
@@ -1764,6 +1778,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw___ibm128:
   case tok::kw_void:
   case tok::annot_decltype:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
     if (NextToken().is(tok::l_paren))
@@ -1883,6 +1900,9 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::kw_void:
   case tok::kw___unknown_anytype:
   case tok::kw___auto_type:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
     return true;

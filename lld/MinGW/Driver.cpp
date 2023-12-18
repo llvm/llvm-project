@@ -297,10 +297,30 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef v = a->getValue();
     if (!v.empty())
       add("-pdb:" + v);
+    if (args.hasArg(OPT_strip_all)) {
+      add("-debug:nodwarf,nosymtab");
+    } else if (args.hasArg(OPT_strip_debug)) {
+      add("-debug:nodwarf,symtab");
+    }
   } else if (args.hasArg(OPT_strip_debug)) {
     add("-debug:symtab");
   } else if (!args.hasArg(OPT_strip_all)) {
     add("-debug:dwarf");
+  }
+  if (auto *a = args.getLastArg(OPT_build_id)) {
+    StringRef v = a->getValue();
+    if (v == "none")
+      add("-build-id:no");
+    else {
+      if (!v.empty())
+        warn("unsupported build id hashing: " + v + ", using default hashing.");
+      add("-build-id");
+    }
+  } else {
+    if (args.hasArg(OPT_strip_debug) || args.hasArg(OPT_strip_all))
+      add("-build-id:no");
+    else
+      add("-build-id");
   }
 
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
@@ -375,7 +395,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef s = a->getValue();
     if (s == "all")
       add("-opt:icf");
-    else if (s == "safe" || s == "none")
+    else if (s == "safe")
+      add("-opt:safeicf");
+    else if (s == "none")
       add("-opt:noicf");
     else
       error("unknown parameter: --icf=" + s);

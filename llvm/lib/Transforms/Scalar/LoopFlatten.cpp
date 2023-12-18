@@ -343,9 +343,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
     // If the RHS of the compare is equal to the backedge taken count we need
     // to add one to get the trip count.
     if (SCEVRHS == BackedgeTCExt || SCEVRHS == BackedgeTakenCount) {
-      ConstantInt *One = ConstantInt::get(ConstantRHS->getType(), 1);
-      Value *NewRHS = ConstantInt::get(
-          ConstantRHS->getContext(), ConstantRHS->getValue() + One->getValue());
+      Value *NewRHS = ConstantInt::get(ConstantRHS->getContext(),
+                                       ConstantRHS->getValue() + 1);
       return setLoopComponents(NewRHS, TripCount, Increment,
                                IterationInstructions);
     }
@@ -641,8 +640,9 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   // Check if the multiply could not overflow due to known ranges of the
   // input values.
   OverflowResult OR = computeOverflowForUnsignedMul(
-      FI.InnerTripCount, FI.OuterTripCount, DL, AC,
-      FI.OuterLoop->getLoopPreheader()->getTerminator(), DT);
+      FI.InnerTripCount, FI.OuterTripCount,
+      SimplifyQuery(DL, DT, AC,
+                    FI.OuterLoop->getLoopPreheader()->getTerminator()));
   if (OR != OverflowResult::MayOverflow)
     return OR;
 

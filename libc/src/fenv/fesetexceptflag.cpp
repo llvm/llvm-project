@@ -12,7 +12,7 @@
 
 #include <fenv.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fesetexceptflag,
                    (const fexcept_t *flagp, int excepts)) {
@@ -25,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, fesetexceptflag,
   return fputil::set_except(excepts_to_set);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

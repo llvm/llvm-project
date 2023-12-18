@@ -7,7 +7,9 @@ HELP-NOT: -reverse-iterate
 HELP: Dsymutil Options:
 CHECK: -accelerator
 CHECK: -arch <arch>
+CHECK: -build-variant-suffix <suffix=buildvariant>
 CHECK: -dump-debug-map
+CHECK: -D <path>
 CHECK: -fat64
 CHECK: -flat
 CHECK: -gen-reproducer
@@ -21,7 +23,6 @@ CHECK: -object-prefix-map <prefix=remapped>
 CHECK: -oso-prepend-path <path>
 CHECK: -out <filename>
 CHECK: {{-o <filename>}}
-CHECK: -papertrail
 CHECK: -remarks-drop-without-debug
 CHECK: -remarks-output-format <format>
 CHECK: -remarks-prepend-path <path>

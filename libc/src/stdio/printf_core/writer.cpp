@@ -14,7 +14,7 @@
 #include "src/string/memory_utils/inline_memset.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 int Writer::pad(char new_char, size_t length) {
@@ -44,4 +44,4 @@ int Writer::pad(char new_char, size_t length) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

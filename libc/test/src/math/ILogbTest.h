@@ -16,7 +16,7 @@
 
 #include <limits.h>
 
-class LlvmLibcILogbTest : public __llvm_libc::testing::Test {
+class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::Test {
 public:
   template <typename T> struct ILogbFunc {
     typedef int (*Func)(T);
@@ -24,14 +24,12 @@ public:
 
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
-    EXPECT_EQ(FP_ILOGB0, func(T(__llvm_libc::fputil::FPBits<T>::zero())));
-    EXPECT_EQ(FP_ILOGB0, func(T(__llvm_libc::fputil::FPBits<T>::neg_zero())));
-
-    EXPECT_EQ(FP_ILOGBNAN,
-              func(T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1))));
-
-    EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::inf())));
-    EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::neg_inf())));
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero())));
+    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::neg_zero())));
+    EXPECT_EQ(FP_ILOGBNAN, func(T(FPBits::build_quiet_nan(1))));
+    EXPECT_EQ(INT_MAX, func(T(FPBits::inf())));
+    EXPECT_EQ(INT_MAX, func(T(FPBits::neg_inf())));
   }
 
   template <typename T>
@@ -75,38 +73,38 @@ public:
 
   template <typename T>
   void test_subnormal_range(typename ILogbFunc<T>::Func func) {
-    using FPBits = __llvm_libc::fputil::FPBits<T>;
-    using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 10'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+    using StorageType = typename FPBits::StorageType;
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
          v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
         continue;
 
       int exponent;
-      __llvm_libc::fputil::frexp(x, exponent);
+      LIBC_NAMESPACE::fputil::frexp(x, exponent);
       ASSERT_EQ(exponent, func(x) + 1);
     }
   }
 
   template <typename T>
   void test_normal_range(typename ILogbFunc<T>::Func func) {
-    using FPBits = __llvm_libc::fputil::FPBits<T>;
-    using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 10'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL; v += STEP) {
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+    using StorageType = typename FPBits::StorageType;
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    for (StorageType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL;
+         v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
         continue;
 
       int exponent;
-      __llvm_libc::fputil::frexp(x, exponent);
+      LIBC_NAMESPACE::fputil::frexp(x, exponent);
       ASSERT_EQ(exponent, func(x) + 1);
     }
   }

@@ -34,7 +34,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   for (size_t i = 0; i < array_size; ++i)
     array[i] = data_as_int[i];
 
-  __llvm_libc::qsort(array, array_size, sizeof(int), int_compare);
+  LIBC_NAMESPACE::qsort(array, array_size, sizeof(int), int_compare);
 
   for (size_t i = 0; i < array_size - 1; ++i) {
     if (array[i] > array[i + 1])

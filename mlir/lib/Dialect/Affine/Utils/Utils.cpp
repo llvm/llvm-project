@@ -75,7 +75,7 @@ public:
   ///             negative = a < 0 in
   ///         select negative, remainder + b, remainder.
   Value visitModExpr(AffineBinaryOpExpr expr) {
-    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+    if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "modulo by non-positive value is not supported");
         return nullptr;
@@ -115,7 +115,7 @@ public:
   /// IR because arith.floordivsi is more general than affine floordiv in that
   /// it supports negative RHS.
   Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
-    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+    if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "division by non-positive value is not supported");
         return nullptr;
@@ -154,7 +154,7 @@ public:
   /// Note: not using arith.ceildivsi for the same reason as explained in the
   /// visitFloorDivExpr comment.
   Value visitCeilDivExpr(AffineBinaryOpExpr expr) {
-    if (auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>()) {
+    if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "division by non-positive value is not supported");
         return nullptr;
@@ -367,7 +367,7 @@ mlir::affine::affineParallelize(AffineForOp forOp,
       loc, ValueRange(reducedValues).getTypes(), reductionKinds,
       llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
       llvm::ArrayRef(upperBoundMap), upperBoundOperands,
-      llvm::ArrayRef(forOp.getStep()));
+      llvm::ArrayRef(forOp.getStepAsInt()));
   // Steal the body of the old affine for op.
   newPloop.getRegion().takeBody(forOp.getRegion());
   Operation *yieldOp = &newPloop.getBody()->back();
@@ -377,7 +377,7 @@ mlir::affine::affineParallelize(AffineForOp forOp,
   SmallVector<Value> newResults;
   newResults.reserve(numReductions);
   for (unsigned i = 0; i < numReductions; ++i) {
-    Value init = forOp.getIterOperands()[i];
+    Value init = forOp.getInits()[i];
     // This works because we are only handling single-op reductions at the
     // moment. A switch on reduction kind or a mechanism to collect operations
     // participating in the reduction will be necessary for multi-op reductions.
@@ -464,15 +464,15 @@ AffineExpr mlir::affine::substWithMin(AffineExpr e, AffineExpr dim,
                                       bool positivePath) {
   if (e == dim)
     return positivePath ? min : max;
-  if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
+  if (auto bin = dyn_cast<AffineBinaryOpExpr>(e)) {
     AffineExpr lhs = bin.getLHS();
     AffineExpr rhs = bin.getRHS();
     if (bin.getKind() == mlir::AffineExprKind::Add)
       return substWithMin(lhs, dim, min, max, positivePath) +
              substWithMin(rhs, dim, min, max, positivePath);
 
-    auto c1 = bin.getLHS().dyn_cast<AffineConstantExpr>();
-    auto c2 = bin.getRHS().dyn_cast<AffineConstantExpr>();
+    auto c1 = dyn_cast<AffineConstantExpr>(bin.getLHS());
+    auto c2 = dyn_cast<AffineConstantExpr>(bin.getRHS());
     if (c1 && c1.getValue() < 0)
       return getAffineBinaryOpExpr(
           bin.getKind(), c1, substWithMin(rhs, dim, min, max, !positivePath));
@@ -497,8 +497,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
   bool isAlreadyNormalized =
       llvm::all_of(llvm::zip(steps, lbMap.getResults()), [](auto tuple) {
         int64_t step = std::get<0>(tuple);
-        auto lbExpr =
-            std::get<1>(tuple).template dyn_cast<AffineConstantExpr>();
+        auto lbExpr = dyn_cast<AffineConstantExpr>(std::get<1>(tuple));
         return lbExpr && lbExpr.getValue() == 0 && step == 1;
       });
   if (isAlreadyNormalized)
@@ -570,7 +569,7 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
 
   Location loc = op.getLoc();
   OpBuilder opBuilder(op);
-  int64_t origLoopStep = op.getStep();
+  int64_t origLoopStep = op.getStepAsInt();
 
   // Construct the new upper bound value map.
   AffineMap oldLbMap = op.getLowerBoundMap();
@@ -1431,20 +1430,18 @@ void mlir::affine::createAffineComputationSlice(
   // differ from opInst's operands only for those operands in 'subOperands', for
   // which they will be replaced by the corresponding one from 'sliceOps'.
   SmallVector<Value, 4> newOperands(opInst->getOperands());
-  for (unsigned i = 0, e = newOperands.size(); i < e; i++) {
+  for (Value &operand : newOperands) {
     // Replace the subOperands from among the new operands.
     unsigned j, f;
     for (j = 0, f = subOperands.size(); j < f; j++) {
-      if (newOperands[i] == subOperands[j])
+      if (operand == subOperands[j])
         break;
     }
-    if (j < subOperands.size()) {
-      newOperands[i] = (*sliceOps)[j];
-    }
+    if (j < subOperands.size())
+      operand = (*sliceOps)[j];
   }
-  for (unsigned idx = 0, e = newOperands.size(); idx < e; idx++) {
+  for (unsigned idx = 0, e = newOperands.size(); idx < e; idx++)
     opInst->setOperand(idx, newOperands[idx]);
-  }
 }
 
 /// Enum to set patterns of affine expr in tiled-layout map.
@@ -1476,8 +1473,8 @@ static LogicalResult getTileSizePos(
   unsigned pos = 0;
   for (AffineExpr expr : map.getResults()) {
     if (expr.getKind() == AffineExprKind::FloorDiv) {
-      AffineBinaryOpExpr binaryExpr = expr.cast<AffineBinaryOpExpr>();
-      if (binaryExpr.getRHS().isa<AffineConstantExpr>())
+      AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
+      if (isa<AffineConstantExpr>(binaryExpr.getRHS()))
         floordivExprs.emplace_back(
             std::make_tuple(binaryExpr.getLHS(), binaryExpr.getRHS(), pos));
     }
@@ -1511,7 +1508,7 @@ static LogicalResult getTileSizePos(
         expr.walk([&](AffineExpr e) {
           if (e == floordivExprLHS) {
             if (expr.getKind() == AffineExprKind::Mod) {
-              AffineBinaryOpExpr binaryExpr = expr.cast<AffineBinaryOpExpr>();
+              AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
               // If LHS and RHS of `mod` are the same with those of floordiv.
               if (floordivExprLHS == binaryExpr.getLHS() &&
                   floordivExprRHS == binaryExpr.getRHS()) {
@@ -1571,7 +1568,7 @@ isNormalizedMemRefDynamicDim(unsigned dim, AffineMap layoutMap,
   // Check if affine expr of the dimension includes dynamic dimension of input
   // memrefType.
   expr.walk([&inMemrefTypeDynDims, &isDynamicDim, &context](AffineExpr e) {
-    if (e.isa<AffineDimExpr>()) {
+    if (isa<AffineDimExpr>(e)) {
       for (unsigned dm : inMemrefTypeDynDims) {
         if (e == getAffineDimExpr(dm, context)) {
           isDynamicDim = true;
@@ -1592,11 +1589,11 @@ static AffineExpr createDimSizeExprForTiledLayout(AffineExpr oldMapOutput,
   AffineBinaryOpExpr binaryExpr = nullptr;
   switch (pat) {
   case TileExprPattern::TileMod:
-    binaryExpr = oldMapOutput.cast<AffineBinaryOpExpr>();
+    binaryExpr = cast<AffineBinaryOpExpr>(oldMapOutput);
     newMapOutput = binaryExpr.getRHS();
     break;
   case TileExprPattern::TileFloorDiv:
-    binaryExpr = oldMapOutput.cast<AffineBinaryOpExpr>();
+    binaryExpr = cast<AffineBinaryOpExpr>(oldMapOutput);
     newMapOutput = getAffineBinaryOpExpr(
         AffineExprKind::CeilDiv, binaryExpr.getLHS(), binaryExpr.getRHS());
     break;

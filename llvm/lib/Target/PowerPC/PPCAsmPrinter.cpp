@@ -280,7 +280,7 @@ public:
 
   void emitFunctionBodyEnd() override;
 
-  void emitPGORefs();
+  void emitPGORefs(Module &M);
 
   void emitEndOfAsmFile(Module &) override;
 
@@ -715,25 +715,11 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
   }
 }
 
-static bool hasTLSFlag(const MachineOperand &MO) {
-  unsigned Flags = MO.getTargetFlags();
-  if (Flags & PPCII::MO_TLSGD_FLAG || Flags & PPCII::MO_TPREL_FLAG ||
-      Flags & PPCII::MO_TLSLD_FLAG || Flags & PPCII::MO_TLSGDM_FLAG)
-    return true;
-
-  if (Flags == PPCII::MO_TPREL_LO || Flags == PPCII::MO_TPREL_HA ||
-      Flags == PPCII::MO_DTPREL_LO || Flags == PPCII::MO_TLSLD_LO ||
-      Flags == PPCII::MO_TLS)
-    return true;
-
-  return false;
-}
-
 static PPCAsmPrinter::TOCEntryType
 getTOCEntryTypeForMO(const MachineOperand &MO) {
   // Use the target flags to determine if this MO is Thread Local.
   // If we don't do this it comes out as Global.
-  if (hasTLSFlag(MO))
+  if (PPCInstrInfo::hasTLSFlag(MO.getTargetFlags()))
     return PPCAsmPrinter::TOCType_ThreadLocal;
 
   switch (MO.getType()) {
@@ -830,7 +816,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // For TLS initial-exec and local-exec accesses on AIX, we have one TOC
     // entry for the symbol (with the variable offset), which is differentiated
     // by MO_TPREL_FLAG.
-    if (MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) {
+    unsigned Flag = MO.getTargetFlags();
+    if (Flag == PPCII::MO_TPREL_FLAG ||
+        Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
       if (Model == TLSModel::LocalExec)
@@ -842,9 +831,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
     // the variable offset and the other for the region handle). They are
     // differentiated by MO_TLSGD_FLAG and MO_TLSGDM_FLAG.
-    if (MO.getTargetFlags() & PPCII::MO_TLSGDM_FLAG)
+    if (Flag == PPCII::MO_TLSGDM_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
-    if (MO.getTargetFlags() & PPCII::MO_TLSGD_FLAG)
+    if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
@@ -1538,8 +1527,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // The faster non-TOC-based local-exec sequence is represented by `addi`
     // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
     // does not otherwise arise.
-    const MachineOperand &MO = MI->getOperand(2);
-    if ((MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) {
+    unsigned Flag = MI->getOperand(2).getTargetFlags();
+    if (Flag == PPCII::MO_TPREL_FLAG ||
+        Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(
           Subtarget->hasAIXSmallLocalExecTLS() &&
           "addi with thread-pointer only expected with local-exec small TLS");
@@ -2528,7 +2519,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
-  assert(!GV->getName().startswith("llvm.") &&
+  assert(!GV->getName().starts_with("llvm.") &&
          "Unhandled intrinsic global variable.");
 
   if (GV->hasComdat())
@@ -2652,10 +2643,28 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 }
 
-void PPCAIXAsmPrinter::emitPGORefs() {
-  if (OutContext.hasXCOFFSection(
+void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
+  if (!OutContext.hasXCOFFSection(
           "__llvm_prf_cnts",
-          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
+    return;
+
+  // When inside a csect `foo`, a .ref directive referring to a csect `bar`
+  // translates into a relocation entry from `foo` to` bar`. The referring
+  // csect, `foo`, is identified by its address.  If multiple csects have the
+  // same address (because one or more of them are zero-length), the referring
+  // csect cannot be determined. Hence, we don't generate the .ref directives
+  // if `__llvm_prf_cnts` is an empty section.
+  bool HasNonZeroLengthPrfCntsSection = false;
+  const DataLayout &DL = M.getDataLayout();
+  for (GlobalVariable &GV : M.globals())
+    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+        DL.getTypeAllocSize(GV.getValueType()) > 0) {
+      HasNonZeroLengthPrfCntsSection = true;
+      break;
+    }
+
+  if (HasNonZeroLengthPrfCntsSection) {
     MCSection *CntsSection = OutContext.getXCOFFSection(
         "__llvm_prf_cnts", SectionKind::getData(),
         XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD),
@@ -2689,7 +2698,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (M.empty() && TOCDataGlobalVars.empty())
     return;
 
-  emitPGORefs();
+  emitPGORefs(M);
 
   // Switch to section to emit TOC base.
   OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());

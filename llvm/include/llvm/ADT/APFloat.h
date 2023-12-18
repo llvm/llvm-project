@@ -770,6 +770,8 @@ public:
 };
 
 hash_code hash_value(const DoubleAPFloat &Arg);
+DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp, IEEEFloat::roundingMode RM);
+DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, IEEEFloat::roundingMode);
 
 } // End detail namespace
 

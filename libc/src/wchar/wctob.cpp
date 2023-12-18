@@ -12,7 +12,7 @@
 
 #include <stdio.h> // for EOF.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, wctob, (wint_t c)) {
   auto result = internal::wctob(c);
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, wctob, (wint_t c)) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -21,6 +21,8 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
+! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! CHECK-NEXT: -E                      Only run the preprocessor
@@ -46,6 +48,8 @@
 ! CHECK-NEXT: -fintegrated-as         Enable the integrated assembler
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                         Specify where to find the compiled intrinsic modules
+! CHECK-NEXT: -flang-deprecated-no-hlfir
+! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
 ! CHECK-NEXT: -flang-experimental-polymorphism
@@ -56,8 +60,11 @@
 ! CHECK-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! CHECK-NEXT: -flto=<value>           Set LTO mode
 ! CHECK-NEXT: -flto                   Enable LTO in 'full' mode
+! CHECK-NEXT: -fms-runtime-lib=<value>
+! CHECK-NEXT:                         Select Windows run-time library
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! CHECK-NEXT: -fno-fortran-main       Do not include Fortran_main.a (provided by Flang) when linking
 ! CHECK-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! CHECK-NEXT: -fno-lto                Disable LTO mode (default)
 ! CHECK-NEXT: -fno-ppc-native-vector-element-order
@@ -66,6 +73,7 @@
 ! CHECK-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fno-version-loops-for-stride
 ! CHECK-NEXT:                         Do not create unit-strided loops (default)
+! CHECK-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! CHECK-NEXT: -fopenacc               Enable OpenACC
 ! CHECK-NEXT: -fopenmp-assume-no-nested-parallelism
 ! CHECK-NEXT:                         Assert no nested parallel regions in the GPU
@@ -94,6 +102,7 @@
 ! CHECK-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -funderscoring          Appends one trailing underscore to external names
+! CHECK-NEXT: -fveclib=<value>        Use the given vector functions library
 ! CHECK-NEXT: -fversion-loops-for-stride
 ! CHECK-NEXT:                         Create unit-strided versions of loops
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -105,11 +114,15 @@
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
+! CHECK-NEXT: -mcode-object-version=<value>
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -msve-vector-bits=<value>
+! CHECK-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! CHECK-NEXT: --no-offload-arch=<value>
 ! CHECK-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! CHECK-NEXT: -nocpp                  Disable predefined and command line preprocessor macros

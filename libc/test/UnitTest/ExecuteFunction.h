@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testutils {
 
 class FunctionCaller {
@@ -47,6 +47,6 @@ invoke_in_subprocess(FunctionCaller *func,
 const char *signal_as_string(int signum);
 
 } // namespace testutils
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_UTILS_TESTUTILS_EXECUTEFUNCTION_H

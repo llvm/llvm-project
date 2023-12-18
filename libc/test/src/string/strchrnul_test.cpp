@@ -13,7 +13,7 @@ TEST(LlvmLibcStrChrNulTest, FindsFirstCharacter) {
   const char *src = "abcde";
 
   // Should return original string since 'a' is the first character.
-  ASSERT_STREQ(__llvm_libc::strchrnul(src, 'a'), "abcde");
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul(src, 'a'), "abcde");
   // Source string should not change.
   ASSERT_STREQ(src, "abcde");
 }
@@ -22,7 +22,7 @@ TEST(LlvmLibcStrChrNulTest, FindsMiddleCharacter) {
   const char *src = "abcde";
 
   // Should return characters after (and including) 'c'.
-  ASSERT_STREQ(__llvm_libc::strchrnul(src, 'c'), "cde");
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul(src, 'c'), "cde");
   // Source string should not change.
   ASSERT_STREQ(src, "abcde");
 }
@@ -31,7 +31,7 @@ TEST(LlvmLibcStrChrNulTest, FindsLastCharacterThatIsNotNullTerminator) {
   const char *src = "abcde";
 
   // Should return 'e' and null-terminator.
-  ASSERT_STREQ(__llvm_libc::strchrnul(src, 'e'), "e");
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul(src, 'e'), "e");
   // Source string should not change.
   ASSERT_STREQ(src, "abcde");
 }
@@ -40,7 +40,7 @@ TEST(LlvmLibcStrChrNulTest, FindsNullTerminator) {
   const char *src = "abcde";
 
   // Should return null terminator.
-  ASSERT_STREQ(__llvm_libc::strchrnul(src, '\0'), "");
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul(src, '\0'), "");
   // Source string should not change.
   ASSERT_STREQ(src, "abcde");
 }
@@ -51,7 +51,7 @@ TEST(LlvmLibcStrChrNulTest,
 
   // Since 'z' is not within the string, should return a pointer to the source
   // string's null terminator.
-  char *result = __llvm_libc::strchrnul(src, 'z');
+  char *result = LIBC_NAMESPACE::strchrnul(src, 'z');
   ASSERT_EQ(*result, '\0');
 
   char *term = const_cast<char *>(src) + 4;
@@ -61,36 +61,36 @@ TEST(LlvmLibcStrChrNulTest,
 TEST(LlvmLibcStrChrNulTest, TheSourceShouldNotChange) {
   const char *src = "abcde";
   // When the character is found, the source string should not change.
-  __llvm_libc::strchrnul(src, 'd');
+  LIBC_NAMESPACE::strchrnul(src, 'd');
   ASSERT_STREQ(src, "abcde");
   // Same case for when the character is not found.
-  __llvm_libc::strchrnul(src, 'z');
+  LIBC_NAMESPACE::strchrnul(src, 'z');
   ASSERT_STREQ(src, "abcde");
   // Same case for when looking for null terminator.
-  __llvm_libc::strchrnul(src, '\0');
+  LIBC_NAMESPACE::strchrnul(src, '\0');
   ASSERT_STREQ(src, "abcde");
 }
 
 TEST(LlvmLibcStrChrNulTest, ShouldFindFirstOfDuplicates) {
   // '1' is duplicated in the string, but it should find the first copy.
-  ASSERT_STREQ(__llvm_libc::strchrnul("abc1def1ghi", '1'), "1def1ghi");
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul("abc1def1ghi", '1'), "1def1ghi");
 
   const char *dups = "XXXXX";
   // Should return original string since 'X' is the first character.
-  ASSERT_STREQ(__llvm_libc::strchrnul(dups, 'X'), dups);
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul(dups, 'X'), dups);
 }
 
 TEST(LlvmLibcStrChrNulTest, EmptyStringShouldOnlyMatchNullTerminator) {
   // Null terminator should match.
-  ASSERT_STREQ(__llvm_libc::strchrnul("", '\0'), "");
+  ASSERT_STREQ(LIBC_NAMESPACE::strchrnul("", '\0'), "");
 
   // All other characters should not match.
-  char *result = __llvm_libc::strchrnul("", 'Z');
+  char *result = LIBC_NAMESPACE::strchrnul("", 'Z');
   ASSERT_EQ(*result, '\0');
 
-  result = __llvm_libc::strchrnul("", '3');
+  result = LIBC_NAMESPACE::strchrnul("", '3');
   ASSERT_EQ(*result, '\0');
 
-  result = __llvm_libc::strchrnul("", '*');
+  result = LIBC_NAMESPACE::strchrnul("", '*');
   ASSERT_EQ(*result, '\0');
 }

@@ -1,4 +1,4 @@
-! RUN: bbc %s -emit-fir -o - | FileCheck %s
+! RUN: bbc %s -emit-fir -hlfir=false -o - | FileCheck %s
 ! UNSUPPORTED: system-windows
 
  logical :: existsvar

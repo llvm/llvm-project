@@ -266,7 +266,9 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [],
+        "@platforms//os:windows": [
+            "ws2_32.lib",
+        ],
         "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",
@@ -1382,9 +1384,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/*.h",
-    ]) + [
-        "include/llvm/Transforms/Vectorize.h",
-    ],
+    ]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
@@ -1411,6 +1411,21 @@ cc_library(
 )
 
 cc_library(
+    name = "FrontendDriver",
+    srcs = glob([
+        "lib/Frontend/Driver/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Driver/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Analysis",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
@@ -1422,6 +1437,23 @@ cc_library(
     deps = [
         ":Core",
         ":Support",
+    ],
+)
+
+cc_library(
+    name = "FrontendOffloading",
+    srcs = glob([
+        "lib/Frontend/Offloading/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/Frontend/Offloading/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":Core",
+        ":Object",
+        ":Support",
+        ":TransformUtils",
     ],
 )
 
@@ -1476,6 +1508,7 @@ cc_library(
         ":Analysis",
         ":BitReader",
         ":Core",
+        ":FrontendOffloading",
         ":MC",
         ":Scalar",
         ":Support",
@@ -1664,6 +1697,23 @@ cc_library(
 )
 
 cc_library(
+    name = "HipStdPar",
+    srcs = glob([
+        "lib/Transforms/HipStdPar/*.cpp",
+        "lib/Transforms/HipStdPar/*.h",
+    ]),
+    hdrs = ["include/llvm/Transforms/HipStdPar/HipStdPar.h"],
+    copts = llvm_copts,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "Coroutines",
     srcs = glob([
         "lib/Transforms/Coroutines/*.cpp",
@@ -1753,6 +1803,7 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
+        ":CFGuard",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -1886,10 +1937,12 @@ llvm_target_lib_list = [lib for lib in [
         "name": "BPF",
         "short_name": "BPF",
         "tbl_outs": [
+            ("-gen-register-bank", "lib/Target/BPF/BPFGenRegisterBank.inc"),
             ("-gen-asm-writer", "lib/Target/BPF/BPFGenAsmWriter.inc"),
             ("-gen-asm-matcher", "lib/Target/BPF/BPFGenAsmMatcher.inc"),
             ("-gen-callingconv", "lib/Target/BPF/BPFGenCallingConv.inc"),
             ("-gen-dag-isel", "lib/Target/BPF/BPFGenDAGISel.inc"),
+            ("-gen-global-isel", "lib/Target/BPF/BPFGenGlobalISel.inc"),
             ("-gen-disassembler", "lib/Target/BPF/BPFGenDisassemblerTables.inc"),
             ("-gen-emitter", "lib/Target/BPF/BPFGenMCCodeEmitter.inc"),
             ("-gen-instr-info", "lib/Target/BPF/BPFGenInstrInfo.inc"),
@@ -2049,7 +2102,6 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-compress-inst-emitter", "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc"),
             ("-gen-dag-isel", "lib/Target/RISCV/RISCVGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/RISCV/RISCVGenDisassemblerTables.inc"),
-            ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
             ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
             ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
             ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
@@ -2190,8 +2242,10 @@ gentbl(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = [
-      ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -2292,10 +2346,10 @@ gentbl(
         deps = [
             ":BinaryFormat",
             ":CodeGenTypes",
+            ":Core",
             ":DebugInfoCodeView",
             ":MC",
             ":MCDisassembler",
-            ":Core",
             ":Support",
             ":Target",
             ":config",
@@ -2500,9 +2554,11 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":CFGuard",
         ":CodeGen",
         ":Core",
         ":Coroutines",
+        ":HipStdPar",
         ":IPO",
         ":IRPrinter",
         ":InstCombine",
@@ -2742,6 +2798,26 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
+    ],
+)
+
+cc_library(
+    name = "OrcDebugging",
+    srcs = glob([
+        "lib/ExecutionEngine/Orc/Debugging/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/Debugging/*.h",
+    ]) + ["include/llvm-c/LLJITUtils.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfo",
+        ":JITLink",
+        ":OrcJIT",
+        ":OrcShared",
+        ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -3046,9 +3122,9 @@ cc_library(
         ":MC",
         ":MCA",
         ":MCDisassembler",
-        ":MCJIT",
         ":Object",
         ":ObjectYAML",
+        ":OrcJIT",
         ":Support",
         ":Target",
         ":config",
@@ -3178,6 +3254,7 @@ cc_binary(
         ":Interpreter",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcTargetProcess",
         ":Support",
@@ -3733,6 +3810,7 @@ cc_binary(
         ":MCDisassembler",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcShared",
         ":OrcTargetProcess",
@@ -4074,6 +4152,7 @@ cc_binary(
         ":Object",
         ":Option",
         ":Support",
+        ":Symbolize",
         ":TargetParser",
     ],
 )
@@ -4629,7 +4708,7 @@ cc_binary(
     srcs = glob([
         "tools/llvm-symbolizer/*.cpp",
         "tools/llvm-symbolizer/*.h",
-    ]) + [ "llvm-symbolizer-driver.cpp"],
+    ]) + ["llvm-symbolizer-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4741,7 +4820,6 @@ expand_template(
     },
     template = "cmake/modules/llvm-driver-template.cpp.in",
 )
-
 
 cc_binary(
     name = "sancov",
@@ -4929,6 +5007,7 @@ cc_binary(
         "utils/count/*.h",
     ]),
     stamp = 0,
+    deps = [":Support"],
 )
 
 cc_binary(
@@ -5098,6 +5177,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "ReadTAPIOptsTableGen",
+    strip_include_prefix = "tools/llvm-readtapi",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-readtapi/TapiOpts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-readtapi/TapiOpts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-readtapi",
     testonly = True,
@@ -5109,6 +5200,8 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Object",
+        ":Option",
+        ":ReadTAPIOptsTableGen",
         ":Support",
         ":TextAPI",
     ],

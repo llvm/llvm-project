@@ -97,8 +97,8 @@ public:
                       [](AffineMap map) { return map.isPermutation(); }))
       return failure();
 
-    for (OpOperand *operand : genericOp.getDpsInitOperands()) {
-      if (genericOp.payloadUsesValueFromOperand(operand))
+    for (OpOperand &operand : genericOp.getDpsInitsMutable()) {
+      if (genericOp.payloadUsesValueFromOperand(&operand))
         return failure();
     }
 
@@ -148,7 +148,7 @@ public:
       SmallVector<unsigned> dims;
       dims.reserve(map.getNumResults());
       for (AffineExpr result : map.getResults()) {
-        dims.push_back(result.cast<AffineDimExpr>().getPosition());
+        dims.push_back(cast<AffineDimExpr>(result).getPosition());
       }
       return dims;
     };

@@ -30,7 +30,6 @@ set(LLDB_ENABLE_CURSES OFF CACHE BOOL "")
 set(LLDB_ENABLE_LIBEDIT OFF CACHE BOOL "")
 
 if(WIN32)
-  set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
   set(FUCHSIA_DISABLE_DRIVER_BUILD ON)
 endif()
 
@@ -50,6 +49,12 @@ set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 
 set(ENABLE_LINKER_BUILD_ID ON CACHE BOOL "")
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL "")
+
+# TODO(#67176): relative-vtables doesn't play well with different default
+# visibilities. Making everything hidden visibility causes other complications
+# let's choose default visibility for our entire toolchain.
+set(CMAKE_C_VISIBILITY_PRESET default CACHE STRING "")
+set(CMAKE_CXX_VISIBILITY_PRESET default CACHE STRING "")
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 if (APPLE)
@@ -76,6 +81,7 @@ if(APPLE)
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
+  set(LIBCXX_HARDENING_MODE "none" CACHE STRING "")
   set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
@@ -330,6 +336,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-symbolizer
   llvm-undname
   llvm-xray
+  opt-viewer
   sancov
   scan-build-py
   CACHE STRING "")
@@ -363,6 +370,7 @@ if(FUCHSIA_ENABLE_LLDB)
     liblldb
     lldb-server
     lldb-argdumper
+    lldb-dap
   )
   if(LLDB_ENABLE_PYTHON)
     list(APPEND _FUCHSIA_LLDB_COMPONENTS lldb-python-scripts)

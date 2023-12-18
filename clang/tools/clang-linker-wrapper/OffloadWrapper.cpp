@@ -8,6 +8,7 @@
 
 #include "OffloadWrapper.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,49 +26,8 @@ namespace {
 constexpr unsigned CudaFatMagic = 0x466243b1;
 constexpr unsigned HIPFatMagic = 0x48495046;
 
-/// Copied from clang/CGCudaRuntime.h.
-enum OffloadEntryKindFlag : uint32_t {
-  /// Mark the entry as a global entry. This indicates the presense of a
-  /// kernel if the size size field is zero and a variable otherwise.
-  OffloadGlobalEntry = 0x0,
-  /// Mark the entry as a managed global variable.
-  OffloadGlobalManagedEntry = 0x1,
-  /// Mark the entry as a surface variable.
-  OffloadGlobalSurfaceEntry = 0x2,
-  /// Mark the entry as a texture variable.
-  OffloadGlobalTextureEntry = 0x3,
-};
-
 IntegerType *getSizeTTy(Module &M) {
-  LLVMContext &C = M.getContext();
-  switch (M.getDataLayout().getPointerTypeSize(Type::getInt8PtrTy(C))) {
-  case 4u:
-    return Type::getInt32Ty(C);
-  case 8u:
-    return Type::getInt64Ty(C);
-  }
-  llvm_unreachable("unsupported pointer type size");
-}
-
-// struct __tgt_offload_entry {
-//   void *addr;
-//   char *name;
-//   size_t size;
-//   int32_t flags;
-//   int32_t reserved;
-// };
-StructType *getEntryTy(Module &M) {
-  LLVMContext &C = M.getContext();
-  StructType *EntryTy = StructType::getTypeByName(C, "__tgt_offload_entry");
-  if (!EntryTy)
-    EntryTy = StructType::create("__tgt_offload_entry", Type::getInt8PtrTy(C),
-                                 Type::getInt8PtrTy(C), getSizeTTy(M),
-                                 Type::getInt32Ty(C), Type::getInt32Ty(C));
-  return EntryTy;
-}
-
-PointerType *getEntryPtrTy(Module &M) {
-  return PointerType::getUnqual(getEntryTy(M));
+  return M.getDataLayout().getIntPtrType(M.getContext());
 }
 
 // struct __tgt_device_image {
@@ -80,9 +40,10 @@ StructType *getDeviceImageTy(Module &M) {
   LLVMContext &C = M.getContext();
   StructType *ImageTy = StructType::getTypeByName(C, "__tgt_device_image");
   if (!ImageTy)
-    ImageTy = StructType::create("__tgt_device_image", Type::getInt8PtrTy(C),
-                                 Type::getInt8PtrTy(C), getEntryPtrTy(M),
-                                 getEntryPtrTy(M));
+    ImageTy =
+        StructType::create("__tgt_device_image", PointerType::getUnqual(C),
+                           PointerType::getUnqual(C), PointerType::getUnqual(C),
+                           PointerType::getUnqual(C));
   return ImageTy;
 }
 
@@ -100,9 +61,9 @@ StructType *getBinDescTy(Module &M) {
   LLVMContext &C = M.getContext();
   StructType *DescTy = StructType::getTypeByName(C, "__tgt_bin_desc");
   if (!DescTy)
-    DescTy = StructType::create("__tgt_bin_desc", Type::getInt32Ty(C),
-                                getDeviceImagePtrTy(M), getEntryPtrTy(M),
-                                getEntryPtrTy(M));
+    DescTy = StructType::create(
+        "__tgt_bin_desc", Type::getInt32Ty(C), getDeviceImagePtrTy(M),
+        PointerType::getUnqual(C), PointerType::getUnqual(C));
   return DescTy;
 }
 
@@ -150,28 +111,8 @@ PointerType *getBinDescPtrTy(Module &M) {
 /// Global variable that represents BinDesc is returned.
 GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
   LLVMContext &C = M.getContext();
-  // Create external begin/end symbols for the offload entries table.
-  auto *EntriesB = new GlobalVariable(
-      M, getEntryTy(M), /*isConstant*/ true, GlobalValue::ExternalLinkage,
-      /*Initializer*/ nullptr, "__start_omp_offloading_entries");
-  EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE = new GlobalVariable(
-      M, getEntryTy(M), /*isConstant*/ true, GlobalValue::ExternalLinkage,
-      /*Initializer*/ nullptr, "__stop_omp_offloading_entries");
-  EntriesE->setVisibility(GlobalValue::HiddenVisibility);
-
-  // We assume that external begin/end symbols that we have created above will
-  // be defined by the linker. But linker will do that only if linker inputs
-  // have section with "omp_offloading_entries" name which is not guaranteed.
-  // So, we just create dummy zero sized object in the offload entries section
-  // to force linker to define those symbols.
-  auto *DummyInit =
-      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
-  auto *DummyEntry = new GlobalVariable(
-      M, DummyInit->getType(), true, GlobalVariable::ExternalLinkage, DummyInit,
-      "__dummy.omp_offloading.entry");
-  DummyEntry->setSection("omp_offloading_entries");
-  DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
+  auto [EntriesB, EntriesE] =
+      offloading::getOffloadEntryArray(M, "omp_offloading_entries");
 
   auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
   Constant *ZeroZero[] = {Zero, Zero};
@@ -284,9 +225,9 @@ StructType *getFatbinWrapperTy(Module &M) {
   LLVMContext &C = M.getContext();
   StructType *FatbinTy = StructType::getTypeByName(C, "fatbin_wrapper");
   if (!FatbinTy)
-    FatbinTy = StructType::create("fatbin_wrapper", Type::getInt32Ty(C),
-                                  Type::getInt32Ty(C), Type::getInt8PtrTy(C),
-                                  Type::getInt8PtrTy(C));
+    FatbinTy = StructType::create(
+        "fatbin_wrapper", Type::getInt32Ty(C), Type::getInt32Ty(C),
+        PointerType::getUnqual(C), PointerType::getUnqual(C));
   return FatbinTy;
 }
 
@@ -294,7 +235,7 @@ StructType *getFatbinWrapperTy(Module &M) {
 /// runtime.
 GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
   LLVMContext &C = M.getContext();
-  llvm::Type *Int8PtrTy = Type::getInt8PtrTy(C);
+  llvm::Type *Int8PtrTy = PointerType::getUnqual(C);
   llvm::Triple Triple = llvm::Triple(M.getTargetTriple());
 
   // Create the global string containing the fatbinary.
@@ -315,7 +256,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
       ConstantInt::get(Type::getInt32Ty(C), IsHIP ? HIPFatMagic : CudaFatMagic),
       ConstantInt::get(Type::getInt32Ty(C), 1),
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(Fatbin, Int8PtrTy),
-      ConstantPointerNull::get(Type::getInt8PtrTy(C))};
+      ConstantPointerNull::get(PointerType::getUnqual(C))};
 
   Constant *FatbinInitializer =
       ConstantStruct::get(getFatbinWrapperTy(M), FatbinWrapper);
@@ -326,18 +267,6 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
                          FatbinInitializer, ".fatbin_wrapper");
   FatbinDesc->setSection(FatbinWrapperSection);
   FatbinDesc->setAlignment(Align(8));
-
-  // We create a dummy entry to ensure the linker will define the begin / end
-  // symbols. The CUDA runtime should ignore the null address if we attempt to
-  // register it.
-  auto *DummyInit =
-      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
-  auto *DummyEntry = new GlobalVariable(
-      M, DummyInit->getType(), true, GlobalVariable::ExternalLinkage, DummyInit,
-      IsHIP ? "__dummy.hip_offloading.entry" : "__dummy.cuda_offloading.entry");
-  DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
-  DummyEntry->setSection(IsHIP ? "hip_offloading_entries"
-                               : "cuda_offloading_entries");
 
   return FatbinDesc;
 }
@@ -367,6 +296,9 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
 /// }
 Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
   LLVMContext &C = M.getContext();
+  auto [EntriesB, EntriesE] = offloading::getOffloadEntryArray(
+      M, IsHIP ? "hip_offloading_entries" : "cuda_offloading_entries");
+
   // Get the __cudaRegisterFunction function declaration.
   PointerType *Int8PtrTy = PointerType::get(C, 0);
   PointerType *Int8PtrPtrTy = PointerType::get(C, 0);
@@ -388,21 +320,23 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
   FunctionCallee RegVar = M.getOrInsertFunction(
       IsHIP ? "__hipRegisterVar" : "__cudaRegisterVar", RegVarTy);
 
-  // Create the references to the start / stop symbols defined by the linker.
-  auto *EntriesB =
-      new GlobalVariable(M, ArrayType::get(getEntryTy(M), 0),
-                         /*isConstant*/ true, GlobalValue::ExternalLinkage,
-                         /*Initializer*/ nullptr,
-                         IsHIP ? "__start_hip_offloading_entries"
-                               : "__start_cuda_offloading_entries");
-  EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE =
-      new GlobalVariable(M, ArrayType::get(getEntryTy(M), 0),
-                         /*isConstant*/ true, GlobalValue::ExternalLinkage,
-                         /*Initializer*/ nullptr,
-                         IsHIP ? "__stop_hip_offloading_entries"
-                               : "__stop_cuda_offloading_entries");
-  EntriesE->setVisibility(GlobalValue::HiddenVisibility);
+  // Get the __cudaRegisterSurface function declaration.
+  auto *RegSurfaceTy =
+      FunctionType::get(Type::getVoidTy(C),
+                        {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
+                         Type::getInt32Ty(C), Type::getInt32Ty(C)},
+                        /*isVarArg=*/false);
+  FunctionCallee RegSurface = M.getOrInsertFunction(
+      IsHIP ? "__hipRegisterSurface" : "__cudaRegisterSurface", RegSurfaceTy);
+
+  // Get the __cudaRegisterTexture function declaration.
+  auto *RegTextureTy = FunctionType::get(
+      Type::getVoidTy(C),
+      {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy, Type::getInt32Ty(C),
+       Type::getInt32Ty(C), Type::getInt32Ty(C)},
+      /*isVarArg=*/false);
+  FunctionCallee RegTexture = M.getOrInsertFunction(
+      IsHIP ? "__hipRegisterTexture" : "__cudaRegisterTexture", RegTextureTy);
 
   auto *RegGlobalsTy = FunctionType::get(Type::getVoidTy(C), Int8PtrPtrTy,
                                          /*isVarArg*/ false);
@@ -426,27 +360,51 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
   auto *EntryCmp = Builder.CreateICmpNE(EntriesB, EntriesE);
   Builder.CreateCondBr(EntryCmp, EntryBB, ExitBB);
   Builder.SetInsertPoint(EntryBB);
-  auto *Entry = Builder.CreatePHI(getEntryPtrTy(M), 2, "entry");
+  auto *Entry = Builder.CreatePHI(PointerType::getUnqual(C), 2, "entry");
   auto *AddrPtr =
-      Builder.CreateInBoundsGEP(getEntryTy(M), Entry,
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
                                 {ConstantInt::get(getSizeTTy(M), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 0)});
   auto *Addr = Builder.CreateLoad(Int8PtrTy, AddrPtr, "addr");
   auto *NamePtr =
-      Builder.CreateInBoundsGEP(getEntryTy(M), Entry,
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
                                 {ConstantInt::get(getSizeTTy(M), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 1)});
   auto *Name = Builder.CreateLoad(Int8PtrTy, NamePtr, "name");
   auto *SizePtr =
-      Builder.CreateInBoundsGEP(getEntryTy(M), Entry,
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
                                 {ConstantInt::get(getSizeTTy(M), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 2)});
   auto *Size = Builder.CreateLoad(getSizeTTy(M), SizePtr, "size");
   auto *FlagsPtr =
-      Builder.CreateInBoundsGEP(getEntryTy(M), Entry,
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
                                 {ConstantInt::get(getSizeTTy(M), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 3)});
-  auto *Flags = Builder.CreateLoad(Type::getInt32Ty(C), FlagsPtr, "flag");
+  auto *Flags = Builder.CreateLoad(Type::getInt32Ty(C), FlagsPtr, "flags");
+  auto *DataPtr =
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
+                                {ConstantInt::get(getSizeTTy(M), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 4)});
+  auto *Data = Builder.CreateLoad(Type::getInt32Ty(C), DataPtr, "textype");
+  auto *Kind = Builder.CreateAnd(
+      Flags, ConstantInt::get(Type::getInt32Ty(C), 0x7), "type");
+
+  // Extract the flags stored in the bit-field and convert them to C booleans.
+  auto *ExternBit = Builder.CreateAnd(
+      Flags, ConstantInt::get(Type::getInt32Ty(C),
+                              llvm::offloading::OffloadGlobalExtern));
+  auto *Extern = Builder.CreateLShr(
+      ExternBit, ConstantInt::get(Type::getInt32Ty(C), 3), "extern");
+  auto *ConstantBit = Builder.CreateAnd(
+      Flags, ConstantInt::get(Type::getInt32Ty(C),
+                              llvm::offloading::OffloadGlobalConstant));
+  auto *Const = Builder.CreateLShr(
+      ConstantBit, ConstantInt::get(Type::getInt32Ty(C), 4), "constant");
+  auto *NormalizedBit = Builder.CreateAnd(
+      Flags, ConstantInt::get(Type::getInt32Ty(C),
+                              llvm::offloading::OffloadGlobalNormalized));
+  auto *Normalized = Builder.CreateLShr(
+      NormalizedBit, ConstantInt::get(Type::getInt32Ty(C), 5), "normalized");
   auto *FnCond =
       Builder.CreateICmpEQ(Size, ConstantInt::getNullValue(getSizeTTy(M)));
   Builder.CreateCondBr(FnCond, IfThenBB, IfElseBB);
@@ -463,43 +421,50 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
   Builder.CreateBr(IfEndBB);
   Builder.SetInsertPoint(IfElseBB);
 
-  auto *Switch = Builder.CreateSwitch(Flags, IfEndBB);
+  auto *Switch = Builder.CreateSwitch(Kind, IfEndBB);
   // Create global variable registration code.
   Builder.SetInsertPoint(SwGlobalBB);
-  Builder.CreateCall(RegVar, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
-                              ConstantInt::get(Type::getInt32Ty(C), 0), Size,
-                              ConstantInt::get(Type::getInt32Ty(C), 0),
-                              ConstantInt::get(Type::getInt32Ty(C), 0)});
+  Builder.CreateCall(RegVar,
+                     {RegGlobalsFn->arg_begin(), Addr, Name, Name, Extern, Size,
+                      Const, ConstantInt::get(Type::getInt32Ty(C), 0)});
   Builder.CreateBr(IfEndBB);
-  Switch->addCase(Builder.getInt32(OffloadGlobalEntry), SwGlobalBB);
+  Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalEntry),
+                  SwGlobalBB);
 
   // Create managed variable registration code.
   Builder.SetInsertPoint(SwManagedBB);
   Builder.CreateBr(IfEndBB);
-  Switch->addCase(Builder.getInt32(OffloadGlobalManagedEntry), SwManagedBB);
+  Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalManagedEntry),
+                  SwManagedBB);
 
   // Create surface variable registration code.
   Builder.SetInsertPoint(SwSurfaceBB);
+  Builder.CreateCall(
+      RegSurface, {RegGlobalsFn->arg_begin(), Addr, Name, Name, Data, Extern});
   Builder.CreateBr(IfEndBB);
-  Switch->addCase(Builder.getInt32(OffloadGlobalSurfaceEntry), SwSurfaceBB);
+  Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalSurfaceEntry),
+                  SwSurfaceBB);
 
   // Create texture variable registration code.
   Builder.SetInsertPoint(SwTextureBB);
+  Builder.CreateCall(RegTexture, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
+                                  Data, Normalized, Extern});
   Builder.CreateBr(IfEndBB);
-  Switch->addCase(Builder.getInt32(OffloadGlobalTextureEntry), SwTextureBB);
+  Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalTextureEntry),
+                  SwTextureBB);
 
   Builder.SetInsertPoint(IfEndBB);
   auto *NewEntry = Builder.CreateInBoundsGEP(
-      getEntryTy(M), Entry, ConstantInt::get(getSizeTTy(M), 1));
+      offloading::getEntryTy(M), Entry, ConstantInt::get(getSizeTTy(M), 1));
   auto *Cmp = Builder.CreateICmpEQ(
       NewEntry,
       ConstantExpr::getInBoundsGetElementPtr(
-          ArrayType::get(getEntryTy(M), 0), EntriesE,
+          ArrayType::get(offloading::getEntryTy(M), 0), EntriesE,
           ArrayRef<Constant *>({ConstantInt::get(getSizeTTy(M), 0),
                                 ConstantInt::get(getSizeTTy(M), 0)})));
   Entry->addIncoming(
       ConstantExpr::getInBoundsGetElementPtr(
-          ArrayType::get(getEntryTy(M), 0), EntriesB,
+          ArrayType::get(offloading::getEntryTy(M), 0), EntriesB,
           ArrayRef<Constant *>({ConstantInt::get(getSizeTTy(M), 0),
                                 ConstantInt::get(getSizeTTy(M), 0)})),
       &RegGlobalsFn->getEntryBlock());
@@ -528,45 +493,41 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
                        IsHIP ? ".hip.fatbin_unreg" : ".cuda.fatbin_unreg", &M);
   DtorFunc->setSection(".text.startup");
 
+  auto *PtrTy = PointerType::getUnqual(C);
+
   // Get the __cudaRegisterFatBinary function declaration.
-  auto *RegFatTy = FunctionType::get(Type::getInt8PtrTy(C)->getPointerTo(),
-                                     Type::getInt8PtrTy(C),
-                                     /*isVarArg*/ false);
+  auto *RegFatTy = FunctionType::get(PtrTy, PtrTy, /*isVarArg=*/false);
   FunctionCallee RegFatbin = M.getOrInsertFunction(
       IsHIP ? "__hipRegisterFatBinary" : "__cudaRegisterFatBinary", RegFatTy);
   // Get the __cudaRegisterFatBinaryEnd function declaration.
-  auto *RegFatEndTy = FunctionType::get(Type::getVoidTy(C),
-                                        Type::getInt8PtrTy(C)->getPointerTo(),
-                                        /*isVarArg*/ false);
+  auto *RegFatEndTy =
+      FunctionType::get(Type::getVoidTy(C), PtrTy, /*isVarArg=*/false);
   FunctionCallee RegFatbinEnd =
       M.getOrInsertFunction("__cudaRegisterFatBinaryEnd", RegFatEndTy);
   // Get the __cudaUnregisterFatBinary function declaration.
-  auto *UnregFatTy = FunctionType::get(Type::getVoidTy(C),
-                                       Type::getInt8PtrTy(C)->getPointerTo(),
-                                       /*isVarArg*/ false);
+  auto *UnregFatTy =
+      FunctionType::get(Type::getVoidTy(C), PtrTy, /*isVarArg=*/false);
   FunctionCallee UnregFatbin = M.getOrInsertFunction(
       IsHIP ? "__hipUnregisterFatBinary" : "__cudaUnregisterFatBinary",
       UnregFatTy);
 
   auto *AtExitTy =
-      FunctionType::get(Type::getInt32Ty(C), DtorFuncTy->getPointerTo(),
-                        /*isVarArg*/ false);
+      FunctionType::get(Type::getInt32Ty(C), PtrTy, /*isVarArg=*/false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
   auto *BinaryHandleGlobal = new llvm::GlobalVariable(
-      M, Type::getInt8PtrTy(C)->getPointerTo(), false,
-      llvm::GlobalValue::InternalLinkage,
-      llvm::ConstantPointerNull::get(Type::getInt8PtrTy(C)->getPointerTo()),
+      M, PtrTy, false, llvm::GlobalValue::InternalLinkage,
+      llvm::ConstantPointerNull::get(PtrTy),
       IsHIP ? ".hip.binary_handle" : ".cuda.binary_handle");
 
   // Create the constructor to register this image with the runtime.
   IRBuilder<> CtorBuilder(BasicBlock::Create(C, "entry", CtorFunc));
   CallInst *Handle = CtorBuilder.CreateCall(
-      RegFatbin, ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-                     FatbinDesc, Type::getInt8PtrTy(C)));
+      RegFatbin,
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(FatbinDesc, PtrTy));
   CtorBuilder.CreateAlignedStore(
       Handle, BinaryHandleGlobal,
-      Align(M.getDataLayout().getPointerTypeSize(Type::getInt8PtrTy(C))));
+      Align(M.getDataLayout().getPointerTypeSize(PtrTy)));
   CtorBuilder.CreateCall(createRegisterGlobalsFunction(M, IsHIP), Handle);
   if (!IsHIP)
     CtorBuilder.CreateCall(RegFatbinEnd, Handle);
@@ -578,8 +539,8 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   // `atexit()` intead.
   IRBuilder<> DtorBuilder(BasicBlock::Create(C, "entry", DtorFunc));
   LoadInst *BinaryHandle = DtorBuilder.CreateAlignedLoad(
-      Type::getInt8PtrTy(C)->getPointerTo(), BinaryHandleGlobal,
-      Align(M.getDataLayout().getPointerTypeSize(Type::getInt8PtrTy(C))));
+      PtrTy, BinaryHandleGlobal,
+      Align(M.getDataLayout().getPointerTypeSize(PtrTy)));
   DtorBuilder.CreateCall(UnregFatbin, BinaryHandle);
   DtorBuilder.CreateRetVoid();
 

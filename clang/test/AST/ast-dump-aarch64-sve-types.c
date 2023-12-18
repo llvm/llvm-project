@@ -42,8 +42,8 @@
 // CHECK: TypedefDecl {{.*}} implicit __SVFloat64_t '__SVFloat64_t'
 // CHECK-NEXT: -BuiltinType {{.*}} '__SVFloat64_t'
 
-// CHECK: TypedefDecl {{.*}} implicit __SVBFloat16_t '__SVBFloat16_t'
-// CHECK-NEXT: -BuiltinType {{.*}} '__SVBFloat16_t'
+// CHECK: TypedefDecl {{.*}} implicit __SVBfloat16_t '__SVBfloat16_t'
+// CHECK-NEXT: -BuiltinType {{.*}} '__SVBfloat16_t'
 
 // CHECK: TypedefDecl {{.*}} implicit __SVBool_t '__SVBool_t'
 // CHECK-NEXT: -BuiltinType {{.*}} '__SVBool_t'

@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 LIBC_INLINE int convert_current_pos(Reader *reader,
@@ -26,6 +26,6 @@ LIBC_INLINE int convert_current_pos(Reader *reader,
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_CURRENT_POS_CONVERTER_H

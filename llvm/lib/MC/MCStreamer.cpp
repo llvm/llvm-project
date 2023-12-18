@@ -137,7 +137,7 @@ void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
          "Invalid size");
   const bool IsLittleEndian = Context.getAsmInfo()->isLittleEndian();
   uint64_t Swapped = support::endian::byte_swap(
-      Value, IsLittleEndian ? support::little : support::big);
+      Value, IsLittleEndian ? llvm::endianness::little : llvm::endianness::big);
   unsigned Index = IsLittleEndian ? 0 : 8 - Size;
   emitBytes(StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size));
 }
@@ -1190,10 +1190,7 @@ void MCStreamer::emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
 }
 
 void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
-                                          StringRef Rename) {
-  llvm_unreachable("emitXCOFFRenameDirective is only supported on "
-                   "XCOFF targets");
-}
+                                          StringRef Rename) {}
 
 void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");

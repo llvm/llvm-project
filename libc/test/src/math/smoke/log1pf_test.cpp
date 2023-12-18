@@ -16,14 +16,14 @@
 #include <errno.h>
 #include <stdint.h>
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcLog1pfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibclog1pfTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::log1pf(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::log1pf(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log1pf(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ(zero, __llvm_libc::log1pf(0.0f));
-  EXPECT_FP_EQ(neg_zero, __llvm_libc::log1pf(-0.0f));
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log1pf(-1.0f),
+TEST_F(LlvmLibcLog1pfTest, SpecialNumbers) {
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log1pf(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log1pf(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log1pf(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::log1pf(0.0f));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::log1pf(-0.0f));
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log1pf(-1.0f),
                               FE_DIVBYZERO);
 }

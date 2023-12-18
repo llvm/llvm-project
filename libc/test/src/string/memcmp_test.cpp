@@ -11,35 +11,35 @@
 #include "test/UnitTest/Test.h"
 #include "test/UnitTest/TestLogger.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 TEST(LlvmLibcMemcmpTest, CmpZeroByte) {
   const char *lhs = "ab";
   const char *rhs = "yz";
-  EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 0), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(lhs, rhs, 0), 0);
 }
 
 TEST(LlvmLibcMemcmpTest, LhsRhsAreTheSame) {
   const char *lhs = "ab";
   const char *rhs = "ab";
-  EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, 2), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcMemcmpTest, LhsBeforeRhsLexically) {
   const char *lhs = "ab";
   const char *rhs = "az";
-  EXPECT_LT(__llvm_libc::memcmp(lhs, rhs, 2), 0);
+  EXPECT_LT(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcMemcmpTest, LhsAfterRhsLexically) {
   const char *lhs = "az";
   const char *rhs = "ab";
-  EXPECT_GT(__llvm_libc::memcmp(lhs, rhs, 2), 0);
+  EXPECT_GT(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
 }
 
 // Adapt CheckMemcmp signature to memcmp.
 static inline int Adaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
-  return __llvm_libc::memcmp(p1.begin(), p2.begin(), size);
+  return LIBC_NAMESPACE::memcmp(p1.begin(), p2.begin(), size);
 }
 
 TEST(LlvmLibcMemcmpTest, SizeSweep) {
@@ -57,4 +57,4 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

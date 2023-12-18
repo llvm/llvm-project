@@ -118,8 +118,8 @@ inline bool isa_derived(mlir::Type t) { return t.isa<fir::RecordType>(); }
 /// Is `t` type(c_ptr) or type(c_funptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = t.dyn_cast_or_null<fir::RecordType>())
-    return recTy.getName().endswith("T__builtin_c_ptr") ||
-           recTy.getName().endswith("T__builtin_c_funptr");
+    return recTy.getName().ends_with("T__builtin_c_ptr") ||
+           recTy.getName().ends_with("T__builtin_c_funptr");
   return false;
 }
 
@@ -146,6 +146,11 @@ inline bool isa_integer(mlir::Type t) {
   return t.isa<mlir::IndexType, mlir::IntegerType, fir::IntegerType>();
 }
 
+/// Is `t` a vector type?
+inline bool isa_vector(mlir::Type t) {
+  return t.isa<mlir::VectorType, fir::VectorType>();
+}
+
 mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
 
 void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
@@ -165,7 +170,7 @@ inline bool isa_char(mlir::Type t) { return t.isa<fir::CharacterType>(); }
 /// Is `t` a trivial intrinsic type? CHARACTER is <em>excluded</em> because it
 /// is a dependent type.
 inline bool isa_trivial(mlir::Type t) {
-  return isa_integer(t) || isa_real(t) || isa_complex(t) ||
+  return isa_integer(t) || isa_real(t) || isa_complex(t) || isa_vector(t) ||
          t.isa<fir::LogicalType>();
 }
 
@@ -328,6 +333,12 @@ bool isUnlimitedPolymorphicType(mlir::Type ty);
 /// Return true iff `ty` is the type of an assumed type.
 bool isAssumedType(mlir::Type ty);
 
+/// Return true iff `ty` is the type of an assumed shape array.
+bool isAssumedShape(mlir::Type ty);
+
+/// Return true iff `ty` is the type of an allocatable array.
+bool isAllocatableOrPointerArray(mlir::Type ty);
+
 /// Return true iff `boxTy` wraps a record type or an unlimited polymorphic
 /// entity. Polymorphic entities with intrinsic type spec do not have addendum
 inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
@@ -343,6 +354,10 @@ mlir::Type unwrapInnerType(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
+
+/// Return true iff `ty` is a scalar/array of RecordType
+/// with members that are descriptors.
+bool isRecordWithDescriptorMember(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with type parameters.
 inline bool isRecordWithTypeParameters(mlir::Type ty) {

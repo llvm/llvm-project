@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_EXIT_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_EXIT_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_EXIT_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_EXIT_H
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[noreturn]] void pthread_exit(void *retval);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_EXIT_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_EXIT_H

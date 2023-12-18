@@ -45,7 +45,7 @@ def find_sanitizer_runtime(name):
 
 
 def find_shlibpath_var():
-    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
+    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "OpenBSD", "SunOS"]:
         yield "LD_LIBRARY_PATH"
     elif platform.system() == "Darwin":
         yield "DYLD_LIBRARY_PATH"
@@ -248,7 +248,7 @@ if (
     "lldb-repro-capture" in config.available_features
     or "lldb-repro-replay" in config.available_features
 ):
-    dotest_cmd += ["--skip-category=lldb-vscode", "--skip-category=std-module"]
+    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]

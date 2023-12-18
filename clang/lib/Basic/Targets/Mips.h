@@ -53,6 +53,7 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
   bool HasMSA;
   bool DisableMadd4;
   bool UseIndirectJumpHazard;
+  bool NoOddSpreg;
 
 protected:
   enum FPModeEnum { FPXX, FP32, FP64 } FPMode;
@@ -313,6 +314,8 @@ public:
     FloatABI = HardFloat;
     DspRev = NoDSP;
     FPMode = isFP64Default() ? FP64 : FPXX;
+    NoOddSpreg = false;
+    bool OddSpregGiven = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -349,7 +352,17 @@ public:
         IsNoABICalls = true;
       else if (Feature == "+use-indirect-jump-hazard")
         UseIndirectJumpHazard = true;
+      else if (Feature == "+nooddspreg") {
+        NoOddSpreg = true;
+        OddSpregGiven = false;
+      } else if (Feature == "-nooddspreg") {
+        NoOddSpreg = false;
+        OddSpregGiven = true;
+      }
     }
+
+    if (FPMode == FPXX && !OddSpregGiven)
+      NoOddSpreg = true;
 
     setDataLayout();
 

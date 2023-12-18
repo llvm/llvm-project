@@ -336,7 +336,7 @@ bool COFFObjectFile::isDebugSection(DataRefImpl Ref) const {
     return false;
   }
   StringRef SectionName = SectionNameOrErr.get();
-  return SectionName.startswith(".debug");
+  return SectionName.starts_with(".debug");
 }
 
 unsigned COFFObjectFile::getSectionID(SectionRef Sec) const {
@@ -1203,9 +1203,9 @@ COFFObjectFile::getSectionName(const coff_section *Sec) const {
   StringRef Name = StringRef(Sec->Name, COFF::NameSize).split('\0').first;
 
   // Check for string table entry. First byte is '/'.
-  if (Name.startswith("/")) {
+  if (Name.starts_with("/")) {
     uint32_t Offset;
-    if (Name.startswith("//")) {
+    if (Name.starts_with("//")) {
       if (decodeBase64StringEntry(Name.substr(2), Offset))
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
@@ -1907,7 +1907,7 @@ Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S) {
   Expected<StringRef> Contents = Section.getContents();
   if (!Contents)
     return Contents.takeError();
-  BBS = BinaryByteStream(*Contents, support::little);
+  BBS = BinaryByteStream(*Contents, llvm::endianness::little);
   const coff_section *COFFSect = Obj->getCOFFSection(Section);
   ArrayRef<coff_relocation> OrigRelocs = Obj->getRelocations(COFFSect);
   Relocs.reserve(OrigRelocs.size());

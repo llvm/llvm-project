@@ -367,7 +367,7 @@ define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV64ID-LP64-NEXT:    addi sp, sp, -16
 ; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ID-LP64-NEXT:    lui a2, 16
-; RV64ID-LP64-NEXT:    addiw a2, a2, -1
+; RV64ID-LP64-NEXT:    addi a2, a2, -1
 ; RV64ID-LP64-NEXT:    and a0, a0, a2
 ; RV64ID-LP64-NEXT:    and a1, a1, a2
 ; RV64ID-LP64-NEXT:    slli a1, a1, 16
@@ -409,7 +409,7 @@ define bfloat @bfloat_add(bfloat %a, bfloat %b) nounwind {
 ; RV64ID-LP64D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ID-LP64D-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-LP64D-NEXT:    lui a1, 16
-; RV64ID-LP64D-NEXT:    addiw a1, a1, -1
+; RV64ID-LP64D-NEXT:    addi a1, a1, -1
 ; RV64ID-LP64D-NEXT:    and a0, a0, a1
 ; RV64ID-LP64D-NEXT:    fmv.x.w a2, fa1
 ; RV64ID-LP64D-NEXT:    and a1, a2, a1
@@ -605,7 +605,7 @@ define void @bfloat_store(ptr %a, bfloat %b, bfloat %c) nounwind {
 ; RV64ID-LP64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64ID-LP64-NEXT:    mv s0, a0
 ; RV64ID-LP64-NEXT:    lui a0, 16
-; RV64ID-LP64-NEXT:    addiw a0, a0, -1
+; RV64ID-LP64-NEXT:    addi a0, a0, -1
 ; RV64ID-LP64-NEXT:    and a1, a1, a0
 ; RV64ID-LP64-NEXT:    and a0, a2, a0
 ; RV64ID-LP64-NEXT:    slli a0, a0, 16
@@ -652,7 +652,7 @@ define void @bfloat_store(ptr %a, bfloat %b, bfloat %c) nounwind {
 ; RV64ID-LP64D-NEXT:    mv s0, a0
 ; RV64ID-LP64D-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-LP64D-NEXT:    lui a1, 16
-; RV64ID-LP64D-NEXT:    addiw a1, a1, -1
+; RV64ID-LP64D-NEXT:    addi a1, a1, -1
 ; RV64ID-LP64D-NEXT:    and a0, a0, a1
 ; RV64ID-LP64D-NEXT:    fmv.x.w a2, fa1
 ; RV64ID-LP64D-NEXT:    and a1, a2, a1

@@ -156,7 +156,6 @@ private:
   unsigned verifyUnitSection(const DWARFSection &S);
   unsigned verifyUnits(const DWARFUnitVector &Units);
 
-  unsigned verifyIndexes(const DWARFObject &DObj);
   unsigned verifyIndex(StringRef Name, DWARFSectionKind SectionKind,
                        StringRef Index);
 

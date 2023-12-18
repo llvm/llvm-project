@@ -9,10 +9,10 @@
 #include "src/math/nearbyintf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, nearbyintf, (float x)) {
   return __builtin_nearbyintf(x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

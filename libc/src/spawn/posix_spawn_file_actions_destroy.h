@@ -11,10 +11,10 @@
 
 #include <spawn.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int posix_spawn_file_actions_destroy(posix_spawn_file_actions_t *actions);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_DESTROY_H

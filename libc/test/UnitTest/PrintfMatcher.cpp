@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 using printf_core::FormatFlags;
@@ -77,7 +77,7 @@ static void display(FormatSection form) {
            << "\n";
     else if (form.conv_name != '%')
       tlog << "\tvalue: "
-           << int_to_hex<fputil::FPBits<long double>::UIntType>(
+           << int_to_hex<fputil::FPBits<long double>::StorageType>(
                   form.conv_val_raw)
            << "\n";
   }
@@ -94,4 +94,4 @@ void FormatSectionMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

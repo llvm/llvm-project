@@ -160,6 +160,10 @@ public:
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
+  // Implement this function to return the user-defined entry point name
+  // for the language.
+  virtual llvm::StringRef GetUserEntryPointName() const { return {}; }
+
   virtual bool IsTopLevelFunction(Function &function);
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;

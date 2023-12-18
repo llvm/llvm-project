@@ -20,7 +20,7 @@ namespace llvm {
 class ARMAsmBackend : public MCAsmBackend {
   bool isThumbMode;    // Currently emitting Thumb code.
 public:
-  ARMAsmBackend(const Target &T, bool isThumb, support::endianness Endian)
+  ARMAsmBackend(const Target &T, bool isThumb, llvm::endianness Endian)
       : MCAsmBackend(Endian), isThumbMode(isThumb) {}
 
   unsigned getNumFixupKinds() const override {
@@ -36,7 +36,8 @@ public:
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
                             const MCValue &Target, uint64_t Value,

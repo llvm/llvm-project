@@ -17,11 +17,12 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
@@ -76,6 +77,22 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  if (getCoordinates().empty() || getCoordinates().size() > 5)
+    return emitError("expects coordinates between 1 to 5 dimension");
+
+  // Check for im2col mode
+  if (!getIm2colOffsets().empty()) {
+    if (getCoordinates().size() < 3)
+      return emitError(
+          "to use im2col mode, the tensor has to be at least 3-dimensional");
+    if (getCoordinates().size() != (getIm2colOffsets().size() + 2))
+      return emitError(
+          "im2col offsets must be 2 less than number of coordinates");
+  }
+  return success();
+}
+
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   if (getCoordinates().size() > 5)
     return emitError("Maximum 5 coordinates and dimension is supported.");
   return success();
@@ -618,7 +635,8 @@ inferMMATypeFromMNK(NVVM::MMATypes type, NVVM::MMAFrag frag, int m, int n,
 LogicalResult NVVM::WMMALoadOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
+  if (addressSpace != 0 && addressSpace != NVVM::kGlobalMemorySpace &&
+      addressSpace != NVVM::kSharedMemorySpace)
     return emitOpError("expected source pointer in memory "
                        "space 0, 1, 3");
 
@@ -638,7 +656,8 @@ LogicalResult NVVM::WMMALoadOp::verify() {
 LogicalResult NVVM::WMMAStoreOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
+  if (addressSpace != 0 && addressSpace != NVVM::kGlobalMemorySpace &&
+      addressSpace != NVVM::kSharedMemorySpace)
     return emitOpError("expected operands to be a source pointer in memory "
                        "space 0, 1, 3");
 
@@ -690,7 +709,7 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 LogicalResult NVVM::LdMatrixOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 3)
+  if (addressSpace != NVVM::kSharedMemorySpace)
     return emitOpError("expected source pointer in memory space 3");
 
   if (getNum() != 1 && getNum() != 2 && getNum() != 4)
@@ -706,6 +725,19 @@ LogicalResult NVVM::LdMatrixOp::verify() {
       return emitOpError("expected destination type is a structure of ")
              << getNum() << " elements of type i32";
   }
+  return success();
+}
+
+LogicalResult NVVM::StMatrixOp::verify() {
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
+  if (addressSpace != NVVM::kSharedMemorySpace)
+    return emitOpError("expected source pointer in memory space 3");
+
+  int numMatrix = getSources().size();
+  if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
+    return emitOpError("expected num attribute to be 1, 2 or 4");
+
   return success();
 }
 
@@ -974,6 +1006,23 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
+}
+LogicalResult NVVM::FenceProxyOp::verify() {
+  if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
+    return emitOpError() << "async_shared fence requires space attribute";
+  }
+  if (getKind() != NVVM::ProxyKind::async_shared && getSpace().has_value()) {
+    return emitOpError() << "only async_shared fence can have space attribute";
+  }
+  return success();
+}
+
+LogicalResult NVVM::SetMaxRegisterOp::verify() {
+  if (getRegCount() % 8)
+    return emitOpError("new register size must be multiple of 8");
+  if (getRegCount() < 24 || getRegCount() > 256)
+    return emitOpError("new register size must be in between 24 to 256");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

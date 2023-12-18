@@ -309,6 +309,25 @@ namespace clang {
     ~ParsingOpenMPDirectiveRAII() { restore(); }
   };
 
+  /// Activates OpenACC parsing mode to preseve OpenACC specific annotation
+  /// tokens.
+  class ParsingOpenACCDirectiveRAII {
+    Parser &P;
+    bool OldVal;
+
+  public:
+    ParsingOpenACCDirectiveRAII(Parser &P, bool Value = true)
+        : P(P), OldVal(P.OpenACCDirectiveParsing) {
+      P.OpenACCDirectiveParsing = Value;
+    }
+
+    /// This can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { P.OpenMPDirectiveParsing = OldVal; }
+
+    ~ParsingOpenACCDirectiveRAII() { restore(); }
+  };
+
   /// RAII object that makes '>' behave either as an operator
   /// or as the closing angle bracket for a template argument list.
   class GreaterThanIsOperatorScope {

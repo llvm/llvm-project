@@ -9,14 +9,29 @@
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
+#include <assert.h>
+#include <sanitizer/hwasan_interface.h>
+
 void USE(void *x) { // pretend_to_do_something(void *x)
   __asm__ __volatile__("" : : "r" (x) : "memory");
 }
 
 __attribute__((noinline))
 char *buggy() {
-  char zzz[0x1000];
-  char *volatile p = zzz;
+  char zzz[0x800];
+  char yyy[0x800];
+  // Tags for stack-allocated variables can occasionally be zero, resulting in
+  // a false negative for this test. The tag allocation algorithm is not easy
+  // to fix, hence we work around it: if the tag is zero, we use the
+  // neighboring variable instead, which must have a different (hence non-zero)
+  // tag.
+  char *volatile p;
+  if (__hwasan_tag_pointer(zzz, 0) == zzz) {
+    assert(__hwasan_tag_pointer(yyy, 0) != yyy);
+    p = yyy;
+  } else {
+    p = zzz;
+  }
   return p;
 }
 
@@ -35,7 +50,7 @@ int main() {
   // CHECK: Cause: stack tag-mismatch
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
-  // CHECK-NEXT: zzz in buggy {{.*}}stack-uar.c:[[@LINE-20]]
+  // CHECK-NEXT: {{zzz|yyy}} in buggy {{.*}}stack-uar.c:
   // CHECK-NEXT: Memory tags around the buggy address
 
   // NOSYM: Previously allocated frames:

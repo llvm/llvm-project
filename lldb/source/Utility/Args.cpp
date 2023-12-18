@@ -445,6 +445,7 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
                         .Case("arg6", LLDB_REGNUM_GENERIC_ARG6)
                         .Case("arg7", LLDB_REGNUM_GENERIC_ARG7)
                         .Case("arg8", LLDB_REGNUM_GENERIC_ARG8)
+                        .Case("tp", LLDB_REGNUM_GENERIC_TP)
                         .Default(LLDB_INVALID_REGNUM);
   return result;
 }
@@ -640,7 +641,7 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
 
   // If the string doesn't start with a dash, we just have no options and just
   // a raw part.
-  if (!arg_string.startswith("-")) {
+  if (!arg_string.starts_with("-")) {
     m_suffix = std::string(original_args);
     return;
   }

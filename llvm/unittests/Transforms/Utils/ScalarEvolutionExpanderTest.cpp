@@ -129,13 +129,13 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
    * top:
    *  br label %L.ph
    * L.ph:
+   *  %gepbase = getelementptr i64 addrspace(10)* %arg, i64 1
    *  br label %L
    * L:
    *  %phi = phi i64 [i64 0, %L.ph], [ %add, %L2 ]
    *  %add = add i64 %phi2, 1
    *  br i1 undef, label %post, label %L2
    * post:
-   *  %gepbase = getelementptr i64 addrspace(10)* %arg, i64 1
    *  #= %gep = getelementptr i64 addrspace(10)* %gepbase, i64 %add =#
    *  ret void
    *
@@ -170,6 +170,8 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Builder.CreateBr(LPh);
 
   Builder.SetInsertPoint(LPh);
+  Value *GepBase =
+      Builder.CreateGEP(T_int64, Arg, ConstantInt::get(T_int64, 1));
   Builder.CreateBr(L);
 
   Builder.SetInsertPoint(L);
@@ -180,8 +182,6 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Phi->addIncoming(Add, L);
 
   Builder.SetInsertPoint(Post);
-  Value *GepBase =
-      Builder.CreateGEP(T_int64, Arg, ConstantInt::get(T_int64, 1));
   Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);

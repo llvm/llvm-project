@@ -21,18 +21,4 @@ uptr getPageSizeSlow() {
   return PageSizeCached;
 }
 
-// Fatal internal map() or unmap() error (potentially OOM related).
-void NORETURN dieOnMapUnmapError(uptr SizeIfOOM) {
-  char Error[128] = "Scudo ERROR: internal map or unmap failure\n";
-  if (SizeIfOOM) {
-    formatString(
-        Error, sizeof(Error),
-        "Scudo ERROR: internal map failure (NO MEMORY) requesting %zuKB\n",
-        SizeIfOOM >> 10);
-  }
-  outputRaw(Error);
-  setAbortMessage(Error);
-  die();
-}
-
 } // namespace scudo

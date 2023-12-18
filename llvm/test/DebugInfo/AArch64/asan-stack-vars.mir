@@ -133,7 +133,8 @@
     store i8* %_cmd, i8** %_cmd.addr, align 8
     call void @llvm.dbg.declare(metadata i8** %_cmd.addr, metadata !48, metadata !DIExpression()), !dbg !47
     %29 = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !50
-    %30 = add i64 lshr (i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_ to i64), i64 3), %1, !dbg !50
+    %lshr1 = lshr i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_ to i64), 3, !dbg !50
+    %30 = add i64 %lshr1, %1, !dbg !50
     %31 = inttoptr i64 %30 to i8*, !dbg !50
     %32 = load i8, i8* %31, !dbg !50
     %33 = icmp ne i8 %32, 0, !dbg !50
@@ -149,7 +150,8 @@
     %37 = bitcast %struct._class_t* %29 to i8*, !dbg !50
     %call = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %37, i8* %36), !dbg !50
     %38 = bitcast i8* %call to %0*, !dbg !50
-    %39 = add i64 lshr (i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.2 to i64), i64 3), %1, !dbg !51
+    %lshr2 = lshr i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.2 to i64), 3, !dbg !51
+    %39 = add i64 %lshr2, %1, !dbg !51
     %40 = inttoptr i64 %39 to i8*, !dbg !51
     %41 = load i8, i8* %40, !dbg !51
     %42 = icmp ne i8 %41, 0, !dbg !51
@@ -197,7 +199,8 @@
   ; <label>:65:                                     ; preds = %55
     store %0* %57, %0** %6, align 8, !dbg !44
     %66 = load %0*, %0** %6, align 8, !dbg !52
-    %67 = add i64 lshr (i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.4 to i64), i64 3), %1, !dbg !53
+    %lshr3 = lshr i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.4 to i64), 3, !dbg !53
+    %67 = add i64 %lshr3, %1, !dbg !53
     %68 = inttoptr i64 %67 to i8*, !dbg !53
     %69 = load i8, i8* %68, !dbg !53
     %70 = icmp ne i8 %69, 0, !dbg !53

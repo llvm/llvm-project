@@ -13,7 +13,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/UInt128.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Struct to store -log*(r) for 4 range reduction steps.
 struct LogRR {
@@ -87,6 +87,6 @@ log_range_reduction(double m_x, const LogRR &log_table,
                                      static_cast<uint64_t>(vv4 >> 64)}));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_LOG_RANGE_REDUCTION_H

@@ -79,8 +79,10 @@ end subroutine
 ! CHECK:    %[[VAL_6:.*]] = fir.call @_QPreturn_temporary_mask() fastmath<contract> : () -> !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 ! CHECK:    fir.save_result %[[VAL_6]] to %[[VAL_1]] : !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:    %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>)
-! CHECK:    %[[VAL_8:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
-! CHECK:    hlfir.yield %[[VAL_8]] : !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> cleanup {
+! CHECK:             %[[deref:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK:             %[[MustFree:.*]] = arith.constant false
+! CHECK:             %[[ResTemp:.*]] = hlfir.as_expr %[[deref]] move %[[MustFree]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
+! CHECK:             hlfir.yield %[[ResTemp]] : !hlfir.expr<?x!fir.logical<4>> cleanup {
 ! CHECK:        fir.freemem
 ! CHECK:    }
 ! CHECK:  } do {
@@ -88,8 +90,10 @@ end subroutine
 ! CHECK:      %[[VAL_14:.*]] = fir.call @_QPreturn_temporary_array() fastmath<contract> : () -> !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:      fir.save_result %[[VAL_14]] to %[[VAL_0]] : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:      %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
-! CHECK:      %[[VAL_16:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-! CHECK:      hlfir.yield %[[VAL_16]] : !fir.box<!fir.heap<!fir.array<?xf32>>> cleanup {
+! CHECK:               %[[deref:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:               %[[MustFree:.*]] = arith.constant false
+! CHECK:               %[[ResTemp:.*]] = hlfir.as_expr %[[deref]] move %[[MustFree]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, i1) -> !hlfir.expr<?xf32>
+! CHECK:               hlfir.yield %[[ResTemp]] : !hlfir.expr<?xf32> cleanup {
 ! CHECK:          fir.freemem
 ! CHECK:      }
 ! CHECK:    } to {

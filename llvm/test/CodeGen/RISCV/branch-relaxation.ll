@@ -2769,42 +2769,22 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV32-NEXT:    #APP
 ; CHECK-RV32-NEXT:    li t6, 31
 ; CHECK-RV32-NEXT:    #NO_APP
-; CHECK-RV32-NEXT:    bne t5, t6, .LBB6_1
-; CHECK-RV32-NEXT:  # %bb.7: # %entry
-; CHECK-RV32-NEXT:    sw s11, 0(sp)
-; CHECK-RV32-NEXT:    jump .LBB6_8, s11
-; CHECK-RV32-NEXT:  .LBB6_1: # %cond_2
-; CHECK-RV32-NEXT:    bne t3, t4, .LBB6_2
-; CHECK-RV32-NEXT:  # %bb.9: # %cond_2
-; CHECK-RV32-NEXT:    sw s11, 0(sp)
-; CHECK-RV32-NEXT:    jump .LBB6_10, s11
-; CHECK-RV32-NEXT:  .LBB6_2: # %cond_3
-; CHECK-RV32-NEXT:    bne t1, t2, .LBB6_3
-; CHECK-RV32-NEXT:  # %bb.11: # %cond_3
-; CHECK-RV32-NEXT:    sw s11, 0(sp)
-; CHECK-RV32-NEXT:    jump .LBB6_12, s11
-; CHECK-RV32-NEXT:  .LBB6_3: # %space
-; CHECK-RV32-NEXT:    #APP
-; CHECK-RV32-NEXT:    .zero 1048576
-; CHECK-RV32-NEXT:    #NO_APP
-; CHECK-RV32-NEXT:    j .LBB6_4
+; CHECK-RV32-NEXT:    bne t5, t6, .LBB6_2
+; CHECK-RV32-NEXT:    j .LBB6_1
 ; CHECK-RV32-NEXT:  .LBB6_8: # %dest_1
 ; CHECK-RV32-NEXT:    lw s11, 0(sp)
-; CHECK-RV32-NEXT:  .LBB6_4: # %dest_1
+; CHECK-RV32-NEXT:  .LBB6_1: # %dest_1
 ; CHECK-RV32-NEXT:    #APP
 ; CHECK-RV32-NEXT:    # dest 1
 ; CHECK-RV32-NEXT:    #NO_APP
-; CHECK-RV32-NEXT:    j .LBB6_5
-; CHECK-RV32-NEXT:  .LBB6_10: # %dest_2
-; CHECK-RV32-NEXT:    lw s11, 0(sp)
-; CHECK-RV32-NEXT:  .LBB6_5: # %dest_2
+; CHECK-RV32-NEXT:    j .LBB6_3
+; CHECK-RV32-NEXT:  .LBB6_2: # %cond_2
+; CHECK-RV32-NEXT:    bne t3, t4, .LBB6_5
+; CHECK-RV32-NEXT:  .LBB6_3: # %dest_2
 ; CHECK-RV32-NEXT:    #APP
 ; CHECK-RV32-NEXT:    # dest 2
 ; CHECK-RV32-NEXT:    #NO_APP
-; CHECK-RV32-NEXT:    j .LBB6_6
-; CHECK-RV32-NEXT:  .LBB6_12: # %dest_3
-; CHECK-RV32-NEXT:    lw s11, 0(sp)
-; CHECK-RV32-NEXT:  .LBB6_6: # %dest_3
+; CHECK-RV32-NEXT:  .LBB6_4: # %dest_3
 ; CHECK-RV32-NEXT:    #APP
 ; CHECK-RV32-NEXT:    # dest 3
 ; CHECK-RV32-NEXT:    #NO_APP
@@ -2907,6 +2887,15 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV32-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, sp, 64
 ; CHECK-RV32-NEXT:    ret
+; CHECK-RV32-NEXT:  .LBB6_5: # %cond_3
+; CHECK-RV32-NEXT:    beq t1, t2, .LBB6_4
+; CHECK-RV32-NEXT:  # %bb.6: # %space
+; CHECK-RV32-NEXT:    #APP
+; CHECK-RV32-NEXT:    .zero 1048576
+; CHECK-RV32-NEXT:    #NO_APP
+; CHECK-RV32-NEXT:  # %bb.7: # %space
+; CHECK-RV32-NEXT:    sw s11, 0(sp)
+; CHECK-RV32-NEXT:    jump .LBB6_8, s11
 ;
 ; CHECK-RV64-LABEL: relax_jal_spill_32_restore_block_correspondence:
 ; CHECK-RV64:       # %bb.0: # %entry
@@ -3026,34 +3015,21 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    sext.w t6, t6
 ; CHECK-RV64-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    sext.w t5, t5
-; CHECK-RV64-NEXT:    bne t5, t6, .LBB6_1
-; CHECK-RV64-NEXT:  # %bb.7: # %entry
-; CHECK-RV64-NEXT:    jump .LBB6_4, t5
-; CHECK-RV64-NEXT:  .LBB6_1: # %cond_2
-; CHECK-RV64-NEXT:    sext.w t5, t4
-; CHECK-RV64-NEXT:    sext.w t6, t3
-; CHECK-RV64-NEXT:    bne t6, t5, .LBB6_2
-; CHECK-RV64-NEXT:  # %bb.9: # %cond_2
-; CHECK-RV64-NEXT:    jump .LBB6_5, t5
-; CHECK-RV64-NEXT:  .LBB6_2: # %cond_3
-; CHECK-RV64-NEXT:    sext.w t5, t2
-; CHECK-RV64-NEXT:    sext.w t6, t1
-; CHECK-RV64-NEXT:    bne t6, t5, .LBB6_3
-; CHECK-RV64-NEXT:  # %bb.11: # %cond_3
-; CHECK-RV64-NEXT:    jump .LBB6_6, t5
-; CHECK-RV64-NEXT:  .LBB6_3: # %space
-; CHECK-RV64-NEXT:    #APP
-; CHECK-RV64-NEXT:    .zero 1048576
-; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:  .LBB6_4: # %dest_1
+; CHECK-RV64-NEXT:    bne t5, t6, .LBB6_2
+; CHECK-RV64-NEXT:  .LBB6_1: # %dest_1
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # dest 1
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:  .LBB6_5: # %dest_2
+; CHECK-RV64-NEXT:    j .LBB6_3
+; CHECK-RV64-NEXT:  .LBB6_2: # %cond_2
+; CHECK-RV64-NEXT:    sext.w t5, t4
+; CHECK-RV64-NEXT:    sext.w t6, t3
+; CHECK-RV64-NEXT:    bne t6, t5, .LBB6_5
+; CHECK-RV64-NEXT:  .LBB6_3: # %dest_2
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # dest 2
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:  .LBB6_6: # %dest_3
+; CHECK-RV64-NEXT:  .LBB6_4: # %dest_3
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    # dest 3
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -3158,6 +3134,16 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    addi sp, sp, 128
 ; CHECK-RV64-NEXT:    ret
+; CHECK-RV64-NEXT:  .LBB6_5: # %cond_3
+; CHECK-RV64-NEXT:    sext.w t5, t2
+; CHECK-RV64-NEXT:    sext.w t6, t1
+; CHECK-RV64-NEXT:    beq t6, t5, .LBB6_4
+; CHECK-RV64-NEXT:  # %bb.6: # %space
+; CHECK-RV64-NEXT:    #APP
+; CHECK-RV64-NEXT:    .zero 1048576
+; CHECK-RV64-NEXT:    #NO_APP
+; CHECK-RV64-NEXT:  # %bb.7: # %space
+; CHECK-RV64-NEXT:    jump .LBB6_1, t5
 entry:
   %ra = call i32 asm sideeffect "addi ra, x0, 1", "={ra}"()
   %t0 = call i32 asm sideeffect "addi t0, x0, 5", "={t0}"()

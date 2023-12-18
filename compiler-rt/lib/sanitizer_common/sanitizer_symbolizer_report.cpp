@@ -33,9 +33,9 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
   if (!common_flags()->print_summary) return;
   InternalScopedString buff;
   buff.AppendF("%s ", error_type);
-  RenderFrame(&buff, "%L %F", 0, info.address, &info,
-              common_flags()->symbolize_vs_style,
-              common_flags()->strip_path_prefix);
+  StackTracePrinter::GetOrInit()->RenderFrame(
+      &buff, "%L %F", 0, info.address, &info,
+      common_flags()->symbolize_vs_style, common_flags()->strip_path_prefix);
   ReportErrorSummary(buff.data(), alt_tool_name);
 }
 #endif

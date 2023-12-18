@@ -119,8 +119,14 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, F, true);
 
   std::vector<std::string> UpdatedFeaturesVec;
-  bool HasEVEX512 = true;
-  bool HasAVX512F = false;
+  std::vector<std::string> UpdatedAVX10FeaturesVec;
+  enum { FE_NOSET = -1, FE_FALSE, FE_TRUE };
+  int HasEVEX512 = FE_NOSET;
+  bool HasAVX512F = Features.lookup("avx512f");
+  bool HasAVX10 = Features.lookup("avx10.1-256");
+  bool HasAVX10_512 = Features.lookup("avx10.1-512");
+  std::string LastAVX10;
+  std::string LastAVX512;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
     if (Feature == "+general-regs-only") {
@@ -130,17 +136,51 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
-    if (!HasAVX512F && Feature.substr(0, 7) == "+avx512")
+    if (Feature.substr(1, 6) == "avx10.") {
+      if (Feature[0] == '+') {
+        HasAVX10 = true;
+        if (Feature.substr(Feature.size() - 3, 3) == "512")
+          HasAVX10_512 = true;
+        LastAVX10 = Feature;
+      } else if (HasAVX10 && Feature == "-avx10.1-256") {
+        HasAVX10 = false;
+        HasAVX10_512 = false;
+      } else if (HasAVX10_512 && Feature == "-avx10.1-512") {
+        HasAVX10_512 = false;
+      }
+      // Postpone AVX10 features handling after AVX512 settled.
+      UpdatedAVX10FeaturesVec.push_back(Feature);
+      continue;
+    } else if (!HasAVX512F && Feature.substr(0, 7) == "+avx512") {
       HasAVX512F = true;
-    if (HasAVX512F && Feature == "-avx512f")
+      LastAVX512 = Feature;
+    } else if (HasAVX512F && Feature == "-avx512f") {
       HasAVX512F = false;
-    if (HasEVEX512 && Feature == "-evex512")
-      HasEVEX512 = false;
+    } else if (HasEVEX512 != FE_TRUE && Feature == "+evex512") {
+      HasEVEX512 = FE_TRUE;
+      continue;
+    } else if (HasEVEX512 != FE_FALSE && Feature == "-evex512") {
+      HasEVEX512 = FE_FALSE;
+      continue;
+    }
 
     UpdatedFeaturesVec.push_back(Feature);
   }
-  if (HasAVX512F && HasEVEX512)
-    UpdatedFeaturesVec.push_back("+evex512");
+  llvm::append_range(UpdatedFeaturesVec, UpdatedAVX10FeaturesVec);
+  // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
+  // according to other features.
+  if (HasAVX512F) {
+    UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
+                                                        : "+evex512");
+    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
+      Diags.Report(diag::warn_invalid_feature_combination)
+          << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
+  } else if (HasAVX10) {
+    if (HasEVEX512 != FE_NOSET)
+      Diags.Report(diag::warn_invalid_feature_combination)
+          << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
+    UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
+  }
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
     return false;
@@ -241,6 +281,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGFNI = true;
     } else if (Feature == "+evex512") {
       HasEVEX512 = true;
+    } else if (Feature == "+avx10.1-256") {
+      HasAVX10_1 = true;
+    } else if (Feature == "+avx10.1-512") {
+      HasAVX10_1_512 = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -376,12 +420,26 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasTSXLDTRK = true;
     } else if (Feature == "+uintr") {
       HasUINTR = true;
+    } else if (Feature == "+usermsr") {
+      HasUSERMSR = true;
     } else if (Feature == "+crc32") {
       HasCRC32 = true;
     } else if (Feature == "+x87") {
       HasX87 = true;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+egpr") {
+      HasEGPR = true;
+    } else if (Feature == "+push2pop2") {
+      HasPush2Pop2 = true;
+    } else if (Feature == "+ppx") {
+      HasPPX = true;
+    } else if (Feature == "+ndd") {
+      HasNDD = true;
+    } else if (Feature == "+ccmp") {
+      HasCCMP = true;
+    } else if (Feature == "+cf") {
+      HasCF = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -563,11 +621,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Arrowlake:
   case CK_ArrowlakeS:
   case CK_Lunarlake:
+  case CK_Pantherlake:
   case CK_Sierraforest:
   case CK_Grandridge:
   case CK_Graniterapids:
   case CK_GraniterapidsD:
   case CK_Emeraldrapids:
+  case CK_Clearwaterforest:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -746,6 +806,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasEVEX512)
     Builder.defineMacro("__EVEX512__");
+  if (HasAVX10_1)
+    Builder.defineMacro("__AVX10_1__");
+  if (HasAVX10_1_512)
+    Builder.defineMacro("__AVX10_1_512__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -766,8 +830,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512BITALG__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
-  if (HasAVX512VL)
+  if (HasAVX512VL) {
     Builder.defineMacro("__AVX512VL__");
+    Builder.defineMacro("__EVEX256__");
+  }
   if (HasAVX512VBMI)
     Builder.defineMacro("__AVX512VBMI__");
   if (HasAVX512VBMI2)
@@ -869,8 +935,22 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__TSXLDTRK__");
   if (HasUINTR)
     Builder.defineMacro("__UINTR__");
+  if (HasUSERMSR)
+    Builder.defineMacro("__USERMSR__");
   if (HasCRC32)
     Builder.defineMacro("__CRC32__");
+  if (HasEGPR)
+    Builder.defineMacro("__EGPR__");
+  if (HasPush2Pop2)
+    Builder.defineMacro("__PUSH2POP2__");
+  if (HasPPX)
+    Builder.defineMacro("__PPX__");
+  if (HasNDD)
+    Builder.defineMacro("__NDD__");
+  if (HasCCMP)
+    Builder.defineMacro("__CCMP__");
+  if (HasCF)
+    Builder.defineMacro("__CF__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -969,6 +1049,8 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-int8", true)
       .Case("amx-tile", true)
       .Case("avx", true)
+      .Case("avx10.1-256", true)
+      .Case("avx10.1-512", true)
       .Case("avx2", true)
       .Case("avx512f", true)
       .Case("avx512cd", true)
@@ -1053,6 +1135,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("tbm", true)
       .Case("tsxldtrk", true)
       .Case("uintr", true)
+      .Case("usermsr", true)
       .Case("vaes", true)
       .Case("vpclmulqdq", true)
       .Case("wbnoinvd", true)
@@ -1063,6 +1146,12 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("egpr", true)
+      .Case("push2pop2", true)
+      .Case("ppx", true)
+      .Case("ndd", true)
+      .Case("ccmp", true)
+      .Case("cf", true)
       .Default(false);
 }
 
@@ -1076,6 +1165,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
+      .Case("avx10.1-256", HasAVX10_1)
+      .Case("avx10.1-512", HasAVX10_1_512)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
@@ -1162,6 +1253,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("tbm", HasTBM)
       .Case("tsxldtrk", HasTSXLDTRK)
       .Case("uintr", HasUINTR)
+      .Case("usermsr", HasUSERMSR)
       .Case("vaes", HasVAES)
       .Case("vpclmulqdq", HasVPCLMULQDQ)
       .Case("wbnoinvd", HasWBNOINVD)
@@ -1176,6 +1268,12 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("xsaves", HasXSAVES)
       .Case("xsaveopt", HasXSAVEOPT)
       .Case("fullbf16", HasFullBFloat16)
+      .Case("egpr", HasEGPR)
+      .Case("push2pop2", HasPush2Pop2)
+      .Case("ppx", HasPPX)
+      .Case("ndd", HasNDD)
+      .Case("ccmp", HasCCMP)
+      .Case("cf", HasCF)
       .Default(false);
 }
 
@@ -1464,11 +1562,13 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Arrowlake:
     case CK_ArrowlakeS:
     case CK_Lunarlake:
+    case CK_Pantherlake:
     case CK_Sierraforest:
     case CK_Grandridge:
     case CK_Graniterapids:
     case CK_GraniterapidsD:
     case CK_Emeraldrapids:
+    case CK_Clearwaterforest:
     case CK_KNL:
     case CK_KNM:
     // K7

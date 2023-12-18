@@ -13,14 +13,15 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class SqrtTest : public __llvm_libc::testing::Test {
+template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr UIntType HIDDEN_BIT =
-      UIntType(1) << __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+  static constexpr StorageType HIDDEN_BIT =
+      StorageType(1)
+      << LIBC_NAMESPACE::fputil::FloatProperties<T>::FRACTION_LEN;
 
 public:
   typedef T (*SqrtFunc)(T);
@@ -38,26 +39,26 @@ public:
   }
 
   void test_denormal_values(SqrtFunc func) {
-    for (UIntType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
+    for (StorageType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
       denormal.set_mantissa(mant);
       T x = T(denormal);
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 
-    constexpr UIntType COUNT = 200'001;
-    constexpr UIntType STEP = HIDDEN_BIT / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = __llvm_libc::cpp::bit_cast<T>(v);
+    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType STEP = HIDDEN_BIT / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 
   void test_normal_range(SqrtFunc func) {
-    constexpr UIntType COUNT = 200'001;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = __llvm_libc::cpp::bit_cast<T>(v);
+    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      T x = LIBC_NAMESPACE::cpp::bit_cast<T>(v);
       if (isnan(x) || (x < 0)) {
         continue;
       }

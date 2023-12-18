@@ -259,6 +259,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
     case LoongArch::B:
+    case LoongArch::BL:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
     }
@@ -296,7 +297,7 @@ void LoongArchMCCodeEmitter::expandToVectorLDI(
   }
   MCInst TmpInst = MCInstBuilder(Opc).addOperand(MI.getOperand(0)).addImm(Imm);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
 void LoongArchMCCodeEmitter::encodeInstruction(
@@ -326,7 +327,7 @@ void LoongArchMCCodeEmitter::encodeInstruction(
     llvm_unreachable("Unhandled encodeInstruction length!");
   case 4: {
     uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::write(CB, Bits, support::little);
+    support::endian::write(CB, Bits, llvm::endianness::little);
     break;
   }
   }

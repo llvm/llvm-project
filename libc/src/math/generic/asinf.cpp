@@ -20,7 +20,7 @@
 
 #include "inv_trigf_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 static constexpr size_t N_EXCEPTS = 2;
 
@@ -108,8 +108,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x +
-           FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+    return x + FPBits::build_nan(FPBits::FRACTION_MASK);
   }
 
   // Check for exceptional values
@@ -152,4 +151,4 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   return static_cast<float>(fputil::multiply_add(c3, r, c2));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

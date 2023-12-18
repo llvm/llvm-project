@@ -35,6 +35,21 @@
 // CHECK-MVENOFP-NOT: -march=thumbv8.1m.main{{.*}}+mve.fp{{.*}}
 // CHECK-MVENOFP: -mfpu=none
 
+// RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv8.1m.main+fp.dp | FileCheck --check-prefix=CHECK-V8_1_FP_DP %s
+// CHECK-V8_1_FP_DP: -march=thumbv8.1m.main{{.*}}
+// CHECK-V8_1_FP_DP: -mfloat-abi=hard
+// CHECK-V8_1_FP_DP: -mfpu=fp-armv8-fullfp16-d16
+
+// RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv8.1m.main+nofp+fp+nofp.dp | FileCheck --check-prefix=CHECK-V8_1_NO_FP_DP %s
+// CHECK-V8_1_NO_FP_DP: -march=thumbv8.1m.main{{.*}}
+// CHECK-V8_1_NO_FP_DP: -mfloat-abi=hard
+// CHECK-V8_1_NO_FP_DP: -mfpu=fp-armv8-fullfp16-sp-d16
+
+// RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -mcpu=cortex-m85+nofp.dp | FileCheck --check-prefix=CHECK-M85_NO_FP_DP %s
+// CHECK-M85_NO_FP_DP: -march=thumbv8.1m.main{{.*}}
+// CHECK-M85_NO_FP_DP: -mfloat-abi=hard
+// CHECK-M85_NO_FP_DP: -mfpu=fp-armv8-fullfp16-sp-d16
+
 // RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -march=armv8-a+lse | FileCheck --check-prefix=CHECK-LSE %s
 // CHECK-LSE: -march=aarch64{{.*}}+lse{{.*}}
 

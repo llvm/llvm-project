@@ -17,6 +17,8 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dumpmachine            Display the compiler's target processor
+! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-NEXT: -E                      Only run the preprocessor
@@ -48,8 +50,11 @@
 ! HELP-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! HELP-NEXT: -flto=<value>           Set LTO mode
 ! HELP-NEXT: -flto                   Enable LTO in 'full' mode
+! HELP-NEXT: -fms-runtime-lib=<value>
+! HELP-NEXT:                         Select Windows run-time library
 ! HELP-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! HELP-NEXT: -fno-fortran-main       Do not include Fortran_main.a (provided by Flang) when linking
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fno-lto                Disable LTO mode (default)
 ! HELP-NEXT: -fno-ppc-native-vector-element-order
@@ -58,6 +63,7 @@
 ! HELP-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fno-version-loops-for-stride
 ! HELP-NEXT:                         Do not create unit-strided loops (default)
+! HELP-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! HELP-NEXT: -fopenacc               Enable OpenACC
 ! HELP-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-NEXT: -fopenmp-targets=<value>
@@ -82,6 +88,7 @@
 ! HELP-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-NEXT: -fversion-loops-for-stride
 ! HELP-NEXT:                         Create unit-strided versions of loops
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -93,11 +100,15 @@
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
+! HELP-NEXT: -mcode-object-version=<value>
+! HELP-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
 ! HELP-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! HELP-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! HELP-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! HELP-NEXT: -msve-vector-bits=<value>
+! HELP-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! HELP-NEXT: --no-offload-arch=<value>
 ! HELP-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! HELP-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
@@ -132,6 +143,7 @@
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                    Enable predefined and command line preprocessor macros
+! HELP-FC1-NEXT: --dependent-lib=<value> Add dependent library
 ! HELP-FC1-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-fir               Build the parse tree, then lower it to FIR
 ! HELP-FC1-NEXT: -emit-hlfir             Build the parse tree, then lower it to HLFIR
@@ -212,6 +224,7 @@
 ! HELP-FC1-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-FC1-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-FC1-NEXT: -fversion-loops-for-stride
 ! HELP-FC1-NEXT:                         Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -219,8 +232,11 @@
 ! HELP-FC1-NEXT: -init-only              Only execute frontend initialization
 ! HELP-FC1-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -load <dsopath>         Load the named plugin (dynamic shared object)
+! HELP-FC1-NEXT: -mcode-object-version=<value>
+! HELP-FC1-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
 ! HELP-FC1-NEXT: -menable-no-infs        Allow optimization to assume there are no infinities.
 ! HELP-FC1-NEXT: -menable-no-nans        Allow optimization to assume there are no NaNs.
+! HELP-FC1-NEXT: -mframe-pointer=<value> Specify which frame pointers to retain.
 ! HELP-FC1-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-FC1-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>       Put MODULE files in <dir>
@@ -228,6 +244,8 @@
 ! HELP-FC1-NEXT: -mreassociate           Allow reassociation transformations for floating-point instructions
 ! HELP-FC1-NEXT: -mrelocation-model <value>
 ! HELP-FC1-NEXT:                         The relocation model to use
+! HELP-FC1-NEXT: -mvscale-max=<value>    Specify the vscale maximum. Defaults to the vector length agnostic value of "0". (AArch64/RISC-V only)
+! HELP-FC1-NEXT: -mvscale-min=<value>    Specify the vscale minimum. Defaults to "1". (AArch64/RISC-V only)
 ! HELP-FC1-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -opt-record-file <value>
 ! HELP-FC1-NEXT:                         File name to use for YAML optimization record output

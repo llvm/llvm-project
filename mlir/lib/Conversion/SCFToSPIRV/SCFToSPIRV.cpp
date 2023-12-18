@@ -96,8 +96,8 @@ Region::iterator getBlockIt(Region &region, unsigned index) {
 template <typename OpTy>
 class SCFToSPIRVPattern : public OpConversionPattern<OpTy> {
 public:
-  SCFToSPIRVPattern<OpTy>(MLIRContext *context, SPIRVTypeConverter &converter,
-                          ScfToSPIRVContextImpl *scfToSPIRVContext)
+  SCFToSPIRVPattern(MLIRContext *context, SPIRVTypeConverter &converter,
+                    ScfToSPIRVContextImpl *scfToSPIRVContext)
       : OpConversionPattern<OpTy>::OpConversionPattern(converter, context),
         scfToSPIRVContext(scfToSPIRVContext), typeConverter(converter) {}
 
@@ -344,10 +344,15 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
     auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
     loopOp.addEntryAndMergeBlock();
 
-    OpBuilder::InsertionGuard guard(rewriter);
-
     Region &beforeRegion = whileOp.getBefore();
     Region &afterRegion = whileOp.getAfter();
+
+    if (failed(rewriter.convertRegionTypes(&beforeRegion, typeConverter)) ||
+        failed(rewriter.convertRegionTypes(&afterRegion, typeConverter)))
+      return rewriter.notifyMatchFailure(whileOp,
+                                         "Failed to convert region types");
+
+    OpBuilder::InsertionGuard guard(rewriter);
 
     Block &entryBlock = *loopOp.getEntryBlock();
     Block &beforeBlock = beforeRegion.front();

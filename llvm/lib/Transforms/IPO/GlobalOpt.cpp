@@ -17,7 +17,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1614,7 +1613,7 @@ processGlobal(GlobalValue &GV,
               function_ref<TargetTransformInfo &(Function &)> GetTTI,
               function_ref<TargetLibraryInfo &(Function &)> GetTLI,
               function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  if (GV.getName().startswith("llvm."))
+  if (GV.getName().starts_with("llvm."))
     return false;
 
   GlobalStatus GS;
@@ -1680,11 +1679,14 @@ static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
 /// idea here is that we don't want to mess with the convention if the user
 /// explicitly requested something with performance implications like coldcc,
 /// GHC, or anyregcc.
-static bool hasChangeableCC(Function *F) {
+static bool hasChangeableCCImpl(Function *F) {
   CallingConv::ID CC = F->getCallingConv();
 
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
+    return false;
+
+  if (F->isVarArg())
     return false;
 
   // FIXME: Change CC for the whole chain of musttail calls when possible.
@@ -1706,7 +1708,16 @@ static bool hasChangeableCC(Function *F) {
     if (BB.getTerminatingMustTailCall())
       return false;
 
-  return true;
+  return !F->hasAddressTaken();
+}
+
+using ChangeableCCCacheTy = SmallDenseMap<Function *, bool, 8>;
+static bool hasChangeableCC(Function *F,
+                            ChangeableCCCacheTy &ChangeableCCCache) {
+  auto Res = ChangeableCCCache.try_emplace(F, false);
+  if (Res.second)
+    Res.first->second = hasChangeableCCImpl(F);
+  return Res.first->second;
 }
 
 /// Return true if the block containing the call site has a BlockFrequency of
@@ -1760,7 +1771,8 @@ static void changeCallSitesToColdCC(Function *F) {
 // coldcc calling convention.
 static bool
 hasOnlyColdCalls(Function &F,
-                 function_ref<BlockFrequencyInfo &(Function &)> GetBFI) {
+                 function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+                 ChangeableCCCacheTy &ChangeableCCCache) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
@@ -1779,8 +1791,7 @@ hasOnlyColdCalls(Function &F,
         if (!CalledFn->hasLocalLinkage())
           return false;
         // Check if it's valid to use coldcc calling convention.
-        if (!hasChangeableCC(CalledFn) || CalledFn->isVarArg() ||
-            CalledFn->hasAddressTaken())
+        if (!hasChangeableCC(CalledFn, ChangeableCCCache))
           return false;
         BlockFrequencyInfo &CallerBFI = GetBFI(F);
         if (!isColdCallSite(*CI, CallerBFI))
@@ -1905,9 +1916,10 @@ OptimizeFunctions(Module &M,
 
   bool Changed = false;
 
+  ChangeableCCCacheTy ChangeableCCCache;
   std::vector<Function *> AllCallsCold;
   for (Function &F : llvm::make_early_inc_range(M))
-    if (hasOnlyColdCalls(F, GetBFI))
+    if (hasOnlyColdCalls(F, GetBFI, ChangeableCCCache))
       AllCallsCold.push_back(&F);
 
   // Optimize functions.
@@ -1969,7 +1981,7 @@ OptimizeFunctions(Module &M,
       continue;
     }
 
-    if (hasChangeableCC(&F) && !F.isVarArg() && !F.hasAddressTaken()) {
+    if (hasChangeableCC(&F, ChangeableCCCache)) {
       NumInternalFunc++;
       TargetTransformInfo &TTI = GetTTI(F);
       // Change the calling convention to coldcc if either stress testing is
@@ -1979,6 +1991,7 @@ OptimizeFunctions(Module &M,
       if (EnableColdCCStressTest ||
           (TTI.useColdCCForColdCall(F) &&
            isValidCandidateForColdCC(F, GetBFI, AllCallsCold))) {
+        ChangeableCCCache.erase(&F);
         F.setCallingConv(CallingConv::Cold);
         changeCallSitesToColdCC(&F);
         Changed = true;
@@ -1986,7 +1999,7 @@ OptimizeFunctions(Module &M,
       }
     }
 
-    if (hasChangeableCC(&F) && !F.isVarArg() && !F.hasAddressTaken()) {
+    if (hasChangeableCC(&F, ChangeableCCCache)) {
       // If this function has a calling convention worth changing, is not a
       // varargs function, and is only called directly, promote it to use the
       // Fast calling convention.

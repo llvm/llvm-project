@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H
 
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/architectures.h"
@@ -19,7 +19,7 @@
 #include "aarch64/nearest_integer.h"
 #else
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // This is a fast implementation for rounding to a nearest integer that.
@@ -60,7 +60,7 @@ LIBC_INLINE double nearest_integer(double x) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEAREST_INTEGER_H

@@ -52,3 +52,4 @@
 // X86_64_V4-NEXT: #define __AVX512F__ 1
 // X86_64_V4-NEXT: #define __AVX512VL__ 1
 // X86_64_V4-NOT:  #define __AVX512{{.*}}
+// X86_64_V4:      #define __EVEX512__ 1

@@ -104,7 +104,7 @@ public:
     return File;
   }
 
-  OptionalFileEntryRefDegradesToFileEntryPtr getFile() const {
+  OptionalFileEntryRef getFile() const {
     if (auto *P = Val.getPointer())
       return FileEntryRef(*P);
     return std::nullopt;
@@ -123,8 +123,8 @@ public:
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, unsigned Generation)
-      : Kind(Kind), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
+      : Kind(Kind), File(File), Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
@@ -176,7 +176,7 @@ public:
   bool DidReadTopLevelSubmodule = false;
 
   /// The file entry for the module file.
-  OptionalFileEntryRefDegradesToFileEntryPtr File;
+  FileEntryRef File;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.
@@ -291,9 +291,6 @@ public:
   /// Offsets for all of the source location entries in the
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
-
-  /// SLocEntries that we're going to preload.
-  SmallVector<uint64_t, 4> PreloadSLocEntries;
 
   /// Remapping table for source locations in this module.
   ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>

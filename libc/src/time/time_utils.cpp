@@ -11,10 +11,10 @@
 
 #include <limits.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace time_utils {
 
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 static int64_t computeRemainingYears(int64_t daysPerYears,
                                      int64_t quotientYears,
@@ -151,4 +151,4 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
 }
 
 } // namespace time_utils
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

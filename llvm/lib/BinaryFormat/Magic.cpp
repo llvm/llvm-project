@@ -26,7 +26,7 @@ using namespace llvm::sys::fs;
 
 template <size_t N>
 static bool startswith(StringRef Magic, const char (&S)[N]) {
-  return Magic.startswith(StringRef(S, N - 1));
+  return Magic.starts_with(StringRef(S, N - 1));
 }
 
 /// Identify the magic in magic.
@@ -72,6 +72,14 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 0x03:
     if (startswith(Magic, "\x03\xF0\x00"))
       return file_magic::goff_object;
+    // SPIR-V format in little-endian mode.
+    if (startswith(Magic, "\x03\x02\x23\x07"))
+      return file_magic::spirv_object;
+    break;
+
+  case 0x07: // SPIR-V format in big-endian mode.
+    if (startswith(Magic, "\x07\x23\x02\x03"))
+      return file_magic::spirv_object;
     break;
 
   case 0x10:
@@ -86,6 +94,10 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 'B':
     if (startswith(Magic, "BC\xC0\xDE"))
       return file_magic::bitcode;
+    break;
+  case 'C':
+    if (startswith(Magic, "CCOB"))
+      return file_magic::offload_bundle_compressed;
     break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
@@ -213,11 +225,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "MZ") && Magic.size() >= 0x3c + 4) {
       uint32_t off = read32le(Magic.data() + 0x3c);
       // PE/COFF file, either EXE or DLL.
-      if (Magic.substr(off).startswith(
+      if (Magic.substr(off).starts_with(
               StringRef(COFF::PEMagic, sizeof(COFF::PEMagic))))
         return file_magic::pecoff_executable;
     }
-    if (Magic.startswith("Microsoft C/C++ MSF 7.00\r\n"))
+    if (Magic.starts_with("Microsoft C/C++ MSF 7.00\r\n"))
       return file_magic::pdb;
     if (startswith(Magic, "MDMP"))
       return file_magic::minidump;
@@ -250,6 +262,13 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (Magic[1] == char(0xA6))
       return file_magic::coff_object;
     break;
+
+  case '_': {
+    const char OBMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
+    if (Magic.size() >= sizeof(OBMagic) && startswith(Magic, OBMagic))
+      return file_magic::offload_bundle;
+    break;
+  }
 
   default:
     break;

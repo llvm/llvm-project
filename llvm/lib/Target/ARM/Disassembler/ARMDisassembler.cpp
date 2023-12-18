@@ -135,9 +135,9 @@ public:
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                   const MCInstrInfo *MCII)
       : MCDisassembler(STI, Ctx), MCII(MCII) {
-    InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
-                                ? llvm::support::big
-                                : llvm::support::little;
+        InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
+                                    ? llvm::endianness::big
+                                    : llvm::endianness::little;
   }
 
   ~ARMDisassembler() override = default;
@@ -166,7 +166,7 @@ private:
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
 
-  llvm::support::endianness InstructionEndianness;
+  llvm::endianness InstructionEndianness;
 };
 
 } // end anonymous namespace

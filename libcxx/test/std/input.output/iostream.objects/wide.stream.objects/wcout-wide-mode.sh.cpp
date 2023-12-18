@@ -13,10 +13,10 @@
 // UNSUPPORTED: no-wide-characters
 // REQUIRES: target={{.+}}-windows-{{.+}}
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: check-stdout.sh, test.dat
+// FILE_DEPENDENCIES: test.dat
 // RUN: %{build}
-// RUN: %{exec} bash check-stdout.sh "%t.exe" "test.dat"
+// RUN: %{exec} %t.exe > %t.actual
+// RUN: diff test.dat %t.actual
 
 // Check that wcout works, preserving the unicode characters, after switching
 // stdout to wide mode.

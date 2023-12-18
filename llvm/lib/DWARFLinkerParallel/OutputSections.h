@@ -21,6 +21,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,6 +30,8 @@
 
 namespace llvm {
 namespace dwarflinker_parallel {
+
+class TypeUnit;
 
 /// List of tracked debug tables.
 enum class DebugSectionKind : uint8_t {
@@ -47,6 +50,13 @@ enum class DebugSectionKind : uint8_t {
   DebugStr,
   DebugLineStr,
   DebugStrOffsets,
+  DebugPubNames,
+  DebugPubTypes,
+  DebugNames,
+  AppleNames,
+  AppleNamespaces,
+  AppleObjC,
+  AppleTypes,
   NumberOfEnumEntries // must be last
 };
 constexpr static size_t SectionKindsNum =
@@ -105,7 +115,7 @@ struct DebugDieRefPatch : SectionPatch {
                    uint32_t RefIdx);
 
   PointerIntPair<CompileUnit *, 1> RefCU;
-  uint64_t RefDieIdxOrClonedOffset;
+  uint64_t RefDieIdxOrClonedOffset = 0;
 };
 
 /// This structure is used to update reference to the DIE of ULEB128 form.
@@ -114,7 +124,53 @@ struct DebugULEB128DieRefPatch : SectionPatch {
                           CompileUnit *RefCU, uint32_t RefIdx);
 
   PointerIntPair<CompileUnit *, 1> RefCU;
-  uint64_t RefDieIdxOrClonedOffset;
+  uint64_t RefDieIdxOrClonedOffset = 0;
+};
+
+/// This structure is used to update reference to the type DIE.
+struct DebugDieTypeRefPatch : SectionPatch {
+  DebugDieTypeRefPatch(uint64_t PatchOffset, TypeEntry *RefTypeName);
+
+  TypeEntry *RefTypeName = nullptr;
+};
+
+/// This structure is used to update reference to the type DIE.
+struct DebugType2TypeDieRefPatch : SectionPatch {
+  DebugType2TypeDieRefPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
+                            TypeEntry *RefTypeName);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  TypeEntry *RefTypeName = nullptr;
+};
+
+struct DebugTypeStrPatch : SectionPatch {
+  DebugTypeStrPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
+                    StringEntry *String);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  StringEntry *String = nullptr;
+};
+
+struct DebugTypeLineStrPatch : SectionPatch {
+  DebugTypeLineStrPatch(uint64_t PatchOffset, DIE *Die, TypeEntry *TypeName,
+                        StringEntry *String);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  StringEntry *String = nullptr;
+};
+
+struct DebugTypeDeclFilePatch {
+  DebugTypeDeclFilePatch(DIE *Die, TypeEntry *TypeName, StringEntry *Directory,
+                         StringEntry *FilePath);
+
+  DIE *Die = nullptr;
+  TypeEntry *TypeName = nullptr;
+  StringEntry *Directory = nullptr;
+  StringEntry *FilePath = nullptr;
+  uint32_t FileID = 0;
 };
 
 /// Type for section data.
@@ -131,20 +187,27 @@ struct SectionDescriptor {
   friend OutputSections;
 
   SectionDescriptor(DebugSectionKind SectionKind, LinkingGlobalData &GlobalData,
-                    dwarf::FormParams Format, support::endianness Endianess)
-      : OS(Contents), GlobalData(GlobalData), SectionKind(SectionKind),
-        Format(Format), Endianess(Endianess) {
-    ListDebugStrPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugLineStrPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugRangePatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugLocPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugDieRefPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugULEB128DieRefPatch.setAllocator(&GlobalData.getAllocator());
-    ListDebugOffsetPatch.setAllocator(&GlobalData.getAllocator());
-  }
+                    dwarf::FormParams Format, llvm::endianness Endianess)
+      : OS(Contents), ListDebugStrPatch(&GlobalData.getAllocator()),
+        ListDebugLineStrPatch(&GlobalData.getAllocator()),
+        ListDebugRangePatch(&GlobalData.getAllocator()),
+        ListDebugLocPatch(&GlobalData.getAllocator()),
+        ListDebugDieRefPatch(&GlobalData.getAllocator()),
+        ListDebugULEB128DieRefPatch(&GlobalData.getAllocator()),
+        ListDebugOffsetPatch(&GlobalData.getAllocator()),
+        ListDebugDieTypeRefPatch(&GlobalData.getAllocator()),
+        ListDebugType2TypeDieRefPatch(&GlobalData.getAllocator()),
+        ListDebugTypeStrPatch(&GlobalData.getAllocator()),
+        ListDebugTypeLineStrPatch(&GlobalData.getAllocator()),
+        ListDebugTypeDeclFilePatch(&GlobalData.getAllocator()),
+        GlobalData(GlobalData), SectionKind(SectionKind), Format(Format),
+        Endianess(Endianess) {}
 
-  /// Erase whole section contents(data bits, list of patches, format).
-  void erase();
+  /// Erase whole section contents(data bits, list of patches).
+  void clearAllSectionData();
+
+  /// Erase only section output data bits.
+  void clearSectionContent();
 
   /// When objects(f.e. compile units) are glued into the single file,
   /// the debug sections corresponding to the concrete object are assigned
@@ -157,7 +220,7 @@ struct SectionDescriptor {
 
   /// Section patches.
 #define ADD_PATCHES_LIST(T)                                                    \
-  T &notePatch(const T &Patch) { return List##T.noteItem(Patch); }             \
+  T &notePatch(const T &Patch) { return List##T.add(Patch); }                  \
   ArrayList<T> List##T;
 
   ADD_PATCHES_LIST(DebugStrPatch)
@@ -167,9 +230,16 @@ struct SectionDescriptor {
   ADD_PATCHES_LIST(DebugDieRefPatch)
   ADD_PATCHES_LIST(DebugULEB128DieRefPatch)
   ADD_PATCHES_LIST(DebugOffsetPatch)
+  ADD_PATCHES_LIST(DebugDieTypeRefPatch)
+  ADD_PATCHES_LIST(DebugType2TypeDieRefPatch)
+  ADD_PATCHES_LIST(DebugTypeStrPatch)
+  ADD_PATCHES_LIST(DebugTypeLineStrPatch)
+  ADD_PATCHES_LIST(DebugTypeDeclFilePatch)
 
-  /// Offsets to some fields are not known at the moment of noting patch.
-  /// In that case we remember pointers to patch offset to update them later.
+  /// While creating patches, offsets to attributes may be partially
+  /// unknown(because size of abbreviation number is unknown). In such case we
+  /// remember patch itself and pointer to patch application offset to add size
+  /// of abbreviation number later.
   template <typename T>
   void notePatchWithOffsetUpdate(const T &Patch,
                                  OffsetsPtrVector &PatchesOffsetsList) {
@@ -211,12 +281,11 @@ struct SectionDescriptor {
   /// Emit specified integer value into the current section contents.
   void emitIntVal(uint64_t Val, unsigned Size);
 
-  /// Emit specified string value into the current section contents.
   void emitString(dwarf::Form StringForm, const char *StringVal);
 
   /// Emit specified inplace string value into the current section contents.
   void emitInplaceString(StringRef String) {
-    OS << String;
+    OS << GlobalData.translateString(String);
     emitIntVal(0, 1);
   }
 
@@ -236,7 +305,7 @@ struct SectionDescriptor {
   const StringLiteral &getName() const { return getSectionName(SectionKind); }
 
   /// Returns endianess used by section.
-  support::endianness getEndianess() const { return Endianess; }
+  llvm::endianness getEndianess() const { return Endianess; }
 
   /// Returns FormParams used by section.
   dwarf::FormParams getFormParams() const { return Format; }
@@ -255,8 +324,7 @@ protected:
   void applySLEB128(uint64_t PatchOffset, uint64_t Val);
 
   /// Sets output format.
-  void setOutputFormat(dwarf::FormParams Format,
-                       support::endianness Endianess) {
+  void setOutputFormat(dwarf::FormParams Format, llvm::endianness Endianess) {
     this->Format = Format;
     this->Endianess = Endianess;
   }
@@ -277,7 +345,7 @@ protected:
 
   /// Output format.
   dwarf::FormParams Format = {4, 4, dwarf::DWARF32};
-  support::endianness Endianess = support::endianness::little;
+  llvm::endianness Endianess = llvm::endianness::little;
 };
 
 /// This class keeps contents and offsets to the debug sections. Any objects
@@ -288,15 +356,46 @@ public:
   OutputSections(LinkingGlobalData &GlobalData) : GlobalData(GlobalData) {}
 
   /// Sets output format for all keeping sections.
-  void setOutputFormat(dwarf::FormParams Format,
-                       support::endianness Endianness) {
+  void setOutputFormat(dwarf::FormParams Format, llvm::endianness Endianness) {
     this->Format = Format;
     this->Endianness = Endianness;
   }
 
   /// Returns descriptor for the specified section of \p SectionKind.
-  std::optional<const SectionDescriptor *>
+  /// The descriptor should already be created. The llvm_unreachable
+  /// would be raised if it is not.
+  const SectionDescriptor &
   getSectionDescriptor(DebugSectionKind SectionKind) const {
+    SectionsSetTy::const_iterator It = SectionDescriptors.find(SectionKind);
+
+    if (It == SectionDescriptors.end())
+      llvm_unreachable(
+          formatv("Section {0} does not exist", getSectionName(SectionKind))
+              .str()
+              .c_str());
+
+    return It->second;
+  }
+
+  /// Returns descriptor for the specified section of \p SectionKind.
+  /// The descriptor should already be created. The llvm_unreachable
+  /// would be raised if it is not.
+  SectionDescriptor &getSectionDescriptor(DebugSectionKind SectionKind) {
+    SectionsSetTy::iterator It = SectionDescriptors.find(SectionKind);
+
+    if (It == SectionDescriptors.end())
+      llvm_unreachable(
+          formatv("Section {0} does not exist", getSectionName(SectionKind))
+              .str()
+              .c_str());
+
+    return It->second;
+  }
+
+  /// Returns descriptor for the specified section of \p SectionKind.
+  /// Returns std::nullopt if section descriptor is not created yet.
+  std::optional<const SectionDescriptor *>
+  tryGetSectionDescriptor(DebugSectionKind SectionKind) const {
     SectionsSetTy::const_iterator It = SectionDescriptors.find(SectionKind);
 
     if (It == SectionDescriptors.end())
@@ -306,8 +405,9 @@ public:
   }
 
   /// Returns descriptor for the specified section of \p SectionKind.
+  /// Returns std::nullopt if section descriptor is not created yet.
   std::optional<SectionDescriptor *>
-  getSectionDescriptor(DebugSectionKind SectionKind) {
+  tryGetSectionDescriptor(DebugSectionKind SectionKind) {
     SectionsSetTy::iterator It = SectionDescriptors.find(SectionKind);
 
     if (It == SectionDescriptors.end())
@@ -317,7 +417,7 @@ public:
   }
 
   /// Returns descriptor for the specified section of \p SectionKind.
-  /// If descriptor does not exist then create it.
+  /// If descriptor does not exist then creates it.
   SectionDescriptor &
   getOrCreateSectionDescriptor(DebugSectionKind SectionKind) {
     return SectionDescriptors
@@ -328,7 +428,7 @@ public:
   /// Erases data of all sections.
   void eraseSections() {
     for (auto &Section : SectionDescriptors)
-      Section.second.erase();
+      Section.second.clearAllSectionData();
   }
 
   /// Enumerate all sections and call \p Handler for each.
@@ -353,10 +453,11 @@ public:
   /// Enumerate all sections, for each section apply all section patches.
   void applyPatches(SectionDescriptor &Section,
                     StringEntryToDwarfStringPoolEntryMap &DebugStrStrings,
-                    StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings);
+                    StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings,
+                    TypeUnit *TypeUnitPtr);
 
   /// Endiannes for the sections.
-  support::endianness getEndianness() const { return Endianness; }
+  llvm::endianness getEndianness() const { return Endianness; }
 
   /// Return DWARF version.
   uint16_t getVersion() const { return Format.Version; }
@@ -388,7 +489,7 @@ protected:
   dwarf::FormParams Format = {4, 4, dwarf::DWARF32};
 
   /// Endiannes for sections.
-  support::endianness Endianness = support::endian::system_endianness();
+  llvm::endianness Endianness = llvm::endianness::native;
 
   /// All keeping sections.
   using SectionsSetTy = std::map<DebugSectionKind, SectionDescriptor>;

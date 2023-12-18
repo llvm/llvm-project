@@ -108,6 +108,14 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
   }
 }
 
+const Scope *FindOpenACCConstructContaining(const Scope *scope) {
+  return scope ? FindScopeContaining(*scope,
+                     [](const Scope &s) {
+                       return s.kind() == Scope::Kind::OpenACCConstruct;
+                     })
+               : nullptr;
+}
+
 // 7.5.2.4 "same derived type" test -- rely on IsTkCompatibleWith() and its
 // infrastructure to detect and handle comparisons on distinct (but "same")
 // sequence/bind(C) derived types
@@ -836,6 +844,16 @@ const Symbol *HasImpureFinal(const Symbol &original) {
   return nullptr;
 }
 
+bool MayRequireFinalization(const DerivedTypeSpec &derived) {
+  return IsFinalizable(derived) ||
+      FindPolymorphicAllocatableUltimateComponent(derived);
+}
+
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
+  DirectComponentIterator directs{derived};
+  return std::any_of(directs.begin(), directs.end(), IsAllocatable);
+}
+
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
@@ -1249,7 +1267,8 @@ static bool StopAtComponentPre(const Symbol &component) {
   } else if constexpr (componentKind == ComponentKind::Ultimate) {
     return component.has<ProcEntityDetails>() ||
         IsAllocatableOrObjectPointer(&component) ||
-        (component.get<ObjectEntityDetails>().type() &&
+        (component.has<ObjectEntityDetails>() &&
+            component.get<ObjectEntityDetails>().type() &&
             component.get<ObjectEntityDetails>().type()->AsIntrinsic());
   } else if constexpr (componentKind == ComponentKind::Potential) {
     return !IsPointer(component);

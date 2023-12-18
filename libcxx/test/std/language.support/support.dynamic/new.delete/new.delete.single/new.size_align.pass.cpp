@@ -10,12 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
-// https://reviews.llvm.org/D129198 is not in AppleClang 14
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.13{{(.0)?}} && apple-clang-14
-
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 

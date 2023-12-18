@@ -359,12 +359,13 @@ bool NaryReassociatePass::requiresSignExtension(Value *Index,
 GetElementPtrInst *
 NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
                                               unsigned I, Type *IndexedType) {
+  SimplifyQuery SQ(*DL, DT, AC, GEP);
   Value *IndexToSplit = GEP->getOperand(I + 1);
   if (SExtInst *SExt = dyn_cast<SExtInst>(IndexToSplit)) {
     IndexToSplit = SExt->getOperand(0);
   } else if (ZExtInst *ZExt = dyn_cast<ZExtInst>(IndexToSplit)) {
     // zext can be treated as sext if the source is non-negative.
-    if (isKnownNonNegative(ZExt->getOperand(0), *DL, 0, AC, GEP, DT))
+    if (isKnownNonNegative(ZExt->getOperand(0), SQ))
       IndexToSplit = ZExt->getOperand(0);
   }
 
@@ -373,8 +374,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // nsw, we cannot split the add because
     //   sext(LHS + RHS) != sext(LHS) + sext(RHS).
     if (requiresSignExtension(IndexToSplit, GEP) &&
-        computeOverflowForSignedAdd(AO, *DL, AC, GEP, DT) !=
-            OverflowResult::NeverOverflows)
+        computeOverflowForSignedAdd(AO, SQ) != OverflowResult::NeverOverflows)
       return nullptr;
 
     Value *LHS = AO->getOperand(0), *RHS = AO->getOperand(1);
@@ -402,7 +402,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
-  if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&
+  if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
       DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
           DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
               .getFixedValue()) {

@@ -14,6 +14,6 @@
 #include <semaphore>
 
 void not_positive() {
-  std::counting_semaphore<-1> s(2); // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}The least maximum value must be a positive number}}
+  std::counting_semaphore<-1> s(2); // expected-error-re@*:* {{static assertion failed{{.*}}The least maximum value must be a positive number}}
   (void)s;
 }

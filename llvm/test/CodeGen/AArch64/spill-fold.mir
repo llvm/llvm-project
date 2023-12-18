@@ -1,10 +1,13 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass greedy -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64_be-none-linux-gnu -run-pass greedy -verify-machineinstrs  -o - %s | FileCheck %s
 --- |
   define i64 @test_subreg_spill_fold() { ret i64 0 }
   define i64 @test_subreg_spill_fold2() { ret i64 0 }
   define i64 @test_subreg_spill_fold3() { ret i64 0 }
+  define <4 x float> @test_subreg_spill_fold4() { ret <4 x float> undef }
   define i64 @test_subreg_fill_fold() { ret i64 0 }
   define double @test_subreg_fill_fold2() { ret double 0.0 }
+  define <4 x float> @test_subreg_fill_fold3() { ret <4 x float> undef }
   define i64 @test_nzcv_spill_fold() { ret i64 0 }
 ...
 ---
@@ -50,6 +53,21 @@ body:             |
     RET_ReallyLR implicit $x0
 ...
 ---
+# CHECK-LABEL: name: test_subreg_spill_fold4
+# A spilled write to a 128-bit register needs a 128-bit store
+name:            test_subreg_spill_fold4
+registers:
+  - { id: 0, class: fpr128 }
+body:             |
+  bb.0:
+    ; CHECK:      undef %1.ssub:fpr128 = COPY $wzr
+    ; CHECK-NEXT: STRQui %1, %stack.0, 0 :: (store (s128) into %stack.0)
+    undef %0.ssub:fpr128 = COPY $wzr
+    INLINEASM &nop, 1, 12, implicit-def dead $d0, 12, implicit-def dead $d1, 12, implicit-def dead $d2, 12, implicit-def dead $d3, 12, implicit-def dead $d4, 12, implicit-def dead $d5, 12, implicit-def dead $d6, 12, implicit-def dead $d7, 12, implicit-def dead $d8, 12, implicit-def dead $d9, 12, implicit-def dead $d10, 12, implicit-def dead $d11, 12, implicit-def dead $d12, 12, implicit-def dead $d13, 12, implicit-def dead $d14, 12, implicit-def dead $d15, 12, implicit-def dead $d16, 12, implicit-def dead $d17, 12, implicit-def dead $d18, 12, implicit-def dead $d19, 12, implicit-def dead $d20, 12, implicit-def dead $d21, 12, implicit-def dead $d22, 12, implicit-def dead $d23, 12, implicit-def dead $d24, 12, implicit-def dead $d25, 12, implicit-def dead $d26, 12, implicit-def dead $d27, 12, implicit-def dead $d28, 12, implicit-def dead $d29, 12, implicit-def dead $d30, 12, implicit-def $d31
+    $q0 = COPY %0
+    RET_ReallyLR implicit $q0
+...
+---
 # CHECK-LABEL: name: test_subreg_fill_fold
 # Ensure that the filled COPY is eliminated and folded into the fill load.
 name:            test_subreg_fill_fold
@@ -80,6 +98,25 @@ body:             |
     undef %1.ssub = COPY %0
     $d0 = COPY %1
     RET_ReallyLR implicit $d0
+...
+---
+# CHECK-LABEL: name: test_subreg_fill_fold3
+# A filled copy from a sub-register should load the whole register
+name:              test_subreg_fill_fold3
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr128 }
+liveins:
+  - { reg: '$q0' }
+body:             |
+  bb.0:
+    liveins: $q0
+    %0 = COPY $q0
+    INLINEASM &nop, 1, 12, implicit-def dead $d0, 12, implicit-def dead $d1, 12, implicit-def dead $d2, 12, implicit-def dead $d3, 12, implicit-def dead $d4, 12, implicit-def dead $d5, 12, implicit-def dead $d6, 12, implicit-def dead $d7, 12, implicit-def dead $d8, 12, implicit-def dead $d9, 12, implicit-def dead $d10, 12, implicit-def dead $d11, 12, implicit-def dead $d12, 12, implicit-def dead $d13, 12, implicit-def dead $d14, 12, implicit-def dead $d15, 12, implicit-def dead $d16, 12, implicit-def dead $d17, 12, implicit-def dead $d18, 12, implicit-def dead $d19, 12, implicit-def dead $d20, 12, implicit-def dead $d21, 12, implicit-def dead $d22, 12, implicit-def dead $d23, 12, implicit-def dead $d24, 12, implicit-def dead $d25, 12, implicit-def dead $d26, 12, implicit-def dead $d27, 12, implicit-def dead $d28, 12, implicit-def dead $d29, 12, implicit-def dead $d30, 12, implicit-def $d31
+    ; CHECK:      %1:fpr128 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
+    ; CHECK-NEXT: $s0 = COPY %1.ssub
+    $s0 = COPY %0.ssub
+    RET_ReallyLR implicit $s0
 ...
 ---
 # CHECK-LABEL: name: test_nzcv_spill_fold

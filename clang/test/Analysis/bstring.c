@@ -483,8 +483,7 @@ int memcmp8(char *a, size_t n) {
 //===----------------------------------------------------------------------===
 
 #define bcopy BUILTIN(bcopy)
-// __builtin_bcopy is not defined with const in Builtins.def.
-void bcopy(/*const*/ void *s1, void *s2, size_t n);
+void bcopy(const void *s1, void *s2, size_t n);
 
 
 void bcopy0 (void) {

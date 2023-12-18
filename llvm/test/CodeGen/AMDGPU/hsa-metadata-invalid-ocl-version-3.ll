@@ -3,10 +3,12 @@
 ; Make sure llc does not crash for invalid opencl version metadata.
 
 ; CHECK: ---
-; CHECK: Version: [ 1, 0 ]
+; CHECK: amdhsa.version:
+; CHECK-NEXT: - 1
+; CHECK-NEXT: - 1
 ; CHECK: ...
 
 !opencl.ocl.version = !{!0}
 !llvm.module.flags = !{!1}
 !0 = !{i32 1}
-!1 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!1 = !{i32 1, !"amdgpu_code_object_version", i32 400}

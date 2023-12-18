@@ -47,7 +47,12 @@ struct __libcpp_datasizeof {
   };
 #endif
 
+  // _FirstPaddingByte<> is sometimes non-standard layout. Using `offsetof` is UB in that case, but GCC and Clang allow
+  // the use as an extension.
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-offsetof")
   static const size_t value = offsetof(_FirstPaddingByte<>, __first_padding_byte_);
+  _LIBCPP_DIAGNOSTIC_POP
 };
 
 _LIBCPP_END_NAMESPACE_STD

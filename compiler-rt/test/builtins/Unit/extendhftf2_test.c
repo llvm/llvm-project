@@ -12,7 +12,7 @@ COMPILER_RT_ABI long double __extendhftf2(TYPE_FP16 a);
 
 int test__extendhftf2(TYPE_FP16 a, uint64_t expectedHi, uint64_t expectedLo) {
   long double x = __extendhftf2(a);
-  int ret = compareResultLD(x, expectedHi, expectedLo);
+  int ret = compareResultF128(x, expectedHi, expectedLo);
 
   if (ret) {
     printf("error in test__extendhftf2(%#.4x) = %.20Lf, "

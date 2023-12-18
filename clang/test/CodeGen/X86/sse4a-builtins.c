@@ -37,8 +37,22 @@ void test_mm_stream_sd(double *p, __m128d a) {
    _mm_stream_sd(p, a);
 }
 
+void test_mm_stream_sd_void(void *p, __m128d a) {
+  // CHECK-LABEL: test_mm_stream_sd_void
+  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
+  // CHECK: store double %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+   _mm_stream_sd(p, a);
+}
+
 void test_mm_stream_ss(float *p, __m128 a) {
   // CHECK-LABEL: test_mm_stream_ss
+  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
+  // CHECK: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  _mm_stream_ss(p, a);
+}
+
+void test_mm_stream_s_void(void *p, __m128 a) {
+  // CHECK-LABEL: test_mm_stream_s_void
   // CHECK: extractelement <4 x float> %{{.*}}, i64 0
   // CHECK: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
   _mm_stream_ss(p, a);

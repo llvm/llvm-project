@@ -21,6 +21,8 @@
 ; ENABLED-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  RISCVPreLegalizerCombiner
 ; ENABLED-NEXT:  Legalizer
+; ENABLED-O1-NEXT:  MachineDominator Tree Construction
+; ENABLED-O1-NEXT:  RISCVPostLegalizerCombiner
 ; ENABLED-NEXT:  RegBankSelect
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  Lazy Branch Probability Analysis

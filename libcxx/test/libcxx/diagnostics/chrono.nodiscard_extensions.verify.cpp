@@ -8,7 +8,7 @@
 
 // Check that format functions are marked [[nodiscard]] as a conforming extension
 
-// UNSUPPORTED: c++03, c++11, c++14 ,c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
 // XFAIL: libcpp-has-no-incomplete-tzdb

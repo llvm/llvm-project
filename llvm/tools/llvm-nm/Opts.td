@@ -22,6 +22,7 @@ def export_symbols : FF<"export-symbols", "Export symbol list for all inputs">;
 def extern_only : FF<"extern-only", "Show only external symbols">;
 defm format : Eq<"format", "Specify output format: bsd (default), posix, sysv, darwin, just-symbols">, MetaVarName<"<format>">;
 def help : FF<"help", "Display this help">;
+def line_numbers : FF<"line-numbers", "Use debugging information to print symbols' filenames and line numbers">;
 def no_llvm_bc : FF<"no-llvm-bc", "Disable LLVM bitcode reader">;
 def no_sort : FF<"no-sort", "Show symbols in order encountered">;
 def no_weak : FF<"no-weak", "Show only non-weak symbols">;
@@ -67,6 +68,7 @@ def : JoinedOrSeparate<["-"], "f">, HelpText<"Alias for --format">, Alias<format
 def : F<"h", "Alias for --help">, Alias<help>;
 def : F<"g", "Alias for --extern-only">, Alias<extern_only>;
 def : F<"j", "Alias for --format=just-symbols">, Alias<format_EQ>, AliasArgs<["just-symbols"]>;
+def : F<"l", "Alias for --line-numbers">, Alias<line_numbers>;
 def : F<"m", "Alias for --format=darwin">, Alias<format_EQ>, AliasArgs<["darwin"]>;
 def : F<"M", "Deprecated alias for --print-armap">, Alias<print_armap>, Flags<[HelpHidden]>;
 def : F<"n", "Alias for --numeric-sort">, Alias<numeric_sort>;

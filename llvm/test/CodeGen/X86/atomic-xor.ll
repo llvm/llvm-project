@@ -22,32 +22,54 @@ define i128 @xor128_signbit_used(ptr %p) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    movl %esp, %eax
-; X86-NEXT:    pushl $-2147483648 # imm = 0x80000000
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    movl 12(%ebp), %edi
+; X86-NEXT:    movl 12(%edi), %ecx
+; X86-NEXT:    movl 8(%edi), %edx
+; X86-NEXT:    movl (%edi), %ebx
+; X86-NEXT:    movl 4(%edi), %esi
+; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:  .LBB1_1: # %atomicrmw.start
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl %ebx, (%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    addl $-2147483648, %ecx # imm = 0x80000000
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl 12(%ebp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll __sync_fetch_and_xor_16
-; X86-NEXT:    addl $20, %esp
-; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl $16
+; X86-NEXT:    calll __atomic_compare_exchange@PLT
+; X86-NEXT:    addl $24, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 8(%esi)
-; X86-NEXT:    movl %edx, 12(%esi)
-; X86-NEXT:    movl %eax, (%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    movl (%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    je .LBB1_1
+; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %ebx, (%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
@@ -56,7 +78,8 @@ define i128 @xor128_signbit_used(ptr %p) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
 ; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    callq __sync_fetch_and_xor_16@PLT
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    callq __atomic_fetch_xor_16@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %r = atomicrmw xor ptr %p, i128 170141183460469231731687303715884105728 monotonic

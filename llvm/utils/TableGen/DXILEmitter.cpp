@@ -81,7 +81,7 @@ struct DXILOperationData {
     if (R->getValue("llvm_intrinsic")) {
       auto *IntrinsicDef = R->getValueAsDef("llvm_intrinsic");
       auto DefName = IntrinsicDef->getName();
-      assert(DefName.startswith("int_") && "invalid intrinsic name");
+      assert(DefName.starts_with("int_") && "invalid intrinsic name");
       // Remove the int_ from intrinsic name.
       Intrinsic = DefName.substr(4);
     }

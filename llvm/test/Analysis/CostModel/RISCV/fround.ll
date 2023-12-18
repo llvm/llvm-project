@@ -22,7 +22,7 @@ define void @floor() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.floor.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.floor.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.floor.f32(float undef)
   call <2 x float> @llvm.floor.v2f32(<2 x float> undef)
@@ -41,7 +41,7 @@ define void @floor() {
   call <16 x double> @llvm.floor.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.floor.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.floor.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.floor.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.floor.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.floor.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
@@ -67,7 +67,7 @@ define void @ceil() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.ceil.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.ceil.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.ceil.f32(float undef)
   call <2 x float> @llvm.ceil.v2f32(<2 x float> undef)
@@ -86,7 +86,7 @@ define void @ceil() {
   call <16 x double> @llvm.ceil.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.ceil.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.ceil.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.ceil.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.ceil.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.ceil.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
@@ -112,7 +112,7 @@ define void @trunc() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %18 = call <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %19 = call <vscale x 8 x double> @llvm.trunc.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.trunc.f32(float undef)
   call <2 x float> @llvm.trunc.v2f32(<2 x float> undef)
@@ -131,7 +131,7 @@ define void @trunc() {
   call <16 x double> @llvm.trunc.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.trunc.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.trunc.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.trunc.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.trunc.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.trunc.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
@@ -157,7 +157,7 @@ define void @rint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %18 = call <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %19 = call <vscale x 8 x double> @llvm.rint.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.rint.f32(float undef)
   call <2 x float> @llvm.rint.v2f32(<2 x float> undef)
@@ -176,8 +176,98 @@ define void @rint() {
   call <16 x double> @llvm.rint.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.rint.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.rint.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.rint.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.rint.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.rint.nvx8f64(<vscale x 8 x double> undef)
+  ret void
+}
+
+define void @lrint() {
+; CHECK-LABEL: 'lrint'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call i64 @llvm.lrint.i64.f32(float undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x i64> @llvm.lrint.v2i64.v2f32(<2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x i64> @llvm.lrint.v8i64.v8f32(<8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = call <16 x i64> @llvm.lrint.v16i64.v16f32(<16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 1 x i64> @llvm.lrint.nxv1i64.nxv1f32(<vscale x 1 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 2 x i64> @llvm.lrint.nxv2i64.nxv2f32(<vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = call <vscale x 4 x i64> @llvm.lrint.nxv4i64.nxv4f32(<vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = call <vscale x 8 x i64> @llvm.lrint.nxv8i64.nxv8f32(<vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = call <vscale x 16 x i64> @llvm.lrint.nxv16i64.nxv16f32(<vscale x 16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call i64 @llvm.lrint.i64.f64(double undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i64> @llvm.lrint.v2i64.v2f64(<2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i64> @llvm.lrint.v4i64.v4f64(<4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = call <8 x i64> @llvm.lrint.v8i64.v8f64(<8 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = call <16 x i64> @llvm.lrint.v16i64.v16f64(<16 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = call <vscale x 1 x i64> @llvm.lrint.nxv1i64.nxv1f64(<vscale x 1 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i64> @llvm.lrint.nxv2i64.nxv2f64(<vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x i64> @llvm.lrint.nxv4i64.nxv4f64(<vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x i64> @llvm.lrint.nxv8i64.nxv8f64(<vscale x 8 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call i64 @llvm.lrint.i64.f32(float undef)
+  call <2 x i64> @llvm.lrint.v2i64.v2f32(<2 x float> undef)
+  call <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float> undef)
+  call <8 x i64> @llvm.lrint.v8i64.v8f32(<8 x float> undef)
+  call <16 x i64> @llvm.lrint.v16i64.v16f32(<16 x float> undef)
+  call <vscale x 1 x i64> @llvm.lrint.nvx1i64.nvx1f32(<vscale x 1 x float> undef)
+  call <vscale x 2 x i64> @llvm.lrint.nvx2i64.nvx2f32(<vscale x 2 x float> undef)
+  call <vscale x 4 x i64> @llvm.lrint.nvx4i64.nvx4f32(<vscale x 4 x float> undef)
+  call <vscale x 8 x i64> @llvm.lrint.nvx8i64.nvx8f32(<vscale x 8 x float> undef)
+  call <vscale x 16 x i64> @llvm.lrint.nvx16i64.nvx16f32(<vscale x 16 x float> undef)
+  call i64 @llvm.lrint.i64.f64(double undef)
+  call <2 x i64> @llvm.lrint.v2i64.v2f64(<2 x double> undef)
+  call <4 x i64> @llvm.lrint.v4i64.v4f64(<4 x double> undef)
+  call <8 x i64> @llvm.lrint.v8i64.v8f64(<8 x double> undef)
+  call <16 x i64> @llvm.lrint.v16i64.v16f64(<16 x double> undef)
+  call <vscale x 1 x i64> @llvm.lrint.nvx1i64.nvx1f64(<vscale x 1 x double> undef)
+  call <vscale x 2 x i64> @llvm.lrint.nvx2i64.nvx2f64(<vscale x 2 x double> undef)
+  call <vscale x 4 x i64> @llvm.lrint.nvx4i64.nvx4f64(<vscale x 4 x double> undef)
+  call <vscale x 8 x i64> @llvm.lrint.nvx8i64.nvx8f64(<vscale x 8 x double> undef)
+  ret void
+}
+
+define void @llrint() {
+; CHECK-LABEL: 'llrint'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call i64 @llvm.llrint.i64.f32(float undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 1 x i64> @llvm.llrint.nxv1i64.nxv1f32(<vscale x 1 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 2 x i64> @llvm.llrint.nxv2i64.nxv2f32(<vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = call <vscale x 4 x i64> @llvm.llrint.nxv4i64.nxv4f32(<vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = call <vscale x 8 x i64> @llvm.llrint.nxv8i64.nxv8f32(<vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %10 = call <vscale x 16 x i64> @llvm.llrint.nxv16i64.nxv16f32(<vscale x 16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call i64 @llvm.llrint.i64.f64(double undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = call <16 x i64> @llvm.llrint.v16i64.v16f64(<16 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = call <vscale x 1 x i64> @llvm.llrint.nxv1i64.nxv1f64(<vscale x 1 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i64> @llvm.llrint.nxv2i64.nxv2f64(<vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x i64> @llvm.llrint.nxv4i64.nxv4f64(<vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x i64> @llvm.llrint.nxv8i64.nxv8f64(<vscale x 8 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  call i64 @llvm.llrint.i64.f32(float undef)
+  call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> undef)
+  call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
+  call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
+  call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
+  call <vscale x 1 x i64> @llvm.llrint.nvx1i64.nvx1f32(<vscale x 1 x float> undef)
+  call <vscale x 2 x i64> @llvm.llrint.nvx2i64.nvx2f32(<vscale x 2 x float> undef)
+  call <vscale x 4 x i64> @llvm.llrint.nvx4i64.nvx4f32(<vscale x 4 x float> undef)
+  call <vscale x 8 x i64> @llvm.llrint.nvx8i64.nvx8f32(<vscale x 8 x float> undef)
+  call <vscale x 16 x i64> @llvm.llrint.nvx16i64.nvx16f32(<vscale x 16 x float> undef)
+  call i64 @llvm.llrint.i64.f64(double undef)
+  call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
+  call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
+  call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
+  call <16 x i64> @llvm.llrint.v16i64.v16f64(<16 x double> undef)
+  call <vscale x 1 x i64> @llvm.llrint.nvx1i64.nvx1f64(<vscale x 1 x double> undef)
+  call <vscale x 2 x i64> @llvm.llrint.nvx2i64.nvx2f64(<vscale x 2 x double> undef)
+  call <vscale x 4 x i64> @llvm.llrint.nvx4i64.nvx4f64(<vscale x 4 x double> undef)
+  call <vscale x 8 x i64> @llvm.llrint.nvx8i64.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
 
@@ -202,7 +292,7 @@ define void @nearbyint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.nearbyint.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.nearbyint.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.nearbyint.f32(float undef)
   call <2 x float> @llvm.nearbyint.v2f32(<2 x float> undef)
@@ -221,7 +311,7 @@ define void @nearbyint() {
   call <16 x double> @llvm.nearbyint.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.nearbyint.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.nearbyint.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.nearbyint.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.nearbyint.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.nearbyint.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
@@ -247,7 +337,7 @@ define void @round() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.round.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.round.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.round.f32(float undef)
   call <2 x float> @llvm.round.v2f32(<2 x float> undef)
@@ -266,7 +356,7 @@ define void @round() {
   call <16 x double> @llvm.round.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.round.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.round.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.round.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.round.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.round.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
@@ -292,7 +382,7 @@ define void @roundeven() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %17 = call <vscale x 2 x double> @llvm.roundeven.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %18 = call <vscale x 4 x double> @llvm.roundeven.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %19 = call <vscale x 8 x double> @llvm.roundeven.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call float @llvm.roundeven.f32(float undef)
   call <2 x float> @llvm.roundeven.v2f32(<2 x float> undef)
@@ -311,7 +401,7 @@ define void @roundeven() {
   call <16 x double> @llvm.roundeven.v16f64(<16 x double> undef)
   call <vscale x 1 x double> @llvm.roundeven.nvx1f64(<vscale x 1 x double> undef)
   call <vscale x 2 x double> @llvm.roundeven.nvx2f64(<vscale x 2 x double> undef)
-  call <vscale x 4 x double> @llvm.roundeven.nvx5f64(<vscale x 4 x double> undef)
+  call <vscale x 4 x double> @llvm.roundeven.nvx4f64(<vscale x 4 x double> undef)
   call <vscale x 8 x double> @llvm.roundeven.nvx8f64(<vscale x 8 x double> undef)
   ret void
 }
@@ -335,7 +425,7 @@ define void @vp_ceil() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.ceil.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.ceil.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.ceil.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.ceil.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.ceil.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -352,7 +442,7 @@ define void @vp_ceil() {
   call <16 x double> @llvm.vp.ceil.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.ceil.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.ceil.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.ceil.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.ceil.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.ceil.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -376,7 +466,7 @@ define void @vp_floor() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.floor.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.floor.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.floor.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.floor.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.floor.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -393,7 +483,7 @@ define void @vp_floor() {
   call <16 x double> @llvm.vp.floor.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.floor.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.floor.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.floor.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.floor.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.floor.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -417,7 +507,7 @@ define void @vp_round() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.round.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.round.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.round.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.round.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.round.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -434,7 +524,7 @@ define void @vp_round() {
   call <16 x double> @llvm.vp.round.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.round.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.round.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.round.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.round.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.round.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -458,7 +548,7 @@ define void @vp_roundeven() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.roundeven.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.roundeven.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.roundeven.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.roundeven.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.roundeven.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -475,7 +565,7 @@ define void @vp_roundeven() {
   call <16 x double> @llvm.vp.roundeven.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.roundeven.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.roundeven.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.roundeven.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.roundeven.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.roundeven.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -499,7 +589,7 @@ define void @vp_roundtozero() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.roundtozero.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.roundtozero.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.roundtozero.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.roundtozero.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.roundtozero.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -516,7 +606,7 @@ define void @vp_roundtozero() {
   call <16 x double> @llvm.vp.roundtozero.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.roundtozero.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.roundtozero.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.roundtozero.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.roundtozero.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.roundtozero.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -540,7 +630,7 @@ define void @vp_rint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.rint.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.rint.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.rint.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.rint.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.rint.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -557,7 +647,7 @@ define void @vp_rint() {
   call <16 x double> @llvm.vp.rint.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.rint.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.rint.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.rint.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.rint.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.rint.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -581,7 +671,7 @@ define void @vp_nearbyint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %15 = call <vscale x 2 x double> @llvm.vp.nearbyint.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %16 = call <vscale x 4 x double> @llvm.vp.nearbyint.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %17 = call <vscale x 8 x double> @llvm.vp.nearbyint.nxv8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <2 x float> @llvm.vp.nearbyint.v2f32(<2 x float> undef, <2 x i1> undef, i32 undef)
   call <4 x float> @llvm.vp.nearbyint.v4f32(<4 x float> undef, <4 x i1> undef, i32 undef)
@@ -598,7 +688,7 @@ define void @vp_nearbyint() {
   call <16 x double> @llvm.vp.nearbyint.v16f64(<16 x double> undef, <16 x i1> undef, i32 undef)
   call <vscale x 1 x double> @llvm.vp.nearbyint.nvx1f64(<vscale x 1 x double> undef, <vscale x 1 x i1> undef, i32 undef)
   call <vscale x 2 x double> @llvm.vp.nearbyint.nvx2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> undef, i32 undef)
-  call <vscale x 4 x double> @llvm.vp.nearbyint.nvx5f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
+  call <vscale x 4 x double> @llvm.vp.nearbyint.nvx4f64(<vscale x 4 x double> undef, <vscale x 4 x i1> undef, i32 undef)
   call <vscale x 8 x double> @llvm.vp.nearbyint.nvx8f64(<vscale x 8 x double> undef, <vscale x 8 x i1> undef, i32 undef)
   ret void
 }
@@ -620,7 +710,7 @@ declare <8 x double> @llvm.floor.v8f64(<8 x double>)
 declare <16 x double> @llvm.floor.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.floor.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.floor.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.floor.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.floor.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.floor.nvx8f64(<vscale x 8 x double>)
 
 declare float @llvm.ceil.f32(float)
@@ -640,7 +730,7 @@ declare <8 x double> @llvm.ceil.v8f64(<8 x double>)
 declare <16 x double> @llvm.ceil.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.ceil.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.ceil.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.ceil.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.ceil.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.ceil.nvx8f64(<vscale x 8 x double>)
 
 declare float @llvm.trunc.f32(float)
@@ -660,7 +750,7 @@ declare <8 x double> @llvm.trunc.v8f64(<8 x double>)
 declare <16 x double> @llvm.trunc.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.trunc.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.trunc.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.trunc.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.trunc.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.trunc.nvx8f64(<vscale x 8 x double>)
 
 declare float @llvm.rint.f32(float)
@@ -680,8 +770,48 @@ declare <8 x double> @llvm.rint.v8f64(<8 x double>)
 declare <16 x double> @llvm.rint.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.rint.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.rint.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.rint.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.rint.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.rint.nvx8f64(<vscale x 8 x double>)
+
+declare i64 @llvm.lrint.i64.f32(float)
+declare <2 x i64> @llvm.lrint.v2i64.v2f32(<2 x float>)
+declare <4 x i64> @llvm.lrint.v4i64.v4f32(<4 x float>)
+declare <8 x i64> @llvm.lrint.v8i64.v8f32(<8 x float>)
+declare <16 x i64> @llvm.lrint.v16i64.v16f32(<16 x float>)
+declare <vscale x 1 x i64> @llvm.lrint.nvx1i64.nvx1f32(<vscale x 1 x float>)
+declare <vscale x 2 x i64> @llvm.lrint.nvx2i64.nvx2f32(<vscale x 2 x float>)
+declare <vscale x 4 x i64> @llvm.lrint.nvx4i64.nvx4f32(<vscale x 4 x float>)
+declare <vscale x 8 x i64> @llvm.lrint.nvx8i64.nvx8f32(<vscale x 8 x float>)
+declare <vscale x 16 x i64> @llvm.lrint.nvx16i64.nvx16f32(<vscale x 16 x float>)
+declare i64 @llvm.lrint.i64.f64(double)
+declare <2 x i64> @llvm.lrint.v2i64.v2f64(<2 x double>)
+declare <4 x i64> @llvm.lrint.v4i64.v4f64(<4 x double>)
+declare <8 x i64> @llvm.lrint.v8i64.v8f64(<8 x double>)
+declare <16 x i64> @llvm.lrint.v16i64.v16f64(<16 x double>)
+declare <vscale x 1 x i64> @llvm.lrint.nvx1i64.nvx1f64(<vscale x 1 x double>)
+declare <vscale x 2 x i64> @llvm.lrint.nvx2i64.nvx2f64(<vscale x 2 x double>)
+declare <vscale x 4 x i64> @llvm.lrint.nvx4i64.nvx4f64(<vscale x 4 x double>)
+declare <vscale x 8 x i64> @llvm.lrint.nvx8i64.nvx8f64(<vscale x 8 x double>)
+
+declare i64 @llvm.llrint.i64.f32(float)
+declare <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float>)
+declare <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float>)
+declare <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float>)
+declare <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float>)
+declare <vscale x 1 x i64> @llvm.llrint.nvx1i64.nvx1f32(<vscale x 1 x float>)
+declare <vscale x 2 x i64> @llvm.llrint.nvx2i64.nvx2f32(<vscale x 2 x float>)
+declare <vscale x 4 x i64> @llvm.llrint.nvx4i64.nvx4f32(<vscale x 4 x float>)
+declare <vscale x 8 x i64> @llvm.llrint.nvx8i64.nvx8f32(<vscale x 8 x float>)
+declare <vscale x 16 x i64> @llvm.llrint.nvx16i64.nvx16f32(<vscale x 16 x float>)
+declare i64 @llvm.llrint.i64.f64(double)
+declare <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double>)
+declare <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double>)
+declare <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double>)
+declare <16 x i64> @llvm.llrint.v16i64.v16f64(<16 x double>)
+declare <vscale x 1 x i64> @llvm.llrint.nvx1i64.nvx1f64(<vscale x 1 x double>)
+declare <vscale x 2 x i64> @llvm.llrint.nvx2i64.nvx2f64(<vscale x 2 x double>)
+declare <vscale x 4 x i64> @llvm.llrint.nvx4i64.nvx4f64(<vscale x 4 x double>)
+declare <vscale x 8 x i64> @llvm.llrint.nvx8i64.nvx8f64(<vscale x 8 x double>)
 
 declare float @llvm.nearbyint.f32(float)
 declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>)
@@ -700,7 +830,7 @@ declare <8 x double> @llvm.nearbyint.v8f64(<8 x double>)
 declare <16 x double> @llvm.nearbyint.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.nearbyint.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.nearbyint.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.nearbyint.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.nearbyint.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.nearbyint.nvx8f64(<vscale x 8 x double>)
 
 declare float @llvm.round.f32(float)
@@ -720,7 +850,7 @@ declare <8 x double> @llvm.round.v8f64(<8 x double>)
 declare <16 x double> @llvm.round.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.round.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.round.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.round.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.round.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.round.nvx8f64(<vscale x 8 x double>)
 
 declare float @llvm.roundeven.f32(float)
@@ -740,7 +870,7 @@ declare <8 x double> @llvm.roundeven.v8f64(<8 x double>)
 declare <16 x double> @llvm.roundeven.v16f64(<16 x double>)
 declare <vscale x 1 x double> @llvm.roundeven.nvx1f64(<vscale x 1 x double>)
 declare <vscale x 2 x double> @llvm.roundeven.nvx2f64(<vscale x 2 x double>)
-declare <vscale x 4 x double> @llvm.roundeven.nvx5f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.roundeven.nvx4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.roundeven.nvx8f64(<vscale x 8 x double>)
 
 declare <2 x float> @llvm.vp.ceil.v2f32(<2 x float>, <2 x i1>, i32)
@@ -759,7 +889,7 @@ declare <8 x double> @llvm.vp.ceil.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.ceil.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.ceil.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.ceil.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.ceil.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.ceil.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.ceil.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 declare <2 x float> @llvm.vp.floor.v2f32(<2 x float>, <2 x i1>, i32)
@@ -778,7 +908,7 @@ declare <8 x double> @llvm.vp.floor.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.floor.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.floor.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.floor.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.floor.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.floor.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.floor.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 declare <2 x float> @llvm.vp.round.v2f32(<2 x float>, <2 x i1>, i32)
@@ -797,7 +927,7 @@ declare <8 x double> @llvm.vp.round.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.round.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.round.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.round.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.round.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.round.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.round.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 declare <2 x float> @llvm.vp.roundeven.v2f32(<2 x float>, <2 x i1>, i32)
@@ -816,7 +946,7 @@ declare <8 x double> @llvm.vp.roundeven.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.roundeven.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.roundeven.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.roundeven.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.roundeven.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.roundeven.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.roundeven.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 declare <2 x float> @llvm.vp.roundtozero.v2f32(<2 x float>, <2 x i1>, i32)
@@ -835,7 +965,7 @@ declare <8 x double> @llvm.vp.roundtozero.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.roundtozero.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.roundtozero.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.roundtozero.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.roundtozero.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.roundtozero.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.roundtozero.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 declare <2 x float> @llvm.vp.rint.v2f32(<2 x float>, <2 x i1>, i32)
@@ -854,7 +984,7 @@ declare <8 x double> @llvm.vp.rint.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.rint.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.rint.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.rint.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.rint.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.rint.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.rint.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
 declare <2 x float> @llvm.vp.nearbyint.v2f32(<2 x float>, <2 x i1>, i32)
@@ -873,5 +1003,5 @@ declare <8 x double> @llvm.vp.nearbyint.v8f64(<8 x double>, <8 x i1>, i32)
 declare <16 x double> @llvm.vp.nearbyint.v16f64(<16 x double>, <16 x i1>, i32)
 declare <vscale x 1 x double> @llvm.vp.nearbyint.nvx1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 declare <vscale x 2 x double> @llvm.vp.nearbyint.nvx2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.nearbyint.nvx5f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
+declare <vscale x 4 x double> @llvm.vp.nearbyint.nvx4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 declare <vscale x 8 x double> @llvm.vp.nearbyint.nvx8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)

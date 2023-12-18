@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sme < %s | FileCheck %s
 
 declare void @private_za_callee()
+declare void @private_za_preserved_callee() "aarch64_pstate_za_preserved"
 declare float @llvm.cos.f32(float)
 
 ; Test lazy-save mechanism for a single callee.
@@ -13,13 +14,14 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_pstate_za_shared" {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mul x8, x8, x8
-; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #16
+; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x9, [x29, #-16]
-; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl private_za_callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -44,12 +46,13 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_pstate_za_shared" {
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mul x19, x8, x8
+; CHECK-NEXT:    rdsvl x19, #1
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    sub x8, x8, x19
+; CHECK-NEXT:    msub x8, x19, x19, x8
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    sub x20, x29, #16
+; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x8, [x29, #-16]
 ; CHECK-NEXT:    sturh w19, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x20
@@ -91,13 +94,14 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_psta
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mul x8, x8, x8
-; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #16
+; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x9, [x29, #-16]
-; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -128,21 +132,22 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_pstate_z
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mul x8, x8, x8
-; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    sub x10, x29, #80
+; CHECK-NEXT:    stur wzr, [x29, #-68]
+; CHECK-NEXT:    sturh wzr, [x29, #-70]
 ; CHECK-NEXT:    stur x9, [x29, #-80]
-; CHECK-NEXT:    sub x9, x29, #80
 ; CHECK-NEXT:    sturh w8, [x29, #-72]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB3_2
+; CHECK-NEXT:    tbz w19, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    bl private_za_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB3_4
+; CHECK-NEXT:    tbz w19, #0, .LBB3_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB3_4:
@@ -163,5 +168,50 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_pstate_z
 ; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @private_za_callee()
+  ret void
+}
+
+
+; Test lazy-save mechanism for an aarch64_pstate_za_shared caller
+; calling a callee with aarch64_pstate_za_preserved.
+define void @za_shared_caller_za_preserved_callee() nounwind "aarch64_pstate_za_shared" "aarch64_pstate_sm_compatible" {
+; CHECK-LABEL: za_shared_caller_za_preserved_callee:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #64
+; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    sub x9, x29, #80
+; CHECK-NEXT:    stp x8, xzr, [x29, #-80]
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    tbz w19, #0, .LBB4_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:    bl private_za_preserved_callee
+; CHECK-NEXT:    tbz w19, #0, .LBB4_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:  .LBB4_4:
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    sub sp, x29, #64
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @private_za_preserved_callee()
   ret void
 }

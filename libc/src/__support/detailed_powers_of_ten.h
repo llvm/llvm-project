@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
-#define LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H
+#define LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H
 
 #include "src/__support/common.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // TODO(michaelrj): write a script that will generate this table.
@@ -29,8 +29,9 @@ constexpr int32_t DETAILED_POWERS_OF_TEN_MIN_EXP_10 = -348;
 constexpr int32_t DETAILED_POWERS_OF_TEN_MAX_EXP_10 = 347;
 
 // This rescales the base 10 exponent by a factor of log(10)/log(2).
-LIBC_INLINE int64_t exp10_to_exp2(int64_t exp10) {
-  return (217706 * exp10) >> 16;
+LIBC_INLINE int32_t exp10_to_exp2(int32_t exp10) {
+  // Valid if exp10 < 646 456 636.
+  return static_cast<int32_t>((217706 * static_cast<int64_t>(exp10)) >> 16);
 }
 
 static constexpr uint64_t DETAILED_POWERS_OF_TEN[696][2] = {
@@ -733,6 +734,6 @@ static constexpr uint64_t DETAILED_POWERS_OF_TEN[696][2] = {
 };
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_SUPPORT_DETAILED_POWERS_OF_TEN_H
+#endif // LLVM_LIBC_SRC___SUPPORT_DETAILED_POWERS_OF_TEN_H

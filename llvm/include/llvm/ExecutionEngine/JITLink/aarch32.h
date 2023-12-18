@@ -89,7 +89,16 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Write immediate value to the top halfword of the destination register
   Thumb_MovtAbs,
 
-  LastThumbRelocation = Thumb_MovtAbs,
+  /// Write PC-relative immediate value to the lower halfword of the destination
+  /// register
+  Thumb_MovwPrelNC,
+
+  /// Write PC-relative immediate value to the top halfword of the destination
+  /// register
+  Thumb_MovtPrel,
+
+  LastThumbRelocation = Thumb_MovtPrel,
+  LastRelocation = LastThumbRelocation,
 };
 
 /// Flags enum for AArch32-specific symbol properties
@@ -155,49 +164,75 @@ struct HalfWords {
   const uint16_t Lo; // Second halfword
 };
 
-/// Collection of named constants per fixup kind. It may contain but is not
-/// limited to the following entries:
+/// FixupInfo base class is required for dynamic lookups.
+struct FixupInfoBase {
+  static const FixupInfoBase *getDynFixupInfo(Edge::Kind K);
+  virtual ~FixupInfoBase() {}
+};
+
+/// FixupInfo checks for Arm edge kinds work on 32-bit words
+struct FixupInfoArm : public FixupInfoBase {
+  bool (*checkOpcode)(uint32_t Wd) = nullptr;
+};
+
+/// FixupInfo check for Thumb32 edge kinds work on a pair of 16-bit halfwords
+struct FixupInfoThumb : public FixupInfoBase {
+  bool (*checkOpcode)(uint16_t Hi, uint16_t Lo) = nullptr;
+};
+
+/// Collection of named constants per fixup kind
 ///
+/// Mandatory entries:
 ///   Opcode      - Values of the op-code bits in the instruction, with
 ///                 unaffected bits nulled
 ///   OpcodeMask  - Mask with all bits set that encode the op-code
+///
+/// Other common entries:
 ///   ImmMask     - Mask with all bits set that encode the immediate value
 ///   RegMask     - Mask with all bits set that encode the register
 ///
+/// Specializations can add further custom fields without restrictions.
+///
 template <EdgeKind_aarch32 Kind> struct FixupInfo {};
 
-template <> struct FixupInfo<Arm_Jump24> {
+struct FixupInfoArmBranch : public FixupInfoArm {
   static constexpr uint32_t Opcode = 0x0a000000;
-  static constexpr uint32_t OpcodeMask = 0x0f000000;
   static constexpr uint32_t ImmMask = 0x00ffffff;
-  static constexpr uint32_t Unconditional = 0xe0000000;
-  static constexpr uint32_t CondMask = 0xe0000000; // excluding BLX bit
 };
 
-template <> struct FixupInfo<Arm_Call> : public FixupInfo<Arm_Jump24> {
+template <> struct FixupInfo<Arm_Jump24> : public FixupInfoArmBranch {
+  static constexpr uint32_t OpcodeMask = 0x0f000000;
+};
+
+template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch {
   static constexpr uint32_t OpcodeMask = 0x0e000000;
+  static constexpr uint32_t CondMask = 0xe0000000; // excluding BLX bit
+  static constexpr uint32_t Unconditional = 0xe0000000;
   static constexpr uint32_t BitH = 0x01000000;
   static constexpr uint32_t BitBlx = 0x10000000;
 };
 
-template <> struct FixupInfo<Arm_MovtAbs> {
-  static constexpr uint32_t Opcode = 0x03400000;
+struct FixupInfoArmMov : public FixupInfoArm {
   static constexpr uint32_t OpcodeMask = 0x0ff00000;
   static constexpr uint32_t ImmMask = 0x000f0fff;
   static constexpr uint32_t RegMask = 0x0000f000;
 };
 
-template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfo<Arm_MovtAbs> {
+template <> struct FixupInfo<Arm_MovtAbs> : public FixupInfoArmMov {
+  static constexpr uint32_t Opcode = 0x03400000;
+};
+
+template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfoArmMov {
   static constexpr uint32_t Opcode = 0x03000000;
 };
 
-template <> struct FixupInfo<Thumb_Jump24> {
-  static constexpr HalfWords Opcode{0xf000, 0x8000};
-  static constexpr HalfWords OpcodeMask{0xf800, 0x8000};
+template <> struct FixupInfo<Thumb_Jump24> : public FixupInfoThumb {
+  static constexpr HalfWords Opcode{0xf000, 0x9000};
+  static constexpr HalfWords OpcodeMask{0xf800, 0x9000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
 };
 
-template <> struct FixupInfo<Thumb_Call> {
+template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb {
   static constexpr HalfWords Opcode{0xf000, 0xc000};
   static constexpr HalfWords OpcodeMask{0xf800, 0xc000};
   static constexpr HalfWords ImmMask{0x07ff, 0x2fff};
@@ -205,41 +240,53 @@ template <> struct FixupInfo<Thumb_Call> {
   static constexpr uint16_t LoBitNoBlx = 0x1000;
 };
 
-template <> struct FixupInfo<Thumb_MovtAbs> {
-  static constexpr HalfWords Opcode{0xf2c0, 0x0000};
+struct FixupInfoThumbMov : public FixupInfoThumb {
   static constexpr HalfWords OpcodeMask{0xfbf0, 0x8000};
   static constexpr HalfWords ImmMask{0x040f, 0x70ff};
   static constexpr HalfWords RegMask{0x0000, 0x0f00};
 };
 
-template <>
-struct FixupInfo<Thumb_MovwAbsNC> : public FixupInfo<Thumb_MovtAbs> {
+template <> struct FixupInfo<Thumb_MovtAbs> : public FixupInfoThumbMov {
+  static constexpr HalfWords Opcode{0xf2c0, 0x0000};
+};
+
+template <> struct FixupInfo<Thumb_MovtPrel> : public FixupInfoThumbMov {
+  static constexpr HalfWords Opcode{0xf2c0, 0x0000};
+};
+
+template <> struct FixupInfo<Thumb_MovwAbsNC> : public FixupInfoThumbMov {
+  static constexpr HalfWords Opcode{0xf240, 0x0000};
+};
+
+template <> struct FixupInfo<Thumb_MovwPrelNC> : public FixupInfoThumbMov {
   static constexpr HalfWords Opcode{0xf240, 0x0000};
 };
 
 /// Helper function to read the initial addend for Data-class relocations.
-Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E);
+Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                 Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Arm-class relocations.
-Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, const Edge &E);
+Expected<int64_t> readAddendArm(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                Edge::Kind Kind);
 
 /// Helper function to read the initial addend for Thumb-class relocations.
-Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, const Edge &E,
-                                  const ArmConfig &ArmCfg);
+Expected<int64_t> readAddendThumb(LinkGraph &G, Block &B, Edge::OffsetT Offset,
+                                  Edge::Kind Kind, const ArmConfig &ArmCfg);
 
 /// Read the initial addend for a REL-type relocation. It's the value encoded
 /// in the immediate field of the fixup location by the compiler.
-inline Expected<int64_t> readAddend(LinkGraph &G, Block &B, const Edge &E,
+inline Expected<int64_t> readAddend(LinkGraph &G, Block &B,
+                                    Edge::OffsetT Offset, Edge::Kind Kind,
                                     const ArmConfig &ArmCfg) {
-  Edge::Kind Kind = E.getKind();
   if (Kind <= LastDataRelocation)
-    return readAddendData(G, B, E);
+    return readAddendData(G, B, Offset, Kind);
 
   if (Kind <= LastArmRelocation)
-    return readAddendArm(G, B, E);
+    return readAddendArm(G, B, Offset, Kind);
 
   if (Kind <= LastThumbRelocation)
-    return readAddendThumb(G, B, E, ArmCfg);
+    return readAddendThumb(G, B, Offset, Kind, ArmCfg);
 
   llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
 }
@@ -285,7 +332,7 @@ public:
   StubsManager() = default;
 
   /// Name of the object file section that will contain all our stubs.
-  static StringRef getSectionName() { return "__llvm_jitlink_STUBS"; }
+  static StringRef getSectionName();
 
   /// Implements link-graph traversal via visitExistingEdges().
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
@@ -334,6 +381,10 @@ private:
 /// Create a branch range extension stub with Thumb encoding for v7 CPUs.
 template <>
 Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target);
+
+template <> inline StringRef StubsManager<Thumbv7>::getSectionName() {
+  return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
+}
 
 } // namespace aarch32
 } // namespace jitlink

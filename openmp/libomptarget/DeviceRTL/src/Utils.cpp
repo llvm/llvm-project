@@ -19,8 +19,6 @@
 
 using namespace ompx;
 
-extern "C" __attribute__((weak)) int IsSPMDMode;
-
 namespace impl {
 
 bool isSharedMemPtr(const void *Ptr) { return false; }

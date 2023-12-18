@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.5.2 Serial
@@ -77,15 +77,15 @@ program openacc_serial_validity
   !$acc serial wait(wait1) wait(wait2)
   !$acc end serial
 
-  !ERROR: NUM_GANGS clause is not allowed on the SERIAL directive
+  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored
   !$acc serial num_gangs(8)
   !$acc end serial
 
-  !ERROR: NUM_WORKERS clause is not allowed on the SERIAL directive
+  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored
   !$acc serial num_workers(8)
   !$acc end serial
 
-  !ERROR: VECTOR_LENGTH clause is not allowed on the SERIAL directive
+  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored
   !$acc serial vector_length(128)
   !$acc end serial
 
@@ -163,6 +163,19 @@ program openacc_serial_validity
   !$acc serial device_type(*) if(.TRUE.)
   do i = 1, N
     a(i) = 3.14
+  end do
+  !$acc end serial
+
+  do i = 1, 100
+    !$acc serial
+    !ERROR: CYCLE to construct outside of SERIAL construct is not allowed
+    if (i == 10) cycle
+    !$acc end serial
+  end do
+
+  !$acc serial
+  do i = 1, 100
+    if (i == 10) cycle
   end do
   !$acc end serial
 

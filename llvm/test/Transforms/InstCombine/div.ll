@@ -22,7 +22,7 @@ define i32 @test2(i32 %A) {
 
 define i32 @sdiv_by_minus1(i32 %A) {
 ; CHECK-LABEL: @sdiv_by_minus1(
-; CHECK-NEXT:    [[B:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = sub nsw i32 0, [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %B = sdiv i32 %A, -1
@@ -31,7 +31,7 @@ define i32 @sdiv_by_minus1(i32 %A) {
 
 define <2 x i64> @sdiv_by_minus1_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @sdiv_by_minus1_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = sub <2 x i64> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sub nsw <2 x i64> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i64> [[DIV]]
 ;
   %div = sdiv <2 x i64> %x, <i64 -1, i64 -1>
@@ -48,7 +48,7 @@ define <2 x i64> @sdiv_by_minus1_vec_poison_elt(<2 x i64> %x) {
 
 define i32 @sdiv_by_sext_minus1(i1 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_by_sext_minus1(
-; CHECK-NEXT:    [[DIV:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sub nsw i32 0, [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %sext = sext i1 %x to i32
@@ -58,7 +58,7 @@ define i32 @sdiv_by_sext_minus1(i1 %x, i32 %y) {
 
 define <2 x i32> @sdiv_by_sext_minus1_vec(<2 x i1> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @sdiv_by_sext_minus1_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = sub <2 x i32> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sub nsw <2 x i32> zeroinitializer, [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[DIV]]
 ;
   %sext = sext <2 x i1> %x to <2 x i32>
@@ -1308,8 +1308,8 @@ define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 define i1 @sdiv_one_icmpeq_one(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_one(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X_FR]], 1
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    [[B1:%.*]] = icmp eq i32 [[X_FR]], 1
+; CHECK-NEXT:    ret i1 [[B1]]
 ;
   %A = sdiv i32 1, %x
   %B = icmp eq i32 %A, 1
@@ -1319,8 +1319,8 @@ define i1 @sdiv_one_icmpeq_one(i32 %x) {
 define i1 @sdiv_one_icmpeq_negone(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_negone(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X_FR]], -1
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    [[B1:%.*]] = icmp eq i32 [[X_FR]], -1
+; CHECK-NEXT:    ret i1 [[B1]]
 ;
   %A = sdiv i32 1, %x
   %B = icmp eq i32 %A, -1
@@ -1430,6 +1430,222 @@ define <2 x i8> @sdiv_sdiv_mul_nsw(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
   %d = sdiv <2 x i8> %m, %z
   %r = sdiv <2 x i8> %d, %x
   ret <2 x i8> %r
+}
+
+; (X * C0) / (X * C1) --> C0 / C1
+define i8 @sdiv_mul_nsw_mul_nsw(i8 %x,i8 %y,i8 %z) {
+; CHECK-LABEL: @sdiv_mul_nsw_mul_nsw(
+; CHECK-NEXT:    [[ADD4:%.*]] = mul nsw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[ADD5:%.*]] = mul nsw i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %add4 = mul nsw i8 %x, %z
+  %add5 = mul nsw i8 %x, %y
+  %div = sdiv i8 %add5, %add4
+  ret i8 %div
+}
+
+define i8 @udiv_mul_nuw_mul_nuw(i8 %x,i8 %y,i8 %z) {
+; CHECK-LABEL: @udiv_mul_nuw_mul_nuw(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %add4 = mul nuw i8 %x, %z
+  %add5 = mul nuw i8 %x, %y
+  %div = udiv i8 %add5, %add4
+  ret i8 %div
+}
+
+define i8 @sdiv_mul_nsw_constant_mul_nsw_constant(i8 %x) {
+; CHECK-LABEL: @sdiv_mul_nsw_constant_mul_nsw_constant(
+; CHECK-NEXT:    ret i8 2
+;
+  %add4 = mul nsw i8 %x, 5
+  %add5 = mul nsw i8 %x, 10
+  %div = sdiv i8 %add5, %add4
+  ret i8 %div
+}
+
+define i4 @sdiv_mul_nsw_constant_mul_constant(i4 %a) {
+; CHECK-LABEL: @sdiv_mul_nsw_constant_mul_constant(
+; CHECK-NEXT:    [[ADD4:%.*]] = mul i4 [[A:%.*]], 3
+; CHECK-NEXT:    [[ADD5:%.*]] = mul nsw i4 [[A]], 6
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul i4 %a, 3
+  %add5 = mul nsw i4 %a, 6
+  %div = sdiv i4 %add5, %add4
+  ret i4 %div
+}
+define i4 @sdiv_mul_nsw_constant_mul_constant2(i4 %a) {
+; CHECK-LABEL: @sdiv_mul_nsw_constant_mul_constant2(
+; CHECK-NEXT:    [[ADD4:%.*]] = sub i4 0, [[A:%.*]]
+; CHECK-NEXT:    [[ADD5:%.*]] = shl i4 [[A]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul i4 %a, 15
+  %add5 = mul nsw i4 %a, 8
+  %div = sdiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i4 @sdiv_mul_nsw_constant_mul_constant3(i4 %a) {
+; CHECK-LABEL: @sdiv_mul_nsw_constant_mul_constant3(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i4 [[A:%.*]], -8
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i4 1, i4 -1
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul i4 %a, 15
+  %add5 = mul nsw i4 %a, 1
+  %div = sdiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i4 @sdiv_mul_nsw_mul(i4 %a) {
+; CHECK-LABEL: @sdiv_mul_nsw_mul(
+; CHECK-NEXT:    [[ADD4:%.*]] = sub i4 0, [[A:%.*]]
+; CHECK-NEXT:    [[ADD5:%.*]] = shl i4 [[A]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul i4 %a, -1
+  %add5 = mul nsw i4 %a, -8
+  %div = sdiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i4 @udiv_mul_nuw_constant_mul_constant(i4 %a) {
+; CHECK-LABEL: @udiv_mul_nuw_constant_mul_constant(
+; CHECK-NEXT:    ret i4 2
+;
+  %add4 = mul i4 %a, 3
+  %add5 = mul nuw i4 %a, 6
+  %div = udiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i4 @udiv_mul_nuw_mul_negative(i4 %a) {
+; CHECK-LABEL: @udiv_mul_nuw_mul_negative(
+; CHECK-NEXT:    [[ADD4:%.*]] = mul i4 [[A:%.*]], -3
+; CHECK-NEXT:    [[ADD5:%.*]] = shl nuw i4 [[A]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul i4 %a, 13
+  %add5 = mul nuw i4 %a, 4
+  %div = udiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i4 @sdiv_mul_nsw_mul_nsw_allones(i4 %a) {
+; CHECK-LABEL: @sdiv_mul_nsw_mul_nsw_allones(
+; CHECK-NEXT:    [[ADD4:%.*]] = sub nsw i4 0, [[A:%.*]]
+; CHECK-NEXT:    [[ADD5:%.*]] = shl i4 [[A]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul nsw i4 %a, -1
+  %add5 = mul nsw i4 %a, -8
+  %div = sdiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i4 @sdiv_mul_nsw_mul_signmask(i4 %a, i4 %c2) {
+; CHECK-LABEL: @sdiv_mul_nsw_mul_signmask(
+; CHECK-NEXT:    [[ADD4:%.*]] = shl i4 [[A:%.*]], 3
+; CHECK-NEXT:    [[ADD5:%.*]] = mul nsw i4 [[A]], [[C2:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i4 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %add4 = mul nsw i4 %a, -8
+  %add5 = mul nsw i4 %a, %c2
+  %div = sdiv i4 %add5, %add4
+  ret i4 %div
+}
+
+define i32 @sdiv_sub1(i32 %arg) {
+; CHECK-LABEL: @sdiv_sub1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG:%.*]], -2147483648
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %neg = sub i32 0, %arg
+  %div = sdiv i32 %neg, %arg
+  ret i32 %div
+}
+
+define i32 @sdiv_sub2(i32 %arg) {
+; CHECK-LABEL: @sdiv_sub2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG:%.*]], -2147483648
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %neg = sub i32 0, %arg
+  %div = sdiv i32 %arg, %neg
+  ret i32 %div
+}
+
+define i32 @sub_sdiv_multiuse(i32 %arg) {
+; CHECK-LABEL: @sub_sdiv_multiuse(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[ARG]], -2147483648
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    call void @use(i32 [[NEG]])
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %neg = sub i32 0, %arg
+  %div = sdiv i32 %arg, %neg
+  call void @use(i32 %neg)
+  ret i32 %div
+}
+
+define i32 @sdiv_sub_sub(i32 %x ,i32 %y) {
+; CHECK-LABEL: @sdiv_sub_sub(
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[S]], -2147483648
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %s = sub i32 %x, %y
+  %u = sub i32 %y, %x
+  %d = sdiv i32 %s, %u
+  ret i32 %d
+}
+
+define i32 @sdiv_mul_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_mul_sub(
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[M]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %y, %x
+  %d = sub i32 0, %m
+  %r = sdiv i32 %d, %m
+  ret i32 %r
+}
+
+define i32 @sdiv_mul_sub_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_mul_sub_nsw(
+; CHECK-NEXT:    ret i32 -1
+;
+  %m = mul i32 %y, %x
+  %n = sub nsw i32 0, %m
+  %d = sdiv i32 %m, %n
+  ret i32 %d
+}
+
+define i32 @sdiv_mul_nsw_sub_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_mul_nsw_sub_nsw(
+; CHECK-NEXT:    ret i32 -1
+;
+  %m = mul nsw i32 %y, %x
+  %n = sub nsw i32 0, %m
+  %d = sdiv i32 %m, %n
+  ret i32 %d
 }
 
 ; exact propagates

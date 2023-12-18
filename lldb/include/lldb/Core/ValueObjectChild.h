@@ -73,6 +73,7 @@ protected:
   friend class ValueObject;
   friend class ValueObjectConstResult;
   friend class ValueObjectConstResultImpl;
+  friend class ValueObjectVTable;
 
   ValueObjectChild(ValueObject &parent, const CompilerType &compiler_type,
                    ConstString name, uint64_t byte_size,

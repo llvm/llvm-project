@@ -120,10 +120,11 @@ void finalizeRealloc(fir::FirOpBuilder &builder, mlir::Location loc,
                      bool takeLboundsIfRealloc,
                      const MutableBoxReallocation &realloc);
 
-/// Finalize a mutable box if it is allocated or associated. This includes both
-/// calling the finalizer, if any, and deallocating the storage.
-void genFinalization(fir::FirOpBuilder &builder, mlir::Location loc,
-                     const fir::MutableBoxValue &box);
+/// Deallocate a mutable box with fir.freemem if it is allocated or associated.
+/// This only deallocates the storage and does not call finalization, the
+/// mutable box is not nullified.
+void genFreememIfAllocated(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const fir::MutableBoxValue &box);
 
 void genInlinedAllocation(fir::FirOpBuilder &builder, mlir::Location loc,
                           const fir::MutableBoxValue &box,
@@ -131,8 +132,10 @@ void genInlinedAllocation(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::ValueRange lenParams, llvm::StringRef allocName,
                           bool mustBeHeap = false);
 
-mlir::Value genInlinedDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 const fir::MutableBoxValue &box);
+/// Deallocate an mutable box storage with fir.freemem without calling any
+/// final procedures. The mutable box is not nullified.
+mlir::Value genFreemem(fir::FirOpBuilder &builder, mlir::Location loc,
+                       const fir::MutableBoxValue &box);
 
 /// When the MutableBoxValue was passed as a fir.ref<fir.box> to a call that may
 /// have modified it, update the MutableBoxValue according to the

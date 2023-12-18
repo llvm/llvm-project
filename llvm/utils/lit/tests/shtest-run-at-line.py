@@ -1,12 +1,13 @@
 # Check that -a/-v/-vv makes the line number of the failing RUN command clear.
 
-# RUN: not %{lit} -a %{inputs}/shtest-run-at-line | FileCheck %s
-# RUN: not %{lit} -v %{inputs}/shtest-run-at-line | FileCheck %s
-# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line | FileCheck %s
+
+# RUN: not %{lit} -a %{inputs}/shtest-run-at-line | %{filter-lit} | FileCheck %s
+# RUN: not %{lit} -v %{inputs}/shtest-run-at-line | %{filter-lit} | FileCheck %s
+# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line | %{filter-lit} | FileCheck %s
 # END.
 
 
-# CHECK: Testing: 6 tests
+# CHECK: Testing: 8 tests
 
 
 # In the case of the external shell, we check for only RUN lines in stderr in
@@ -47,6 +48,15 @@
 #   CHECK-NOT: RUN
 #       CHECK: --
 
+# CHECK-LABEL: FAIL: shtest-run-at-line :: external-shell/run-line-with-newline.txt
+
+#      CHECK: Command Output (stderr)
+# CHECK-NEXT: --
+# CHECK-NEXT: {{^}}RUN: at line 1: echo abc |
+# CHECK-NEXT: FileCheck {{.*}} &&
+# CHECK-NEXT: false
+#  CHECK-NOT: RUN
+
 
 # CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/basic.txt
 
@@ -86,3 +96,16 @@
 # CHECK-NEXT: # executed command: echo 'foo baz'
 # CHECK-NEXT: # executed command: FileCheck {{.*}}
 # CHECK-NOT:  RUN
+
+# CHECK-LABEL: FAIL: shtest-run-at-line :: internal-shell/run-line-with-newline.txt
+
+#      CHECK: Command Output (stdout)
+# CHECK-NEXT: --
+# CHECK-NEXT: # RUN: at line 1
+# CHECK-NEXT: echo abc |
+# CHECK-NEXT: FileCheck {{.*}} &&
+# CHECK-NEXT: false
+# CHECK-NEXT: # executed command: echo abc
+# CHECK-NEXT: # executed command: FileCheck {{.*}}
+# CHECK-NEXT: # executed command: false
+#  CHECK-NOT: RUN

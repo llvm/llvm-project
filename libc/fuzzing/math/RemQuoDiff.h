@@ -44,8 +44,8 @@ void RemQuoDiff(RemQuoFunc<T> func1, RemQuoFunc<T> func2, const uint8_t *data,
   if ((q1 & 0x7) != (q2 & 0x7))
     __builtin_trap();
 
-  __llvm_libc::fputil::FPBits<T> bits1(remainder1);
-  __llvm_libc::fputil::FPBits<T> bits2(remainder2);
+  LIBC_NAMESPACE::fputil::FPBits<T> bits1(remainder1);
+  LIBC_NAMESPACE::fputil::FPBits<T> bits2(remainder2);
   if (bits1.uintval() != bits2.uintval())
     __builtin_trap();
 }

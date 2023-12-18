@@ -37,7 +37,7 @@ endsubroutine
 ! CHECK-LOWERING:       %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
 ! CHECK-LOWERING:       %[[TRUE:.*]] = arith.constant true
 ! CHECK-LOWERING:       %[[TRANSPOSE_EXPR:.*]] = hlfir.as_expr %[[TRANSPOSE_RES_VAR]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xf32>>, i1) -> !hlfir.expr<?x?xf32>
-! CHECK-LOWERING:       %[[TRANSPOSE_ASSOC:.*]]:3 = hlfir.associate %[[TRANSPOSE_EXPR]]({{.*}}) {uniq_name = "adapt.valuebyref"}
+! CHECK-LOWERING:       %[[TRANSPOSE_ASSOC:.*]]:3 = hlfir.associate %[[TRANSPOSE_EXPR]]({{.*}}) {adapt.valuebyref}
 ! CHECK-LOWERING:           (!hlfir.expr<?x?xf32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>, i1)
 
 ! CHECK-LOWERING:       %[[LHS_BOX:.*]] = fir.embox %[[TRANSPOSE_ASSOC]]#1
@@ -97,7 +97,8 @@ endsubroutine
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_HEAP:.*]] = fir.convert %[[TRANSPOSE_RES_REF]] : (!fir.ref<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
 ! CHECK-BUFFERING-NEXT: fir.freemem %[[TRANSPOSE_RES_HEAP]]
 ! CHECK-BUFFERING-NEXT: hlfir.assign %[[MUL_RES_VAR]]#0 to %[[RES_DECL]]#0 : !fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<1x2xf32>>
-! CHECK-BUFFERING-NEXT: fir.freemem %[[MUL_RES_VAR]]#1
+! CHECK-BUFFERING-NEXT: %[[MUL_RES_HEAP:.*]] = fir.box_addr %[[MUL_RES_VAR]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
+! CHECK-BUFFERING-NEXT: fir.freemem %[[MUL_RES_HEAP]]
 
 ! CHECK-ALL-NEXT:       return
 ! CHECK-ALL-NEXT:     }

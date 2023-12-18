@@ -95,14 +95,14 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if (AST.tuPath().endswith(PHeader))
+      if (AST.tuPath().ends_with(PHeader))
         return false;
     }
   }
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
-          &FE->getFileEntry())) {
+          *FE)) {
     dlog("{0} doesn't have header guard and will not be considered unused",
          FE->getName());
     return false;
@@ -390,17 +390,17 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
   include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
-  auto *PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
+  auto PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
 
   std::vector<include_cleaner::SymbolReference> Macros =
       collectMacroReferences(AST);
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
-  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
-                                .getHeaderSearchInfo()
-                                .getModuleMap()
-                                .getBuiltinDir();
+  OptionalDirectoryEntryRef ResourceDir = AST.getPreprocessor()
+                                              .getHeaderSearchInfo()
+                                              .getModuleMap()
+                                              .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
       AST.getPragmaIncludes().get(), AST.getPreprocessor(),

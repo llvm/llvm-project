@@ -1940,14 +1940,32 @@ void test_mm256_stream_pd(double* A, __m256d B) {
   _mm256_stream_pd(A, B);
 }
 
+void test_mm256_stream_pd_void(void *A, __m256d B) {
+  // CHECK-LABEL: test_mm256_stream_pd_void
+  // CHECK: store <4 x double> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
+  _mm256_stream_pd(A, B);
+}
+
 void test_mm256_stream_ps(float* A, __m256 B) {
   // CHECK-LABEL: test_mm256_stream_ps
   // CHECK: store <8 x float> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
   _mm256_stream_ps(A, B);
 }
 
+void test_mm256_stream_ps_void(void *A, __m256 B) {
+  // CHECK-LABEL: test_mm256_stream_ps_void
+  // CHECK: store <8 x float> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
+  _mm256_stream_ps(A, B);
+}
+
 void test_mm256_stream_si256(__m256i* A, __m256i B) {
   // CHECK-LABEL: test_mm256_stream_si256
+  // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
+  _mm256_stream_si256(A, B);
+}
+
+void test_mm256_stream_si256_void(void *A, __m256i B) {
+  // CHECK-LABEL: test_mm256_stream_si256_void
   // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 32, !nontemporal
   _mm256_stream_si256(A, B);
 }

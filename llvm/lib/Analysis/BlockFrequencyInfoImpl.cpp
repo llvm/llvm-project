@@ -481,30 +481,24 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
 
 static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
                                      const Scaled64 &Min, const Scaled64 &Max) {
-  // Scale the Factor to a size that creates integers.  Ideally, integers would
-  // be scaled so that Max == UINT64_MAX so that they can be best
-  // differentiated.  However, in the presence of large frequency values, small
-  // frequencies are scaled down to 1, making it impossible to differentiate
-  // small, unequal numbers. When the spread between Min and Max frequencies
-  // fits well within MaxBits, we make the scale be at least 8.
-  const unsigned MaxBits = 64;
-  const unsigned SpreadBits = (Max / Min).lg();
-  Scaled64 ScalingFactor;
-  if (SpreadBits <= MaxBits - 3) {
-    // If the values are small enough, make the scaling factor at least 8 to
-    // allow distinguishing small values.
-    ScalingFactor = Min.inverse();
-    ScalingFactor <<= 3;
-  } else {
-    // If the values need more than MaxBits to be represented, saturate small
-    // frequency values down to 1 by using a scaling factor that benefits large
-    // frequency values.
-    ScalingFactor = Scaled64(1, MaxBits) / Max;
-  }
+  // Scale the Factor to a size that creates integers.  If possible scale
+  // integers so that Max == UINT64_MAX so that they can be best differentiated.
+  // Is is possible that the range between min and max cannot be accurately
+  // represented in a 64bit integer without either loosing precision for small
+  // values (so small unequal numbers all map to 1) or saturaturing big numbers
+  // loosing precision for big numbers (so unequal big numbers may map to
+  // UINT64_MAX). We choose to loose precision for small numbers.
+  const unsigned MaxBits = sizeof(Scaled64::DigitsType) * CHAR_BIT;
+  // Users often add up multiple BlockFrequency values or multiply them with
+  // things like instruction costs. Leave some room to avoid saturating
+  // operations reaching UIN64_MAX too early.
+  const unsigned Slack = 10;
+  Scaled64 ScalingFactor = Scaled64(1, MaxBits - Slack) / Max;
 
   // Translate the floats to integers.
   LLVM_DEBUG(dbgs() << "float-to-int: min = " << Min << ", max = " << Max
                     << ", factor = " << ScalingFactor << "\n");
+  (void)Min;
   for (size_t Index = 0; Index < BFI.Freqs.size(); ++Index) {
     Scaled64 Scaled = BFI.Freqs[Index].Scaled * ScalingFactor;
     BFI.Freqs[Index].Integer = std::max(UINT64_C(1), Scaled.toInt<uint64_t>());
@@ -581,30 +575,27 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
       report_fatal_error(OS.str());
     }
 #endif
-    return 0;
+    return BlockFrequency(0);
   }
-  return Freqs[Node.Index].Integer;
+  return BlockFrequency(Freqs[Node.Index].Integer);
 }
 
 std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
                                                  const BlockNode &Node,
                                                  bool AllowSynthetic) const {
-  return getProfileCountFromFreq(F, getBlockFreq(Node).getFrequency(),
-                                 AllowSynthetic);
+  return getProfileCountFromFreq(F, getBlockFreq(Node), AllowSynthetic);
 }
 
-std::optional<uint64_t>
-BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
-                                                    uint64_t Freq,
-                                                    bool AllowSynthetic) const {
+std::optional<uint64_t> BlockFrequencyInfoImplBase::getProfileCountFromFreq(
+    const Function &F, BlockFrequency Freq, bool AllowSynthetic) const {
   auto EntryCount = F.getEntryCount(AllowSynthetic);
   if (!EntryCount)
     return std::nullopt;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
   APInt BlockCount(128, EntryCount->getCount());
-  APInt BlockFreq(128, Freq);
-  APInt EntryFreq(128, getEntryFreq());
+  APInt BlockFreq(128, Freq.getFrequency());
+  APInt EntryFreq(128, getEntryFreq().getFrequency());
   BlockCount *= BlockFreq;
   // Rounded division of BlockCount by EntryFreq. Since EntryFreq is unsigned
   // lshr by 1 gives EntryFreq/2.
@@ -627,10 +618,10 @@ BlockFrequencyInfoImplBase::getFloatingBlockFreq(const BlockNode &Node) const {
 }
 
 void BlockFrequencyInfoImplBase::setBlockFreq(const BlockNode &Node,
-                                              uint64_t Freq) {
+                                              BlockFrequency Freq) {
   assert(Node.isValid() && "Expected valid node");
   assert(Node.Index < Freqs.size() && "Expected legal index");
-  Freqs[Node.Index].Integer = Freq;
+  Freqs[Node.Index].Integer = Freq.getFrequency();
 }
 
 std::string
@@ -643,19 +634,19 @@ BlockFrequencyInfoImplBase::getLoopName(const LoopData &Loop) const {
   return getBlockName(Loop.getHeader()) + (Loop.isIrreducible() ? "**" : "*");
 }
 
-raw_ostream &
-BlockFrequencyInfoImplBase::printBlockFreq(raw_ostream &OS,
-                                           const BlockNode &Node) const {
-  return OS << getFloatingBlockFreq(Node);
-}
-
-raw_ostream &
-BlockFrequencyInfoImplBase::printBlockFreq(raw_ostream &OS,
-                                           const BlockFrequency &Freq) const {
+void llvm::printBlockFreqImpl(raw_ostream &OS, BlockFrequency EntryFreq,
+                              BlockFrequency Freq) {
+  if (Freq == BlockFrequency(0)) {
+    OS << "0";
+    return;
+  }
+  if (EntryFreq == BlockFrequency(0)) {
+    OS << "<invalid BFI>";
+    return;
+  }
   Scaled64 Block(Freq.getFrequency(), 0);
-  Scaled64 Entry(getEntryFreq(), 0);
-
-  return OS << Block / Entry;
+  Scaled64 Entry(EntryFreq.getFrequency(), 0);
+  OS << Block / Entry;
 }
 
 void IrreducibleGraph::addNodesInLoop(const BFIBase::LoopData &OuterLoop) {

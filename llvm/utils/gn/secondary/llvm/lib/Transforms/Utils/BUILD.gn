@@ -46,6 +46,7 @@ static_library("Utils") {
     "LCSSA.cpp",
     "LibCallsShrinkWrap.cpp",
     "Local.cpp",
+    "LoopConstrainer.cpp",
     "LoopPeel.cpp",
     "LoopRotationUtils.cpp",
     "LoopSimplify.cpp",

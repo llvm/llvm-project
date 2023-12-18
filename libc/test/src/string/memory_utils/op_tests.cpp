@@ -14,7 +14,7 @@
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T> struct has_head_tail {
   template <typename C> static char sfinae(decltype(&C::head_tail));
@@ -343,4 +343,4 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

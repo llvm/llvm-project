@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 static_assert(std::is_nothrow_move_constructible_v<std::jthread>);
@@ -27,8 +28,8 @@ int main(int, char**) {
   {
     // x.get_id() == id() and get_id() returns the value of x.get_id() prior
     // to the start of construction.
-    std::jthread j1{[] {}};
-    auto id1 = j1.get_id();
+    std::jthread j1 = support::make_test_jthread([] {});
+    auto id1        = j1.get_id();
 
     std::jthread j2(std::move(j1));
     assert(j1.get_id() == std::jthread::id());
@@ -38,8 +39,8 @@ int main(int, char**) {
   {
     // ssource has the value of x.ssource prior to the start of construction
     // and x.ssource.stop_possible() is false.
-    std::jthread j1{[] {}};
-    auto ss1 = j1.get_stop_source();
+    std::jthread j1 = support::make_test_jthread([] {});
+    auto ss1        = j1.get_stop_source();
 
     std::jthread j2(std::move(j1));
     assert(ss1 == j2.get_stop_source());

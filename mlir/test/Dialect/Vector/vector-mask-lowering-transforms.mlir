@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @genbool_1d
 // CHECK: %[[T0:.*]] = arith.constant dense<[true, true, true, true, false, false, false, false]> : vector<8xi1>
@@ -91,14 +91,16 @@ func.func @genbool_var_3d(%arg0: index, %arg1: index, %arg2: index) -> vector<2x
   return %0 : vector<2x1x7xi1>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_masks
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_masks
+    } : !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -114,20 +116,22 @@ func.func @transfer_read_3d(
   //      CHECK: vector.transfer_read {{.*}}, %[[mask]] {in_bounds = [true, true, true]}
   // CHECK-SAME:   : tensor<?x?x?xf32>, vector<2x1x7xf32>
   %0 = vector.create_mask %arg0, %arg1, %arg2 : vector<2x1x7xi1>
-  %1 = vector.mask %0 { 
+  %1 = vector.mask %0 {
     vector.transfer_read %t[%c0, %c0, %c0], %f0 {in_bounds = [true, true, true]}
-      : tensor<?x?x?xf32>, vector<2x1x7xf32> 
+      : tensor<?x?x?xf32>, vector<2x1x7xf32>
   } : vector<2x1x7xi1> -> vector<2x1x7xf32>
 
   return %1: vector<2x1x7xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %f = transform.structured.match ops{["func.func"]} in %module_op 
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match ops{["func.func"]} in %module_op
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %f {
-    transform.apply_patterns.vector.lower_masked_transfers
-  } : !transform.any_op
+    transform.apply_patterns to %f {
+      transform.apply_patterns.vector.lower_masked_transfers
+    } : !transform.any_op
+    transform.yield
+  }
 }

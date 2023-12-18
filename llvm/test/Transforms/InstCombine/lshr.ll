@@ -290,7 +290,7 @@ define <2 x i8> @smear_sign_and_widen_splat(<2 x i6> %x) {
 define i18 @fake_sext(i3 %x) {
 ; CHECK-LABEL: @fake_sext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i3 [[X:%.*]], 2
-; CHECK-NEXT:    [[SH:%.*]] = zext i3 [[TMP1]] to i18
+; CHECK-NEXT:    [[SH:%.*]] = zext nneg i3 [[TMP1]] to i18
 ; CHECK-NEXT:    ret i18 [[SH]]
 ;
   %sext = sext i3 %x to i18
@@ -314,7 +314,7 @@ define i32 @fake_sext_but_should_not_change_type(i3 %x) {
 define <2 x i8> @fake_sext_splat(<2 x i3> %x) {
 ; CHECK-LABEL: @fake_sext_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i3> [[X:%.*]], <i3 2, i3 2>
-; CHECK-NEXT:    [[SH:%.*]] = zext <2 x i3> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[SH:%.*]] = zext nneg <2 x i3> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %sext = sext <2 x i3> %x to <2 x i8>
@@ -327,7 +327,7 @@ define <2 x i8> @fake_sext_splat(<2 x i3> %x) {
 define <2 x i32> @narrow_lshr_constant(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @narrow_lshr_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[SH:%.*]] = zext <2 x i8> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[SH:%.*]] = zext nneg <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[SH]]
 ;
   %zx = zext <2 x i8> %x to <2 x i32>
@@ -889,13 +889,11 @@ define <2 x i64> @narrow_bswap_splat(<2 x i16> %x) {
   ret <2 x i64> %s
 }
 
-; TODO: poison/undef in the shift amount is ok to propagate.
-
 define <2 x i64> @narrow_bswap_splat_poison_elt(<2 x i16> %x) {
 ; CHECK-LABEL: @narrow_bswap_splat_poison_elt(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[B]], <i64 48, i64 poison>
+; CHECK-NEXT:    [[S:%.*]] = lshr exact <2 x i64> [[B]], <i64 48, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[S]]
 ;
   %z = zext <2 x i16> %x to <2 x i64>
@@ -908,7 +906,7 @@ define <2 x i64> @narrow_bswap_overshift(<2 x i32> %x) {
 ; CHECK-LABEL: @narrow_bswap_overshift(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], <i32 16, i32 16>
-; CHECK-NEXT:    [[S:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[S:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[S]]
 ;
   %z = zext <2 x i32> %x to <2 x i64>
@@ -921,7 +919,7 @@ define i128 @narrow_bswap_overshift2(i96 %x) {
 ; CHECK-LABEL: @narrow_bswap_overshift2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i96 @llvm.bswap.i96(i96 [[X:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i96 [[TMP1]], 29
-; CHECK-NEXT:    [[S:%.*]] = zext i96 [[TMP2]] to i128
+; CHECK-NEXT:    [[S:%.*]] = zext nneg i96 [[TMP2]] to i128
 ; CHECK-NEXT:    ret i128 [[S]]
 ;
   %z = zext i96 %x to i128

@@ -43,9 +43,7 @@ protected:
   BinaryStreamRefBase(BinaryStreamRefBase &&Other) = default;
 
 public:
-  llvm::support::endianness getEndian() const {
-    return BorrowedImpl->getEndian();
-  }
+  llvm::endianness getEndian() const { return BorrowedImpl->getEndian(); }
 
   uint64_t getLength() const {
     if (Length)
@@ -165,9 +163,8 @@ public:
   BinaryStreamRef(BinaryStream &Stream);
   BinaryStreamRef(BinaryStream &Stream, uint64_t Offset,
                   std::optional<uint64_t> Length);
-  explicit BinaryStreamRef(ArrayRef<uint8_t> Data,
-                           llvm::support::endianness Endian);
-  explicit BinaryStreamRef(StringRef Data, llvm::support::endianness Endian);
+  explicit BinaryStreamRef(ArrayRef<uint8_t> Data, llvm::endianness Endian);
+  explicit BinaryStreamRef(StringRef Data, llvm::endianness Endian);
 
   BinaryStreamRef(const BinaryStreamRef &Other) = default;
   BinaryStreamRef &operator=(const BinaryStreamRef &Other) = default;
@@ -240,7 +237,7 @@ public:
   WritableBinaryStreamRef(WritableBinaryStream &Stream, uint64_t Offset,
                           std::optional<uint64_t> Length);
   explicit WritableBinaryStreamRef(MutableArrayRef<uint8_t> Data,
-                                   llvm::support::endianness Endian);
+                                   llvm::endianness Endian);
   WritableBinaryStreamRef(const WritableBinaryStreamRef &Other) = default;
   WritableBinaryStreamRef &
   operator=(const WritableBinaryStreamRef &Other) = default;

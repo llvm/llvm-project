@@ -29,8 +29,8 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   // local var, this helps us test setting of errno and
   // reading it back.
   ASSERT_TRUE(libc_errno == 0);
-  void *addr = __llvm_libc::mmap(nullptr, 0, PROT_READ,
-                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, 0, PROT_READ,
+                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_TRUE(addr == MAP_FAILED);
   ASSERT_TRUE(libc_errno == EINVAL);
 

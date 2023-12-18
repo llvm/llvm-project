@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zfhmin,+d -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zfhmin,+d < %s \
-# RUN:     | llvm-objdump --mattr=+zfhmin,+d -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+zfhmin,+d --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zfhmin,+d < %s \
-# RUN:     | llvm-objdump --mattr=+zfhmin,+d -M no-aliases -d -r - \
+# RUN:     | llvm-objdump --mattr=+zfhmin,+d --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: flh ft0, 12(a0)
@@ -51,12 +51,18 @@ fmv.h.x ft1, a6
 # CHECK-ASM-AND-OBJ: fcvt.s.h fa0, ft0
 # CHECK-ASM: encoding: [0x53,0x05,0x20,0x40]
 fcvt.s.h fa0, ft0
+# CHECK-ASM-AND-OBJ: fcvt.s.h fa0, ft0, rup
+# CHECK-ASM: encoding: [0x53,0x35,0x20,0x40]
+fcvt.s.h fa0, ft0, rup
 # CHECK-ASM-AND-OBJ: fcvt.h.s ft2, fa2
 # CHECK-ASM: encoding: [0x53,0x71,0x06,0x44]
 fcvt.h.s ft2, fa2
 # CHECK-ASM-AND-OBJ: fcvt.d.h fa0, ft0
 # CHECK-ASM: encoding: [0x53,0x05,0x20,0x42]
 fcvt.d.h fa0, ft0
+# CHECK-ASM-AND-OBJ: fcvt.d.h fa0, ft0, rup
+# CHECK-ASM: encoding: [0x53,0x35,0x20,0x42]
+fcvt.d.h fa0, ft0, rup
 # CHECK-ASM-AND-OBJ: fcvt.h.d ft2, fa2
 # CHECK-ASM: encoding: [0x53,0x71,0x16,0x44]
 fcvt.h.d ft2, fa2

@@ -180,8 +180,8 @@ public:
                                         const PreambleData &Baseline);
   /// Returns the FileEntry for the preamble patch of MainFilePath in SM, if
   /// any.
-  static const FileEntry *getPatchEntry(llvm::StringRef MainFilePath,
-                                        const SourceManager &SM);
+  static OptionalFileEntryRef getPatchEntry(llvm::StringRef MainFilePath,
+                                            const SourceManager &SM);
 
   /// Adjusts CI (which compiles the modified inputs) to be used with the
   /// baseline preamble. This is done by inserting an artificial include to the

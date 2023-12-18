@@ -797,6 +797,25 @@ void UnOpInit::Profile(FoldingSetNodeID &ID) const {
 Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
   RecordKeeper &RK = getRecordKeeper();
   switch (getOpcode()) {
+  case REPR:
+    if (LHS->isConcrete()) {
+      // If it is a Record, print the full content.
+      if (const auto *Def = dyn_cast<DefInit>(LHS)) {
+        std::string S;
+        raw_string_ostream OS(S);
+        OS << *Def->getDef();
+        OS.flush();
+        return StringInit::get(RK, S);
+      } else {
+        // Otherwise, print the value of the variable.
+        //
+        // NOTE: we could recursively !repr the elements of a list,
+        // but that could produce a lot of output when printing a
+        // defset.
+        return StringInit::get(RK, LHS->getAsString());
+      }
+    }
+    break;
   case TOLOWER:
     if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
       return StringInit::get(RK, LHSs->getValue().lower());
@@ -957,6 +976,9 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case REPR:
+    Result = "!repr";
+    break;
   case TOLOWER:
     Result = "!tolower";
     break;
@@ -1287,7 +1309,6 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     }
     return ListInit::get(Args, TheList->getElementType());
   }
-  case RANGE:
   case RANGEC: {
     auto *LHSi = dyn_cast<IntInit>(LHS);
     auto *RHSi = dyn_cast<IntInit>(RHS);
@@ -1487,8 +1508,9 @@ std::string BinOpInit::getAsString() const {
   case GT: Result = "!gt"; break;
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
-  case LISTREMOVE: Result = "!listremove"; break;
-  case RANGE: Result = "!range"; break;
+  case LISTREMOVE:
+    Result = "!listremove";
+    break;
   case STRCONCAT: Result = "!strconcat"; break;
   case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
@@ -1704,6 +1726,34 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     break;
   }
 
+  case RANGE: {
+    auto *LHSi = dyn_cast<IntInit>(LHS);
+    auto *MHSi = dyn_cast<IntInit>(MHS);
+    auto *RHSi = dyn_cast<IntInit>(RHS);
+    if (!LHSi || !MHSi || !RHSi)
+      break;
+
+    auto Start = LHSi->getValue();
+    auto End = MHSi->getValue();
+    auto Step = RHSi->getValue();
+    if (Step == 0)
+      PrintError(CurRec->getLoc(), "Step of !range can't be 0");
+
+    SmallVector<Init *, 8> Args;
+    if (Start < End && Step > 0) {
+      Args.reserve((End - Start) / Step);
+      for (auto I = Start; I < End; I += Step)
+        Args.push_back(IntInit::get(getRecordKeeper(), I));
+    } else if (Start > End && Step < 0) {
+      Args.reserve((Start - End) / -Step);
+      for (auto I = Start; I > End; I += Step)
+        Args.push_back(IntInit::get(getRecordKeeper(), I));
+    } else {
+      // Empty set
+    }
+    return ListInit::get(Args, LHSi->getType());
+  }
+
   case SUBSTR: {
     StringInit *LHSs = dyn_cast<StringInit>(LHS);
     IntInit *MHSi = dyn_cast<IntInit>(MHS);
@@ -1823,6 +1873,9 @@ std::string TernOpInit::getAsString() const {
   case FILTER: Result = "!filter"; UnquotedLHS = true; break;
   case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
   case IF: Result = "!if"; break;
+  case RANGE:
+    Result = "!range";
+    break;
   case SUBST: Result = "!subst"; break;
   case SUBSTR: Result = "!substr"; break;
   case FIND: Result = "!find"; break;
@@ -2210,9 +2263,9 @@ void VarDefInit::Profile(FoldingSetNodeID &ID) const {
 DefInit *VarDefInit::instantiate() {
   if (!Def) {
     RecordKeeper &Records = Class->getRecords();
-    auto NewRecOwner = std::make_unique<Record>(Records.getNewAnonymousName(),
-                                           Class->getLoc(), Records,
-                                           /*IsAnonymous=*/true);
+    auto NewRecOwner =
+        std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
+                                 Records, Record::RK_AnonymousDef);
     Record *NewRec = NewRecOwner.get();
 
     // Copy values from class to instance
@@ -2221,6 +2274,9 @@ DefInit *VarDefInit::instantiate() {
 
     // Copy assertions from class to instance.
     NewRec->appendAssertions(Class);
+
+    // Copy dumps from class to instance.
+    NewRec->appendDumps(Class);
 
     // Substitute and resolve template arguments
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
@@ -2255,6 +2311,9 @@ DefInit *VarDefInit::instantiate() {
 
     // Check the assertions.
     NewRec->checkRecordAssertions();
+
+    // Check the assertions.
+    NewRec->emitRecordDumps();
 
     Def = DefInit::get(NewRec);
   }
@@ -2813,6 +2872,11 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
     Value = Assertion.Message->resolveReferences(R);
     Assertion.Message = Value;
   }
+  // Resolve the dump expressions.
+  for (auto &Dump : Dumps) {
+    Init *Value = Dump.Message->resolveReferences(R);
+    Dump.Message = Value;
+  }
 }
 
 void Record::resolveReferences(Init *NewName) {
@@ -3066,6 +3130,16 @@ void Record::checkRecordAssertions() {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
     CheckAssert(Assertion.Loc, Condition, Message);
+  }
+}
+
+void Record::emitRecordDumps() {
+  RecordResolver R(*this);
+  R.setFinal(true);
+
+  for (const auto &Dump : getDumps()) {
+    Init *Message = Dump.Message->resolveReferences(R);
+    dumpMessage(Dump.Loc, Message);
   }
 }
 

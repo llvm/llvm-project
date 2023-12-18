@@ -325,15 +325,18 @@ protected:
   SourceLocation Loc;
 
   /// MacroDirective kind.
+  LLVM_PREFERRED_TYPE(Kind)
   unsigned MDKind : 2;
 
   /// True if the macro directive was loaded from a PCH file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFromPCH : 1;
 
   // Used by VisibilityMacroDirective ----------------------------------------//
 
   /// Whether the macro has public visibility (when described in a
   /// module).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPublic : 1;
 
   MacroDirective(Kind K, SourceLocation Loc)

@@ -169,6 +169,25 @@ loopexit:
   ret i32 %selector
 }
 
+define i32 @unroll_phi_select_constant_nonzero_large_btc(i32 %arg1, i32 %arg2) {
+; CHECK-LABEL: @unroll_phi_select_constant_nonzero_large_btc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[ARG2:%.*]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %selector = phi i32 [%arg1, %entry], [%arg2, %loop]
+  %i.next = add nuw i32 %i, 1
+  %c = icmp ult i32 %i, -42
+  br i1 %c, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %selector
+}
+
 declare i32 @f()
 
 ; After LCSSA formation, there's no LCSSA phi for %f since it isn't directly

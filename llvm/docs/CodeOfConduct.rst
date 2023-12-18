@@ -148,13 +148,11 @@ The current committee members are:
 
 * Kit Barton (kbarton\@llvm.org)
 * Kristof Beyls (kristof.beyls\@llvm.org)
+* Stella Stamenova (sstamenova\@llvm.org)
+* David Blaikie (dblaikie\@llvm.org)
 * Mike Edwards (medwards\@llvm.org)
-* Hal Finkel (hfinkel\@llvm.org)
 * Cyndy Ishida (cishida\@llvm.org)
-* Anton Korobeynikov (anton.korobeynikov\@llvm.org)
 * Tanya Lattner (tanyalattner\@llvm.org)
-* Chris Lattner (clattner\@llvm.org)
-* Tom Stellard (tstellar\@llvm.org)
 
 
 Transparency Reports

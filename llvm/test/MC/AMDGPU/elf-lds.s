@@ -34,8 +34,8 @@ test_kernel:
 
 // CHECK:      Relocations [
 // CHECK:        Section (3) .rel.text {
-// CHECK-NEXT:     0x4 R_AMDGPU_ABS32 lds0
-// CHECK-NEXT:     0x1C R_AMDGPU_ABS32 lds4
+// CHECK-NEXT:     0x4 R_AMDGPU_ABS32_LO lds0
+// CHECK-NEXT:     0x1C R_AMDGPU_ABS32_LO lds4
 // CHECK-NEXT:   }
 // CHECK:      ]
 

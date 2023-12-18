@@ -10,8 +10,8 @@
 #include "src/__support/CPP/span.h"
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
-using __llvm_libc::cpp::span;
+using LIBC_NAMESPACE::cpp::array;
+using LIBC_NAMESPACE::cpp::span;
 
 TEST(LlvmLibcSpanTest, InitializeEmpty) {
   span<int> s;

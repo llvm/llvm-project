@@ -276,6 +276,9 @@ endif()
 
 
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
+if (NOT PACKAGE_VERSION)
+  set(PACKAGE_VERSION ${LLVM_VERSION_MAJOR})
+endif()
 
 
 if (NOT DEFINED FLANG_VERSION_MAJOR)
@@ -490,3 +493,17 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.inc"
     )
 endif()
+
+# Put ISO_Fortran_binding.h into the include files of the build area now
+# so that we can run tests before installing
+include(GetClangResourceDir)
+get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
+configure_file(
+  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
+  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
+
+# And also install it into the install area
+get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
+install(
+  FILES include/flang/ISO_Fortran_binding.h
+  DESTINATION ${HEADER_INSTALL_DIR} )

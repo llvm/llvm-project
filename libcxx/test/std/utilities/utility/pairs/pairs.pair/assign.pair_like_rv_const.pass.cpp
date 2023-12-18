@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// GCC 12 chokes on using a mutable variable inside a constexpr context
-// XFAIL: gcc-12
-
 // <utility>
 
 // template <class T1, class T2> struct pair

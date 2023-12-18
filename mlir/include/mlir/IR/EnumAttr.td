@@ -113,6 +113,13 @@ class I64BitEnumAttrCaseGroup<string sym, list<BitEnumAttrCaseBase> cases,
 class EnumAttrInfo<
     string name, list<EnumAttrCaseInfo> cases, Attr baseClass> :
       Attr<baseClass.predicate, baseClass.summary> {
+
+  // Generate a description of this enums members for the MLIR docs.
+  let description =
+        "Enum cases:\n" # !interleave(
+          !foreach(case, cases,
+              "* " # case.str  # " (`" # case.symbol # "`)"), "\n");
+
   // The C++ enum class name
   string className = name;
 
@@ -381,6 +388,7 @@ class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string name = "",
                list <Trait> traits = []>
     : AttrDef<dialect, enumInfo.className, traits> {
   let summary = enumInfo.summary;
+  let description = enumInfo.description;
 
   // The backing enumeration.
   EnumAttrInfo enum = enumInfo;

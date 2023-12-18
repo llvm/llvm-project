@@ -77,10 +77,12 @@ func.func @mul(%A: tensor<100x?xf32>, %B: tensor<?x50xf32>) -> (tensor<100x50xf3
 
   // Allocate addressable "buffers" and copy tensors %A and %B into them.
   %A_m = memref.alloc(%n) : memref<100x?xf32>
-  memref.tensor_store %A to %A_m : memref<100x?xf32>
+  bufferization.materialize_in_destination %A in writable %A_m
+      : (tensor<100x?xf32>, memref<100x?xf32>) -> ()
 
   %B_m = memref.alloc(%n) : memref<?x50xf32>
-  memref.tensor_store %B to %B_m : memref<?x50xf32>
+  bufferization.materialize_in_destination %B in writable %B_m
+      : (tensor<?x50xf32>, memref<?x50xf32>) -> ()
 
   // Call function @multiply passing memrefs as arguments,
   // and getting returned the result of the multiplication.

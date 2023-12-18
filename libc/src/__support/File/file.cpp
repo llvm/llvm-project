@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
   if (!write_allowed()) {
@@ -433,4 +433,4 @@ File::ModeFlags File::mode_flags(const char *mode) {
   return flags;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -17,16 +17,16 @@
 
 // Returns: the quotient of (a + ib) / (c + id)
 
-COMPILER_RT_ABI Lcomplex __divxc3(long double __a, long double __b,
-                                  long double __c, long double __d) {
+COMPILER_RT_ABI Lcomplex __divxc3(xf_float __a, xf_float __b, xf_float __c,
+                                  xf_float __d) {
   int __ilogbw = 0;
-  long double __logbw = crt_logbl(crt_fmaxl(crt_fabsl(__c), crt_fabsl(__d)));
+  xf_float __logbw = crt_logbl(crt_fmaxl(crt_fabsl(__c), crt_fabsl(__d)));
   if (crt_isfinite(__logbw)) {
     __ilogbw = (int)__logbw;
     __c = crt_scalbnl(__c, -__ilogbw);
     __d = crt_scalbnl(__d, -__ilogbw);
   }
-  long double __denom = __c * __c + __d * __d;
+  xf_float __denom = __c * __c + __d * __d;
   Lcomplex z;
   COMPLEX_REAL(z) = crt_scalbnl((__a * __c + __b * __d) / __denom, -__ilogbw);
   COMPLEX_IMAGINARY(z) =

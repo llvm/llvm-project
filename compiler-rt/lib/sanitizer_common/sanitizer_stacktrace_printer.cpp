@@ -12,13 +12,28 @@
 
 #include "sanitizer_stacktrace_printer.h"
 
+#include "sanitizer_common.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_fuchsia.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
-const char *StripFunctionName(const char *function) {
+StackTracePrinter *StackTracePrinter::GetOrInit() {
+  static StackTracePrinter *stacktrace_printer;
+  static StaticSpinMutex init_mu;
+  SpinMutexLock l(&init_mu);
+  if (stacktrace_printer)
+    return stacktrace_printer;
+
+  stacktrace_printer = StackTracePrinter::NewStackTracePrinter();
+
+  CHECK(stacktrace_printer);
+  return stacktrace_printer;
+}
+
+const char *StackTracePrinter::StripFunctionName(const char *function) {
   if (!common_flags()->demangle)
     return function;
   if (!function)
@@ -46,6 +61,13 @@ const char *StripFunctionName(const char *function) {
 
 // sanitizer_symbolizer_markup.cpp implements these differently.
 #if !SANITIZER_SYMBOLIZER_MARKUP
+
+StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
+  if (common_flags()->enable_symbolizer_markup)
+    return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
+
+  return new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
+}
 
 static const char *DemangleFunctionName(const char *function) {
   if (!common_flags()->demangle)
@@ -141,9 +163,12 @@ static void MaybeBuildIdToBuffer(const AddressInfo &info, bool PrefixSpace,
 
 static const char kDefaultFormat[] = "    #%n %p %F %L";
 
-void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
-                 uptr address, const AddressInfo *info, bool vs_style,
-                 const char *strip_path_prefix) {
+void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
+                                             const char *format, int frame_no,
+                                             uptr address,
+                                             const AddressInfo *info,
+                                             bool vs_style,
+                                             const char *strip_path_prefix) {
   // info will be null in the case where symbolization is not needed for the
   // given format. This ensures that the code below will get a hard failure
   // rather than print incorrect information in case RenderNeedsSymbolization
@@ -250,7 +275,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
   }
 }
 
-bool RenderNeedsSymbolization(const char *format) {
+bool FormattedStackTracePrinter::RenderNeedsSymbolization(const char *format) {
   if (0 == internal_strcmp(format, "DEFAULT"))
     format = kDefaultFormat;
   for (const char *p = format; *p != '\0'; p++) {
@@ -273,8 +298,10 @@ bool RenderNeedsSymbolization(const char *format) {
   return false;
 }
 
-void RenderData(InternalScopedString *buffer, const char *format,
-                const DataInfo *DI, const char *strip_path_prefix) {
+void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
+                                            const char *format,
+                                            const DataInfo *DI,
+                                            const char *strip_path_prefix) {
   for (const char *p = format; *p != '\0'; p++) {
     if (*p != '%') {
       buffer->AppendF("%c", *p);
@@ -304,9 +331,10 @@ void RenderData(InternalScopedString *buffer, const char *format,
 
 #endif  // !SANITIZER_SYMBOLIZER_MARKUP
 
-void RenderSourceLocation(InternalScopedString *buffer, const char *file,
-                          int line, int column, bool vs_style,
-                          const char *strip_path_prefix) {
+void StackTracePrinter::RenderSourceLocation(InternalScopedString *buffer,
+                                             const char *file, int line,
+                                             int column, bool vs_style,
+                                             const char *strip_path_prefix) {
   if (vs_style && line > 0) {
     buffer->AppendF("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
     if (column > 0)
@@ -323,9 +351,10 @@ void RenderSourceLocation(InternalScopedString *buffer, const char *file,
   }
 }
 
-void RenderModuleLocation(InternalScopedString *buffer, const char *module,
-                          uptr offset, ModuleArch arch,
-                          const char *strip_path_prefix) {
+void StackTracePrinter::RenderModuleLocation(InternalScopedString *buffer,
+                                             const char *module, uptr offset,
+                                             ModuleArch arch,
+                                             const char *strip_path_prefix) {
   buffer->AppendF("(%s", StripPathPrefix(module, strip_path_prefix));
   if (arch != kModuleArchUnknown) {
     buffer->AppendF(":%s", ModuleArchToString(arch));

@@ -63,6 +63,16 @@ if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
                         moldname mingwex msvcrt)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
   endif()
+  if (NOT TARGET unwind)
+    # Don't check for a library named unwind, if there's a target with that name within
+    # the same build.
+    check_library_exists(unwind _Unwind_GetRegionStart "" COMPILER_RT_HAS_LIBUNWIND)
+    if (COMPILER_RT_HAS_LIBUNWIND)
+      # If we're omitting default libraries, we might need to manually link in libunwind.
+      # This can affect whether we detect a statically linked libc++ correctly.
+      list(APPEND CMAKE_REQUIRED_LIBRARIES unwind)
+    endif()
+  endif()
 endif ()
 
 # CodeGen options.
@@ -440,10 +450,16 @@ if(APPLE)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
   set(FUZZER_SUPPORTED_OS osx)
-  set(ORC_SUPPORTED_OS osx)
+  set(ORC_SUPPORTED_OS)
   set(UBSAN_SUPPORTED_OS osx)
   set(LSAN_SUPPORTED_OS osx)
   set(STATS_SUPPORTED_OS osx)
+
+  # FIXME: Support a general COMPILER_RT_ENABLE_OSX to match other platforms.
+  set(ORC_ENABLE_OSX 1 CACHE BOOL "Whether to build the orc runtime library for osx")
+  if(ORC_ENABLE_OSX)
+    set(ORC_SUPPORTED_OS osx)
+  endif()
 
   # Note: In order to target x86_64h on OS X the minimum deployment target must
   # be 10.8 or higher.

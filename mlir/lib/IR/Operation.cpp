@@ -352,14 +352,14 @@ Attribute Operation::getPropertiesAsAttribute() {
   return info->getOpPropertiesAsAttribute(this);
 }
 LogicalResult Operation::setPropertiesFromAttribute(
-    Attribute attr, function_ref<InFlightDiagnostic &()> getDiag) {
+    Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
   std::optional<RegisteredOperationName> info = getRegisteredInfo();
   if (LLVM_UNLIKELY(!info)) {
     *getPropertiesStorage().as<Attribute *>() = attr;
     return success();
   }
   return info->setOpPropertiesFromAttribute(
-      this->getName(), this->getPropertiesStorage(), attr, getDiag);
+      this->getName(), this->getPropertiesStorage(), attr, emitError);
 }
 
 void Operation::copyProperties(OpaqueProperties rhs) {
@@ -751,7 +751,7 @@ void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
 void OpState::printOpName(Operation *op, OpAsmPrinter &p,
                           StringRef defaultDialect) {
   StringRef name = op->getName().getStringRef();
-  if (name.startswith((defaultDialect + ".").str()) && name.count('.') == 1)
+  if (name.starts_with((defaultDialect + ".").str()) && name.count('.') == 1)
     name = name.drop_front(defaultDialect.size() + 1);
   p.getStream() << name;
 }

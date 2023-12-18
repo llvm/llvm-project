@@ -177,6 +177,20 @@ static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
   sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
 }
 
+/// Make a best effort to guess the
+/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
+static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
+  SmallString<128> Result;
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+  StringRef Base = sys::path::parent_path(SysRoot);
+  if (sys::path::filename(Base) != "SDKs")
+    return Result;
+  Base = sys::path::parent_path(Base);
+  Result = Base;
+  Result += "/Toolchains";
+  return Result;
+}
+
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 static void analyzeImportedModule(
@@ -190,13 +204,18 @@ static void analyzeImportedModule(
     return;
 
   StringRef Path = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_include_path));
-  if (!Path.endswith(".swiftinterface"))
+  if (!Path.ends_with(".swiftinterface"))
     return;
   // Don't track interfaces that are part of the SDK.
   StringRef SysRoot = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_sysroot));
   if (SysRoot.empty())
     SysRoot = CU.getSysRoot();
-  if (!SysRoot.empty() && Path.startswith(SysRoot))
+  if (!SysRoot.empty() && Path.starts_with(SysRoot))
+    return;
+  // Don't track interfaces that are part of the toolchain.
+  // For example: Swift, _Concurrency, ...
+  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
+  if (!Toolchain.empty() && Path.starts_with(Toolchain))
     return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));
@@ -1026,6 +1045,15 @@ unsigned DWARFLinker::DIECloner::cloneStringAttribute(DIE &Die,
     StringEntry = DebugLineStrPool.getEntry(*String);
   } else {
     StringEntry = DebugStrPool.getEntry(*String);
+
+    if (AttrSpec.Attr == dwarf::DW_AT_APPLE_origin) {
+      Info.HasAppleOrigin = true;
+      if (std::optional<StringRef> FileName =
+              ObjFile.Addresses->getLibraryInstallName()) {
+        StringEntry = DebugStrPool.getEntry(*FileName);
+      }
+    }
+
     // Update attributes info.
     if (AttrSpec.Attr == dwarf::DW_AT_name)
       Info.Name = StringEntry;
@@ -1637,6 +1665,12 @@ shouldSkipAttribute(bool Update,
   }
 }
 
+struct AttributeLinkedOffsetFixup {
+  int64_t LinkedOffsetFixupVal;
+  uint64_t InputAttrStartOffset;
+  uint64_t InputAttrEndOffset;
+};
+
 DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                                       const DWARFFile &File, CompileUnit &Unit,
                                       int64_t PCOffset, uint32_t OutOffset,
@@ -1720,6 +1754,9 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       Flags |= TF_SkipPC;
   }
 
+  std::optional<StringRef> LibraryInstallName =
+      ObjFile.Addresses->getLibraryInstallName();
+  SmallVector<AttributeLinkedOffsetFixup> AttributesFixups;
   for (const auto &AttrSpec : Abbrev->attributes()) {
     if (shouldSkipAttribute(Update, AttrSpec, Flags & TF_SkipPC)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
@@ -1727,17 +1764,41 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       continue;
     }
 
+    AttributeLinkedOffsetFixup CurAttrFixup;
+    CurAttrFixup.InputAttrStartOffset = InputDIE.getOffset() + Offset;
+    CurAttrFixup.LinkedOffsetFixupVal =
+        Unit.getStartOffset() + OutOffset - CurAttrFixup.InputAttrStartOffset;
+
     DWARFFormValue Val = AttrSpec.getFormValue();
     uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
+    CurAttrFixup.InputAttrEndOffset = InputDIE.getOffset() + Offset;
     AttrSize = Offset - AttrSize;
 
-    OutOffset += cloneAttribute(*Die, InputDIE, File, Unit, Val, AttrSpec,
-                                AttrSize, AttrInfo, IsLittleEndian);
+    uint64_t FinalAttrSize =
+        cloneAttribute(*Die, InputDIE, File, Unit, Val, AttrSpec, AttrSize,
+                       AttrInfo, IsLittleEndian);
+    if (FinalAttrSize != 0 && ObjFile.Addresses->needToSaveValidRelocs())
+      AttributesFixups.push_back(CurAttrFixup);
+
+    OutOffset += FinalAttrSize;
+  }
+
+  uint16_t Tag = InputDIE.getTag();
+  // Add the DW_AT_APPLE_origin attribute to Compile Unit die if we have
+  // an install name and the DWARF doesn't have the attribute yet.
+  const bool NeedsAppleOrigin = (Tag == dwarf::DW_TAG_compile_unit) &&
+                                LibraryInstallName.has_value() &&
+                                !AttrInfo.HasAppleOrigin;
+  if (NeedsAppleOrigin) {
+    auto StringEntry = DebugStrPool.getEntry(LibraryInstallName.value());
+    Die->addValue(DIEAlloc, dwarf::Attribute(dwarf::DW_AT_APPLE_origin),
+                  dwarf::DW_FORM_strp, DIEInteger(StringEntry.getOffset()));
+    AttrInfo.Name = StringEntry;
+    OutOffset += 4;
   }
 
   // Look for accelerator entries.
-  uint16_t Tag = InputDIE.getTag();
   // FIXME: This is slightly wrong. An inline_subroutine without a
   // low_pc, but with AT_ranges might be interesting to get into the
   // accelerator tables too. For now stick with dsymutil's behavior.
@@ -1806,8 +1867,19 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   Linker.assignAbbrev(NewAbbrev);
   Die->setAbbrevNumber(NewAbbrev.getNumber());
 
+  uint64_t AbbrevNumberSize = getULEB128Size(Die->getAbbrevNumber());
+
   // Add the size of the abbreviation number to the output offset.
-  OutOffset += getULEB128Size(Die->getAbbrevNumber());
+  OutOffset += AbbrevNumberSize;
+
+  // Update fixups with the size of the abbreviation number
+  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
+    F.LinkedOffsetFixupVal += AbbrevNumberSize;
+
+  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
+    ObjFile.Addresses->updateAndSaveValidRelocs(
+        Unit.getOrigUnit().getVersion() >= 5, Unit.getOrigUnit().getOffset(),
+        F.LinkedOffsetFixupVal, F.InputAttrStartOffset, F.InputAttrEndOffset);
 
   if (!HasChildren) {
     // Update our size.
@@ -2584,69 +2656,6 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
   return OutputDebugInfoSize - StartOutputDebugInfoSize;
 }
 
-bool DWARFLinker::emitPaperTrailWarnings(const DWARFFile &File,
-                                         OffsetsStringPool &StringPool) {
-
-  if (File.Warnings.empty())
-    return false;
-
-  DIE *CUDie = DIE::get(DIEAlloc, dwarf::DW_TAG_compile_unit);
-  CUDie->setOffset(11);
-  StringRef Producer;
-  StringRef WarningHeader;
-
-  switch (DwarfLinkerClientID) {
-  case DwarfLinkerClient::Dsymutil:
-    Producer = StringPool.internString("dsymutil");
-    WarningHeader = "dsymutil_warning";
-    break;
-
-  default:
-    Producer = StringPool.internString("dwarfopt");
-    WarningHeader = "dwarfopt_warning";
-    break;
-  }
-
-  StringRef FileName = StringPool.internString(File.FileName);
-  CUDie->addValue(DIEAlloc, dwarf::DW_AT_producer, dwarf::DW_FORM_strp,
-                  DIEInteger(StringPool.getStringOffset(Producer)));
-  DIEBlock *String = new (DIEAlloc) DIEBlock();
-  DIEBlocks.push_back(String);
-  for (auto &C : FileName)
-    String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
-                     DIEInteger(C));
-  String->addValue(DIEAlloc, dwarf::Attribute(0), dwarf::DW_FORM_data1,
-                   DIEInteger(0));
-
-  CUDie->addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_string, String);
-  for (const auto &Warning : File.Warnings) {
-    DIE &ConstDie = CUDie->addChild(DIE::get(DIEAlloc, dwarf::DW_TAG_constant));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_name, dwarf::DW_FORM_strp,
-                      DIEInteger(StringPool.getStringOffset(WarningHeader)));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_artificial, dwarf::DW_FORM_flag,
-                      DIEInteger(1));
-    ConstDie.addValue(DIEAlloc, dwarf::DW_AT_const_value, dwarf::DW_FORM_strp,
-                      DIEInteger(StringPool.getStringOffset(Warning)));
-  }
-  unsigned Size = 4 /* FORM_strp */ + FileName.size() + 1 +
-                  File.Warnings.size() * (4 + 1 + 4) + 1 /* End of children */;
-  DIEAbbrev Abbrev = CUDie->generateAbbrev();
-  assignAbbrev(Abbrev);
-  CUDie->setAbbrevNumber(Abbrev.getNumber());
-  Size += getULEB128Size(Abbrev.getNumber());
-  // Abbreviation ordering needed for classic compatibility.
-  for (auto &Child : CUDie->children()) {
-    Abbrev = Child.generateAbbrev();
-    assignAbbrev(Abbrev);
-    Child.setAbbrevNumber(Abbrev.getNumber());
-    Size += getULEB128Size(Abbrev.getNumber());
-  }
-  CUDie->setSize(Size);
-  TheDwarfEmitter->emitPaperTrailWarningsDie(*CUDie);
-
-  return true;
-}
-
 void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getLocSection().Data,
                                        "debug_loc");
@@ -2711,9 +2720,6 @@ Error DWARFLinker::link() {
         outs() << "OBJECT FILE: " << OptContext.File.FileName << "\n";
     }
 
-    if (emitPaperTrailWarnings(OptContext.File, DebugStrPool))
-      continue;
-
     if (!OptContext.File.Dwarf)
       continue;
 
@@ -2748,12 +2754,12 @@ Error DWARFLinker::link() {
       continue;
     }
 
-    // In a first phase, just read in the debug info and load all clang modules.
+    // Clone all the clang modules with requires extracting the DIE units. We
+    // don't need the full debug info until the Analyze phase.
     OptContext.CompileUnits.reserve(
         OptContext.File.Dwarf->getNumCompileUnits());
-
     for (const auto &CU : OptContext.File.Dwarf->compile_units()) {
-      auto CUDie = CU->getUnitDIE(false);
+      auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/true);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
         DIDumpOptions DumpOpts;
@@ -2794,9 +2800,9 @@ Error DWARFLinker::link() {
       return;
 
     for (const auto &CU : Context.File.Dwarf->compile_units()) {
-      // The !isClangModuleRef condition effectively skips over fully resolved
-      // skeleton units.
-      auto CUDie = CU->getUnitDIE();
+      // Previously we only extracted the unit DIEs. We need the full debug info
+      // now.
+      auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false);
       std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
 
       if (!CUDie || LLVM_UNLIKELY(Options.Update) ||

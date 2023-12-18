@@ -40,7 +40,7 @@ TypeBuilderFunc getModel();
 template <>
 TypeBuilderFunc getModel<void *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::LLVM::LLVMPointerType::get(mlir::IntegerType::get(context, 8));
+    return mlir::LLVM::LLVMPointerType::get(context);
   };
 }
 template <>
@@ -113,7 +113,7 @@ getModel<Fortran::ISO::cfi_internal::FlexibleArray<Fortran::ISO::CFI_dim_t>>() {
 /// Get the type model of the field number `Field` in an ISO CFI descriptor.
 template <int Field>
 static constexpr TypeBuilderFunc getDescFieldTypeModel() {
-  Fortran::ISO::Fortran_2018::CFI_cdesc_t dummyDesc{};
+  Fortran::ISO::CFI_cdesc_t dummyDesc{};
   // check that the descriptor is exactly 8 fields as specified in CFI_cdesc_t
   // in flang/include/flang/ISO_Fortran_binding.h.
   auto [a, b, c, d, e, f, g, h] = dummyDesc;

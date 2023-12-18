@@ -27,7 +27,7 @@ define void @test() {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], undef
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_I_I_I]], label [[FOR_END_I_I_I]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end.i.i.i:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi ptr [ undef, [[FOR_INC_I_I_I]] ], [ undef, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    unreachable

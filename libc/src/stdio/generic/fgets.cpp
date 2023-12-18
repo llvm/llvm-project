@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, fgets,
                    (char *__restrict str, int count,
@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(char *, fgets,
     return nullptr;
 
   unsigned char c = '\0';
-  auto stream = reinterpret_cast<__llvm_libc::File *__restrict>(raw_stream);
+  auto stream = reinterpret_cast<LIBC_NAMESPACE::File *__restrict>(raw_stream);
   stream->lock();
 
   // i is an int because it's frequently compared to count, which is also int.
@@ -52,4 +52,4 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   return str;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

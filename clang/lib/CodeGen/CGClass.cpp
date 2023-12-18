@@ -28,6 +28,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -138,7 +139,7 @@ Address CodeGenFunction::LoadCXXThisAddress() {
     CXXThisAlignment = CGM.getClassPointerAlignment(MD->getParent());
   }
 
-  llvm::Type *Ty = ConvertType(MD->getThisObjectType());
+  llvm::Type *Ty = ConvertType(MD->getFunctionObjectParameterType());
   return Address(LoadCXXThis(), Ty, CXXThisAlignment, KnownNonNull);
 }
 
@@ -510,7 +511,7 @@ namespace {
       const CXXDestructorDecl *D = BaseClass->getDestructor();
       // We are already inside a destructor, so presumably the object being
       // destroyed should have the expected type.
-      QualType ThisTy = D->getThisObjectType();
+      QualType ThisTy = D->getFunctionObjectParameterType();
       Address Addr =
         CGF.GetAddressOfDirectBaseInCompleteClass(CGF.LoadCXXThisAddress(),
                                                   DerivedClass, BaseClass,
@@ -1291,10 +1292,10 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(BaseCtorContinueBB);
   }
 
-  llvm::Value *const OldThis = CXXThisValue;
   for (; B != E && (*B)->isBaseInitializer() && (*B)->isBaseVirtual(); B++) {
     if (!ConstructVBases)
       continue;
+    SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
@@ -1311,15 +1312,13 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
   // Then, non-virtual base initializers.
   for (; B != E && (*B)->isBaseInitializer(); B++) {
     assert(!(*B)->isBaseVirtual());
-
+    SaveAndRestore ThisRAII(CXXThisValue);
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         CGM.getCodeGenOpts().OptimizationLevel > 0 &&
         isInitializerOfDynamicClass(*B))
       CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
     EmitBaseInitializer(*this, ClassDecl, *B);
   }
-
-  CXXThisValue = OldThis;
 
   InitializeVTablePointers(ClassDecl);
 
@@ -1456,7 +1455,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     RunCleanupsScope DtorEpilogue(*this);
     EnterDtorCleanups(Dtor, Dtor_Deleting);
     if (HaveInsertPoint()) {
-      QualType ThisTy = Dtor->getThisObjectType();
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
       EmitCXXDestructorCall(Dtor, Dtor_Complete, /*ForVirtualBase=*/false,
                             /*Delegating=*/false, LoadCXXThisAddress(), ThisTy);
     }
@@ -1490,7 +1489,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     EnterDtorCleanups(Dtor, Dtor_Complete);
 
     if (!isTryBody) {
-      QualType ThisTy = Dtor->getThisObjectType();
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
       EmitCXXDestructorCall(Dtor, Dtor_Base, /*ForVirtualBase=*/false,
                             /*Delegating=*/false, LoadCXXThisAddress(), ThisTy);
       break;
@@ -2114,7 +2113,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   CallArgList Args;
   Address This = ThisAVS.getAddress();
   LangAS SlotAS = ThisAVS.getQualifiers().getAddressSpace();
-  LangAS ThisAS = D->getThisObjectType().getAddressSpace();
+  LangAS ThisAS = D->getFunctionObjectParameterType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
 
   if (SlotAS != ThisAS) {
@@ -2453,7 +2452,7 @@ namespace {
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       // We are calling the destructor from within the constructor.
       // Therefore, "this" should have the expected type.
-      QualType ThisTy = Dtor->getThisObjectType();
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
       CGF.EmitCXXDestructorCall(Dtor, Type, /*ForVirtualBase=*/false,
                                 /*Delegating=*/true, Addr, ThisTy);
     }

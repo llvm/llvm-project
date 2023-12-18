@@ -45,6 +45,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -95,8 +96,6 @@ class PPCBoolRetToInt : public FunctionPass {
     Type *IntTy = ST->isPPC64() ? Type::getInt64Ty(V->getContext())
                                 : Type::getInt32Ty(V->getContext());
 
-    if (auto *C = dyn_cast<Constant>(V))
-      return ConstantExpr::getZExt(C, IntTy);
     if (auto *P = dyn_cast<PHINode>(V)) {
       // Temporarily set the operands to 0. We'll fix this later in
       // runOnUse.
@@ -108,13 +107,12 @@ class PPCBoolRetToInt : public FunctionPass {
       return Q;
     }
 
-    auto *A = dyn_cast<Argument>(V);
-    auto *I = dyn_cast<Instruction>(V);
-    assert((A || I) && "Unknown value type");
-
-    auto InstPt =
-      A ? &*A->getParent()->getEntryBlock().begin() : I->getNextNode();
-    return new ZExtInst(V, IntTy, "", InstPt);
+    IRBuilder IRB(V->getContext());
+    if (auto *I = dyn_cast<Instruction>(V))
+      IRB.SetInsertPoint(I->getNextNode());
+    else
+      IRB.SetInsertPoint(&Func->getEntryBlock(), Func->getEntryBlock().begin());
+    return IRB.CreateZExt(V, IntTy);
   }
 
   typedef SmallPtrSet<const PHINode *, 8> PHINodeSet;
@@ -196,6 +194,7 @@ class PPCBoolRetToInt : public FunctionPass {
 
     auto &TM = TPC->getTM<PPCTargetMachine>();
     ST = TM.getSubtargetImpl(F);
+    Func = &F;
 
     PHINodeSet PromotablePHINodes = getPromotablePHINodes(F);
     B2IMap Bool2IntMap;
@@ -277,6 +276,7 @@ class PPCBoolRetToInt : public FunctionPass {
 
 private:
   const PPCSubtarget *ST;
+  Function *Func;
 };
 
 } // end anonymous namespace

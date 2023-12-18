@@ -22,24 +22,24 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 /// Dimension level types (and properties) that define sparse tensors.
 /// See the documentation in SparseTensorAttrDefs.td for their meaning.
 ///
-/// These correspond to SparseTensorEncodingAttr::DimLevelType in the C++ API.
+/// These correspond to SparseTensorEncodingAttr::LevelType in the C++ API.
 /// If updating, keep them in sync and update the static_assert in the impl
 /// file.
-enum MlirSparseTensorDimLevelType {
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE = 4,                     // 0b00001_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED = 8,                // 0b00010_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU = 9,             // 0b00010_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO = 10,            // 0b00010_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO = 11,         // 0b00010_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON = 16,                // 0b00100_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU = 17,             // 0b00100_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO = 18,             // 0b00100_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO = 19,          // 0b00100_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI = 32,       // 0b01000_00
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NU = 33,    // 0b01000_01
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NO = 34,    // 0b01000_10
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NU_NO = 35, // 0b01000_11
-  MLIR_SPARSE_TENSOR_DIM_LEVEL_TWO_OUT_OF_FOUR = 64,          // 0b10000_00
+enum MlirSparseTensorLevelType {
+  MLIR_SPARSE_TENSOR_LEVEL_DENSE = 4,                   // 0b00001_00
+  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED = 8,              // 0b00010_00
+  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU = 9,           // 0b00010_01
+  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NO = 10,          // 0b00010_10
+  MLIR_SPARSE_TENSOR_LEVEL_COMPRESSED_NU_NO = 11,       // 0b00010_11
+  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON = 16,              // 0b00100_00
+  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU = 17,           // 0b00100_01
+  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NO = 18,           // 0b00100_10
+  MLIR_SPARSE_TENSOR_LEVEL_SINGLETON_NU_NO = 19,        // 0b00100_11
+  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED = 32,       // 0b01000_00
+  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU = 33,    // 0b01000_01
+  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NO = 34,    // 0b01000_10
+  MLIR_SPARSE_TENSOR_LEVEL_LOOSE_COMPRESSED_NU_NO = 35, // 0b01000_11
+  MLIR_SPARSE_TENSOR_LEVEL_TWO_OUT_OF_FOUR = 64,        // 0b10000_00
 };
 
 //===----------------------------------------------------------------------===//
@@ -53,21 +53,26 @@ mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr);
 /// Creates a `sparse_tensor.encoding` attribute with the given parameters.
 MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
     MlirContext ctx, intptr_t lvlRank,
-    enum MlirSparseTensorDimLevelType const *lvlTypes, MlirAffineMap dimToLvl,
-    int posWidth, int crdWidth);
+    enum MlirSparseTensorLevelType const *lvlTypes, MlirAffineMap dimToLvl,
+    MlirAffineMap lvlTodim, int posWidth, int crdWidth);
 
 /// Returns the level-rank of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED intptr_t
 mlirSparseTensorEncodingGetLvlRank(MlirAttribute attr);
 
 /// Returns a specified level-type of the `sparse_tensor.encoding` attribute.
-MLIR_CAPI_EXPORTED enum MlirSparseTensorDimLevelType
+MLIR_CAPI_EXPORTED enum MlirSparseTensorLevelType
 mlirSparseTensorEncodingAttrGetLvlType(MlirAttribute attr, intptr_t lvl);
 
 /// Returns the dimension-to-level mapping of the `sparse_tensor.encoding`
 /// attribute.
 MLIR_CAPI_EXPORTED MlirAffineMap
 mlirSparseTensorEncodingAttrGetDimToLvl(MlirAttribute attr);
+
+/// Returns the level-to-dimension mapping of the `sparse_tensor.encoding`
+/// attribute.
+MLIR_CAPI_EXPORTED MlirAffineMap
+mlirSparseTensorEncodingAttrGetLvlToDim(MlirAttribute attr);
 
 /// Returns the position bitwidth of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED int

@@ -10,7 +10,9 @@
 // BPF backend and provides introspection for the stored information.
 // Currently the following information is accessible:
 // - string table;
-// - instruction offset to line information mapping.
+// - instruction offset to line information mapping;
+// - types table;
+// - CO-RE relocations table.
 //
 // See llvm/DebugInfo/BTF/BTF.h for some details about binary format
 // and links to Linux Kernel documentation.
@@ -32,6 +34,7 @@ using object::SectionRef;
 
 class BTFParser {
   using BTFLinesVector = SmallVector<BTF::BPFLineInfo, 0>;
+  using BTFRelocVector = SmallVector<BTF::BPFFieldReloc, 0>;
 
   // In BTF strings are stored as a continuous memory region with
   // individual strings separated by 0 bytes. Strings are identified
@@ -39,15 +42,34 @@ class BTFParser {
   // The `StringsTable` points to this region in the parsed ObjectFile.
   StringRef StringsTable;
 
+  // A copy of types table from the object file but using native byte
+  // order. Should not be too big in practice, e.g. for ~250MiB vmlinux
+  // image it is ~4MiB.
+  OwningArrayRef<uint8_t> TypesBuffer;
+
   // Maps ELF section number to instruction line number information.
   // Each BTFLinesVector is sorted by `InsnOffset` to allow fast lookups.
   DenseMap<uint64_t, BTFLinesVector> SectionLines;
+
+  // Maps ELF section number to CO-RE relocation information.
+  // Each BTFRelocVector is sorted by `InsnOffset` to allow fast lookups.
+  DenseMap<uint64_t, BTFRelocVector> SectionRelocs;
+
+  // Vector of pointers to all known types, index in this vector
+  // equals to logical type BTF id.
+  // Pointers point to memory owned by `TypesBuffer`
+  // (except pointer at index 0, which is statically allocated).
+  std::vector<const BTF::CommonType *> Types;
 
   struct ParseContext;
   Error parseBTF(ParseContext &Ctx, SectionRef BTF);
   Error parseBTFExt(ParseContext &Ctx, SectionRef BTFExt);
   Error parseLineInfo(ParseContext &Ctx, DataExtractor &Extractor,
                       uint64_t LineInfoStart, uint64_t LineInfoEnd);
+  Error parseRelocInfo(ParseContext &Ctx, DataExtractor &Extractor,
+                       uint64_t RelocInfoStart, uint64_t RelocInfoEnd);
+  Error parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
+                       StringRef RawData);
 
 public:
   // Looks-up a string in the .BTF section's string table.
@@ -61,6 +83,34 @@ public:
   // owned by this class.
   const BTF::BPFLineInfo *findLineInfo(SectionedAddress Address) const;
 
+  // Search for CO-RE relocation information for a specific address.
+  // Return nullptr if no information found.
+  // If information is present, return a pointer to object
+  // owned by this class.
+  const BTF::BPFFieldReloc *findFieldReloc(SectionedAddress Address) const;
+
+  // Return a human readable representation of the CO-RE relocation
+  // record, this is for display purpose only.
+  // See implementation for details.
+  void symbolize(const BTF::BPFFieldReloc *Reloc,
+                 SmallVectorImpl<char> &Result) const;
+
+  // Lookup BTF type definition with a specific index.
+  // Return nullptr if no information found.
+  // If information is present, return a pointer to object
+  // owned by this class.
+  const BTF::CommonType *findType(uint32_t Id) const;
+
+  // Return total number of known BTF types.
+  size_t typesCount() const { return Types.size(); }
+
+  // Allow to selectively load BTF information.
+  struct ParseOptions {
+    bool LoadLines = false;
+    bool LoadTypes = false;
+    bool LoadRelocs = false;
+  };
+
   // Fills instance of BTFParser with information stored in .BTF and
   // .BTF.ext sections of the `Obj`. If this instance was already
   // filled, old data is discarded.
@@ -70,7 +120,8 @@ public:
   // - state of the BTFParser might be incomplete but is not invalid,
   //   queries might be run against it, but some (or all) information
   //   might be unavailable;
-  Error parse(const ObjectFile &Obj);
+  Error parse(const ObjectFile &Obj, const ParseOptions &Opts);
+  Error parse(const ObjectFile &Obj) { return parse(Obj, {true, true, true}); }
 
   // Return true if `Obj` has .BTF and .BTF.ext sections.
   static bool hasBTFSections(const ObjectFile &Obj);

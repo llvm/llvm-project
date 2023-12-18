@@ -137,7 +137,7 @@ entry:
 ; CHECK-DOT-CFG-SIMPLE-NEXT:     </p></div>
 ; CHECK-DOT-CFG-SIMPLE-NEXT:   <a>4. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-SIMPLE-NEXT:   <a>5. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-SIMPLE-NEXT:   <a>6. Pass PrintModulePass on [module] omitted because no change</a><br/>
+; CHECK-DOT-CFG-SIMPLE-NEXT:   <a>6. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-SIMPLE-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 ; CHECK-DOT-CFG-FUNC-FILTER: <!doctype html><html><head><style>.collapsible { background-color: #777; color: white; cursor: pointer; padding: 18px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px;} .active, .collapsible:hover { background-color: #555;} .content { padding: 0 18px; display: none; overflow: hidden; background-color: #f1f1f1;}</style><title>passes.html</title></head>
@@ -153,7 +153,7 @@ entry:
 ; CHECK-DOT-CFG-FUNC-FILTER-NEXT:     </p></div>
 ; CHECK-DOT-CFG-FUNC-FILTER-NEXT:   <a>4. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-FUNC-FILTER-NEXT:   <a>5. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-FUNC-FILTER-NEXT:   <a>6. Pass PrintModulePass on [module] omitted because no change</a><br/>
+; CHECK-DOT-CFG-FUNC-FILTER-NEXT:   <a>6. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-FUNC-FILTER-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 ; CHECK-DOT-CFG-PRINT-MOD-SCOPE: <!doctype html><html><head><style>.collapsible { background-color: #777; color: white; cursor: pointer; padding: 18px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px;} .active, .collapsible:hover { background-color: #555;} .content { padding: 0 18px; display: none; overflow: hidden; background-color: #f1f1f1;}</style><title>passes.html</title></head>
@@ -171,7 +171,7 @@ entry:
 ; CHECK-DOT-CFG-PRINT-MOD-SCOPE-NEXT:     </p></div>
 ; CHECK-DOT-CFG-PRINT-MOD-SCOPE-NEXT:   <a>4. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-PRINT-MOD-SCOPE-NEXT:   <a>5. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-PRINT-MOD-SCOPE-NEXT:   <a>6. Pass PrintModulePass on [module] omitted because no change</a><br/>
+; CHECK-DOT-CFG-PRINT-MOD-SCOPE-NEXT:   <a>6. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-PRINT-MOD-SCOPE-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 ; CHECK-DOT-CFG-FILTER-MULT-FUNC: <!doctype html><html><head><style>.collapsible { background-color: #777; color: white; cursor: pointer; padding: 18px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px;} .active, .collapsible:hover { background-color: #555;} .content { padding: 0 18px; display: none; overflow: hidden; background-color: #f1f1f1;}</style><title>passes.html</title></head>
@@ -189,7 +189,7 @@ entry:
 ; CHECK-DOT-CFG-FILTER-MULT-FUNC-NEXT:     </p></div>
 ; CHECK-DOT-CFG-FILTER-MULT-FUNC-NEXT:   <a>4. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-MULT-FUNC-NEXT:   <a>5. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-FILTER-MULT-FUNC-NEXT:   <a>6. Pass PrintModulePass on [module] omitted because no change</a><br/>
+; CHECK-DOT-CFG-FILTER-MULT-FUNC-NEXT:   <a>6. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-MULT-FUNC-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 ; CHECK-DOT-CFG-FILTER-PASSES: <!doctype html><html><head><style>.collapsible { background-color: #777; color: white; cursor: pointer; padding: 18px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px;} .active, .collapsible:hover { background-color: #555;} .content { padding: 0 18px; display: none; overflow: hidden; background-color: #f1f1f1;}</style><title>passes.html</title></head>
@@ -207,7 +207,7 @@ entry:
 ; CHECK-DOT-CFG-FILTER-PASSES-NEXT:   <a>5. Pass NoOpFunctionPass on f omitted because no change</a><br/>
 ; CHECK-DOT-CFG-FILTER-PASSES-NEXT:   <a>6. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-PASSES-NEXT:   <a>7. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-FILTER-PASSES-NEXT:   <a>8. Pass PrintModulePass on [module] filtered out</a><br/>
+; CHECK-DOT-CFG-FILTER-PASSES-NEXT:   <a>8. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-PASSES-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 
@@ -229,7 +229,7 @@ entry:
 ; CHECK-DOT-CFG-FILTER-MULT-PASSES-NEXT:   <a>5. Pass NoOpFunctionPass on f omitted because no change</a><br/>
 ; CHECK-DOT-CFG-FILTER-MULT-PASSES-NEXT:   <a>6. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-MULT-PASSES-NEXT:   <a>7. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-FILTER-MULT-PASSES-NEXT:   <a>8. Pass PrintModulePass on [module] filtered out</a><br/>
+; CHECK-DOT-CFG-FILTER-MULT-PASSES-NEXT:   <a>8. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-MULT-PASSES-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 ; CHECK-DOT-CFG-FILTER-FUNC-PASSES: <!doctype html><html><head><style>.collapsible { background-color: #777; color: white; cursor: pointer; padding: 18px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px;} .active, .collapsible:hover { background-color: #555;} .content { padding: 0 18px; display: none; overflow: hidden; background-color: #f1f1f1;}</style><title>passes.html</title></head>
@@ -247,7 +247,7 @@ entry:
 ; CHECK-DOT-CFG-FILTER-FUNC-PASSES-NEXT:   <a>5. Pass NoOpFunctionPass on f omitted because no change</a><br/>
 ; CHECK-DOT-CFG-FILTER-FUNC-PASSES-NEXT:   <a>6. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-FUNC-PASSES-NEXT:   <a>7. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-FILTER-FUNC-PASSES-NEXT:   <a>8. Pass PrintModulePass on [module] filtered out</a><br/>
+; CHECK-DOT-CFG-FILTER-FUNC-PASSES-NEXT:   <a>8. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-FILTER-FUNC-PASSES-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 
@@ -266,7 +266,7 @@ entry:
 ; CHECK-DOT-CFG-MULT-PASSES-FILTER-FUNC-NEXT:   <a>5. Pass InstSimplifyPass on f omitted because no change</a><br/>
 ; CHECK-DOT-CFG-MULT-PASSES-FILTER-FUNC-NEXT:   <a>6. PassManager{{.*}} on f ignored</a><br/>
 ; CHECK-DOT-CFG-MULT-PASSES-FILTER-FUNC-NEXT:   <a>7. ModuleToFunctionPassAdaptor on [module] ignored</a><br/>
-; CHECK-DOT-CFG-MULT-PASSES-FILTER-FUNC-NEXT:   <a>8. Pass PrintModulePass on [module] omitted because no change</a><br/>
+; CHECK-DOT-CFG-MULT-PASSES-FILTER-FUNC-NEXT:   <a>8. PrintModulePass on [module] ignored</a><br/>
 ; CHECK-DOT-CFG-MULT-PASSES-FILTER-FUNC-NEXT: <script>var coll = document.getElementsByClassName("collapsible");var i;for (i = 0; i < coll.length; i++) {coll[i].addEventListener("click", function() { this.classList.toggle("active"); var content = this.nextElementSibling; if (content.style.display === "block"){ content.style.display = "none"; } else { content.style.display= "block"; } }); }</script></body></html>
 
 ; CHECK-DOT-CFG-QUIET-SIMPLE: <!doctype html><html><head><style>.collapsible { background-color: #777; color: white; cursor: pointer; padding: 18px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px;} .active, .collapsible:hover { background-color: #555;} .content { padding: 0 18px; display: none; overflow: hidden; background-color: #f1f1f1;}</style><title>passes.html</title></head>

@@ -140,42 +140,43 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
   if (!II)   // if no identifier, not a simple C function
     return;
   StringRef Name = II->getName();
-  if (Name.startswith("__builtin_"))
+  if (Name.starts_with("__builtin_"))
     Name = Name.substr(10);
 
   // Set the evaluation function by switching on the callee name.
-  FnCheck evalFunction = llvm::StringSwitch<FnCheck>(Name)
-    .Case("bcmp", &WalkAST::checkCall_bcmp)
-    .Case("bcopy", &WalkAST::checkCall_bcopy)
-    .Case("bzero", &WalkAST::checkCall_bzero)
-    .Case("gets", &WalkAST::checkCall_gets)
-    .Case("getpw", &WalkAST::checkCall_getpw)
-    .Case("mktemp", &WalkAST::checkCall_mktemp)
-    .Case("mkstemp", &WalkAST::checkCall_mkstemp)
-    .Case("mkdtemp", &WalkAST::checkCall_mkstemp)
-    .Case("mkstemps", &WalkAST::checkCall_mkstemp)
-    .Cases("strcpy", "__strcpy_chk", &WalkAST::checkCall_strcpy)
-    .Cases("strcat", "__strcat_chk", &WalkAST::checkCall_strcat)
-    .Cases("sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
-           "vscanf", "vwscanf", "vfscanf", "vfwscanf",
-           &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-    .Cases("sscanf", "swscanf", "vsscanf", "vswscanf", "swprintf",
-           "snprintf", "vswprintf", "vsnprintf", "memcpy", "memmove",
-           &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-    .Cases("strncpy", "strncat", "memset",
-           &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-    .Case("drand48", &WalkAST::checkCall_rand)
-    .Case("erand48", &WalkAST::checkCall_rand)
-    .Case("jrand48", &WalkAST::checkCall_rand)
-    .Case("lrand48", &WalkAST::checkCall_rand)
-    .Case("mrand48", &WalkAST::checkCall_rand)
-    .Case("nrand48", &WalkAST::checkCall_rand)
-    .Case("lcong48", &WalkAST::checkCall_rand)
-    .Case("rand", &WalkAST::checkCall_rand)
-    .Case("rand_r", &WalkAST::checkCall_rand)
-    .Case("random", &WalkAST::checkCall_random)
-    .Case("vfork", &WalkAST::checkCall_vfork)
-    .Default(nullptr);
+  FnCheck evalFunction =
+      llvm::StringSwitch<FnCheck>(Name)
+          .Case("bcmp", &WalkAST::checkCall_bcmp)
+          .Case("bcopy", &WalkAST::checkCall_bcopy)
+          .Case("bzero", &WalkAST::checkCall_bzero)
+          .Case("gets", &WalkAST::checkCall_gets)
+          .Case("getpw", &WalkAST::checkCall_getpw)
+          .Case("mktemp", &WalkAST::checkCall_mktemp)
+          .Case("mkstemp", &WalkAST::checkCall_mkstemp)
+          .Case("mkdtemp", &WalkAST::checkCall_mkstemp)
+          .Case("mkstemps", &WalkAST::checkCall_mkstemp)
+          .Cases("strcpy", "__strcpy_chk", &WalkAST::checkCall_strcpy)
+          .Cases("strcat", "__strcat_chk", &WalkAST::checkCall_strcat)
+          .Cases("sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
+                 "vscanf", "vwscanf", "vfscanf", "vfwscanf",
+                 &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
+          .Cases("sscanf", "swscanf", "vsscanf", "vswscanf", "swprintf",
+                 "snprintf", "vswprintf", "vsnprintf", "memcpy", "memmove",
+                 &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
+          .Cases("strncpy", "strncat", "memset", "fprintf",
+                 &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
+          .Case("drand48", &WalkAST::checkCall_rand)
+          .Case("erand48", &WalkAST::checkCall_rand)
+          .Case("jrand48", &WalkAST::checkCall_rand)
+          .Case("lrand48", &WalkAST::checkCall_rand)
+          .Case("mrand48", &WalkAST::checkCall_rand)
+          .Case("nrand48", &WalkAST::checkCall_rand)
+          .Case("lcong48", &WalkAST::checkCall_rand)
+          .Case("rand", &WalkAST::checkCall_rand)
+          .Case("rand_r", &WalkAST::checkCall_rand)
+          .Case("random", &WalkAST::checkCall_random)
+          .Case("vfork", &WalkAST::checkCall_vfork)
+          .Default(nullptr);
 
   // If the callee isn't defined, it is not of security concern.
   // Check and evaluate the call.
@@ -737,10 +738,10 @@ void WalkAST::checkCall_strcat(const CallExpr *CE, const FunctionDecl *FD) {
 // Check: Any use of 'sprintf', 'vsprintf', 'scanf', 'wscanf', 'fscanf',
 //        'fwscanf', 'vscanf', 'vwscanf', 'vfscanf', 'vfwscanf', 'sscanf',
 //        'swscanf', 'vsscanf', 'vswscanf', 'swprintf', 'snprintf', 'vswprintf',
-//        'vsnprintf', 'memcpy', 'memmove', 'strncpy', 'strncat', 'memset'
-//        is deprecated since C11.
+//        'vsnprintf', 'memcpy', 'memmove', 'strncpy', 'strncat', 'memset',
+//        'fprintf' is deprecated since C11.
 //
-//        Use of 'sprintf', 'vsprintf', 'scanf', 'wscanf','fscanf',
+//        Use of 'sprintf', 'fprintf', 'vsprintf', 'scanf', 'wscanf', 'fscanf',
 //        'fwscanf', 'vscanf', 'vwscanf', 'vfscanf', 'vfwscanf', 'sscanf',
 //        'swscanf', 'vsscanf', 'vswscanf' without buffer limitations
 //        is insecure.
@@ -762,14 +763,15 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   enum { DEPR_ONLY = -1, UNKNOWN_CALL = -2 };
 
   StringRef Name = FD->getIdentifier()->getName();
-  if (Name.startswith("__builtin_"))
+  if (Name.starts_with("__builtin_"))
     Name = Name.substr(10);
 
   int ArgIndex =
       llvm::StringSwitch<int>(Name)
           .Cases("scanf", "wscanf", "vscanf", "vwscanf", 0)
-          .Cases("sprintf", "vsprintf", "fscanf", "fwscanf", "vfscanf",
-                 "vfwscanf", "sscanf", "swscanf", "vsscanf", "vswscanf", 1)
+          .Cases("fscanf", "fwscanf", "vfscanf", "vfwscanf", "sscanf",
+                 "swscanf", "vsscanf", "vswscanf", 1)
+          .Cases("sprintf", "vsprintf", "fprintf", 1)
           .Cases("swprintf", "snprintf", "vswprintf", "vsnprintf", "memcpy",
                  "memmove", "memset", "strncpy", "strncat", DEPR_ONLY)
           .Default(UNKNOWN_CALL);

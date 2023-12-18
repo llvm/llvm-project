@@ -44,7 +44,7 @@ define void @sha_stream_bb3_2E_i(ptr %sha_info, ptr %data1, i32, ptr %buffer_add
 ; CHECK-NEXT:  Loop %bb3.i: symbolic max backedge-taken count is ((63 + (-1 * (63 smin %0)) + %0) /u 64)
 ; CHECK-NEXT:  Loop %bb3.i: Predicated backedge-taken count is ((63 + (-1 * (63 smin %0)) + %0) /u 64)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb3.i: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb3.i: Trip multiple is 1
 ;
 newFuncRoot:
   br label %bb3.i

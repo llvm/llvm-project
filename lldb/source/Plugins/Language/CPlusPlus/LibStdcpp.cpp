@@ -377,9 +377,16 @@ lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
   if (idx == 0)
     return m_ptr_obj->GetSP();
-  if (idx == 1)
-    return m_obj_obj->GetSP();
-
+  if (idx == 1) {
+    if (m_ptr_obj && !m_obj_obj) {
+      Status error;
+      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
+      if (error.Success())
+        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
+    }
+    if (m_obj_obj)
+      return m_obj_obj->GetSP();
+  }
   return lldb::ValueObjectSP();
 }
 
@@ -397,14 +404,7 @@ bool LibStdcppSharedPtrSyntheticFrontEnd::Update() {
     return false;
 
   m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
-
-  if (m_ptr_obj) {
-    Status error;
-    ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
-    if (error.Success()) {
-      m_obj_obj = obj_obj->Clone(ConstString("object")).get();
-    }
-  }
+  m_obj_obj = nullptr;
 
   return false;
 }

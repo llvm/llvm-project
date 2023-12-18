@@ -119,49 +119,49 @@ func.func @extract_element(%arg0: vector<4x4xf32>) {
 
 func.func @extract_vector_type(%arg0: index) {
   // expected-error@+1 {{invalid kind of type specified}}
-  %1 = vector.extract %arg0[] : index
+  %1 = vector.extract %arg0[] : index from index
 }
 
 // -----
 
 func.func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = vector.extract %arg0[0, 0, 0, 0] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 0, 0, 0] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = "vector.extract" (%arg0) <{position = array<i64: 0, 0, 0, 0>}> : (vector<4x8x16xf32>) -> (vector<16xf32>)
+  %1 = "vector.extract" (%arg0) <{static_position = array<i64: 0, 0, 0, 0>}> : (vector<4x8x16xf32>) -> (vector<16xf32>)
 }
 
 // -----
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #2 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0, 43, 0] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 43, 0] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[3, 7, 16] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[3, 7, 16] : f32 from vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_0d(%arg0: vector<f32>) {
   // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
-  %1 = vector.extract %arg0[0] : vector<f32>
+  %1 = vector.extract %arg0[0] : f32 from vector<f32>
 }
 
 // -----
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0, 0, -1] : vector<4x8x16xf32>
+  %1 = vector.extract %arg0[0, 0, -1] : f32 from vector<4x8x16xf32>
 }
 
 // -----
@@ -328,6 +328,28 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
   %cst = arith.constant 3.0 : f32
   // expected-error@+1 {{requires two types}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst { permutation_map = affine_map<()->(0)> } : memref<?x?xf32>
+}
+
+// -----
+
+#map1 = affine_map<(d0, d1, d2) -> (d0, 0, 0)>
+func.func @main(%m:  memref<1xi32>, %2: vector<1x32xi1>) -> vector<1x32xi32> {
+  %0 = arith.constant 1 : index
+  %1 = arith.constant 1 : i32
+  // expected-error@+1 {{expected the same rank for the vector and the results of the permutation map}}
+  %3 = vector.transfer_read %m[%0], %1, %2 { permutation_map = #map1 } : memref<1xi32>, vector<1x32xi32>
+  return %3 : vector<1x32xi32>
+}
+
+// -----
+
+#map1 = affine_map<(d0, d1, d2) -> (d0, 0, 0)>
+func.func @test_vector.transfer_write(%m:  memref<1xi32>, %2: vector<1x32xi32>) -> vector<1x32xi32> {
+  %0 = arith.constant 1 : index
+  %1 = arith.constant 1 : i32
+  // expected-error@+1 {{expected the same rank for the vector and the results of the permutation map}}
+  %3 = vector.transfer_write %2, %m[%0], %1 { permutation_map = #map1 } : vector<1x32xi32>, memref<1xi32>
+  return %3 : vector<1x32xi32>
 }
 
 // -----
@@ -995,7 +1017,7 @@ func.func @constant_mask_with_zero_mask_dim_size() {
 // -----
 
 func.func @constant_mask_scalable_non_zero_dim_size() {
-  // expected-error@+1 {{expected mask dim sizes for scalable masks to be 0}}
+  // expected-error@+1 {{only supports 'none set' or 'all set' scalable dimensions}}
   %0 = vector.constant_mask [2] : vector<[8]xi1>
 }
 
@@ -1011,6 +1033,22 @@ func.func @print_no_result(%arg0 : f32) -> i32 {
 func.func private @print_needs_vector(%arg0: tensor<8xf32>) {
   // expected-error@+1 {{op operand #0 must be , but got 'tensor<8xf32>'}}
   vector.print %arg0 : tensor<8xf32>
+  return
+}
+
+// -----
+
+func.func @cannot_print_string_with_punctuation_set() {
+  // expected-error@+1 {{`source` or `punctuation` are not set when printing strings}}
+  vector.print str "Whoops!" punctuation <comma>
+  return
+}
+
+// -----
+
+func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
+  // expected-error@+1 {{`source` or `punctuation` are not set when printing strings}}
+  vector.print %vec: vector<[4]xf32> str "Yay!"
   return
 }
 
@@ -1169,7 +1207,7 @@ func.func @reduce_unsupported_attr(%arg0: vector<16xf32>) -> i32 {
 // -----
 
 func.func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  // expected-error@+1 {{'vector.reduction' unsupported number of operands}}
+  // expected-error@+1 {{expected ':'}}
   %0 = vector.reduction <add>, %arg0, %arg1, %arg1 : vector<16xf32> into f32
 }
 

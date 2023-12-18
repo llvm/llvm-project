@@ -266,7 +266,7 @@ define i1 @bittest_constant_by_var_shr_i32(i32 signext %b) nounwind {
 ; RV64I-LABEL: bittest_constant_by_var_shr_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 301408
-; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    addi a1, a1, 722
 ; RV64I-NEXT:    srlw a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret
@@ -296,7 +296,7 @@ define i1 @bittest_constant_by_var_shr_i32(i32 signext %b) nounwind {
 ; RV64XTHEADBS-LABEL: bittest_constant_by_var_shr_i32:
 ; RV64XTHEADBS:       # %bb.0:
 ; RV64XTHEADBS-NEXT:    lui a1, 301408
-; RV64XTHEADBS-NEXT:    addiw a1, a1, 722
+; RV64XTHEADBS-NEXT:    addi a1, a1, 722
 ; RV64XTHEADBS-NEXT:    srlw a0, a1, a0
 ; RV64XTHEADBS-NEXT:    andi a0, a0, 1
 ; RV64XTHEADBS-NEXT:    ret
@@ -319,7 +319,7 @@ define i1 @bittest_constant_by_var_shl_i32(i32 signext %b) nounwind {
 ; RV64I-LABEL: bittest_constant_by_var_shl_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 301408
-; RV64I-NEXT:    addiw a1, a1, 722
+; RV64I-NEXT:    addi a1, a1, 722
 ; RV64I-NEXT:    srlw a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 1
 ; RV64I-NEXT:    ret
@@ -349,7 +349,7 @@ define i1 @bittest_constant_by_var_shl_i32(i32 signext %b) nounwind {
 ; RV64XTHEADBS-LABEL: bittest_constant_by_var_shl_i32:
 ; RV64XTHEADBS:       # %bb.0:
 ; RV64XTHEADBS-NEXT:    lui a1, 301408
-; RV64XTHEADBS-NEXT:    addiw a1, a1, 722
+; RV64XTHEADBS-NEXT:    addi a1, a1, 722
 ; RV64XTHEADBS-NEXT:    srlw a0, a1, a0
 ; RV64XTHEADBS-NEXT:    andi a0, a0, 1
 ; RV64XTHEADBS-NEXT:    ret

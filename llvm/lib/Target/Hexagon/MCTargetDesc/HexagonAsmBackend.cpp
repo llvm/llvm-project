@@ -62,10 +62,9 @@ class HexagonAsmBackend : public MCAsmBackend {
 public:
   HexagonAsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
                     StringRef CPU)
-      : MCAsmBackend(support::little), OSABI(OSABI), CPU(CPU), relaxedCnt(0),
-        MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
-        Extender(nullptr), MaxPacketSize(HexagonMCInstrInfo::packetSize(CPU))
-        {}
+      : MCAsmBackend(llvm::endianness::little), OSABI(OSABI), CPU(CPU),
+        relaxedCnt(0), MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
+        Extender(nullptr), MaxPacketSize(HexagonMCInstrInfo::packetSize(CPU)) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -203,7 +202,8 @@ public:
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override {
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override {
     switch(Fixup.getTargetKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");

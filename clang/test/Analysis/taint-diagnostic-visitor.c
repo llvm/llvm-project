@@ -29,8 +29,8 @@ int taintDiagnosticOutOfBound(void) {
   int Array[] = {1, 2, 3, 4, 5};
   scanf("%d", &index); // expected-note {{Taint originated here}}
                        // expected-note@-1 {{Taint propagated to the 2nd argument}}
-  return Array[index]; // expected-warning {{Out of bound memory access (index is tainted)}}
-                       // expected-note@-1 {{Out of bound memory access (index is tainted)}}
+  return Array[index]; // expected-warning {{Potential out of bound access to 'Array' with tainted index}}
+                       // expected-note@-1 {{Access of 'Array' with a tainted index that may be too large}}
 }
 
 int taintDiagnosticDivZero(int operand) {

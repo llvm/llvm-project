@@ -175,9 +175,9 @@ define <16 x i8> @test13(<2 x i64> %x) {
 define i8 @test14(i8 %x, i32 %y) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i8 [[X:%.*]], ptr [[A]], align 4
+; CHECK-NEXT:    store i8 [[X:%.*]], ptr [[A]], align 1
 ; CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[A]], align 4
-; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = alloca i32
@@ -193,9 +193,9 @@ define i8 @test14(i8 %x, i32 %y) {
 
 define i8 @test15(i8 %x, i32 %y) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    store i8 [[X:%.*]], ptr @test15_global, align 4
+; CHECK-NEXT:    store i8 [[X:%.*]], ptr @test15_global, align 1
 ; CHECK-NEXT:    store i32 [[Y:%.*]], ptr @test15_global, align 4
-; CHECK-NEXT:    [[R:%.*]] = load i8, ptr @test15_global, align 4
+; CHECK-NEXT:    [[R:%.*]] = load i8, ptr @test15_global, align 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   store i8 %x, ptr @test15_global
@@ -420,7 +420,7 @@ define i32 @load_via_strip_invariant_group() {
 
 define i4 @test_vector_load_i4_non_byte_sized() {
 ; CHECK-LABEL: @test_vector_load_i4_non_byte_sized(
-; CHECK-NEXT:    [[RES0:%.*]] = load i4, ptr @foo, align 8
+; CHECK-NEXT:    [[RES0:%.*]] = load i4, ptr @foo, align 1
 ; CHECK-NEXT:    ret i4 [[RES0]]
 ;
   %ptr0 = getelementptr i8, ptr @foo, i64 0

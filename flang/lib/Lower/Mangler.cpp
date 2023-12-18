@@ -96,14 +96,6 @@ std::string Fortran::lower::mangle::mangleName(
   if (auto *overrideName = ultimateSymbol.GetBindName())
     return *overrideName;
 
-  // TODO: A procedure that inherits BIND(C) through another interface
-  // (procedure(iface)) should be dealt with in GetBindName() or some wrapper.
-  if (!Fortran::semantics::IsPointer(ultimateSymbol) &&
-      Fortran::semantics::IsBindCProcedure(ultimateSymbol) &&
-      Fortran::semantics::ClassifyProcedure(symbol) !=
-          Fortran::semantics::ProcedureDefinitionClass::Internal)
-    return ultimateSymbol.name().ToString();
-
   llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
   llvm::SmallVector<llvm::StringRef> modules;
   llvm::SmallVector<llvm::StringRef> procs;

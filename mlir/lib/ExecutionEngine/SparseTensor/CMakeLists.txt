@@ -7,7 +7,7 @@
 # that is reserved/intended for shared libraries only.
 add_mlir_library(MLIRSparseTensorRuntime
   File.cpp
-  NNZ.cpp
+  MapRef.cpp
   Storage.cpp
 
   EXCLUDE_FROM_LIBMLIR

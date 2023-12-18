@@ -18,7 +18,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>\b(def|let|in|code|dag|string|list|bits|bit|field|include|defm|foreach|class|multiclass|int|defvar|defset|if|then|else)\b</string>
+			<string>\b(def|let|in|code|dag|string|list|bits|bit|field|include|defm|foreach|class|multiclass|int|defvar|defset|if|then|else|assert|dump)\b</string>
 			<key>name</key>
 			<string>keyword.control.tablegen</string>
 		</dict>

@@ -1,5 +1,5 @@
 // RUN: %clang %cflags -Wl,--defsym='__global_pointer$'=0x2800 -o %t %s
-// RUN: llvm-bolt --print-cfg --print-only=_start -o /dev/null %t \
+// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
 // RUN:    | FileCheck %s
 
   .data
@@ -17,8 +17,7 @@ _start:
   .option push
   .option norelax
 1:
-// CHECK: .Ltmp0
-// CHECK: auipc gp, %pcrel_hi(__global_pointer$)
+// CHECK: auipc gp, %pcrel_hi(__global_pointer$) # Label: .Ltmp0
 // CHECK-NEXT: addi gp, gp, %pcrel_lo(.Ltmp0)
   auipc gp, %pcrel_hi(__global_pointer$)
   addi  gp, gp, %pcrel_lo(1b)

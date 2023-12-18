@@ -55,10 +55,10 @@ Attribute MyPropStruct::asAttribute(MLIRContext *ctx) const {
 }
 LogicalResult
 MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
-                          function_ref<InFlightDiagnostic &()> getDiag) {
+                          function_ref<InFlightDiagnostic()> emitError) {
   StringAttr strAttr = dyn_cast<StringAttr>(attr);
   if (!strAttr) {
-    getDiag() << "Expect StringAttr but got " << attr;
+    emitError() << "Expect StringAttr but got " << attr;
     return failure();
   }
   prop.content = strAttr.getValue();
@@ -108,7 +108,7 @@ static void writeToMlirBytecode(::mlir::DialectBytecodeWriter &writer,
 
 static LogicalResult
 setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag);
+                           function_ref<InFlightDiagnostic()> emitError);
 static DictionaryAttr
 getPropertiesAsAttribute(MLIRContext *ctx,
                          const PropertiesWithCustomPrint &prop);
@@ -119,7 +119,7 @@ static ParseResult customParseProperties(OpAsmParser &parser,
                                          PropertiesWithCustomPrint &prop);
 static LogicalResult
 setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag);
+                           function_ref<InFlightDiagnostic()> emitError);
 static DictionaryAttr getPropertiesAsAttribute(MLIRContext *ctx,
                                                const VersionedProperties &prop);
 static llvm::hash_code computeHash(const VersionedProperties &prop);
@@ -529,6 +529,11 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
+  // Exercise the fact that an operation created with createOrFold should be
+  // allowed to access its parent block.
+  assert(getOperation()->getBlock() &&
+         "expected that operation is not unlinked");
+
   if (adaptor.getOp() && !getProperties().attr) {
     // The folder adds "attr" if not present.
     getProperties().attr = dyn_cast_or_null<IntegerAttr>(adaptor.getOp());
@@ -998,7 +1003,7 @@ void LoopBlockOp::getSuccessorRegions(
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   assert(point == getBody());
-  return getInitMutable();
+  return MutableOperandRange(getInitMutable());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1138,20 +1143,20 @@ OpFoldResult ManualCppOpWithFold::fold(ArrayRef<Attribute> attributes) {
 
 static LogicalResult
 setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set TestProperties";
+    emitError() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    getDiag() << "expected StringAttr for key `label`";
+    emitError() << "expected StringAttr for key `label`";
     return failure();
   }
   auto valueAttr = dict.getAs<IntegerAttr>("value");
   if (!valueAttr) {
-    getDiag() << "expected IntegerAttr for key `value`";
+    emitError() << "expected IntegerAttr for key `value`";
     return failure();
   }
 
@@ -1187,20 +1192,20 @@ static ParseResult customParseProperties(OpAsmParser &parser,
 }
 static LogicalResult
 setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set VersionedProperties";
+    emitError() << "expected DictionaryAttr to set VersionedProperties";
     return failure();
   }
   auto value1Attr = dict.getAs<IntegerAttr>("value1");
   if (!value1Attr) {
-    getDiag() << "expected IntegerAttr for key `value1`";
+    emitError() << "expected IntegerAttr for key `value1`";
     return failure();
   }
   auto value2Attr = dict.getAs<IntegerAttr>("value2");
   if (!value2Attr) {
-    getDiag() << "expected IntegerAttr for key `value2`";
+    emitError() << "expected IntegerAttr for key `value2`";
     return failure();
   }
 
@@ -1334,7 +1339,7 @@ TestVersionedOpA::readProperties(::mlir::DialectBytecodeReader &reader,
 
   // Check if we have a version. If not, assume we are parsing the current
   // version.
-  auto maybeVersion = reader.getDialectVersion("test");
+  auto maybeVersion = reader.getDialectVersion<test::TestDialect>();
   if (succeeded(maybeVersion)) {
     // If version is less than 2.0, there is no additional attribute to parse.
     // We can materialize missing properties post parsing before verification.
@@ -1353,6 +1358,17 @@ TestVersionedOpA::readProperties(::mlir::DialectBytecodeReader &reader,
 void TestVersionedOpA::writeProperties(::mlir::DialectBytecodeWriter &writer) {
   auto &prop = getProperties();
   writer.writeAttribute(prop.dims);
+
+  auto maybeVersion = writer.getDialectVersion<test::TestDialect>();
+  if (succeeded(maybeVersion)) {
+    // If version is less than 2.0, there is no additional attribute to write.
+    const auto *version =
+        reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
+    if ((version->major_ < 2)) {
+      llvm::outs() << "downgrading op properties...\n";
+      return;
+    }
+  }
   writer.writeAttribute(prop.modifier);
 }
 
@@ -1364,7 +1380,7 @@ void TestVersionedOpA::writeProperties(::mlir::DialectBytecodeWriter &writer) {
 
   // Check if we have a version. If not, assume we are parsing the current
   // version.
-  auto maybeVersion = reader.getDialectVersion("test");
+  auto maybeVersion = reader.getDialectVersion<test::TestDialect>();
   bool needToParseAnotherInt = true;
   if (succeeded(maybeVersion)) {
     // If version is less than 2.0, there is no additional attribute to parse.

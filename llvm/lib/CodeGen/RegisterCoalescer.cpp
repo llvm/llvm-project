@@ -383,6 +383,11 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+    MachineFunctionProperties getClearedProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::IsSSA);
+    }
+
     void releaseMemory() override;
 
     /// This is the pass entry point.
@@ -1196,6 +1201,8 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
                       << printMBBReference(MBB) << '\t' << CopyMI);
   }
 
+  const bool IsUndefCopy = CopyMI.getOperand(1).isUndef();
+
   // Remove CopyMI.
   // Note: This is fine to remove the copy before updating the live-ranges.
   // While updating the live-ranges, we only look at slot indices and
@@ -1209,6 +1216,19 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
   LIS->pruneValue(*static_cast<LiveRange *>(&IntB), CopyIdx.getRegSlot(),
                   &EndPoints);
   BValNo->markUnused();
+
+  if (IsUndefCopy) {
+    // We're introducing an undef phi def, and need to set undef on any users of
+    // the previously local def to avoid artifically extending the lifetime
+    // through the block.
+    for (MachineOperand &MO : MRI->use_nodbg_operands(IntB.reg())) {
+      const MachineInstr &MI = *MO.getParent();
+      SlotIndex UseIdx = LIS->getInstructionIndex(MI);
+      if (!IntB.liveAt(UseIdx))
+        MO.setIsUndef(true);
+    }
+  }
+
   // Extend IntB to the EndPoints of its original live interval.
   LIS->extendToIndices(IntB, EndPoints);
 
@@ -1317,6 +1337,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
+  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
@@ -1396,7 +1417,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     MachineOperand &MO = CopyMI->getOperand(I);
     if (MO.isReg()) {
       assert(MO.isImplicit() && "No explicit operands after implicit operands.");
-      assert(MO.getReg().isPhysical() && "unexpected implicit virtual register def");
+      assert((MO.getReg().isPhysical() ||
+              (MO.getSubReg() == 0 && MO.getReg() == DstOperand.getReg())) &&
+             "unexpected implicit virtual register def");
       ImplicitOps.push_back(MO);
     }
   }
@@ -1407,14 +1430,48 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // NewMI may have dead implicit defs (E.g. EFLAGS for MOV<bits>r0 on X86).
   // We need to remember these so we can add intervals once we insert
   // NewMI into SlotIndexes.
+  //
+  // We also expect to have tied implicit-defs of super registers originating
+  // from SUBREG_TO_REG, such as:
+  // $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+  // undef %0.sub_32bit = MOV32r0 implicit-def dead $eflags, implicit-def %0
+  //
+  // The implicit-def of the super register may have been reduced to
+  // subregisters depending on the uses.
+
+  bool NewMIDefinesFullReg = false;
+
   SmallVector<MCRegister, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
        i != e; ++i) {
     MachineOperand &MO = NewMI.getOperand(i);
     if (MO.isReg() && MO.isDef()) {
-      assert(MO.isImplicit() && MO.isDead() && MO.getReg().isPhysical());
-      NewMIImplDefs.push_back(MO.getReg().asMCReg());
+      assert(MO.isImplicit());
+      if (MO.getReg().isPhysical()) {
+        if (MO.getReg() == DstReg)
+          NewMIDefinesFullReg = true;
+
+        assert(MO.isImplicit() && MO.getReg().isPhysical() &&
+               (MO.isDead() ||
+                (DefSubIdx &&
+                 ((TRI->getSubReg(MO.getReg(), DefSubIdx) ==
+                   MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
+                  TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
+                                       MO.getReg())))));
+        NewMIImplDefs.push_back(MO.getReg().asMCReg());
+      } else {
+        assert(MO.getReg() == NewMI.getOperand(0).getReg());
+
+        // We're only expecting another def of the main output, so the range
+        // should get updated with the regular output range.
+        //
+        // FIXME: The range updating below probably needs updating to look at
+        // the super register if subranges are tracked.
+        assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
+               "subrange update for implicit-def of super register may not be "
+               "properly handled");
+      }
     }
   }
 
@@ -1526,8 +1583,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
     NewMI.getOperand(0).setIsDead(true);
-    NewMI.addOperand(MachineOperand::CreateReg(
-        CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+
+    if (!NewMIDefinesFullReg) {
+      NewMI.addOperand(MachineOperand::CreateReg(
+          CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+    }
+
     // Record small dead def live-ranges for all the subregisters
     // of the destination register.
     // Otherwise, variables that live through may miss some
@@ -1550,8 +1611,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
 
-  if (NewMI.getOperand(0).getSubReg())
-    NewMI.getOperand(0).setIsUndef();
+  NewMI.setRegisterDefReadUndef(NewMI.getOperand(0).getReg());
 
   // Transfer over implicit operands to the rematerialized instruction.
   for (MachineOperand &MO : ImplicitOps)
@@ -1648,12 +1708,19 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   // The source interval may also have been on an undef use, in which case the
   // copy introduced a live value.
   if (((V && V->isPHIDef()) || (!V && !DstLI.liveAt(Idx)))) {
-    CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     for (unsigned i = CopyMI->getNumOperands(); i != 0; --i) {
       MachineOperand &MO = CopyMI->getOperand(i-1);
-      if (MO.isReg() && MO.isUse())
+      if (MO.isReg()) {
+        if (MO.isUse())
+          CopyMI->removeOperand(i - 1);
+      } else {
+        assert(MO.isImm() &&
+               CopyMI->getOpcode() == TargetOpcode::SUBREG_TO_REG);
         CopyMI->removeOperand(i-1);
+      }
     }
+
+    CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
                "implicit def\n");
     return CopyMI;

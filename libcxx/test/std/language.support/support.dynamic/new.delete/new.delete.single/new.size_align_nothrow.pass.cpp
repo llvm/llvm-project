@@ -10,12 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
-// https://reviews.llvm.org/D129198 is not in AppleClang 14
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.13{{(.0)?}} && apple-clang-14
-
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
@@ -66,8 +60,9 @@ int main(int, char**) {
         assert(reinterpret_cast<std::uintptr_t>(x) % alignof(TrackLifetimeOverAligned) == 0);
         assert(info.address_constructed == x);
 
+        const auto old_x = x;
         delete x;
-        assert(info.address_destroyed == x);
+        assert(info.address_destroyed == old_x);
     }
 
     return 0;

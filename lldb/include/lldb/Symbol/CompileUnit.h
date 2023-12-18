@@ -331,8 +331,7 @@ public:
   ///     A line table object pointer that this object now owns.
   void SetLineTable(LineTable *line_table);
 
-  void SetSupportFiles(const FileSpecList &support_files);
-  void SetSupportFiles(FileSpecList &&support_files);
+  void SetSupportFiles(FileSpecList support_files);
 
   void SetDebugMacros(const DebugMacrosSP &debug_macros);
 

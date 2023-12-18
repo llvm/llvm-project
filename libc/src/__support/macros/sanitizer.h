@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
-#define LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H
+#define LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H
 
 #include "src/__support/macros/config.h" //LIBC_HAS_FEATURE
 
@@ -47,9 +47,16 @@
 // Functions to unpoison memory
 //-----------------------------------------------------------------------------
 
-#ifdef LIBC_HAVE_MEMORY_SANITIZER
+#if defined(LIBC_HAVE_MEMORY_SANITIZER) &&                                     \
+    LIBC_HAS_BUILTIN(__builtin_constant_p)
+// Only perform MSAN unpoison in non-constexpr context.
 #include <sanitizer/msan_interface.h>
-#define MSAN_UNPOISON(addr, size) __msan_unpoison(addr, size)
+#define MSAN_UNPOISON(addr, size)                                              \
+  do {                                                                         \
+    if (!__builtin_constant_p(*addr)) {                                        \
+      __msan_unpoison(addr, size);                                             \
+    }                                                                          \
+  } while (0)
 #else
 #define MSAN_UNPOISON(ptr, size)
 #endif
@@ -65,4 +72,4 @@
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_MACROS_SANITIZER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H

@@ -17,7 +17,6 @@
 #include "clang/AST/CommentLexer.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Index/USRGeneration.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 

@@ -1641,8 +1641,16 @@ let isBranch = 1, isTerminator = 1, Size = 0 in {
 
 // System call.
 let PPC970_Unit = 7 in {
-  def SC     : SCForm<17, 1, (outs), (ins i32imm:$LEV),
+  def SC     : SCForm<17, 1, 0, (outs), (ins i32imm:$LEV),
                       "sc $LEV", IIC_BrB, [(PPCsc (i32 imm:$LEV))]>;
+}
+
+// We mark SCV as having no scheduling model since it is only meant to be used
+// as inline assembly. If we implement a builtin pattern for it we will need to
+// add it to the P9 and P10 scheduling models.
+let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
+  def SCV : SCForm<17, 0, 1, (outs), (ins i32imm:$LEV),
+                   "scv $LEV", IIC_BrB, []>;
 }
 
 // Branch history rolling buffer.
@@ -3429,6 +3437,23 @@ def crnot : OutPatFrag<(ops node:$in),
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
 
+// Pseudo-instructions for alternate assembly syntax (never used by codegen).
+// These are aliases that require C++ handling to convert to the target
+// instruction, while InstAliases can be handled directly by tblgen.
+class PPCAsmPseudo<string asm, dag iops>
+  : Instruction {
+  let Namespace = "PPC";
+  bit PPC64 = 0;  // Default value, override with isPPC64
+
+  let OutOperandList = (outs);
+  let InOperandList = iops;
+  let Pattern = [];
+  let AsmString = asm;
+  let isAsmParserOnly = 1;
+  let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
 include "PPCInstrP10.td"
@@ -4449,23 +4474,6 @@ def ICBIEP  : XForm_1a<31, 991, (outs), (ins (memrr $RA, $RB):$addr), "icbiep $a
 //===----------------------------------------------------------------------===//
 // PowerPC Assembler Instruction Aliases
 //
-
-// Pseudo-instructions for alternate assembly syntax (never used by codegen).
-// These are aliases that require C++ handling to convert to the target
-// instruction, while InstAliases can be handled directly by tblgen.
-class PPCAsmPseudo<string asm, dag iops>
-  : Instruction {
-  let Namespace = "PPC";
-  bit PPC64 = 0;  // Default value, override with isPPC64
-
-  let OutOperandList = (outs);
-  let InOperandList = iops;
-  let Pattern = [];
-  let AsmString = asm;
-  let isAsmParserOnly = 1;
-  let isPseudo = 1;
-  let hasNoSchedulingInfo = 1;
-}
 
 def : InstAlias<"sc", (SC 0)>;
 

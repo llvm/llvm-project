@@ -219,6 +219,10 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIContext() {
   emitARM64WinUnwindCode(Win64EH::UOP_Context, -1, 0);
 }
 
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIECContext() {
+  emitARM64WinUnwindCode(Win64EH::UOP_ECContext, -1, 0);
+}
+
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFIClearUnwoundToCall() {
   emitARM64WinUnwindCode(Win64EH::UOP_ClearUnwoundToCall, -1, 0);
 }

@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_DIFF(double, __llvm_libc::hypot, ::hypot,
+BINARY_OP_SINGLE_OUTPUT_DIFF(double, LIBC_NAMESPACE::hypot, ::hypot,
                              "hypot_diff.log")

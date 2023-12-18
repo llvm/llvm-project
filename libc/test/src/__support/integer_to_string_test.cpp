@@ -16,14 +16,14 @@
 
 #include "limits.h"
 
-using __llvm_libc::IntegerToString;
-using __llvm_libc::cpp::span;
-using __llvm_libc::cpp::string_view;
-using __llvm_libc::radix::Bin;
-using __llvm_libc::radix::Custom;
-using __llvm_libc::radix::Dec;
-using __llvm_libc::radix::Hex;
-using __llvm_libc::radix::Oct;
+using LIBC_NAMESPACE::IntegerToString;
+using LIBC_NAMESPACE::cpp::span;
+using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::radix::Bin;
+using LIBC_NAMESPACE::radix::Custom;
+using LIBC_NAMESPACE::radix::Dec;
+using LIBC_NAMESPACE::radix::Hex;
+using LIBC_NAMESPACE::radix::Oct;
 
 #define EXPECT(type, value, string_value)                                      \
   {                                                                            \
@@ -225,7 +225,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36) {
 }
 
 TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16) {
-  using UInt256 = __llvm_libc::cpp::UInt<256>;
+  using UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
   using type = IntegerToString<UInt256, Hex::WithWidth<64>>;
   EXPECT(type, static_cast<UInt256>(0),
          "0000000000000000000000000000000000000000000000000000000000000000");

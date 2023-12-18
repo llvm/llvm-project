@@ -26,7 +26,7 @@ getArchiveAndObjectName(StringRef Filename) {
   return {Archive, Object};
 }
 
-static bool isArchive(StringRef Filename) { return Filename.endswith(")"); }
+static bool isArchive(StringRef Filename) { return Filename.ends_with(")"); }
 
 static std::vector<MemoryBufferRef>
 getMachOFatMemoryBuffers(StringRef Filename, MemoryBuffer &Mem,
@@ -182,7 +182,7 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
 
   for (const auto &Archive : Archives) {
     Error Err = Error::success();
-    for (auto Child : Archive->children(Err)) {
+    for (const auto &Child : Archive->children(Err)) {
       if (auto NameOrErr = Child.getName()) {
         if (*NameOrErr == ObjectFilename) {
           auto ModTimeOrErr = Child.getLastModified();

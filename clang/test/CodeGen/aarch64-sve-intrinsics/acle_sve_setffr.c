@@ -7,12 +7,12 @@
 
 // CHECK-LABEL: @test_svsetffr(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.aarch64.sve.setffr()
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.setffr()
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svsetffrv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    call void @llvm.aarch64.sve.setffr()
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.setffr()
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svsetffr()

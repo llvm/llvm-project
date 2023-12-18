@@ -311,14 +311,21 @@ struct WmmaLoadOpToSPIRVLowering final
                   OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = subgroupMmaLoadMatrixOp->getLoc();
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+
     gpu::MMAMatrixType retType =
         cast<gpu::MMAMatrixType>(subgroupMmaLoadMatrixOp.getRes().getType());
     auto memrefType =
         cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType());
-    Value bufferPtr = spirv::getElementPtr(
-        *getTypeConverter<const SPIRVTypeConverter>(), memrefType,
-        adaptor.getSrcMemref(), adaptor.getIndices(), loc, rewriter);
-    auto coopType = convertMMAToSPIRVCoopMatrixNVType(retType);
+    Value bufferPtr =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getSrcMemref(),
+                             adaptor.getIndices(), loc, rewriter);
+    auto coopType =
+        typeConverter.convertType<spirv::CooperativeMatrixNVType>(retType);
+    if (!coopType)
+      return rewriter.notifyMatchFailure(subgroupMmaLoadMatrixOp,
+                                         "type conversion failed");
+
     int64_t stride = subgroupMmaLoadMatrixOp.getLeadDimension().getSExtValue();
     auto i32Type = rewriter.getI32Type();
     auto strideValue = rewriter.create<spirv::ConstantOp>(
@@ -385,30 +392,6 @@ struct WmmaMmaOpToSPIRVLowering final
 } // namespace nv
 } // namespace mlir
 
-mlir::spirv::CooperativeMatrixNVType
-mlir::convertMMAToSPIRVCoopMatrixNVType(gpu::MMAMatrixType type) {
-  ArrayRef<int64_t> retTypeShape = type.getShape();
-  Type elementType = type.getElementType();
-  return spirv::CooperativeMatrixNVType::get(
-      elementType, spirv::Scope::Subgroup, retTypeShape[0], retTypeShape[1]);
-}
-
-mlir::spirv::CooperativeMatrixType
-mlir::convertMMAToSPIRVCoopMatrixType(gpu::MMAMatrixType type) {
-  ArrayRef<int64_t> retTypeShape = type.getShape();
-  Type elementType = type.getElementType();
-
-  auto use =
-      llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
-          .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
-          .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
-          .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
-
-  return spirv::CooperativeMatrixType::get(elementType, retTypeShape[0],
-                                           retTypeShape[1],
-                                           spirv::Scope::Subgroup, use);
-}
-
 void mlir::populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
     SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
   using namespace mlir;
@@ -431,4 +414,32 @@ void mlir::populateGpuWMMAToSPIRVCoopMatrixNVConversionPatterns(
   // Give the following patterns higher benefit to prevail over the default one.
   patterns.add<WmmaElementwiseOpToSPIRVScalarMulLowering>(converter, context,
                                                           /*benefit=*/2);
+}
+
+void mlir::populateMMAToSPIRVCoopMatrixTypeConversion(
+    mlir::SPIRVTypeConverter &typeConverter, bool useNVTypes) {
+  if (useNVTypes) {
+    typeConverter.addConversion([](gpu::MMAMatrixType type) {
+      ArrayRef<int64_t> retTypeShape = type.getShape();
+      Type elementType = type.getElementType();
+      return spirv::CooperativeMatrixNVType::get(
+          elementType, spirv::Scope::Subgroup, retTypeShape[0],
+          retTypeShape[1]);
+    });
+    return;
+  }
+
+  typeConverter.addConversion([](gpu::MMAMatrixType type) {
+    ArrayRef<int64_t> retTypeShape = type.getShape();
+    Type elementType = type.getElementType();
+    auto use =
+        llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
+            .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
+            .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
+            .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
+
+    return spirv::CooperativeMatrixType::get(elementType, retTypeShape[0],
+                                             retTypeShape[1],
+                                             spirv::Scope::Subgroup, use);
+  });
 }

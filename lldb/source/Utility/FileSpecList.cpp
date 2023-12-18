@@ -117,7 +117,7 @@ size_t FileSpecList::FindCompatibleIndex(size_t start_idx,
       auto is_suffix = [](llvm::StringRef a, llvm::StringRef b,
                           bool case_sensitive) -> bool {
         if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b))
-          return a.empty() || a.endswith("/");
+          return a.empty() || a.ends_with("/");
         return false;
       };
       const bool case_sensitive =
@@ -140,12 +140,6 @@ const FileSpec &FileSpecList::GetFileSpecAtIndex(size_t idx) const {
   return g_empty_file_spec;
 }
 
-const FileSpec *FileSpecList::GetFileSpecPointerAtIndex(size_t idx) const {
-  if (idx < m_files.size())
-    return &m_files[idx];
-  return nullptr;
-}
-
 // Return the size in bytes that this object takes in memory. This returns the
 // size in bytes of this object's member variables and any FileSpec objects its
 // member variables contain, the result doesn't not include the string values
@@ -162,9 +156,3 @@ size_t FileSpecList::MemorySize() const {
 
 // Return the number of files in the file spec list.
 size_t FileSpecList::GetSize() const { return m_files.size(); }
-
-size_t FileSpecList::GetFilesMatchingPartialPath(const char *path,
-                                                 bool dir_okay,
-                                                 FileSpecList &matches) {
-  return 0;
-}

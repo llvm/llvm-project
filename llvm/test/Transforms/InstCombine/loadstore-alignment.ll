@@ -9,7 +9,7 @@ target datalayout = "E-p:64:64:64-p1:64:64:64-p2:32:32:32-a0:0:8-f32:32:32-f64:6
 
 define <2 x i64> @static_hem() {
 ; CHECK-LABEL: @static_hem(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 7
@@ -21,7 +21,7 @@ define <2 x i64> @hem(i32 %i) {
 ; CHECK-LABEL: @hem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 %i
@@ -34,7 +34,7 @@ define <2 x i64> @hem_2d(i32 %i, i32 %j) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %t = getelementptr [13 x <2 x i64>], ptr @xx, i32 %i, i32 %j
@@ -44,7 +44,7 @@ define <2 x i64> @hem_2d(i32 %i, i32 %j) {
 
 define <2 x i64> @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @x, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @x, align 1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %tmp1 = load <2 x i64>, ptr @x, align 1
@@ -55,7 +55,7 @@ define <2 x i64> @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[T:%.*]] = alloca <2 x i64>, align 16
 ; CHECK-NEXT:    call void @kip(ptr nonnull [[T]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %t = alloca <2 x i64>
@@ -66,7 +66,7 @@ define <2 x i64> @bar() {
 
 define void @static_hem_store(<2 x i64> %y) {
 ; CHECK-LABEL: @static_hem_store(
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 7
@@ -78,7 +78,7 @@ define void @hem_store(i32 %i, <2 x i64> %y) {
 ; CHECK-LABEL: @hem_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = getelementptr <2 x i64>, ptr @x, i32 %i
@@ -91,7 +91,7 @@ define void @hem_2d_store(i32 %i, i32 %j, <2 x i64> %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]], i64 [[TMP2]]
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = getelementptr [13 x <2 x i64>], ptr @xx, i32 %i, i32 %j
@@ -101,7 +101,7 @@ define void @hem_2d_store(i32 %i, i32 %j, <2 x i64> %y) {
 
 define void @foo_store(<2 x i64> %y) {
 ; CHECK-LABEL: @foo_store(
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr @x, align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr @x, align 1
 ; CHECK-NEXT:    ret void
 ;
   store <2 x i64> %y, ptr @x, align 1
@@ -112,7 +112,7 @@ define void @bar_store(<2 x i64> %y) {
 ; CHECK-LABEL: @bar_store(
 ; CHECK-NEXT:    [[T:%.*]] = alloca <2 x i64>, align 16
 ; CHECK-NEXT:    call void @kip(ptr nonnull [[T]])
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %t = alloca <2 x i64>

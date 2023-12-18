@@ -462,7 +462,7 @@ define <2 x i1> @ne_and_shl_one_commute(<2 x i8> %x, <2 x i8> %y) {
 define i1 @ne_and_lshr_minval(i8 %px, i8 %y) {
 ; CHECK-LABEL: @ne_and_lshr_minval(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[POW2:%.*]] = lshr i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2:%.*]] = lshr exact i8 -128, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[POW2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -477,7 +477,7 @@ define i1 @ne_and_lshr_minval(i8 %px, i8 %y) {
 define i1 @eq_and_lshr_minval_commute(i8 %px, i8 %y) {
 ; CHECK-LABEL: @eq_and_lshr_minval_commute(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[POW2:%.*]] = lshr i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2:%.*]] = lshr exact i8 -128, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[POW2]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[POW2]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])

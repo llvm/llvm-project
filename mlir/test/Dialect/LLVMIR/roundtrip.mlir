@@ -34,6 +34,16 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr>
   %typecheck_vptrcmp = llvm.add %vptrcmp, %vptrcmp : vector<2 x i1>
 
+// Integer overflow flags
+// CHECK: {{.*}} = llvm.add %[[I32]], %[[I32]] overflow<nsw> : i32
+// CHECK: {{.*}} = llvm.sub %[[I32]], %[[I32]] overflow<nuw> : i32
+// CHECK: {{.*}} = llvm.mul %[[I32]], %[[I32]] overflow<nsw, nuw> : i32
+// CHECK: {{.*}} = llvm.shl %[[I32]], %[[I32]] overflow<nsw, nuw> : i32
+  %add_flag = llvm.add %arg0, %arg0 overflow<nsw> : i32
+  %sub_flag = llvm.sub %arg0, %arg0 overflow<nuw> : i32
+  %mul_flag = llvm.mul %arg0, %arg0 overflow<nsw, nuw> : i32
+  %shl_flag = llvm.shl %arg0, %arg0 overflow<nuw, nsw> : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32
@@ -50,11 +60,11 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // Memory-related operations.
 //
 // CHECK-NEXT:  %[[ALLOCA:.*]] = llvm.alloca %[[I32]] x f64 : (i32) -> !llvm.ptr
-// CHECK-NEXT:  %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][%[[I32]], %[[I32]]] : (!llvm.ptr, i32, i32) -> !llvm.ptr, f64
+// CHECK-NEXT:  %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][%[[I32]]] : (!llvm.ptr, i32) -> !llvm.ptr, f64
 // CHECK-NEXT:  %[[VALUE:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> f64
 // CHECK-NEXT:  llvm.store %[[VALUE]], %[[ALLOCA]] : f64, !llvm.ptr
   %13 = llvm.alloca %arg0 x f64 : (i32) -> !llvm.ptr
-  %14 = llvm.getelementptr %13[%arg0, %arg0] : (!llvm.ptr, i32, i32) -> !llvm.ptr, f64
+  %14 = llvm.getelementptr %13[%arg0] : (!llvm.ptr, i32) -> !llvm.ptr, f64
   %15 = llvm.load %14 : !llvm.ptr -> f64
   llvm.store %15, %13 : f64, !llvm.ptr
 
@@ -70,6 +80,18 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %19 = llvm.insertvalue %18, %17[2] : !llvm.struct<(i32, f64, i32)>
   %20 = llvm.mlir.addressof @foo : !llvm.ptr
   %21 = llvm.call %20(%arg0) : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
+
+// Variadic calls
+// CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
+// CHECK:  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : (i32, i32) -> ()
+// CHECK:  %[[VARIADIC_FUNC:.*]] = llvm.mlir.addressof @vararg_func : !llvm.ptr
+// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+// CHECK:  llvm.call %[[VARIADIC_FUNC]](%[[I32]], %[[I32]]) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
+  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : (i32, i32) -> ()
+  llvm.call @vararg_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : (i32, i32) -> ()
+  %variadic_func = llvm.mlir.addressof @vararg_func : !llvm.ptr
+  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) : !llvm.ptr, (i32, i32) -> ()
+  llvm.call %variadic_func(%arg0, %arg0) vararg(!llvm.func<void (i32, ...)>) {fastmathFlags = #llvm.fastmath<fast>} : !llvm.ptr, (i32, i32) -> ()
 
 // Terminator operations and their successors.
 //
@@ -182,6 +204,8 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64, %ptr2: !llvm.ptr) {
   llvm.getelementptr inbounds %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.return
 }
+
+llvm.func @vararg_foo(i32, ...) -> !llvm.struct<(i32, f64, i32)>
 
 // An larger self-contained function.
 // CHECK-LABEL: llvm.func @foo(%{{.*}}: i32) -> !llvm.struct<(i32, f64, i32)> {
@@ -329,8 +353,8 @@ func.func @alloca(%size : i64) {
 
 // CHECK-LABEL: @null
 func.func @null() {
-  // CHECK: llvm.mlir.null : !llvm.ptr
-  %0 = llvm.mlir.null : !llvm.ptr
+  // CHECK: llvm.mlir.zero : !llvm.ptr
+  %0 = llvm.mlir.zero : !llvm.ptr
   llvm.return
 }
 
@@ -386,7 +410,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 // CHECK: %[[V0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %{{.*}} = llvm.mlir.constant(3 : i32) : i32
 // CHECK: %[[V1:.*]] = llvm.mlir.constant("\01") : !llvm.array<1 x i8>
-// CHECK: %[[V2:.*]] = llvm.mlir.null : !llvm.ptr
+// CHECK: %[[V2:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK: %[[V3:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
 // CHECK: %[[V4:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: %[[V5:.*]] = llvm.alloca %[[V4]] x i8 : (i32) -> !llvm.ptr
@@ -394,7 +418,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.mlir.constant(3 : i32) : i32
   %2 = llvm.mlir.constant("\01") : !llvm.array<1 x i8>
-  %3 = llvm.mlir.null : !llvm.ptr
+  %3 = llvm.mlir.zero : !llvm.ptr
   %4 = llvm.mlir.addressof @_ZTIi : !llvm.ptr
   %5 = llvm.mlir.constant(1 : i32) : i32
   %6 = llvm.alloca %5 x i8 : (i32) -> !llvm.ptr
@@ -427,8 +451,21 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %13 = llvm.invoke %12(%5) to ^bb2 unwind ^bb1 : !llvm.ptr, (i32) -> !llvm.struct<(i32, f64, i32)>
 
 // CHECK: ^[[BB5:.*]]:
-// CHECK:   llvm.return %[[V0]] : i32
+// CHECK: %{{.*}} = llvm.invoke @{{.*}} vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+
 ^bb5:
+  %14 = llvm.invoke @vararg_foo(%5, %5) to ^bb2 unwind ^bb1 vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+
+// CHECK: ^[[BB6:.*]]:
+// CHECK: %[[FUNC:.*]] = llvm.mlir.addressof @vararg_foo : !llvm.ptr
+// CHECK: %{{.*}} = llvm.invoke %[[FUNC]]{{.*}} vararg(!llvm.func<struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+^bb6:
+  %15 = llvm.mlir.addressof @vararg_foo : !llvm.ptr
+  %16 = llvm.invoke %15(%5, %5) to ^bb2 unwind ^bb1 vararg(!llvm.func<!llvm.struct<(i32, f64, i32)> (i32, ...)>) : !llvm.ptr, (i32, i32) -> !llvm.struct<(i32, f64, i32)>
+
+// CHECK: ^[[BB7:.*]]:
+// CHECK:   llvm.return %[[V0]] : i32
+^bb7:
   llvm.return %0 : i32
 }
 
@@ -537,6 +574,16 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.intr.lifetime.start 16, %p : !llvm.ptr
   // CHECK: llvm.intr.lifetime.end 16, %[[P]]
   llvm.intr.lifetime.end 16, %p : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: @invariant
+// CHECK-SAME: %[[P:.*]]: !llvm.ptr
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: %[[START:.*]] = llvm.intr.invariant.start 1, %[[P]] : !llvm.ptr
+  %1 = llvm.intr.invariant.start 1, %p : !llvm.ptr
+  // CHECK: llvm.intr.invariant.end %[[START]], 1, %[[P]] : !llvm.ptr
+  llvm.intr.invariant.end %1, 1, %p : !llvm.ptr
   llvm.return
 }
 

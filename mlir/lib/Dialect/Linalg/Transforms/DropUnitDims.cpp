@@ -88,12 +88,12 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
     if (genericOp.getNumParallelLoops() != genericOp.getNumLoops())
       return failure();
 
-    auto outputOperands = genericOp.getDpsInitOperands();
+    auto outputOperands = genericOp.getDpsInitsMutable();
     SetVector<OpOperand *> candidates;
-    for (OpOperand *op : outputOperands) {
-      if (genericOp.getMatchingBlockArgument(op).use_empty())
+    for (OpOperand &op : outputOperands) {
+      if (genericOp.getMatchingBlockArgument(&op).use_empty())
         continue;
-      candidates.insert(op);
+      candidates.insert(&op);
     }
 
     if (candidates.empty())
@@ -101,7 +101,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 
     // Compute the modified indexing maps.
     int64_t origNumInput = genericOp.getNumDpsInputs();
-    SmallVector<Value> newInputOperands = genericOp.getDpsInputOperands();
+    SmallVector<Value> newInputOperands = genericOp.getDpsInputs();
     SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
     SmallVector<AffineMap> newIndexingMaps;
     newIndexingMaps.append(indexingMaps.begin(),
@@ -114,7 +114,8 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
                            indexingMaps.end());
 
     Location loc = genericOp.getLoc();
-    SmallVector<Value> newOutputOperands = outputOperands;
+    SmallVector<Value> newOutputOperands =
+        llvm::to_vector(genericOp.getDpsInits());
     for (OpOperand *op : candidates) {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointAfterValue(op->get());
@@ -122,7 +123,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
       auto empty = rewriter.create<tensor::EmptyOp>(
           loc, tensor::getMixedSizes(rewriter, loc, op->get()), elemType);
 
-      auto [start, end] = genericOp.getDpsInitsPositionRange();
+      unsigned start = genericOp.getDpsInits().getBeginOperandIndex();
       newOutputOperands[op->getOperandNumber() - start] = empty.getResult();
     }
 
@@ -145,9 +146,9 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
       mapper.map(bbarg, block->addArgument(bbarg.getType(), loc));
     }
 
-    for (OpOperand *op : outputOperands) {
-      BlockArgument bbarg = genericOp.getMatchingBlockArgument(op);
-      if (candidates.count(op))
+    for (OpOperand &op : outputOperands) {
+      BlockArgument bbarg = genericOp.getMatchingBlockArgument(&op);
+      if (candidates.count(&op))
         block->addArgument(bbarg.getType(), loc);
       else
         mapper.map(bbarg, block->addArgument(bbarg.getType(), loc));
@@ -348,14 +349,14 @@ static UnitExtentReplacementInfo dropUnitExtentFromOperandMetadata(
   ArrayRef<AffineExpr> exprs = indexingMap.getResults();
 
   auto isUnitDim = [&](unsigned dim) {
-    if (auto dimExpr = exprs[dim].dyn_cast<AffineDimExpr>()) {
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(exprs[dim])) {
       unsigned oldPosition = dimExpr.getPosition();
       return !oldDimsToNewDimsMap.count(oldPosition);
     }
     // Handle the other case where the shape is 1, and is accessed using a
     // constant 0.
     if (operandShape[dim] == 1) {
-      auto constAffineExpr = exprs[dim].dyn_cast<AffineConstantExpr>();
+      auto constAffineExpr = dyn_cast<AffineConstantExpr>(exprs[dim]);
       return constAffineExpr && constAffineExpr.getValue() == 0;
     }
     return false;
@@ -410,7 +411,7 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
                                                allowedUnitDims.end());
   llvm::SmallDenseSet<unsigned> unitDims;
   for (const auto &expr : enumerate(invertedMap.getResults())) {
-    if (AffineDimExpr dimExpr = expr.value().dyn_cast<AffineDimExpr>()) {
+    if (AffineDimExpr dimExpr = dyn_cast<AffineDimExpr>(expr.value())) {
       if (dims[dimExpr.getPosition()] == 1 &&
           unitDimsFilter.count(expr.index()))
         unitDims.insert(expr.index());
@@ -571,13 +572,17 @@ struct RankReducedExtractSliceOp
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
     RankedTensorType resultType = sliceOp.getType();
-    SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
-    auto reassociation = getReassociationMapForFoldingUnitDims(sizes);
+    SmallVector<OpFoldResult> targetShape;
+    for (auto size : resultType.getShape())
+      targetShape.push_back(rewriter.getIndexAttr(size));
+    auto reassociation = getReassociationMapForFoldingUnitDims(targetShape);
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(resultType.getRank()))
       return failure();
+
+    SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
+    SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
     auto rankReducedType = cast<RankedTensorType>(
         tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
             reassociation->size(), sliceOp.getSourceType(), offsets, sizes,
@@ -601,13 +606,14 @@ struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
   LogicalResult matchAndRewrite(InsertOpTy insertSliceOp,
                                 PatternRewriter &rewriter) const override {
     RankedTensorType sourceType = insertSliceOp.getSourceType();
-    SmallVector<OpFoldResult> offsets = insertSliceOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = insertSliceOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = insertSliceOp.getMixedStrides();
-    auto reassociation = getReassociationMapForFoldingUnitDims(sizes);
+    SmallVector<OpFoldResult> targetShape;
+    for (auto size : sourceType.getShape())
+      targetShape.push_back(rewriter.getIndexAttr(size));
+    auto reassociation = getReassociationMapForFoldingUnitDims(targetShape);
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(sourceType.getRank()))
       return failure();
+
     Location loc = insertSliceOp.getLoc();
     tensor::CollapseShapeOp reshapedSource;
     {

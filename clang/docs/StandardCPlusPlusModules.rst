@@ -365,6 +365,10 @@ the above example could be rewritten into:
 
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
 
+When there are multiple ``-fmodule-file=<module-name>=`` options for the same
+``<module-name>``, the last ``-fmodule-file=<module-name>=`` will override the previous
+``-fmodule-file=<module-name>=`` options.
+
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
 it saves time for file lookup.
 
@@ -685,6 +689,15 @@ Now we can't use the `/clang:-fmodule-file` or `/clang:-fprebuilt-module-path` t
 the BMI within ``clang-cl.exe``.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/64118
+
+delayed template parsing is not supported/broken with C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The feature `-fdelayed-template-parsing` can't work well with C++ modules now.
+Note that this is significant on Windows since the option will be enabled by default
+on Windows.
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/61068
 
 Header Units
 ============

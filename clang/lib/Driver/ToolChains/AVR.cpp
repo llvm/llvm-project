@@ -457,7 +457,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   // Enable garbage collection of unused sections.
-  CmdArgs.push_back("--gc-sections");
+  if (!Args.hasArg(options::OPT_r))
+    CmdArgs.push_back("--gc-sections");
 
   // Add library search paths before we specify libraries.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
@@ -471,7 +472,7 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Only add default libraries if the user hasn't explicitly opted out.
   bool LinkStdlib = false;
-  if (!Args.hasArg(options::OPT_nostdlib) &&
+  if (!Args.hasArg(options::OPT_nostdlib) && !Args.hasArg(options::OPT_r) &&
       !Args.hasArg(options::OPT_nodefaultlibs)) {
     if (!CPU.empty()) {
       if (!FamilyName) {
@@ -497,18 +498,30 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::warn_drv_avr_stdlib_not_linked);
   }
 
-  if (SectionAddressData) {
-    CmdArgs.push_back(
-        Args.MakeArgString("--defsym=__DATA_REGION_ORIGIN__=0x" +
-                           Twine::utohexstr(*SectionAddressData)));
-  } else {
-    // We do not have an entry for this CPU in the address mapping table yet.
-    D.Diag(diag::warn_drv_avr_linker_section_addresses_not_implemented) << CPU;
+  if (!Args.hasArg(options::OPT_r)) {
+    if (SectionAddressData) {
+      CmdArgs.push_back(
+          Args.MakeArgString("--defsym=__DATA_REGION_ORIGIN__=0x" +
+                             Twine::utohexstr(*SectionAddressData)));
+    } else {
+      // We do not have an entry for this CPU in the address mapping table
+      // yet.
+      D.Diag(diag::warn_drv_avr_linker_section_addresses_not_implemented)
+          << CPU;
+    }
   }
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
 
@@ -549,21 +562,31 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back("--end-group");
 
-    // Add user specified linker script.
-    Args.AddAllArgs(CmdArgs, options::OPT_T);
+    // Add avr-libc's linker script to lld by default, if it exists.
+    if (!Args.hasArg(options::OPT_T) &&
+        Linker.find("avr-ld") == std::string::npos) {
+      std::string Path(*AVRLibcRoot + "/lib/ldscripts/");
+      Path += *FamilyName;
+      Path += ".x";
+      if (llvm::sys::fs::exists(Path))
+        CmdArgs.push_back(Args.MakeArgString("-T" + Path));
+    }
+    // Otherwise add user specified linker script to either avr-ld or lld.
+    else
+      Args.AddAllArgs(CmdArgs, options::OPT_T);
 
     if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
       CmdArgs.push_back("--relax");
-
-    // Specify the family name as the emulation mode to use.
-    // This is almost always required because otherwise avr-ld
-    // will assume 'avr2' and warn about the program being larger
-    // than the bare minimum supports.
-    if (Linker.find("avr-ld") != std::string::npos)
-      CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
   } else {
     AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   }
+
+  // Specify the family name as the emulation mode to use.
+  // This is almost always required because otherwise avr-ld
+  // will assume 'avr2' and warn about the program being larger
+  // than the bare minimum supports.
+  if (Linker.find("avr-ld") != std::string::npos && FamilyName)
+    CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
 
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(), Args.MakeArgString(Linker),
