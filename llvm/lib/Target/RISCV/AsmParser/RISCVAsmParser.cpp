@@ -151,7 +151,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // Helper to emit pseudo instruction "la.tls.gd" used in global-dynamic TLS
   // addressing.
   void emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
-  void emitLoadTLSDescAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
   // Helper to emit pseudo load/store instruction with a symbol.
   void emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
@@ -3203,41 +3202,6 @@ void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
                     RISCV::ADDI, IDLoc, Out);
 }
 
-void RISCVAsmParser::emitLoadTLSDescAddress(MCInst &Inst, SMLoc IDLoc,
-                                            MCStreamer &Out) {
-  // The load TLS GD address pseudo-instruction "la.tlsdesc" is used in
-  // global-dynamic TLS model addressing of global symbols:
-  //   la.tlsdesc rdest, symbol
-  // expands to
-  //   TmpLabel: AUIPC rdest, %tlsdesc_hi(symbol)
-  //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
-  MCOperand DestReg = Inst.getOperand(0);
-  const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-
-  MCContext &Ctx = getContext();
-
-  MCSymbol *TmpLabel = Ctx.createNamedTempSymbol("pcrel_hi");
-  Out.emitLabel(TmpLabel);
-
-  const RISCVMCExpr *SymbolHi =
-      RISCVMCExpr::create(Symbol, RISCVMCExpr::VK_RISCV_TLSDESC_HI, Ctx);
-  emitToStreamer(
-      Out, MCInstBuilder(RISCV::AUIPC).addOperand(DestReg).addExpr(SymbolHi));
-
-  const MCExpr *RefToLinkTmpLabel =
-      RISCVMCExpr::create(MCSymbolRefExpr::create(TmpLabel, Ctx),
-                          RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO, Ctx);
-
-  emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
-                          .addOperand(DestReg)
-                          .addOperand(DestReg)
-                          .addExpr(RefToLinkTmpLabel));
-
-  emitToStreamer(
-      Out,
-      MCInstBuilder(RISCV::JALR).addReg(RISCV::X5).addReg(RISCV::X5).addImm(0));
-}
-
 void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
                                          SMLoc IDLoc, MCStreamer &Out,
                                          bool HasTmpReg) {
@@ -3591,9 +3555,6 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoLA_TLS_GD:
     emitLoadTLSGDAddress(Inst, IDLoc, Out);
-    return false;
-  case RISCV::PseudoLA_TLSDESC:
-    emitLoadTLSDescAddress(Inst, IDLoc, Out);
     return false;
   case RISCV::PseudoLB:
     emitLoadStoreSymbol(Inst, RISCV::LB, IDLoc, Out, /*HasTmpReg=*/false);
