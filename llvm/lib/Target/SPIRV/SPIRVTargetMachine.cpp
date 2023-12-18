@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils.h"
 #include <optional>
 
 using namespace llvm;
@@ -151,6 +152,11 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  // Once legalized, we need to structurize the CFG to follow the spec.
+  // This is done through the following 8 steps.
+  // TODO(#75801): add the remaining steps.
+  addPass(createLoopSimplifyPass());
+
   TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
