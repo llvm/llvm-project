@@ -1714,31 +1714,22 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
-  // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-    return A->getMangledName() < B->getMangledName();
-  });
-
-  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
-
-  // Ensure these are only emitted once.
-  std::set<std::string> Emitted;
+  std::map<bool, std::set<std::string>> DefsZAState;
 
   uint64_t IsSharedZAFlag = getEnumValueForFlag("IsSharedZA");
   for (auto &Def : Defs) {
-    if (Emitted.find(Def->getMangledName()) != Emitted.end())
-      continue;
-
-    OS << "case SME::BI__builtin_sme_" << Def->getMangledName() << ":\n";
-    if (Def->isFlagSet(IsSharedZAFlag))
-      OS << "  return true;\n";
-    else
-      OS << "  return false;\n";
-
-    Emitted.insert(Def->getMangledName());
+    bool HasZAState = Def->isFlagSet(IsSharedZAFlag);
+    DefsZAState[HasZAState].insert(Def->getMangledName());
   }
 
+  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
+
+  for (auto HasZA : {true, false}) {
+    auto Names = DefsZAState[HasZA];
+    for (auto Name : Names)
+      OS << "case SME::BI__builtin_sme_" << Name << ":\n";
+    OS << "  return " << (HasZA ? "true" : "false") << ";\n";
+  }
   OS << "#endif\n\n";
 }
 
