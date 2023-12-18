@@ -608,12 +608,15 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
           std::optional<uint32_t> Offset = BF->requiresAddressTranslation()
                                                ? BC.MIB->getOffset(*II)
                                                : std::nullopt;
+          std::optional<uint32_t> Size = BC.MIB->getSize(*II);
           MCSymbol *Label = BC.MIB->getLabel(*II);
 
           BC.MIB->stripAnnotations(*II);
 
           if (Offset)
             BC.MIB->setOffset(*II, *Offset);
+          if (Size)
+            BC.MIB->setSize(*II, *Size);
           if (Label)
             BC.MIB->setLabel(*II, Label);
         }

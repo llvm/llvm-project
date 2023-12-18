@@ -1946,7 +1946,7 @@ void COFFDumper::printCOFFResources() {
   ListScope ResourcesD(W, "Resources");
   for (const SectionRef &S : Obj->sections()) {
     StringRef Name = unwrapOrError(Obj->getFileName(), S.getName());
-    if (!Name.startswith(".rsrc"))
+    if (!Name.starts_with(".rsrc"))
       continue;
 
     StringRef Ref = unwrapOrError(Obj->getFileName(), S.getContents());
@@ -2126,7 +2126,7 @@ void COFFDumper::printAddrsig() {
   const uint8_t *End = AddrsigContents.bytes_end();
   while (Cur != End) {
     unsigned Size;
-    const char *Err;
+    const char *Err = nullptr;
     uint64_t SymIndex = decodeULEB128(Cur, &Size, End, &Err);
     if (Err)
       reportError(createError(Err), Obj->getFileName());

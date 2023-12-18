@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test appears to hang with picolibc & qemu.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 // <algorithm>
 
 // template<RandomAccessIterator Iter>
@@ -190,7 +193,7 @@ test_pointer_sort()
 
 // test_adversarial_quicksort generates a vector with values arranged in such a
 // way that they would invoke O(N^2) behavior on any quick sort implementation
-// that satisifies certain conditions.  Details are available in the following
+// that satisfies certain conditions.  Details are available in the following
 // paper:
 // "A Killer Adversary for Quicksort", M. D. McIlroy, Software-Practice &
 // Experience Volume 29 Issue 4 April 10, 1999 pp 341-344.

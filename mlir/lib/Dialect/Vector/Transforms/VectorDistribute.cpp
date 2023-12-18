@@ -16,6 +16,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <numeric>
 #include <utility>
 
@@ -97,7 +98,7 @@ struct DistributedLoadStoreHelper {
     SmallVector<Value> indices(rank, zero);
     if (val == distributedVal) {
       for (auto dimExpr : distributionMap.getResults()) {
-        int64_t index = dimExpr.cast<AffineDimExpr>().getPosition();
+        int64_t index = cast<AffineDimExpr>(dimExpr).getPosition();
         indices[index] = buildDistributedOffset(b, loc, index);
       }
     }
@@ -142,7 +143,7 @@ struct DistributedLoadStoreHelper {
     SmallVector<Value> indices(sequentialVectorType.getRank(), zero);
     if (type == distributedVectorType) {
       for (auto dimExpr : distributionMap.getResults()) {
-        int64_t index = dimExpr.cast<AffineDimExpr>().getPosition();
+        int64_t index = cast<AffineDimExpr>(dimExpr).getPosition();
         indices[index] = buildDistributedOffset(b, loc, index);
       }
     }
@@ -458,7 +459,9 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 }
 
 /// Distribute transfer_write ops based on the affine map returned by
-/// `distributionMapFn`.
+/// `distributionMapFn`. Writes of size more than `maxNumElementToExtract`
+/// will not be distributed (it should be less than the warp size).
+///
 /// Example:
 /// ```
 /// %0 = vector.warp_execute_on_lane_0(%id){
@@ -476,9 +479,10 @@ static VectorType getDistributedType(VectorType originalType, AffineMap map,
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
   WarpOpTransferWrite(MLIRContext *ctx, DistributionMapFn fn,
-                      PatternBenefit b = 1)
+                      unsigned maxNumElementsToExtract, PatternBenefit b = 1)
       : OpRewritePattern<WarpExecuteOnLane0Op>(ctx, b),
-        distributionMapFn(std::move(fn)) {}
+        distributionMapFn(std::move(fn)),
+        maxNumElementsToExtract(maxNumElementsToExtract) {}
 
   /// Distribute the TransferWriteOp. Only 1D distributions and vector dims that
   /// are multiples of the distribution ratio are supported at the moment.
@@ -530,11 +534,11 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     for (auto it : llvm::zip(indexMap.getResults(), map.getResults())) {
       AffineExpr d0, d1;
       bindDims(newWarpOp.getContext(), d0, d1);
-      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      auto indexExpr = dyn_cast<AffineDimExpr>(std::get<0>(it));
       if (!indexExpr)
         continue;
       unsigned indexPos = indexExpr.getPosition();
-      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
+      unsigned vectorPos = cast<AffineDimExpr>(std::get<1>(it)).getPosition();
       auto scale =
           rewriter.getAffineConstantExpr(targetType.getDimSize(vectorPos));
       indices[indexPos] = affine::makeComposedAffineApply(
@@ -553,10 +557,13 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Location loc = writeOp.getLoc();
     VectorType vecType = writeOp.getVectorType();
 
-    // Only sink out vector of 1 element for now to not serialize large vector
-    // store. This can later be controlled by user.
-    if (vecType.getNumElements() != 1)
-      return failure();
+    if (vecType.getNumElements() > maxNumElementsToExtract) {
+      return rewriter.notifyMatchFailure(
+          warpOp,
+          llvm::formatv(
+              "writes more elements ({0}) than allowed to extract ({1})",
+              vecType.getNumElements(), maxNumElementsToExtract));
+    }
 
     // Do not process warp ops that contain only TransferWriteOps.
     if (llvm::all_of(warpOp.getOps(), [](Operation &op) {
@@ -616,6 +623,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<WarpExecuteOnLane0Op> {
 
 private:
   DistributionMapFn distributionMapFn;
+  unsigned maxNumElementsToExtract = 1;
 };
 
 /// Sink out elementwise op feeding into a warp op yield.
@@ -837,7 +845,7 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
       // of which lane is responsible for which element is captured strictly
       // by shape information on the warp op, and thus requires materializing
       // the permutation in IR.
-      if (!read.getPermutationMap().isMinorIdentity())
+      if (!mlir::compressUnusedDims(read.getPermutationMap()).isIdentity())
         return failure();
       VectorType maskType =
           getDistributedType(read.getMaskType(), map, warpOp.getWarpSize());
@@ -877,11 +885,11 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     for (auto it : llvm::zip_equal(indexMap.getResults(), map.getResults())) {
       AffineExpr d0, d1;
       bindDims(read.getContext(), d0, d1);
-      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      auto indexExpr = dyn_cast<AffineDimExpr>(std::get<0>(it));
       if (!indexExpr)
         continue;
       unsigned indexPos = indexExpr.getPosition();
-      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
+      unsigned vectorPos = cast<AffineDimExpr>(std::get<1>(it)).getPosition();
       int64_t scale = distributedType.getDimSize(vectorPos);
       indices[indexPos] = affine::makeComposedAffineApply(
           rewriter, read.getLoc(), d0 + scale * d1,
@@ -1833,9 +1841,9 @@ void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(
 
 void mlir::vector::populateDistributeTransferWriteOpPatterns(
     RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit) {
+    unsigned maxNumElementsToExtract, PatternBenefit benefit) {
   patterns.add<WarpOpTransferWrite>(patterns.getContext(), distributionMapFn,
-                                    benefit);
+                                    maxNumElementsToExtract, benefit);
 }
 
 void mlir::vector::populatePropagateWarpVectorDistributionPatterns(

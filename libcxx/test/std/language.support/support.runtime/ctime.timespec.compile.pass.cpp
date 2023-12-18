@@ -11,6 +11,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// picolibc doesn't define TIME_UTC.
+// XFAIL: LIBCXX-PICOLIBC-FIXME
+
 // ::timespec_get is provided by the C library, but it's marked as
 // unavailable until macOS 10.15
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}

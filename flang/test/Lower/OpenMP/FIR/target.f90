@@ -189,8 +189,8 @@ subroutine omp_target
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
    !CHECK: %[[MAP:.*]] = omp.map_info var_ptr(%[[VAL_0]] : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, index) {
-   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>, %{{.*}}: index):
+   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>):
    !$omp target map(tofrom: a)
       !CHECK: %[[VAL_1:.*]] = arith.constant 10 : i32
       !CHECK: %[[VAL_2:.*]] = arith.constant 1 : i64
@@ -213,8 +213,8 @@ subroutine omp_target_implicit
    !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_implicitEa"}
    integer :: a(1024)
    !CHECK: %[[MAP:.*]] = omp.map_info var_ptr(%[[VAL_0]] : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, index) {
-   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>, %{{.*}}: index):
+   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>):
    !$omp target
       !CHECK: %[[VAL_5:.*]] = fir.coordinate_of %[[ARG_0]], %{{.*}} : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
       a(1) = 10
@@ -249,22 +249,62 @@ end subroutine omp_target_implicit_nested
 ! Target implicit capture with bounds
 !===============================================================================
 
-!CHECK-LABEL: func.func @_QPomp_target_implicit_bounds(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"}) {
+
+!CHECK-LABEL: func.func @_QPomp_target_implicit_bounds(
+!CHECK: %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 subroutine omp_target_implicit_bounds(n)
-   !CHECK: %[[VAL_1:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
-   !CHECK: %[[VAL_2:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
-   !CHECK: %[[VAL_3:.*]] = fir.alloca !fir.array<?x1024xi32>, %[[VAL_1]] {bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}
+   !CHECK: %[[VAL_COPY:.*]] = fir.alloca i32
+   !CHECK: %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
+   !CHECK: fir.store %[[VAL_1]] to %[[VAL_COPY]] : !fir.ref<i32>
+   !CHECK: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
+   !CHECK: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (i64) -> index
+   !CHECK: %[[VAL_4:.*]] = arith.constant 0 : index
+   !CHECK: %[[VAL_5:.*]] = arith.cmpi sgt, %[[VAL_3]], %[[VAL_4]] : index
+   !CHECK: %[[VAL_6:.*]] = arith.select %[[VAL_5]], %[[VAL_3]], %[[VAL_4]] : index
+   !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : i64
+   !CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
+   !CHECK: %[[VAL_9:.*]] = arith.constant 0 : index
+   !CHECK: %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : index
+   !CHECK: %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_8]], %[[VAL_9]] : index
+   !CHECK: %[[VAL_12:.*]] = fir.alloca !fir.array<?x1024xi32>, %[[VAL_6]] {bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}
    integer :: n
    integer :: a(n, 1024)
-   !CHECK: %[[VAL_4:.*]] = omp.map_info var_ptr(%[[VAL_3]] : !fir.ref<!fir.array<?x1024xi32>>, !fir.array<?x1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<?x1024xi32>> {name = "a"}
-   !CHECK: %[[VAL_5:.*]] = omp.map_info val(%[[VAL_1]] : index)  map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> index {name = ""}
-   !CHECK: %[[VAL_6:.*]] = omp.map_info val(%[[VAL_2]] : index)  map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> index {name = ""}
-   !CHECK: omp.target   map_entries(%[[VAL_4]] -> %[[ARG_1:.*]], %[[VAL_5]] -> %[[ARG_2:.*]], %[[VAL_6]] -> %[[ARG_3:.*]] : !fir.ref<!fir.array<?x1024xi32>>, index, index) {
-   !CHECK: ^bb0(%[[ARG_1]]: !fir.ref<!fir.array<?x1024xi32>>, %[[ARG_2]]: index, %[[ARG_3]]: index):
+   !CHECK: %[[VAL_13:.*]] = arith.constant 1 : index
+   !CHECK: %[[VAL_14:.*]] = arith.constant 0 : index
+   !CHECK: %[[VAL_15:.*]] = arith.subi %[[VAL_6]], %[[VAL_13]] : index
+   !CHECK: %[[VAL_16:.*]] = omp.bounds lower_bound(%[[VAL_14]] : index) upper_bound(%[[VAL_15]] : index) extent(%[[VAL_6]] : index) stride(%[[VAL_13]] : index) start_idx(%[[VAL_13]] : index)
+   !CHECK: %[[VAL_17:.*]] = arith.constant 0 : index
+   !CHECK: %[[VAL_18:.*]] = arith.subi %[[VAL_11]], %[[VAL_13]] : index
+   !CHECK: %[[VAL_19:.*]] = omp.bounds lower_bound(%[[VAL_17]] : index) upper_bound(%[[VAL_18]] : index) extent(%[[VAL_11]] : index) stride(%[[VAL_13]] : index) start_idx(%[[VAL_13]] : index)
+   !CHECK: %[[VAL_20:.*]] = omp.map_info var_ptr(%[[VAL_12]] : !fir.ref<!fir.array<?x1024xi32>>, !fir.array<?x1024xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_16]], %[[VAL_19]]) -> !fir.ref<!fir.array<?x1024xi32>> {name = "a"}
+   !CHECK: %[[VAL_21:.*]] = omp.map_info var_ptr(%[[VAL_COPY]] : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
+   !CHECK: omp.target map_entries(%[[VAL_20]] -> %[[VAL_22:.*]], %[[VAL_21]] -> %[[VAL_23:.*]] : !fir.ref<!fir.array<?x1024xi32>>, !fir.ref<i32>) {
+   !CHECK: ^bb0(%[[VAL_22]]: !fir.ref<!fir.array<?x1024xi32>>, %[[VAL_23]]: !fir.ref<i32>):
    !$omp target
-      !CHECK: %{{.*}} = fir.convert %[[ARG_1]] : (!fir.ref<!fir.array<?x1024xi32>>) -> !fir.ref<!fir.array<?xi32>>
-      !CHECK: %{{.*}} = arith.muli %{{.*}}, %[[ARG_2]] : index
-      a(11,22) = 33
+      !CHECK: %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<i32>
+      !CHECK: %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (i32) -> i64
+      !CHECK: %[[VAL_26:.*]] = arith.constant 0 : index
+      !CHECK: %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (i64) -> index
+      !CHECK: %[[VAL_28:.*]] = arith.cmpi sgt, %[[VAL_27]], %[[VAL_26]] : index
+      !CHECK: %[[VAL_29:.*]] = arith.select %[[VAL_28]], %[[VAL_27]], %[[VAL_26]] : index
+      !CHECK: %[[VAL_30:.*]] = arith.constant 33 : i32
+      !CHECK: %[[VAL_31:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.array<?x1024xi32>>) -> !fir.ref<!fir.array<?xi32>>
+      !CHECK: %[[VAL_32:.*]] = arith.constant 1 : index
+      !CHECK: %[[VAL_33:.*]] = arith.constant 0 : index
+      !CHECK: %[[VAL_34:.*]] = arith.constant 11 : i64
+      !CHECK: %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (i64) -> index
+      !CHECK: %[[VAL_36:.*]] = arith.subi %[[VAL_35]], %[[VAL_32]] : index
+      !CHECK: %[[VAL_37:.*]] = arith.muli %[[VAL_32]], %[[VAL_36]] : index
+      !CHECK: %[[VAL_38:.*]] = arith.addi %[[VAL_37]], %[[VAL_33]] : index
+      !CHECK: %[[VAL_39:.*]] = arith.muli %[[VAL_32]], %[[VAL_29]] : index
+      !CHECK: %[[VAL_40:.*]] = arith.constant 22 : i64
+      !CHECK: %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (i64) -> index
+      !CHECK: %[[VAL_42:.*]] = arith.subi %[[VAL_41]], %[[VAL_32]] : index
+      !CHECK: %[[VAL_43:.*]] = arith.muli %[[VAL_39]], %[[VAL_42]] : index
+      !CHECK: %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_38]] : index
+      !CHECK: %[[VAL_45:.*]] = fir.coordinate_of %[[VAL_31]], %[[VAL_44]] : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+      !CHECK: fir.store %[[VAL_30]] to %[[VAL_45]] : !fir.ref<i32>
+      a(11, 22) = 33
       !CHECK: omp.terminator
    !$omp end target
 !CHECK: }
@@ -344,8 +384,8 @@ subroutine omp_target_parallel_do
    !CHECK: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C0]] : index) upper_bound(%[[SUB]] : index) extent(%[[C1024]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
    !CHECK: %[[MAP1:.*]] = omp.map_info var_ptr(%[[VAL_0]] : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
    !CHECK: %[[MAP2:.*]] = omp.map_info var_ptr(%[[VAL_1]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-   !CHECK: omp.target map_entries(%[[MAP1]] -> %[[VAL_2:.*]], %[[MAP2]] -> %[[VAL_3:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>, index) {
-   !CHECK: ^bb0(%[[VAL_2]]: !fir.ref<!fir.array<1024xi32>>, %[[VAL_3]]: !fir.ref<i32>, %{{.*}}: index):
+   !CHECK: omp.target map_entries(%[[MAP1]] -> %[[VAL_2:.*]], %[[MAP2]] -> %[[VAL_3:.*]] : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>) {
+   !CHECK: ^bb0(%[[VAL_2]]: !fir.ref<!fir.array<1024xi32>>, %[[VAL_3]]: !fir.ref<i32>):
       !CHECK-NEXT: omp.parallel
       !$omp target parallel do map(tofrom: a)
          !CHECK: %[[VAL_4:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}

@@ -12,6 +12,8 @@
 // The following are done for IR adjustment:
 //   - remove __builtin_bpf_passthrough builtins. Target independent IR
 //     optimizations are done and those builtins can be removed.
+//   - remove llvm.bpf.getelementptr.and.load builtins.
+//   - remove llvm.bpf.getelementptr.and.store builtins.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,6 +26,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -51,6 +54,7 @@ private:
   bool removePassThroughBuiltin(Module &M);
   bool removeCompareBuiltin(Module &M);
   bool sinkMinMax(Module &M);
+  bool removeGEPBuiltins(Module &M);
 };
 } // End anonymous namespace
 
@@ -115,7 +119,7 @@ bool BPFCheckAndAdjustIR::removePassThroughBuiltin(Module &M) {
         auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
         if (!GV)
           continue;
-        if (!GV->getName().startswith("llvm.bpf.passthrough"))
+        if (!GV->getName().starts_with("llvm.bpf.passthrough"))
           continue;
         Changed = true;
         Value *Arg = Call->getArgOperand(1);
@@ -145,7 +149,7 @@ bool BPFCheckAndAdjustIR::removeCompareBuiltin(Module &M) {
         auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
         if (!GV)
           continue;
-        if (!GV->getName().startswith("llvm.bpf.compare"))
+        if (!GV->getName().starts_with("llvm.bpf.compare"))
           continue;
 
         Changed = true;
@@ -361,10 +365,62 @@ void BPFCheckAndAdjustIR::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
 }
 
+static void unrollGEPLoad(CallInst *Call) {
+  auto [GEP, Load] = BPFPreserveStaticOffsetPass::reconstructLoad(Call);
+  GEP->insertBefore(Call);
+  Load->insertBefore(Call);
+  Call->replaceAllUsesWith(Load);
+  Call->eraseFromParent();
+}
+
+static void unrollGEPStore(CallInst *Call) {
+  auto [GEP, Store] = BPFPreserveStaticOffsetPass::reconstructStore(Call);
+  GEP->insertBefore(Call);
+  Store->insertBefore(Call);
+  Call->eraseFromParent();
+}
+
+static bool removeGEPBuiltinsInFunc(Function &F) {
+  SmallVector<CallInst *> GEPLoads;
+  SmallVector<CallInst *> GEPStores;
+  for (auto &BB : F)
+    for (auto &Insn : BB)
+      if (auto *Call = dyn_cast<CallInst>(&Insn))
+        if (auto *Called = Call->getCalledFunction())
+          switch (Called->getIntrinsicID()) {
+          case Intrinsic::bpf_getelementptr_and_load:
+            GEPLoads.push_back(Call);
+            break;
+          case Intrinsic::bpf_getelementptr_and_store:
+            GEPStores.push_back(Call);
+            break;
+          }
+
+  if (GEPLoads.empty() && GEPStores.empty())
+    return false;
+
+  for_each(GEPLoads, unrollGEPLoad);
+  for_each(GEPStores, unrollGEPStore);
+
+  return true;
+}
+
+// Rewrites the following builtins:
+// - llvm.bpf.getelementptr.and.load
+// - llvm.bpf.getelementptr.and.store
+// As (load (getelementptr ...)) or (store (getelementptr ...)).
+bool BPFCheckAndAdjustIR::removeGEPBuiltins(Module &M) {
+  bool Changed = false;
+  for (auto &F : M)
+    Changed = removeGEPBuiltinsInFunc(F) || Changed;
+  return Changed;
+}
+
 bool BPFCheckAndAdjustIR::adjustIR(Module &M) {
   bool Changed = removePassThroughBuiltin(M);
   Changed = removeCompareBuiltin(M) || Changed;
   Changed = sinkMinMax(M) || Changed;
+  Changed = removeGEPBuiltins(M) || Changed;
   return Changed;
 }
 

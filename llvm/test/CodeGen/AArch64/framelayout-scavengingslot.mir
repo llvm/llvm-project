@@ -19,6 +19,7 @@ stack:
 body: |
   bb.0:
     liveins: $x0, $x8
+    $x9 = LDRXui $x0, 0 :: (load (s64))
     STRXui $x0, %stack.0, 0
     B %bb.1
   bb.1:

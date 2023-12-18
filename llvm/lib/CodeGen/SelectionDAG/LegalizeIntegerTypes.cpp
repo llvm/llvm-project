@@ -3830,20 +3830,7 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
                                          SDValue &Lo, SDValue &Hi) {
-  if (N->isAtomic()) {
-    // It's typical to have larger CAS than atomic load instructions.
-    SDLoc dl(N);
-    EVT VT = N->getMemoryVT();
-    SDVTList VTs = DAG.getVTList(VT, MVT::i1, MVT::Other);
-    SDValue Zero = DAG.getConstant(0, dl, VT);
-    SDValue Swap = DAG.getAtomicCmpSwap(
-        ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, dl,
-        VT, VTs, N->getOperand(0),
-        N->getOperand(1), Zero, Zero, N->getMemOperand());
-    ReplaceValueWith(SDValue(N, 0), Swap.getValue(0));
-    ReplaceValueWith(SDValue(N, 1), Swap.getValue(2));
-    return;
-  }
+  assert(!N->isAtomic() && "Should have been a ATOMIC_LOAD?");
 
   if (ISD::isNormalLoad(N)) {
     ExpandRes_NormalLoad(N, Lo, Hi);
@@ -3898,7 +3885,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
 
     // Increment the pointer to the other half.
     unsigned IncrementSize = NVT.getSizeInBits()/8;
-    Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(IncrementSize), dl);
+    Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(IncrementSize), dl);
     Hi = DAG.getExtLoad(ExtType, dl, NVT, Ch, Ptr,
                         N->getPointerInfo().getWithOffset(IncrementSize), NEVT,
                         N->getOriginalAlign(), MMOFlags, AAInfo);
@@ -3922,7 +3909,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
                         N->getOriginalAlign(), MMOFlags, AAInfo);
 
     // Increment the pointer to the other half.
-    Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(IncrementSize), dl);
+    Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(IncrementSize), dl);
     // Load the rest of the low bits.
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, NVT, Ch, Ptr,
                         N->getPointerInfo().getWithOffset(IncrementSize),
@@ -4430,7 +4417,7 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   // FIXME: should we be more picky about alignment?
   Align StackSlotAlignment(1);
   SDValue StackPtr = DAG.CreateStackTemporary(
-      TypeSize::Fixed(StackSlotByteWidth), StackSlotAlignment);
+      TypeSize::getFixed(StackSlotByteWidth), StackSlotAlignment);
   EVT PtrTy = StackPtr.getValueType();
   SDValue Ch = DAG.getEntryNode();
 
@@ -4836,7 +4823,7 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
 
   // Also pass the address of the overflow check.
   Entry.Node = Temp;
-  Entry.Ty = PtrTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(PtrTy->getContext());
   Entry.IsSExt = true;
   Entry.IsZExt = false;
   Args.push_back(Entry);
@@ -5398,16 +5385,8 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
-  if (N->isAtomic()) {
-    // It's typical to have larger CAS than atomic store instructions.
-    SDLoc dl(N);
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 N->getMemoryVT(),
-                                 N->getOperand(0), N->getOperand(2),
-                                 N->getOperand(1),
-                                 N->getMemOperand());
-    return Swap.getValue(1);
-  }
+  assert(!N->isAtomic() && "Should have been a ATOMIC_STORE?");
+
   if (ISD::isNormalStore(N))
     return ExpandOp_NormalStore(N, OpNo);
 
@@ -5445,7 +5424,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
 
     // Increment the pointer to the other half.
     unsigned IncrementSize = NVT.getSizeInBits()/8;
-    Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
     Hi = DAG.getTruncStore(Ch, dl, Hi, Ptr,
                            N->getPointerInfo().getWithOffset(IncrementSize),
                            NEVT, N->getOriginalAlign(), MMOFlags, AAInfo);
@@ -5480,7 +5459,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
                          N->getOriginalAlign(), MMOFlags, AAInfo);
 
   // Increment the pointer to the other half.
-  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
   // Store the lowest ExcessBits bits in the second half.
   Lo = DAG.getTruncStore(Ch, dl, Lo, Ptr,
                          N->getPointerInfo().getWithOffset(IncrementSize),

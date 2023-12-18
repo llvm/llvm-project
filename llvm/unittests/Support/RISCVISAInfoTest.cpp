@@ -712,7 +712,9 @@ R"(All available -march extensions for RISC-V
     xcvalu              1.0
     xcvbi               1.0
     xcvbitmanip         1.0
+    xcvelw              1.0
     xcvmac              1.0
+    xcvmem              1.0
     xcvsimd             1.0
     xsfcie              1.0
     xsfvcp              1.0
@@ -734,7 +736,7 @@ R"(All available -march extensions for RISC-V
     xventanacondops     1.0
 
 Experimental extensions
-    zicfilp             0.2       This is a long dummy description
+    zicfilp             0.4       This is a long dummy description
     zicond              1.0
     zacas               1.0
     zfbfmin             0.8

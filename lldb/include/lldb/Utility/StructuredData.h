@@ -276,16 +276,6 @@ public:
       return {};
     }
 
-    bool GetItemAtIndexAsArray(size_t idx, Array *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsArray();
-        return (result != nullptr);
-      }
-      return false;
-    }
-
     void Push(const ObjectSP &item) { m_items.push_back(item); }
 
     void AddItem(const ObjectSP &item) { m_items.push_back(item); }

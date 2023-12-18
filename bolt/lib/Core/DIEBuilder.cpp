@@ -189,15 +189,10 @@ static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   return CUNum;
 }
 
-void DIEBuilder::buildTypeUnits(const bool Init) {
+void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
+                                const bool Init) {
   if (Init)
     BuilderState.reset(new State());
-
-  unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
-  getState().CloneUnitCtxMap.resize(CUNum);
-  DWARFContext::unit_iterator_range CU4TURanges =
-      IsDWO ? DwarfContext->dwo_types_section_units()
-            : DwarfContext->types_section_units();
 
   const DWARFUnitIndex &TUIndex = DwarfContext->getTUIndex();
   if (!TUIndex.getRows().empty()) {
@@ -208,6 +203,11 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
                                        true);
     }
   }
+  const unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  getState().CloneUnitCtxMap.resize(CUNum);
+  DWARFContext::unit_iterator_range CU4TURanges =
+      IsDWO ? DwarfContext->dwo_types_section_units()
+            : DwarfContext->types_section_units();
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
@@ -230,8 +230,11 @@ void DIEBuilder::buildTypeUnits(const bool Init) {
     registerUnit(*DU.get(), false);
   }
 
-  for (DWARFUnit *DU : getState().DWARF5TUVector)
+  for (DWARFUnit *DU : getState().DWARF5TUVector) {
     constructFromUnit(*DU);
+    if (StrOffsetWriter)
+      StrOffsetWriter->finalizeSection(*DU, *this);
+  }
 }
 
 void DIEBuilder::buildCompileUnits(const bool Init) {
@@ -278,11 +281,13 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
     constructFromUnit(*DU);
 }
 
-void DIEBuilder::buildBoth() {
+void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
-  buildTypeUnits(false);
-  buildCompileUnits(false);
+  buildTypeUnits(nullptr, false);
+  getState().Type = ProcessingType::CUs;
+  registerUnit(U, false);
+  constructFromUnit(U);
 }
 
 DIE *DIEBuilder::constructDIEFast(DWARFDie &DDie, DWARFUnit &U,

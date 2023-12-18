@@ -1378,6 +1378,8 @@ public:
   StmtResult RebuildAttributedStmt(SourceLocation AttrLoc,
                                    ArrayRef<const Attr *> Attrs,
                                    Stmt *SubStmt) {
+    if (SemaRef.CheckRebuiltStmtAttributes(Attrs))
+      return StmtError();
     return SemaRef.BuildAttributedStmt(AttrLoc, Attrs, SubStmt);
   }
 
@@ -9862,6 +9864,12 @@ TreeTransform<Derived>::TransformOMPCaptureClause(OMPCaptureClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPCompareClause(OMPCompareClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPFailClause(OMPFailClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
 }

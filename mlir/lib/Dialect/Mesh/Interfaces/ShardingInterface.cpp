@@ -34,7 +34,7 @@ checkOperandAffineExprRecursively(AffineExpr expr,
                                   SmallVectorImpl<bool> &seenIds) {
   switch (expr.getKind()) {
   case AffineExprKind::Add: {
-    auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+    auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
     AffineExpr lhs = binOpExpr.getLHS();
     AffineExpr rhs = binOpExpr.getRHS();
     if (failed(checkOperandAffineExprRecursively(lhs, seenIds)))
@@ -44,7 +44,7 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     return success();
   }
   case AffineExprKind::Mul: {
-    auto binOpExpr = expr.cast<AffineBinaryOpExpr>();
+    auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
     AffineExpr lhs = binOpExpr.getLHS();
     AffineExpr rhs = binOpExpr.getRHS();
     AffineExpr dimExpr;
@@ -56,14 +56,14 @@ checkOperandAffineExprRecursively(AffineExpr expr,
       dimExpr = rhs;
     } else
       return failure();
-    unsigned position = dimExpr.cast<AffineDimExpr>().getPosition();
+    unsigned position = cast<AffineDimExpr>(dimExpr).getPosition();
     if ((size_t)position >= seenIds.size() || seenIds[position])
       return failure();
     seenIds[position] = true;
     return success();
   }
   case AffineExprKind::DimId: {
-    unsigned position = expr.cast<AffineDimExpr>().getPosition();
+    unsigned position = cast<AffineDimExpr>(expr).getPosition();
     if ((size_t)position >= seenIds.size() || seenIds[position])
       return failure();
     seenIds[position] = true;
@@ -231,9 +231,7 @@ static LogicalResult fillShardingOption(Operation *op,
       continue;
 
     for (int32_t axis : meshAxes) {
-      if (std::find(shardingOption.shardingArray[i].begin(),
-                    shardingOption.shardingArray[i].end(),
-                    axis) != shardingOption.shardingArray[i].end()) {
+      if (llvm::is_contained(shardingOption.shardingArray[i], axis)) {
         LLVM_DEBUG(DBGS() << "sharding option conflicts because mesh axes "
                           << axis << " duplicate");
         return failure();
@@ -280,7 +278,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
     for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
       AffineExpr expr = std::get<0>(it);
       ArrayRef<int32_t> axes = std::get<1>(it).asArrayRef();
-      auto dim = expr.cast<AffineDimExpr>();
+      auto dim = cast<AffineDimExpr>(expr);
       unsigned index = dim.getPosition();
       visitedLoopIndices.insert(index);
       if (failed(fillShardingOption(op, shardingOption, shardAttr.getCluster(),
@@ -416,7 +414,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
     AffineExpr expr = it.value();
     // `expr` must be an `AffineDimExpr` because `map` is verified by
     // isProjectedPermutation
-    auto dim = expr.cast<AffineDimExpr>();
+    auto dim = cast<AffineDimExpr>(expr);
     unsigned loopIdx = dim.getPosition();
     if (loopIdx < shardingOption.shardingArray.size())
       splitAxes[it.index()].append(shardingOption.shardingArray[loopIdx]);

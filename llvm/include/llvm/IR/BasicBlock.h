@@ -141,6 +141,14 @@ public:
   /// move such DPValues back to the right place (ahead of the terminator).
   void flushTerminatorDbgValues();
 
+  /// In rare circumstances instructions can be speculatively removed from
+  /// blocks, and then be re-inserted back into that position later. When this
+  /// happens in RemoveDIs debug-info mode, some special patching-up needs to
+  /// occur: inserting into the middle of a sequence of dbg.value intrinsics
+  /// does not have an equivalent with DPValues.
+  void reinsertInstInDPValues(Instruction *I,
+                              std::optional<DPValue::self_iterator> Pos);
+
 private:
   void setParent(Function *parent);
 
@@ -528,6 +536,9 @@ private:
   void spliceDebugInfo(BasicBlock::iterator ToIt, BasicBlock *FromBB,
                        BasicBlock::iterator FromBeginIt,
                        BasicBlock::iterator FromEndIt);
+  void spliceDebugInfoImpl(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                           BasicBlock::iterator FromBeginIt,
+                           BasicBlock::iterator FromEndIt);
 
 public:
   /// Returns a pointer to the symbol table if one exists.

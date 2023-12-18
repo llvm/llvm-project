@@ -44,6 +44,7 @@ enum {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
+  GFX12 = 11,
 };
 }
 
@@ -80,19 +81,21 @@ enum : uint64_t {
   MTBUF = 1 << 18,
   SMRD = 1 << 19,
   MIMG = 1 << 20,
-  EXP = 1 << 21,
-  FLAT = 1 << 22,
-  DS = 1 << 23,
+  VIMAGE = 1 << 21,
+  VSAMPLE = 1 << 22,
+  EXP = 1 << 23,
+  FLAT = 1 << 24,
+  DS = 1 << 25,
 
   // Pseudo instruction formats.
-  VGPRSpill = 1 << 24,
-  SGPRSpill = 1 << 25,
+  VGPRSpill = 1 << 26,
+  SGPRSpill = 1 << 27,
 
   // LDSDIR instruction format.
-  LDSDIR = 1 << 26,
+  LDSDIR = 1 << 28,
 
   // VINTERP instruction format.
-  VINTERP = 1 << 27,
+  VINTERP = 1 << 29,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -209,6 +212,9 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_V2FP16,
   OPERAND_REG_INLINE_C_V2INT32,
   OPERAND_REG_INLINE_C_V2FP32,
+
+  // Operand for split barrier inline constant
+  OPERAND_INLINE_SPLIT_BARRIER_INT32,
 
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
@@ -353,7 +359,47 @@ enum CPol {
   SC0 = GLC,
   SC1 = SCC,
   NT = SLC,
-  ALL = GLC | SLC | DLC | SCC
+  ALL_pregfx12 = GLC | SLC | DLC | SCC,
+  SWZ_pregfx12 = 8,
+
+  // Below are GFX12+ cache policy bits
+
+  // Temporal hint
+  TH = 0x7,      // All TH bits
+  TH_RT = 0,     // regular
+  TH_NT = 1,     // non-temporal
+  TH_HT = 2,     // high-temporal
+  TH_LU = 3,     // last use
+  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
+  TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
+  TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
+  TH_NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
+  TH_BYPASS = 3, // only to be used with scope = 3
+
+  TH_RESERVED = 7, // unused value for load insts
+
+  // Bits of TH for atomics
+  TH_ATOMIC_RETURN = GLC, // Returning vs non-returning
+  TH_ATOMIC_NT = SLC,     // Non-temporal vs regular
+  TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
+
+  // Scope
+  SCOPE = 0x3 << 3, // All Scope bits
+  SCOPE_CU = 0 << 3,
+  SCOPE_SE = 1 << 3,
+  SCOPE_DEV = 2 << 3,
+  SCOPE_SYS = 3 << 3,
+
+  SWZ = 1 << 6, // Swizzle bit
+
+  ALL = TH | SCOPE,
+
+  // Helper bits
+  TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
 };
 
 } // namespace CPol
@@ -370,8 +416,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_DEALLOC_VGPRS_GFX11Plus = 3, // reused in GFX11
 
   ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
-  ID_STALL_WAVE_GEN = 5,     // added in GFX9
-  ID_HALT_WAVES = 6,         // added in GFX9
+  ID_STALL_WAVE_GEN = 5,     // added in GFX9, removed in GFX12
+  ID_HALT_WAVES = 6,         // added in GFX9, removed in GFX12
   ID_ORDERED_PS_DONE = 7,    // added in GFX9, removed in GFX11
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
@@ -385,6 +431,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_REALTIME = 131,
   ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
+  ID_RTN_GET_SE_AID_ID = 134,
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -435,6 +482,9 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_GPR_ALLOC = 5,
   ID_LDS_ALLOC = 6,
   ID_IB_STS = 7,
+  ID_PERF_SNAPSHOT_DATA_gfx12 = 10,
+  ID_PERF_SNAPSHOT_PC_LO_gfx12 = 11,
+  ID_PERF_SNAPSHOT_PC_HI_gfx12 = 12,
   ID_MEM_BASES = 15,
   ID_TBA_LO = 16,
   ID_TBA_HI = 17,
@@ -446,12 +496,23 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
-  ID_PERF_SNAPSHOT_DATA = 27,
+  ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_SHADER_CYCLES = 29,
+  ID_SHADER_CYCLES_HI = 30,
+  ID_DVGPR_ALLOC_LO = 31,
+  ID_DVGPR_ALLOC_HI = 32,
 
-  // Register numbers reused in GFX11+
-  ID_PERF_SNAPSHOT_PC_LO = 18,
-  ID_PERF_SNAPSHOT_PC_HI = 19,
+  // Register numbers reused in GFX11
+  ID_PERF_SNAPSHOT_PC_LO_gfx11 = 18,
+  ID_PERF_SNAPSHOT_PC_HI_gfx11 = 19,
+
+  // Register numbers reused in GFX12+
+  ID_STATE_PRIV = 4,
+  ID_PERF_SNAPSHOT_DATA1 = 15,
+  ID_PERF_SNAPSHOT_DATA2 = 16,
+  ID_EXCP_FLAG_PRIV = 17,
+  ID_EXCP_FLAG_USER = 18,
+  ID_TRAP_CTRL = 19,
 
   // GFX940 specific registers
   ID_XCC_ID = 20,
@@ -968,6 +1029,14 @@ enum Register_Flag : uint8_t {
 
 } // namespace AMDGPU
 
+namespace AMDGPU {
+namespace Barrier {
+enum Type { TRAP = -2, WORKGROUP = -1 };
+} // namespace Barrier
+} // namespace AMDGPU
+
+// clang-format off
+
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
 #define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
 #define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
@@ -1060,6 +1129,9 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_DX10_CLAMP(x)                                      (((x) & 0x1) << 21)
 #define   G_00B848_DX10_CLAMP(x)                                      (((x) >> 21) & 0x1)
 #define   C_00B848_DX10_CLAMP                                         0xFFDFFFFF
+#define   S_00B848_RR_WG_MODE(x)                                      (((x) & 0x1) << 21)
+#define   G_00B848_RR_WG_MODE(x)                                      (((x) >> 21) & 0x1)
+#define   C_00B848_RR_WG_MODE                                         0xFFDFFFFF
 #define   S_00B848_DEBUG_MODE(x)                                      (((x) & 0x1) << 22)
 #define   G_00B848_DEBUG_MODE(x)                                      (((x) >> 22) & 0x1)
 #define   C_00B848_DEBUG_MODE                                         0xFFBFFFFF
@@ -1075,7 +1147,6 @@ enum Register_Flag : uint8_t {
 #define   S_00B848_FWD_PROGRESS(x)                                    (((x) & 0x1) << 31)
 #define   G_00B848_FWD_PROGRESS(x)                                    (((x) >> 31) & 0x1)
 #define   C_00B848_FWD_PROGRESS                                       0x7FFFFFFF
-
 
 // Helpers for setting FLOAT_MODE
 #define FP_ROUND_ROUND_TO_NEAREST 0
@@ -1118,6 +1189,9 @@ enum Register_Flag : uint8_t {
 
 #define R_SPILLED_SGPRS         0x4
 #define R_SPILLED_VGPRS         0x8
+
+// clang-format on
+
 } // End namespace llvm
 
 #endif

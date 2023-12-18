@@ -2440,9 +2440,9 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
     return nullptr;
 
   unsigned NumElts = VecTy->getNumElements();
-  APInt UndefElts(NumElts, 0);
+  APInt PoisonElts(NumElts, 0);
   APInt AllOnesEltMask(APInt::getAllOnes(NumElts));
-  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, UndefElts)) {
+  if (Value *V = SimplifyDemandedVectorElts(&Sel, AllOnesEltMask, PoisonElts)) {
     if (V != &Sel)
       return replaceInstUsesWith(Sel, V);
     return &Sel;
@@ -3075,18 +3075,18 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     return SelectInst::Create(TrueVal, OrV, Zero);
   }
   // select (c & b), a, b -> select b, (select ~c, true, a), false
-  if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal)))) &&
-      isFreeToInvert(C, C->hasOneUse())) {
-    Value *NotC = Builder.CreateNot(C);
-    Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-    return SelectInst::Create(FalseVal, OrV, Zero);
+  if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
+    if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
+      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
+      return SelectInst::Create(FalseVal, OrV, Zero);
+    }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
-  if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C)))) &&
-      isFreeToInvert(C, C->hasOneUse())) {
-    Value *NotC = Builder.CreateNot(C);
-    Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-    return SelectInst::Create(TrueVal, One, AndV);
+  if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
+    if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
+      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
+      return SelectInst::Create(TrueVal, One, AndV);
+    }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,

@@ -61,7 +61,7 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
   Location loc = xferOp.getLoc();
   unsigned offsetsIdx = 0;
   for (auto expr : xferOp.getPermutationMap().getResults()) {
-    if (auto dim = expr.template dyn_cast<AffineDimExpr>()) {
+    if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
       Value prevIdx = indices[dim.getPosition()];
       SmallVector<OpFoldResult, 3> dims(dimValues.begin(), dimValues.end());
       dims.push_back(prevIdx);
@@ -303,8 +303,9 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
 /// `getSlice`. In scf.for we only want to include as part of the slice elements
 /// that are part of the use/def chain.
 static SetVector<Operation *>
-getSliceContract(Operation *op, BackwardSliceOptions backwardSliceOptions,
-                 ForwardSliceOptions forwardSliceOptions) {
+getSliceContract(Operation *op,
+                 const BackwardSliceOptions &backwardSliceOptions,
+                 const ForwardSliceOptions &forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
   unsigned currentIndex = 0;
@@ -455,7 +456,8 @@ struct CombineTransferReadOpTranspose final
     Type resultType = op.getType();
     Operation *extOp;
     if ((extOp = source.getDefiningOp<arith::ExtSIOp>()) ||
-        (extOp = source.getDefiningOp<arith::ExtUIOp>())) {
+        (extOp = source.getDefiningOp<arith::ExtUIOp>()) ||
+        (extOp = source.getDefiningOp<arith::ExtFOp>())) {
       source = extOp->getOperand(0);
       resultType =
           VectorType::get(cast<VectorType>(resultType).getShape(),
@@ -473,13 +475,8 @@ struct CombineTransferReadOpTranspose final
     if (transferReadOp.getMask() || transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(op, "not inbounds transfer read");
 
-    SmallVector<int64_t, 2> perm;
-    op.getTransp(perm);
-    SmallVector<unsigned, 2> permU;
-    for (int64_t o : perm)
-      permU.push_back(unsigned(o));
     AffineMap permutationMap =
-        AffineMap::getPermutationMap(permU, op.getContext());
+        AffineMap::getPermutationMap(op.getPermutation(), op.getContext());
     AffineMap newMap =
         permutationMap.compose(transferReadOp.getPermutationMap());
 
@@ -498,8 +495,11 @@ struct CombineTransferReadOpTranspose final
       if (isa<arith::ExtSIOp>(extOp))
         result = rewriter.create<arith::ExtSIOp>(loc, op.getType(), result)
                      .getResult();
-      else
+      else if (isa<arith::ExtUIOp>(extOp))
         result = rewriter.create<arith::ExtUIOp>(loc, op.getType(), result)
+                     .getResult();
+      else
+        result = rewriter.create<arith::ExtFOp>(loc, op.getType(), result)
                      .getResult();
     }
 
@@ -549,8 +549,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   bool isTranspose = isTransposeMatrixLoadMap(map);
 
   // Handle broadcast by setting the stride to 0.
-  if (auto cstExpr =
-          map.getResult(isTranspose).dyn_cast<AffineConstantExpr>()) {
+  if (auto cstExpr = dyn_cast<AffineConstantExpr>(map.getResult(isTranspose))) {
     assert(cstExpr.getValue() == 0);
     stride = 0;
   }
@@ -559,7 +558,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   auto elType = op.getVectorType().getElementType();
   const char *fragType = inferFragType(op);
   if (op->hasOneUse()) {
-    auto user = *op->user_begin();
+    auto *user = *op->user_begin();
     // Infer the signedness of the mma type from the integer extend.
     bool isSignedExtend = isa<arith::ExtSIOp>(user);
     if (isSignedExtend || isa<arith::ExtUIOp>(user)) {
@@ -682,8 +681,8 @@ static FailureOr<bool> isTransposed(vector::TransferReadOp op) {
   mlir::AffineExpr dN = map.getResult(1);
 
   //  Find the position of these expressions in the input.
-  auto exprM = dM.dyn_cast<AffineDimExpr>();
-  auto exprN = dN.dyn_cast<AffineDimExpr>();
+  auto exprM = dyn_cast<AffineDimExpr>(dM);
+  auto exprN = dyn_cast<AffineDimExpr>(dN);
 
   if (!exprM || !exprN) {
     LLVM_DEBUG(DBGS() << "Failed because expressions are not affine dim "

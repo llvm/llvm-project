@@ -37,14 +37,14 @@ SUPPORTED PLATFORMS
 only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
 benchmarking functionality is guaranteed to work on every platform.
 :program:`llvm-exegesis` also has a separate analysis mode that is supported
-on every platform on which LLVM is.
+on every platform that LLVM is.
 
 SNIPPET ANNOTATIONS
 -------------------
 
 :program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
 However, benchmarking these snippets often requires some setup so that they
-can execute properly. :program:`llvm-exegesis` has two annotations and some
+can execute properly. :program:`llvm-exegesis` has four annotations and some
 additional utilities to help with setup so that snippets can be benchmarked
 properly.
 
@@ -69,10 +69,11 @@ properly.
   specifying memory definitions that can later be mapped into the execution
   process of a snippet with the `LLVM-EXEGESIS-MEM-MAP` annotation. Each
   value is named using the `<value name>` argument so that it can be referenced
-  later within a map annotation. The size is specified in bytes the the value
-  is taken in hexadecimal. If the size of the value is less than the specified
-  size, the value will be repeated until it fills the entire section of memory.
-  Using this annotation requires using the subprocess execution mode.
+  later within a map annotation. The size is specified in a decimal number of
+  bytes and the value is given in hexadecimal. If the size of the value is less
+  than the specified size, the value will be repeated until it fills the entire
+  section of memory. Using this annotation requires using the subprocess execution
+  mode.
 * `LLVM-EXEGESIS-MEM-MAP <value name> <address>` - This annotation allows for
   mapping previously defined memory definitions into the execution context of a
   process. The value name refers to a previously defined memory definition and
@@ -80,6 +81,14 @@ properly.
   definition should start at. Note that a single memory definition can be
   mapped multiple times. Using this annotation requires the subprocess
   execution mode.
+* `LLVM-EXEGESIS-SNIPPET-ADDRESS <address>` - This annotation allows for
+  setting the address where the beginning of the snippet to be executed will
+  be mapped in at. The address is given in hexadecimal. Note that the snippet
+  also includes setup code, so the instruction exactly at the specified
+  address will not be the first instruction in the snippet. Using this
+  annotation requires the subprocess execution mode. This is useful in
+  cases where the memory accessed by the snippet depends on the location
+  of the snippet, like RIP-relative addressing.
 
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
@@ -423,6 +432,12 @@ OPTIONS
   mode is the default. The `subprocess` execution mode allows for additional
   features such as memory annotations but is currently restricted to X86-64
   on Linux.
+
+.. option:: --benchmark-repeat-count=<repeat-count>
+
+  This option enables specifying the number of times to repeat the measurement
+  when performing latency measurements. By default, llvm-exegesis will repeat
+  a latency measurement enough times to balance run-time and noise reduction.
 
 EXIT STATUS
 -----------

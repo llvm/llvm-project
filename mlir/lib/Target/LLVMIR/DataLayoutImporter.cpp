@@ -56,21 +56,21 @@ DataLayoutImporter::tryToParseAlphaPrefix(StringRef &token) const {
   return prefix;
 }
 
-FailureOr<unsigned> DataLayoutImporter::tryToParseInt(StringRef &token) const {
-  unsigned parameter;
+FailureOr<uint64_t> DataLayoutImporter::tryToParseInt(StringRef &token) const {
+  uint64_t parameter;
   if (token.consumeInteger(/*Radix=*/10, parameter))
     return failure();
   return parameter;
 }
 
-FailureOr<SmallVector<unsigned>>
+FailureOr<SmallVector<uint64_t>>
 DataLayoutImporter::tryToParseIntList(StringRef token) const {
   SmallVector<StringRef> tokens;
   token.consume_front(":");
   token.split(tokens, ':');
 
   // Parse an integer list.
-  SmallVector<unsigned> results(tokens.size());
+  SmallVector<uint64_t> results(tokens.size());
   for (auto [result, token] : llvm::zip(results, tokens))
     if (token.getAsInteger(/*Radix=*/10, result))
       return failure();
@@ -79,7 +79,7 @@ DataLayoutImporter::tryToParseIntList(StringRef token) const {
 
 FailureOr<DenseIntElementsAttr>
 DataLayoutImporter::tryToParseAlignment(StringRef token) const {
-  FailureOr<SmallVector<unsigned>> alignment = tryToParseIntList(token);
+  FailureOr<SmallVector<uint64_t>> alignment = tryToParseIntList(token);
   if (failed(alignment))
     return failure();
   if (alignment->empty() || alignment->size() > 2)
@@ -89,16 +89,16 @@ DataLayoutImporter::tryToParseAlignment(StringRef token) const {
   // form <abi>[:<pref>], where abi specifies the minimal alignment and pref the
   // optional preferred alignment. The preferred alignment is set to the minimal
   // alignment if not available.
-  unsigned minimal = (*alignment)[0];
-  unsigned preferred = alignment->size() == 1 ? minimal : (*alignment)[1];
+  uint64_t minimal = (*alignment)[0];
+  uint64_t preferred = alignment->size() == 1 ? minimal : (*alignment)[1];
   return DenseIntElementsAttr::get(
-      VectorType::get({2}, IntegerType::get(context, 32)),
+      VectorType::get({2}, IntegerType::get(context, 64)),
       {minimal, preferred});
 }
 
 FailureOr<DenseIntElementsAttr>
 DataLayoutImporter::tryToParsePointerAlignment(StringRef token) const {
-  FailureOr<SmallVector<unsigned>> alignment = tryToParseIntList(token);
+  FailureOr<SmallVector<uint64_t>> alignment = tryToParseIntList(token);
   if (failed(alignment))
     return failure();
   if (alignment->size() < 2 || alignment->size() > 4)
@@ -110,12 +110,12 @@ DataLayoutImporter::tryToParsePointerAlignment(StringRef token) const {
   // idx the optional index computation bit width. The preferred alignment is
   // set to the minimal alignment if not available and the index computation
   // width is set to the pointer size if not available.
-  unsigned size = (*alignment)[0];
-  unsigned minimal = (*alignment)[1];
-  unsigned preferred = alignment->size() < 3 ? minimal : (*alignment)[2];
-  unsigned idx = alignment->size() < 4 ? size : (*alignment)[3];
-  return DenseIntElementsAttr::get(
-      VectorType::get({4}, IntegerType::get(context, 32)),
+  uint64_t size = (*alignment)[0];
+  uint64_t minimal = (*alignment)[1];
+  uint64_t preferred = alignment->size() < 3 ? minimal : (*alignment)[2];
+  uint64_t idx = alignment->size() < 4 ? size : (*alignment)[3];
+  return DenseIntElementsAttr::get<uint64_t>(
+      VectorType::get({4}, IntegerType::get(context, 64)),
       {size, minimal, preferred, idx});
 }
 
@@ -170,7 +170,7 @@ DataLayoutImporter::tryToEmplaceAllocaAddrSpaceEntry(StringRef token) {
   if (keyEntries.count(key))
     return success();
 
-  FailureOr<unsigned> space = tryToParseInt(token);
+  FailureOr<uint64_t> space = tryToParseInt(token);
   if (failed(space))
     return failure();
 
@@ -179,7 +179,10 @@ DataLayoutImporter::tryToEmplaceAllocaAddrSpaceEntry(StringRef token) {
     return success();
   OpBuilder builder(context);
   keyEntries.try_emplace(
-      key, DataLayoutEntryAttr::get(key, builder.getUI32IntegerAttr(*space)));
+      key,
+      DataLayoutEntryAttr::get(
+          key, builder.getIntegerAttr(
+                   builder.getIntegerType(64, /*isSigned=*/false), *space)));
   return success();
 }
 
@@ -190,7 +193,7 @@ DataLayoutImporter::tryToEmplaceStackAlignmentEntry(StringRef token) {
   if (keyEntries.count(key))
     return success();
 
-  FailureOr<unsigned> alignment = tryToParseInt(token);
+  FailureOr<uint64_t> alignment = tryToParseInt(token);
   if (failed(alignment))
     return failure();
 
@@ -199,7 +202,7 @@ DataLayoutImporter::tryToEmplaceStackAlignmentEntry(StringRef token) {
     return success();
   OpBuilder builder(context);
   keyEntries.try_emplace(key, DataLayoutEntryAttr::get(
-                                  key, builder.getI32IntegerAttr(*alignment)));
+                                  key, builder.getI64IntegerAttr(*alignment)));
   return success();
 }
 
@@ -258,7 +261,7 @@ void DataLayoutImporter::translateDataLayout(
     }
     // Parse integer alignment specifications.
     if (*prefix == "i") {
-      FailureOr<unsigned> width = tryToParseInt(token);
+      FailureOr<uint64_t> width = tryToParseInt(token);
       if (failed(width))
         return;
 
@@ -269,7 +272,7 @@ void DataLayoutImporter::translateDataLayout(
     }
     // Parse float alignment specifications.
     if (*prefix == "f") {
-      FailureOr<unsigned> width = tryToParseInt(token);
+      FailureOr<uint64_t> width = tryToParseInt(token);
       if (failed(width))
         return;
 
@@ -280,7 +283,7 @@ void DataLayoutImporter::translateDataLayout(
     }
     // Parse pointer alignment specifications.
     if (*prefix == "p") {
-      FailureOr<unsigned> space =
+      FailureOr<uint64_t> space =
           token.starts_with(":") ? 0 : tryToParseInt(token);
       if (failed(space))
         return;

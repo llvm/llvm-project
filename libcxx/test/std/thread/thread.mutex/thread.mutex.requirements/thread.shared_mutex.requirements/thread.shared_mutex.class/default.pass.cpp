@@ -22,6 +22,7 @@
 int main(int, char**)
 {
     std::shared_mutex m;
+    (void)m;
 
-  return 0;
+    return 0;
 }

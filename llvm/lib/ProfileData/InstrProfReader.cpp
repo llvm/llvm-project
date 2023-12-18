@@ -142,27 +142,15 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
   return Error::success();
 }
 
-static Error printBinaryIdsInternal(raw_ostream &OS,
-                                    const MemoryBuffer &DataBuffer,
-                                    uint64_t BinaryIdsSize,
-                                    const uint8_t *BinaryIdsStart,
-                                    llvm::endianness Endian) {
-  if (BinaryIdsSize == 0)
-    return Error::success();
-
-  std::vector<llvm::object::BuildID> BinaryIds;
-  if (Error E = readBinaryIdsInternal(DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                      BinaryIds, Endian))
-    return E;
-
+static void
+printBinaryIdsInternal(raw_ostream &OS,
+                       std::vector<llvm::object::BuildID> &BinaryIds) {
   OS << "Binary IDs: \n";
   for (auto BI : BinaryIds) {
     for (uint64_t I = 0; I < BI.size(); I++)
       OS << format("%02x", BI[I]);
     OS << "\n";
   }
-
-  return Error::success();
 }
 
 Expected<std::unique_ptr<InstrProfReader>>
@@ -258,7 +246,7 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
 Error TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
 
-  while (Line->startswith(":")) {
+  while (Line->starts_with(":")) {
     StringRef Str = Line->substr(1);
     if (Str.equals_insensitive("ir"))
       ProfileKind |= InstrProfKind::IRInstrumentation;
@@ -271,6 +259,8 @@ Error TextInstrProfReader::readHeader() {
       ProfileKind |= InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("not_entry_first"))
       ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
+    else if (Str.equals_insensitive("single_byte_coverage"))
+      ProfileKind |= InstrProfKind::SingleByteCoverage;
     else if (Str.equals_insensitive("temporal_prof_traces")) {
       ProfileKind |= InstrProfKind::TemporalProfile;
       if (auto Err = readTemporalProfTraceData())
@@ -396,7 +386,7 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
 
 Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   // Skip empty lines and comments.
-  while (!Line.is_at_end() && (Line->empty() || Line->startswith("#")))
+  while (!Line.is_at_end() && (Line->empty() || Line->starts_with("#")))
     ++Line;
   // If we hit EOF while looking for a name, we're done.
   if (Line.is_at_end()) {
@@ -438,7 +428,7 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
   }
 
   // Bitmap byte information is indicated with special character.
-  if (Line->startswith("$")) {
+  if (Line->starts_with("$")) {
     Record.BitmapBytes.clear();
     // Read the number of bitmap bytes.
     uint64_t NumBitmapBytes;
@@ -566,14 +556,21 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-  if (useCorrelate() && !Correlator)
-    return error(instrprof_error::missing_debug_info_for_correlation);
-  if (!useCorrelate() && Correlator)
-    return error(instrprof_error::unexpected_debug_info_for_correlation);
 
-  BinaryIdsSize = swap(Header.BinaryIdsSize);
-  if (BinaryIdsSize % sizeof(uint64_t))
+  uint64_t BinaryIdSize = swap(Header.BinaryIdsSize);
+  // Binary id start just after the header if exists.
+  const uint8_t *BinaryIdStart =
+      reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
+  const uint8_t *BinaryIdEnd = BinaryIdStart + BinaryIdSize;
+  const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
+  if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
     return error(instrprof_error::bad_header);
+  if (BinaryIdSize != 0) {
+    if (Error Err =
+            readBinaryIdsInternal(*DataBuffer, BinaryIdSize, BinaryIdStart,
+                                  BinaryIds, getDataEndianness()))
+      return Err;
+  }
 
   CountersDelta = swap(Header.CountersDelta);
   BitmapDelta = swap(Header.BitmapDelta);
@@ -591,7 +588,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto PaddingSize = getNumPaddingBytes(NamesSize);
 
   // Profile data starts after profile header and binary ids if exist.
-  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdsSize;
+  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdSize;
   ptrdiff_t CountersOffset = DataOffset + DataSize + PaddingBytesBeforeCounters;
   ptrdiff_t BitmapOffset =
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
@@ -606,8 +603,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (Correlator) {
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
-    assert(DataSize == 0 && NamesSize == 0);
-    assert(CountersDelta == 0 && NamesDelta == 0);
+    if (!(DataSize == 0 && NamesSize == 0 && CountersDelta == 0 &&
+          NamesDelta == 0))
+      return error(instrprof_error::unexpected_correlation_info);
     Data = Correlator->getDataPointer();
     DataEnd = Data + Correlator->getDataSize();
     NamesStart = Correlator->getNamesPointer();
@@ -620,18 +618,11 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     NamesEnd = NamesStart + NamesSize;
   }
 
-  // Binary ids start just after the header.
-  BinaryIdsStart =
-      reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   CountersStart = Start + CountersOffset;
   CountersEnd = CountersStart + CountersSize;
   BitmapStart = Start + BitmapOffset;
   BitmapEnd = BitmapStart + NumBitmapBytes;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
-
-  const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
-  if (BinaryIdsStart + BinaryIdsSize > BufferEnd)
-    return error(instrprof_error::bad_header);
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = createSymtab(*NewSymtab))
@@ -830,14 +821,16 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
-  return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds, getDataEndianness());
+  BinaryIds.insert(BinaryIds.begin(), this->BinaryIds.begin(),
+                   this->BinaryIds.end());
+  return Error::success();
 }
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
-  return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                getDataEndianness());
+  if (!BinaryIds.empty())
+    printBinaryIdsInternal(OS, BinaryIds);
+  return Error::success();
 }
 
 namespace llvm {
@@ -1021,7 +1014,7 @@ public:
     std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
     while (true) {
       Parts = Parts.second.split(':');
-      if (Parts.first.startswith("_Z"))
+      if (Parts.first.starts_with("_Z"))
         return Parts.first;
       if (Parts.second.empty())
         return Name;
@@ -1473,8 +1466,11 @@ Error IndexedInstrProfReader::readBinaryIds(
 }
 
 Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {
-  return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                llvm::endianness::little);
+  std::vector<llvm::object::BuildID> BinaryIds;
+  if (Error E = readBinaryIds(BinaryIds))
+    return E;
+  printBinaryIdsInternal(OS, BinaryIds);
+  return Error::success();
 }
 
 void InstrProfReader::accumulateCounts(CountSumOrPercent &Sum, bool IsCS) {

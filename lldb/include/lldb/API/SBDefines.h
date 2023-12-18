@@ -71,6 +71,7 @@ class LLDB_API SBExpressionOptions;
 class LLDB_API SBFile;
 class LLDB_API SBFileSpec;
 class LLDB_API SBFileSpecList;
+class LLDB_API SBFormat;
 class LLDB_API SBFrame;
 class LLDB_API SBFunction;
 class LLDB_API SBHostOS;
@@ -127,6 +128,7 @@ class LLDB_API SBValue;
 class LLDB_API SBValueList;
 class LLDB_API SBVariablesOptions;
 class LLDB_API SBWatchpoint;
+class LLDB_API SBWatchpointOptions;
 class LLDB_API SBUnixSignals;
 
 typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,

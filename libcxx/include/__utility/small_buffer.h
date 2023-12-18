@@ -29,7 +29,7 @@
 // allow type-erasing classes like move_only_function to store small objects in a local buffer without requiring an
 // allocation.
 //
-// This small buffer class only allows storing  trivially relocatable objects inside the local storage to allow
+// This small buffer class only allows storing trivially relocatable objects inside the local storage to allow
 // __small_buffer to be trivially relocatable itself. Since the buffer doesn't know what's stored inside it, the user
 // has to manage the object's lifetime, in particular the destruction of the object.
 

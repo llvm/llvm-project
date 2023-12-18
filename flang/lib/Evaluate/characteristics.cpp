@@ -38,18 +38,23 @@ static void CopyAttrs(const semantics::Symbol &src, A &dst,
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-bool ShapesAreCompatible(const Shape &x, const Shape &y) {
+bool ShapesAreCompatible(
+    const Shape &x, const Shape &y, bool *possibleWarning) {
   if (x.size() != y.size()) {
     return false;
   }
   auto yIter{y.begin()};
   for (const auto &xDim : x) {
     const auto &yDim{*yIter++};
-    if (xDim) {
-      if (!yDim || ToInt64(*xDim) != ToInt64(*yDim)) {
-        return false;
+    if (xDim && yDim) {
+      if (auto equiv{AreEquivalentInInterface(*xDim, *yDim)}) {
+        if (!*equiv) {
+          return false;
+        }
+      } else if (possibleWarning) {
+        *possibleWarning = true;
       }
-    } else if (yDim) {
+    } else if (xDim || yDim) {
       return false;
     }
   }
@@ -270,35 +275,19 @@ llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
 bool DummyDataObject::operator==(const DummyDataObject &that) const {
   return type == that.type && attrs == that.attrs && intent == that.intent &&
       coshape == that.coshape && cudaDataAttr == that.cudaDataAttr;
-  ;
 }
 
-static bool AreCompatibleDummyDataObjectShapes(const Shape &x, const Shape &y) {
-  int n{GetRank(x)};
-  if (n != GetRank(y)) {
-    return false;
-  }
-  auto xIter{x.begin()};
-  auto yIter{y.begin()};
-  for (; n-- > 0; ++xIter, ++yIter) {
-    if (auto xVal{ToInt64(*xIter)}) {
-      if (auto yVal{ToInt64(*yIter)}) {
-        if (*xVal != *yVal) {
-          return false;
-        }
-      }
-    }
-  }
-  return true;
-}
-
-bool DummyDataObject::IsCompatibleWith(
-    const DummyDataObject &actual, std::string *whyNot) const {
-  if (!AreCompatibleDummyDataObjectShapes(type.shape(), actual.type.shape())) {
+bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
+    std::string *whyNot, std::optional<std::string> *warning) const {
+  bool possibleWarning{false};
+  if (!ShapesAreCompatible(
+          type.shape(), actual.type.shape(), &possibleWarning)) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object shapes";
     }
     return false;
+  } else if (warning && possibleWarning) {
+    *warning = "distinct dummy data object shapes";
   }
   // Treat deduced dummy character type as if it were assumed-length character
   // to avoid useless "implicit interfaces have distinct type" warnings from
@@ -748,11 +737,11 @@ bool DummyArgument::operator==(const DummyArgument &that) const {
   return u == that.u; // name and passed-object usage are not characteristics
 }
 
-bool DummyArgument::IsCompatibleWith(
-    const DummyArgument &actual, std::string *whyNot) const {
+bool DummyArgument::IsCompatibleWith(const DummyArgument &actual,
+    std::string *whyNot, std::optional<std::string> *warning) const {
   if (const auto *ifaceData{std::get_if<DummyDataObject>(&u)}) {
     if (const auto *actualData{std::get_if<DummyDataObject>(&actual.u)}) {
-      return ifaceData->IsCompatibleWith(*actualData, whyNot);
+      return ifaceData->IsCompatibleWith(*actualData, whyNot, warning);
     }
     if (whyNot) {
       *whyNot = "one dummy argument is an object, the other is not";
@@ -792,8 +781,9 @@ static std::optional<DummyArgument> CharacterizeDummyArgument(
   return std::nullopt;
 }
 
-std::optional<DummyArgument> DummyArgument::FromActual(
-    std::string &&name, const Expr<SomeType> &expr, FoldingContext &context) {
+std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
+    const Expr<SomeType> &expr, FoldingContext &context,
+    bool forImplicitInterface) {
   return common::visit(
       common::visitors{
           [&](const BOZLiteralConstant &) {
@@ -828,6 +818,13 @@ std::optional<DummyArgument> DummyArgument::FromActual(
           },
           [&](const auto &) {
             if (auto type{TypeAndShape::Characterize(expr, context)}) {
+              if (forImplicitInterface &&
+                  !type->type().IsUnlimitedPolymorphic() &&
+                  type->type().IsPolymorphic()) {
+                // Pass the monomorphic declared type to an implicit interface
+                type->set_type(DynamicType{
+                    type->type().GetDerivedTypeSpec(), /*poly=*/false});
+              }
               DummyDataObject obj{std::move(*type)};
               obj.attrs.set(DummyDataObject::Attr::DeducedFromActual);
               return std::make_optional<DummyArgument>(
@@ -840,10 +837,11 @@ std::optional<DummyArgument> DummyArgument::FromActual(
       expr.u);
 }
 
-std::optional<DummyArgument> DummyArgument::FromActual(
-    std::string &&name, const ActualArgument &arg, FoldingContext &context) {
+std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
+    const ActualArgument &arg, FoldingContext &context,
+    bool forImplicitInterface) {
   if (const auto *expr{arg.UnwrapExpr()}) {
-    return FromActual(std::move(name), *expr, context);
+    return FromActual(std::move(name), *expr, context, forImplicitInterface);
   } else if (arg.GetAssumedTypeDummy()) {
     return std::nullopt;
   } else {
@@ -1172,7 +1170,8 @@ bool Procedure::operator==(const Procedure &that) const {
 }
 
 bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
-    const SpecificIntrinsic *specificIntrinsic) const {
+    const SpecificIntrinsic *specificIntrinsic,
+    std::optional<std::string> *warning) const {
   // 15.5.2.9(1): if dummy is not pure, actual need not be.
   // Ditto with elemental.
   Attrs actualAttrs{actual.attrs};
@@ -1217,13 +1216,17 @@ bool Procedure::IsCompatibleWith(const Procedure &actual, std::string *whyNot,
       //   subroutine s1(base); subroutine s2(extended)
       //   procedure(s1), pointer :: p
       //   p => s2 ! an error, s2 is more restricted, can't handle "base"
+      std::optional<std::string> gotWarning;
       if (!actual.dummyArguments[j].IsCompatibleWith(
-              dummyArguments[j], whyNot)) {
+              dummyArguments[j], whyNot, warning ? &gotWarning : nullptr)) {
         if (whyNot) {
           *whyNot = "incompatible dummy argument #"s + std::to_string(j + 1) +
               ": "s + *whyNot;
         }
         return false;
+      } else if (warning && !*warning && gotWarning) {
+        *warning = "possibly incompatible dummy argument #"s +
+            std::to_string(j + 1) + ": "s + std::move(*gotWarning);
       }
     }
     return true;
@@ -1325,8 +1328,9 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
       for (const auto &arg : args) {
         ++j;
         if (arg) {
-          if (auto dummy{DummyArgument::FromActual(
-                  "x"s + std::to_string(j), *arg, context)}) {
+          if (auto dummy{DummyArgument::FromActual("x"s + std::to_string(j),
+                  *arg, context,
+                  /*forImplicitInterface=*/true)}) {
             callee->dummyArguments.emplace_back(std::move(*dummy));
             continue;
           }

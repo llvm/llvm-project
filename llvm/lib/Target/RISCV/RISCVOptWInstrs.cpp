@@ -53,9 +53,7 @@ class RISCVOptWInstrs : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVOptWInstrs() : MachineFunctionPass(ID) {
-    initializeRISCVOptWInstrsPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVOptWInstrs() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
@@ -128,7 +126,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
     if (MI->getNumExplicitDefs() != 1)
       return false;
 
-    for (auto &UserOp : MRI.use_operands(MI->getOperand(0).getReg())) {
+    for (auto &UserOp : MRI.use_nodbg_operands(MI->getOperand(0).getReg())) {
       const MachineInstr *UserMI = UserOp.getParent();
       unsigned OpIdx = UserOp.getOperandNo();
 
@@ -366,6 +364,20 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
   // Copying from X0 produces zero.
   case RISCV::COPY:
     return MI.getOperand(1).getReg() == RISCV::X0;
+  case RISCV::PseudoAtomicLoadNand32:
+    return true;
+  case RISCV::PseudoVMV_X_S_MF8:
+  case RISCV::PseudoVMV_X_S_MF4:
+  case RISCV::PseudoVMV_X_S_MF2:
+  case RISCV::PseudoVMV_X_S_M1:
+  case RISCV::PseudoVMV_X_S_M2:
+  case RISCV::PseudoVMV_X_S_M4:
+  case RISCV::PseudoVMV_X_S_M8: {
+    // vmv.x.s has at least 33 sign bits if log2(sew) <= 5.
+    int64_t Log2SEW = MI.getOperand(2).getImm();
+    assert(Log2SEW >= 3 && Log2SEW <= 6 && "Unexpected Log2SEW");
+    return Log2SEW <= 5;
+  }
   }
 
   return false;
@@ -383,6 +395,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       return false;
     MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
     if (!SrcMI)
+      return false;
+    // Code assumes the register is operand 0.
+    // TODO: Maybe the worklist should store register?
+    if (!SrcMI->getOperand(0).isReg() ||
+        SrcMI->getOperand(0).getReg() != SrcReg)
       return false;
     // Add SrcMI to the worklist.
     Worklist.push_back(SrcMI);
@@ -482,9 +499,16 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
 
       break;
     case RISCV::PseudoCCADDW:
+    case RISCV::PseudoCCADDIW:
     case RISCV::PseudoCCSUBW:
-      // Returns operand 4 or an ADDW/SUBW of operands 5 and 6. We only need to
-      // check if operand 4 is sign extended.
+    case RISCV::PseudoCCSLLW:
+    case RISCV::PseudoCCSRLW:
+    case RISCV::PseudoCCSRAW:
+    case RISCV::PseudoCCSLLIW:
+    case RISCV::PseudoCCSRLIW:
+    case RISCV::PseudoCCSRAIW:
+      // Returns operand 4 or an ADDW/SUBW/etc. of operands 5 and 6. We only
+      // need to check if operand 4 is sign extended.
       if (!AddRegDefToWorkList(MI->getOperand(4).getReg()))
         return false;
       break;

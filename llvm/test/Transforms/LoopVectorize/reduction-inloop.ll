@@ -1293,9 +1293,9 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE6:%.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, [[VECTOR_PH]] ], [ [[TMP51:%.*]], [[PRED_LOAD_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B:%.*]], i64 0, i64 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64

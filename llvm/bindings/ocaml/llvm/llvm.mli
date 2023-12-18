@@ -1145,16 +1145,6 @@ val const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getShl]. *)
 val const_shl : llvalue -> llvalue -> llvalue
 
-(** [const_lshr c1 c2] returns the constant integer [c1] right-shifted by the
-    constant integer [c2] with zero extension.
-    See the method [llvm::ConstantExpr::getLShr]. *)
-val const_lshr : llvalue -> llvalue -> llvalue
-
-(** [const_ashr c1 c2] returns the constant integer [c1] right-shifted by the
-    constant integer [c2] with sign extension.
-    See the method [llvm::ConstantExpr::getAShr]. *)
-val const_ashr : llvalue -> llvalue -> llvalue
-
 (** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
     with source element type [srcty] and the constant integers indices from the
     array [indices].

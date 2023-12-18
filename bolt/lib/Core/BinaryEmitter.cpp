@@ -287,7 +287,10 @@ void BinaryEmitter::emitFunctions() {
 
   // Mark the end of hot text.
   if (opts::HotText) {
-    Streamer.switchSection(BC.getTextSection());
+    if (BC.HasWarmSection)
+      Streamer.switchSection(BC.getCodeSection(BC.getWarmCodeSectionName()));
+    else
+      Streamer.switchSection(BC.getTextSection());
     Streamer.emitLabel(BC.getHotTextEndSymbol());
   }
 }
@@ -505,6 +508,18 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
 
         if (InstrLabel)
           Streamer.emitLabel(InstrLabel);
+      }
+
+      // Emit sized NOPs via MCAsmBackend::writeNopData() interface on x86.
+      // This is a workaround for invalid NOPs handling by asm/disasm layer.
+      if (BC.MIB->isNoop(Instr) && BC.isX86()) {
+        if (std::optional<uint32_t> Size = BC.MIB->getSize(Instr)) {
+          SmallString<15> Code;
+          raw_svector_ostream VecOS(Code);
+          BC.MAB->writeNopData(VecOS, *Size, BC.STI.get());
+          Streamer.emitBytes(Code);
+          continue;
+        }
       }
 
       Streamer.emitInstruction(Instr, *BC.STI);

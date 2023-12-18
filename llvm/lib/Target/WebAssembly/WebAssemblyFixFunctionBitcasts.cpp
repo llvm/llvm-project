@@ -255,8 +255,7 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
                           << *F.getFunctionType() << "\n");
         Value *Args[] = {UndefValue::get(MainArgTys[0]),
                          UndefValue::get(MainArgTys[1])};
-        Value *Casted = ConstantExpr::getBitCast(Main, PointerType::get(C, 0));
-        CallMain = CallInst::Create(MainTy, Casted, Args, "call_main");
+        CallMain = CallInst::Create(MainTy, Main, Args, "call_main");
         Uses.push_back(std::make_pair(CallMain, &F));
       }
     }

@@ -83,6 +83,10 @@ enum NodeType : unsigned {
   ADC,
   SBC, // adc, sbc instructions
 
+  // To avoid stack clash, allocation is performed by block and each block is
+  // probed.
+  PROBED_ALLOCA,
+
   // Predicated instructions where inactive lanes produce undefined results.
   ABDS_PRED,
   ABDU_PRED,
@@ -375,6 +379,8 @@ enum NodeType : unsigned {
   GLD1_UXTW_SCALED_MERGE_ZERO,
   GLD1_SXTW_SCALED_MERGE_ZERO,
   GLD1_IMM_MERGE_ZERO,
+  GLD1Q_MERGE_ZERO,
+  GLD1Q_INDEX_MERGE_ZERO,
 
   // Signed gather loads
   GLD1S_MERGE_ZERO,
@@ -419,6 +425,8 @@ enum NodeType : unsigned {
   SST1_UXTW_SCALED_PRED,
   SST1_SXTW_SCALED_PRED,
   SST1_IMM_PRED,
+  SST1Q_PRED,
+  SST1Q_INDEX_PRED,
 
   // Non-temporal scatter store
   SSTNT1_PRED,
@@ -441,6 +449,10 @@ enum NodeType : unsigned {
   // Strict (exception-raising) floating point comparison
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,
+
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
 
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -505,6 +517,13 @@ const unsigned RoundingBitsPos = 22;
 // Registers used to pass function arguments.
 ArrayRef<MCPhysReg> getGPRArgRegs();
 ArrayRef<MCPhysReg> getFPRArgRegs();
+
+/// Maximum allowed number of unprobed bytes above SP at an ABI
+/// boundary.
+const unsigned StackProbeMaxUnprobedStack = 1024;
+
+/// Maximum number of iterations to unroll for a constant size probing loop.
+const unsigned StackProbeMaxLoopUnroll = 4;
 
 } // namespace AArch64
 
@@ -601,6 +620,9 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
+                                            MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
@@ -608,6 +630,8 @@ public:
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                  MachineInstr &MI, MachineBasicBlock *BB,
                                  bool HasTile) const;
+  MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
+                                 unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
@@ -674,6 +698,9 @@ public:
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
                              Instruction *I = nullptr) const override;
+
+  int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
+                                         int64_t MaxOffset) const override;
 
   /// Return true if an FMA operation is faster than a pair of fmul and fadd
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
@@ -946,6 +973,21 @@ public:
   // used for 64bit and 128bit vectors as well.
   bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
 
+  // Follow NEON ABI rules even when using SVE for fixed length vectors.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
+
+  /// True if stack clash protection is enabled for this functions.
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -966,6 +1008,9 @@ private:
                                const SmallVectorImpl<ISD::InputArg> &Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
+
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
 
   SDValue LowerCall(CallLoweringInfo & /*CLI*/,
                     SmallVectorImpl<SDValue> &InVals) const override;
@@ -1106,10 +1151,10 @@ private:
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SDValue Chain,
-                                         SDValue &Size,
-                                         SelectionDAG &DAG) const;
+
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
@@ -1250,6 +1295,8 @@ private:
                       SDLoc DL, EVT VT) const;
 
   bool preferScalarizeSplat(SDNode *N) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace AArch64 {

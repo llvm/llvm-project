@@ -1,11 +1,11 @@
-// RUN: mlir-opt %s -enable-arm-streaming="mode=locally enable-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \
+// RUN: mlir-opt %s -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
+// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
+// RUN:   -convert-arm-sme-to-llvm -cse -canonicalize \
+// RUN:   -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:  -march=aarch64 -mattr=+sve,+sme \
 // RUN:  -e entry -entry-point-result=i32 \
-// RUN:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
+// RUN:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
 // Integration test demonstrating filling a 32-bit element ZA tile with a

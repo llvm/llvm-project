@@ -166,13 +166,16 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_BUILTINS_LIBRARY} ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_LIBRARIES})
+if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
+endif()
 target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
     DEFINE_SYMBOL ""
 )
@@ -252,7 +255,7 @@ set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
 

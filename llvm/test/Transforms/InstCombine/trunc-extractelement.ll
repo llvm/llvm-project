@@ -182,7 +182,8 @@ define <4 x i64> @PR45314(<4 x i64> %x) {
 ;
 ; BE-LABEL: @PR45314(
 ; BE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[X:%.*]] to <8 x i32>
-; BE-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; BE-NEXT:    [[I:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; BE-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[I]], <8 x i32> undef, <8 x i32> zeroinitializer
 ; BE-NEXT:    [[B:%.*]] = bitcast <8 x i32> [[S]] to <4 x i64>
 ; BE-NEXT:    ret <4 x i64> [[B]]
 ;

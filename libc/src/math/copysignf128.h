@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_COPYSIGNF128_H
 #define LLVM_LIBC_SRC_MATH_COPYSIGNF128_H
 
-#include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/float.h"
 
 namespace LIBC_NAMESPACE {
 

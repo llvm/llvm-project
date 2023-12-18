@@ -81,9 +81,9 @@ def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
 def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
                               SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
-// Operand that is allowed to be a register or a 5 bit immediate.
-// This allows us to pick between VSETIVLI and VSETVLI opcodes using the same
-// pseudo instructions.
+// Operand that is allowed to be a register other than X0, a 5 bit unsigned
+// immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
+// VSETVLI opcodes using the same pseudo instructions.
 def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";
@@ -240,6 +240,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // We can't use X0 register becuase the AVL operands use GPRNoX0.
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
+
+def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
 
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
@@ -1125,7 +1127,6 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryMask_FRM<VReg RetClass,
@@ -1145,7 +1146,6 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryNoMaskGPROut :
@@ -7425,6 +7425,11 @@ foreach fvti = AllFloatVectors in {
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
                (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
+                           (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
+              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
+               (fvti.Vector $rs1), GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
   }
 }
 

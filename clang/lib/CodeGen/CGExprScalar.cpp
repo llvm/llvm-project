@@ -2224,18 +2224,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Visit(const_cast<Expr*>(E));
 
   case CK_NoOp: {
-    llvm::Value *V = CE->changesVolatileQualification()
-                         ? EmitLoadOfLValue(CE)
-                         : Visit(const_cast<Expr *>(E));
-    if (V) {
-      // CK_NoOp can model a pointer qualification conversion, which can remove
-      // an array bound and change the IR type.
-      // FIXME: Once pointee types are removed from IR, remove this.
-      llvm::Type *T = ConvertType(DestTy);
-      if (T != V->getType())
-        V = Builder.CreateBitCast(V, T);
-    }
-    return V;
+    return CE->changesVolatileQualification() ? EmitLoadOfLValue(CE)
+                                              : Visit(const_cast<Expr *>(E));
   }
 
   case CK_BaseToDerived: {
@@ -2581,7 +2571,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       // For atomic bool increment, we just store true and return it for
       // preincrement, do an atomic swap with true for postincrement
       return Builder.CreateAtomicRMW(
-          llvm::AtomicRMWInst::Xchg, LV.getPointer(CGF), True,
+          llvm::AtomicRMWInst::Xchg, LV.getAddress(CGF), True,
           llvm::AtomicOrdering::SequentiallyConsistent);
     }
     // Special case for atomic increment / decrement on integers, emit
@@ -2599,7 +2589,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       llvm::Value *amt = CGF.EmitToMemory(
           llvm::ConstantInt::get(ConvertType(type), 1, true), type);
       llvm::Value *old =
-          Builder.CreateAtomicRMW(aop, LV.getPointer(CGF), amt,
+          Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
@@ -3324,7 +3314,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
                                  E->getExprLoc()),
             LHSTy);
         Value *OldVal = Builder.CreateAtomicRMW(
-            AtomicOp, LHSLV.getPointer(CGF), Amt,
+            AtomicOp, LHSLV.getAddress(CGF), Amt,
             llvm::AtomicOrdering::SequentiallyConsistent);
 
         // Since operation is atomic, the result type is guaranteed to be the

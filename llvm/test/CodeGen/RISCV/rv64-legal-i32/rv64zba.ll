@@ -1521,7 +1521,6 @@ define signext i32 @srliw_1_sh2add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_1_sh2add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 1
-; RV64ZBA-NEXT:    zext.w a1, a1
 ; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
@@ -1545,7 +1544,6 @@ define i64 @srliw_1_sh3add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_1_sh3add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 1
-; RV64ZBA-NEXT:    zext.w a1, a1
 ; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
@@ -1569,7 +1567,6 @@ define i64 @srliw_2_sh3add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_2_sh3add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 2
-; RV64ZBA-NEXT:    zext.w a1, a1
 ; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
@@ -1593,7 +1590,6 @@ define signext i16 @srliw_2_sh1add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_2_sh1add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 2
-; RV64ZBA-NEXT:    zext.w a1, a1
 ; RV64ZBA-NEXT:    sh1add a0, a1, a0
 ; RV64ZBA-NEXT:    lh a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
@@ -1618,7 +1614,6 @@ define signext i32 @srliw_3_sh2add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_3_sh2add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 3
-; RV64ZBA-NEXT:    zext.w a1, a1
 ; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
@@ -1642,7 +1637,6 @@ define i64 @srliw_4_sh3add(ptr %0, i32 signext %1) {
 ; RV64ZBA-LABEL: srliw_4_sh3add:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srliw a1, a1, 4
-; RV64ZBA-NEXT:    zext.w a1, a1
 ; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret

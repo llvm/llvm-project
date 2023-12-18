@@ -823,7 +823,7 @@ public:
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
     llvm::support::endian::Writer writer(OS, llvm::endianness::little);
-    writer.write<uint16_t>(Key.NumPieces);
+    writer.write<uint16_t>(Key.NumArgs);
     for (auto Identifier : Key.Identifiers)
       writer.write<uint32_t>(Identifier);
   }

@@ -66,7 +66,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
 // CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
-  %_c0 = llvm.mlir.constant(2: i32) :i32
+  %_c0 = llvm.mlir.constant(2: i32) : i32
   %gepinit = llvm.getelementptr %addr[%_c0] : (!llvm.ptr, i32) -> !llvm.ptr, i32
   llvm.return %gepinit : !llvm.ptr
 }
@@ -179,7 +179,7 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // CHECK: declare ptr @malloc(i64)
 llvm.func @malloc(i64) -> !llvm.ptr
 // CHECK: declare void @free(ptr)
-
+llvm.func @free(!llvm.ptr)
 
 //
 // Basic functionality: function and block conversion, function calls,
@@ -1223,19 +1223,23 @@ llvm.func @dereferenceableornullattr_ret_decl() -> (!llvm.ptr {llvm.dereferencea
 llvm.func @inregattr_ret_decl() -> (!llvm.ptr {llvm.inreg})
 
 // CHECK-LABEL: @varargs(...)
-llvm.func @varargs(...)
+llvm.func @varargs(...) -> f32
 
 // CHECK-LABEL: define void @varargs_call
 llvm.func @varargs_call(%arg0 : i32) {
-// CHECK:  call void (...) @varargs(i32 %{{.*}})
-  llvm.call @varargs(%arg0) vararg(!llvm.func<void (...)>) : (i32) -> ()
+// CHECK:  call float (...) @varargs(i32 %{{.*}})
+// CHECK:  call nnan float (...) @varargs(i32 %{{.*}})
+  llvm.call @varargs(%arg0) vararg(!llvm.func<f32 (...)>) : (i32) -> (f32)
+  llvm.call @varargs(%arg0) vararg(!llvm.func<f32 (...)>) {fastmathFlags = #llvm.fastmath<nnan>} : (i32) -> (f32)
   llvm.return
 }
 
 // CHECK-LABEL: define void @indirect_varargs_call(ptr %0, i32 %1)
 llvm.func @indirect_varargs_call(%arg0 : !llvm.ptr, %arg1 : i32) {
-// CHECK:  call void (...) %0(i32 %1)
-  llvm.call %arg0(%arg1) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
+// CHECK:  call float (...) %0(i32 %1)
+// CHECK:  call nnan float (...) %0(i32 %1)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<f32 (...)>) : !llvm.ptr, (i32) -> (f32)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<f32 (...)>) {fastmathFlags = #llvm.fastmath<nnan>} : !llvm.ptr, (i32) -> (f32)
   llvm.return
 }
 
@@ -2302,6 +2306,20 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 // -----
 
 //
+// arm_streaming_compatible attribute.
+//
+
+// CHECK-LABEL: @streaming_compatible_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" }
+
+// -----
+
+//
 // Zero-initialize operation.
 //
 
@@ -2324,3 +2342,9 @@ llvm.func @zeroinit_complex_local_aggregate() {
 
   llvm.return
 }
+
+//CHECK: !llvm.linker.options = !{![[MD0:[0-9]+]], ![[MD1:[0-9]+]]}
+//CHECK: ![[MD0]] = !{!"/DEFAULTLIB:", !"libcmt"}
+llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
+//CHECK: ![[MD1]] = !{!"/DEFAULTLIB:", !"libcmtd"}
+llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]

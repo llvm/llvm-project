@@ -2065,7 +2065,7 @@ static LogicalResult generateCopy(
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = offset.dyn_cast<AffineConstantExpr>()) {
+    if (auto caf = dyn_cast<AffineConstantExpr>(offset)) {
       auto indexVal = caf.getValue();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);

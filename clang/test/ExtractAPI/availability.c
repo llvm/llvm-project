@@ -98,8 +98,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 1
+          "character": 5,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -172,8 +172,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 3
+          "character": 5,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -256,8 +256,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 5
+          "character": 5,
+          "line": 4
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -356,8 +356,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 7
+          "character": 5,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -438,8 +438,8 @@ void e(void) __attribute__((availability(tvos, unavailable)));
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 9
+          "character": 5,
+          "line": 8
         },
         "uri": "file://INPUT_DIR/input.h"
       },

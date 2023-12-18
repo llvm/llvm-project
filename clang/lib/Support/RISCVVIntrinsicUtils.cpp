@@ -464,7 +464,7 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   PrototypeDescriptorStr = PrototypeDescriptorStr.drop_back();
 
   // Compute the vector type transformers, it can only appear one time.
-  if (PrototypeDescriptorStr.startswith("(")) {
+  if (PrototypeDescriptorStr.starts_with("(")) {
     assert(VTM == VectorTypeModifier::NoModifier &&
            "VectorTypeModifier should only have one modifier");
     size_t Idx = PrototypeDescriptorStr.find(')');
@@ -856,6 +856,9 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
       break;
     case TypeModifier::Float:
       ScalarType = ScalarTypeKind::Float;
+      break;
+    case TypeModifier::BFloat:
+      ScalarType = ScalarTypeKind::BFloat;
       break;
     case TypeModifier::LMUL1:
       LMUL = LMULType(0);

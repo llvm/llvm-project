@@ -66,6 +66,7 @@ bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
 StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   AMDGPU::GPUKind AK;
 
+  // clang-format off
   switch (ElfMach) {
   case ELF::EF_AMDGPU_MACH_R600_R600:      AK = GK_R600;    break;
   case ELF::EF_AMDGPU_MACH_R600_R630:      AK = GK_R630;    break;
@@ -125,9 +126,12 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103: AK = GK_GFX1103; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   default:                                 AK = GK_NONE;    break;
   }
+  // clang-format on
 
   StringRef GPUName = getArchNameAMDGCN(AK);
   if (GPUName != "")
@@ -140,6 +144,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   if (AK == AMDGPU::GPUKind::GK_NONE)
     AK = parseArchR600(GPU);
 
+  // clang-format off
   switch (AK) {
   case GK_R600:    return ELF::EF_AMDGPU_MACH_R600_R600;
   case GK_R630:    return ELF::EF_AMDGPU_MACH_R600_R630;
@@ -199,8 +204,11 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1103: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103;
   case GK_GFX1150: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150;
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
+  case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
+  case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
+  // clang-format on
 
   llvm_unreachable("unknown GPU");
 }
@@ -443,12 +451,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   PRINT_FIELD(OS, ".amdhsa_float_denorm_mode_16_64", KD,
               compute_pgm_rsrc1,
               amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64);
-  PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD,
-              compute_pgm_rsrc1,
-              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
-  PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD,
-              compute_pgm_rsrc1,
-              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
+  if (IVersion.Major < 12) {
+    PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD, compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP);
+    PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD, compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE);
+  }
   if (IVersion.Major >= 9)
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
@@ -470,6 +478,9 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_shared_vgpr_count", KD, compute_pgm_rsrc3,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
   }
+  if (IVersion.Major >= 12)
+    PRINT_FIELD(OS, ".amdhsa_round_robin_scheduling", KD, compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN);
   PRINT_FIELD(
       OS, ".amdhsa_exception_fp_ieee_invalid_op", KD,
       compute_pgm_rsrc2,

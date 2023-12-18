@@ -943,6 +943,10 @@ public:
   /// def-use chain linking it to a loop.
   void forgetValue(Value *V);
 
+  /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
+  /// such that it may no longer be trivial.
+  void forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V);
+
   /// Called when the client has changed the disposition of values in
   /// this loop.
   ///

@@ -23,9 +23,7 @@ def Mesh_Dialect : Dialect {
   let cppNamespace = "::mlir::mesh";
 
   let description = [{
-    The `mesh` dialect contains a set of attributes, operations, interfaces that
-    are useful for representing sharding and communication on device mesh
-    cluster.
+    See [Mesh dialect documentation](mlir/docs/Dialects/Mesh.md).
   }];
 
   let dependentDialects = [
@@ -47,6 +45,10 @@ def Mesh_Partial : I32EnumAttr<"Partial", "partial type of a distributed tensor"
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::mesh";
+}
+
+def Mesh_PartialAttr : EnumAttr<Mesh_Dialect, Mesh_Partial, "partial"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 // Mesh_IteratorType and Mesh_Partial are used to annotate different aspects of

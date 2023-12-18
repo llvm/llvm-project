@@ -38,6 +38,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include(UseLibtool)
   endif()
   include(AddCompilerRT)
+
+  if(MINGW)
+    # Simplified version of what's set in cmake/config-ix.cmake; not including
+    # builtins, which are linked separately.
+    set(MINGW_LIBRARIES mingw32 moldname mingwex msvcrt advapi32 shell32
+                        user32 kernel32 mingw32 moldname mingwex msvcrt)
+   endif()
 endif()
 
 if (COMPILER_RT_STANDALONE_BUILD)
@@ -760,6 +767,7 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
   if (MSVC)
@@ -880,12 +888,14 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   endif()
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if(CAN_TARGET_${arch})
+      list(APPEND COMPILER_RT_LIBATOMIC_LINK_LIBS_${arch} clang_rt.builtins-${arch})
+      append_list_if(MINGW "${MINGW_LIBRARIES}" COMPILER_RT_LIBATOMIC_LINK_LIBS_${arch})
       add_compiler_rt_runtime(clang_rt.atomic
                               ${BUILTIN_TYPE}
                               ARCHS ${arch}
                               SOURCES atomic.c
                               LINK_FLAGS ${COMPILER_RT_LIBATOMIC_LINK_FLAGS}
-                              LINK_LIBS clang_rt.builtins-${arch}
+                              LINK_LIBS ${COMPILER_RT_LIBATOMIC_LINK_LIBS_${arch}}
                               PARENT_TARGET builtins-standalone-atomic)
     endif()
   endforeach()

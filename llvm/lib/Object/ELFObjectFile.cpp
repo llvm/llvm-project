@@ -506,6 +506,12 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1150";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151:
     return "gfx1151";
+
+  // AMDGCN GFX12.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
+    return "gfx1200";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
+    return "gfx1201";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
@@ -710,10 +716,13 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
 
 template <class ELFT>
 Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
-    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex) {
+    const ELFFile<ELFT> &EF, std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) {
   using Elf_Shdr = typename ELFT::Shdr;
   bool IsRelocatable = EF.getHeader().e_type == ELF::ET_REL;
   std::vector<BBAddrMap> BBAddrMaps;
+  if (PGOAnalyses)
+    PGOAnalyses->clear();
 
   const auto &Sections = cantFail(EF.sections());
   auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
@@ -742,10 +751,13 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
       return createError("unable to get relocation section for " +
                          describe(EF, *Sec));
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
-        EF.decodeBBAddrMap(*Sec, RelocSec);
-    if (!BBAddrMapOrErr)
+        EF.decodeBBAddrMap(*Sec, RelocSec, PGOAnalyses);
+    if (!BBAddrMapOrErr) {
+      if (PGOAnalyses)
+        PGOAnalyses->clear();
       return createError("unable to read " + describe(EF, *Sec) + ": " +
                          toString(BBAddrMapOrErr.takeError()));
+    }
     std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),
               std::back_inserter(BBAddrMaps));
   }
@@ -822,13 +834,14 @@ ELFObjectFileBase::readDynsymVersions() const {
 }
 
 Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
-    std::optional<unsigned> TextSectionIndex) const {
+    std::optional<unsigned> TextSectionIndex,
+    std::vector<PGOAnalysisMap> *PGOAnalyses) const {
   if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
-    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex);
+    return readBBAddrMapImpl(Obj->getELFFile(), TextSectionIndex, PGOAnalyses);
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
-                           TextSectionIndex);
+                           TextSectionIndex, PGOAnalyses);
 }

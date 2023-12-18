@@ -149,7 +149,7 @@ unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   for (const auto &exprs : exprArrays) {
     for (auto expr : exprs) {
       expr.walk([&pos](AffineExpr e) {
-        if (auto d = e.dyn_cast<AffineExprTy>())
+        if (auto d = dyn_cast<AffineExprTy>(e))
           pos = std::max(pos, d.getPosition());
       });
     }
@@ -174,7 +174,7 @@ SmallVector<ReassociationIndices, 2> mlir::convertReassociationMapsToIndices(
     ReassociationIndices indices;
     indices.reserve(exprs.size());
     for (const auto &expr : exprs)
-      indices.push_back(expr.cast<AffineDimExpr>().getPosition());
+      indices.push_back(cast<AffineDimExpr>(expr).getPosition());
     reassociationIndices.push_back(indices);
   }
   return reassociationIndices;
@@ -208,7 +208,7 @@ bool mlir::isReassociationValid(ArrayRef<AffineMap> reassociation,
       return false;
     }
     for (auto e : m.getResults()) {
-      auto d = e.dyn_cast<AffineDimExpr>();
+      auto d = dyn_cast<AffineDimExpr>(e);
       if (!d || d.getPosition() != nextExpectedDim++) {
         if (invalidIndex)
           *invalidIndex = it.index();

@@ -90,6 +90,9 @@ protected:
 /// class has value-type semantics and is just a simple wrapper around a
 /// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
 /// an Operation(in the case of an OpResult).
+/// As most IR construct, this isn't const-correct, but we keep method
+/// consistent and as such method that immediately modify this Value aren't
+/// marked `const` (include modifying the Value use-list).
 class Value {
 public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
@@ -158,26 +161,25 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Drop all uses of this object from their respective owners.
-  void dropAllUses() const { return impl->dropAllUses(); }
+  void dropAllUses() { return impl->dropAllUses(); }
 
   /// Replace all uses of 'this' value with the new value, updating anything in
   /// the IR that uses 'this' to use the other value instead.  When this returns
   /// there are zero uses of 'this'.
-  void replaceAllUsesWith(Value newValue) const {
+  void replaceAllUsesWith(Value newValue) {
     impl->replaceAllUsesWith(newValue);
   }
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
   /// listed in 'exceptions' .
-  void
-  replaceAllUsesExcept(Value newValue,
-                       const SmallPtrSetImpl<Operation *> &exceptions) const;
+  void replaceAllUsesExcept(Value newValue,
+                            const SmallPtrSetImpl<Operation *> &exceptions);
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
   /// 'exceptedUser'.
-  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser) const;
+  void replaceAllUsesExcept(Value newValue, Operation *exceptedUser);
 
   /// Replace all uses of 'this' value with 'newValue' if the given callback
   /// returns true.
@@ -185,7 +187,7 @@ public:
                          function_ref<bool(OpOperand &)> shouldReplace);
 
   /// Returns true if the value is used outside of the given block.
-  bool isUsedOutsideOfBlock(Block *block);
+  bool isUsedOutsideOfBlock(Block *block) const;
 
   /// Shuffle the use list order according to the provided indices. It is
   /// responsibility of the caller to make sure that the indices map the current
@@ -224,14 +226,14 @@ public:
   //===--------------------------------------------------------------------===//
   // Utilities
 
-  void print(raw_ostream &os);
-  void print(raw_ostream &os, const OpPrintingFlags &flags);
-  void print(raw_ostream &os, AsmState &state);
-  void dump();
+  void print(raw_ostream &os) const;
+  void print(raw_ostream &os, const OpPrintingFlags &flags) const;
+  void print(raw_ostream &os, AsmState &state) const;
+  void dump() const;
 
   /// Print this value as if it were an operand.
-  void printAsOperand(raw_ostream &os, AsmState &state);
-  void printAsOperand(raw_ostream &os, const OpPrintingFlags &flags);
+  void printAsOperand(raw_ostream &os, AsmState &state) const;
+  void printAsOperand(raw_ostream &os, const OpPrintingFlags &flags) const;
 
   /// Methods for supporting PointerLikeTypeTraits.
   void *getAsOpaquePointer() const { return impl; }

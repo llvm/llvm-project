@@ -1511,10 +1511,6 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   assert(CastWidth <= IVWidth && "Unexpected width while widening compare.");
 
   // Widen the compare instruction.
-  auto *InsertPt = getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI);
-  if (!InsertPt)
-    return false;
-  IRBuilder<> Builder(InsertPt);
   DU.NarrowUse->replaceUsesOfWith(DU.NarrowDef, DU.WideDef);
 
   // Widen the other operand of the compare, if necessary.

@@ -50,6 +50,8 @@ static MCInst beq() {
       .addImm(32);
 }
 
+static MCInst b() { return MCInstBuilder(LoongArch::B).addImm(32); }
+
 static MCInst bl() { return MCInstBuilder(LoongArch::BL).addImm(32); }
 
 static MCInst jirl(unsigned RD, unsigned RJ = LoongArch::R10) {
@@ -58,6 +60,7 @@ static MCInst jirl(unsigned RD, unsigned RJ = LoongArch::R10) {
 
 TEST_P(InstrAnalysisTest, IsTerminator) {
   EXPECT_TRUE(Analysis->isTerminator(beq()));
+  EXPECT_TRUE(Analysis->isTerminator(b()));
   EXPECT_FALSE(Analysis->isTerminator(bl()));
   EXPECT_TRUE(Analysis->isTerminator(jirl(LoongArch::R0)));
   EXPECT_FALSE(Analysis->isTerminator(jirl(LoongArch::R5)));
@@ -65,6 +68,7 @@ TEST_P(InstrAnalysisTest, IsTerminator) {
 
 TEST_P(InstrAnalysisTest, IsCall) {
   EXPECT_FALSE(Analysis->isCall(beq()));
+  EXPECT_FALSE(Analysis->isCall(b()));
   EXPECT_TRUE(Analysis->isCall(bl()));
   EXPECT_TRUE(Analysis->isCall(jirl(LoongArch::R1)));
   EXPECT_FALSE(Analysis->isCall(jirl(LoongArch::R0)));
@@ -72,6 +76,7 @@ TEST_P(InstrAnalysisTest, IsCall) {
 
 TEST_P(InstrAnalysisTest, IsReturn) {
   EXPECT_FALSE(Analysis->isReturn(beq()));
+  EXPECT_FALSE(Analysis->isReturn(b()));
   EXPECT_FALSE(Analysis->isReturn(bl()));
   EXPECT_TRUE(Analysis->isReturn(jirl(LoongArch::R0, LoongArch::R1)));
   EXPECT_FALSE(Analysis->isReturn(jirl(LoongArch::R0)));
@@ -80,14 +85,22 @@ TEST_P(InstrAnalysisTest, IsReturn) {
 
 TEST_P(InstrAnalysisTest, IsBranch) {
   EXPECT_TRUE(Analysis->isBranch(beq()));
+  EXPECT_TRUE(Analysis->isBranch(b()));
   EXPECT_FALSE(Analysis->isBranch(bl()));
   EXPECT_TRUE(Analysis->isBranch(jirl(LoongArch::R0)));
   EXPECT_FALSE(Analysis->isBranch(jirl(LoongArch::R1)));
   EXPECT_FALSE(Analysis->isBranch(jirl(LoongArch::R0, LoongArch::R1)));
 }
 
+TEST_P(InstrAnalysisTest, IsConditionalBranch) {
+  EXPECT_TRUE(Analysis->isConditionalBranch(beq()));
+  EXPECT_FALSE(Analysis->isConditionalBranch(b()));
+  EXPECT_FALSE(Analysis->isConditionalBranch(bl()));
+}
+
 TEST_P(InstrAnalysisTest, IsUnconditionalBranch) {
   EXPECT_FALSE(Analysis->isUnconditionalBranch(beq()));
+  EXPECT_TRUE(Analysis->isUnconditionalBranch(b()));
   EXPECT_FALSE(Analysis->isUnconditionalBranch(bl()));
   EXPECT_TRUE(Analysis->isUnconditionalBranch(jirl(LoongArch::R0)));
   EXPECT_FALSE(Analysis->isUnconditionalBranch(jirl(LoongArch::R1)));
@@ -97,6 +110,7 @@ TEST_P(InstrAnalysisTest, IsUnconditionalBranch) {
 
 TEST_P(InstrAnalysisTest, IsIndirectBranch) {
   EXPECT_FALSE(Analysis->isIndirectBranch(beq()));
+  EXPECT_FALSE(Analysis->isIndirectBranch(b()));
   EXPECT_FALSE(Analysis->isIndirectBranch(bl()));
   EXPECT_TRUE(Analysis->isIndirectBranch(jirl(LoongArch::R0)));
   EXPECT_FALSE(Analysis->isIndirectBranch(jirl(LoongArch::R1)));
