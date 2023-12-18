@@ -1374,7 +1374,8 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
   if (NeedEmitEHBlock) {
     Per = dyn_cast<Function>(
         MF->getFunction().getPersonalityFn()->stripPointerCasts());
-    MCSymbol *PersonalityRoutine = Per ? MF->getTarget().getSymbol(Per) : nullptr;
+    MCSymbol *PersonalityRoutine =
+        Per ? MF->getTarget().getSymbol(Per) : nullptr;
     assert(PersonalityRoutine && "Missing personality routine");
 
     OutStreamer->AddComment("Version");
