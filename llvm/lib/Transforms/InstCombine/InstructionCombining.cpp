@@ -1770,9 +1770,9 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   Constant *C;
   auto *InstVTy = dyn_cast<FixedVectorType>(Inst.getType());
   if (InstVTy &&
-      match(&Inst,
-            m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
-                      m_ImmConstant(C))) &&
+      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+                                                m_Mask(Mask))),
+                             m_ImmConstant(C))) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <=
           InstVTy->getNumElements()) {
     assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
@@ -1787,8 +1787,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     ArrayRef<int> ShMask = Mask;
     unsigned SrcVecNumElts =
         cast<FixedVectorType>(V1->getType())->getNumElements();
-    UndefValue *UndefScalar = UndefValue::get(C->getType()->getScalarType());
-    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, UndefScalar);
+    PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
+    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, PoisonScalar);
     bool MayChange = true;
     unsigned NumElts = InstVTy->getNumElements();
     for (unsigned I = 0; I < NumElts; ++I) {
@@ -1801,29 +1801,29 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
         // 2. The shuffle needs an element of the constant vector that can't
         //    be mapped to a new constant vector.
         // 3. This is a widening shuffle that copies elements of V1 into the
-        //    extended elements (extending with undef is allowed).
-        if (!CElt || (!isa<UndefValue>(NewCElt) && NewCElt != CElt) ||
+        //    extended elements (extending with poison is allowed).
+        if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
             I >= SrcVecNumElts) {
           MayChange = false;
           break;
         }
         NewVecC[ShMask[I]] = CElt;
       }
-      // If this is a widening shuffle, we must be able to extend with undef
-      // elements. If the original binop does not produce an undef in the high
+      // If this is a widening shuffle, we must be able to extend with poison
+      // elements. If the original binop does not produce a poison in the high
       // lanes, then this transform is not safe.
-      // Similarly for undef lanes due to the shuffle mask, we can only
-      // transform binops that preserve undef.
-      // TODO: We could shuffle those non-undef constant values into the
-      //       result by using a constant vector (rather than an undef vector)
+      // Similarly for poison lanes due to the shuffle mask, we can only
+      // transform binops that preserve poison.
+      // TODO: We could shuffle those non-poison constant values into the
+      //       result by using a constant vector (rather than an poison vector)
       //       as operand 1 of the new binop, but that might be too aggressive
       //       for target-independent shuffle creation.
       if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybeUndef =
+        Constant *MaybePoison =
             ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, UndefScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, UndefScalar, DL);
-        if (!MaybeUndef || !match(MaybeUndef, m_Undef())) {
+                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
+                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
+        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
           MayChange = false;
           break;
         }
@@ -1831,9 +1831,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     }
     if (MayChange) {
       Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with undef elements
+      // It may not be safe to execute a binop on a vector with poison elements
       // because the entire instruction can be folded to undef or create poison
       // that did not exist in the original code.
+      // TODO: The shift case should not be necessary.
       if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
