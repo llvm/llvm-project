@@ -68,7 +68,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
       "  - { Name: baz, Type: TLS, Size: 3 }\n"
       "  - { Name: foo, Type: Func, Warning: \"Deprecated!\" }\n"
       "  - { Name: nor, Type: NoType, Undefined: true }\n"
-      "  - { Name: not, Type: File, Undefined: true, Size: 111, "
+      "  - { Name: not, Type: NoType, Undefined: true, Size: 111, "
       "Weak: true, Warning: \'All fields populated!\' }\n"
       "...\n";
   Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
@@ -116,7 +116,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   IFSSymbol const &SymNot = *Iterator++;
   EXPECT_STREQ(SymNot.Name.c_str(), "not");
   EXPECT_EQ(*SymNot.Size, 111u);
-  EXPECT_EQ(SymNot.Type, IFSSymbolType::Unknown);
+  EXPECT_EQ(SymNot.Type, IFSSymbolType::NoType);
   EXPECT_TRUE(SymNot.Undefined);
   EXPECT_TRUE(SymNot.Weak);
   EXPECT_TRUE(SymNot.Warning);
