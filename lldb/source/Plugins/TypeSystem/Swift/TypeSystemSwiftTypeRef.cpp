@@ -206,14 +206,15 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
 /// Find a Clang type by name in the modules in \p module_holder.
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(
     StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context) {
-  auto lookup = [&decl_context](Module &M, ConstString name) -> TypeSP {
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    TypeMap clang_types;
-    M.FindTypes(decl_context, TypeSystemClang::GetSupportedLanguagesForTypes(),
-                searched_symbol_files, clang_types);
-    if (clang_types.Empty())
-      return {};
-    return clang_types.GetTypeAtIndex(0);
+
+  TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
+                                    TypeQueryOptions::e_module_search);
+  query.SetLanguages(TypeSystemClang::GetSupportedLanguagesForTypes());
+
+  auto lookup = [&](Module &M) -> TypeSP {
+    TypeResults results;
+    M.FindTypes(query, results);
+    return results.GetFirstType();
   };
 
   // Check the cache first. Negative results are also cached.
@@ -223,7 +224,7 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(
     return result;
   
   if (auto *M = GetModule()) {
-    TypeSP result = lookup(*M, name);
+    TypeSP result = lookup(*M);
     // Cache it.
     m_clang_type_cache.Insert(name.AsCString(), result);
     return result;
@@ -235,7 +236,7 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(
   target_sp->GetImages().ForEach([&](const ModuleSP &module) -> bool {
     // Don't recursively call into LookupClangTypes() to avoid filling
     // hundreds of image caches with negative results.
-    result = lookup(const_cast<Module &>(*module), name);
+    result = lookup(const_cast<Module &>(*module));
     // Cache it in the expression context.
     if (result)
       m_clang_type_cache.Insert(name.AsCString(), result);
@@ -535,17 +536,17 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     return clang_type.GetCanonicalType();
   };
 
-  TypeList types;
+  TypeResults results;
+  TypeQuery query(mangled.GetStringRef(), TypeQueryOptions::e_find_one);
   if (!prefer_clang_types) {
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
     // First check if this type has already been parsed from DWARF.
     if (auto cached = m_swift_type_map.Lookup(mangled.AsCString()))
-      types.Insert(cached);
+    results.InsertUnique(cached);
     else if (auto *M = GetModule())
-      M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
+      M->FindTypes(query, results);
     else if (TargetSP target_sp = GetTargetWP().lock())
-      target_sp->GetImages().FindTypes(nullptr, {mangled}, false, 1,
-                                       searched_symbol_files, types);
+      target_sp->GetImages().FindTypes(/*search_first=*/nullptr, query,
+                                       results);
     else {
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "No module. Couldn't resolve type alias %s",
@@ -553,7 +554,8 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
       return {{}, {}};
     }
   }
-  if (prefer_clang_types || types.Empty()) {
+
+  if (prefer_clang_types || !results.Done(query)) {
     // No Swift type found -- this could be a Clang typedef.  This
     // check is not done earlier because a Clang typedef that points
     // to a builtin type, e.g., "typedef unsigned uint32_t", could
@@ -566,7 +568,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     return {{}, clang_type};
   }
 
-  auto type = types.GetTypeAtIndex(0);
+  TypeSP type = results.GetFirstType();
   if (!type) {
     LLDB_LOGF(GetLog(LLDBLog::Types), "Found empty type alias %s",
               mangled.AsCString());
@@ -1777,11 +1779,14 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   decl_context.push_back({CompilerContextKind::Module, module});
   decl_context.push_back({CompilerContextKind::AnyType, type});
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  TypeMap types;
-  M->FindTypes(decl_context, TypeSystemSwift::GetSupportedLanguagesForTypes(),
-               searched_symbol_files, types);
-  return types.Empty() ? TypeSP() : types.GetTypeAtIndex(0);
+
+  TypeQuery query(decl_context, TypeQueryOptions::e_find_one |
+                                    TypeQueryOptions::e_module_search);
+  query.SetLanguages(TypeSystemSwift::GetSupportedLanguagesForTypes());
+
+  TypeResults results;
+  M->FindTypes(query, results);
+  return results.GetFirstType();
 }
 
 // Tests
