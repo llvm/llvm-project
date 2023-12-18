@@ -564,7 +564,7 @@ define <4 x i32> @mul_const_splat(<4 x i32> %v) {
 
 define <4 x i32> @lshr_const_half_splat(<4 x i32> %v) {
 ; CHECK-LABEL: @lshr_const_half_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 undef, i32 8, i32 9, i32 undef>, [[V:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 poison, i32 8, i32 9, i32 poison>, [[V:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
@@ -666,13 +666,12 @@ define <4 x i16> @widening_shuffle_shl_constant_op1(<2 x i16> %v) {
   ret <4 x i16> %bo
 }
 
-; A binop that does not produce undef in the high lanes can not be moved before the shuffle.
-; This is not ok because 'shl undef, 1 (or 2)' --> 0' but moving the shuffle results in undef instead.
+; This is valid for poison, but would not be valid for undef.
 
 define <4 x i16> @widening_shuffle_shl_constant_op1_non0(<2 x i16> %v) {
 ; CHECK-LABEL: @widening_shuffle_shl_constant_op1_non0(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i16> [[V:%.*]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BO:%.*]] = shl <4 x i16> [[SHUF]], <i16 2, i16 4, i16 1, i16 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i16> [[V:%.*]], <i16 2, i16 4>
+; CHECK-NEXT:    [[BO:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[BO]]
 ;
   %shuf = shufflevector <2 x i16> %v, <2 x i16> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -685,8 +684,8 @@ define <4 x i16> @widening_shuffle_shl_constant_op1_non0(<2 x i16> %v) {
 
 define <4 x i16> @widening_shuffle_or(<2 x i16> %v) {
 ; CHECK-LABEL: @widening_shuffle_or(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i16> [[V:%.*]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BO:%.*]] = or <4 x i16> [[SHUF]], <i16 42, i16 -42, i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i16> [[V:%.*]], <i16 42, i16 -42>
+; CHECK-NEXT:    [[BO:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[BO]]
 ;
   %shuf = shufflevector <2 x i16> %v, <2 x i16> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -863,7 +862,7 @@ define <2 x i32> @mul_splat_constant(<2 x i32> %x) {
 
 define <2 x i32> @shl_splat_constant0(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_splat_constant0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> <i32 5, i32 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> <i32 5, i32 poison>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -885,7 +884,7 @@ define <2 x i32> @shl_splat_constant1(<2 x i32> %x) {
 
 define <2 x i32> @ashr_splat_constant0(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_splat_constant0(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> <i32 5, i32 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> <i32 5, i32 poison>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -907,7 +906,7 @@ define <2 x i32> @ashr_splat_constant1(<2 x i32> %x) {
 
 define <2 x i32> @lshr_splat_constant0(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr_splat_constant0(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> <i32 5, i32 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> <i32 5, i32 poison>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -1026,13 +1025,10 @@ define <2 x i32> @and_splat_constant(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
-; AND does not fold to undef for undef operands, we cannot move it
-; across a shuffle with undef masks.
-define <4 x i16> @and_constant_mask_undef(<4 x i16> %add) {
-; CHECK-LABEL: @and_constant_mask_undef(
+define <4 x i16> @and_constant_mask_poison(<4 x i16> %add) {
+; CHECK-LABEL: @and_constant_mask_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[ADD:%.*]], <4 x i16> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[SHUFFLE]], <i16 0, i16 0, i16 -1, i16 -1>
+; CHECK-NEXT:    [[AND:%.*]] = shufflevector <4 x i16> [[ADD:%.*]], <4 x i16> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i16> [[AND]]
 ;
 entry:
@@ -1041,13 +1037,10 @@ entry:
   ret <4 x i16> %and
 }
 
-; AND does not fold to undef for undef operands, we cannot move it
-; across a shuffle with undef masks.
-define <4 x i16> @and_constant_mask_undef_2(<4 x i16> %add) {
-; CHECK-LABEL: @and_constant_mask_undef_2(
+define <4 x i16> @and_constant_mask_poison_2(<4 x i16> %add) {
+; CHECK-LABEL: @and_constant_mask_poison_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[ADD:%.*]], <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 poison>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[SHUFFLE]], <i16 -1, i16 -1, i16 -1, i16 0>
+; CHECK-NEXT:    [[AND:%.*]] = shufflevector <4 x i16> [[ADD:%.*]], <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[AND]]
 ;
 entry:
@@ -1057,8 +1050,8 @@ entry:
 }
 
 ; We can move the AND across the shuffle, as -1 (AND identity value) is used for undef lanes.
-define <4 x i16> @and_constant_mask_undef_3(<4 x i16> %add) {
-; CHECK-LABEL: @and_constant_mask_undef_3(
+define <4 x i16> @and_constant_mask_poison_3(<4 x i16> %add) {
+; CHECK-LABEL: @and_constant_mask_poison_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret <4 x i16> <i16 0, i16 0, i16 0, i16 undef>
 ;
@@ -1069,8 +1062,8 @@ entry:
 }
 
 ; We can move the AND across the shuffle, as -1 (AND identity value) is used for undef lanes.
-define <4 x i16> @and_constant_mask_undef_4(<4 x i16> %add) {
-; CHECK-LABEL: @and_constant_mask_undef_4(
+define <4 x i16> @and_constant_mask_poison_4(<4 x i16> %add) {
+; CHECK-LABEL: @and_constant_mask_poison_4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i16> [[ADD:%.*]], <i16 9, i16 20, i16 poison, i16 poison>
 ; CHECK-NEXT:    [[AND:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 poison>
@@ -1095,13 +1088,10 @@ entry:
   ret <4 x i16> %and
 }
 
-; OR does not fold to undef for undef operands, we cannot move it
-; across a shuffle with undef masks.
-define <4 x i16> @or_constant_mask_undef(<4 x i16> %in) {
-; CHECK-LABEL: @or_constant_mask_undef(
+define <4 x i16> @or_constant_mask_poison(<4 x i16> %in) {
+; CHECK-LABEL: @or_constant_mask_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i16> [[SHUFFLE]], <i16 -1, i16 -1, i16 0, i16 0>
+; CHECK-NEXT:    [[OR:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i16> [[OR]]
 ;
 entry:
@@ -1110,13 +1100,10 @@ entry:
   ret <4 x i16> %or
 }
 
-; OR does not fold to undef for undef operands, we cannot move it
-; across a shuffle with undef masks.
-define <4 x i16> @or_constant_mask_undef_2(<4 x i16> %in) {
-; CHECK-LABEL: @or_constant_mask_undef_2(
+define <4 x i16> @or_constant_mask_poison_2(<4 x i16> %in) {
+; CHECK-LABEL: @or_constant_mask_poison_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> poison, <4 x i32> <i32 poison, i32 1, i32 1, i32 poison>
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i16> [[SHUFFLE]], <i16 -1, i16 0, i16 0, i16 -1>
+; CHECK-NEXT:    [[OR:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> poison, <4 x i32> <i32 poison, i32 1, i32 1, i32 poison>
 ; CHECK-NEXT:    ret <4 x i16> [[OR]]
 ;
 entry:
@@ -1126,8 +1113,8 @@ entry:
 }
 
 ; We can move the OR across the shuffle, as 0 (OR identity value) is used for undef lanes.
-define <4 x i16> @or_constant_mask_undef_3(<4 x i16> %in) {
-; CHECK-LABEL: @or_constant_mask_undef_3(
+define <4 x i16> @or_constant_mask_poison_3(<4 x i16> %in) {
+; CHECK-LABEL: @or_constant_mask_poison_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret <4 x i16> <i16 undef, i16 -1, i16 -1, i16 undef>
 ;
@@ -1138,8 +1125,8 @@ entry:
 }
 
 ; We can move the OR across the shuffle, as 0 (OR identity value) is used for undef lanes.
-define <4 x i16> @or_constant_mask_undef_4(<4 x i16> %in) {
-; CHECK-LABEL: @or_constant_mask_undef_4(
+define <4 x i16> @or_constant_mask_poison_4(<4 x i16> %in) {
+; CHECK-LABEL: @or_constant_mask_poison_4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or <4 x i16> [[IN:%.*]], <i16 poison, i16 99, i16 poison, i16 poison>
 ; CHECK-NEXT:    [[OR:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 poison, i32 1, i32 1, i32 poison>
@@ -1167,8 +1154,8 @@ entry:
 define <4 x i16> @shl_constant_mask_undef(<4 x i16> %in) {
 ; CHECK-LABEL: @shl_constant_mask_undef(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 1>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i16> [[SHUFFLE]], <i16 10, i16 3, i16 0, i16 0>
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i16> [[IN:%.*]], <i16 10, i16 0, i16 0, i16 0>
+; CHECK-NEXT:    [[SHL:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i16> [[SHL]]
 ;
 entry:
