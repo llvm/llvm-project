@@ -241,3 +241,47 @@ void test_bfmlslb_bad_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __
   svbfmlslb_lane_f32(zda, zn, zm, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   svbfmlslt_lane_f32(zda, zn, zm, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
 }
+
+void test_multiply_add_sub_long(uint32_t base, svint8_t s8, svuint8_t u8,
+                                svint16_t s16, svuint16_t u16, svint8x2_t s8x2,
+                                svuint8x2_t u8x2, svint16x2_t s16x2, svuint16x2_t u16x2,
+                                svint8x4_t s8x4, svuint8x4_t u8x4, svint16x4_t s16x4, svuint16x4_t u16x4) __arm_streaming __arm_shared_za {
+
+  svmla_lane_za32_s8_vg4x1(base, s8, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmla_lane_za32_u8_vg4x1(base, u8, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmla_lane_za64_s16_vg4x1(base, s16, s16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmla_lane_za64_u16_vg4x1(base, u16, u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+  svmla_lane_za32_s8_vg4x2(base, s8x2, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmla_lane_za32_u8_vg4x2(base, u8x2, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmla_lane_za64_s16_vg4x2(base, s16x2, s16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmla_lane_za64_u16_vg4x2(base, u16x2, u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+  svmla_lane_za32_s8_vg4x4(base, s8x4, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmla_lane_za32_u8_vg4x4(base, u8x4, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmla_lane_za64_s16_vg4x4(base, s16x4, s16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmla_lane_za64_u16_vg4x4(base, u16x4, u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+  svmls_lane_za32_s8_vg4x1(base, s8, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmls_lane_za32_u8_vg4x1(base, u8, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmls_lane_za64_s16_vg4x1(base, s16, s16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmls_lane_za64_u16_vg4x1(base, u16, u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+  svmls_lane_za32_s8_vg4x2(base, s8x2, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmls_lane_za32_u8_vg4x2(base, u8x2, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmls_lane_za64_s16_vg4x2(base, s16x2, s16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmls_lane_za64_u16_vg4x2(base, u16x2, u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+  svmls_lane_za32_s8_vg4x4(base, s8x4, s8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmls_lane_za32_u8_vg4x4(base, u8x4, u8, 16);   // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svmls_lane_za64_s16_vg4x4(base, s16x4, s16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmls_lane_za64_u16_vg4x4(base, u16x4, u16, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+  svsumla_lane_za32_s8_vg4x1(base, s8, u8, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svsumla_lane_za32_s8_vg4x2(base, s8x2, u8, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svsumla_lane_za32_s8_vg4x4(base, s8x4, u8, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+
+  svusmla_lane_za32_u8_vg4x1(base, u8, s8, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svusmla_lane_za32_u8_vg4x2(base, u8x2, s8, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svusmla_lane_za32_u8_vg4x4(base, u8x4, s8, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+}
