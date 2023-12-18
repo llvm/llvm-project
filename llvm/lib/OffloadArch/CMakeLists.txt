@@ -31,7 +31,7 @@ add_llvm_component_library(LLVMOffloadArch
     InterfaceStub
 )
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT CYGWIN)
   target_link_libraries(LLVMOffloadArch PRIVATE dl)
 endif()
 
