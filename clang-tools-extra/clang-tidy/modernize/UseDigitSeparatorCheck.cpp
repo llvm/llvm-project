@@ -207,7 +207,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
       diag(MatchedFloat->getLocation(),
-           "unformatted representation of integer literal '%0'")
+           "unformatted representation of float literal '%0'")
           << OriginalLiteralString
           << FixItHint::CreateInsertion(MatchedFloat->getLocation(),
                                         FormatedLiteralString);
