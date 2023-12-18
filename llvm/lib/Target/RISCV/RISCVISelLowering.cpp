@@ -6845,9 +6845,8 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   return LowerCallTo(CLI).first;
 }
 
-SDValue
-RISCVTargetLowering::getGeneralDynamicTLSDescAddr(GlobalAddressSDNode *N,
-                                                  SelectionDAG &DAG) const {
+SDValue RISCVTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
+                                            SelectionDAG &DAG) const {
   SDLoc DL(N);
   EVT Ty = getPointerTy(DAG.getDataLayout());
   const GlobalValue *GV = N->getGlobal();
@@ -6887,8 +6886,8 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     break;
   case TLSModel::LocalDynamic:
   case TLSModel::GeneralDynamic:
-    Addr = EnableRISCVTLSDESC ? getGeneralDynamicTLSDescAddr(N, DAG)
-                              : getDynamicTLSAddr(N, DAG);
+    Addr =
+        EnableRISCVTLSDESC ? getTLSDescAddr(N, DAG) : getDynamicTLSAddr(N, DAG);
     break;
   }
 
