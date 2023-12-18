@@ -49,15 +49,15 @@ struct RecordReplayTy {
 
 private:
   // Memory pointers for recording, replaying memory.
-  void *MemoryStart;
-  void *MemoryPtr;
-  size_t MemorySize;
-  size_t TotalSize;
-  GenericDeviceTy *Device;
-  std::mutex AllocationLock;
+  void *MemoryStart = nullptr;
+  void *MemoryPtr = nullptr;
+  size_t MemorySize = 0;
+  size_t TotalSize = 0;
+  GenericDeviceTy *Device = nullptr;
+  std::mutex AllocationLock{};
 
-  RRStatusTy Status;
-  bool ReplaySaveOutput;
+  RRStatusTy Status = RRDeactivated;
+  bool ReplaySaveOutput = false;
   bool UsedVAMap = false;
   uintptr_t MemoryOffset = 0;
 
@@ -190,7 +190,7 @@ public:
   void setStatus(RRStatusTy Status) { this->Status = Status; }
   bool isSaveOutputEnabled() const { return ReplaySaveOutput; }
 
-  RecordReplayTy()
+  constexpr RecordReplayTy()
       : Status(RRStatusTy::RRDeactivated), ReplaySaveOutput(false) {}
 
   void saveImage(const char *Name, const DeviceImageTy &Image) {
@@ -352,8 +352,9 @@ public:
       Device->free(MemoryStart);
     }
   }
+};
 
-} RecordReplay;
+static RecordReplayTy RecordReplay;
 
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
