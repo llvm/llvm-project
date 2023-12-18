@@ -521,6 +521,9 @@ Improvements to Clang's diagnostics
           |               ~~~~~~~^~~~~
 
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
+- Clang now diagnoses narrowing conversions involving const references.
+  (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
+
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -685,6 +688,9 @@ Bug Fixes in This Version
   (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
   (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
+- Fix an issue where clang doesn't respect detault template arguments that
+  are added in a later redeclaration for CTAD.
+  Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -967,6 +973,9 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+
+- Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
+  for RV64.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

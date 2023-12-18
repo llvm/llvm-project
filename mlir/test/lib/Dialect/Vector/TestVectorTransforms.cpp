@@ -455,6 +455,7 @@ struct TestFlattenVectorTransferPatterns
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
     registry.insert<affine::AffineDialect>();
+    registry.insert<vector::VectorDialect>();
   }
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -776,6 +777,31 @@ struct TestFoldArithExtensionIntoVectorContractPatterns
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
+
+struct TestVectorEmulateMaskedLoadStore final
+    : public PassWrapper<TestVectorEmulateMaskedLoadStore,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorEmulateMaskedLoadStore)
+
+  StringRef getArgument() const override {
+    return "test-vector-emulate-masked-load-store";
+  }
+  StringRef getDescription() const override {
+    return "Test patterns that emulate the maskedload/maskedstore op by "
+           " memref.load/store and scf.if";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<arith::ArithDialect, func::FuncDialect, memref::MemRefDialect,
+                scf::SCFDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorMaskedLoadStoreEmulationPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -816,6 +842,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorGatherLowering>();
 
   PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
+
+  PassRegistration<TestVectorEmulateMaskedLoadStore>();
 }
 } // namespace test
 } // namespace mlir

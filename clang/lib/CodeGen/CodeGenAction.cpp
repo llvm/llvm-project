@@ -418,6 +418,8 @@ void BackendConsumer::anchor() { }
 } // namespace clang
 
 bool ClangDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
+  if (DI.getSeverity() == DS_Error)
+    HasErrors = true;
   BackendCon->DiagnosticHandlerImpl(DI);
   return true;
 }
@@ -1139,7 +1141,7 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 
   // Strip off a leading diagnostic code if there is one.
   StringRef Msg = Err.getMessage();
-  if (Msg.startswith("error: "))
+  if (Msg.starts_with("error: "))
     Msg = Msg.substr(7);
 
   unsigned DiagID =

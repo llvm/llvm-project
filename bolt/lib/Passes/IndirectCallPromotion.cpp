@@ -460,7 +460,7 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
 
     if (AccessInfo.MemoryObject) {
       // Deal with bad/stale data
-      if (!AccessInfo.MemoryObject->getName().startswith(
+      if (!AccessInfo.MemoryObject->getName().starts_with(
               "JUMP_TABLE/" + Function.getOneName().str()))
         return JumpTableInfoType();
       Index =

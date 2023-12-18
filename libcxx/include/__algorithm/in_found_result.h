@@ -30,7 +30,7 @@ struct in_found_result {
 
   template <class _InIter2>
     requires convertible_to<const _InIter1&, _InIter2>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator in_found_result<_InIter2>() const & {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_found_result<_InIter2>() const& {
     return {in, found};
   }
 
