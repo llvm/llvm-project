@@ -74,17 +74,11 @@ TEST_CONSTEXPR bool is_string_asan_correct(const std::basic_string<ChrT, TraitsT
   if (TEST_IS_CONSTANT_EVALUATED)
     return true;
 
-  if (!is_string_short(c) || _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED) {
-    if (std::__asan_annotate_container_with_allocator<Alloc>::value)
-      return __sanitizer_verify_contiguous_container(c.data(), c.data() + c.size() + 1, c.data() + c.capacity() + 1) !=
-             0;
-    else
-      return __sanitizer_verify_contiguous_container(
-                 c.data(), c.data() + c.capacity() + 1, c.data() + c.capacity() + 1) != 0;
-  } else {
-    return __sanitizer_verify_contiguous_container(std::addressof(c), std::addressof(c) + 1, std::addressof(c) + 1) !=
-           0;
-  }
+  if (std::__asan_annotate_container_with_allocator<Alloc>::value)
+    return __sanitizer_verify_contiguous_container(c.data(), c.data() + c.size() + 1, c.data() + c.capacity() + 1) != 0;
+  else
+    return __sanitizer_verify_contiguous_container(
+               c.data(), c.data() + c.capacity() + 1, c.data() + c.capacity() + 1) != 0;
 }
 #else
 #  include <string>
