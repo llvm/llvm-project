@@ -33,7 +33,6 @@
   ; CHECK-NEXT:    s_and_saveexec_b32 s1, s1
   ; CHECK-NEXT:    s_waitcnt vmcnt(0)
   ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-  ; CHECK-NEXT:    s_waitcnt vmcnt(1)
   ; CHECK-NEXT:    v_readfirstlane_b32 s8, v7
   ; CHECK-NEXT:    v_readfirstlane_b32 s9, v8
   ; CHECK-NEXT:    v_readfirstlane_b32 s10, v9
@@ -42,7 +41,6 @@
   ; CHECK-NEXT:    v_readfirstlane_b32 s13, v12
   ; CHECK-NEXT:    v_readfirstlane_b32 s14, v13
   ; CHECK-NEXT:    v_readfirstlane_b32 s15, v14
-  ; CHECK-NEXT:    s_waitcnt vmcnt(0)
   ; CHECK-NEXT:    v_readfirstlane_b32 s16, v15
   ; CHECK-NEXT:    v_readfirstlane_b32 s17, v16
   ; CHECK-NEXT:    v_readfirstlane_b32 s18, v17
