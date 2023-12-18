@@ -89,7 +89,7 @@ define i1 @test_i8_pattern_3(<4 x i8> %invec) {
 define i1 @test_i8_nopattern(i8 %val) {
 ; CHECK-LABEL: @test_i8_nopattern(
 ; CHECK-NEXT:    [[INSVEC:%.*]] = insertelement <4 x i8> undef, i8 [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INSVEC]], <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x i8> [[INSVEC]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[VEC]] to i32
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[CAST]], 1212696647
 ; CHECK-NEXT:    ret i1 [[COND]]
