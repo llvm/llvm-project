@@ -547,7 +547,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Check that we can lower unpack "as unpad" with dynamic dims 
+// Check that we can lower unpack "as unpad" with dynamic dims.
 // CHECK-LABEL: func.func @unpack_as_pad_dynamic(
 // CHECK-SAME: %[[ARG0:.*]]: tensor<1x1x1x1x?x?x?x?xf32>, %[[ARG1:.*]]: tensor<?x?x?x?xf32>
 //      CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index

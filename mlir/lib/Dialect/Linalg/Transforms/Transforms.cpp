@@ -430,7 +430,7 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
       stripMinedTensorType, packingMetadata.reassociations);
 
   // Get dynamic dims from input tensor based on lastDimsToInsertPositionsPerm
-  // permutation
+  // permutation.
   SmallVector<OpFoldResult, 4> dims =
       tensor::getMixedSizes(rewriter, loc, unPackOp.getSource());
   applyPermutationToVector(dims, lastDimsToInsertPositionsPerm);
