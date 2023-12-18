@@ -54,7 +54,7 @@ private:
   size_t MemorySize = 0;
   size_t TotalSize = 0;
   GenericDeviceTy *Device = nullptr;
-  std::mutex AllocationLock{};
+  std::mutex AllocationLock;
 
   RRStatusTy Status = RRDeactivated;
   bool ReplaySaveOutput = false;
