@@ -84,36 +84,32 @@ Users are expected to pass ``-ffat-lto-objects`` to clang in addition to one of
 the ``-flto`` variants. Without the ``-flto`` flag, ``-ffat-lto-objects`` has
 no effect.
 
-
-Compile and link. Use the object code from the fat object without LTO.
-
-.. code-block:: console
-
-   $ clang -fno-lto -ffat-lto-objects -fuse-ld=lld example.c
-
-Compile and link. Select full LTO at link time.
+Compile an object file using FatLTO:
 
 .. code-block:: console
 
-   $ clang -flto -ffat-lto-objects -fuse-ld=lld example.c
+   $ clang -flto -ffat-lto-objects example.c -o example.o
 
-Compile and link. Select ThinLTO at link time.
-
-.. code-block:: console
-
-   $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld example.c
-
-Link separately, using ThinLTO.
+Link using the object code from the fat object without LTO:
 
 .. code-block:: console
 
-   $ clang -c -flto=thin -ffat-lto-objects example.c
-   $ clang -flto=thin -fuse-ld=lld foo.o -ffat-lto-objects  # pass --lto=thin --fat-lto-objects to ld.lld
+   $ clang -fno-lto -ffat-lto-objects -fuse-ld=lld example.o
 
-Link separately, using full LTO.
+Alternatively, you can omit any references to LTO with fat objects and retain standard linker behavior:
 
 .. code-block:: console
 
-   $ clang -c -flto -ffat-lto-objects example.c
-   $ clang -flto -fuse-ld=lld foo.o  # pass --lto=full --fat-lto-objects to ld.lld
+   $ clang -fuse-ld=lld example.o
 
+Link using the LLVM bitcode from the fat object with Full LTO:
+
+.. code-block:: console
+
+   $ clang -flto -ffat-lto-objects -fuse-ld=lld example.o  # clang will pass --lto=full --fat-lto-objects to ld.lld
+
+Link using the LLVM bitcode from the fat object with Thin LTO:
+
+.. code-block:: console
+
+   $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld example.o  # clang will pass --lto=thin --fat-lto-objects to ld.lld
