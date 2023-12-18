@@ -149,6 +149,13 @@ static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+static bool isNonZeroLoadImmediate(MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::ADDI &&
+    MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
+    MI.getOperand(1).getReg() == RISCV::X0 &&
+    MI.getOperand(2).getImm() != 0;
+}
+
 /// Return true if this is an operation on mask registers.  Note that
 /// this includes both arithmetic/logical ops and load/store (vlm/vsm).
 static bool isMaskRegOp(const MachineInstr &MI) {
@@ -501,10 +508,7 @@ public:
       if (getAVLReg() == RISCV::X0)
         return true;
       if (MachineInstr *MI = MRI.getVRegDef(getAVLReg());
-          MI && MI->getOpcode() == RISCV::ADDI &&
-          MI->getOperand(1).isReg() && MI->getOperand(2).isImm() &&
-          MI->getOperand(1).getReg() == RISCV::X0 &&
-          MI->getOperand(2).getImm() != 0)
+          MI && isNonZeroLoadImmediate(*MI))
         return true;
       return false;
     }
@@ -1461,10 +1465,7 @@ static bool isNonZeroAVL(const MachineOperand &MO,
     if (MO.getReg() == RISCV::X0)
       return true;
     if (MachineInstr *MI = MRI.getVRegDef(MO.getReg());
-        MI && MI->getOpcode() == RISCV::ADDI &&
-        MI->getOperand(1).isReg() && MI->getOperand(2).isImm() &&
-        MI->getOperand(1).getReg() == RISCV::X0 &&
-        MI->getOperand(2).getImm() != 0)
+        MI && isNonZeroLoadImmediate(*MI))
       return true;
     return false;
   }

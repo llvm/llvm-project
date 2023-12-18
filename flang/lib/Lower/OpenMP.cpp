@@ -2668,7 +2668,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
           bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
                                                     mlir::omp::DataBoundsType>(
               converter.getFirOpBuilder(), converter.getCurrentLocation(),
-              converter, dataExv, baseAddr);
+              converter, dataExv);
 
         llvm::omp::OpenMPOffloadMappingFlags mapFlag =
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
