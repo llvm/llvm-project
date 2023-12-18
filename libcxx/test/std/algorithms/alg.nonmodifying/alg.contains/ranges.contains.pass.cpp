@@ -263,7 +263,7 @@ constexpr bool test() {
   return true;
 }
 
-// count invocations of the projection for std::list
+// test for non-contiguous containers
 bool test_nonconstexpr() {
   std::list<int> a     = {7, 5, 0, 16, 8};
   int projection_count = 0;
