@@ -385,6 +385,26 @@ void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
   NumBitsExpr->Profile(ID, Context, true);
 }
 
+bool BoundsAttributedType::referencesFieldDecls() const {
+  for (const auto &Decl : dependent_decls())
+    if (isa<FieldDecl>(Decl.getDecl()))
+      return true;
+  return false;
+}
+
+void CountAttributedType::Profile(llvm::FoldingSetNodeID &ID,
+                                  QualType WrappedTy, Expr *CountExpr,
+                                  bool CountInBytes, bool OrNull) {
+  ID.AddPointer(WrappedTy.getAsOpaquePtr());
+  ID.AddBoolean(CountInBytes);
+  ID.AddBoolean(OrNull);
+  // We profile it as a pointer as the StmtProfiler considers parameter
+  // expressions on function declaration and function definition as the
+  // same, resulting in count expression being evaluated with ParamDecl
+  // not in the function scope.
+  ID.AddPointer(CountExpr);
+}
+
 /// getArrayElementTypeNoTypeQual - If this is an array type, return the
 /// element type of the array, potentially with type qualifiers missing.
 /// This method should never be used when type qualifiers are meaningful.
@@ -557,6 +577,14 @@ template <> const TemplateSpecializationType *Type::getAs() const {
 
 template <> const AttributedType *Type::getAs() const {
   return getAsSugar<AttributedType>(this);
+}
+
+template <> const BoundsAttributedType *Type::getAs() const {
+  return getAsSugar<BoundsAttributedType>(this);
+}
+
+template <> const CountAttributedType *Type::getAs() const {
+  return getAsSugar<CountAttributedType>(this);
 }
 
 /// getUnqualifiedDesugaredType - Pull any qualifiers and syntactic
@@ -3705,6 +3733,43 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+}
+
+TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
+    : Data(D, Deref << DerefShift) {}
+
+bool TypeCoupledDeclRefInfo::isDeref() const {
+  return Data.getInt() & DerefMask;
+}
+ValueDecl *TypeCoupledDeclRefInfo::getDecl() const { return Data.getPointer(); }
+unsigned TypeCoupledDeclRefInfo::getInt() const { return Data.getInt(); }
+void *TypeCoupledDeclRefInfo::getOpaqueValue() const {
+  return Data.getOpaqueValue();
+}
+bool TypeCoupledDeclRefInfo::operator==(
+    const TypeCoupledDeclRefInfo &Other) const {
+  return getOpaqueValue() == Other.getOpaqueValue();
+}
+void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
+  Data.setFromOpaqueValue(V);
+}
+
+BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
+                                           QualType Canon)
+    : Type(TC, Canon, Wrapped->getDependence()), WrappedTy(Wrapped) {}
+
+CountAttributedType::CountAttributedType(
+    QualType Wrapped, QualType Canon, Expr *CountExpr, bool CountInBytes,
+    bool OrNull, ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls)
+    : BoundsAttributedType(CountAttributed, Wrapped, Canon),
+      CountExpr(CountExpr) {
+  CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
+  CountAttributedTypeBits.CountInBytes = CountInBytes;
+  CountAttributedTypeBits.OrNull = OrNull;
+  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
+  for (unsigned i = 0; i != CoupledDecls.size(); ++i)
+    DeclSlot[i] = CoupledDecls[i];
 }
 
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,

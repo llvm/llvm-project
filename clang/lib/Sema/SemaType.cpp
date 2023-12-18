@@ -9745,6 +9745,18 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   return Context.getTypeOfExprType(E, Kind);
 }
 
+QualType Sema::BuildCountAttributedArrayType(
+    QualType WrappedTy, Expr *CountExpr,
+    const llvm::SmallVector<TypeCoupledDeclRefInfo, 1> &Decls) {
+  assert(WrappedTy->isIncompleteArrayType());
+
+  /// When the resulting expression is invalid, we still create the AST using
+  /// the original count expression for the sake of AST dump.
+  return Context.getCountAttributedType(
+      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false,
+      llvm::ArrayRef(Decls.begin(), Decls.end()));
+}
+
 /// getDecltypeForExpr - Given an expr, will return the decltype for
 /// that expression, according to the rules in C++11
 /// [dcl.type.simple]p4 and C++11 [expr.lambda.prim]p18.

@@ -4466,10 +4466,11 @@ def CodeAlign: StmtAttr {
   }];
 }
 
-def CountedBy : InheritableAttr {
+def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field]>;
-  let Args = [IdentifierArgument<"CountedByField">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel">];
+  let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
   let LangOpts = [COnly];
   // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl

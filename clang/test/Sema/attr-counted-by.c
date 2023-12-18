@@ -11,7 +11,7 @@ struct not_found {
 
 struct no_found_count_not_in_substruct {
   unsigned long flags;
-  unsigned char count; // expected-note {{field 'count' declared here}}
+  unsigned char count; // expected-note {{'count' declared here}}
   struct A {
     int dummy;
     int array[] __counted_by(count); // expected-error {{'counted_by' field 'count' isn't within the same struct as the flexible array}}
@@ -19,8 +19,8 @@ struct no_found_count_not_in_substruct {
 };
 
 struct not_found_suggest {
-  int bork; // expected-note {{'bork' declared here}}
-  struct bar *fam[] __counted_by(blork); // expected-error {{use of undeclared identifier 'blork'; did you mean 'bork'?}}
+  int bork;
+  struct bar *fam[] __counted_by(blork); // expected-error {{use of undeclared identifier 'blork'}}
 };
 
 int global; // expected-note {{'global' declared here}}
@@ -32,17 +32,17 @@ struct found_outside_of_struct {
 
 struct self_referrential {
   int bork;
-  struct bar *self[] __counted_by(self); // expected-error {{'counted_by' cannot refer to the flexible array 'self'}}
+  struct bar *self[] __counted_by(self); // expected-error {{use of undeclared identifier 'self'}}
 };
 
 struct non_int_count {
-  double dbl_count; // expected-note {{field 'dbl_count' declared here}}
-  struct bar *fam[] __counted_by(dbl_count); // expected-error {{field 'dbl_count' in 'counted_by' must be a non-boolean integer type}}
+  double dbl_count;
+  struct bar *fam[] __counted_by(dbl_count); // expected-error {{'counted_by' requires a non-boolean integer type argument}}
 };
 
 struct array_of_ints_count {
-  int integers[2]; // expected-note {{field 'integers' declared here}}
-  struct bar *fam[] __counted_by(integers); // expected-error {{field 'integers' in 'counted_by' must be a non-boolean integer type}}
+  int integers[2];
+  struct bar *fam[] __counted_by(integers); // expected-error {{'counted_by' requires a non-boolean integer type argument}}
 };
 
 struct not_a_fam {
@@ -58,7 +58,7 @@ struct not_a_c99_fam {
 struct annotated_with_anon_struct {
   unsigned long flags;
   struct {
-    unsigned char count; // expected-note {{'count' declared here}}
-    int array[] __counted_by(crount); // expected-error {{use of undeclared identifier 'crount'; did you mean 'count'?}}
+    unsigned char count;
+    int array[] __counted_by(crount); // expected-error {{use of undeclared identifier 'crount'}}
   };
 };

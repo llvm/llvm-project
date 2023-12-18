@@ -7262,6 +7262,13 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
+QualType TreeTransform<Derived>::TransformCountAttributedType(
+    TypeLocBuilder &TLB, CountAttributedTypeLoc TL) {
+  // TODO
+  llvm_unreachable("Unexpected TreeTransform for CountAttributedType");
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
     TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
   // The BTFTagAttributedType is available for C only.
