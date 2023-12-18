@@ -122,14 +122,14 @@ struct {
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
 #if defined(__FreeBSD__)
+#include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/freebsd.inc"
-#include "aarch64/fmv/mrs.inc"
 #elif defined(__Fuchsia__)
+#include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/fucsia.inc"
-#include "aarch64/fmv/mrs.inc"
 #elif defined(__ANDROID__)
-#include "aarch64/fmv/android.inc"
 #include "aarch64/fmv/mrs.inc"
+#include "aarch64/fmv/android.inc"
 #elif __has_include(<sys/auxv.h>)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/sysauxv.inc"
