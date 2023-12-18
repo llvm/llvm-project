@@ -122,6 +122,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+  case FileFormat::SREC:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
