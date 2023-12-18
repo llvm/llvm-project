@@ -702,7 +702,7 @@ let TargetPrefix = "riscv" in {
                      LLVMMatchType<2>, LLVMMatchType<2>],
                     [ImmArg<ArgIndex<4>>,ImmArg<ArgIndex<6>>, IntrNoMem, IntrHasSideEffects]>,
                     RISCVVIntrinsic {
-    let VLOperand = 6;
+    let VLOperand = 5;
   }
   // For Saturating binary operations.
   // The destination vector type is NOT the same as first source vector.
