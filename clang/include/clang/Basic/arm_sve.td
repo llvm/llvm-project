@@ -2303,9 +2303,10 @@ let TargetGuard = "sme2" in {
 
 let TargetGuard = "sve2p1|sme2" in {
 // == BFloat16 multiply-subtract ==
-  def SVBFMLSLB : SInst<"svbfmlslb[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslb", [IsOverloadNone, IsStreaming], []>;
-  def SVBFMLSLT : SInst<"svbfmlslt[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslt", [IsOverloadNone, IsStreaming], []>;
+// FIXME: Make all of these IsStreamingOrSVE2p1 once that is added
+  def SVBFMLSLB : SInst<"svbfmlslb[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslb", [IsOverloadNone, IsStreamingCompatible], []>;
+  def SVBFMLSLT : SInst<"svbfmlslt[_{d}]", "dd$$", "f", MergeNone, "aarch64_sve_bfmlslt", [IsOverloadNone, IsStreamingCompatible], []>;
 
-  def SVBFMLSLB_LANE : SInst<"svbfmlslb_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslb_lane", [IsOverloadNone, IsStreaming], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVBFMLSLT_LANE : SInst<"svbfmlslt_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslt_lane", [IsOverloadNone, IsStreaming], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVBFMLSLB_LANE : SInst<"svbfmlslb_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslb_lane", [IsOverloadNone, IsStreamingCompatible], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVBFMLSLT_LANE : SInst<"svbfmlslt_lane[_{d}]", "dd$$i", "f", MergeNone, "aarch64_sve_bfmlslt_lane", [IsOverloadNone, IsStreamingCompatible], [ImmCheck<3, ImmCheck0_7>]>;
 }
