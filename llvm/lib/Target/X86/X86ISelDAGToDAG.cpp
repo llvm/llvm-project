@@ -1736,9 +1736,11 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
   if (Val != 0 && (AM.ES || AM.MCSym))
     return true;
 
+  CodeModel::Model M = TM.getCodeModel();
   if (Subtarget->is64Bit()) {
-    if (Val != 0 && !X86::isOffsetSuitableForCodeModel(
-                        Val, TM.getCodeModel(), AM.hasSymbolicDisplacement()))
+    if (Val != 0 &&
+        !X86::isOffsetSuitableForCodeModel(Val, M,
+                                           AM.hasSymbolicDisplacement()))
       return true;
     // In addition to the checks required for a register base, check that
     // we do not try to use an unsafe Disp with a frame index.
@@ -1862,6 +1864,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
   } else
     llvm_unreachable("Unhandled symbol reference node.");
 
+  // Can't use an addressing mode with large globals.
   if (Subtarget->is64Bit() && !IsRIPRel && AM.GV &&
       TM.isLargeGlobalValue(AM.GV)) {
     AM = Backup;

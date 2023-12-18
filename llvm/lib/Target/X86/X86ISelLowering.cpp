@@ -18441,6 +18441,7 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   bool HasPICReg = isGlobalRelativeToPICBase(OpFlags);
   bool NeedsLoad = isGlobalStubReference(OpFlags);
 
+  CodeModel::Model M = DAG.getTarget().getCodeModel();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result;
 
@@ -18452,8 +18453,7 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
     // relocation will compute to a negative value, which is invalid.
     int64_t GlobalOffset = 0;
     if (OpFlags == X86II::MO_NO_FLAG && Offset >= 0 &&
-        X86::isOffsetSuitableForCodeModel(
-            Offset, getTargetMachine().getCodeModel(), true)) {
+        X86::isOffsetSuitableForCodeModel(Offset, M, true)) {
       std::swap(GlobalOffset, Offset);
     }
     Result = DAG.getTargetGlobalAddress(GV, dl, PtrVT, GlobalOffset, OpFlags);
