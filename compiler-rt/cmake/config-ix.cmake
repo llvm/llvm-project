@@ -468,7 +468,7 @@ if(APPLE)
 
   set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.10)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
-  if(SANITIZER_MIN_OSX_VERSION STREQUAL "")
+  if(NOT SANITIZER_MIN_OSX_VERSION)
     string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
            MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
     if(MACOSX_VERSION_MIN_FLAG)
@@ -479,6 +479,8 @@ if(APPLE)
       set(MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
     endif()
 
+    # Note: In order to target x86_64h on OS X the minimum deployment target must
+    # be 10.8 or higher.
     if(MIN_OSX_VERSION VERSION_LESS "10.7")
       message(FATAL_ERROR "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too old.")
     endif()
@@ -488,7 +490,7 @@ if(APPLE)
     endif()
 
     set(SANITIZER_MIN_OSX_VERSION "${MIN_OSX_VERSION}" CACHE STRING
-        "Minimum OS X version to target (e.g. 10.10) for sanitizers." FORCE)
+        "Minimum OS X version to target (e.g. 10.10) for sanitizers.")
   endif()
 
   # We're setting the flag manually for each target OS
