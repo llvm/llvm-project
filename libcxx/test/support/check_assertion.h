@@ -258,9 +258,7 @@ void std::__libcpp_verbose_abort(char const* format, ...) {
   std::exit(DeathTest::RK_Terminate);
 }
 
-[[noreturn]] inline void abort_handler(int) {
-  std::exit(DeathTest::RK_Terminate);
-}
+[[noreturn]] inline void abort_handler(int) { std::exit(DeathTest::RK_Terminate); }
 
 template <class Func>
 inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matcher) {
