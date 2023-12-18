@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <list>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -152,46 +153,6 @@ constexpr void test_iterators() {
     }
   }
 
-  { // check that std::string type works
-    const std::string str{"hello world"};
-    const std::string str1{"hi world"};
-    std::string a[] = {str1, str1, str, str1, str1};
-    auto whole =
-        std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
-    {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), "hello world");
-      assert(ret);
-    }
-    {
-      bool ret = std::ranges::contains(whole, "hello world");
-      assert(ret);
-    }
-  }
-
-  { // check that non-continuous iterators work
-    std::vector<bool> whole{false, false, true, false};
-    {
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), true);
-      assert(ret);
-    }
-    {
-      bool ret = std::ranges::contains(whole, true);
-      assert(ret);
-    }
-  }
-
-  { // check that non-continuous iterators(views::transform) work
-    int a[]            = {1, 2, 3, 4, 5};
-    auto square_number = a | std::views::transform([](int x) { return x * x; });
-    {
-      bool ret = std::ranges::contains(square_number.begin(), square_number.end(), 16);
-      assert(ret);
-    }
-    {
-      bool ret = std::ranges::contains(square_number, 16);
-      assert(ret);
-    }
-  }
 }
 
 constexpr bool test() {
@@ -204,7 +165,7 @@ constexpr bool test() {
     });
   });
 
-  { // count invocations of the projection
+  { // count invocations of the projection for continuous iterators
     int a[]              = {1, 9, 0, 13, 25};
     int projection_count = 0;
     {
@@ -226,12 +187,113 @@ constexpr bool test() {
     }
   }
 
+  { // check invocations of the projection for std::string
+    const std::string str{"hello world"};
+    const std::string str1{"hi world"};
+    int projection_count = 0;
+    {
+      std::string a[] = {str1, str1, str, str1, str1};
+      auto whole      =
+        std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
+      bool ret        = std::ranges::contains(whole.begin(), whole.end(), "hello world", [&](const std::string i) {
+        ++projection_count;
+        return i;
+      });
+      assert(ret);
+      assert(projection_count == 3);
+      projection_count = 0;
+    }
+    {
+      std::string a[] = {str1, str1, str, str1, str1};
+      auto whole      =
+        std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
+      bool ret        = std::ranges::contains(whole, "hello world", [&](const std::string i) {
+        ++projection_count;
+        return i;
+      });
+      assert(ret);
+      assert(projection_count == 3);
+    }
+  }
+
+  { // check invocations of the projection for non-continuous iterators
+    std::vector<bool> whole{false, false, true, false};
+    int projection_count = 0;
+    {
+      bool ret = std::ranges::contains(whole.begin(), whole.end(), true, [&](int i) {
+        ++projection_count;
+        return i;
+      });
+      assert(ret);
+      assert(projection_count == 3);
+      projection_count = 0;
+    }
+    {
+      bool ret = std::ranges::contains(whole, true, [&](int i) {
+        ++projection_count;
+        return i;
+      });
+      assert(ret);
+      assert(projection_count == 3);
+    }
+  }
+
+  { // check invocations of the projection for views::transform
+    int a[]               = {1, 2, 3, 4, 5};
+    int projection_count  = 0;
+    auto square_number    = a | std::views::transform([](int x) { return x * x; });
+    {
+      bool ret = std::ranges::contains(square_number.begin(), square_number.end(), 16, [&](int i) {
+        ++projection_count;
+        return i;
+      });
+      assert(ret);
+      assert(projection_count == 4);
+      projection_count = 0;
+    }
+    {
+      bool ret = std::ranges::contains(square_number, 16, [&](int i) {
+        ++projection_count;
+        return i;
+      });
+      assert(ret);
+      assert(projection_count == 4);
+    }
+  }
+
+  return true;
+}
+
+// count invocations of the projection for std::list
+bool test_nonconstexpr() {
+  std::list<int> a = {7, 5, 0, 16, 8};
+  int projection_count = 0;
+  {
+    bool ret = std::ranges::contains(a.begin(), a.end(), 0, [&](int i) {
+      ++projection_count;
+      return i;
+    });
+    assert(ret);
+    assert(projection_count == 3);
+    projection_count = 0;
+  }
+  {
+    bool ret = std::ranges::contains(a, 0, [&](int i) {
+      ++projection_count;
+      return i;
+    });
+    assert(ret);
+    assert(projection_count == 3);
+  }
+
   return true;
 }
 
 int main(int, char**) {
   test();
   static_assert(test());
+
+  assert(test_nonconstexpr());
 
   return 0;
 }
