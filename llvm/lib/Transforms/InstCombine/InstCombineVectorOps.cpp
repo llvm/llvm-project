@@ -1919,6 +1919,10 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask,
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
   Type *EltTy = V->getType()->getScalarType();
+
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(FixedVectorType::get(EltTy, Mask.size()));
+
   if (match(V, m_Undef()))
     return UndefValue::get(FixedVectorType::get(EltTy, Mask.size()));
 
