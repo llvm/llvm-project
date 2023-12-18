@@ -282,3 +282,86 @@ header:
   call void @hold(i32 %v1)
   br label %header
 }
+
+
+; In block Z one load is unavailable (via entry block), whereas via other 2
+; predecessors the loads are available.
+define i8 @test7a(i1 %c1, ptr %a, i8 %i, i8 %j) {
+; CHECK-LABEL: @test7a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[Z:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[A:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[A]], i8 [[J:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], [[Y]]
+; CHECK-NEXT:    br i1 [[C2]], label [[Z]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[Z]]
+; CHECK:       Z:
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[A]], i8 [[K]]
+; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+entry:
+  br i1 %c1, label %A, label %Z
+
+A:
+  %pi = getelementptr i8, ptr %a, i8 %i
+  %pj = getelementptr i8, ptr %a, i8 %j
+  %x = load i8, ptr %pi
+  %y = load i8, ptr %pj
+  %c2 = icmp slt i8 %x, %y
+  br i1 %c2, label %Z, label %B
+
+B:
+  br label %Z
+
+Z:
+  %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
+  %pk = getelementptr i8, ptr %a, i8 %k
+  %z = load i8, ptr %pk
+  ret i8 %z
+}
+
+
+
+; In block Z two loads are unavailable (via entry and B blocks), whereas via
+; other predecessor (A) the load is available.
+define i8 @test7b(i1 %c1, ptr %a, i8 %i, i8 %j) {
+; CHECK-LABEL: @test7b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[Z:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[A:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], 3
+; CHECK-NEXT:    br i1 [[C2]], label [[Z]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[Z]]
+; CHECK:       Z:
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J:%.*]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[A]], i8 [[K]]
+; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+entry:
+  br i1 %c1, label %A, label %Z
+
+A:
+  %pi = getelementptr i8, ptr %a, i8 %i
+  %x = load i8, ptr %pi
+  %c2 = icmp slt i8 %x, 3
+  br i1 %c2, label %Z, label %B
+
+B:
+  br label %Z
+
+Z:
+  %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
+  %pk = getelementptr i8, ptr %a, i8 %k
+  %z = load i8, ptr %pk
+  ret i8 %z
+}
