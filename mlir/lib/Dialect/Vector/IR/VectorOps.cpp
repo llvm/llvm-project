@@ -5694,7 +5694,7 @@ public:
       // Most basic case - this operand is a constant value. Note that for
       // scalable dimensions, CreateMaskOp can be folded only if the
       // corresponding operand is negative or zero.
-      if (auto op = getConstantIntValue(operand)) {
+      if (getConstantIntValue(operand)) {
         APInt intVal;
         if (isScalable && !(matchPattern(operand, m_ConstantInt(&intVal)) ||
                             intVal.isStrictlyPositive()))
@@ -5709,11 +5709,11 @@ public:
 
       // For scalable vectors, "arith.muli %vscale, %dimSize" means an "all
       // true" mask, so can also be treated as constant.
-      auto mul = llvm::dyn_cast_or_null<arith::MulIOp>(operand.getDefiningOp());
+      auto mul = operand.getDefiningOp<arith::MulIOp>();
       if (!mul)
         return failure();
-      auto mulLHS = mul.getOperands()[0];
-      auto mulRHS = mul.getOperands()[1];
+      auto mulLHS = mul.getRhs();
+      auto mulRHS = mul.getLhs();
       bool isOneOpVscale =
           (isa<vector::VectorScaleOp>(mulLHS.getDefiningOp()) ||
            isa<vector::VectorScaleOp>(mulRHS.getDefiningOp()));
@@ -5737,8 +5737,8 @@ public:
     maskDimSizes.reserve(createMaskOp->getNumOperands());
     for (auto [operand, maxDimSize] : llvm::zip_equal(
              createMaskOp.getOperands(), createMaskOp.getType().getShape())) {
-      auto dimSize = getConstantIntValue(operand);
-      if (not dimSize) {
+      std::optional dimSize = getConstantIntValue(operand);
+      if (!dimSize) {
         // Although not a constant, it is safe to assume that `operand` is
         // "vscale * maxDimSize".
         maskDimSizes.push_back(maxDimSize);
