@@ -1098,7 +1098,7 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
 
 bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
 
-  if (LHS->getNumOperands() != 2 || RHS->getNumOperands() != 2)
+  if (LHS->getNumIncomingValues() != 2 || RHS->getNumIncomingValues() != 2)
     return false;
 
   BasicBlock *B0 = LHS->getIncomingBlock(0);
@@ -1121,7 +1121,7 @@ bool InstCombinerImpl::matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
 Value *InstCombinerImpl::SimplifyPhiCommutativeBinaryOp(BinaryOperator &I,
                                                         Value *Op0,
                                                         Value *Op1) {
-  assert(I.isCommutative() && "Instruction Should be commutative");
+  assert(I.isCommutative() && "Instruction should be commutative");
 
   PHINode *LHS = dyn_cast<PHINode>(Op0);
   PHINode *RHS = dyn_cast<PHINode>(Op1);

@@ -4243,7 +4243,7 @@ InstCombinerImpl::foldCommutativeIntrinsicOverSelects(IntrinsicInst &II) {
 
 Instruction *
 InstCombinerImpl::foldCommutativeIntrinsicOverPhis(IntrinsicInst &II) {
-  assert(II.isCommutative());
+  assert(II.isCommutative() && "Instruction should be commutative");
 
   PHINode *LHS = dyn_cast<PHINode>(II.getOperand(0));
   PHINode *RHS = dyn_cast<PHINode>(II.getOperand(1));
