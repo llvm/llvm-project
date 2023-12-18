@@ -1520,7 +1520,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
         DemandedElts.isAllOnes()) {
-      if (!match(I->getOperand(1), m_Undef())) {
+      if (!isa<PoisonValue>(I->getOperand(1))) {
         I->setOperand(1, PoisonValue::get(I->getOperand(1)->getType()));
         MadeChange = true;
       }
