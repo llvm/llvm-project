@@ -75,7 +75,7 @@ TEST_CONSTEXPR bool is_string_asan_correct(const std::basic_string<ChrT, TraitsT
     return true;
 
   if (!is_string_short(c) || _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED) {
-    if (std::is_same<Alloc, std::allocator<ChrT>>::value)
+    if (std::__asan_annotate_container_with_allocator<Alloc>::value)
       return __sanitizer_verify_contiguous_container(c.data(), c.data() + c.size() + 1, c.data() + c.capacity() + 1) !=
              0;
     else
