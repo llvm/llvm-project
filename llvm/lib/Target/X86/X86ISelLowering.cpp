@@ -33521,7 +33521,7 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // X86 allows a sign-extended 32-bit immediate field as a displacement.
   if (!X86::isOffsetSuitableForCodeModel(AM.BaseOffs, getTargetMachine(),
                                          AM.BaseGV, AM.BaseGV != nullptr))
-  return false;
+    return false;
 
   if (AM.BaseGV) {
     unsigned GVFlags = Subtarget.classifyGlobalReference(AM.BaseGV);
