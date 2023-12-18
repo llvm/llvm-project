@@ -47,6 +47,9 @@ void test_call_operator_forwarding() {
     assert(Fn::check_call<int &>(CT_NonConst | CT_RValue));
     std::visit(std::move(cobj), v);
     assert(Fn::check_call<int &>(CT_Const | CT_RValue));
+
+    v.visit(obj);
+    assert(Fn::check_call<int &>(CT_NonConst | CT_LValue));
   }
   { // test call operator forwarding - single variant, multi arg
     using V = std::variant<int, long, double>;

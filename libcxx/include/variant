@@ -69,6 +69,12 @@ namespace std {
 
     // 20.7.2.6, swap
     void swap(variant&) noexcept(see below);
+
+    // [variant.visit], visitation
+    template<class Self, class Visitor>
+      constexpr decltype(auto) visit(this Self&&, Visitor&&);
+    template<class R, class Self, class Visitor>
+      constexpr R visit(this Self&&, Visitor&&);
   };
 
   // 20.7.3, variant helper classes
@@ -235,6 +241,7 @@ namespace std {
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/forward_like.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -1489,6 +1496,21 @@ public:
              is_nothrow_swappable_v<_Types>)...>::value) {
     __impl_.__swap(__that.__impl_);
   }
+
+#  if _LIBCPP_STD_VER >= 26
+  // [variant.visit], visitation
+  template <class _Self, class _Visitor>
+  constexpr decltype(auto) visit(this _Self&& __self, _Visitor&& __visitor) {
+    using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
+    return std::visit(std::forward<_Visitor>(__visitor), (_V)__self);
+  }
+
+  template <class _R, class _Self, class _Visitor>
+  constexpr _R visit(this _Self&& __self, _Visitor&& __visitor) {
+    using _V = _OverrideRef<_Self&&, _CopyConst<remove_reference_t<_Self>, variant>>;
+    return std::visit<_R>(std::forward<_Visitor>(__visitor), (_V)__self);
+  }
+#  endif
 
 private:
   __variant_detail::__impl<_Types...> __impl_;
