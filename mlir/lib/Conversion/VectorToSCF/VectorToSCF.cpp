@@ -595,8 +595,7 @@ struct PrepareTransferReadConversion
     auto *newXfer = rewriter.clone(*xferOp.getOperation());
     newXfer->setAttr(kPassLabel, rewriter.getUnitAttr());
     if (xferOp.getMask()) {
-      cast<TransferReadOp>(newXfer).getMaskMutable().assign(
-          buffers.maskBuffer);
+      cast<TransferReadOp>(newXfer).getMaskMutable().assign(buffers.maskBuffer);
     }
 
     Location loc = xferOp.getLoc();
@@ -724,15 +723,12 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       VectorType signlessTarget =
           vectorType.cloneWith({}, getIntTypeWithSignlessSemantics(legalIntTy));
       VectorType target = vectorType.cloneWith({}, legalIntTy);
-      value = rewriter.create<vector::BitCastOp>(loc, signlessSource,
-                                                 value);
+      value = rewriter.create<vector::BitCastOp>(loc, signlessSource, value);
       if (value.getType() != signlessTarget) {
         if (width == 1 || intTy.isUnsigned())
-          value = rewriter.create<arith::ExtUIOp>(loc, signlessTarget,
-                                                  value);
+          value = rewriter.create<arith::ExtUIOp>(loc, signlessTarget, value);
         else
-          value = rewriter.create<arith::ExtSIOp>(loc, signlessTarget,
-                                                  value);
+          value = rewriter.create<arith::ExtSIOp>(loc, signlessTarget, value);
       }
       value = rewriter.create<vector::BitCastOp>(loc, target, value);
       vectorType = target;
@@ -749,7 +745,7 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       // non-constant value (which can currently only be done via
       // vector.extractelement for 1D vectors).
       int flatLength = std::accumulate(shape.begin(), shape.end(), 1,
-                                        std::multiplies<int64_t>());
+                                       std::multiplies<int64_t>());
       VectorType flat =
           VectorType::get({flatLength}, vectorType.getElementType());
       value = rewriter.create<vector::ShapeCastOp>(loc, flat, value);
