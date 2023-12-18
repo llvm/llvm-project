@@ -24,17 +24,6 @@
 namespace mlir {
 namespace presburger {
 
-// The H (inequality) representation of both general
-// polyhedra and cones specifically is an integer relation.
-using PolyhedronH = IntegerRelation;
-using ConeH = PolyhedronH;
-
-// The V (generator) representation of both general
-// polyhedra and cones specifically is simply a matrix
-// whose rows are the generators.
-using PolyhedronV = Matrix<MPInt>;
-using ConeV = PolyhedronV;
-
 // A parametric point is a vector, each of whose elements
 // is an affine function of n parameters. Each row
 // in the matrix represents the affine function and
@@ -78,7 +67,7 @@ public:
   // from the dimensionality of the affine functions.
   unsigned getNumParams() { return numParam; }
 
-  SmallVector<int, 8> getSigns() { return signs; }
+  SmallVector<int> getSigns() { return signs; }
 
   std::vector<ParamPoint> getNumerators() { return numerators; }
 
@@ -156,6 +145,10 @@ public:
 
   // Find the number of parameters involved in the polynomial.
   unsigned getNumParams() { return numParam; }
+
+  SmallVector<Fraction> getCoefficients() { return coefficients; }
+
+  std::vector<std::vector<SmallVector<Fraction>>> getAffine() { return affine; }
 
   QuasiPolynomial operator+(const QuasiPolynomial &x) {
     assert(numParam == x.getNumParams() &&
