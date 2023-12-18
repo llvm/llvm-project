@@ -647,20 +647,30 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 23:
     CPU = "znver1";
     *Type = AMDFAM17H;
-    if (Model == 0x31 || Model == 0x60 || Model == 0x68 || Model == 0x71 ||
-        (Model >= 0xA0 && Model <= 0XAf)) {
-      // Family 17h model 31h - Zen2 Rome/Castle Peak
-      // Family 17h model 60h - Zen2 Renoir
-      // Family 17h model 68h - Zen2 Lucienne
-      // Family 17h model 71h - Zen2 Matisse
-      // Family 17h models A0h-Afh - Zen2 Mendocino
+    if ((Model >= 0x30 && Model <= 0x3f) || (Model == 0x47) ||
+        (Model >= 0x60 && Model <= 0x67) || (Model >= 0x68 && Model <= 0x6f) ||
+        (Model >= 0x70 && Model <= 0x7f) || (Model >= 0x84 && Model <= 0x87) ||
+        (Model >= 0x90 && Model <= 0x97) || (Model >= 0x98 && Model <= 0x9f) ||
+        (Model >= 0xa0 && Model <= 0xaf)) {
+      // Family 17h Models 30h-3Fh (Starship) Zen 2
+      // Family 17h Models 47h (Cardinal) Zen 2
+      // Family 17h Models 60h-67h (Renoir) Zen 2
+      // Family 17h Models 68h-6Fh (Lucienne) Zen 2
+      // Family 17h Models 70h-7Fh (Matisse) Zen 2
+      // Family 17h Models 84h-87h (ProjectX) Zen 2
+      // Family 17h Models 90h-97h (VanGogh) Zen 2
+      // Family 17h Models 98h-9Fh (Mero) Zen 2
+      // Family 17h Models A0h-AFh (Mendocino) Zen 2
       CPU = "znver2";
       *Subtype = AMDFAM17H_ZNVER2;
       break;
     }
-    if (Model <= 0x0f) {
+    if (Model <= 0x2f) {
+      // Family 17h Models 10h-1Fh (Raven1) Zen
+      // Family 17h Models 10h-1Fh (Picasso) Zen+
+      // Family 17h Models 20h-2Fh (Raven2 x86) Zen
       *Subtype = AMDFAM17H_ZNVER1;
-      break; // 00h-0Fh: Zen1
+      break;
     }
     break;
   case 25:
