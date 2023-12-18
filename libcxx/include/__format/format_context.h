@@ -27,8 +27,8 @@
 #include <cstddef>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#include <locale>
-#include <optional>
+#  include <locale>
+#  include <optional>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -40,10 +40,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _OutIt, class _CharT>
-requires output_iterator<_OutIt, const _CharT&>
+  requires output_iterator<_OutIt, const _CharT&>
 class _LIBCPP_TEMPLATE_VIS basic_format_context;
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
 /**
  * Helper to create a basic_format_context.
  *
@@ -51,32 +51,26 @@ class _LIBCPP_TEMPLATE_VIS basic_format_context;
  */
 template <class _OutIt, class _CharT>
 _LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
-__format_context_create(
-    _OutIt __out_it,
-    basic_format_args<basic_format_context<_OutIt, _CharT>> __args,
-    optional<std::locale>&& __loc = nullopt) {
+__format_context_create(_OutIt __out_it,
+                        basic_format_args<basic_format_context<_OutIt, _CharT>> __args,
+                        optional<std::locale>&& __loc = nullopt) {
   return std::basic_format_context(std::move(__out_it), __args, std::move(__loc));
 }
-#else
+#  else
 template <class _OutIt, class _CharT>
 _LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
-__format_context_create(
-    _OutIt __out_it,
-    basic_format_args<basic_format_context<_OutIt, _CharT>> __args) {
+__format_context_create(_OutIt __out_it, basic_format_args<basic_format_context<_OutIt, _CharT>> __args) {
   return std::basic_format_context(std::move(__out_it), __args);
 }
-#endif
+#  endif
 
-using format_context =
-    basic_format_context<back_insert_iterator<__format::__output_buffer<char>>,
-                         char>;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-using wformat_context = basic_format_context<
-    back_insert_iterator<__format::__output_buffer<wchar_t>>, wchar_t>;
-#endif
+using format_context = basic_format_context<back_insert_iterator<__format::__output_buffer<char>>, char>;
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wformat_context = basic_format_context< back_insert_iterator<__format::__output_buffer<wchar_t>>, wchar_t>;
+#  endif
 
 template <class _OutIt, class _CharT>
-requires output_iterator<_OutIt, const _CharT&>
+  requires output_iterator<_OutIt, const _CharT&>
 class
     // clang-format off
     _LIBCPP_TEMPLATE_VIS
@@ -85,29 +79,28 @@ class
     // clang-format on
     basic_format_context {
 public:
-  using iterator = _OutIt;
+  using iterator  = _OutIt;
   using char_type = _CharT;
   template <class _Tp>
   using formatter_type = formatter<_Tp, _CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context>
-  arg(size_t __id) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
   _LIBCPP_HIDE_FROM_ABI std::locale locale() {
     if (!__loc_)
       __loc_ = std::locale{};
     return *__loc_;
   }
-#endif
+#  endif
   _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
   _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }
 
 private:
   iterator __out_it_;
   basic_format_args<basic_format_context> __args_;
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
 
   // The Standard doesn't specify how the locale is stored.
   // [format.context]/6
@@ -121,27 +114,21 @@ private:
   optional<std::locale> __loc_;
 
   template <class _OtherOutIt, class _OtherCharT>
-  friend _LIBCPP_HIDE_FROM_ABI basic_format_context<_OtherOutIt, _OtherCharT>
-  __format_context_create(_OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>,
-                          optional<std::locale>&&);
+  friend _LIBCPP_HIDE_FROM_ABI basic_format_context<_OtherOutIt, _OtherCharT> __format_context_create(
+      _OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>, optional<std::locale>&&);
 
   // Note: the Standard doesn't specify the required constructors.
-  _LIBCPP_HIDE_FROM_ABI
-  explicit basic_format_context(_OutIt __out_it,
-                                basic_format_args<basic_format_context> __args,
-                                optional<std::locale>&& __loc)
-      : __out_it_(std::move(__out_it)), __args_(__args),
-        __loc_(std::move(__loc)) {}
-#else
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_context(
+      _OutIt __out_it, basic_format_args<basic_format_context> __args, optional<std::locale>&& __loc)
+      : __out_it_(std::move(__out_it)), __args_(__args), __loc_(std::move(__loc)) {}
+#  else
   template <class _OtherOutIt, class _OtherCharT>
   friend _LIBCPP_HIDE_FROM_ABI basic_format_context<_OtherOutIt, _OtherCharT>
       __format_context_create(_OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>);
 
-  _LIBCPP_HIDE_FROM_ABI
-  explicit basic_format_context(_OutIt __out_it,
-                                basic_format_args<basic_format_context> __args)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_format_context(_OutIt __out_it, basic_format_args<basic_format_context> __args)
       : __out_it_(std::move(__out_it)), __args_(__args) {}
-#endif
+#  endif
 };
 
 // A specialization for __retarget_buffer
@@ -161,8 +148,7 @@ private:
 // Here the width of an element in input is determined dynamically.
 // Note when the top-level element has no width the retargeting is not needed.
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS
-    basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> {
+class _LIBCPP_TEMPLATE_VIS basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> {
 public:
   using iterator  = typename __format::__retarget_buffer<_CharT>::__iterator;
   using char_type = _CharT;
