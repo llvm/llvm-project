@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ranges>
+#include <string>
 #include <vector>
 
 #include "almost_satisfies_types.h"
