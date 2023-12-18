@@ -1031,13 +1031,13 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         NewState.meet(OpState);
       });
 
-      // if the instruction has known base, but should in fact be marked as 
-      // conflict because of incompatible in/out types, we mark it as such 
+      // if the instruction has known base, but should in fact be marked as
+      // conflict because of incompatible in/out types, we mark it as such
       // ensuring that it will propagate through the fixpoint iteration
       auto I = cast<Instruction>(BDV);
       auto BV = NewState.getBaseValue();
       if (BV && MarkConflict(I, BV))
-          NewState = BDVState(I, BDVState::Conflict);
+        NewState = BDVState(I, BDVState::Conflict);
 
       BDVState OldState = Pair.second;
       if (OldState != NewState) {
@@ -1058,8 +1058,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   }
 #endif
 
-  // since we do the conflict marking as part of the fixpoint iteration this loop
-  // only asserts that invariants are met
+  // since we do the conflict marking as part of the fixpoint iteration this
+  // loop only asserts that invariants are met
   for (auto Pair : States) {
     Instruction *I = cast<Instruction>(Pair.first);
     BDVState State = Pair.second;
