@@ -76,3 +76,56 @@ Supported File Formats
 The current implementation only supports ELF files. At time of writing, it is
 unclear if it will be useful to support other object file formats like ``COFF``
 or ``Mach-O``.
+
+Usage
+===========
+
+Users are expected to pass ``-ffat-lto-objects`` to clang in addition to one of
+the ``-flto`` variants. Without the ``-flto`` flag, ``-ffat-lto-objects`` has
+no effect.
+
+
+Compile and link. Use the object code from the fat object without LTO.
+
+.. code-block:: console
+
+   $ clang -fno-lto -ffat-lto-objects -fuse-ld=lld foo.c
+
+Compile and link. Select full LTO at link time.
+
+.. code-block:: console
+
+   $ clang -flto -ffat-lto-objects -fuse-ld=lld foo.c
+
+Compile and link. Select ThinLTO at link time.
+
+.. code-block:: console
+
+   $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld foo.c
+
+Compile and link. Use ThinLTO with the UnifiedLTO pipeline.
+
+.. code-block:: console
+
+   $ clang -flto=thin -ffat-lto-objects -funified-lto -fuse-ld=lld foo.c
+
+Compile and link. Use full LTO  with the UnifiedLTO pipeline.
+
+.. code-block:: console
+
+   $ clang -flto -ffat-lto-objects -funified-lto -fuse-ld=lld foo.c
+
+Link separately, using ThinLTO.
+
+.. code-block:: console
+
+   $ clang -c -flto=thin -ffat-lto-objects foo.c
+   $ clang -flto=thin -fuse-ld=lld foo.o -ffat-lto-objects  # pass --lto=thin --fat-lto-objects to ld.lld
+
+Link separately, using full LTO.
+
+.. code-block:: console
+
+   $ clang -c -flto -ffat-lto-objects foo.c
+   $ clang -flto -fuse-ld=lld foo.o  # pass --lto=full --fat-lto-objects to ld.lld
+
