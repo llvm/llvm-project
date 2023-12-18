@@ -265,9 +265,7 @@ define i8 @fold_phi_xor(i1 %c, i8 %a, i8 %b)  {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ [[A]], [[ENTRY:%.*]] ], [ [[B]], [[THEN]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[A]], [[THEN]] ]
-; CHECK-NEXT:    [[RET:%.*]] = xor i8 [[PHI1]], [[PHI2]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i8 [[A]], [[B]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
