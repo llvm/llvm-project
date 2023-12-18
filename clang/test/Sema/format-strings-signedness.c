@@ -13,8 +13,8 @@ int scanf(const char * restrict, ...);
 void test_printf_bool(_Bool x)
 {
     printf("%d", x); // no-warning
-    printf("%u", x); // expected-warning{{format specifies type 'unsigned int' but the argument has type '_Bool'}}
-    printf("%x", x); // expected-warning{{format specifies type 'unsigned int' but the argument has type '_Bool'}}
+    printf("%u", x); // no-warning
+    printf("%x", x); // no-warning
 }
 
 void test_printf_char(char x)
@@ -186,6 +186,23 @@ void test_scanf_enum_unsigned_long(enum enum_unsigned_long *x) {
   scanf("%lx", x); // no-warning
 }
 #endif
+
+// Verify that we get no warnings from <inttypes.h>
+
+typedef short int int16_t;
+typedef unsigned short int uint16_t;
+
+void test_printf_priX16(int16_t x) {
+  printf("PRId16: %" "d" /*PRId16*/ "\n", x); // no-warning
+  printf("PRIi16: %" "i" /*PRIi16*/ "\n", x); // no-warning
+}
+
+void test_printf_unsigned_priX16(uint16_t x) {
+  printf("PRIo16: %" "o" /*PRIo16*/ "\n", x); // no-warning
+  printf("PRIu16: %" "u" /*PRIu16*/ "\n", x); // no-warning
+  printf("PRIx16: %" "x" /*PRIx16*/ "\n", x); // no-warning
+  printf("PRIX16: %" "X" /*PRIX16*/ "\n", x); // no-warning
+}
 
 // Verify that we can suppress a -Wformat-signedness warning by ignoring
 // -Wformat (gcc compat).
