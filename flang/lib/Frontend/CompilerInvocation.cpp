@@ -1085,7 +1085,7 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
 }
 
 bool CompilerInvocation::createFromArgs(
-    CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
+    CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
 
   bool success = true;
@@ -1096,7 +1096,7 @@ bool CompilerInvocation::createFromArgs(
   // NOTE: Like in Clang, it would be nice to use option marshalling
   // for this so that the entire logic for setting-up the triple is in one
   // place.
-  res.getTargetOpts().triple =
+  invoc.getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   // Parse the arguments
@@ -1128,7 +1128,7 @@ bool CompilerInvocation::createFromArgs(
   // -flang-experimental-hlfir
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
-    res.loweringOpts.setLowerToHighLevelFIR(true);
+    invoc.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
   // -flang-deprecated-no-hlfir
@@ -1141,16 +1141,17 @@ bool CompilerInvocation::createFromArgs(
           "'-flang-deprecated-no-hlfir' cannot be both specified");
       diags.Report(diagID);
     }
-    res.loweringOpts.setLowerToHighLevelFIR(false);
+    invoc.loweringOpts.setLowerToHighLevelFIR(false);
   }
 
-  if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
-    res.loweringOpts.setPolymorphicTypeImpl(true);
+  if (args.hasArg(
+          clang::driver::options::OPT_flang_experimental_polymorphism)) {
+    invoc.loweringOpts.setPolymorphicTypeImpl(true);
   }
 
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
-    res.loweringOpts.setNoPPCNativeVecElemOrder(true);
+    invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
@@ -1161,46 +1162,46 @@ bool CompilerInvocation::createFromArgs(
       // This is -Rfoo=, where foo is the name of the diagnostic
       // group. Add only the remark option name to the diagnostics. e.g. for
       // -Rpass= we will add the string "pass".
-      res.getDiagnosticOpts().Remarks.push_back(
+      invoc.getDiagnosticOpts().Remarks.push_back(
           std::string(a->getOption().getName().drop_front(1).rtrim("=-")));
     else
       // If no regex was provided, add the provided value, e.g. for -Rpass add
       // the string "pass".
-      res.getDiagnosticOpts().Remarks.push_back(a->getValue());
+      invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
 
-  success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
-  parseTargetArgs(res.getTargetOpts(), args);
-  parsePreprocessorArgs(res.getPreprocessorOpts(), args);
-  parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
-  success &= parseDebugArgs(res.getCodeGenOpts(), args, diags);
-  success &= parseVectorLibArg(res.getCodeGenOpts(), args, diags);
-  success &= parseSemaArgs(res, args, diags);
-  success &= parseDialectArgs(res, args, diags);
-  success &= parseDiagArgs(res, args, diags);
+  success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
+  parseTargetArgs(invoc.getTargetOpts(), args);
+  parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
+  parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
+  success &= parseSemaArgs(invoc, args, diags);
+  success &= parseDialectArgs(invoc, args, diags);
+  success &= parseDiagArgs(invoc, args, diags);
 
   // Collect LLVM (-mllvm) and MLIR (-mmlir) options.
   // NOTE: Try to avoid adding any options directly to `llvmArgs` or
   // `mlirArgs`. Instead, you can use
   //    * `-mllvm <your-llvm-option>`, or
   //    * `-mmlir <your-mlir-option>`.
-  res.frontendOpts.llvmArgs =
+  invoc.frontendOpts.llvmArgs =
       args.getAllArgValues(clang::driver::options::OPT_mllvm);
-  res.frontendOpts.mlirArgs =
+  invoc.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
-  success &= parseFloatingPointArgs(res, args, diags);
+  success &= parseFloatingPointArgs(invoc, args, diags);
 
-  success &= parseVScaleArgs(res, args, diags);
+  success &= parseVScaleArgs(invoc, args, diags);
 
-  success &= parseLinkerOptionsArgs(res, args, diags);
+  success &= parseLinkerOptionsArgs(invoc, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent
   // compiler driver invocation with an environment variable, or failing that
   // set to the command line arguments of the frontend driver invocation.
-  res.allCompilerInvocOpts = std::string();
-  llvm::raw_string_ostream os(res.allCompilerInvocOpts);
+  invoc.allCompilerInvocOpts = std::string();
+  llvm::raw_string_ostream os(invoc.allCompilerInvocOpts);
   char *compilerOptsEnv = std::getenv("FLANG_COMPILER_OPTIONS_STRING");
   if (compilerOptsEnv != nullptr) {
     os << compilerOptsEnv;
@@ -1212,7 +1213,7 @@ bool CompilerInvocation::createFromArgs(
     }
   }
 
-  res.setArgv0(argv0);
+  invoc.setArgv0(argv0);
 
   return success;
 }

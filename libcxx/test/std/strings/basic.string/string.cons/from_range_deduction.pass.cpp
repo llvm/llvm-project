@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // To silence a GCC warning-turned-error re. `BadAlloc::value_type`.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-unused-local-typedefs
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-unused-local-typedefs
 
 // template<ranges::input_range R,
 //          class Allocator = allocator<ranges::range_value_t<R>>>
@@ -26,6 +26,7 @@
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
+#include "asan_testing.h"
 
 int main(int, char**) {
   using Char = char16_t;
@@ -33,12 +34,14 @@ int main(int, char**) {
   {
     std::basic_string c(std::from_range, std::array<Char, 0>());
     static_assert(std::is_same_v<decltype(c), std::basic_string<Char>>);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   {
     using Alloc = test_allocator<Char>;
     std::basic_string c(std::from_range, std::array<Char, 0>(), Alloc());
     static_assert(std::is_same_v<decltype(c), std::basic_string<Char, std::char_traits<Char>, Alloc>>);
+    LIBCPP_ASSERT(is_string_asan_correct(c));
   }
 
   // Note: defining `value_type` is a workaround because one of the deduction guides will end up instantiating

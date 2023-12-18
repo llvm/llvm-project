@@ -90,7 +90,8 @@ public:
       RewriterBase &rewriter);
   /// Emits the epilogue, this creates `maxStage - 1` part which will contain
   /// operations from stages [i; maxStage], where i is the part index.
-  llvm::SmallVector<Value> emitEpilogue(RewriterBase &rewriter);
+  void emitEpilogue(RewriterBase &rewriter,
+                    llvm::SmallVector<Value> &returnValues);
 };
 
 bool LoopPipelinerInternal::initializeLoopInfo(
@@ -175,15 +176,18 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     }
   }
 
-  // Only support loop carried dependency with a distance of 1. This means the
-  // source of all the scf.yield operands needs to be defined by operations in
-  // the loop.
+  // Support only loop-carried dependencies with a distance of one iteration or
+  // those defined outside of the loop. This means that any dependency within a
+  // loop should either be on the immediately preceding iteration, the current
+  // iteration, or on variables whose values are set before entering the loop.
   if (llvm::any_of(forOp.getBody()->getTerminator()->getOperands(),
                    [this](Value operand) {
                      Operation *def = operand.getDefiningOp();
-                     return !def || !stages.contains(def);
+                     return !def ||
+                            (!stages.contains(def) && forOp->isAncestor(def));
                    })) {
-    LDBG("--only support loop carried dependency with a distance of 1 -> BAIL");
+    LDBG("--only support loop carried dependency with a distance of 1 or "
+         "defined outside of the loop -> BAIL");
     return false;
   }
   annotateFn = options.annotateFn;
@@ -341,12 +345,17 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   for (const auto &retVal :
        llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
     Operation *def = retVal.value().getDefiningOp();
-    assert(def && "Only support loop carried dependencies of distance 1");
-    unsigned defStage = stages[def];
-    Value valueVersion = valueMapping[forOp.getRegionIterArgs()[retVal.index()]]
-                                     [maxStage - defStage];
-    assert(valueVersion);
-    newLoopArg.push_back(valueVersion);
+    assert(def && "Only support loop carried dependencies of distance of 1 or "
+                  "outside the loop");
+    auto defStage = stages.find(def);
+    if (defStage != stages.end()) {
+      Value valueVersion =
+          valueMapping[forOp.getRegionIterArgs()[retVal.index()]]
+                      [maxStage - defStage->second];
+      assert(valueVersion);
+      newLoopArg.push_back(valueVersion);
+    } else
+      newLoopArg.push_back(forOp.getInitArgs()[retVal.index()]);
   }
   for (auto escape : crossStageValues) {
     LiverangeInfo &info = escape.second;
@@ -551,21 +560,25 @@ LogicalResult LoopPipelinerInternal::createKernel(
   for (const auto &retVal :
        llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
     Operation *def = retVal.value().getDefiningOp();
-    assert(def && "Only support loop carried dependencies of distance 1");
-    unsigned defStage = stages[def];
-    if (defStage > 0) {
+    assert(def && "Only support loop carried dependencies of distance of 1 or "
+                  "defined outside the loop");
+    auto defStage = stages.find(def);
+    if (defStage == stages.end()) {
+      for (unsigned int stage = 1; stage <= maxStage; stage++)
+        setValueMapping(forOp.getRegionIterArgs()[retVal.index()],
+                        retVal.value(), stage);
+    } else if (defStage->second > 0) {
       setValueMapping(forOp.getRegionIterArgs()[retVal.index()],
                       newForOp->getResult(retVal.index()),
-                      maxStage - defStage + 1);
+                      maxStage - defStage->second + 1);
     }
   }
   rewriter.create<scf::YieldOp>(forOp.getLoc(), yieldOperands);
   return success();
 }
 
-llvm::SmallVector<Value>
-LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter) {
-  llvm::SmallVector<Value> returnValues(forOp->getNumResults());
+void LoopPipelinerInternal::emitEpilogue(
+    RewriterBase &rewriter, llvm::SmallVector<Value> &returnValues) {
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
   for (int64_t i = 0; i < maxStage; i++) {
@@ -628,7 +641,6 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter) {
       }
     }
   }
-  return returnValues;
 }
 
 void LoopPipelinerInternal::setValueMapping(Value key, Value el, int64_t idx) {
@@ -685,7 +697,7 @@ FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
   if (options.peelEpilogue) {
     // 4. Emit the epilogue after the new forOp.
     rewriter.setInsertionPointAfter(newForOp);
-    returnValues = pipeliner.emitEpilogue(rewriter);
+    pipeliner.emitEpilogue(rewriter, returnValues);
   }
   // 5. Erase the original loop and replace the uses with the epilogue output.
   if (forOp->getNumResults() > 0)

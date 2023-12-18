@@ -39,7 +39,7 @@ public:
   ///
   /// Invalid or unimplemented markup elements are removed. Some output may be
   /// deferred until future filter() or finish() call.
-  void filter(StringRef Line);
+  void filter(std::string &&InputLine);
 
   /// Records that the input stream has ended and writes any deferred output.
   void finish();
@@ -142,7 +142,7 @@ private:
   MarkupParser Parser;
 
   // Current line being filtered.
-  StringRef Line;
+  std::string Line;
 
   // A module info line currently being built. This incorporates as much mmap
   // information as possible before being emitted.

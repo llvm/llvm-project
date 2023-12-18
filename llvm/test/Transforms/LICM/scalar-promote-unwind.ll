@@ -147,9 +147,8 @@ for.cond.cleanup:
   ret void
 }
 
-; TODO: sret could be specified to not be accessed on unwind either.
-define void @test_sret(ptr noalias sret(i32) %a, i1 zeroext %y) uwtable {
-; CHECK-LABEL: @test_sret(
+define void @test_dead_on_unwind(ptr noalias dead_on_unwind %a, i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test_dead_on_unwind(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -157,7 +156,6 @@ define void @test_sret(ptr noalias sret(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @f()
@@ -167,6 +165,8 @@ define void @test_sret(ptr noalias sret(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_INC]] ]
+; CHECK-NEXT:    store i32 [[ADD_LCSSA]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

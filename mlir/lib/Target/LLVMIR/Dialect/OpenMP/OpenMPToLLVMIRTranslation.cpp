@@ -1915,6 +1915,23 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             mapOperands = exitDataOp.getMapOperands();
             return success();
           })
+          .Case([&](omp::UpdateDataOp updateDataOp) {
+            if (updateDataOp.getNowait())
+              return failure();
+
+            if (auto ifExprVar = updateDataOp.getIfExpr())
+              ifCond = moduleTranslation.lookupValue(ifExprVar);
+
+            if (auto devId = updateDataOp.getDevice())
+              if (auto constOp =
+                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
+                  deviceID = intAttr.getInt();
+
+            RTLFn = llvm::omp::OMPRTL___tgt_target_data_update_mapper;
+            mapOperands = updateDataOp.getMotionOperands();
+            return success();
+          })
           .Default([&](Operation *op) {
             return op->emitError("unsupported OpenMP operation: ")
                    << op->getName();
@@ -2748,9 +2765,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::ThreadprivateOp) {
         return convertOmpThreadprivate(*op, builder, moduleTranslation);
       })
-      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp>([&](auto op) {
-        return convertOmpTargetData(op, builder, moduleTranslation);
-      })
+      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp, omp::UpdateDataOp>(
+          [&](auto op) {
+            return convertOmpTargetData(op, builder, moduleTranslation);
+          })
       .Case([&](omp::TargetOp) {
         return convertOmpTarget(*op, builder, moduleTranslation);
       })
