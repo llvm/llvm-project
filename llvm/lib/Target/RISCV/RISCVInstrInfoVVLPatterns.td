@@ -2361,7 +2361,7 @@ multiclass VPatTruncSatClipUMin<VTypeInfo vti, VTypeInfo wti, int uminval> {
   let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                GetVTypePredicates<wti>.Predicates) in
   def : Pat<(vti.Vector (riscv_trunc_vector_vl
-    (wti.Vector (riscv_smin_vl
+    (wti.Vector (riscv_umin_vl
       (wti.Vector wti.RegClass:$rs1),
       (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), uminval, (XLenVT srcvalue))),
       (wti.Vector undef), (wti.Mask V0), VLOpFrag)),
