@@ -222,16 +222,17 @@ function test-armv7m-picolibc() {
         -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-        -C "${CMAKE_CONFIG}" \
         -DCMAKE_C_FLAGS="${flags}" \
         -DCMAKE_CXX_FLAGS="${flags}" \
-        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
-    generate-cmake -C "${CMAKE_CONFIG}" \
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
+        "${@}"
+    generate-cmake \
         -DLIBCXX_TEST_CONFIG="armv7m-picolibc-libc++.cfg.in" \
         -DLIBCXXABI_TEST_CONFIG="armv7m-picolibc-libc++abi.cfg.in" \
         -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
         -DCMAKE_C_FLAGS="${flags}" \
-        -DCMAKE_CXX_FLAGS="${flags}"
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        "${@}"
 
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
     mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
@@ -652,12 +653,16 @@ armv7-no-exceptions)
     check-runtimes
 ;;
 armv7m-picolibc)
-    CMAKE_CONFIG="${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake"
-    test-armv7m-picolibc
+    test-armv7m-picolibc \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake"
 ;;
 armv7m-picolibc-no-exceptions)
-    CMAKE_CONFIG="${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc-no-exceptions.cmake"
-    test-armv7m-picolibc
+    test-armv7m-picolibc \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
+        -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXX_ENABLE_RTTI=OFF
 ;;
 clang-cl-dll)
     clean
