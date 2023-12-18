@@ -39,7 +39,7 @@ body:             |
   ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr5, $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.72, addrspace 5)
   ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.74, addrspace 5)
   ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr1
-  ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr0, 4, undef $vgpr4
+  ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr0, 4, undef $vgpr3
   ; GCN-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24, implicit-def dead $scc
   ; GCN-NEXT:   renamable $vgpr5 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr1 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, $vgpr1
@@ -198,7 +198,7 @@ body:             |
   ; GCN-NEXT:   $sgpr5 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 1
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 0
   ; GCN-NEXT:   KILL killed renamable $vgpr5
-  ; GCN-NEXT:   $sgpr0 = SI_RESTORE_S32_FROM_VGPR $vgpr4, 4
+  ; GCN-NEXT:   $sgpr0 = SI_RESTORE_S32_FROM_VGPR $vgpr3, 4
   ; GCN-NEXT:   $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.69, addrspace 5)
   ; GCN-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.70, addrspace 5)

@@ -68,7 +68,7 @@ def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
 
 def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
   let description = [{
-    Returns the cluster id, i.e. the index of the current cluster within the 
+    Returns the cluster id, i.e. the index of the current cluster within the
     grid along the x, y, or z `dimension`.
 
     Example:
@@ -462,23 +462,23 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
 {
   let summary = "Get the memref for dynamic shared memory";
-  
+
   let description = [{
-    This operation provides a memref pointer to the start of dynamic shared 
+    This operation provides a memref pointer to the start of dynamic shared
     memory, often referred to as workgroup memory. It's important to note that
-    this dynamic shared memory needs to be allocated at kernel launch. One can 
-    conveniently utilize `the dynamic_shared_memory_size` parameter of 
+    this dynamic shared memory needs to be allocated at kernel launch. One can
+    conveniently utilize `the dynamic_shared_memory_size` parameter of
     `gpu.launch` for this purpose.
-   
-    Examples: 
-    ```mlir        
+
+    Examples:
+    ```mlir
     %0 = gpu.dynamic.shared.memory : memref<?xi8, #gpu.address_space<workgroup>>
-    %1 = memref.view %0[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> 
+    %1 = memref.view %0[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>>
                             to memref<32x64xf32, #gpu.address_space<workgroup>>
-    %2 = memref.view %0[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> 
+    %2 = memref.view %0[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>>
                             to memref<32x64xf32, #gpu.address_space<workgroup>>
     ```
-  }];  
+  }];
   let arguments = (ins);
   let results = (outs Arg<MemRefRankOf<[I8], [1]>>:$resultMemref);
   let assemblyFormat = [{ attr-dict `:` type($resultMemref) }];
@@ -493,11 +493,11 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                SymbolRefAttr:$kernel,
-               LaunchIndx:$gridSizeX, 
-               LaunchIndx:$gridSizeY, 
+               LaunchIndx:$gridSizeX,
+               LaunchIndx:$gridSizeY,
                LaunchIndx:$gridSizeZ,
-               LaunchIndx:$blockSizeX, 
-               LaunchIndx:$blockSizeY, 
+               LaunchIndx:$blockSizeX,
+               LaunchIndx:$blockSizeY,
                LaunchIndx:$blockSizeZ,
                Optional<LaunchIndx>:$clusterSizeX,
                Optional<LaunchIndx>:$clusterSizeY,
@@ -539,10 +539,10 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     The remaining operands if present are passed as arguments to the kernel
     function.
 
-    The `gpu.launch_func` also supports kernel launching with clusters if 
-    supported by the target architecture. The cluster size can be set by 
-    `clusterSizeX`, `clusterSizeY`, and `clusterSizeZ` arguments. When these 
-    arguments are present, the Op launches a kernel that clusters the given 
+    The `gpu.launch_func` also supports kernel launching with clusters if
+    supported by the target architecture. The cluster size can be set by
+    `clusterSizeX`, `clusterSizeY`, and `clusterSizeZ` arguments. When these
+    arguments are present, the Op launches a kernel that clusters the given
     thread blocks. This feature is exclusive to certain architectures.
 
     Example:
@@ -593,7 +593,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
           async                           // (Optional) Don't block host, return token.
           [%t0]                           // (Optional) Execute only after %t0 has completed.
           @kernels::@kernel_1             // Kernel function.
-          clusters in (%cst, %cst, %cst)  // (Optional) Cluster size only for support architectures. 
+          clusters in (%cst, %cst, %cst)  // (Optional) Cluster size only for support architectures.
           blocks in (%cst, %cst, %cst)    // Grid size.
           threads in (%cst, %cst, %cst)   // Block size.
           dynamic_shared_memory_size %s   // (Optional) Amount of dynamic shared
@@ -659,7 +659,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
   let assemblyFormat = [{
       custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
       (`<` $asyncObject^ `:` type($asyncObject) `>`)?
-      $kernel      
+      $kernel
       ( `clusters` `in` ` ` `(` $clusterSizeX^ `,` $clusterSizeY `,` $clusterSizeZ `)` )?
       `blocks` `in` ` ` `(` $gridSizeX `,` $gridSizeY `,` $gridSizeZ `)`
       `threads` `in` ` ` `(` $blockSizeX `,` $blockSizeY `,` $blockSizeZ `)`
