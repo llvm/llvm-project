@@ -11,6 +11,11 @@ module m
     integer :: i
     procedure(goodbye), pointer :: p
   end type
+  type t3
+    sequence
+    character(4) :: c
+    procedure(char_func), pointer :: p
+  end type
 
   interface
     subroutine takes_hello(p)
@@ -27,6 +32,11 @@ subroutine goodbye(x)
   class(t2) :: x
   print *, "goodbye"
 end subroutine
+function char_func(x)
+  type(t3) :: x
+  character(4) :: char_func
+  char_func = x%c
+end function
 end module
 
 subroutine test1(x)
@@ -79,3 +89,22 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = hlfir.designate %[[VAL_3]]#1{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{i:i32,p:!fir.boxproc<(!fir.ref<!fir.type<_QMmTt>>) -> ()>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<!fir.type<_QMmTt{i:i32,p:!fir.boxproc<(!fir.ref<!fir.type<_QMmTt>>) -> ()>}>>) -> ()>>
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.boxproc<(!fir.ref<!fir.type<_QMmTt{i:i32,p:!fir.boxproc<(!fir.ref<!fir.type<_QMmTt>>) -> ()>}>>) -> ()>>
 ! CHECK:           fir.store %[[VAL_6]] to %[[VAL_4]] : !fir.ref<!fir.boxproc<(!fir.ref<!fir.type<_QMmTt{i:i32,p:!fir.boxproc<(!fir.ref<!fir.type<_QMmTt>>) -> ()>}>>) -> ()>>
+
+subroutine test5(x)
+  use m, only : t3
+  type(t3) :: x
+  call takes_char(x%p())
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest5(
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,4> {bindc_name = ".result"}
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ex
+! CHECK:           %[[VAL_3:.*]] = hlfir.designate %[[VAL_2]]#1{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt3{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3>>) -> !fir.boxchar<1>>}>>) -> !fir.ref<!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>>>
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : i64
+! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
+! CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_8:.*]] = arith.cmpi sgt, %[[VAL_6]], %[[VAL_7]] : index
+! CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_6]], %[[VAL_7]] : index
+! CHECK:           %[[VAL_10:.*]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
+! CHECK:           %[[VAL_11:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>>) -> ((!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>)
+! CHECK:           %[[VAL_12:.*]] = fir.call %[[VAL_11]](%[[VAL_1]], %[[VAL_9]], %[[VAL_2]]#1) fastmath<contract> : (!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3{c:!fir.char<1,4>,p:!fir.boxproc<(!fir.ref<!fir.char<1,4>>, index, !fir.ref<!fir.type<_QMmTt3>>) -> !fir.boxchar<1>>}>>) -> !fir.boxchar<1>

@@ -118,6 +118,9 @@ public:
     });
     addConversion(
         [&](HeapType ty) { return HeapType::get(convertType(ty.getEleTy())); });
+    addConversion([&](fir::LLVMPointerType ty) {
+      return fir::LLVMPointerType::get(convertType(ty.getEleTy()));
+    });
     addConversion(
         [&](BoxType ty) { return BoxType::get(convertType(ty.getEleTy())); });
     addConversion([&](ClassType ty) {

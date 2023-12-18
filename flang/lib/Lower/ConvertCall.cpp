@@ -168,14 +168,13 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   mlir::Value charFuncPointerLength;
   if (const Fortran::evaluate::ProcedureDesignator *procDesignator =
           caller.getIfIndirectCall()) {
-    if (std::optional<unsigned> passArg = caller.getPassArgIndex()) {
+    if (mlir::Value passedArg = caller.getIfPassedArg()) {
       // Procedure pointer component call with PASS argument. To avoid
       // "double" lowering of the ComponentRef, semantics only place the
       // ComponentRef in the ActualArguments, not in the ProcedureDesignator (
       // that is only the component symbol).
       // Fetch the passed argument and addresses of its procedure pointer
       // component.
-      mlir::Value passedArg = caller.getInputs()[*passArg];
       funcPointer = Fortran::lower::derefPassProcPointerComponent(
           loc, converter, *procDesignator, passedArg, symMap, stmtCtx);
     } else {

@@ -132,6 +132,15 @@ Fortran::lower::CallerInterface::getPassArgIndex() const {
   return passArg;
 }
 
+mlir::Value Fortran::lower::CallerInterface::getIfPassedArg() const {
+  if (std::optional<unsigned> passArg = getPassArgIndex()) {
+    assert(actualInputs.size() > *passArg && actualInputs[*passArg] &&
+           "passed arg was not set yet");
+    return actualInputs[*passArg];
+  }
+  return {};
+}
+
 const Fortran::evaluate::ProcedureDesignator *
 Fortran::lower::CallerInterface::getIfIndirectCall() const {
   if (const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol())
