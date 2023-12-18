@@ -1,7 +1,7 @@
 ; RUN: opt -passes=print-alias-sets -S -o - < %s 2>&1 | FileCheck %s
 
 ; CHECK: Alias sets for function 'test1':
-; CHECK: Alias Set Tracker: 2 alias sets for 2 memory locations.
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %a, LocationSize::precise(1))
 ; CHECK-NOT: 1 Unknown instruction
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %b, LocationSize::precise(1))
@@ -17,7 +17,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test2':
-; CHECK: Alias Set Tracker: 3 alias sets for 2 memory locations.
+; CHECK: Alias Set Tracker: 3 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %a, LocationSize::precise(1))
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] may alias, Ref
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond1) [ "deopt"() ]
@@ -34,7 +34,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test3':
-; CHECK: Alias Set Tracker: 1 alias sets for 2 memory locations.
+; CHECK: Alias Set Tracker: 1 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 3] may alias, Mod/Ref   Pointers: (ptr %a, LocationSize::precise(1)), (ptr %b, LocationSize::precise(1))
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond1) [ "deopt"() ]
 define void @test3(i32 %c, ptr %a, ptr %b) {
@@ -47,7 +47,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test4':
-; CHECK: Alias Set Tracker: 2 alias sets for 2 memory locations.
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref   Pointers: (ptr %a, LocationSize::precise(1))
 ; CHECK:     1 Unknown instructions:   call void (i1, ...) @llvm.experimental.guard(i1 %cond1) [ "deopt"() ]
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %b, LocationSize::precise(1))
@@ -62,7 +62,7 @@ entry:
 }
 
 ; CHECK: Alias sets for function 'test5':
-; CHECK: Alias Set Tracker: 2 alias sets for 2 memory locations.
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %a, LocationSize::precise(1))
 ; CHECK-NOT: 1 Unknown instruction
 ; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (ptr %b, LocationSize::precise(1))
