@@ -1484,7 +1484,8 @@ FunctionType *VFABI::createFunctionType(const VFInfo &Info,
   // Create vector parameter types
   SmallVector<Type *, 8> VecTypes;
   ElementCount VF = Info.Shape.VF;
-  for (auto [Idx, VFParam] : enumerate(Info.Shape.Parameters)) {
+  int ScalarParamIndex = 0;
+  for (auto VFParam : Info.Shape.Parameters) {
     if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
       VectorType *MaskTy =
           VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
@@ -1492,7 +1493,7 @@ FunctionType *VFABI::createFunctionType(const VFInfo &Info,
       continue;
     }
 
-    Type *OperandTy = ScalarFTy->getParamType(Idx);
+    Type *OperandTy = ScalarFTy->getParamType(ScalarParamIndex++);
     if (VFParam.ParamKind == VFParamKind::Vector)
       OperandTy = VectorType::get(OperandTy, VF);
     VecTypes.push_back(OperandTy);

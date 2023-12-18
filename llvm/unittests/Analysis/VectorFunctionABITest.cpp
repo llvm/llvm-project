@@ -9,6 +9,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -397,7 +398,9 @@ TEST_F(VFABIParserTest, Align) {
   EXPECT_EQ(Parameters[0].Alignment, Align(2));
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
-
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+  EXPECT_EQ(getFunctionType(), FTy);
   // Missing alignment value.
   EXPECT_FALSE(invokeParser("_ZGVsM2l2a_foo"));
   // Invalid alignment token "x".
