@@ -4467,9 +4467,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return R;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
   if (Value *V = SimplifyPhiCommutativeBinaryOp(I, Op0, Op1))
-      return replaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
   // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
