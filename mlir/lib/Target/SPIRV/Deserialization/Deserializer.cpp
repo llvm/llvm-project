@@ -645,8 +645,8 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
       initializer = SymbolRefAttr::get(
           (cast<spirv::GlobalVariableOp>(op)).getOperation());
     else if ((op = getSpecConstant(operands[wordIndex])))
-      initializer = SymbolRefAttr::get(
-          (cast<spirv::SpecConstantOp>(op)).getOperation());
+      initializer =
+          SymbolRefAttr::get((cast<spirv::SpecConstantOp>(op)).getOperation());
     else if ((op = getSpecConstantComposite(operands[wordIndex])))
       initializer = SymbolRefAttr::get(
           (cast<spirv::SpecConstantCompositeOp>(op)).getOperation());
