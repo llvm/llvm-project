@@ -16,6 +16,9 @@
 using namespace llvm;
 
 namespace {
+
+static LLVMContext Ctx;
+
 /// Perform tests against VFABI Rules. `invokeParser` creates a VFInfo object
 /// and a scalar FunctionType, which are used by tests to check that:
 /// 1. The scalar and vector names are correct.
@@ -46,7 +49,6 @@ private:
   }
 
   // Data needed to load the optional IR passed to invokeParser
-  LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
   FunctionType *ScalarFTy = nullptr;
@@ -93,76 +95,35 @@ protected:
     return (Parameters.size() - isMasked()) == ScalarFTy->getNumParams();
   }
 
-  /// Creates a mock CallInst and uses it along with VFInfo to create a
-  /// FunctionType. Then it checks that the created FunctionType matches the
-  /// number and type of arguments with both the ScalarFTy and the operands of
-  /// the call.
-  bool checkFunctionType() {
-    // For scalable ISAs, the created vector FunctionType might have a mask
-    // parameter Type, according to VFABI. Regardless, this input CallInst,
-    // despite being a vectorized call, it will not have a masked operand.
-    SmallVector<Value *, 8> Args;
-    SmallVector<Type *, 8> CallTypes;
-    for (auto [VFParam, STy] :
-         zip(Info.Shape.Parameters, ScalarFTy->params())) {
-      // use VectorType where relevant, according to VShape
-      Type *UseTy = STy;
-      if (VFParam.ParamKind == VFParamKind::Vector)
-        UseTy = VectorType::get(STy, Info.Shape.VF);
-
-      CallTypes.push_back(UseTy);
-      Args.push_back(Constant::getNullValue(UseTy));
-    }
-
-    // Mangled names do not currently encode return Type information. Generally,
-    // return types are vectors, so use one.
-    Type *VecRetTy = ScalarFTy->getReturnType();
-    if (!VecRetTy->isVoidTy())
-      VecRetTy = VectorType::get(VecRetTy, Info.Shape.VF);
-
-    FunctionCallee F = M->getOrInsertFunction(
-        VectorName, FunctionType::get(VecRetTy, CallTypes, false));
-    std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
-
-    // Use VFInfo and the mock CallInst to create a FunctionType that will
-    // include a mask when relevant.
-    FunctionType *VecFTy = VFABI::createFunctionType(Info, ScalarFTy);
-    if (!VecFTy)
-      return false;
-
-    // Check that vectorized parameters' size match with VFInfo.
-    // Both may include a mask.
-    if ((VecFTy->getNumParams() != Info.Shape.Parameters.size()))
-      return false;
-
-    // Check if the types of the vectorized parameters from the created
-    // FunctionType match with the arguments passed to the CallInst. Any masks
-    // are ignored, as the original, mock CallInst does not have one.
-    auto VecParams = VecFTy->params();
-    for (auto [VecTy, VFTyParam] : zip(CallTypes, VecParams))
-      if (VecTy != VFTyParam)
-        return false;
-
-    // Check if the types of the scalar and vector FunctionTypes match.
-    // In the case of a mask, the vector FunctionType should have an additional
-    // i1 vector parameter.
-    if (ScalarFTy->getReturnType() != VecFTy->getReturnType()->getScalarType())
-      return false;
-    auto ScalarParams = ScalarFTy->params();
-    for (auto [OptSTy, OptVTy] : zip_longest(ScalarParams, VecParams)) {
-      Type *VTy = OptVTy.value();
-      // ensure the extra vector Type is a mask
-      if (!OptSTy && VTy->isVectorTy() &&
-          VTy->getScalarType() != Type::getInt1Ty(M->getContext()))
-        return false;
-      if (OptSTy && OptSTy.value() != VTy->getScalarType())
-        return false;
-    }
-
-    return true;
+  FunctionType *getFunctionType() {
+    return VFABI::createFunctionType(Info, ScalarFTy);
   }
 };
 } // unnamed namespace
+
+// Function Types commonly used in tests
+FunctionType *FTyMaskVLen2_i32 = FunctionType::get(
+    Type::getVoidTy(Ctx),
+    {
+        VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+        VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getFixed(2)),
+    },
+    false);
+
+FunctionType *FTyNoMaskVLen2_i32 = FunctionType::get(
+    Type::getVoidTy(Ctx),
+    {
+        VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+    },
+    false);
+
+FunctionType *FTyMaskedVLA_i32 = FunctionType::get(
+    Type::getVoidTy(Ctx),
+    {
+        VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(4)),
+        VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(4)),
+    },
+    false);
 
 // This test makes sure that the demangling method succeeds only on
 // valid values of the string.
@@ -201,7 +162,13 @@ TEST_F(VFABIParserTest, ParamListParsing) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(false, isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx)},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)5);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_Linear, 16}));
@@ -217,7 +184,7 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_01) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(true, isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
 }
@@ -227,7 +194,7 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_02) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(true, isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
 }
@@ -238,7 +205,7 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_03) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(true, isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(ScalarName, "__foo_bar_abc");
   EXPECT_EQ(VectorName, "fooBarAbcVec");
 }
@@ -260,7 +227,21 @@ TEST_F(VFABIParserTest, Parse) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)9);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -281,7 +262,7 @@ TEST_F(VFABIParserTest, ParseVectorName) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyNoMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -295,7 +276,12 @@ TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo()},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, -1}));
@@ -311,7 +297,7 @@ TEST_F(VFABIParserTest, ParseScalableSVE) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskedVLA_i32);
   EXPECT_EQ(VF, ElementCount::getScalable(4));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -325,7 +311,7 @@ TEST_F(VFABIParserTest, ParseFixedWidthSVE) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -360,7 +346,14 @@ TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx)},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)8);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, 1}));
@@ -380,7 +373,7 @@ TEST_F(VFABIParserTest, LLVM_ISA) {
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyNoMaskVLen2_i32);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(ScalarName, "foo");
@@ -423,7 +416,9 @@ TEST_F(VFABIParserTest, ParseUniform) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));
@@ -439,6 +434,15 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
   // independent on the <isa> token.
   const StringRef IRTy =
       "void(i32, i32, i32, i32, ptr, i32, i32, i32, i32, i32)";
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getFixed(2)),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)->getPointerTo(), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx), Type::getInt32Ty(Ctx),
+       Type::getInt32Ty(Ctx)},
+      false);
+
   const SmallVector<VFParameter, 8> ExpectedParams = {
       VFParameter({0, VFParamKind::Vector, 0}),
       VFParameter({1, VFParamKind::OMP_LinearPos, 2}),
@@ -457,7 +461,7 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
     EXPECT_EQ(VF, ElementCount::getFixed(2));                                  \
     EXPECT_FALSE(isMasked());                                                  \
     EXPECT_TRUE(matchParametersNum());                                         \
-    EXPECT_TRUE(checkFunctionType());                                          \
+    EXPECT_EQ(getFunctionType(), FTy);                                         \
     EXPECT_EQ(Parameters.size(), (unsigned)10);                                \
     EXPECT_EQ(Parameters, ExpectedParams);                                     \
     EXPECT_EQ(ScalarName, "foo");                                              \
@@ -533,7 +537,7 @@ TEST_F(VFABIParserTest, ParseMaskingNEON) {
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -547,7 +551,7 @@ TEST_F(VFABIParserTest, ParseMaskingSVE) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -561,7 +565,7 @@ TEST_F(VFABIParserTest, ParseMaskingSSE) {
   EXPECT_EQ(ISA, VFISAKind::SSE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -575,7 +579,7 @@ TEST_F(VFABIParserTest, ParseMaskingAVX) {
   EXPECT_EQ(ISA, VFISAKind::AVX);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -589,7 +593,7 @@ TEST_F(VFABIParserTest, ParseMaskingAVX2) {
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -603,7 +607,7 @@ TEST_F(VFABIParserTest, ParseMaskingAVX512) {
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -617,7 +621,7 @@ TEST_F(VFABIParserTest, ParseMaskingLLVM) {
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskVLen2_i32);
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -636,20 +640,27 @@ TEST_F(VFABIParserTest, LLVM_InternalISA) {
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyNoMaskVLen2_i32);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
 }
 
-TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
+TEST_F(VFABIParserTest, LLVM_Intrinsics) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)",
                            "void(float, float)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_FALSE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(4)),
+          VectorType::get(Type::getFloatTy(Ctx), ElementCount::getFixed(4)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getFixed(4));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -665,7 +676,7 @@ TEST_F(VFABIParserTest, ParseScalableRequiresDeclaration) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  EXPECT_EQ(getFunctionType(), FTyMaskedVLA_i32);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
@@ -685,7 +696,12 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVE) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(4)),
+      {VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(4)),
+       VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(4))},
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getScalable(4));
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -700,7 +716,16 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getDoubleTy(Ctx), ElementCount::getScalable(2)),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+          Type::getInt32Ty(Ctx)->getPointerTo(),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -718,7 +743,15 @@ TEST_F(VFABIParserTest, ParseWiderReturnTypeSVE) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      VectorType::get(Type::getInt64Ty(Ctx), ElementCount::getScalable(2)),
+      {
+          VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt32Ty(Ctx), ElementCount::getScalable(2)),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(2)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)3);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::Vector}));
@@ -734,7 +767,14 @@ TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_TRUE(isMasked());
   EXPECT_TRUE(matchParametersNum());
-  EXPECT_TRUE(checkFunctionType());
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Ctx),
+      {
+          VectorType::get(Type::getInt16Ty(Ctx), ElementCount::getScalable(8)),
+          VectorType::get(Type::getInt1Ty(Ctx), ElementCount::getScalable(8)),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));

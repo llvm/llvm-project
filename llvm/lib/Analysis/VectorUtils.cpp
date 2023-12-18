@@ -26,7 +26,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
-#include <optional>
 
 #define DEBUG_TYPE "vectorutils"
 
@@ -1482,27 +1481,26 @@ void VFABI::getVectorVariantNames(
 
 FunctionType *VFABI::createFunctionType(const VFInfo &Info,
                                         const FunctionType *ScalarFTy) {
-  ElementCount VF = Info.Shape.VF;
   // Create vector parameter types
   SmallVector<Type *, 8> VecTypes;
-  for (auto [STy, VFParam] : zip(ScalarFTy->params(), Info.Shape.Parameters)) {
+  ElementCount VF = Info.Shape.VF;
+  for (auto [Idx, VFParam] : enumerate(Info.Shape.Parameters)) {
+    if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
+      VectorType *MaskTy =
+          VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
+      VecTypes.push_back(MaskTy);
+      continue;
+    }
+
+    Type *OperandTy = ScalarFTy->getParamType(Idx);
     if (VFParam.ParamKind == VFParamKind::Vector)
-      VecTypes.push_back(VectorType::get(STy, VF));
-    else
-      VecTypes.push_back(STy);
+      OperandTy = VectorType::get(OperandTy, VF);
+    VecTypes.push_back(OperandTy);
   }
 
-  // Get mask's position mask and append one if not present in the Instruction.
-  if (auto OptMaskPos = Info.getParamIndexForOptionalMask()) {
-    if (!OptMaskPos)
-      return nullptr;
-    VectorType *MaskTy =
-        VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
-    VecTypes.insert(VecTypes.begin() + OptMaskPos.value(), MaskTy);
-  }
   auto *RetTy = ScalarFTy->getReturnType();
   if (!RetTy->isVoidTy())
-    RetTy = VectorType::get(ScalarFTy->getReturnType(), VF);
+    RetTy = VectorType::get(RetTy, VF);
   return FunctionType::get(RetTy, VecTypes, false);
 }
 
