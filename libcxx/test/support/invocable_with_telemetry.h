@@ -65,9 +65,9 @@ public:
   {
     // Not using copy-and-swap idiom to ensure that copies and moves remain accurate.
     assert(&other != this);
-    assert(invocations_ != nullptr);
-    assert(moves_ != nullptr);
-    assert(copies_ != nullptr);
+    assert(other.invocations_ != nullptr);
+    assert(other.moves_ != nullptr);
+    assert(other.copies_ != nullptr);
 
     f_           = other.f_;
     invocations_ = other.invocations_;
