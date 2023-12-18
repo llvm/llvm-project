@@ -272,7 +272,7 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
   // set, even if they themselves don't have src cross cu ref. We could have
   // cases where this is not the case. In which case this container needs to be
   // big enough for all.
-  getState().CloneUnitCtxMap.resize(DwarfContext->getNumCompileUnits());
+  getState().CloneUnitCtxMap.resize(CUs.size());
   getState().Type = ProcessingType::CUs;
   for (DWARFUnit *CU : CUs)
     registerUnit(*CU, false);
@@ -897,6 +897,8 @@ void DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
                 });
   }
   getState().UnitIDMap[getHash(DU)] = getState().DUList.size();
+  if (getState().DUList.size() == getState().CloneUnitCtxMap.size())
+    getState().CloneUnitCtxMap.emplace_back();
   getState().DUList.push_back(&DU);
 }
 
