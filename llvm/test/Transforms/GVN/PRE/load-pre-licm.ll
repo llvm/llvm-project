@@ -130,11 +130,13 @@ define i32 @test3(i1 %cnd, ptr %p) {
 ; CHECK:       header:
 ; CHECK-NEXT:    br i1 [[CND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[V1_PRE1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = phi i32 [ [[V1_PRE]], [[BB2]] ], [ [[V1_PRE1]], [[BB1]] ]
 ; CHECK-NEXT:    call void @hold(i32 [[V1]])
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
@@ -286,13 +288,17 @@ header:
 
 ; In block Z one load is unavailable (via entry block), whereas via other 2
 ; predecessors the loads are available.
-define i8 @test7a(i1 %c1, ptr %a, i8 %i, i8 %j) {
+define i8 @test7a(i1 %c1, ptr %p, i8 %i, i8 %j) {
 ; CHECK-LABEL: @test7a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_Z_CRIT_EDGE:%.*]]
+; CHECK:       entry.Z_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE1:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[Z:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[A:%.*]], i8 [[I:%.*]]
-; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[A]], i8 [[J:%.*]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
+; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], [[Y]]
@@ -300,17 +306,18 @@ define i8 @test7a(i1 %c1, ptr %a, i8 %i, i8 %j) {
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[Z]]
 ; CHECK:       Z:
-; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
-; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[A]], i8 [[K]]
-; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE1]], [[ENTRY_Z_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[Y]], [[B]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_Z_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
+
 entry:
   br i1 %c1, label %A, label %Z
 
 A:
-  %pi = getelementptr i8, ptr %a, i8 %i
-  %pj = getelementptr i8, ptr %a, i8 %j
+  %pi = getelementptr i8, ptr %p, i8 %i
+  %pj = getelementptr i8, ptr %p, i8 %j
   %x = load i8, ptr %pi
   %y = load i8, ptr %pj
   %c2 = icmp slt i8 %x, %y
@@ -321,7 +328,7 @@ B:
 
 Z:
   %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
-  %pk = getelementptr i8, ptr %a, i8 %k
+  %pk = getelementptr i8, ptr %p, i8 %k
   %z = load i8, ptr %pk
   ret i8 %z
 }
@@ -330,28 +337,34 @@ Z:
 
 ; In block Z two loads are unavailable (via entry and B blocks), whereas via
 ; other predecessor (A) the load is available.
-define i8 @test7b(i1 %c1, ptr %a, i8 %i, i8 %j) {
+define i8 @test7b(i1 %c1, ptr %p, i8 %i, i8 %j) {
 ; CHECK-LABEL: @test7b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_Z_CRIT_EDGE:%.*]]
+; CHECK:       entry.Z_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT1:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE2:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT1]], align 1
+; CHECK-NEXT:    br label [[Z:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[A:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i8 [[X]], 3
 ; CHECK-NEXT:    br i1 [[C2]], label [[Z]], label [[B:%.*]]
 ; CHECK:       B:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
 ; CHECK-NEXT:    br label [[Z]]
 ; CHECK:       Z:
-; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J:%.*]], [[B]] ]
-; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[A]], i8 [[K]]
-; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE2]], [[ENTRY_Z_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[Z_PRE]], [[B]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_Z_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
 entry:
   br i1 %c1, label %A, label %Z
 
 A:
-  %pi = getelementptr i8, ptr %a, i8 %i
+  %pi = getelementptr i8, ptr %p, i8 %i
   %x = load i8, ptr %pi
   %c2 = icmp slt i8 %x, 3
   br i1 %c2, label %Z, label %B
@@ -361,7 +374,7 @@ B:
 
 Z:
   %k = phi i8 [ %i, %entry ], [%i, %A], [ %j, %B ]
-  %pk = getelementptr i8, ptr %a, i8 %k
+  %pk = getelementptr i8, ptr %p, i8 %k
   %z = load i8, ptr %pk
   ret i8 %z
 }

@@ -1625,7 +1625,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // FIXME: If we could restructure the CFG, we could make a common pred with
   // all the preds that don't have an available Load and insert a new load into
   // that one block.
-  if (NumInsertPreds > 1)
+  if (CriticalEdgePredSplit.size() > 1)
       return false;
 
   // Now we know where we will insert load. We must ensure that it is safe

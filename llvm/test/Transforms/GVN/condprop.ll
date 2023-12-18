@@ -214,11 +214,11 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SW:%.*]], label [[CASE3:%.*]]
 ; CHECK:       sw:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE0]]
-; CHECK-NEXT:    i32 3, label [[CASE3]]
-; CHECK-NEXT:    i32 4, label [[DEFAULT]]
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE0]]
+; CHECK-NEXT:      i32 3, label [[CASE3]]
+; CHECK-NEXT:      i32 4, label [[DEFAULT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @bar(i32 [[X]])
@@ -570,12 +570,16 @@ define void @test14(ptr %ptr1, ptr noalias %ptr2) {
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP2]], [[PTR2:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_END]], label [[IF2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN_LOOP_END_CRIT_EDGE:%.*]], label [[IF2:%.*]]
+; CHECK:       then.loop.end_crit_edge:
+; CHECK-NEXT:    [[VAL3_PRE2:%.*]] = load i32, ptr [[PTR2]], align 4
+; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       if2:
+; CHECK-NEXT:    [[VAL3_PRE:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[PTR2]], [[THEN]] ], [ [[PTR1]], [[IF2]] ]
-; CHECK-NEXT:    [[VAL3]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[VAL3]] = phi i32 [ [[VAL3_PRE2]], [[THEN_LOOP_END_CRIT_EDGE]] ], [ [[VAL3_PRE]], [[IF2]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[PTR2]], [[THEN_LOOP_END_CRIT_EDGE]] ], [ [[PTR1]], [[IF2]] ]
 ; CHECK-NEXT:    store i32 [[VAL3]], ptr [[PHI3]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[IF1]]
 ;
