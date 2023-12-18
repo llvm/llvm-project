@@ -909,6 +909,9 @@ X86 Support
   * Support intrinsic of ``_uwrmsr``.
 - Support ISA of ``AVX10.1``.
 - ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
+- Emit Warnings for clang options to enable knl/knm. From next version
+  (LLVM 19), all-end supports on knl/knm and other Xeon Phi targets will be
+  removed.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
