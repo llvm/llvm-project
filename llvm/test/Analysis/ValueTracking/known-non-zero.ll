@@ -1218,3 +1218,19 @@ define <2 x i1> @cmp_excludes_zero_with_nonsplat_vec_fail(<2 x i8> %a, <2 x i8> 
   ret <2 x i1> %r
 }
 
+define i1 @sub_via_non_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_via_non_eq(
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[X]], 3
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[SHL]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ne = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %ne)
+  %shl = shl nuw i8 %x, 3
+  %sub = sub i8 %x, %shl
+  %cmp = icmp eq i8 %sub, 0
+  ret i1 %cmp
+}
