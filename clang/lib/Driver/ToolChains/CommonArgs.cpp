@@ -1161,30 +1161,16 @@ static void addFortranRuntimeLibsMSVC(const ArgList &Args,
   }
 }
 
-/// Add Fortran runtime libs
-void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
-                                  llvm::opt::ArgStringList &CmdArgs) {
-  // 1. Link FortranRuntime and FortranDecimal
-  // These are handled earlier on Windows by telling the frontend driver to
-  // add the correct libraries to link against as dependents in the object
-  // file.
-  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back("-lFortranRuntime");
-    CmdArgs.push_back("-lFortranDecimal");
-  }
-
-  // 2. Link FortranMain
-  // If -fno-fortran-main has been passed, skip linking Fortran_main.a
-  if (Args.hasArg(options::OPT_no_fortran_main))
-    return;
-
-  // 2.1. MSVC
+// Add FortranMain runtime lib
+static void addFortranMain(const ToolChain &TC, const ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) {
+  // 1. MSVC
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     addFortranRuntimeLibsMSVC(Args, CmdArgs);
     return;
   }
 
-  // 2.2. GNU and similar
+  // 2. GNU and similar
   // The --whole-archive option needs to be part of the link line to make
   // sure that the main() function from Fortran_main.a is pulled in by the
   // linker. However, it shouldn't be used if it's already active.
@@ -1197,6 +1183,25 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
   }
 
   CmdArgs.push_back("-lFortran_main");
+}
+
+/// Add Fortran runtime libs
+void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) {
+  // 1. Link FortranMain
+  // FortranMain depends on FortranRuntime, so needs to be listed first. If
+  // -fno-fortran-main has been passed, skip linking Fortran_main.a
+  if (!Args.hasArg(options::OPT_no_fortran_main))
+    addFortranMain(TC, Args, CmdArgs);
+
+  // 2. Link FortranRuntime and FortranDecimal
+  // These are handled earlier on Windows by telling the frontend driver to
+  // add the correct libraries to link against as dependents in the object
+  // file.
+  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back("-lFortranRuntime");
+    CmdArgs.push_back("-lFortranDecimal");
+  }
 }
 
 void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,

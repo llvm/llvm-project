@@ -117,7 +117,7 @@ size_t FileSpecList::FindCompatibleIndex(size_t start_idx,
       auto is_suffix = [](llvm::StringRef a, llvm::StringRef b,
                           bool case_sensitive) -> bool {
         if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b))
-          return a.empty() || a.endswith("/");
+          return a.empty() || a.ends_with("/");
         return false;
       };
       const bool case_sensitive =
