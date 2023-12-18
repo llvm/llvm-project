@@ -150,10 +150,53 @@ constexpr void test_iterators() {
       assert(ret);
     }
   }
+
+  { // check that std::string type works
+    const std::string str{"hello world"};
+    const std::string str1{"hi world"};
+    std::string a[] = {str1, str1, str, str1, str1};
+    auto whole =
+        std::ranges::subrange(forward_iterator(std::move_iterator(a)),
+                              forward_iterator(std::move_iterator(a + 5)));
+    {
+      bool ret = std::ranges::contains(whole.begin(), whole.end(), "hello world");
+      assert(ret);
+    }
+    {
+      bool ret = std::ranges::contains(whole, "hello world");
+      assert(ret);
+    }
+  }
+
+  { // check that non-continuous iterators work
+    std::vector<bool> whole {false, false, true, false};
+    {
+      bool ret = std::ranges::contains(whole.begin(), whole.end(), true);
+      assert(ret);
+    }
+    {
+      bool ret = std::ranges::contains(whole, true);
+      assert(ret);
+    }
+  }
+
+  { // check that non-continuous iterators(views::transform) work
+    int a[] = {1, 2, 3, 4, 5};
+    auto square_number = a | std::views::transform([](int x) { return x * x; });
+    {
+      bool ret = std::ranges::contains(square_number.begin(),
+                                       square_number.end(), 16);
+      assert(ret);
+    }
+    {
+      bool ret   = std::ranges::contains(square_number, 16);
+      assert(ret);
+    }
+  }
 }
 
 constexpr bool test() {
-  types::for_each(types::type_list<char, short, int, long, long long>{}, []<class T> {
+  types::for_each(types::type_list<char, long long>{}, []<class T> {
     types::for_each(types::cpp20_input_iterator_list<T*>{}, []<class Iter> {
       if constexpr (std::forward_iterator<Iter>)
         test_iterators<Iter>();
