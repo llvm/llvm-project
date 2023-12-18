@@ -4792,7 +4792,7 @@ define amdgpu_ps float @extract_elt0_image_sample_2d_v4f32_f32(float %s, float %
 
 define amdgpu_ps float @extract_elt0_dmask_0000_image_sample_3d_v4f32_f32(float %s, float %t, float %r, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
 ; CHECK-LABEL: @extract_elt0_dmask_0000_image_sample_3d_v4f32_f32(
-; CHECK-NEXT:    ret float undef
+; CHECK-NEXT:    ret float poison
 ;
   %data = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32 0, float %s, float %t, float %r, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0

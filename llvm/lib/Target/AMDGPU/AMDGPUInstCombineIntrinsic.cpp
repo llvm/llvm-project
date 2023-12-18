@@ -1261,7 +1261,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   unsigned NewNumElts = DemandedElts.popcount();
   if (!NewNumElts)
-    return UndefValue::get(IIVTy);
+    return PoisonValue::get(IIVTy);
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
     if (DMaskIdx >= 0)
@@ -1299,7 +1299,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   if (IsLoad) {
     if (NewNumElts == 1) {
-      return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
+      return IC.Builder.CreateInsertElement(PoisonValue::get(IIVTy), NewCall,
                                             DemandedElts.countr_zero());
     }
 
