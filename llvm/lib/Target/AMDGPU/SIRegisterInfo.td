@@ -606,15 +606,15 @@ def VGPR_HI16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let GeneratePressureSet = 0;
 }
 
-// VOP3 and VINTERP can access 256 lo and 256 hi registers.
+// VOP3 and VINTERP can access 1024 lo and 1024 hi registers.
 def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
-                            (add (interleave (sequence "VGPR%u_LO16", 0, 255),
-                                             (sequence "VGPR%u_HI16", 0, 255)))> {
+                            (add (interleave (sequence "VGPR%u_LO16", 0, 1023),
+                                             (sequence "VGPR%u_HI16", 0, 1023)))> {
   let AllocationPriority = 2;
   let Size = 16;
   let GeneratePressureSet = 0;
 
-  // This is the base class for VGPR{128..255}_{LO16,HI16}.
+  // This is the base class for VGPR{128..1023}_{LO16,HI16}.
   let BaseClassOrder = 17;
 }
 
