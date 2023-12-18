@@ -2987,7 +2987,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
   // different from libc sizeof(sigset_t). Some archs have sigset_t
   // defined as unsigned long, so let's use that.
   const auto approxKernelSigsetSize = sizeof(unsigned long);
-  [[maybe_unused]] int Result =
+  [[maybe_unused]] const int Result =
       syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, sigsetAddr,
               approxKernelSigsetSize);
   // Because our "how" is invalid, this syscall should always fail, and our
