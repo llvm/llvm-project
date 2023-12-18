@@ -1378,7 +1378,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       if (!Elt) return nullptr;
 
       Elts.push_back(Elt);
-      if (isa<UndefValue>(Elt))   // Already undef or poison.
+      if (isa<PoisonValue>(Elt)) // Already poison.
         UndefElts.setBit(i);
     }
 
