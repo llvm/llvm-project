@@ -121,6 +121,8 @@ struct {
   // As features grows new fields could be added
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
+// The formatter wants to re-order these includes, but doing so is incorrect:
+// clang-format off
 #if defined(__APPLE__)
 #include "aarch64/fmv/apple.inc"
 #elif defined(__FreeBSD__)
@@ -138,5 +140,6 @@ struct {
 #else
 #include "aarch64/fmv/unimplemented.inc"
 #endif
+// clang-format on
 
 #endif // !defined(DISABLE_AARCH64_FMV)
