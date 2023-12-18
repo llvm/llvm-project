@@ -942,7 +942,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
                      : Builder.CreateZExtOrTrunc(FAMSize, ResType);
   Value *Res = FAMSize;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+  if (isa<DeclRefExpr>(Base)) {
     // The whole struct is specificed in the __bdos.
     const RecordDecl *OuterRD =
         CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
