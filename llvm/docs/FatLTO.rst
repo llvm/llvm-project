@@ -78,19 +78,19 @@ unclear if it will be useful to support other object file formats like ``COFF``
 or ``Mach-O``.
 
 Usage
-===========
+=====
 
-Users are expected to pass ``-ffat-lto-objects`` to clang in addition to one of
-the ``-flto`` variants. Without the ``-flto`` flag, ``-ffat-lto-objects`` has
-no effect.
+Clang users can specify ``-ffat-lto-objects`` with ``-flto`` or ``-flto=thin``.
+Without the ``-flto`` option, ``-ffat-lto-objects`` has no effect.
 
 Compile an object file using FatLTO:
 
 .. code-block:: console
 
-   $ clang -flto -ffat-lto-objects example.c -o example.o
+   $ clang -flto -ffat-lto-objects example.c -c -o example.o
 
-Link using the object code from the fat object without LTO:
+Link using the object code from the fat object without LTO. This turns
+``-ffat-lto-objects`` into a no-op, when ``-fno-lto`` is specified:
 
 .. code-block:: console
 
