@@ -741,7 +741,7 @@ class DataInvocationGadget : public WarningGadget {
   static Matcher matcher() {
     return stmt(
         explicitCastExpr(has(cxxMemberCallExpr(callee(
-               cxxMethodDecl(hasName("data")))))).bind(OpTag));
+               cxxMethodDecl(hasName("data"), ofClass(hasName("std::span"))))))).bind(OpTag));
   }   
   const Stmt *getBaseStmt() const override { return Op; }
 

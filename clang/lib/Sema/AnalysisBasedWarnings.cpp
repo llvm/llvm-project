@@ -2265,17 +2265,12 @@ public:
         QualType destType = ECE->getType();
         const uint64_t dSize = Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
         if(const auto *CE =dyn_cast<CXXMemberCallExpr>(ECE->getSubExpr())) {
-
-          if(CE->getRecordDecl()->getQualifiedNameAsString().compare("std::span"))
-           return;
-         
           QualType srcType = CE->getType();
           const uint64_t sSize = Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
           if(sSize >= dSize)
             return;
         }
         MsgParam = 4;
- 
       }
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();

@@ -12,7 +12,6 @@
 #pragma clang system_header
 
 // no spanification warnings for system headers
-void foo(...);  // let arguments of `foo` to hold testing expressions
 #else
 
 namespace std {
@@ -65,18 +64,13 @@ namespace std{
 };
 }
 
-class span {
-
- int array[10];
- 
- public:
-
- int *data() {
-   return array;
- }
-};
+using namespace std;
 
 class A {
+  int a, b, c;
+};
+
+class B {
   int a, b, c;
 };
 
@@ -93,41 +87,45 @@ void cast_without_data(int *ptr) {
  float *p = (float*) ptr;
 }
 
-void warned_patterns(std::span<int> span_ptr, std::span<Base> base_span) {
-    int *p;
-    A *a = (A*)span_ptr.data(); // expected-warning{{unsafe invocation of span::data}}
-    a = (A*)span_ptr.data(); // expected-warning{{unsafe invocation of span::data}}
+void warned_patterns(std::span<int> span_ptr, std::span<Base> base_span, span<int> span_without_qual) {
+    A *a1 = (A*)span_ptr.data(); // expected-warning{{unsafe invocation of span::data}}
+    a1 = (A*)span_ptr.data(); // expected-warning{{unsafe invocation of span::data}}
+  
+    A *a2 = (A*) span_without_qual.data(); // expected-warning{{unsafe invocation of span::data}}
    
     // TODO:: Should we warn when we cast from base to derived type?
     Derived *b = dynamic_cast<Derived*> (base_span.data());// expected-warning{{unsafe invocation of span::data}}
 
    // TODO:: This pattern is safe. We can add special handling for it, if we decide this
    // is the recommended fixit for the unsafe invocations.
-   a = (A*)span_ptr.subspan(0, sizeof(A)).data(); // expected-warning{{unsafe invocation of span::data}}
+   A *a3 = (A*)span_ptr.subspan(0, sizeof(A)).data(); // expected-warning{{unsafe invocation of span::data}}
 }
 
 void not_warned_patterns(std::span<A> span_ptr, std::span<Base> base_span) {
-    int *p = (int*)span_ptr.data();
-    p = (int*)span_ptr.data();
-    A *a = (A*) span_ptr.hello();
+    int *p = (int*) span_ptr.data(); // Cast to a smaller type
+  
+    B *b = (B*) span_ptr.data(); // Cast to a type of same size.
+
+    p = (int*) span_ptr.data();
+    A *a = (A*) span_ptr.hello(); // Invoking other methods.
 }
 
 // We do not want to warn about other types
-void other_classes(std::span_duplicate<int> span_ptr, span sp) {
+void other_classes(std::span_duplicate<int> span_ptr) {
     int *p;
     A *a = (A*)span_ptr.data();
     a = (A*)span_ptr.data(); 
-
-    a = (A*)sp.data();
 }
 
 // Potential source for false negatives
 
-void false_negatives(std::span<int> span_pt) {
+A false_negatives(std::span<int> span_pt, span<A> span_A) {
   int *ptr = span_pt.data();
-  A *a = (A*)ptr; //TODO: We want to warn here eventually.
 
-  int k = *ptr; // TODO: Can cause OOB if span_pt is empty
+  A *a1 = (A*)ptr; //TODO: We want to warn here eventually.
+
+  A *a2= span_A.data();
+  return *a2; // TODO: Can cause OOB if span_pt is empty
 
 }
 #endif
