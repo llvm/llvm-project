@@ -6408,6 +6408,104 @@ define { i64, i1 } @cmpxchg_i64(ptr %ptr, i64 %desired, i64 %new) {
   ret { i64, i1 } %res
 }
 
+define { ptr, i1 } @cmpxchg_ptr(ptr %ptr, ptr %desired, ptr %new) {
+; CHECK-NOLSE-O1-LABEL: cmpxchg_ptr:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    mov x8, x0
+; CHECK-NOLSE-O1-NEXT:  LBB71_1: ; %cmpxchg.start
+; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O1-NEXT:    ldxr x0, [x8]
+; CHECK-NOLSE-O1-NEXT:    cmp x0, x1
+; CHECK-NOLSE-O1-NEXT:    b.ne LBB71_4
+; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
+; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB71_1 Depth=1
+; CHECK-NOLSE-O1-NEXT:    stxr w9, x2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB71_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
+; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    ret
+; CHECK-NOLSE-O1-NEXT:  LBB71_4: ; %cmpxchg.nostore
+; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-OUTLINE-O1-LABEL: cmpxchg_ptr:
+; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; CHECK-OUTLINE-O1-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-OUTLINE-O1-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w30, -8
+; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w29, -16
+; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w19, -24
+; CHECK-OUTLINE-O1-NEXT:    .cfi_offset w20, -32
+; CHECK-OUTLINE-O1-NEXT:    mov x3, x0
+; CHECK-OUTLINE-O1-NEXT:    mov x19, x1
+; CHECK-OUTLINE-O1-NEXT:    mov x1, x2
+; CHECK-OUTLINE-O1-NEXT:    mov x0, x19
+; CHECK-OUTLINE-O1-NEXT:    mov x2, x3
+; CHECK-OUTLINE-O1-NEXT:    bl ___aarch64_cas8_relax
+; CHECK-OUTLINE-O1-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-OUTLINE-O1-NEXT:    cmp x0, x19
+; CHECK-OUTLINE-O1-NEXT:    cset w1, eq
+; CHECK-OUTLINE-O1-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-OUTLINE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: cmpxchg_ptr:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    mov x9, x0
+; CHECK-NOLSE-O0-NEXT:  LBB71_1: ; =>This Inner Loop Header: Depth=1
+; CHECK-NOLSE-O0-NEXT:    ldaxr x0, [x9]
+; CHECK-NOLSE-O0-NEXT:    cmp x0, x1
+; CHECK-NOLSE-O0-NEXT:    b.ne LBB71_3
+; CHECK-NOLSE-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB71_1 Depth=1
+; CHECK-NOLSE-O0-NEXT:    stlxr w8, x2, [x9]
+; CHECK-NOLSE-O0-NEXT:    cbnz w8, LBB71_1
+; CHECK-NOLSE-O0-NEXT:  LBB71_3:
+; CHECK-NOLSE-O0-NEXT:    subs x8, x0, x1
+; CHECK-NOLSE-O0-NEXT:    cset w1, eq
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-OUTLINE-O0-LABEL: cmpxchg_ptr:
+; CHECK-OUTLINE-O0:       ; %bb.0:
+; CHECK-OUTLINE-O0-NEXT:    sub sp, sp, #32
+; CHECK-OUTLINE-O0-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-OUTLINE-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w30, -8
+; CHECK-OUTLINE-O0-NEXT:    .cfi_offset w29, -16
+; CHECK-OUTLINE-O0-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; CHECK-OUTLINE-O0-NEXT:    mov x0, x1
+; CHECK-OUTLINE-O0-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-OUTLINE-O0-NEXT:    mov x1, x2
+; CHECK-OUTLINE-O0-NEXT:    ldr x2, [sp] ; 8-byte Folded Reload
+; CHECK-OUTLINE-O0-NEXT:    bl ___aarch64_cas8_relax
+; CHECK-OUTLINE-O0-NEXT:    ldr x1, [sp, #8] ; 8-byte Folded Reload
+; CHECK-OUTLINE-O0-NEXT:    subs x8, x0, x1
+; CHECK-OUTLINE-O0-NEXT:    cset w1, eq
+; CHECK-OUTLINE-O0-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-OUTLINE-O0-NEXT:    add sp, sp, #32
+; CHECK-OUTLINE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: cmpxchg_ptr:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    mov x8, x1
+; CHECK-LSE-O1-NEXT:    cas x8, x2, [x0]
+; CHECK-LSE-O1-NEXT:    cmp x8, x1
+; CHECK-LSE-O1-NEXT:    cset w1, eq
+; CHECK-LSE-O1-NEXT:    mov x0, x8
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: cmpxchg_ptr:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    mov x8, x0
+; CHECK-LSE-O0-NEXT:    mov x0, x1
+; CHECK-LSE-O0-NEXT:    cas x0, x2, [x8]
+; CHECK-LSE-O0-NEXT:    subs x8, x0, x1
+; CHECK-LSE-O0-NEXT:    cset w1, eq
+; CHECK-LSE-O0-NEXT:    ret
+  %res = cmpxchg ptr %ptr, ptr %desired, ptr %new monotonic monotonic
+  ret { ptr, i1 } %res
+}
+
 define internal double @bitcast_to_double(ptr %ptr) {
 ; CHECK-NOLSE-LABEL: bitcast_to_double:
 ; CHECK-NOLSE:       ; %bb.0:

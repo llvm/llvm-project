@@ -773,7 +773,7 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
   auto Ordering = MMO.getMergedOrdering();
   LLT MemType = MMO.getMemoryType();
   uint64_t MemSize = MemType.getSizeInBytes();
-  if (!MemType.isScalar())
+  if (MemType.isVector())
     return RTLIB::UNKNOWN_LIBCALL;
 
 #define LCALLS(A, B)                                                           \
@@ -819,10 +819,6 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
 
-  // Add all the args, except for the last which is an imm denoting 'tail'.
-  // const CallLowering::ArgInfo &Result,
-  // Operand 0 & 1 are return: 0 is old val, 1 is success, 2-4 are reg operands:
-  // 2 is ptr, 3 is expected, 4 is new
   Type *RetTy;
   SmallVector<Register> RetRegs;
   SmallVector<CallLowering::ArgInfo, 3> Args;
