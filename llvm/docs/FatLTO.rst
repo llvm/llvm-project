@@ -89,43 +89,31 @@ Compile and link. Use the object code from the fat object without LTO.
 
 .. code-block:: console
 
-   $ clang -fno-lto -ffat-lto-objects -fuse-ld=lld foo.c
+   $ clang -fno-lto -ffat-lto-objects -fuse-ld=lld example.c
 
 Compile and link. Select full LTO at link time.
 
 .. code-block:: console
 
-   $ clang -flto -ffat-lto-objects -fuse-ld=lld foo.c
+   $ clang -flto -ffat-lto-objects -fuse-ld=lld example.c
 
 Compile and link. Select ThinLTO at link time.
 
 .. code-block:: console
 
-   $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld foo.c
-
-Compile and link. Use ThinLTO with the UnifiedLTO pipeline.
-
-.. code-block:: console
-
-   $ clang -flto=thin -ffat-lto-objects -funified-lto -fuse-ld=lld foo.c
-
-Compile and link. Use full LTO  with the UnifiedLTO pipeline.
-
-.. code-block:: console
-
-   $ clang -flto -ffat-lto-objects -funified-lto -fuse-ld=lld foo.c
+   $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld example.c
 
 Link separately, using ThinLTO.
 
 .. code-block:: console
 
-   $ clang -c -flto=thin -ffat-lto-objects foo.c
+   $ clang -c -flto=thin -ffat-lto-objects example.c
    $ clang -flto=thin -fuse-ld=lld foo.o -ffat-lto-objects  # pass --lto=thin --fat-lto-objects to ld.lld
 
 Link separately, using full LTO.
 
 .. code-block:: console
 
-   $ clang -c -flto -ffat-lto-objects foo.c
+   $ clang -c -flto -ffat-lto-objects example.c
    $ clang -flto -fuse-ld=lld foo.o  # pass --lto=full --fat-lto-objects to ld.lld
 
