@@ -3174,6 +3174,25 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   }
 }
 
+static bool hasSMEZAState(const FunctionDecl *FD) {
+  if (FD->hasAttr<ArmNewZAAttr>())
+    return true;
+  if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask)
+      return true;
+  return false;
+}
+
+static bool hasSMEZAState(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  default:
+    return false;
+#define GET_SME_BUILTIN_HAS_ZA_STATE
+#include "clang/Basic/arm_sme_builtins_za_state.inc"
+#undef GET_SME_BUILTIN_HAS_ZA_STATE
+  }
+}
+
 bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
@@ -3186,6 +3205,11 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     if (BuiltinType)
       checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
+
+    if (hasSMEZAState(BuiltinID) && !hasSMEZAState(FD))
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_attribute_arm_za_builtin_no_za_state)
+          << TheCall->getSourceRange();
   }
 
   // Range check SME intrinsics that take immediate values.
