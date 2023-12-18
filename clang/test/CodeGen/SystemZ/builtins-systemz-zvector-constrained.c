@@ -82,7 +82,7 @@ void test_core(void) {
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
   // CHECK-ASM: vrepg
   vd = vec_splat(vd, 1);
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> undef, <2 x i32> <i32 1, i32 1>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> <i32 1, i32 1>
   // CHECK-ASM: vrepg
 
   vd = vec_splats(d);

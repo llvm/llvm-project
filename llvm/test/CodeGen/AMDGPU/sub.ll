@@ -95,9 +95,7 @@ define amdgpu_kernel void @s_sub_imm_i32(ptr addrspace(1) %out, i32 %a) {
 ;
 ; GFX12-LABEL: s_sub_imm_i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x2c
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12-NEXT:    s_sub_co_i32 s2, 0x4d2, s2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
