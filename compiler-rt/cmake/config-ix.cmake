@@ -461,11 +461,6 @@ if(APPLE)
     set(ORC_SUPPORTED_OS osx)
   endif()
 
-  # Note: In order to target x86_64h on OS X the minimum deployment target must
-  # be 10.8 or higher.
-  set(SANITIZER_MIN_OSX_VERSION "" CACHE STRING
-    "Minimum OS X version to target (e.g. 10.10) for sanitizers.")
-
   set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.10)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
   if(NOT SANITIZER_MIN_OSX_VERSION)
