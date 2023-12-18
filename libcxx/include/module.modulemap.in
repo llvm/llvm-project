@@ -713,6 +713,7 @@ module std_private_algorithm_move_backward                               [system
 module std_private_algorithm_next_permutation                            [system] { header "__algorithm/next_permutation.h" }
 module std_private_algorithm_none_of                                     [system] { header "__algorithm/none_of.h" }
 module std_private_algorithm_nth_element                                 [system] { header "__algorithm/nth_element.h" }
+module std_private_algorithm_out_value_result                            [system] { header "__algorithm/out_value_result.h" }
 module std_private_algorithm_partial_sort                                [system] { header "__algorithm/partial_sort.h" }
 module std_private_algorithm_partial_sort_copy                           [system] { header "__algorithm/partial_sort_copy.h" }
 module std_private_algorithm_partition                                   [system] { header "__algorithm/partition.h" }
@@ -1580,7 +1581,10 @@ module std_private_numeric_pstl_transform_reduce    [system] {
   export *
 }
 module std_private_numeric_reduce                   [system] { header "__numeric/reduce.h" }
-module std_private_numeric_ranges_iota              [system] { header "__numeric/ranges_iota.h" }
+module std_private_numeric_ranges_iota              [system] { 
+  header "__numeric/ranges_iota.h"
+  export std_private_algorithm_out_value_result
+}
 module std_private_numeric_transform_exclusive_scan [system] { header "__numeric/transform_exclusive_scan.h" }
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
