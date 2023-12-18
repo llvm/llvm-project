@@ -154,7 +154,10 @@ public:
   void emitGNUAttribute(unsigned Tag, unsigned Value) override;
 
   StringRef getMnemonic(MCInst &MI) override {
-    return InstPrinter->getMnemonic(&MI).first;
+    std::pair<const char *, uint64_t> M = InstPrinter->getMnemonic(&MI);
+    assert((M.second != 0 || M.first == nullptr) &&
+           "Invalid char pointer for instruction with no mnemonic");
+    return M.first;
   }
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
