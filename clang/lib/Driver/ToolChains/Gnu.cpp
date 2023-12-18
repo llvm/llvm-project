@@ -1754,7 +1754,7 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
 
   // Collect all flags except march=*
   for (StringRef Flag : Flags) {
-    if (Flag.startswith("!march=") || Flag.startswith("-march="))
+    if (Flag.starts_with("!march=") || Flag.starts_with("-march="))
       continue;
 
     NewFlags.push_back(Flag.str());
