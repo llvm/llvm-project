@@ -28,19 +28,15 @@
 # CHECK-NEXT:             000000000000001a:  R_X86_64_REX_GOTPCRELX       var-0x4
 # CHECK-NOT:   {{.}}
 
-## FIXME: --disassemble-symbols: remove inline relocs from skipped functions
 # CHECK2:      000000000000000a <x2>:
 # CHECK2-NEXT:   a: 90                            nop
-# CHECK2-NEXT:           0000000000000001:  R_X86_64_PC32        foo-0x4
-# CHECK2-NEXT:           0000000000000002:  R_X86_64_NONE        bar+0x8
-# CHECK2-NEXT:           0000000000000006:  R_X86_64_PLT32       foo+0x1
 # CHECK2-NEXT:   b: 48 8b 05 00 00 00 00          movq    (%rip), %rax            # 0x12 <x3>
 # CHECK2-NEXT:           000000000000000e:  R_X86_64_REX_GOTPCRELX       var-0x4
 # CHECK2-EMPTY:
 # CHECK2-NEXT: 0000000000000017 <x4>:
 # CHECK2-NEXT:  17: 48 8b 05 00 00 00 00          movq    (%rip), %rax            # 0x1e <x4+0x7>
-# CHECK2-NEXT:            0000000000000013:  R_X86_64_PLT32       foo-0x4
 # CHECK2-NEXT:            000000000000001a:  R_X86_64_REX_GOTPCRELX       var-0x4
+# CHECK2-NOT:  {{.}}
 
 .globl x1, x2, x3, x4
 x1:
