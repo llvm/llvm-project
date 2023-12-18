@@ -2973,14 +2973,23 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
   // which is Copyright Abseil Authors (2017), and provided under
   // the Apache License 2.0.
 
-  // We have to check that addr is nullptr (0) because sigprocmask allows that
-  // as an argument without failure.
-  if (addr == 0)
-    return false;
   // Align to 8-bytes.
   const auto alignedAddr = addr & ~pint_t{7};
   const auto sigsetAddr = reinterpret_cast<sigset_t *>(alignedAddr);
-  [[maybe_unused]] int Result = sigprocmask(/*how=*/-1, sigsetAddr, nullptr);
+  // We have to check that addr is nullptr because sigprocmask allows that
+  // as an argument without failure.
+  if (!sigsetAddr)
+    return false;
+
+  // We MUST use the raw sigprocmask syscall here, as wrappers may try to
+  // access sigsetAddr which may cause a SIGSEGV. The raw syscall however is
+  // safe. Additionally, we need to pass the kernel_sigset_size, which is
+  // different from libc sizeof(sigset_t). Some archs have sigset_t
+  // defined as unsigned long, so let's use that.
+  const auto approxKernelSigsetSize = sizeof(unsigned long);
+  [[maybe_unused]] int Result =
+      syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, sigsetAddr,
+              approxKernelSigsetSize);
   // Because our "how" is invalid, this syscall should always fail, and our
   // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
   // by the POSIX standard, so this is (for now) Linux specific.
