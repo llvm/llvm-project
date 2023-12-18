@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_CONFIG_LINUX_APP_H
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
-
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
@@ -34,7 +34,7 @@ struct TLSImage {
   // value is a power of 2.
   uintptr_t align = 0;
 
-  constexpr TLSImage() = default;
+  LIBC_INLINE constexpr TLSImage() = default;
 };
 
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                     \
@@ -94,7 +94,7 @@ struct AppProperties {
   // Auxiliary vector data.
   AuxEntry *auxv_ptr = nullptr;
 
-  constexpr AppProperties() = default;
+  LIBC_INLINE constexpr AppProperties() = default;
 };
 
 extern AppProperties app;
@@ -113,7 +113,7 @@ struct TLSDescriptor {
   // same as |addr| or something else.
   uintptr_t tp = 0;
 
-  constexpr TLSDescriptor() = default;
+  LIBC_INLINE constexpr TLSDescriptor() = default;
 };
 
 // Create and initialize the TLS area for the current thread. Should not
