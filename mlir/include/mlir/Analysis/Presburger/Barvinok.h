@@ -78,6 +78,12 @@ public:
   // from the dimensionality of the affine functions.
   unsigned getNumParams() { return numParam; }
 
+  SmallVector<int, 8> getSigns() { return signs; }
+
+  std::vector<ParamPoint> getNumerators() { return numerators; }
+
+  std::vector<std::vector<Point>> getDenominators() { return denominators; }
+
   GeneratingFunction operator+(const GeneratingFunction &gf) {
     assert(numParam == gf.getNumParams() &&
            "two generating functions with different numbers of parameters "
@@ -112,12 +118,11 @@ public:
     return os;
   }
 
+private:
+  unsigned numParam;
   SmallVector<int, 8> signs;
   std::vector<ParamPoint> numerators;
   std::vector<std::vector<Point>> denominators;
-
-private:
-  unsigned numParam;
 };
 
 // A class to describe the quasi-polynomials obtained by
@@ -219,11 +224,10 @@ public:
     return QuasiPolynomial(newCoeffs, newAffine);
   }
 
-  SmallVector<Fraction> coefficients;
-  std::vector<std::vector<SmallVector<Fraction>>> affine;
-
 private:
   unsigned numParam;
+  SmallVector<Fraction> coefficients;
+  std::vector<std::vector<SmallVector<Fraction>>> affine;
 };
 
 } // namespace presburger
