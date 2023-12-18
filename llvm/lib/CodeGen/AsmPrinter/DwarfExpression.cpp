@@ -754,7 +754,7 @@ void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
 }
 
 static bool isUnsigned(const ConstantInt *CI) {
-  return (CI->getType()->getSignBit() & CI->getSExtValue()) == 0;
+  return (CI->getIntegerType()->getSignBit() & CI->getSExtValue()) == 0;
 }
 
 size_t DwarfExprAST::Node::getChildrenCount() const {

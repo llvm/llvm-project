@@ -46,38 +46,13 @@ protected:
                         bool SRV = false, bool HasCounter = false,
                         uint32_t SampleCount = 0);
 
-  // The value ordering of this enumeration is part of the DXIL ABI. Elements
-  // can only be added to the end, and not removed.
-  enum class ComponentType : uint32_t {
-    Invalid = 0,
-    I1,
-    I16,
-    U16,
-    I32,
-    U32,
-    I64,
-    U64,
-    F16,
-    F32,
-    F64,
-    SNormF16,
-    UNormF16,
-    SNormF32,
-    UNormF32,
-    SNormF64,
-    UNormF64,
-    PackedS8x32,
-    PackedU8x32,
-    LastEntry
-  };
-
-  static StringRef getComponentTypeName(ComponentType CompType);
-  static void printComponentType(Kinds Kind, ComponentType CompType,
-                                 unsigned Alignment, raw_ostream &OS);
+  static StringRef getElementTypeName(hlsl::ElementType CompType);
+  static void printElementType(Kinds Kind, hlsl::ElementType CompType,
+                               unsigned Alignment, raw_ostream &OS);
 
 public:
   struct ExtendedProperties {
-    std::optional<ComponentType> ElementType;
+    std::optional<hlsl::ElementType> ElementType;
 
     // The value ordering of this enumeration is part of the DXIL ABI. Elements
     // can only be added to the end, and not removed.
@@ -102,7 +77,9 @@ class UAVResource : public ResourceBase {
   void parseSourceType(StringRef S);
 
 public:
-  UAVResource(uint32_t I, hlsl::FrontendResource R);
+  UAVResource(uint32_t I, hlsl::FrontendResource R)
+      : ResourceBase(I, R), Shape(R.getResourceKind()), GloballyCoherent(false),
+        HasCounter(false), IsROV(R.getIsROV()), ExtProps{R.getElementType()} {}
 
   MDNode *write() const;
   void print(raw_ostream &O) const;

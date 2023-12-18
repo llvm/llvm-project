@@ -79,15 +79,15 @@ struct RecordReplayTy {
 
 private:
   // Memory pointers for recording, replaying memory.
-  void *MemoryStart;
-  void *MemoryPtr;
-  size_t MemorySize;
-  size_t TotalSize;
-  GenericDeviceTy *Device;
+  void *MemoryStart = nullptr;
+  void *MemoryPtr = nullptr;
+  size_t MemorySize = 0;
+  size_t TotalSize = 0;
+  GenericDeviceTy *Device = nullptr;
   std::mutex AllocationLock;
 
-  RRStatusTy Status;
-  bool ReplaySaveOutput;
+  RRStatusTy Status = RRDeactivated;
+  bool ReplaySaveOutput = false;
   bool UsedVAMap = false;
   uintptr_t MemoryOffset = 0;
 
@@ -219,9 +219,6 @@ public:
   }
   void setStatus(RRStatusTy Status) { this->Status = Status; }
   bool isSaveOutputEnabled() const { return ReplaySaveOutput; }
-
-  RecordReplayTy()
-      : Status(RRStatusTy::RRDeactivated), ReplaySaveOutput(false) {}
 
   void saveImage(const char *Name, const DeviceImageTy &Image) {
     SmallString<128> ImageName = {Name, ".image"};
@@ -382,8 +379,9 @@ public:
       Device->free(MemoryStart);
     }
   }
+};
 
-} RecordReplay;
+static RecordReplayTy RecordReplay;
 
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
@@ -469,6 +467,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
        Name, ErrStr.data());
     assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
            "Default initialization failed.");
+    IsBareKernel = true;
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -651,6 +650,9 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
   assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
 
+  if (IsBareKernel && ThreadLimitClause[0] > 0)
+    return ThreadLimitClause[0];
+
   if (ThreadLimitClause[0] > 0 && isGenericMode()) {
     if (ThreadLimitClause[0] == (uint32_t)-1)
       ThreadLimitClause[0] = PreferredNumThreads;
@@ -670,6 +672,9 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        bool IsNumThreadsFromUser) const {
   assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
+
+  if (IsBareKernel && NumTeamsClause[0] > 0)
+    return NumTeamsClause[0];
 
   if (NumTeamsClause[0] > 0) {
     // TODO: We need to honor any value and consequently allow more than the
