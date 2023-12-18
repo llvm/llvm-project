@@ -58,6 +58,7 @@ typedef uintptr_t EnvironType;
 // (see: https://man7.org/linux/man-pages/man5/proc.5.html)
 using AuxEntryType = unsigned long;
 // Using the naming convention from `proc(5)`.
+// TODO: Would be nice to use the aux entry structure from elf.h when available.
 struct AuxEntry {
   AuxEntryType id;
   AuxEntryType value;
