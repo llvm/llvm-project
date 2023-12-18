@@ -7,4 +7,3 @@
 # CHECK: sha1msg1	xmm12, xmmword ptr [r28 + 4*r29 + 291]
 # CHECK: encoding: [0x62,0x1c,0x78,0x08,0xd9,0xa4,0xac,0x23,0x01,0x00,0x00]
          sha1msg1	xmm12, xmmword ptr [r28 + 4*r29 + 291]
-         

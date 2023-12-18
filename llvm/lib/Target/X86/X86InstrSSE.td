@@ -6765,7 +6765,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
                                SchedWriteVecIMul.XMM>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode]in {
+let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in {
   def SHA1RNDS4rri_EVEX: Ii8<0xD4, MRMSrcReg, (outs VR128:$dst),
                              (ins VR128:$src1, VR128:$src2, u8imm:$src3),
                              "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
@@ -6813,8 +6813,6 @@ def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
 def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
                 (SHA256RNDS2rm VR128:$dst, i128mem:$src2), 0>;
 
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rr_EVEX VR128:$dst, VR128:$src2), 0>;
 def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
                 (SHA256RNDS2rm_EVEX VR128:$dst, i128mem:$src2), 0>;
 
