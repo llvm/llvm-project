@@ -115,7 +115,7 @@ Constant *ShadowStackGCLowering::GetFrameMap(Function &F) {
     Constant *C = cast<Constant>(Roots[I].first->getArgOperand(1));
     if (!C->isNullValue())
       NumMeta = I + 1;
-    Metadata.push_back(ConstantExpr::getBitCast(C, VoidPtr));
+    Metadata.push_back(C);
   }
   Metadata.resize(NumMeta);
 
