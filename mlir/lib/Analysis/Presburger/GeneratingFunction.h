@@ -77,11 +77,12 @@ public:
     sumSigns.append(gf.signs);
 
     std::vector<ParamPoint> sumNumerators(numerators);
-    sumNumerators.insert(sumNumerators.end(), gf.numerators.begin(), gf.numerators.end());
+    sumNumerators.insert(sumNumerators.end(), gf.numerators.begin(),
+                         gf.numerators.end());
 
     std::vector<std::vector<Point>> sumDenominators(denominators);
     sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
-                        gf.denominators.end());
+                           gf.denominators.end());
     return GeneratingFunction(sumSigns, sumNumerators, sumDenominators);
   }
 
