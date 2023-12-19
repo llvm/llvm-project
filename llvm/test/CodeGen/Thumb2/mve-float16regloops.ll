@@ -831,7 +831,6 @@ define void @arm_fir_f32_1_4_mve(ptr nocapture readonly %S, ptr nocapture readon
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:  .LBB15_10: @ %while.end55
 ; CHECK-NEXT:    ands r1, r9, #3
-; CHECK-NEXT:    @ implicit-def: $lr
 ; CHECK-NEXT:    beq .LBB15_12
 ; CHECK-NEXT:  @ %bb.11: @ %if.then59
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
