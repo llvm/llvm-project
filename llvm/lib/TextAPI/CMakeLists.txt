@@ -21,3 +21,5 @@ add_llvm_component_library(LLVMTextAPI
   BinaryFormat
   TargetParser
 )
+
+add_subdirectory(BinaryReader)
