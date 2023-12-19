@@ -15,19 +15,21 @@
 #ifndef __INTRIN0_H
 #define __INTRIN0_H
 
+#ifdef __x86_64__
+#include <adcintrin.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 unsigned char _BitScanForward(unsigned long *_Index, unsigned long _Mask);
 unsigned char _BitScanReverse(unsigned long *_Index, unsigned long _Mask);
-unsigned char _bittest(long const *, long);
 void _ReadWriteBarrier(void);
 
 #if defined(__aarch64__)
 unsigned int _CountLeadingZeros(unsigned long);
 unsigned int _CountLeadingZeros64(unsigned _int64);
-
 unsigned char _InterlockedCompareExchange128_acq(__int64 volatile *_Destination,
                                                  __int64 _ExchangeHigh,
                                                  __int64 _ExchangeLow,
@@ -99,6 +101,7 @@ __int64 _InterlockedExchangeAdd64_acq(__int64 volatile *_Addend,
 __int64 _InterlockedExchangeAdd64_nf(__int64 volatile *_Addend, __int64 _Value);
 __int64 _InterlockedExchangeAdd64_rel(__int64 volatile *_Addend,
                                       __int64 _Value);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked Increment
 \*----------------------------------------------------------------------------*/
@@ -111,6 +114,7 @@ long _InterlockedIncrement_rel(long volatile *_Value);
 __int64 _InterlockedIncrement64_acq(__int64 volatile *_Value);
 __int64 _InterlockedIncrement64_nf(__int64 volatile *_Value);
 __int64 _InterlockedIncrement64_rel(__int64 volatile *_Value);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked Decrement
 \*----------------------------------------------------------------------------*/
@@ -123,6 +127,7 @@ long _InterlockedDecrement_rel(long volatile *_Value);
 __int64 _InterlockedDecrement64_acq(__int64 volatile *_Value);
 __int64 _InterlockedDecrement64_nf(__int64 volatile *_Value);
 __int64 _InterlockedDecrement64_rel(__int64 volatile *_Value);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked And
 \*----------------------------------------------------------------------------*/
@@ -138,6 +143,7 @@ long _InterlockedAnd_rel(long volatile *_Value, long _Mask);
 __int64 _InterlockedAnd64_acq(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedAnd64_nf(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedAnd64_rel(__int64 volatile *_Value, __int64 _Mask);
+
 /*----------------------------------------------------------------------------*\
 |* Bit Counting and Testing
 \*----------------------------------------------------------------------------*/
@@ -153,6 +159,7 @@ unsigned char _interlockedbittestandreset_nf(long volatile *_BitBase,
                                              long _BitPos);
 unsigned char _interlockedbittestandreset_rel(long volatile *_BitBase,
                                               long _BitPos);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked Or
 \*----------------------------------------------------------------------------*/
@@ -168,6 +175,7 @@ long _InterlockedOr_rel(long volatile *_Value, long _Mask);
 __int64 _InterlockedOr64_acq(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedOr64_nf(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedOr64_rel(__int64 volatile *_Value, __int64 _Mask);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked Xor
 \*----------------------------------------------------------------------------*/
@@ -183,6 +191,7 @@ long _InterlockedXor_rel(long volatile *_Value, long _Mask);
 __int64 _InterlockedXor64_acq(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedXor64_nf(__int64 volatile *_Value, __int64 _Mask);
 __int64 _InterlockedXor64_rel(__int64 volatile *_Value, __int64 _Mask);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked Exchange
 \*----------------------------------------------------------------------------*/
@@ -198,6 +207,7 @@ long _InterlockedExchange_rel(long volatile *_Target, long _Value);
 __int64 _InterlockedExchange64_acq(__int64 volatile *_Target, __int64 _Value);
 __int64 _InterlockedExchange64_nf(__int64 volatile *_Target, __int64 _Value);
 __int64 _InterlockedExchange64_rel(__int64 volatile *_Target, __int64 _Value);
+
 /*----------------------------------------------------------------------------*\
 |* Interlocked Compare Exchange
 \*----------------------------------------------------------------------------*/

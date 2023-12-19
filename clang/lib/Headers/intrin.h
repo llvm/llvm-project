@@ -133,6 +133,7 @@ void __writefsqword(unsigned long, unsigned __int64);
 void __writefsword(unsigned long, unsigned short);
 void __writemsr(unsigned long, unsigned __int64);
 void *_AddressOfReturnAddress(void);
+unsigned char _bittest(long const *, long);
 unsigned char _bittestandcomplement(long *, long);
 unsigned char _bittestandreset(long *, long);
 unsigned char _bittestandset(long *, long);

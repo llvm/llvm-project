@@ -528,8 +528,7 @@ _storebe_i64(void * __P, long long __D) {
 #include <cetintrin.h>
 #endif
 
-/* Some intrinsics inside adxintrin.h are available only on processors with ADX,
- * whereas others are also available at all times. */
+#include <adcintrin.h>
 #include <adxintrin.h>
 
 #if !defined(__SCE__) || __has_feature(modules) || defined(__RDSEED__)
