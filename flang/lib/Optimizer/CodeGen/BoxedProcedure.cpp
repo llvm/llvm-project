@@ -240,7 +240,8 @@ public:
         } else if (auto embox = mlir::dyn_cast<EmboxProcOp>(op)) {
           // Rewrite all `fir.emboxproc` ops to either `fir.convert` or a thunk
           // as required.
-          mlir::Type toTy = embox.getType().cast<BoxProcType>().getEleTy();
+          mlir::Type toTy = typeConverter.convertType(
+              embox.getType().cast<BoxProcType>().getEleTy());
           rewriter.setInsertionPoint(embox);
           if (embox.getHost()) {
             // Create the thunk.
