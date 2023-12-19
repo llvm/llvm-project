@@ -28,7 +28,6 @@
 #include <fstream>
 #include <stdlib.h>
 #include <string>
-#include <tuple>
 
 using namespace llvm;
 using llvm::unittest::TempDir;
@@ -523,6 +522,59 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
   OS.flush();
   EXPECT_FALSE(Errs.empty());
+}
+
+TEST(CommandLineTest, TopLevelOptInSubcommand) {
+  enum LiteralOptionEnum {
+    foo,
+    bar,
+    baz,
+  };
+
+  cl::ResetCommandLineParser();
+
+  // This is a top-level option and not associated with a subcommand.
+  // A command line using subcommand should parse both subcommand options and
+  // top-level options.  A valid use case is that users of llvm command line
+  // tools should be able to specify top-level options defined in any library.
+  StackOption<std::string> TopLevelOpt("str", cl::init("txt"),
+                                       cl::desc("A top-level option."));
+
+  StackSubCommand SC("sc", "Subcommand");
+  StackOption<std::string> PositionalOpt(
+      cl::Positional, cl::desc("positional argument test coverage"),
+      cl::sub(SC));
+  StackOption<LiteralOptionEnum> LiteralOpt(
+      cl::desc("literal argument test coverage"), cl::sub(SC), cl::init(bar),
+      cl::values(clEnumVal(foo, "foo"), clEnumVal(bar, "bar"),
+                 clEnumVal(baz, "baz")));
+  StackOption<bool> EnableOpt("enable", cl::sub(SC), cl::init(false));
+  StackOption<int> ThresholdOpt("threshold", cl::sub(SC), cl::init(1));
+
+  const char *PositionalOptVal = "input-file";
+  const char *args[] = {"prog",    "sc",        PositionalOptVal,
+                        "-enable", "--str=csv", "--threshold=2"};
+
+  // cl::ParseCommandLineOptions returns true on success. Otherwise, it will
+  // print the error message to stderr and exit in this setting (`Errs` ostream
+  // is not set).
+  ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]), args,
+                                          StringRef()));
+  EXPECT_STREQ(PositionalOpt.getValue().c_str(), PositionalOptVal);
+  EXPECT_TRUE(EnableOpt);
+  // Tests that the value of `str` option is `csv` as specified.
+  EXPECT_STREQ(TopLevelOpt.getValue().c_str(), "csv");
+  EXPECT_EQ(ThresholdOpt, 2);
+
+  for (auto &[LiteralOptVal, WantLiteralOpt] :
+       {std::pair{"--bar", bar}, {"--foo", foo}, {"--baz", baz}}) {
+    const char *args[] = {"prog", "sc", LiteralOptVal};
+    ASSERT_TRUE(cl::ParseCommandLineOptions(sizeof(args) / sizeof(args[0]),
+                                            args, StringRef()));
+
+    // Tests that literal options are parsed correctly.
+    EXPECT_EQ(LiteralOpt, WantLiteralOpt);
+  }
 }
 
 TEST(CommandLineTest, AddToAllSubCommands) {
@@ -1294,29 +1346,32 @@ struct AutoDeleteFile {
   }
 };
 
+static std::string interceptStdout(std::function<void()> F) {
+  outs().flush(); // flush any output from previous tests
+  AutoDeleteFile File;
+  {
+    OutputRedirector Stdout(fileno(stdout));
+    if (!Stdout.Valid)
+      return "";
+    File.FilePath = Stdout.FilePath;
+    F();
+    outs().flush();
+  }
+  auto Buffer = MemoryBuffer::getFile(File.FilePath);
+  if (!Buffer)
+    return "";
+  return Buffer->get()->getBuffer().str();
+}
+
 template <void (*Func)(const cl::Option &)>
 class PrintOptionTestBase : public ::testing::Test {
 public:
   // Return std::string because the output of a failing EXPECT check is
   // unreadable for StringRef. It also avoids any lifetime issues.
   template <typename... Ts> std::string runTest(Ts... OptionAttributes) {
-    outs().flush();  // flush any output from previous tests
-    AutoDeleteFile File;
-    {
-      OutputRedirector Stdout(fileno(stdout));
-      if (!Stdout.Valid)
-        return "";
-      File.FilePath = Stdout.FilePath;
-
-      StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
-                                          OptionAttributes...);
-      Func(TestOption);
-      outs().flush();
-    }
-    auto Buffer = MemoryBuffer::getFile(File.FilePath);
-    if (!Buffer)
-      return "";
-    return Buffer->get()->getBuffer().str();
+    StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
+                                        OptionAttributes...);
+    return interceptStdout([&]() { Func(TestOption); });
   }
 
   enum class OptionValue { Val };
@@ -2151,6 +2206,72 @@ TEST(CommandLineTest, DefaultValue) {
   EXPECT_EQ("str-init-value", StrInitOption);
   EXPECT_TRUE(StrInitOption.Default.hasValue());
   EXPECT_EQ(1, StrInitOption.getNumOccurrences());
+}
+
+TEST(CommandLineTest, HelpWithoutSubcommands) {
+  // Check that the help message does not contain the "[subcommand]" placeholder
+  // and the "SUBCOMMANDS" section if there are no subcommands.
+  cl::ResetCommandLineParser();
+  StackOption<bool> Opt("opt", cl::init(false));
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout([]() { cl::PrintHelpMessage(); });
+  EXPECT_NE(std::string::npos, Output.find("USAGE: prog [options]")) << Output;
+  EXPECT_EQ(std::string::npos, Output.find("SUBCOMMANDS:")) << Output;
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, HelpWithSubcommands) {
+  // Check that the help message contains the "[subcommand]" placeholder in the
+  // "USAGE" line and describes subcommands.
+  cl::ResetCommandLineParser();
+  StackSubCommand SC1("sc1", "First Subcommand");
+  StackSubCommand SC2("sc2", "Second Subcommand");
+  StackOption<bool> SC1Opt("sc1", cl::sub(SC1), cl::init(false));
+  StackOption<bool> SC2Opt("sc2", cl::sub(SC2), cl::init(false));
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout([]() { cl::PrintHelpMessage(); });
+  EXPECT_NE(std::string::npos,
+            Output.find("USAGE: prog [subcommand] [options]"))
+      << Output;
+  EXPECT_NE(std::string::npos, Output.find("SUBCOMMANDS:")) << Output;
+  EXPECT_NE(std::string::npos, Output.find("sc1 - First Subcommand")) << Output;
+  EXPECT_NE(std::string::npos, Output.find("sc2 - Second Subcommand"))
+      << Output;
+  cl::ResetCommandLineParser();
+}
+
+TEST(CommandLineTest, UnknownCommands) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("foo", "Foo subcommand");
+  StackSubCommand SC2("bar", "Bar subcommand");
+  StackOption<bool> SC1Opt("put", cl::sub(SC1));
+  StackOption<bool> SC2Opt("get", cl::sub(SC2));
+  StackOption<bool> TopOpt1("peek");
+  StackOption<bool> TopOpt2("set");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *Args1[] = {"prog", "baz", "--get"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args1), Args1, StringRef(), &OS));
+  EXPECT_EQ(Errs,
+            "prog: Unknown subcommand 'baz'.  Try: 'prog --help'\n"
+            "prog: Did you mean 'bar'?\n"
+            "prog: Unknown command line argument '--get'.  Try: 'prog --help'\n"
+            "prog: Did you mean '--set'?\n");
+
+  // Do not show a suggestion if the subcommand is not similar to any known.
+  Errs.clear();
+  const char *Args2[] = {"prog", "faz"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(std::size(Args2), Args2, StringRef(), &OS));
+  EXPECT_EQ(Errs, "prog: Unknown subcommand 'faz'.  Try: 'prog --help'\n");
 }
 
 } // anonymous namespace

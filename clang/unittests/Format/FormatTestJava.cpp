@@ -221,7 +221,7 @@ TEST_F(FormatTestJava, EnumDeclarations) {
                "\"cccccccccccccccccccccccc\"),\n"
                "  SECOND_ENUM(\"a\", \"b\", \"c\");\n"
                "  private VeryLongEnum(String a, String b, String c) {}\n"
-               "}\n");
+               "}");
 }
 
 TEST_F(FormatTestJava, ArrayInitializers) {

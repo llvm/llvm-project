@@ -128,9 +128,6 @@ public:
 
   void emitEndOfAsmFile(Module &M) override;
 
-  bool isBlockOnlyReachableByFallthrough(
-    const MachineBasicBlock *MBB) const override;
-
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &O) override;
 

@@ -12,6 +12,7 @@
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>
+#include <sys/stat.h>    // For S_* flags.
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 

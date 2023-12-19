@@ -11,7 +11,9 @@ stack:
 # CHECK:      Function:        fun0
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '16'
-# CHECK-NEXT:   - String:          ' stack bytes in function'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun0
+# CHECK-NEXT:   - String: ''''
 # CHECK-NEXT: ...
 constants:
 body:             |
@@ -29,7 +31,9 @@ stack:
 # CHECK:      Function:        fun1
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '32'
-# CHECK-NEXT:   - String:          ' stack bytes in function'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun1
+# CHECK-NEXT:   - String: ''''
 # CHECK-NEXT: ...
 constants:
 body:             |
@@ -47,7 +51,9 @@ stack:
 # CHECK:      Function:        fun2
 # CHECK-NEXT: Args:
 # CHECK-NEXT:   - NumStackBytes:   '1040'
-# CHECK-NEXT:   - String:          ' stack bytes in function'
+# CHECK-NEXT:   - String:          ' stack bytes in function '''
+# CHECK-NEXT:   - Function: fun2
+# CHECK-NEXT:   - String: ''''
 # CHECK-NEXT: ...
 constants:
 body:             |

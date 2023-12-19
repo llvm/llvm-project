@@ -44,6 +44,9 @@ static DecodeStatus DecodeFPR128RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeFPR128_loRegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t Address,
                                                  const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeFPR128_0to7RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const MCDisassembler *Decoder);
@@ -433,6 +436,14 @@ static DecodeStatus
 DecodeFPR128_loRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
                              const MCDisassembler *Decoder) {
   if (RegNo > 15)
+    return Fail;
+  return DecodeFPR128RegisterClass(Inst, RegNo, Addr, Decoder);
+}
+
+static DecodeStatus
+DecodeFPR128_0to7RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
+                               const MCDisassembler *Decoder) {
+  if (RegNo > 7)
     return Fail;
   return DecodeFPR128RegisterClass(Inst, RegNo, Addr, Decoder);
 }

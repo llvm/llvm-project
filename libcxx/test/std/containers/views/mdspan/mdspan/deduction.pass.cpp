@@ -55,7 +55,7 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 #include "CustomTestAccessors.h"
 
 template <class H, class M, class A>
@@ -80,10 +80,10 @@ template <class H, class L, class A>
 constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int>()), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D>(7)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D>(7)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<unsigned, 7>()), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<size_t, D, 4, D>(2, 3)), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D, 7, D>(0, 3)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D, 7, D>(0, 3)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int64_t, D, 7, D, 4, D, D>(1, 2, 3, 2)), acc);
 }
 

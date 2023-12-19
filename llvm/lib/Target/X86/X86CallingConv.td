@@ -419,15 +419,6 @@ def RetCC_X86_64_HiPE : CallingConv<[
   CCIfType<[i64], CCAssignToReg<[R15, RBP, RAX, RDX]>>
 ]>;
 
-// X86-64 WebKit_JS return-value convention.
-def RetCC_X86_64_WebKit_JS : CallingConv<[
-  // Promote all types to i64
-  CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
-
-  // Return: RAX
-  CCIfType<[i64], CCAssignToReg<[RAX]>>
-]>;
-
 def RetCC_X86_64_Swift : CallingConv<[
 
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
@@ -495,8 +486,7 @@ def RetCC_X86_64 : CallingConv<[
   // HiPE uses RetCC_X86_64_HiPE
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_64_HiPE>>,
 
-  // Handle JavaScript calls.
-  CCIfCC<"CallingConv::WebKit_JS", CCDelegateTo<RetCC_X86_64_WebKit_JS>>,
+  // Handle AnyReg calls.
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_X86_64_AnyReg>>,
 
   // Handle Swift calls.
@@ -751,22 +741,6 @@ def CC_X86_64_HiPE : CallingConv<[
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
   CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>
-]>;
-
-def CC_X86_64_WebKit_JS : CallingConv<[
-  // Promote i8/i16 arguments to i32.
-  CCIfType<[i8, i16], CCPromoteToType<i32>>,
-
-  // Only the first integer argument is passed in register.
-  CCIfType<[i32], CCAssignToReg<[EAX]>>,
-  CCIfType<[i64], CCAssignToReg<[RAX]>>,
-
-  // The remaining integer arguments are passed on the stack. 32bit integer and
-  // floating-point arguments are aligned to 4 byte and stored in 4 byte slots.
-  // 64bit integer and floating-point arguments are aligned to 8 byte and stored
-  // in 8 byte stack slots.
-  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
-  CCIfType<[i64, f64], CCAssignToStack<8, 8>>
 ]>;
 
 // No explicit register is specified for the AnyReg calling convention. The
@@ -1112,7 +1086,6 @@ def CC_X86_32 : CallingConv<[
 def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_64_GHC>>,
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_64_HiPE>>,
-  CCIfCC<"CallingConv::WebKit_JS", CCDelegateTo<CC_X86_64_WebKit_JS>>,
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_X86_64_AnyReg>>,
   CCIfCC<"CallingConv::Win64", CCDelegateTo<CC_X86_Win64_C>>,
   CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<CC_X86_64_C>>,
@@ -1177,6 +1150,9 @@ def CSR_64_CXX_TLS_Darwin_ViaCopy : CalleeSavedRegs<(sub CSR_64_TLS_Darwin, RBP)
 // All GPRs - except r11 and return registers.
 def CSR_64_RT_MostRegs : CalleeSavedRegs<(add CSR_64, RAX, RCX, RDX, RSI, RDI,
                                               R8, R9, R10)>;
+
+def CSR_Win64_RT_MostRegs : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
+                                                 (sequence "XMM%u", 6, 15))>;
 
 // All registers - except r11 and return registers.
 def CSR_64_RT_AllRegs     : CalleeSavedRegs<(add CSR_64_RT_MostRegs,

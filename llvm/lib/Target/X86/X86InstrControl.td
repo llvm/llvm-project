@@ -188,6 +188,9 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
   }
 }
 
+def JMPABS64i : Ii64<0xA1, RawFrm, (outs), (ins i64imm:$dst), "jmpabs\t$dst", []>,
+                ExplicitREX2Prefix, Requires<[In64BitMode]>, Sched<[WriteJumpLd]>;
+
 // Loop instructions
 let isBranch = 1, isTerminator = 1, SchedRW = [WriteJump] in {
 def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins brtarget8:$dst), "loop\t$dst", []>;

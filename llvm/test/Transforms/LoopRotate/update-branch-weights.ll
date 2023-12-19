@@ -70,9 +70,9 @@ outer_loop_exit:
 
 ; BFI_AFTER-LABEL: block-frequency-info: func1
 ; BFI_AFTER: - entry: {{.*}} count = 1024
-; BFI_AFTER: - loop_body.lr.ph: {{.*}} count = 1024
-; BFI_AFTER: - loop_body: {{.*}} count = 20608
-; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 1024
+; BFI_AFTER: - loop_body.lr.ph: {{.*}} count = 1016
+; BFI_AFTER: - loop_body: {{.*}} count = 20480
+; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 1016
 ; BFI_AFTER: - loop_exit: {{.*}} count = 1024
 
 ; IR-LABEL: define void @func1
@@ -146,14 +146,14 @@ loop_exit:
 
 ; BFI_BEFORE-LABEL: block-frequency-info: func3_zero_branch_weight
 ; BFI_BEFORE: - entry: {{.*}} count = 1024
-; BFI_BEFORE: - loop_header: {{.*}} count = 2199023255296
-; BFI_BEFORE: - loop_body: {{.*}} count = 2199023254272
+; BFI_BEFORE: - loop_header: {{.*}} count = 2199023255552
+; BFI_BEFORE: - loop_body: {{.*}} count = 2199023254528
 ; BFI_BEFORE: - loop_exit: {{.*}} count = 1024
 
 ; BFI_AFTER-LABEL: block-frequency-info: func3_zero_branch_weight
 ; BFI_AFTER: - entry: {{.*}} count = 1024
 ; BFI_AFTER: - loop_body.lr.ph: {{.*}} count = 1024
-; BFI_AFTER: - loop_body: {{.*}} count = 2199023255296
+; BFI_AFTER: - loop_body: {{.*}} count = 2199023255552
 ; BFI_AFTER: - loop_header.loop_exit_crit_edge: {{.*}} count = 1024
 ; BFI_AFTER: - loop_exit: {{.*}} count = 1024
 

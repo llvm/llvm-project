@@ -424,6 +424,18 @@ Builtin Macros
   "UTF-16" or "UTF-32" (but may change in the future if the
   ``-fwide-exec-charset="Encoding-Name"`` option is implemented.)
 
+Implementation-defined keywords
+===============================
+
+__datasizeof
+------------
+
+``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
+type ignoring tail padding.
+
+..
+  FIXME: This should list all the keyword extensions
+
 .. _langext-vectors:
 
 Vectors and Extended Vectors
@@ -1458,7 +1470,7 @@ Relaxed constexpr                      __cpp_constexpr                  C++14   
 ``if constexpr``                       __cpp_if_constexpr               C++17         C++11
 fold expressions                       __cpp_fold_expressions           C++17         C++03
 Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++11
+Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
 Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
 Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
 ``inline`` variables                   __cpp_inline_variables           C++17         C++03
@@ -1471,6 +1483,7 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``using enum``                         __cpp_using_enum                 C++20         C++03
 ``if consteval``                       __cpp_if_consteval               C++23         C++20
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                        C++23         C++11
 -------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C23           C89
@@ -2809,7 +2822,7 @@ Example output:
 
 The ``__builtin_dump_struct`` function is used to print the fields of a simple
 structure and their values for debugging purposes. The first argument of the
-builtin should be a pointer to the struct to dump. The second argument ``f``
+builtin should be a pointer to a complete record type to dump. The second argument ``f``
 should be some callable expression, and can be a function object or an overload
 set. The builtin calls ``f``, passing any further arguments ``args...``
 followed by a ``printf``-compatible format string and the corresponding
@@ -3854,6 +3867,30 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
 
+__scoped_atomic builtins
+------------------------
+
+Clang provides a set of atomics taking a memory scope argument. These atomics
+are identical to the standard GNU / GCC atomic builtins but taking an extra
+memory scope argument. These are designed to be a generic alternative to the
+``__opencl_atomic_*`` builtin functions for targets that support atomic memory
+scopes.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+* ``__MEMORY_SCOPE_SYSTEM``
+* ``__MEMORY_SCOPE_DEVICE``
+* ``__MEMORY_SCOPE_WRKGRP``
+* ``__MEMORY_SCOPE_WVFRNT``
+* ``__MEMORY_SCOPE_SINGLE``
+
+This controls whether or not the atomic operation is ordered with respect to the
+whole system, the current device, an OpenCL workgroup, wavefront, or just a
+single thread. If these are used on a target that does not support atomic
+scopes, then they will behave exactly as the standard GNU atomic builtins.
+
 Low-level ARM exclusive memory builtins
 ---------------------------------------
 
@@ -4617,6 +4654,22 @@ The pragma can take two values: ``on`` and ``off``.
     float v = t + z;
   }
 
+``#pragma clang fp reciprocal`` allows control over using reciprocal
+approximations in floating point expressions. When enabled, this
+pragma allows the expression ``x / y`` to be approximated as ``x *
+(1.0 / y)``.  This pragma can be used to disable reciprocal
+approximation when it is otherwise enabled for the translation unit
+with the ``-freciprocal-math`` flag or other fast-math options. The
+pragma can take two values: ``on`` and ``off``.
+
+.. code-block:: c++
+
+  float f(float x, float y)
+  {
+    // Enable floating point reciprocal approximation
+    #pragma clang fp reciprocal(on)
+    return x / y;
+  }
 
 ``#pragma clang fp contract`` specifies whether the compiler should
 contract a multiply and an addition (or subtraction) into a fused FMA

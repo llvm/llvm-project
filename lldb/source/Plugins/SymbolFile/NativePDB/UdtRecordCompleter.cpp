@@ -356,14 +356,14 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
   case Member::Struct:
   case Member::Union: {
     clang::TagTypeKind kind = field->kind == Member::Struct
-                                  ? clang::TagTypeKind::TTK_Struct
-                                  : clang::TagTypeKind::TTK_Union;
+                                  ? clang::TagTypeKind::Struct
+                                  : clang::TagTypeKind::Union;
     ClangASTMetadata metadata;
     metadata.SetUserID(pdb->anonymous_id);
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
-        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "", kind,
-        lldb::eLanguageTypeC_plus_plus, &metadata);
+        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
+        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, &metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);

@@ -17,13 +17,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAtanhfTest, SpecialNumbers) {
+TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   libc_errno = 0;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(aNaN));
@@ -85,7 +83,7 @@ TEST(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST(LlvmLibcAtanhfTest, InFloatRange) {
+TEST_F(LlvmLibcAtanhfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   const uint32_t STEP = FPBits(1.0f).uintval() / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -98,7 +96,7 @@ TEST(LlvmLibcAtanhfTest, InFloatRange) {
 }
 
 // For small values, atanh(x) is x.
-TEST(LlvmLibcAtanhfTest, SmallValues) {
+TEST_F(LlvmLibcAtanhfTest, SmallValues) {
   float x = float(FPBits(uint32_t(0x17800000)));
   float result = LIBC_NAMESPACE::atanhf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Atanh, x, result, 0.5);

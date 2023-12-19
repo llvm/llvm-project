@@ -629,6 +629,7 @@ HANDLE_DW_AT(0x3fec, APPLE_objc_complete_type, 0, APPLE)
 HANDLE_DW_AT(0x3fed, APPLE_property, 0, APPLE)
 HANDLE_DW_AT(0x3fee, APPLE_objc_direct, 0, APPLE)
 HANDLE_DW_AT(0x3fef, APPLE_sdk, 0, APPLE)
+HANDLE_DW_AT(0x3ff0, APPLE_origin, 0, APPLE)
 
 // Attribute form encodings.
 HANDLE_DW_FORM(0x01, addr, 2, DWARF)

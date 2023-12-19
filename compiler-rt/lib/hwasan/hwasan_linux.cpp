@@ -106,8 +106,12 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  __hwasan_shadow_memory_dynamic_address =
-      FindDynamicShadowStart(shadow_size_bytes);
+  if (flags()->fixed_shadow_base != (uptr)-1) {
+    __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
+  } else {
+    __hwasan_shadow_memory_dynamic_address =
+        FindDynamicShadowStart(shadow_size_bytes);
+  }
 }
 
 static void MaybeDieIfNoTaggingAbi(const char *message) {
@@ -293,25 +297,6 @@ bool MemIsApp(uptr p) {
 void InstallAtExitHandler() { atexit(HwasanAtExit); }
 
 // ---------------------- TSD ---------------- {{{1
-
-extern "C" void __hwasan_thread_enter() {
-  hwasanThreadList().CreateCurrentThread()->EnsureRandomStateInited();
-}
-
-extern "C" void __hwasan_thread_exit() {
-  Thread *t = GetCurrentThread();
-  // Make sure that signal handler can not see a stale current thread pointer.
-  atomic_signal_fence(memory_order_seq_cst);
-  if (t) {
-    // Block async signals on the thread as the handler can be instrumented.
-    // After this point instrumented code can't access essential data from TLS
-    // and will crash.
-    // Bionic already calls __hwasan_thread_exit with blocked signals.
-    if (SANITIZER_GLIBC)
-      BlockSignals();
-    hwasanThreadList().ReleaseThread(t);
-  }
-}
 
 #  if HWASAN_WITH_INTERCEPTORS
 static pthread_key_t tsd_key;
@@ -538,12 +523,24 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
 
 void HwasanInstallAtForkHandler() {
   auto before = []() {
-    HwasanAllocatorLock();
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::LockGlobal();
+    }
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+    // stuff we need.
+    __lsan::LockThreads();
+    __lsan::LockAllocator();
     StackDepotLockAll();
   };
   auto after = []() {
     StackDepotUnlockAll();
-    HwasanAllocatorUnlock();
+    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+    // the stuff we need.
+    __lsan::UnlockAllocator();
+    __lsan::UnlockThreads();
+    if (CAN_SANITIZE_LEAKS) {
+      __lsan::UnlockGlobal();
+    }
   };
   pthread_atfork(before, after, after);
 }
@@ -560,5 +557,26 @@ void InstallAtExitCheckLeaks() {
 }
 
 }  // namespace __hwasan
+
+using namespace __hwasan;
+
+extern "C" void __hwasan_thread_enter() {
+  hwasanThreadList().CreateCurrentThread()->EnsureRandomStateInited();
+}
+
+extern "C" void __hwasan_thread_exit() {
+  Thread *t = GetCurrentThread();
+  // Make sure that signal handler can not see a stale current thread pointer.
+  atomic_signal_fence(memory_order_seq_cst);
+  if (t) {
+    // Block async signals on the thread as the handler can be instrumented.
+    // After this point instrumented code can't access essential data from TLS
+    // and will crash.
+    // Bionic already calls __hwasan_thread_exit with blocked signals.
+    if (SANITIZER_GLIBC)
+      BlockSignals();
+    hwasanThreadList().ReleaseThread(t);
+  }
+}
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD

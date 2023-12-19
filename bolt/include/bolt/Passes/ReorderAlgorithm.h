@@ -42,7 +42,7 @@ public:
   virtual void clusterBasicBlocks(BinaryFunction &BF,
                                   bool ComputeEdges = false) = 0;
 
-  /// Compute for each cluster its averagae execution frequency, that is
+  /// Compute for each cluster its average execution frequency, that is
   /// the sum of average frequencies of its blocks (execution count / # instrs).
   /// The average frequencies are stored in the AvgFreq vector, index by the
   /// cluster indices in the Clusters vector.
@@ -128,7 +128,7 @@ private:
   //  A -> B with execution count 500,
   //  A -> C with execution count 100, and
   //  D -> B with execution count 150
-  // wher B, C are the only successors of A and A, D are thr only predessecors
+  // where B, C are the only successors of A and A, D are the only predecessors
   // of B. Then if we choose to layout edge A -> B as a fallthrough, the win in
   // branches would be 500 - 100 - 150 = 250. That is the weight of edge A->B.
   int64_t calculateWeight(const EdgeTy &E, const BinaryFunction &BF) const;
@@ -144,8 +144,8 @@ public:
   void reset() override;
 };
 
-/// Objects of this class implement various basic block reordering alogrithms.
-/// Most of these algorithms depend on a clustering alogrithm.
+/// Objects of this class implement various basic block reordering algorithms.
+/// Most of these algorithms depend on a clustering algorithm.
 /// Here we have 3 conflicting goals as to how to layout clusters. If we want
 /// to minimize jump offsets, we should put clusters with heavy inter-cluster
 /// dependence as close as possible. If we want to maximize the probability

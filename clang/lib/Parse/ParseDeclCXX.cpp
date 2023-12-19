@@ -1023,7 +1023,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
         const Token &T = GetLookAheadToken(I);
         if (T.is(tok::r_paren))
           break;
-        if (!tokenIsLikeStringLiteral(T, getLangOpts())) {
+        if (!tokenIsLikeStringLiteral(T, getLangOpts()) || T.hasUDSuffix()) {
           ParseAsExpression = true;
           break;
         }
@@ -3429,6 +3429,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
   case tok::annot_pragma_openmp:
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(
         AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirectiveDecl();
 
   default:
     if (tok::isPragmaAnnotation(Tok.getKind())) {

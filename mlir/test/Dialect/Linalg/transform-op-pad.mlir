@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter -split-input-file -verify-diagnostics %s | FileCheck %s
 
 #map = affine_map<()[s0] -> (-s0 + 12, 7)>
 
@@ -33,16 +33,18 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
   func.return %5 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
-  // expected-remark @below {{1}}
-  test_print_number_of_associated_payload_ir_ops %copy_back : !transform.op<"bufferization.materialize_in_destination">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
+    // expected-remark @below {{1}}
+    transform.test_print_number_of_associated_payload_ir_ops %copy_back : !transform.op<"bufferization.materialize_in_destination">
+    transform.yield
+  }
 }
 
 // -----
@@ -67,15 +69,17 @@ func.func @pad_to_multiple(%arg0: tensor<24x12xf32>,
   func.return %5 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pad_to_multiple_of=[2, 2, 1],
-    pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pad_to_multiple_of=[2, 2, 1],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -109,14 +113,16 @@ func.func @static_sizes_output_divisible_on_empty_op(%arg0: tensor<24x12xf32>,
   func.return %5 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -129,15 +135,17 @@ func.func @pad(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{op expects a padding value of type 'f32', got 0 : i32}}
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0: i32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{op expects a padding value of type 'f32', got 0 : i32}}
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0: i32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -150,15 +158,17 @@ func.func @pad(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{expects a padding that parses to 'f32', got "{foo}"}}
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=["{foo}", 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{expects a padding that parses to 'f32', got "{foo}"}}
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=["{foo}", 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -173,16 +183,18 @@ func.func @pad(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(suppress) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // This error is silenceable and is not reported by this transform
-  //   {{transform.structured.pad failed to apply}}
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // This error is silenceable and is not reported by this transform
+    //   {{transform.structured.pad failed to apply}}
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -230,14 +242,16 @@ func.func @outs_not_produced_by_empty_or_extract_slice(%a : tensor<128x2044xf32>
   return %10 : tensor<128x128xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 1]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 1]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -280,12 +294,14 @@ func.func @pack_everything(%arg0: tensor<24x12xf32>,
   func.return %5 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %padded, %pad, %copy_back = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    pack_paddings=[1, 1, 1]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      pack_paddings=[1, 1, 1]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }

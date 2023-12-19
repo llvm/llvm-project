@@ -362,7 +362,8 @@ public:
   }
 
   /// Construct a declaration name from an Objective-C selector.
-  DeclarationName(Selector Sel) : Ptr(Sel.InfoPtr) {}
+  DeclarationName(Selector Sel)
+      : Ptr(reinterpret_cast<uintptr_t>(Sel.InfoPtr.getOpaqueValue())) {}
 
   /// Returns the name for all C++ using-directives.
   static DeclarationName getUsingDirectiveName() {

@@ -173,8 +173,11 @@ public:
 private:
   const RequirementKind Kind;
   // FIXME: use RequirementDependence to model dependence?
+  LLVM_PREFERRED_TYPE(bool)
   bool Dependent : 1;
+  LLVM_PREFERRED_TYPE(bool)
   bool ContainsUnexpandedParameterPack : 1;
+  LLVM_PREFERRED_TYPE(bool)
   bool Satisfied : 1;
 public:
   struct SubstitutionDiagnostic {

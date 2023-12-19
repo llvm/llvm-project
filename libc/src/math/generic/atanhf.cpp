@@ -17,7 +17,7 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
   bool sign = xbits.get_sign();
-  uint32_t x_abs = xbits.uintval() & FPBits::FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.uintval() & FPBits::EXP_MANT_MASK;
 
   // |x| >= 1.0
   if (LIBC_UNLIKELY(x_abs >= 0x3F80'0000U)) {
@@ -28,7 +28,7 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
     if (x_abs == 0x3F80'0000U) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return FPBits::inf(sign).get_val();
+      return FPBits::inf(sign);
     } else {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

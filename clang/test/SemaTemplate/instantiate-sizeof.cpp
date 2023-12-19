@@ -1,12 +1,14 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -std=c++11 %s
 
 // Make sure we handle contexts correctly with sizeof
-template<typename T> void f(T n) {
-  int buffer[n];
+template<typename T> void f(T n) { // expected-note {{declared here}}
+  int buffer[n]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                    expected-note {{function parameter 'n' with unknown value cannot be used in a constant expression}} \
+                    expected-note@#instantiate {{in instantiation of function template specialization 'f<int>' requested here}}
   [] { int x = sizeof(sizeof(buffer)); }();
 }
 int main() {
-  f<int>(1);
+  f<int>(1); // #instantiate
 }
 
 // Make sure we handle references to non-static data members in unevaluated

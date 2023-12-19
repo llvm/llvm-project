@@ -245,21 +245,17 @@ define <4 x i32> @uaddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.4h, #1
+; CHECK-NEXT:    eor v2.8b, v0.8b, v1.8b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
+; CHECK-NEXT:    shl v2.4h, v2.4h, #15
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    cmlt v1.4h, v2.4h, #0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    fmov d1, d0
-; CHECK-NEXT:    shl v2.4h, v0.4h, #15
-; CHECK-NEXT:    cmlt v2.4h, v2.4h, #0
-; CHECK-NEXT:    bic v1.4h, #2
-; CHECK-NEXT:    cmeq v0.4h, v1.4h, v0.4h
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    and v1.8b, v2.8b, v1.8b
-; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    addv h1, v1.4h
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    strb w8, [x0]
 ; CHECK-NEXT:    ret

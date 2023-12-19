@@ -37,7 +37,7 @@ endsubroutine
 ! CHECK-LOWERING:       %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
 ! CHECK-LOWERING:       %[[TRUE:.*]] = arith.constant true
 ! CHECK-LOWERING:       %[[TRANSPOSE_EXPR:.*]] = hlfir.as_expr %[[TRANSPOSE_RES_VAR]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xf32>>, i1) -> !hlfir.expr<?x?xf32>
-! CHECK-LOWERING:       %[[TRANSPOSE_ASSOC:.*]]:3 = hlfir.associate %[[TRANSPOSE_EXPR]]({{.*}}) {uniq_name = "adapt.valuebyref"}
+! CHECK-LOWERING:       %[[TRANSPOSE_ASSOC:.*]]:3 = hlfir.associate %[[TRANSPOSE_EXPR]]({{.*}}) {adapt.valuebyref}
 ! CHECK-LOWERING:           (!hlfir.expr<?x?xf32>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>, i1)
 
 ! CHECK-LOWERING:       %[[LHS_BOX:.*]] = fir.embox %[[TRANSPOSE_ASSOC]]#1

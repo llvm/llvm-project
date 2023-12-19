@@ -21,7 +21,7 @@
 // void polymorphic_allocator<T>::construct(pair<T1, T2>*, piecewise_construct_t
 //                                          tuple<Args1...> x, tuple<Args2...>)
 
-// The stardard specifiers a tranformation to uses-allocator construction as
+// The standard specifies a transformation to uses-allocator construction as
 // follows:
 //  - If uses_allocator_v<T1,memory_resource*> is false and
 //      is_constructible_v<T,Args1...> is true, then xprime is x.
@@ -36,7 +36,7 @@
 //
 // The use of "xprime = tuple_cat(..., std::move(x), ...)" causes all of the
 // objects in 'x' to be copied into 'xprime'. If 'x' contains any types which
-// are stored by value this causes an unessary copy to occur. To prevent this
+// are stored by value this causes an unnecessary copy to occur. To prevent this
 //  libc++ changes this call into
 // "xprime = forward_as_tuple(..., std::get<Idx>(std::move(x))..., ...)".
 // 'xprime' contains references to the values in 'x' instead of copying them.

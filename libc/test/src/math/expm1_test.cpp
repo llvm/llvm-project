@@ -17,12 +17,12 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
-DECLARE_SPECIAL_CONSTANTS(double)
-
-TEST(LlvmLibcExpm1Test, TrickyInputs) {
+TEST_F(LlvmLibcExpm1Test, TrickyInputs) {
   constexpr int N = 21;
   constexpr uint64_t INPUTS[N] = {
       0x3FD79289C6E6A5C0, // x=0x1.79289c6e6a5cp-2
@@ -54,7 +54,7 @@ TEST(LlvmLibcExpm1Test, TrickyInputs) {
   }
 }
 
-TEST(LlvmLibcExpm1Test, InDoubleRange) {
+TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
   uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
   uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();

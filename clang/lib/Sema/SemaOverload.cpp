@@ -38,8 +38,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <optional>
 
@@ -156,7 +158,8 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
                      // it was omitted by the patch that added
                      // ICK_Zero_Queue_Conversion
     ICR_C_Conversion,
-    ICR_C_Conversion_Extension
+    ICR_C_Conversion_Extension,
+    ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -195,7 +198,8 @@ static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
     "OpenCL Zero Event Conversion",
     "OpenCL Zero Queue Conversion",
     "C specific type conversion",
-    "Incompatible pointer conversion"
+    "Incompatible pointer conversion",
+    "Fixed point conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -960,18 +964,13 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
     return true;
   }
   // Otherwise the search scope is the namespace scope of which F is a member.
-  LookupResult NonMembers(S, NotEqOp, OpLoc,
-                          Sema::LookupNameKind::LookupOperatorName);
-  S.LookupName(NonMembers,
-               S.getScopeForContext(EqFD->getEnclosingNamespaceContext()));
-  NonMembers.suppressAccessDiagnostics();
-  for (NamedDecl *Op : NonMembers) {
-    auto *FD = Op->getAsFunction();
-    if(auto* UD = dyn_cast<UsingShadowDecl>(Op))
-      FD = UD->getUnderlyingDecl()->getAsFunction();
-    if (FunctionsCorrespond(S.Context, EqFD, FD) &&
-        declaresSameEntity(cast<Decl>(EqFD->getDeclContext()),
-                           cast<Decl>(Op->getDeclContext())))
+  for (NamedDecl *Op : EqFD->getEnclosingNamespaceContext()->lookup(NotEqOp)) {
+    auto *NotEqFD = Op->getAsFunction();
+    if (auto *UD = dyn_cast<UsingShadowDecl>(Op))
+      NotEqFD = UD->getUnderlyingDecl()->getAsFunction();
+    if (FunctionsCorrespond(S.Context, EqFD, NotEqFD) && S.isVisible(NotEqFD) &&
+        declaresSameEntity(cast<Decl>(EqFD->getEnclosingNamespaceContext()),
+                           cast<Decl>(Op->getLexicalDeclContext())))
       return false;
   }
   return true;
@@ -2192,6 +2191,9 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              From->isIntegerConstantExpr(S.getASTContext())) {
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType;
+  } else if (ToType->isFixedPointType() || FromType->isFixedPointType()) {
+    SCS.Second = ICK_Fixed_Point_Conversion;
+    FromType = ToType;
   } else {
     // No second conversion required.
     SCS.Second = ICK_Identity;
@@ -3235,6 +3237,28 @@ bool Sema::FunctionParamTypesAreEqual(const FunctionProtoType *OldType,
                                       unsigned *ArgPos, bool Reversed) {
   return FunctionParamTypesAreEqual(OldType->param_types(),
                                     NewType->param_types(), ArgPos, Reversed);
+}
+
+bool Sema::FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
+                                               const FunctionDecl *NewFunction,
+                                               unsigned *ArgPos,
+                                               bool Reversed) {
+
+  if (OldFunction->getNumNonObjectParams() !=
+      NewFunction->getNumNonObjectParams())
+    return false;
+
+  unsigned OldIgnore =
+      unsigned(OldFunction->hasCXXExplicitFunctionObjectParameter());
+  unsigned NewIgnore =
+      unsigned(NewFunction->hasCXXExplicitFunctionObjectParameter());
+
+  auto *OldPT = cast<FunctionProtoType>(OldFunction->getFunctionType());
+  auto *NewPT = cast<FunctionProtoType>(NewFunction->getFunctionType());
+
+  return FunctionParamTypesAreEqual(OldPT->param_types().slice(OldIgnore),
+                                    NewPT->param_types().slice(NewIgnore),
+                                    ArgPos, Reversed);
 }
 
 /// CheckPointerConversion - Check the pointer conversion from the
@@ -5389,7 +5413,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         }
         llvm::APInt Size(S.Context.getTypeSize(S.Context.getSizeType()), e);
         ContTy = S.Context.getConstantArrayType(InitTy, Size, nullptr,
-                                                ArrayType::Normal, 0);
+                                                ArraySizeModifier::Normal, 0);
       }
     }
 
@@ -5950,6 +5974,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Zero_Event_Conversion:
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
+  case ICK_Fixed_Point_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -6098,61 +6123,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   return Result;
 }
 
-/// EvaluateConvertedConstantExpression - Evaluate an Expression
-/// That is a converted constant expression
-/// (which was built with BuildConvertedConstantExpression)
-static ExprResult EvaluateConvertedConstantExpression(
-    Sema &S, Expr *E, QualType T, APValue &Value, Sema::CCEKind CCE,
-    bool RequireInt, const APValue &PreNarrowingValue) {
-  ExprResult Result = E;
-  // Check the expression is a constant expression.
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  Expr::EvalResult Eval;
-  Eval.Diag = &Notes;
-
-  ConstantExprKind Kind;
-  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
-    Kind = ConstantExprKind::ClassTemplateArgument;
-  else if (CCE == Sema::CCEK_TemplateArg)
-    Kind = ConstantExprKind::NonClassTemplateArgument;
-  else
-    Kind = ConstantExprKind::Normal;
-
-  if (!E->EvaluateAsConstantExpr(Eval, S.Context, Kind) ||
-      (RequireInt && !Eval.Val.isInt())) {
-    // The expression can't be folded, so we can't keep it at this position in
-    // the AST.
-    Result = ExprError();
-  } else {
-    Value = Eval.Val;
-
-    if (Notes.empty()) {
-      // It's a constant expression.
-      Expr *E = ConstantExpr::Create(S.Context, Result.get(), Value);
-      if (!PreNarrowingValue.isAbsent())
-        Value = std::move(PreNarrowingValue);
-      return E;
-    }
-  }
-
-  // It's not a constant expression. Produce an appropriate diagnostic.
-  if (Notes.size() == 1 &&
-      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
-    S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
-  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
-                                   diag::note_constexpr_invalid_template_arg) {
-    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
-    for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
-  } else {
-    S.Diag(E->getBeginLoc(), diag::err_expr_not_cce)
-        << CCE << E->getSourceRange();
-    for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
-  }
-  return ExprError();
-}
-
 /// CheckConvertedConstantExpression - Check that the expression From is a
 /// converted constant expression of type T, perform the conversion and produce
 /// the converted expression, per C++11 [expr.const]p3.
@@ -6169,8 +6139,8 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     Value = APValue();
     return Result;
   }
-  return EvaluateConvertedConstantExpression(S, Result.get(), T, Value, CCE,
-                                             RequireInt, PreNarrowingValue);
+  return S.EvaluateConvertedConstantExpression(Result.get(), T, Value, CCE,
+                                               RequireInt, PreNarrowingValue);
 }
 
 ExprResult Sema::BuildConvertedConstantExpression(Expr *From, QualType T,
@@ -6201,6 +6171,62 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
   return R;
 }
 
+/// EvaluateConvertedConstantExpression - Evaluate an Expression
+/// That is a converted constant expression
+/// (which was built with BuildConvertedConstantExpression)
+ExprResult
+Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
+                                          Sema::CCEKind CCE, bool RequireInt,
+                                          const APValue &PreNarrowingValue) {
+
+  ExprResult Result = E;
+  // Check the expression is a constant expression.
+  SmallVector<PartialDiagnosticAt, 8> Notes;
+  Expr::EvalResult Eval;
+  Eval.Diag = &Notes;
+
+  ConstantExprKind Kind;
+  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+    Kind = ConstantExprKind::ClassTemplateArgument;
+  else if (CCE == Sema::CCEK_TemplateArg)
+    Kind = ConstantExprKind::NonClassTemplateArgument;
+  else
+    Kind = ConstantExprKind::Normal;
+
+  if (!E->EvaluateAsConstantExpr(Eval, Context, Kind) ||
+      (RequireInt && !Eval.Val.isInt())) {
+    // The expression can't be folded, so we can't keep it at this position in
+    // the AST.
+    Result = ExprError();
+  } else {
+    Value = Eval.Val;
+
+    if (Notes.empty()) {
+      // It's a constant expression.
+      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      if (!PreNarrowingValue.isAbsent())
+        Value = std::move(PreNarrowingValue);
+      return E;
+    }
+  }
+
+  // It's not a constant expression. Produce an appropriate diagnostic.
+  if (Notes.size() == 1 &&
+      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
+    Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
+  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
+                                   diag::note_constexpr_invalid_template_arg) {
+    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      Diag(Notes[I].first, Notes[I].second);
+  } else {
+    Diag(E->getBeginLoc(), diag::err_expr_not_cce)
+        << CCE << E->getSourceRange();
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      Diag(Notes[I].first, Notes[I].second);
+  }
+  return ExprError();
+}
 
 /// dropPointerConversions - If the given standard conversion sequence
 /// involves any pointer conversions, remove them.  This may change
@@ -6798,7 +6824,7 @@ void Sema::AddOverloadCandidate(
     if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
       ND = SpecInfo->getTemplate();
 
-    if (ND->getFormalLinkage() == Linkage::InternalLinkage) {
+    if (ND->getFormalLinkage() == Linkage::Internal) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;
@@ -10118,22 +10144,41 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
 
 /// We're allowed to use constraints partial ordering only if the candidates
 /// have the same parameter types:
-/// [over.match.best]p2.6
-/// F1 and F2 are non-template functions with the same parameter-type-lists,
-/// and F1 is more constrained than F2 [...]
+/// [over.match.best.general]p2.6
+/// F1 and F2 are non-template functions with the same
+/// non-object-parameter-type-lists, and F1 is more constrained than F2 [...]
 static bool sameFunctionParameterTypeLists(Sema &S,
-                                          const OverloadCandidate &Cand1,
-                                          const OverloadCandidate &Cand2) {
-  if (Cand1.Function && Cand2.Function) {
-    auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());
-    auto *PT2 = cast<FunctionProtoType>(Cand2.Function->getFunctionType());
-    if (PT1->getNumParams() == PT2->getNumParams() &&
-        PT1->isVariadic() == PT2->isVariadic() &&
-        S.FunctionParamTypesAreEqual(PT1, PT2, nullptr,
-                                     Cand1.isReversed() ^ Cand2.isReversed()))
-      return true;
+                                           const OverloadCandidate &Cand1,
+                                           const OverloadCandidate &Cand2) {
+  if (!Cand1.Function || !Cand2.Function)
+    return false;
+
+  FunctionDecl *Fn1 = Cand1.Function;
+  FunctionDecl *Fn2 = Cand2.Function;
+
+  if (Fn1->isVariadic() != Fn1->isVariadic())
+    return false;
+
+  if (!S.FunctionNonObjectParamTypesAreEqual(
+          Fn1, Fn2, nullptr, Cand1.isReversed() ^ Cand2.isReversed()))
+    return false;
+
+  auto *Mem1 = dyn_cast<CXXMethodDecl>(Fn1);
+  auto *Mem2 = dyn_cast<CXXMethodDecl>(Fn2);
+  if (Mem1 && Mem2) {
+    // if they are member functions, both are direct members of the same class,
+    // and
+    if (Mem1->getParent() != Mem2->getParent())
+      return false;
+    // if both are non-static member functions, they have the same types for
+    // their object parameters
+    if (Mem1->isInstance() && Mem2->isInstance() &&
+        !S.getASTContext().hasSameType(
+            Mem1->getFunctionObjectParameterReferenceType(),
+            Mem1->getFunctionObjectParameterReferenceType()))
+      return false;
   }
-  return false;
+  return true;
 }
 
 /// isBetterOverloadCandidate - Determines whether the first overload
@@ -12009,6 +12054,7 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
 }
 
 namespace {
+
 struct CompareOverloadCandidatesForDisplay {
   Sema &S;
   SourceLocation Loc;
@@ -12046,13 +12092,9 @@ struct CompareOverloadCandidatesForDisplay {
     if (L->Viable) {
       if (!R->Viable) return true;
 
-      // TODO: introduce a tri-valued comparison for overload
-      // candidates.  Would be more worthwhile if we had a sort
-      // that could exploit it.
-      if (isBetterOverloadCandidate(S, *L, *R, SourceLocation(), CSK))
-        return true;
-      if (isBetterOverloadCandidate(S, *R, *L, SourceLocation(), CSK))
-        return false;
+      if (int Ord = CompareConversions(*L, *R))
+        return Ord < 0;
+      // Use other tie breakers.
     } else if (R->Viable)
       return false;
 
@@ -12104,30 +12146,8 @@ struct CompareOverloadCandidatesForDisplay {
         }
 
         // If there's any ordering between the defined conversions...
-        // FIXME: this might not be transitive.
-        assert(L->Conversions.size() == R->Conversions.size());
-
-        int leftBetter = 0;
-        unsigned I = (L->IgnoreObjectArgument || R->IgnoreObjectArgument);
-        for (unsigned E = L->Conversions.size(); I != E; ++I) {
-          switch (CompareImplicitConversionSequences(S, Loc,
-                                                     L->Conversions[I],
-                                                     R->Conversions[I])) {
-          case ImplicitConversionSequence::Better:
-            leftBetter++;
-            break;
-
-          case ImplicitConversionSequence::Worse:
-            leftBetter--;
-            break;
-
-          case ImplicitConversionSequence::Indistinguishable:
-            break;
-          }
-        }
-        if (leftBetter > 0) return true;
-        if (leftBetter < 0) return false;
-
+        if (int Ord = CompareConversions(*L, *R))
+          return Ord < 0;
       } else if (RFailureKind == ovl_fail_bad_conversion)
         return false;
 
@@ -12135,9 +12155,12 @@ struct CompareOverloadCandidatesForDisplay {
         if (RFailureKind != ovl_fail_bad_deduction)
           return true;
 
-        if (L->DeductionFailure.Result != R->DeductionFailure.Result)
-          return RankDeductionFailure(L->DeductionFailure)
-               < RankDeductionFailure(R->DeductionFailure);
+        if (L->DeductionFailure.Result != R->DeductionFailure.Result) {
+          unsigned LRank = RankDeductionFailure(L->DeductionFailure);
+          unsigned RRank = RankDeductionFailure(R->DeductionFailure);
+          if (LRank != RRank)
+            return LRank < RRank;
+        }
       } else if (RFailureKind == ovl_fail_bad_deduction)
         return false;
 
@@ -12149,10 +12172,66 @@ struct CompareOverloadCandidatesForDisplay {
     SourceLocation RLoc = GetLocationForCandidate(R);
 
     // Put candidates without locations (e.g. builtins) at the end.
-    if (LLoc.isInvalid()) return false;
-    if (RLoc.isInvalid()) return true;
+    if (LLoc.isValid() && RLoc.isValid())
+      return S.SourceMgr.isBeforeInTranslationUnit(LLoc, RLoc);
+    if (LLoc.isValid() && !RLoc.isValid())
+      return true;
+    if (RLoc.isValid() && !LLoc.isValid())
+      return false;
+    assert(!LLoc.isValid() && !RLoc.isValid());
+    // For builtins and other functions without locations, fallback to the order
+    // in which they were added into the candidate set.
+    return L < R;
+  }
 
-    return S.SourceMgr.isBeforeInTranslationUnit(LLoc, RLoc);
+private:
+  struct ConversionSignals {
+    unsigned KindRank = 0;
+    ImplicitConversionRank Rank = ICR_Exact_Match;
+
+    static ConversionSignals ForSequence(ImplicitConversionSequence &Seq) {
+      ConversionSignals Sig;
+      Sig.KindRank = Seq.getKindRank();
+      if (Seq.isStandard())
+        Sig.Rank = Seq.Standard.getRank();
+      else if (Seq.isUserDefined())
+        Sig.Rank = Seq.UserDefined.After.getRank();
+      // We intend StaticObjectArgumentConversion to compare the same as
+      // StandardConversion with ICR_ExactMatch rank.
+      return Sig;
+    }
+
+    static ConversionSignals ForObjectArgument() {
+      // We intend StaticObjectArgumentConversion to compare the same as
+      // StandardConversion with ICR_ExactMatch rank. Default give us that.
+      return {};
+    }
+  };
+
+  // Returns -1 if conversions in L are considered better.
+  //          0 if they are considered indistinguishable.
+  //          1 if conversions in R are better.
+  int CompareConversions(const OverloadCandidate &L,
+                         const OverloadCandidate &R) {
+    // We cannot use `isBetterOverloadCandidate` because it is defined
+    // according to the C++ standard and provides a partial order, but we need
+    // a total order as this function is used in sort.
+    assert(L.Conversions.size() == R.Conversions.size());
+    for (unsigned I = 0, N = L.Conversions.size(); I != N; ++I) {
+      auto LS = L.IgnoreObjectArgument && I == 0
+                    ? ConversionSignals::ForObjectArgument()
+                    : ConversionSignals::ForSequence(L.Conversions[I]);
+      auto RS = R.IgnoreObjectArgument
+                    ? ConversionSignals::ForObjectArgument()
+                    : ConversionSignals::ForSequence(R.Conversions[I]);
+      if (std::tie(LS.KindRank, LS.Rank) != std::tie(RS.KindRank, RS.Rank))
+        return std::tie(LS.KindRank, LS.Rank) < std::tie(RS.KindRank, RS.Rank)
+                   ? -1
+                   : 1;
+    }
+    // FIXME: find a way to compare templates for being more or less
+    // specialized that provides a strict weak ordering.
+    return 0;
   }
 };
 }

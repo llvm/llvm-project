@@ -104,8 +104,11 @@ void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI) const {
   const GlobalValue *GV =
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
-  if (!Subtarget.useMovt() || Subtarget.isGVInGOT(GV)) {
-    if (TM.isPositionIndependent())
+  bool ForceELFGOTPIC = Subtarget.isTargetELF() && !GV->isDSOLocal();
+  if (!Subtarget.useMovt() || ForceELFGOTPIC) {
+    // For ELF non-PIC, use GOT PIC code sequence as well because R_ARM_GOT_ABS
+    // does not have assembler support.
+    if (TM.isPositionIndependent() || ForceELFGOTPIC)
       expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_pcrel, ARM::LDRi12);
     else
       expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_abs, ARM::LDRi12);

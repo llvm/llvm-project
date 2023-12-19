@@ -42,16 +42,14 @@ define i32 @test_minsize(i32 %argc, ptr nocapture readonly %argv) local_unnamed_
 ; OVERIDE-NEXT:    [[TMP3:%.*]] = mul i32 [[CALL]], [[TMP2]]
 ; OVERIDE-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[CALL]], 0
 ; OVERIDE-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
-; OVERIDE-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
+; OVERIDE-NEXT:    br i1 [[COND_FR]], label [[TMP5:%.*]], label [[COND_END_THREAD]]
+; OVERIDE:       5:
+; OVERIDE-NEXT:    br label [[COND_END_THREAD]]
 ; OVERIDE:       cond.end.thread:
-; OVERIDE-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ 205962976, [[ENTRY:%.*]] ]
-; OVERIDE-NEXT:    [[COND3:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
-; OVERIDE-NEXT:    br label [[TMP6]]
-; OVERIDE:       6:
-; OVERIDE-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP5]], [[COND_END_THREAD]] ], [ [[TMP3]], [[COND_END]] ]
-; OVERIDE-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND3]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
-; OVERIDE-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
-; OVERIDE-NEXT:    [[CALL33:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 [[TMP9]])
+; OVERIDE-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ [[TMP3]], [[TMP5]] ], [ 205962976, [[ENTRY:%.*]] ]
+; OVERIDE-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[COND_END]] ], [ [[CALL]], [[TMP5]] ], [ 46, [[ENTRY]] ]
+; OVERIDE-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP6]], [[TMP7]]
+; OVERIDE-NEXT:    [[CALL33:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 [[TMP8]])
 ; OVERIDE-NEXT:    ret i32 0
 ;
 entry:
@@ -90,16 +88,14 @@ define i32 @test_optsize(i32 %argc, ptr nocapture readonly %argv) local_unnamed_
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i32 [[CALL]], [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[CALL]], 0
 ; DEFAULT-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
-; DEFAULT-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
+; DEFAULT-NEXT:    br i1 [[COND_FR]], label [[TMP5:%.*]], label [[COND_END_THREAD]]
+; DEFAULT:       5:
+; DEFAULT-NEXT:    br label [[COND_END_THREAD]]
 ; DEFAULT:       cond.end.thread:
-; DEFAULT-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ 205962976, [[ENTRY:%.*]] ]
-; DEFAULT-NEXT:    [[COND3:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
-; DEFAULT-NEXT:    br label [[TMP6]]
-; DEFAULT:       6:
-; DEFAULT-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP5]], [[COND_END_THREAD]] ], [ [[TMP3]], [[COND_END]] ]
-; DEFAULT-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND3]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
-; DEFAULT-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
-; DEFAULT-NEXT:    [[CALL33:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 [[TMP9]])
+; DEFAULT-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ [[TMP3]], [[TMP5]] ], [ 205962976, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[COND_END]] ], [ [[CALL]], [[TMP5]] ], [ 46, [[ENTRY]] ]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP6]], [[TMP7]]
+; DEFAULT-NEXT:    [[CALL33:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 [[TMP8]])
 ; DEFAULT-NEXT:    ret i32 0
 ;
 ; OVERIDE-LABEL: @test_optsize(
@@ -115,16 +111,14 @@ define i32 @test_optsize(i32 %argc, ptr nocapture readonly %argv) local_unnamed_
 ; OVERIDE-NEXT:    [[TMP3:%.*]] = mul i32 [[CALL]], [[TMP2]]
 ; OVERIDE-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[CALL]], 0
 ; OVERIDE-NEXT:    [[COND_FR:%.*]] = freeze i1 [[TMP4]]
-; OVERIDE-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP6:%.*]]
+; OVERIDE-NEXT:    br i1 [[COND_FR]], label [[TMP5:%.*]], label [[COND_END_THREAD]]
+; OVERIDE:       5:
+; OVERIDE-NEXT:    br label [[COND_END_THREAD]]
 ; OVERIDE:       cond.end.thread:
-; OVERIDE-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ 205962976, [[ENTRY:%.*]] ]
-; OVERIDE-NEXT:    [[COND3:%.*]] = phi i32 [ [[CALL]], [[COND_END]] ], [ 46, [[ENTRY]] ]
-; OVERIDE-NEXT:    br label [[TMP6]]
-; OVERIDE:       6:
-; OVERIDE-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP5]], [[COND_END_THREAD]] ], [ [[TMP3]], [[COND_END]] ]
-; OVERIDE-NEXT:    [[TMP8:%.*]] = phi i32 [ [[COND3]], [[COND_END_THREAD]] ], [ 0, [[COND_END]] ]
-; OVERIDE-NEXT:    [[TMP9:%.*]] = mul i32 [[TMP7]], [[TMP8]]
-; OVERIDE-NEXT:    [[CALL33:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 [[TMP9]])
+; OVERIDE-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP3]], [[COND_END]] ], [ [[TMP3]], [[TMP5]] ], [ 205962976, [[ENTRY:%.*]] ]
+; OVERIDE-NEXT:    [[TMP7:%.*]] = phi i32 [ 0, [[COND_END]] ], [ [[CALL]], [[TMP5]] ], [ 46, [[ENTRY]] ]
+; OVERIDE-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP6]], [[TMP7]]
+; OVERIDE-NEXT:    [[CALL33:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 [[TMP8]])
 ; OVERIDE-NEXT:    ret i32 0
 ;
 entry:

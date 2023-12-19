@@ -21,7 +21,6 @@
 
 /* C23 7.20.1 Defines several macros for performing checked integer arithmetic*/
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 #define __STDC_VERSION_STDCKDINT_H__ 202311L
 
 // Both A and B shall be any integer type other than "plain" char, bool, a bit-
@@ -38,7 +37,6 @@
 #define ckd_add(R, A, B) __builtin_add_overflow((A), (B), (R))
 #define ckd_sub(R, A, B) __builtin_sub_overflow((A), (B), (R))
 #define ckd_mul(R, A, B) __builtin_mul_overflow((A), (B), (R))
-#endif
 
 #endif /* __STDC_HOSTED__ */
 #endif /* __STDCKDINT_H */

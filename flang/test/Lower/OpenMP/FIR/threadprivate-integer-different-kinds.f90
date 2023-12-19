@@ -2,7 +2,7 @@
 ! Test for variables with different kind.
 
 !REQUIRES: shell
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 program test
   integer, save :: i

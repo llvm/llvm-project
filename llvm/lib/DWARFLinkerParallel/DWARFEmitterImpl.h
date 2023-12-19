@@ -39,7 +39,7 @@ class MCCodeEmitter;
 namespace dwarflinker_parallel {
 
 using DebugNamesUnitsOffsets = std::vector<std::variant<MCSymbol *, uint64_t>>;
-using CompUnitIDToIdx = DenseMap<unsigned, size_t>;
+using CompUnitIDToIdx = DenseMap<unsigned, unsigned>;
 
 /// This class emits DWARF data to the output stream. It emits already
 /// generated section data and specific data, which could not be generated
@@ -87,7 +87,7 @@ public:
   uint64_t getDebugInfoSectionSize() const { return DebugInfoSectionSize; }
 
   /// Emits .debug_names section according to the specified \p Table.
-  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table,
+  void emitDebugNames(DWARF5AccelTable &Table,
                       DebugNamesUnitsOffsets &CUOffsets,
                       CompUnitIDToIdx &UnitIDToIdxMap);
 

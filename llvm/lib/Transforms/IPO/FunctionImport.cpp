@@ -37,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -137,6 +138,29 @@ static cl::opt<std::string>
 static cl::opt<bool>
     ImportAllIndex("import-all-index",
                    cl::desc("Import all external functions in index."));
+
+/// Pass a workload description file - an example of workload would be the
+/// functions executed to satisfy a RPC request. A workload is defined by a root
+/// function and the list of functions that are (frequently) needed to satisfy
+/// it. The module that defines the root will have all those functions imported.
+/// The file contains a JSON dictionary. The keys are root functions, the values
+/// are lists of functions to import in the module defining the root. It is
+/// assumed -funique-internal-linkage-names was used, thus ensuring function
+/// names are unique even for local linkage ones.
+static cl::opt<std::string> WorkloadDefinitions(
+    "thinlto-workload-def",
+    cl::desc("Pass a workload definition. This is a file containing a JSON "
+             "dictionary. The keys are root functions, the values are lists of "
+             "functions to import in the module defining the root. It is "
+             "assumed -funique-internal-linkage-names was used, to ensure "
+             "local linkage functions have unique names. For example: \n"
+             "{\n"
+             "  \"rootFunction_1\": [\"function_to_import_1\", "
+             "\"function_to_import_2\"], \n"
+             "  \"rootFunction_2\": [\"function_to_import_3\", "
+             "\"function_to_import_4\"] \n"
+             "}"),
+    cl::Hidden);
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
@@ -369,14 +393,16 @@ public:
   }
 };
 
+static const char *getFailureName(FunctionImporter::ImportFailureReason Reason);
+
 /// Determine the list of imports and exports for each module.
-class ModuleImportsManager final {
+class ModuleImportsManager {
+protected:
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
   const ModuleSummaryIndex &Index;
   DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
-public:
   ModuleImportsManager(
       function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           IsPrevailing,
@@ -384,13 +410,246 @@ public:
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
 
+public:
+  virtual ~ModuleImportsManager() = default;
+
   /// Given the list of globals defined in a module, compute the list of imports
   /// as well as the list of "exports", i.e. the list of symbols referenced from
   /// another module (that may require promotion).
-  void computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
-                              StringRef ModName,
-                              FunctionImporter::ImportMapTy &ImportList);
+  virtual void
+  computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                         StringRef ModName,
+                         FunctionImporter::ImportMapTy &ImportList);
+
+  static std::unique_ptr<ModuleImportsManager>
+  create(function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+             IsPrevailing,
+         const ModuleSummaryIndex &Index,
+         DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists =
+             nullptr);
 };
+
+/// A ModuleImportsManager that operates based on a workload definition (see
+/// -thinlto-workload-def). For modules that do not define workload roots, it
+/// applies the base ModuleImportsManager import policy.
+class WorkloadImportsManager : public ModuleImportsManager {
+  // Keep a module name -> value infos to import association. We use it to
+  // determine if a module's import list should be done by the base
+  // ModuleImportsManager or by us.
+  StringMap<DenseSet<ValueInfo>> Workloads;
+
+  void
+  computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                         StringRef ModName,
+                         FunctionImporter::ImportMapTy &ImportList) override {
+    auto SetIter = Workloads.find(ModName);
+    if (SetIter == Workloads.end()) {
+      LLVM_DEBUG(dbgs() << "[Workload] " << ModName
+                        << " does not contain the root of any context.\n");
+      return ModuleImportsManager::computeImportForModule(DefinedGVSummaries,
+                                                          ModName, ImportList);
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] " << ModName
+                      << " contains the root(s) of context(s).\n");
+
+    GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
+                        ExportLists);
+    auto &ValueInfos = SetIter->second;
+    SmallVector<EdgeInfo, 128> GlobWorklist;
+    for (auto &VI : llvm::make_early_inc_range(ValueInfos)) {
+      auto It = DefinedGVSummaries.find(VI.getGUID());
+      if (It != DefinedGVSummaries.end() &&
+          IsPrevailing(VI.getGUID(), It->second)) {
+        LLVM_DEBUG(
+            dbgs() << "[Workload] " << VI.name()
+                   << " has the prevailing variant already in the module "
+                   << ModName << ". No need to import\n");
+        continue;
+      }
+      auto Candidates =
+          qualifyCalleeCandidates(Index, VI.getSummaryList(), ModName);
+
+      const GlobalValueSummary *GVS = nullptr;
+      auto PotentialCandidates = llvm::map_range(
+          llvm::make_filter_range(
+              Candidates,
+              [&](const auto &Candidate) {
+                LLVM_DEBUG(dbgs() << "[Workflow] Candidate for " << VI.name()
+                                  << " from " << Candidate.second->modulePath()
+                                  << " ImportFailureReason: "
+                                  << getFailureName(Candidate.first) << "\n");
+                return Candidate.first ==
+                        FunctionImporter::ImportFailureReason::None;
+              }),
+          [](const auto &Candidate) { return Candidate.second; });
+      if (PotentialCandidates.empty()) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because can't find eligible Callee. Guid is: "
+                          << Function::getGUID(VI.name()) << "\n");
+        continue;
+      }
+      /// We will prefer importing the prevailing candidate, if not, we'll
+      /// still pick the first available candidate. The reason we want to make
+      /// sure we do import the prevailing candidate is because the goal of
+      /// workload-awareness is to enable optimizations specializing the call
+      /// graph of that workload. Suppose a function is already defined in the
+      /// module, but it's not the prevailing variant. Suppose also we do not
+      /// inline it (in fact, if it were interposable, we can't inline it),
+      /// but we could specialize it to the workload in other ways. However,
+      /// the linker would drop it in the favor of the prevailing copy.
+      /// Instead, by importing the prevailing variant (assuming also the use
+      /// of `-avail-extern-to-local`), we keep the specialization. We could
+      /// alteranatively make the non-prevailing variant local, but the
+      /// prevailing one is also the one for which we would have previously
+      /// collected profiles, making it preferrable.
+      auto PrevailingCandidates = llvm::make_filter_range(
+          PotentialCandidates, [&](const auto *Candidate) {
+            return IsPrevailing(VI.getGUID(), Candidate);
+          });
+      if (PrevailingCandidates.empty()) {
+        GVS = *PotentialCandidates.begin();
+        if (!llvm::hasSingleElement(PotentialCandidates) &&
+            GlobalValue::isLocalLinkage(GVS->linkage()))
+          LLVM_DEBUG(
+              dbgs()
+              << "[Workload] Found multiple non-prevailing candidates for "
+              << VI.name()
+              << ". This is unexpected. Are module paths passed to the "
+                 "compiler unique for the modules passed to the linker?");
+        // We could in theory have multiple (interposable) copies of a symbol
+        // when there is no prevailing candidate, if say the prevailing copy was
+        // in a native object being linked in. However, we should in theory be
+        // marking all of these non-prevailing IR copies dead in that case, in
+        // which case they won't be candidates.
+        assert(GVS->isLive());
+      } else {
+        assert(llvm::hasSingleElement(PrevailingCandidates));
+        GVS = *PrevailingCandidates.begin();
+      }
+
+      auto ExportingModule = GVS->modulePath();
+      // We checked that for the prevailing case, but if we happen to have for
+      // example an internal that's defined in this module, it'd have no
+      // PrevailingCandidates.
+      if (ExportingModule == ModName) {
+        LLVM_DEBUG(dbgs() << "[Workload] Not importing " << VI.name()
+                          << " because its defining module is the same as the "
+                             "current module\n");
+        continue;
+      }
+      LLVM_DEBUG(dbgs() << "[Workload][Including]" << VI.name() << " from "
+                        << ExportingModule << " : "
+                        << Function::getGUID(VI.name()) << "\n");
+      ImportList[ExportingModule].insert(VI.getGUID());
+      GVI.onImportingSummary(*GVS);
+      if (ExportLists)
+        (*ExportLists)[ExportingModule].insert(VI);
+    }
+    LLVM_DEBUG(dbgs() << "[Workload] Done\n");
+  }
+
+public:
+  WorkloadImportsManager(
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      const ModuleSummaryIndex &Index,
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
+      : ModuleImportsManager(IsPrevailing, Index, ExportLists) {
+    // Since the workload def uses names, we need a quick lookup
+    // name->ValueInfo.
+    StringMap<ValueInfo> NameToValueInfo;
+    StringSet<> AmbiguousNames;
+    for (auto &I : Index) {
+      ValueInfo VI = Index.getValueInfo(I);
+      if (!NameToValueInfo.insert(std::make_pair(VI.name(), VI)).second)
+        LLVM_DEBUG(AmbiguousNames.insert(VI.name()));
+    }
+    auto DbgReportIfAmbiguous = [&](StringRef Name) {
+      LLVM_DEBUG(if (AmbiguousNames.count(Name) > 0) {
+        dbgs() << "[Workload] Function name " << Name
+               << " present in the workload definition is ambiguous. Consider "
+                  "compiling with -funique-internal-linkage-names.";
+      });
+    };
+    std::error_code EC;
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(WorkloadDefinitions);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      report_fatal_error("Failed to open context file");
+      return;
+    }
+    auto Buffer = std::move(BufferOrErr.get());
+    std::map<std::string, std::vector<std::string>> WorkloadDefs;
+    json::Path::Root NullRoot;
+    // The JSON is supposed to contain a dictionary matching the type of
+    // WorkloadDefs. For example:
+    // {
+    //   "rootFunction_1": ["function_to_import_1", "function_to_import_2"],
+    //   "rootFunction_2": ["function_to_import_3", "function_to_import_4"]
+    // }
+    auto Parsed = json::parse(Buffer->getBuffer());
+    if (!Parsed)
+      report_fatal_error(Parsed.takeError());
+    if (!json::fromJSON(*Parsed, WorkloadDefs, NullRoot))
+      report_fatal_error("Invalid thinlto contextual profile format.");
+    for (const auto &Workload : WorkloadDefs) {
+      const auto &Root = Workload.first;
+      DbgReportIfAmbiguous(Root);
+      LLVM_DEBUG(dbgs() << "[Workload] Root: " << Root << "\n");
+      const auto &AllCallees = Workload.second;
+      auto RootIt = NameToValueInfo.find(Root);
+      if (RootIt == NameToValueInfo.end()) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
+                          << " not found in this linkage unit.\n");
+        continue;
+      }
+      auto RootVI = RootIt->second;
+      if (RootVI.getSummaryList().size() != 1) {
+        LLVM_DEBUG(dbgs() << "[Workload] Root " << Root
+                          << " should have exactly one summary, but has "
+                          << RootVI.getSummaryList().size() << ". Skipping.\n");
+        continue;
+      }
+      StringRef RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath();
+      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << Root
+                        << " is : " << RootDefiningModule << "\n");
+      auto &Set = Workloads[RootDefiningModule];
+      for (const auto &Callee : AllCallees) {
+        LLVM_DEBUG(dbgs() << "[Workload] " << Callee << "\n");
+        DbgReportIfAmbiguous(Callee);
+        auto ElemIt = NameToValueInfo.find(Callee);
+        if (ElemIt == NameToValueInfo.end()) {
+          LLVM_DEBUG(dbgs() << "[Workload] " << Callee << " not found\n");
+          continue;
+        }
+        Set.insert(ElemIt->second);
+      }
+      LLVM_DEBUG({
+        dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
+               << " distinct callees.\n";
+        for (const auto &VI : Set) {
+          dbgs() << "[Workload] Root: " << Root
+                 << " Would include: " << VI.getGUID() << "\n";
+        }
+      });
+    }
+  }
+};
+
+std::unique_ptr<ModuleImportsManager> ModuleImportsManager::create(
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        IsPrevailing,
+    const ModuleSummaryIndex &Index,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists) {
+  if (WorkloadDefinitions.empty()) {
+    LLVM_DEBUG(dbgs() << "[Workload] Using the regular imports manager.\n");
+    return std::unique_ptr<ModuleImportsManager>(
+        new ModuleImportsManager(IsPrevailing, Index, ExportLists));
+  }
+  LLVM_DEBUG(dbgs() << "[Workload] Using the contextual imports manager.\n");
+  return std::make_unique<WorkloadImportsManager>(IsPrevailing, Index,
+                                                  ExportLists);
+}
 
 static const char *
 getFailureName(FunctionImporter::ImportFailureReason Reason) {
@@ -732,14 +991,14 @@ void llvm::ComputeCrossModuleImport(
         isPrevailing,
     DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
-  ModuleImportsManager MIS(isPrevailing, Index, &ExportLists);
+  auto MIS = ModuleImportsManager::create(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
   for (const auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
     auto &ImportList = ImportLists[DefinedGVSummaries.first];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
                       << DefinedGVSummaries.first << "'\n");
-    MIS.computeImportForModule(DefinedGVSummaries.second,
-                               DefinedGVSummaries.first, ImportList);
+    MIS->computeImportForModule(DefinedGVSummaries.second,
+                                DefinedGVSummaries.first, ImportList);
   }
 
   // When computing imports we only added the variables and functions being
@@ -855,8 +1114,8 @@ static void ComputeCrossModuleImportForModuleForTest(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ModuleImportsManager MIS(isPrevailing, Index);
-  MIS.computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
+  auto MIS = ModuleImportsManager::create(isPrevailing, Index);
+  MIS->computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
 
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
@@ -1322,7 +1581,7 @@ static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
   // ensure all uses of alias instead use the new clone (casted if necessary).
   NewFn->setLinkage(GA->getLinkage());
   NewFn->setVisibility(GA->getVisibility());
-  GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewFn, GA->getType()));
+  GA->replaceAllUsesWith(NewFn);
   NewFn->takeName(GA);
   return NewFn;
 }

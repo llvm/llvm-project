@@ -108,5 +108,5 @@ attributes #0 = { nounwind }
                              isOptimized: true, flags: "-O2",
                              splitDebugFilename: "abc.debug", emissionKind: 2)
 !29 = !{!"function_entry_count", i64 3}
-!30 = !{!"branch_weights", i32 99, i32 1}
+!30 = !{!"branch_weights", i32 10000, i32 1}
 !31 = !{!"branch_weights", i32 1, i32 99}

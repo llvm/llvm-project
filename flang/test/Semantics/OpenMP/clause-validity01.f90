@@ -319,7 +319,8 @@ use omp_lib
   !$omp parallel
   b = 1
   !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
-  !$omp single private(a) lastprivate(c)
+  !ERROR: NOWAIT clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive 
+  !$omp single private(a) lastprivate(c) nowait
   a = 3.14
   !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
@@ -399,13 +400,15 @@ use omp_lib
   !$omp parallel
   !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
   !ERROR: NOGROUP clause is not allowed on the DO SIMD directive
-  !$omp do simd ordered(2) NOGROUP
+  !ERROR: NOWAIT clause is not allowed on the OMP DO SIMD directive, use it on OMP END DO SIMD directive 
+  !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
      do j = 1, N
         a = 3.14
      enddo
   enddo
-  !$omp end parallel
+  !omp end do nowait
+  !$omp end parallel 
 
 ! 2.11.4 parallel-do-simd-clause -> parallel-clause |
 !                                   do-simd-clause

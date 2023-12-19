@@ -28,7 +28,7 @@ namespace LIBC_NAMESPACE {
     return load32_aligned<uint32_t>(ptr, offset);
   else if (alignment == 2)
     return load32_aligned<uint16_t, uint16_t>(ptr, offset);
-  else
+  else // 1, 3
     return load32_aligned<uint8_t, uint16_t, uint8_t>(ptr, offset);
 }
 
@@ -38,9 +38,11 @@ namespace LIBC_NAMESPACE {
     return load64_aligned<uint64_t>(ptr, offset);
   else if (alignment == 4)
     return load64_aligned<uint32_t, uint32_t>(ptr, offset);
+  else if (alignment == 6)
+    return load64_aligned<uint16_t, uint32_t, uint16_t>(ptr, offset);
   else if (alignment == 2)
     return load64_aligned<uint16_t, uint16_t, uint16_t, uint16_t>(ptr, offset);
-  else
+  else // 1, 3, 5, 7
     return load64_aligned<uint8_t, uint16_t, uint16_t, uint16_t, uint8_t>(
         ptr, offset);
 }

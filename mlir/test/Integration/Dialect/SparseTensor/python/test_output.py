@@ -8,36 +8,52 @@ import tempfile
 
 from mlir import ir
 from mlir import runtime as rt
-
 from mlir.dialects import builtin
 from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
-# TODO: move more into actual IR building.
+
 def boilerplate(attr: st.EncodingAttr):
     """Returns boilerplate main method."""
     return f"""
-func.func @main(%p : !llvm.ptr<i8>) -> () attributes {{ llvm.emit_c_interface }} {{
+func.func @main(%p : !llvm.ptr) -> () attributes {{ llvm.emit_c_interface }} {{
   %d = arith.constant sparse<[[0, 0], [1, 1], [0, 9], [9, 0], [4, 4]],
                              [1.0, 2.0, 3.0, 4.0, 5.0]> : tensor<10x10xf64>
   %a = sparse_tensor.convert %d : tensor<10x10xf64> to tensor<10x10xf64, {attr}>
-  sparse_tensor.out %a, %p : tensor<10x10xf64, {attr}>, !llvm.ptr<i8>
+  sparse_tensor.out %a, %p : tensor<10x10xf64, {attr}>, !llvm.ptr
   return
 }}
 """
 
 
-def expected():
+def expected(id_map):
     """Returns expected contents of output.
 
-    Regardless of the dimension ordering, compression, and bitwidths that are
-    used in the sparse tensor, the output is always lexicographically sorted
-    by natural index order.
+    +-----+-----+-----+-----+-----+
+    | 1 0 | . . | . . | . . | 0 3 |
+    | 0 2 | . . | . . | . . | 0 0 |
+    +-----+-----+-----+-----+-----+
+    | . . | . . | . . | . . | . . |
+    | . . | . . | . . | . . | . . |
+    +-----+-----+-----+-----+-----+
+    | . . | . . | 5 0 | . . | . . |
+    | . . | . . | 0 0 | . . | . . |
+    +-----+-----+-----+-----+-----+
+    | . . | . . | . . | . . | . . |
+    | . . | . . | . . | . . | . . |
+    +-----+-----+-----+-----+-----+
+    | 0 0 | . . | . . | . . | . . |
+    | 4 0 | . . | . . | . . | . . |
+    +-----+-----+-----+-----+-----+
+
+    Output appears as dimension coordinates but lexicographically
+    sorted by level coordinates. For BSR, the blocks are filled.
     """
-    return f"""; extended FROSTT format
+    if id_map is 0:
+        return f"""# extended FROSTT format
 2 5
 10 10
 1 1 1
@@ -46,22 +62,52 @@ def expected():
 5 5 5
 10 1 4
 """
+    if id_map is 1:
+        return f"""# extended FROSTT format
+2 5
+10 10
+1 1 1
+10 1 4
+2 2 2
+5 5 5
+1 10 3
+"""
+    if id_map is 2:
+        return f"""# extended FROSTT format
+2 16
+10 10
+1 1 1
+1 2 0
+2 1 0
+2 2 2
+1 9 0
+1 10 3
+2 9 0
+2 10 0
+5 5 5
+5 6 0
+6 5 0
+6 6 0
+9 1 0
+9 2 0
+10 1 4
+10 2 0
+"""
+    raise AssertionError("unexpected id_map")
 
 
-def build_compile_and_run_output(attr: st.EncodingAttr, compiler):
+def build_compile_and_run_output(attr: st.EncodingAttr, compiler, expected):
     # Build and Compile.
     module = ir.Module.parse(boilerplate(attr))
     engine = compiler.compile_and_jit(module)
-
     # Invoke the kernel and compare output.
     with tempfile.TemporaryDirectory() as test_dir:
         out = os.path.join(test_dir, "out.tns")
         buf = out.encode("utf-8")
         mem_a = ctypes.pointer(ctypes.pointer(ctypes.create_string_buffer(buf)))
         engine.invoke("main", mem_a)
-
         actual = open(out).read()
-        if actual != expected():
+        if actual != expected:
             quit("FAILURE")
 
 
@@ -75,27 +121,62 @@ def main():
     print("\nTEST: test_output")
     count = 0
     with ir.Context() as ctx, ir.Location.unknown():
-        # Loop over various sparse types: CSR, DCSR, CSC, DCSC.
+        # Loop over various sparse types (COO, CSR, DCSR, CSC, DCSC) with
+        # regular and loose compression and various metadata bitwidths.
+        # For these simple orderings, dim2lvl and lvl2dim are the same.
         levels = [
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [st.LevelType.compressed_nu, st.LevelType.singleton],
+            [st.LevelType.dense, st.LevelType.compressed],
+            [st.LevelType.dense, st.LevelType.loose_compressed],
+            [st.LevelType.compressed, st.LevelType.compressed],
         ]
         orderings = [
-            ir.AffineMap.get_permutation([0, 1]),
-            ir.AffineMap.get_permutation([1, 0]),
+            (ir.AffineMap.get_permutation([0, 1]), 0),
+            (ir.AffineMap.get_permutation([1, 0]), 1),
         ]
-        bitwidths = [8, 16, 32, 64]
-        compiler = sparse_compiler.SparseCompiler(
+        bitwidths = [8, 64]
+        compiler = sparsifier.Sparsifier(
             options="", opt_level=2, shared_libs=[support_lib]
         )
         for level in levels:
-            for ordering in orderings:
+            for ordering, id_map in orderings:
                 for bwidth in bitwidths:
-                    attr = st.EncodingAttr.get(level, ordering, None, bwidth, bwidth)
-                    build_compile_and_run_output(attr, compiler)
+                    attr = st.EncodingAttr.get(
+                        level, ordering, ordering, bwidth, bwidth
+                    )
+                    build_compile_and_run_output(attr, compiler, expected(id_map))
                     count = count + 1
 
-    # CHECK: Passed 16 tests
+        # Now do the same for BSR.
+        level = [
+            st.LevelType.dense,
+            st.LevelType.compressed,
+            st.LevelType.dense,
+            st.LevelType.dense,
+        ]
+        d0 = ir.AffineDimExpr.get(0)
+        d1 = ir.AffineDimExpr.get(1)
+        c2 = ir.AffineConstantExpr.get(2)
+        dim2lvl = ir.AffineMap.get(
+            2,
+            0,
+            [
+                ir.AffineExpr.get_floor_div(d0, c2),
+                ir.AffineExpr.get_floor_div(d1, c2),
+                ir.AffineExpr.get_mod(d0, c2),
+                ir.AffineExpr.get_mod(d1, c2),
+            ],
+        )
+        l0 = ir.AffineDimExpr.get(0)
+        l1 = ir.AffineDimExpr.get(1)
+        l2 = ir.AffineDimExpr.get(2)
+        l3 = ir.AffineDimExpr.get(3)
+        lvl2dim = ir.AffineMap.get(4, 0, [2 * l0 + l2, 2 * l1 + l3])
+        attr = st.EncodingAttr.get(level, dim2lvl, lvl2dim, 0, 0)
+        build_compile_and_run_output(attr, compiler, expected(2))
+        count = count + 1
+
+    # CHECK: Passed 17 tests
     print("Passed", count, "tests")
 
 

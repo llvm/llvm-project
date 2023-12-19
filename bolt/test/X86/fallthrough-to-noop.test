@@ -1,4 +1,4 @@
-# Check that profile data for the fall-through jump is not ingored when there is
+# Check that profile data for the fall-through jump is not ignored when there is
 # a conditional jump followed by a no-op.
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \

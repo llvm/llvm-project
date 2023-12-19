@@ -23,19 +23,25 @@
 // RUN: not %clang_cc1 -include-pch %t.h.gch -DFOO=baz -fsyntax-only %s -print-stats 2> %t.missinglog
 // RUN: FileCheck -check-prefix=CHECK-NO-SUITABLE %s < %t.missinglog
 
+// Don't gch probe directories which contain no pch files.
+// RUN: rm -rf %t.x.h.gch
+// RUN: mkdir -p %t.x.h.gch
+// RUN: not %clang -include %t.x.h -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHECK-IGNORED-DIR %s
+
 // CHECK-CBAR: int bar
 int FOO;
 
 int get(void) {
 #ifdef __cplusplus
-  // CHECK-CPP: warning: '-include {{.*}}.h' probing .gch is deprecated. Use '-include-pch {{.*}}.h.gch' or switch to .pch instead
   // CHECK-CPP: .h.gch{{[/\\]}}cpp.gch
   return i;
 #else
-  // CHECK-C: warning: '-include {{.*}}.h' probing .gch is deprecated. Use '-include-pch {{.*}}.h.gch' or switch to .pch instead
   // CHECK-C: .h.gch{{[/\\]}}c.gch
   return j;
 #endif
 }
 
 // CHECK-NO-SUITABLE: no suitable precompiled header file found in directory
+
+// CHECK-IGNORED-DIR: precompiled header directory '{{.*}}pch-dir.c.tmp.x.h.gch' was ignored because it contains no clang PCH files
+// CHECK-IGNORED-DIR: '{{.*}}pch-dir.c.tmp.x.h' file not found

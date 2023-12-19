@@ -45,37 +45,48 @@ string.h
 Function Name  Available  RPC Required
 =============  =========  ============
 bcmp           |check|
+bcopy          |check|
 bzero          |check|
+index          |check|
 memccpy        |check|
-memchr         
+memchr         |check|
 memcmp         |check|
 memcpy         |check|
+memmem         |check|
 memmove        |check|
 mempcpy        |check|
-memrchr
+memrchr        |check|
 memset         |check|
+rindex         |check|
 stpcpy         |check|
 stpncpy        |check|
+strcasecmp     |check|
+strcasestr     |check|
 strcat         |check|
-strchr         
+strchr         |check|
+strchrnul      |check|
 strcmp         |check|
+strcoll        |check|
 strcpy         |check|
 strcspn        |check|
+strdup         |check|
 strlcat        |check|
 strlcpy        |check|
 strlen         |check|
+strncasecmp    |check|
 strncat        |check|
 strncmp        |check|
 strncpy        |check|
+strndup        |check|
 strnlen        |check|
-strpbrk        
-strrchr        
+strpbrk        |check|
+strrchr        |check|
+strsep         |check|
 strspn         |check|
-strstr         
+strstr         |check|
 strtok         |check|
 strtok_r       |check|
-strdup
-strndup
+strxfrm        |check|
 =============  =========  ============
 
 stdlib.h

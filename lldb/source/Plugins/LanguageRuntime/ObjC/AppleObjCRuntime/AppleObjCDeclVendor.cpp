@@ -311,8 +311,8 @@ public:
     const bool isSynthesizedAccessorStub = false;
     const bool isImplicitlyDeclared = true;
     const bool isDefined = false;
-    const clang::ObjCMethodDecl::ImplementationControl impControl =
-        clang::ObjCMethodDecl::None;
+    const clang::ObjCImplementationControl impControl =
+        clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
     const bool for_expression = true;
 

@@ -1,0 +1,101 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc __support functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "math_extras_test",
+    srcs = ["math_extras_test.cpp"],
+    deps = ["//libc:__support_math_extras"],
+)
+
+# This test is currently disabled because of an issue in
+# `libc/src/__support/CPP/new.h` which currently fails with
+# "error: cannot apply asm label to function after its first use"
+# libc_test(
+#     name = "blockstore_test",
+#     srcs = ["blockstore_test.cpp"],
+#     deps = ["//libc:__support_blockstore"],
+# )
+
+libc_test(
+    name = "endian_test",
+    srcs = ["endian_test.cpp"],
+    deps = ["//libc:__support_common"],
+)
+
+libc_test(
+    name = "high_precision_decimal_test",
+    srcs = ["high_precision_decimal_test.cpp"],
+    deps = [
+        "//libc:__support_str_to_float",
+        "//libc:__support_uint128",
+    ],
+)
+
+libc_test(
+    name = "str_to_float_test",
+    srcs = [
+        "str_to_double_test.cpp",
+        "str_to_float_test.cpp",
+        "str_to_fp_test.h",
+        "str_to_long_double_test.cpp",
+    ],
+    deps = [
+        "//libc:__support_fputil_float_properties",
+        "//libc:__support_str_to_float",
+        "//libc:__support_uint128",
+    ],
+)
+
+libc_test(
+    name = "integer_to_string_test",
+    srcs = ["integer_to_string_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:__support_cpp_string_view",
+        "//libc:__support_integer_to_string",
+        "//libc:__support_uint",
+        "//libc:__support_uint128",
+    ],
+)
+
+libc_test(
+    name = "arg_list_test",
+    srcs = ["arg_list_test.cpp"],
+    deps = [
+        "//libc:__support_arg_list",
+    ],
+)
+
+libc_test(
+    name = "uint_test",
+    srcs = ["uint_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_optional",
+        "//libc:__support_uint",
+    ],
+)
+
+libc_test(
+    name = "fixedvector_test",
+    srcs = ["fixedvector_test.cpp"],
+    deps = [
+        "//libc:__support_fixedvector",
+    ],
+)
+
+libc_test(
+    name = "char_vector_test",
+    srcs = ["char_vector_test.cpp"],
+    deps = [
+        "//libc:__support_char_vector",
+    ],
+)

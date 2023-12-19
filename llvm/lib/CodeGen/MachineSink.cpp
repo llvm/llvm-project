@@ -500,43 +500,47 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     return false;
 
   // Now we know we can fold the instruction in all its users.
-  if (UsedRegA)
-    MRI->clearKillFlags(UsedRegA);
-  if (UsedRegB)
-    MRI->clearKillFlags(UsedRegB);
-
   for (auto &[SinkDst, MaybeAM] : SinkInto) {
     MachineInstr *New = nullptr;
     LLVM_DEBUG(dbgs() << "Sinking copy of"; MI.dump(); dbgs() << "into";
                SinkDst->dump());
     if (SinkDst->isCopy()) {
+      // TODO: After performing the sink-and-fold, the original instruction is
+      // deleted. Its value is still available (in a hard register), so if there
+      // are debug instructions which refer to the (now deleted) virtual
+      // register they could be updated to refer to the hard register, in
+      // principle. However, it's not clear how to do that, moreover in some
+      // cases the debug instructions may need to be replicated proportionally
+      // to the number of the COPY instructions replaced and in some extreme
+      // cases we can end up with quadratic increase in the number of debug
+      // instructions.
+
       // Sink a copy of the instruction, replacing a COPY instruction.
       MachineBasicBlock::iterator InsertPt = SinkDst->getIterator();
       Register DstReg = SinkDst->getOperand(0).getReg();
       TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI, *TRI);
-      // If the original instruction did not have source location, reuse a one
-      // from the COPY.
       New = &*std::prev(InsertPt);
-      if (const DebugLoc &NewLoc = New->getDebugLoc(); !NewLoc)
+      if (!New->getDebugLoc())
         New->setDebugLoc(SinkDst->getDebugLoc());
-      // Sink DBG_VALUEs, which refer to the original instruction's destination
-      // (DefReg).
-      MachineBasicBlock &SinkMBB = *SinkDst->getParent();
-      auto &DbgUsers = SeenDbgUsers[DefReg];
-      for (auto &U : DbgUsers) {
-        MachineInstr *DbgMI = U.getPointer();
-        if (U.getInt())
-          continue;
-        MachineInstr *NewDbgMI = SinkDst->getMF()->CloneMachineInstr(DbgMI);
-        SinkMBB.insertAfter(InsertPt, NewDbgMI);
-        for (auto &SrcMO : DbgMI->getDebugOperandsForReg(DefReg)) {
-          auto &DstMO = NewDbgMI->getOperand(SrcMO.getOperandNo());
-          DstMO.setReg(DstReg);
-        }
-      }
+
+      // The operand registers of the "sunk" instruction have their live range
+      // extended and their kill flags may no longer be correct. Conservatively
+      // clear the kill flags.
+      if (UsedRegA)
+        MRI->clearKillFlags(UsedRegA);
+      if (UsedRegB)
+        MRI->clearKillFlags(UsedRegB);
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
+
+      // The registers of the addressing mode may have their live range extended
+      // and their kill flags may no longer be correct. Conservatively clear the
+      // kill flags.
+      if (Register R = MaybeAM.BaseReg; R.isValid() && R.isVirtual())
+        MRI->clearKillFlags(R);
+      if (Register R = MaybeAM.ScaledReg; R.isValid() && R.isVirtual())
+        MRI->clearKillFlags(R);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
     // Clear the StoreInstrCache, since we may invalidate it by erasing.

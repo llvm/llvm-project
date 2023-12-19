@@ -13,11 +13,11 @@ define i64 @test1(ptr %array, i64 %i, i64 %j)  {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I:%.*]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[ARRAY:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 5
-; CHECK-NEXT:    store i64 [[J:%.*]], ptr [[GEP4]], align 4
+; CHECK-NEXT:    store i64 [[J:%.*]], ptr [[GEP4]], align 8
 ; CHECK-NEXT:    [[GEP26:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
-; CHECK-NEXT:    store i64 [[J]], ptr [[GEP26]], align 4
+; CHECK-NEXT:    store i64 [[J]], ptr [[GEP26]], align 8
 ; CHECK-NEXT:    [[GEP38:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 35
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP38]], align 4
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP38]], align 8
 ; CHECK-NEXT:    ret i64 undef
 ;
 entry:
@@ -169,11 +169,11 @@ define i64 @test6(ptr %array, i64 %i, i64 %j) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[I:%.*]], 5
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[ARRAY:%.*]], i64 [[J:%.*]]
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[ARRAY]], i64 [[I]]
 ; CHECK-NEXT:    [[GEP52:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 6
-; CHECK-NEXT:    store i64 [[I]], ptr [[GEP52]], align 4
-; CHECK-NEXT:    store i64 [[I]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i64 [[I]], ptr [[GEP52]], align 8
+; CHECK-NEXT:    store i64 [[I]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    ret i64 undef
 ;
 entry:

@@ -158,6 +158,8 @@ public:
     }
 
     options = options.enableExpensiveChecks(enableExpensiveChecks);
+    options = options.enableEnforceSingleToplevelTransformOp(
+        enforceSingleToplevelTransformOp);
     if (failed(transform::detail::interpreterBaseRunOnOperationImpl(
             getOperation(), getArgument(), getSharedTransformModule(),
             getTransformLibraryModule(), extraMapping, options,
@@ -170,6 +172,10 @@ public:
       *this, "enable-expensive-checks", llvm::cl::init(false),
       llvm::cl::desc("perform expensive checks to better report errors in the "
                      "transform IR")};
+  Option<bool> enforceSingleToplevelTransformOp{
+      *this, "enforce-single-top-level-transform-op", llvm::cl::init(true),
+      llvm::cl::desc("Ensure that only a single top-level transform op is "
+                     "present in the IR.")};
 
   Option<std::string> bindFirstExtraToOps{
       *this, "bind-first-extra-to-ops",

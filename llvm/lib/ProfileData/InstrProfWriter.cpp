@@ -132,6 +132,8 @@ public:
       M += sizeof(uint64_t); // The function hash
       M += sizeof(uint64_t); // The size of the Counts vector
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
+      M += sizeof(uint64_t); // The size of the Bitmap vector
+      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -159,6 +161,10 @@ public:
       LE.write<uint64_t>(ProfileData.first); // Function hash
       LE.write<uint64_t>(ProfRecord.Counts.size());
       for (uint64_t I : ProfRecord.Counts)
+        LE.write<uint64_t>(I);
+
+      LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
+      for (uint64_t I : ProfRecord.BitmapBytes)
         LE.write<uint64_t>(I);
 
       // Write value data
@@ -380,6 +386,8 @@ bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
     const InstrProfRecord &IPR = Func.second;
     if (llvm::any_of(IPR.Counts, [](uint64_t Count) { return Count > 0; }))
       return true;
+    if (llvm::any_of(IPR.BitmapBytes, [](uint8_t Byte) { return Byte > 0; }))
+      return true;
   }
   return false;
 }
@@ -528,7 +536,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       // Insert the key (func hash) and value (memprof record).
       RecordTableGenerator.insert(I.first, I.second);
     }
+    // Release the memory of this MapVector as it is no longer needed.
+    MemProfRecordData.clear();
 
+    // The call to Emit invokes RecordWriterTrait::EmitData which destructs
+    // the memprof record copies owned by the RecordTableGenerator. This works
+    // because the RecordTableGenerator is not used after this point.
     uint64_t RecordTableOffset =
         RecordTableGenerator.Emit(OS.OS, *RecordWriter);
 
@@ -541,6 +554,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       // Insert the key (frame id) and value (frame contents).
       FrameTableGenerator.insert(I.first, I.second);
     }
+    // Release the memory of this MapVector as it is no longer needed.
+    MemProfFrameData.clear();
 
     uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
 
@@ -703,6 +718,17 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   for (uint64_t Count : Func.Counts)
     OS << Count << "\n";
 
+  if (Func.BitmapBytes.size() > 0) {
+    OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
+    OS << "# Bitmap Byte Values:\n";
+    for (uint8_t Byte : Func.BitmapBytes) {
+      OS << "0x";
+      OS.write_hex(Byte);
+      OS << "\n";
+    }
+    OS << "\n";
+  }
+
   uint32_t NumValueKinds = Func.getNumValueKinds();
   if (!NumValueKinds) {
     OS << "\n";
@@ -743,6 +769,8 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::FunctionEntryInstrumentation))
     OS << "# Always instrument the function entry block\n:entry_first\n";
+  if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
+    OS << "# Instrument block coverage\n:single_byte_coverage\n";
   InstrProfSymtab Symtab;
 
   using FuncPair = detail::DenseMapPair<uint64_t, InstrProfRecord>;

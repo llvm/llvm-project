@@ -82,8 +82,8 @@ void LambdaFunctionNameCheck::registerPPCallbacks(
 
 void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<PredefinedExpr>("E");
-  if (E->getIdentKind() != PredefinedExpr::Func &&
-      E->getIdentKind() != PredefinedExpr::Function) {
+  if (E->getIdentKind() != PredefinedIdentKind::Func &&
+      E->getIdentKind() != PredefinedIdentKind::Function) {
     // We don't care about other PredefinedExprs.
     return;
   }

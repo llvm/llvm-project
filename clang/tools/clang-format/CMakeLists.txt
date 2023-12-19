@@ -38,3 +38,9 @@ install(FILES clang-format.py
 install(PROGRAMS git-clang-format
   DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT clang-format)
+
+if (WIN32 AND NOT CYGWIN)
+  install(PROGRAMS git-clang-format.bat
+    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    COMPONENT clang-format)
+endif()

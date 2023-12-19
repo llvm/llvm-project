@@ -70,7 +70,7 @@ public:
   /// Constructs a new sparse-tensor storage object with the given encoding.
   SparseTensorStorageBase(uint64_t dimRank, const uint64_t *dimSizes,
                           uint64_t lvlRank, const uint64_t *lvlSizes,
-                          const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                          const LevelType *lvlTypes, const uint64_t *dim2lvl,
                           const uint64_t *lvl2dim);
   virtual ~SparseTensorStorageBase() = default;
 
@@ -99,32 +99,38 @@ public:
   }
 
   /// Gets the level-types array.
-  const std::vector<DimLevelType> &getLvlTypes() const { return lvlTypes; }
+  const std::vector<LevelType> &getLvlTypes() const { return lvlTypes; }
 
   /// Safely looks up the type of the given level.
-  DimLevelType getLvlType(uint64_t l) const {
+  LevelType getLvlType(uint64_t l) const {
     assert(l < getLvlRank());
     return lvlTypes[l];
   }
 
   /// Safely checks if the level uses dense storage.
-  bool isDenseLvl(uint64_t l) const { return isDenseDLT(getLvlType(l)); }
+  bool isDenseLvl(uint64_t l) const { return isDenseLT(getLvlType(l)); }
 
   /// Safely checks if the level uses compressed storage.
   bool isCompressedLvl(uint64_t l) const {
-    return isCompressedDLT(getLvlType(l));
+    return isCompressedLT(getLvlType(l));
+  }
+
+  /// Safely checks if the level uses loose compressed storage.
+  bool isLooseCompressedLvl(uint64_t l) const {
+    return isLooseCompressedLT(getLvlType(l));
   }
 
   /// Safely checks if the level uses singleton storage.
-  bool isSingletonLvl(uint64_t l) const {
-    return isSingletonDLT(getLvlType(l));
-  }
+  bool isSingletonLvl(uint64_t l) const { return isSingletonLT(getLvlType(l)); }
+
+  /// Safely checks if the level uses 2 out of 4 storage.
+  bool is2OutOf4Lvl(uint64_t l) const { return is2OutOf4LT(getLvlType(l)); }
 
   /// Safely checks if the level is ordered.
-  bool isOrderedLvl(uint64_t l) const { return isOrderedDLT(getLvlType(l)); }
+  bool isOrderedLvl(uint64_t l) const { return isOrderedLT(getLvlType(l)); }
 
   /// Safely checks if the level is unique.
-  bool isUniqueLvl(uint64_t l) const { return isUniqueDLT(getLvlType(l)); }
+  bool isUniqueLvl(uint64_t l) const { return isUniqueLT(getLvlType(l)); }
 
   /// Gets positions-overhead storage for the given level.
 #define DECL_GETPOSITIONS(PNAME, P)                                            \
@@ -137,9 +143,6 @@ public:
   virtual void getCoordinates(std::vector<C> **, uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETCOORDINATES)
 #undef DECL_GETCOORDINATES
-
-  /// Gets the coordinate-value stored at the given level and position.
-  virtual uint64_t getCrd(uint64_t lvl, uint64_t pos) const = 0;
 
   /// Gets primary storage.
 #define DECL_GETVALUES(VNAME, V) virtual void getValues(std::vector<V> **);
@@ -177,12 +180,13 @@ public:
 private:
   const std::vector<uint64_t> dimSizes;
   const std::vector<uint64_t> lvlSizes;
-  const std::vector<DimLevelType> lvlTypes;
+  const std::vector<LevelType> lvlTypes;
   const std::vector<uint64_t> dim2lvlVec;
   const std::vector<uint64_t> lvl2dimVec;
 
 protected:
   const MapRef map; // non-owning pointers into dim2lvl/lvl2dim vectors
+  const bool allDense;
 };
 
 /// A memory-resident sparse tensor using a storage scheme based on
@@ -200,7 +204,7 @@ class SparseTensorStorage final : public SparseTensorStorageBase {
   /// doesn't entail `!(positions[l].empty())`.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim)
       : SparseTensorStorageBase(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                                 dim2lvl, lvl2dim),
@@ -216,7 +220,7 @@ public:
   /// some other form of initialization.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim, SparseTensorCOO<V> *lvlCOO,
                       bool initializeValuesIfAllDense);
 
@@ -225,7 +229,7 @@ public:
   /// overhead-storage allocation as the ctor above.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO);
 
   /// Constructs a sparse tensor with the given encoding, and initializes
@@ -237,19 +241,19 @@ public:
   /// passed in as a single AoS memory.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim, const intptr_t *lvlBufs);
 
   /// Allocates a new empty sparse tensor.
   static SparseTensorStorage<P, C, V> *
   newEmpty(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-           const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+           const uint64_t *lvlSizes, const LevelType *lvlTypes,
            const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding);
 
   /// Allocates a new sparse tensor and initializes it from the given COO.
   static SparseTensorStorage<P, C, V> *
   newFromCOO(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-             const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+             const uint64_t *lvlSizes, const LevelType *lvlTypes,
              const uint64_t *dim2lvl, const uint64_t *lvl2dim,
              SparseTensorCOO<V> &lvlCOO);
 
@@ -258,7 +262,7 @@ public:
   static SparseTensorStorage<P, C, V> *
   packFromLvlBuffers(uint64_t dimRank, const uint64_t *dimSizes,
                      uint64_t lvlRank, const uint64_t *lvlSizes,
-                     const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                     const LevelType *lvlTypes, const uint64_t *dim2lvl,
                      const uint64_t *lvl2dim, uint64_t srcRank,
                      const intptr_t *buffers);
 
@@ -280,13 +284,6 @@ public:
     *out = &values;
   }
 
-  /// Returns coordinate at given position.
-  uint64_t getCrd(uint64_t lvl, uint64_t pos) const final {
-    assert(isCompressedDLT(getLvlType(lvl)) || isSingletonDLT(getLvlType(lvl)));
-    assert(pos < coordinates[lvl].size());
-    return coordinates[lvl][pos]; // Converts the stored `C` into `uint64_t`.
-  }
-
   /// Partially specialize forwarding insertions based on template types.
   void forwardingInsert(const uint64_t *dimCoords, V val) final {
     assert(dimCoords && coo);
@@ -297,14 +294,12 @@ public:
   /// Partially specialize lexicographical insertions based on template types.
   void lexInsert(const uint64_t *lvlCoords, V val) final {
     assert(lvlCoords);
-    bool allDense = std::all_of(getLvlTypes().begin(), getLvlTypes().end(),
-                                [](DimLevelType lt) { return isDenseDLT(lt); });
     if (allDense) {
       uint64_t lvlRank = getLvlRank();
       uint64_t valIdx = 0;
-      // Linearize the address
-      for (size_t lvl = 0; lvl < lvlRank; lvl++)
-        valIdx = valIdx * getLvlSize(lvl) + lvlCoords[lvl];
+      // Linearize the address.
+      for (uint64_t l = 0; l < lvlRank; l++)
+        valIdx = valIdx * getLvlSize(l) + lvlCoords[l];
       values[valIdx] = val;
       return;
     }
@@ -338,7 +333,7 @@ public:
     values[c] = 0;
     filled[c] = false;
     // Subsequent insertions are quick.
-    for (uint64_t i = 1; i < count; ++i) {
+    for (uint64_t i = 1; i < count; i++) {
       assert(c < added[i] && "non-lexicographic insertion");
       c = added[i];
       assert(c <= expsz);
@@ -367,10 +362,12 @@ public:
 
   /// Finalizes lexicographic insertions.
   void endLexInsert() final {
-    if (values.empty())
-      finalizeSegment(0);
-    else
-      endPath(0);
+    if (!allDense) {
+      if (values.empty())
+        finalizeSegment(0);
+      else
+        endPath(0);
+    }
   }
 
   /// Allocates a new COO object and initializes it with the contents.
@@ -394,27 +391,27 @@ public:
 
     // In-place permutation.
     auto applyPerm = [this](std::vector<uint64_t> &perm) {
-      size_t length = perm.size();
-      size_t lvlRank = getLvlRank();
+      uint64_t length = perm.size();
+      uint64_t lvlRank = getLvlRank();
       // Cache for the current level coordinates.
       std::vector<P> lvlCrds(lvlRank);
-      for (size_t i = 0; i < length; i++) {
-        size_t current = i;
+      for (uint64_t i = 0; i < length; i++) {
+        uint64_t current = i;
         if (i != perm[current]) {
-          for (size_t l = 0; l < lvlRank; l++)
+          for (uint64_t l = 0; l < lvlRank; l++)
             lvlCrds[l] = coordinates[l][i];
           V val = values[i];
           // Deals with a permutation cycle.
           while (i != perm[current]) {
-            size_t next = perm[current];
+            uint64_t next = perm[current];
             // Swaps the level coordinates and value.
-            for (size_t l = 0; l < lvlRank; l++)
+            for (uint64_t l = 0; l < lvlRank; l++)
               coordinates[l][current] = coordinates[l][next];
             values[current] = values[next];
             perm[current] = current;
             current = next;
           }
-          for (size_t l = 0; l < lvlRank; l++)
+          for (uint64_t l = 0; l < lvlRank; l++)
             coordinates[l][current] = lvlCrds[l];
           values[current] = val;
           perm[current] = current;
@@ -441,16 +438,6 @@ public:
   }
 
 private:
-  /// Appends an arbitrary new position to `positions[lvl]`.  This method
-  /// checks that `pos` is representable in the `P` type; however, it
-  /// does not check that `pos` is semantically valid (i.e., larger than
-  /// the previous position and smaller than `coordinates[lvl].capacity()`).
-  void appendPos(uint64_t lvl, uint64_t pos, uint64_t count = 1) {
-    assert(isCompressedLvl(lvl));
-    positions[lvl].insert(positions[lvl].end(), count,
-                          detail::checkOverflowCast<P>(pos));
-  }
-
   /// Appends coordinate `crd` to level `lvl`, in the semantically
   /// general sense.  For non-dense levels, that means appending to the
   /// `coordinates[lvl]` array, checking that `crd` is representable in
@@ -461,11 +448,11 @@ private:
   /// `full` is the number of "entries" already written to `values` for this
   /// segment (aka one after the highest coordinate previously appended).
   void appendCrd(uint64_t lvl, uint64_t full, uint64_t crd) {
-    const auto dlt = getLvlType(lvl); // Avoid redundant bounds checking.
-    if (isCompressedDLT(dlt) || isSingletonDLT(dlt)) {
+    if (!isDenseLvl(lvl)) {
+      assert(isCompressedLvl(lvl) || isLooseCompressedLvl(lvl) ||
+             isSingletonLvl(lvl) || is2OutOf4Lvl(lvl));
       coordinates[lvl].push_back(detail::checkOverflowCast<C>(crd));
     } else { // Dense level.
-      assert(isDenseDLT(dlt));
       assert(crd >= full && "Coordinate was already filled");
       if (crd == full)
         return; // Short-circuit, since it'll be a nop.
@@ -482,15 +469,14 @@ private:
   /// storage, as opposed to "level-sizes" which are the cardinality
   /// of possible coordinates for that level.
   uint64_t assembledSize(uint64_t parentSz, uint64_t l) const {
-    const auto dlt = getLvlType(l); // Avoid redundant bounds checking.
-    if (isCompressedDLT(dlt))
+    if (isCompressedLvl(l))
       return positions[l][parentSz];
-    if (isSingletonDLT(dlt))
-      return parentSz; // New size is same as the parent.
-    if (isDenseDLT(dlt))
-      return parentSz * getLvlSize(l);
-    MLIR_SPARSETENSOR_FATAL("unsupported level type: %d\n",
-                            static_cast<uint8_t>(dlt));
+    if (isLooseCompressedLvl(l))
+      return positions[l][2 * parentSz - 1];
+    if (isSingletonLvl(l) || is2OutOf4Lvl(l))
+      return parentSz; // new size same as the parent
+    assert(isDenseLvl(l));
+    return parentSz * getLvlSize(l);
   }
 
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
@@ -514,7 +500,7 @@ private:
       uint64_t seg = lo + 1;
       if (isUniqueLvl(l))
         while (seg < hi && lvlElements[seg].coords[l] == c)
-          ++seg;
+          seg++;
       // Handle segment in interval for sparse or dense level.
       appendCrd(l, full, c);
       full = c + 1;
@@ -529,14 +515,22 @@ private:
   /// Finalizes the sparse position structure at this level.
   void finalizeSegment(uint64_t l, uint64_t full = 0, uint64_t count = 1) {
     if (count == 0)
-      return;                       // Short-circuit, since it'll be a nop.
-    const auto dlt = getLvlType(l); // Avoid redundant bounds checking.
-    if (isCompressedDLT(dlt)) {
-      appendPos(l, coordinates[l].size(), count);
-    } else if (isSingletonDLT(dlt)) {
+      return; // Short-circuit, since it'll be a nop.
+    if (isCompressedLvl(l)) {
+      uint64_t pos = coordinates[l].size();
+      positions[l].insert(positions[l].end(), count,
+                          detail::checkOverflowCast<P>(pos));
+    } else if (isLooseCompressedLvl(l)) {
+      // Finish this level, and push pairs for the empty ones, and one
+      // more for next level. Note that this always leaves one extra
+      // unused element at the end.
+      uint64_t pos = coordinates[l].size();
+      positions[l].insert(positions[l].end(), 2 * count,
+                          detail::checkOverflowCast<P>(pos));
+    } else if (isSingletonLvl(l) || is2OutOf4Lvl(l)) {
       return; // Nothing to finalize.
     } else {  // Dense dimension.
-      assert(isDenseDLT(dlt));
+      assert(isDenseLvl(l));
       const uint64_t sz = getLvlSizes()[l];
       assert(sz >= full && "Segment is overfull");
       count = detail::checkedMul(count, sz - full);
@@ -557,7 +551,7 @@ private:
     const uint64_t lastLvl = lvlRank - 1;
     assert(diffLvl <= lvlRank);
     const uint64_t stop = lvlRank - diffLvl;
-    for (uint64_t i = 0; i < stop; ++i) {
+    for (uint64_t i = 0; i < stop; i++) {
       const uint64_t l = lastLvl - i;
       finalizeSegment(l, lvlCursor[l] + 1);
     }
@@ -569,7 +563,7 @@ private:
                V val) {
     const uint64_t lvlRank = getLvlRank();
     assert(diffLvl <= lvlRank);
-    for (uint64_t l = diffLvl; l < lvlRank; ++l) {
+    for (uint64_t l = diffLvl; l < lvlRank; l++) {
       const uint64_t c = lvlCoords[l];
       appendCrd(l, full, c);
       full = 0;
@@ -582,14 +576,13 @@ private:
   /// in the argument differ from those in the current cursor.
   uint64_t lexDiff(const uint64_t *lvlCoords) const {
     const uint64_t lvlRank = getLvlRank();
-    for (uint64_t l = 0; l < lvlRank; ++l) {
+    for (uint64_t l = 0; l < lvlRank; l++) {
       const auto crd = lvlCoords[l];
       const auto cur = lvlCursor[l];
       if (crd > cur || (crd == cur && !isUniqueLvl(l)) ||
           (crd < cur && !isOrderedLvl(l))) {
         return l;
       }
-
       if (crd < cur) {
         assert(false && "non-lexicographic insertion");
         return -1u;
@@ -609,27 +602,37 @@ private:
       return;
     }
     if (isCompressedLvl(l)) {
-      // Look up the bounds of the `l`-level segment determined by the
-      // `(l - 1)`-level position `parentPos`.
       const std::vector<P> &positionsL = positions[l];
       assert(parentPos + 1 < positionsL.size());
       const uint64_t pstart = static_cast<uint64_t>(positionsL[parentPos]);
       const uint64_t pstop = static_cast<uint64_t>(positionsL[parentPos + 1]);
-      // Loop-invariant code for looking up the `l`-level coordinates.
       const std::vector<C> &coordinatesL = coordinates[l];
       assert(pstop <= coordinatesL.size());
-      for (uint64_t pos = pstart; pos < pstop; ++pos) {
+      for (uint64_t pos = pstart; pos < pstop; pos++) {
         lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
         toCOO(pos, l + 1, dimCoords);
       }
-    } else if (isSingletonLvl(l)) {
-      lvlCursor[l] = getCrd(l, parentPos);
+    } else if (isLooseCompressedLvl(l)) {
+      const std::vector<P> &positionsL = positions[l];
+      assert(2 * parentPos + 1 < positionsL.size());
+      const uint64_t pstart = static_cast<uint64_t>(positionsL[2 * parentPos]);
+      const uint64_t pstop =
+          static_cast<uint64_t>(positionsL[2 * parentPos + 1]);
+      const std::vector<C> &coordinatesL = coordinates[l];
+      assert(pstop <= coordinatesL.size());
+      for (uint64_t pos = pstart; pos < pstop; pos++) {
+        lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
+        toCOO(pos, l + 1, dimCoords);
+      }
+    } else if (isSingletonLvl(l) || is2OutOf4Lvl(l)) {
+      assert(parentPos < coordinates[l].size());
+      lvlCursor[l] = static_cast<uint64_t>(coordinates[l][parentPos]);
       toCOO(parentPos, l + 1, dimCoords);
     } else { // Dense level.
       assert(isDenseLvl(l));
       const uint64_t sz = getLvlSizes()[l];
       const uint64_t pstart = parentPos * sz;
-      for (uint64_t c = 0; c < sz; ++c) {
+      for (uint64_t c = 0; c < sz; c++) {
         lvlCursor[l] = c;
         toCOO(pstart + c, l + 1, dimCoords);
       }
@@ -652,7 +655,7 @@ private:
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding) {
   SparseTensorCOO<V> *lvlCOO = nullptr;
   if (forwarding)
@@ -665,7 +668,7 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
     SparseTensorCOO<V> &lvlCOO) {
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
@@ -675,7 +678,7 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, uint64_t srcRank,
     const intptr_t *buffers) {
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
@@ -691,7 +694,7 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
     SparseTensorCOO<V> *lvlCOO, bool initializeValuesIfAllDense)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
@@ -703,22 +706,28 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   // we reserve position/coordinate space based on all previous dense
   // levels, which works well up to first sparse level; but we should
   // really use nnz and dense/sparse distribution.
-  bool allDense = true;
   uint64_t sz = 1;
-  for (uint64_t l = 0; l < lvlRank; ++l) {
-    const DimLevelType dlt = lvlTypes[l]; // Avoid redundant bounds checking.
-    if (isCompressedDLT(dlt)) {
+  for (uint64_t l = 0; l < lvlRank; l++) {
+    if (isCompressedLvl(l)) {
       positions[l].reserve(sz + 1);
       positions[l].push_back(0);
       coordinates[l].reserve(sz);
       sz = 1;
-      allDense = false;
-    } else if (isSingletonDLT(dlt)) {
+    } else if (isLooseCompressedLvl(l)) {
+      positions[l].reserve(2 * sz + 1); // last one unused
+      positions[l].push_back(0);
       coordinates[l].reserve(sz);
       sz = 1;
-      allDense = false;
+    } else if (isSingletonLvl(l)) {
+      coordinates[l].reserve(sz);
+      sz = 1;
+    } else if (is2OutOf4Lvl(l)) {
+      assert(l == lvlRank - 1 && "unexpected 2:4 usage");
+      sz = detail::checkedMul(sz, lvlSizes[l]) / 2;
+      coordinates[l].reserve(sz);
+      values.reserve(sz);
     } else { // Dense level.
-      assert(isDenseDLT(dlt));
+      assert(isDenseLvl(l));
       sz = detail::checkedMul(sz, lvlSizes[l]);
     }
   }
@@ -729,7 +738,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
     SparseTensorCOO<V> &lvlCOO)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
@@ -748,43 +757,63 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, const intptr_t *lvlBufs)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                           dim2lvl, lvl2dim) {
+  // Note that none of the buffers can be reused because ownership
+  // of the memory passed from clients is not necessarily transferred.
+  // Therefore, all data is copied over into a new SparseTensorStorage.
+  //
+  // TODO: this needs to be generalized to all formats AND
+  //       we need a proper audit of e.g. double compressed
+  //       levels where some are not filled
+  //
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
-    if (!isUniqueLvl(l) && isCompressedLvl(l)) {
-      // A `compressed_nu` level marks the start of trailing COO start level.
-      // Since the coordinate buffer used for trailing COO are passed in as AoS
-      // scheme, and SparseTensorStorage uses a SoA scheme, we can not simply
-      // copy the value from the provided buffers.
+    if (!isUniqueLvl(l) && (isCompressedLvl(l) || isLooseCompressedLvl(l))) {
+      // A `(loose)compressed_nu` level marks the start of trailing COO
+      // start level. Since the coordinate buffer used for trailing COO
+      // is passed in as AoS scheme and SparseTensorStorage uses a SoA
+      // scheme, we cannot simply copy the value from the provided buffers.
       trailCOOLen = lvlRank - l;
       break;
     }
-    assert(!isSingletonLvl(l) &&
-           "Singleton level not following a compressed_nu level");
-    if (isCompressedLvl(l)) {
+    if (isCompressedLvl(l) || isLooseCompressedLvl(l)) {
       P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
       C *crdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);
-      // Copies the lvlBuf into the vectors. The buffer can not be simply reused
-      // because the memory passed from users is not necessarily allocated on
-      // heap.
-      positions[l].assign(posPtr, posPtr + parentSz + 1);
-      coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
+      if (isLooseCompressedLvl(l)) {
+        positions[l].assign(posPtr, posPtr + 2 * parentSz);
+        coordinates[l].assign(crdPtr, crdPtr + positions[l][2 * parentSz - 1]);
+      } else {
+        positions[l].assign(posPtr, posPtr + parentSz + 1);
+        coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
+      }
+    } else if (isSingletonLvl(l)) {
+      assert(0 && "general singleton not supported yet");
+    } else if (is2OutOf4Lvl(l)) {
+      assert(0 && "2Out4 not supported yet");
     } else {
       assert(isDenseLvl(l));
     }
     parentSz = assembledSize(parentSz, l);
   }
 
+  // Handle Aos vs. SoA mismatch for COO.
   if (trailCOOLen != 0) {
     uint64_t cooStartLvl = lvlRank - trailCOOLen;
-    assert(!isUniqueLvl(cooStartLvl) && isCompressedLvl(cooStartLvl));
+    assert(!isUniqueLvl(cooStartLvl) &&
+           (isCompressedLvl(cooStartLvl) || isLooseCompressedLvl(cooStartLvl)));
     P *posPtr = reinterpret_cast<P *>(lvlBufs[bufIdx++]);
     C *aosCrdPtr = reinterpret_cast<C *>(lvlBufs[bufIdx++]);
-    positions[cooStartLvl].assign(posPtr, posPtr + parentSz + 1);
-    P crdLen = positions[cooStartLvl][parentSz];
+    P crdLen;
+    if (isLooseCompressedLvl(cooStartLvl)) {
+      positions[cooStartLvl].assign(posPtr, posPtr + 2 * parentSz);
+      crdLen = positions[cooStartLvl][2 * parentSz - 1];
+    } else {
+      positions[cooStartLvl].assign(posPtr, posPtr + parentSz + 1);
+      crdLen = positions[cooStartLvl][parentSz];
+    }
     for (uint64_t l = cooStartLvl; l < lvlRank; l++) {
       coordinates[l].resize(crdLen);
       for (uint64_t n = 0; n < crdLen; n++) {
@@ -794,6 +823,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     parentSz = assembledSize(parentSz, cooStartLvl);
   }
 
+  // Copy the values buffer.
   V *valPtr = reinterpret_cast<V *>(lvlBufs[bufIdx]);
   values.assign(valPtr, valPtr + parentSz);
 }

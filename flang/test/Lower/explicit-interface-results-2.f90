@@ -1,7 +1,7 @@
 ! Test lowering of internal procedures returning arrays or characters.
 ! This test allocation on the caller side of the results that may depend on
 ! host associated symbols.
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 module some_module
  integer :: n_module

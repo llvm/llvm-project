@@ -10,12 +10,13 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
 #include "FPBits.h"
+#include "FloatProperties.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
-#include "PlatformDefs.h"
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -129,7 +130,7 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // early. Because the result of the ldexp operation can be a subnormal number,
   // we need to accommodate the (mantissaWidht + 1) worth of shift in
   // calculating the limit.
-  int exp_limit = FPBits<T>::MAX_EXPONENT + MantissaWidth<T>::VALUE + 1;
+  int exp_limit = FPBits<T>::MAX_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
     return bits.get_sign() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
 
@@ -143,41 +144,54 @@ LIBC_INLINE T ldexp(T x, int exp) {
   return normal;
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T nextafter(T from, T to) {
+template <typename T, typename U,
+          cpp::enable_if_t<cpp::is_floating_point_v<T> &&
+                               cpp::is_floating_point_v<U> &&
+                               (sizeof(T) <= sizeof(U)),
+                           int> = 0>
+LIBC_INLINE T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;
 
-  FPBits<T> to_bits(to);
+  FPBits<U> to_bits(to);
   if (to_bits.is_nan())
-    return to;
+    return static_cast<T>(to);
 
-  if (from == to)
-    return to;
+  // NOTE: This would work only if `U` has a greater or equal precision than
+  // `T`. Otherwise `from` could loose its precision and the following statement
+  // could incorrectly evaluate to `true`.
+  if (static_cast<U>(from) == to)
+    return static_cast<T>(to);
 
-  using UIntType = typename FPBits<T>::UIntType;
-  UIntType int_val = from_bits.uintval();
-  UIntType sign_mask = (UIntType(1) << (sizeof(T) * 8 - 1));
-  if (from != T(0.0)) {
-    if ((from < to) == (from > T(0.0))) {
+  using StorageType = typename FPBits<T>::StorageType;
+  StorageType int_val = from_bits.uintval();
+  if (from != FPBits<T>::zero()) {
+    if ((static_cast<U>(from) < to) == (from > FPBits<T>::zero())) {
       ++int_val;
     } else {
       --int_val;
     }
   } else {
-    int_val = (to_bits.uintval() & sign_mask) + UIntType(1);
+    int_val = FPBits<T>::MIN_SUBNORMAL;
+    if (to_bits.get_sign())
+      int_val |= FloatProperties<T>::SIGN_MASK;
   }
 
+  StorageType exponent_bits = int_val & FloatProperties<T>::EXP_MASK;
+  if (exponent_bits == StorageType(0))
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+  else if (exponent_bits == FloatProperties<T>::EXP_MASK)
+    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+
   return cpp::bit_cast<T>(int_val);
-  // TODO: Raise floating point exceptions as required by the standard.
 }
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#ifdef SPECIAL_X86_LONG_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/NextAfterLongDouble.h"
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H

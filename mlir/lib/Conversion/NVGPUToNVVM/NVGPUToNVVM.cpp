@@ -402,10 +402,24 @@ struct ConvertNVGPUToNVVMPass
 
   void runOnOperation() override {
     LowerToLLVMOptions options(&getContext());
-    options.useOpaquePointers = useOpaquePointers;
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext(), options);
     IRRewriter rewriter(&getContext());
+    populateGpuMemorySpaceAttributeConversions(
+        converter, [](gpu::AddressSpace space) -> unsigned {
+          switch (space) {
+          case gpu::AddressSpace::Global:
+            return static_cast<unsigned>(
+                NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          case gpu::AddressSpace::Workgroup:
+            return static_cast<unsigned>(
+                NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          case gpu::AddressSpace::Private:
+            return 0;
+          }
+          llvm_unreachable("unknown address space enum value");
+          return 0;
+        });
     /// device-side async tokens cannot be materialized in nvvm. We just
     /// convert them to a dummy i32 type in order to easily drop them during
     /// conversion.
@@ -451,7 +465,7 @@ struct ConvertNVGPUToNVVMPass
           nvgpu::getMBarrierMemrefType(rewriter.getContext(), type));
     });
     converter.addConversion([&](nvgpu::TensorMapDescriptorType type) -> Type {
-      return converter.getPointerType(type.getTensor().getElementType());
+      return LLVM::LLVMPointerType::get(type.getContext());
     });
     populateNVGPUToNVVMConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
@@ -651,16 +665,11 @@ struct NVGPUAsyncCopyLowering
     Value dstPtr =
         getStridedElementPtr(b.getLoc(), dstMemrefType, adaptor.getDst(),
                              adaptor.getDstIndices(), rewriter);
-    auto i8Ty = IntegerType::get(op.getContext(), 8);
     FailureOr<unsigned> dstAddressSpace =
         getTypeConverter()->getMemRefAddressSpace(dstMemrefType);
     if (failed(dstAddressSpace))
       return rewriter.notifyMatchFailure(
           loc, "destination memref address space not convertible to integer");
-    auto dstPointerType =
-        getTypeConverter()->getPointerType(i8Ty, *dstAddressSpace);
-    if (!getTypeConverter()->useOpaquePointers())
-      dstPtr = b.create<LLVM::BitcastOp>(dstPointerType, dstPtr);
 
     auto srcMemrefType = cast<MemRefType>(op.getSrc().getType());
     FailureOr<unsigned> srcAddressSpace =
@@ -671,13 +680,9 @@ struct NVGPUAsyncCopyLowering
 
     Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.getSrc(),
                                         adaptor.getSrcIndices(), rewriter);
-    auto srcPointerType =
-        getTypeConverter()->getPointerType(i8Ty, *srcAddressSpace);
-    if (!getTypeConverter()->useOpaquePointers())
-      scrPtr = b.create<LLVM::BitcastOp>(srcPointerType, scrPtr);
     // Intrinsics takes a global pointer so we need an address space cast.
-    auto srcPointerGlobalType = getTypeConverter()->getPointerType(
-        i8Ty, NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+    auto srcPointerGlobalType = LLVM::LLVMPointerType::get(
+        op->getContext(), NVVM::NVVMMemorySpace::kGlobalMemorySpace);
     scrPtr = b.create<LLVM::AddrSpaceCastOp>(srcPointerGlobalType, scrPtr);
     int64_t dstElements = adaptor.getDstElements().getZExtValue();
     int64_t sizeInBytes =
@@ -983,10 +988,9 @@ struct NVGPUTmaAsyncLoadOpLowering
     for (auto [index, value] : llvm::enumerate(coords)) {
       coords[index] = truncToI32(b, value);
     }
-
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
-        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords,
-        adaptor.getPredicate());
+        op, dest, adaptor.getTensorMapDescriptor(), coords, barrier,
+        ValueRange{}, Value{}, Value{}, adaptor.getPredicate());
     return success();
   }
 };
@@ -1128,8 +1132,7 @@ struct NVGPUTmaCreateDescriptorOpLowering
   matchAndRewrite(nvgpu::TmaCreateDescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-    LLVM::LLVMPointerType llvmPointerType = getTypeConverter()->getPointerType(
-        IntegerType::get(op->getContext(), 8));
+    auto llvmPointerType = LLVM::LLVMPointerType::get(op->getContext());
     Type llvmInt64Type = IntegerType::get(op->getContext(), 64);
 
     Value tensorElementType =

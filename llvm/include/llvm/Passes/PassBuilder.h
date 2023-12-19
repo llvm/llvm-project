@@ -246,8 +246,7 @@ public:
   /// separately to avoid any inconsistencies with an ad-hoc pipeline that tries
   /// to approximate the PerModuleDefaultPipeline from the pre-link LTO
   /// pipelines.
-  ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
-                                               bool ThinLTO, bool EmitSummary);
+  ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
@@ -628,11 +627,16 @@ private:
   Error parseModulePassPipeline(ModulePassManager &MPM,
                                 ArrayRef<PipelineElement> Pipeline);
 
+  // Adds passes to do pre-inlining and related cleanup passes before
+  // profile instrumentation/matching (to enable better context sensitivity),
+  // and for memprof to enable better matching with missing debug frames.
+  void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
+                           ThinOrFullLTOPhase LTOPhase);
+
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
                          bool AtomicCounterUpdate, std::string ProfileFile,
                          std::string ProfileRemappingFile,
-                         ThinOrFullLTOPhase LTOPhase,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   // Extension Point callbacks
@@ -716,10 +720,10 @@ template <typename AnalysisT, typename IRUnitT, typename AnalysisManagerT,
 bool parseAnalysisUtilityPasses(
     StringRef AnalysisName, StringRef PipelineName,
     PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...> &PM) {
-  if (!PipelineName.endswith(">"))
+  if (!PipelineName.ends_with(">"))
     return false;
   // See if this is an invalidate<> pass name
-  if (PipelineName.startswith("invalidate<")) {
+  if (PipelineName.starts_with("invalidate<")) {
     PipelineName = PipelineName.substr(11, PipelineName.size() - 12);
     if (PipelineName != AnalysisName)
       return false;
@@ -728,7 +732,7 @@ bool parseAnalysisUtilityPasses(
   }
 
   // See if this is a require<> pass name
-  if (PipelineName.startswith("require<")) {
+  if (PipelineName.starts_with("require<")) {
     PipelineName = PipelineName.substr(8, PipelineName.size() - 9);
     if (PipelineName != AnalysisName)
       return false;

@@ -1,4 +1,4 @@
-//===------- RISCVPushPopOptimizer.cpp - RISCV Push/Pop opt. pass ---------===//
+//===------- RISCVPushPopOptimizer.cpp - RISC-V Push/Pop opt. pass --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,9 +22,7 @@ namespace {
 struct RISCVPushPopOpt : public MachineFunctionPass {
   static char ID;
 
-  RISCVPushPopOpt() : MachineFunctionPass(ID) {
-    initializeRISCVPushPopOptPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVPushPopOpt() : MachineFunctionPass(ID) {}
 
   const RISCVInstrInfo *TII;
   const TargetRegisterInfo *TRI;

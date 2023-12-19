@@ -82,7 +82,7 @@
 // FULL-MANGLED-METHOD-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 
 // CONTEXT: Found 1 functions:
-// CONTEXT-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
+// CONTEXT-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv", decl_context = {Namespace(bar)}
 
 // EMPTY: Found 0 functions:
 

@@ -1,9 +1,10 @@
-// RUN: mlir-opt -convert-scf-to-openmp='use-opaque-pointers=1' %s | FileCheck %s
+// RUN: mlir-opt -convert-scf-to-openmp='num-threads=4' %s | FileCheck %s
 
 // CHECK-LABEL: @parallel
 func.func @parallel(%arg0: index, %arg1: index, %arg2: index,
           %arg3: index, %arg4: index, %arg5: index) {
-  // CHECK: omp.parallel {
+  // CHECK: %[[FOUR:.+]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: omp.parallel num_threads(%[[FOUR]] : i32) {
   // CHECK: omp.wsloop for (%[[LVAR1:.*]], %[[LVAR2:.*]]) : index = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
   // CHECK: memref.alloca_scope
   scf.parallel (%i, %j) = (%arg0, %arg1) to (%arg2, %arg3) step (%arg4, %arg5) {
@@ -20,7 +21,8 @@ func.func @parallel(%arg0: index, %arg1: index, %arg2: index,
 // CHECK-LABEL: @nested_loops
 func.func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
                    %arg3: index, %arg4: index, %arg5: index) {
-  // CHECK: omp.parallel {
+  // CHECK: %[[FOUR:.+]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: omp.parallel num_threads(%[[FOUR]] : i32) {
   // CHECK: omp.wsloop for (%[[LVAR_OUT1:.*]]) : index = (%arg0) to (%arg2) step (%arg4) {
     // CHECK: memref.alloca_scope
   scf.parallel (%i) = (%arg0) to (%arg2) step (%arg4) {
@@ -43,7 +45,8 @@ func.func @nested_loops(%arg0: index, %arg1: index, %arg2: index,
 // CHECK-LABEL: @adjacent_loops
 func.func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
                      %arg3: index, %arg4: index, %arg5: index) {
-  // CHECK: omp.parallel {
+  // CHECK: %[[FOUR:.+]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: omp.parallel num_threads(%[[FOUR]] : i32) {
   // CHECK: omp.wsloop for (%[[LVAR_AL1:.*]]) : index = (%arg0) to (%arg2) step (%arg4) {
   // CHECK: memref.alloca_scope
   scf.parallel (%i) = (%arg0) to (%arg2) step (%arg4) {
@@ -55,7 +58,8 @@ func.func @adjacent_loops(%arg0: index, %arg1: index, %arg2: index,
   // CHECK:   omp.terminator
   // CHECK: }
 
-  // CHECK: omp.parallel {
+  // CHECK: %[[FOUR:.+]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: omp.parallel num_threads(%[[FOUR]] : i32) {
   // CHECK: omp.wsloop for (%[[LVAR_AL2:.*]]) : index = (%arg1) to (%arg3) step (%arg5) {
   // CHECK: memref.alloca_scope
   scf.parallel (%j) = (%arg1) to (%arg3) step (%arg5) {

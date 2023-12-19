@@ -165,6 +165,20 @@ class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
 def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
 def u16imm : ImmOperand<i16, "U16Imm", 0, "printU16ImmOperand">;
 
+class ValuePredicatedOperand<CustomOperand op, string valuePredicate,
+                             bit optional = 0>
+    : CustomOperand<op.Type, optional> {
+  let ImmTy = op.ImmTy;
+  defvar OpPredicate = op.ParserMatchClass.PredicateMethod;
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op."#OpPredicate#"() && "#valuePredicate#"; })";
+  let ParserMethod = op.ParserMatchClass.ParserMethod;
+  let DefaultValue = op.DefaultValue;
+  let DefaultMethod = op.DefaultMethod;
+  let PrintMethod = op.PrintMethod;
+}
+
 //===--------------------------------------------------------------------===//
 // Custom Operands
 //===--------------------------------------------------------------------===//
@@ -238,6 +252,8 @@ def umin_oneuse : HasOneUseBinOp<umin>;
 
 def fminnum_oneuse : HasOneUseBinOp<fminnum>;
 def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+def fminimum_oneuse : HasOneUseBinOp<fminimum>;
+def fmaximum_oneuse : HasOneUseBinOp<fmaximum>;
 
 def fminnum_ieee_oneuse : HasOneUseBinOp<fminnum_ieee>;
 def fmaxnum_ieee_oneuse : HasOneUseBinOp<fmaxnum_ieee>;
@@ -626,6 +642,10 @@ defm int_amdgcn_global_atomic_fmax : noret_op;
 defm int_amdgcn_global_atomic_csub : noret_op;
 defm int_amdgcn_flat_atomic_fadd : local_addr_space_atomic_op;
 defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
+defm int_amdgcn_flat_atomic_fmin_num : noret_op;
+defm int_amdgcn_flat_atomic_fmax_num : noret_op;
+defm int_amdgcn_global_atomic_fmin_num : noret_op;
+defm int_amdgcn_global_atomic_fmax_num : noret_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
   let HasNoUse = true in

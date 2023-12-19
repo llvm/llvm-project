@@ -111,7 +111,7 @@ static bool hasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
       if (!S)
         continue;
 
-      if (S->getString().startswith(Prefix))
+      if (S->getString().starts_with(Prefix))
         return true;
     }
   }

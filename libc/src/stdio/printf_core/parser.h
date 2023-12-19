@@ -26,10 +26,10 @@ template <typename T> struct int_type_of {
   using type = T;
 };
 template <> struct int_type_of<double> {
-  using type = fputil::FPBits<double>::UIntType;
+  using type = fputil::FPBits<double>::StorageType;
 };
 template <> struct int_type_of<long double> {
-  using type = fputil::FPBits<long double>::UIntType;
+  using type = fputil::FPBits<long double>::StorageType;
 };
 template <typename T> using int_type_of_v = typename int_type_of<T>::type;
 

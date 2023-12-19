@@ -155,20 +155,16 @@ public:
 
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
-    u32 Integral = 0;
-    u32 Fractional = 0;
-    if (CallsToRetrieve != 0) {
-      Integral = SuccessfulRetrieves * 100 / CallsToRetrieve;
-      Fractional = (((SuccessfulRetrieves * 100) % CallsToRetrieve) * 100 +
-                    CallsToRetrieve / 2) /
-                   CallsToRetrieve;
-    }
+    uptr Integral;
+    uptr Fractional;
+    computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
+                      &Fractional);
     Str->append("Stats: MapAllocatorCache: EntriesCount: %d, "
                 "MaxEntriesCount: %u, MaxEntrySize: %zu\n",
                 EntriesCount, atomic_load_relaxed(&MaxEntriesCount),
                 atomic_load_relaxed(&MaxEntrySize));
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
-                "(%u.%02u%%)\n",
+                "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
     for (CachedBlock Entry : Entries) {
       if (!Entry.isValid())
@@ -223,7 +219,7 @@ public:
                                          MAP_NOACCESS);
       }
     } else if (Interval == 0) {
-      Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
+      Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
       Entry.Time = 0;
     }
     do {
@@ -441,7 +437,7 @@ private:
         OldestTime = Entry.Time;
       return;
     }
-    Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
+    Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase, Entry.CommitSize);
     Entry.Time = 0;
   }
 

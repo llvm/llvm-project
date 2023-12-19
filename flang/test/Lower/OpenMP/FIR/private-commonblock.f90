@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 !CHECK: func.func @_QPprivate_common() {
 !CHECK: omp.parallel {

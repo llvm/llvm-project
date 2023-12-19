@@ -2252,6 +2252,159 @@ __kmp_invoke_microtask:
 
 #endif /* KMP_ARCH_VE */
 
+#if KMP_ARCH_S390X
+
+//------------------------------------------------------------------------
+//
+// typedef void (*microtask_t)(int *gtid, int *tid, ...);
+//
+// int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
+//                            void *p_argv[]
+// #if OMPT_SUPPORT
+//                            ,
+//                            void **exit_frame_ptr
+// #endif
+//                            ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)(&gtid, &tid, argv[0], ...);
+//
+//   return 1;
+// }
+//
+// Parameters:
+//   r2: pkfn
+//   r3: gtid
+//   r4: tid
+//   r5: argc
+//   r6: p_argv
+//   SP+160: exit_frame_ptr
+//
+// Locals:
+//   __gtid: gtid param pushed on stack so can pass &gtid to pkfn
+//   __tid: tid param pushed on stack so can pass &tid to pkfn
+//
+// Temp. registers:
+//
+//  r0: used to fetch argv slots
+//  r7: used as temporary for number of remaining pkfn parms
+//  r8: argv
+//  r9: pkfn
+//  r10: stack size
+//  r11: previous fp
+//  r12: stack parameter area
+//  r13: argv slot
+//
+// return: r2 (always 1/TRUE)
+//
+
+// -- Begin __kmp_invoke_microtask
+// mark_begin;
+	.text
+	.globl	__kmp_invoke_microtask
+	.p2align	1
+	.type	__kmp_invoke_microtask,@function
+__kmp_invoke_microtask:
+	.cfi_startproc
+
+	stmg	%r6,%r14,48(%r15)
+        .cfi_offset %r6, -112
+        .cfi_offset %r7, -104
+        .cfi_offset %r8, -96
+        .cfi_offset %r9, -88
+        .cfi_offset %r10, -80
+        .cfi_offset %r11, -72
+        .cfi_offset %r12, -64
+        .cfi_offset %r13, -56
+        .cfi_offset %r14, -48
+        .cfi_offset %r15, -40
+	lgr	%r11,%r15
+	.cfi_def_cfa %r11, 160
+
+	// Compute the dynamic stack size:
+	//
+	// - We need 8 bytes for storing 'gtid' and 'tid', so we can pass them by
+	//   reference
+	// - We need 8 bytes for each argument that cannot be passed to the 'pkfn'
+	//   function by register. Given that we have 5 of such registers (r[2-6])
+	//   and two + 'argc' arguments (consider &gtid and &tid), we need to
+	//   reserve max(0, argc - 3)*8 extra bytes
+	//
+	// The total number of bytes is then max(0, argc - 3)*8 + 8
+
+	lgr	%r10,%r5
+	aghi	%r10,-2
+	jnm	0f
+	lghi	%r10,0
+0:
+	sllg	%r10,%r10,3
+	lgr	%r12,%r10
+	aghi	%r10,176
+	sgr 	%r15,%r10
+	agr	%r12,%r15
+	stg	%r11,0(%r15)
+
+	lgr	%r9,%r2			// pkfn
+
+#if OMPT_SUPPORT
+	// Save frame pointer into exit_frame
+	lg	%r8,160(%r11)
+	stg	%r11,0(%r8)
+#endif
+
+	// Prepare arguments for the pkfn function (first 5 using r2-r6 registers)
+
+	stg     %r3,160(%r12)
+	la	%r2,164(%r12)		// gid
+	stg	%r4,168(%r12)		
+	la	%r3,172(%r12)		// tid
+	lgr	%r8,%r6			// argv
+
+	// If argc > 0
+	ltgr	%r7,%r5
+	jz	1f
+
+	lg	%r4,0(%r8)		// argv[0]
+	aghi	%r7,-1
+	jz	1f
+
+	// If argc > 1
+	lg	%r5,8(%r8)		// argv[1]
+	aghi	%r7,-1
+	jz	1f
+
+	// If argc > 2
+	lg	%r6,16(%r8)		// argv[2]
+	aghi	%r7,-1
+	jz	1f
+
+	lghi	%r13,0			// Index [n]
+2:
+	lg	%r0,24(%r13,%r8)	// argv[2+n]
+	stg	%r0,160(%r13,%r15)	// parm[2+n]
+	aghi	%r13,8			// Next
+	aghi	%r7,-1
+	jnz	2b
+
+1:
+	basr	%r14,%r9		// Call pkfn
+
+	// Restore stack and return
+
+	lgr	%r15,%r11
+	lmg	%r6,%r14,48(%r15)
+	lghi	%r2,1
+	br	%r14
+.Lfunc_end0:
+	.size	__kmp_invoke_microtask, .Lfunc_end0-__kmp_invoke_microtask
+	.cfi_endproc
+
+// -- End  __kmp_invoke_microtask
+
+#endif /* KMP_ARCH_S390X */
+
 #if KMP_ARCH_ARM || KMP_ARCH_MIPS
     .data
     COMMON .gomp_critical_user_, 32, 3
@@ -2266,7 +2419,8 @@ __kmp_unnamed_critical_addr:
 #endif /* KMP_ARCH_ARM */
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||                   \
-    KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE
+    KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE ||                 \
+    KMP_ARCH_S390X
 #ifndef KMP_PREFIX_UNDERSCORE
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
@@ -2281,12 +2435,33 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||
-          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE */
+          KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE || 
+          KMP_ARCH_S390X */
 
 #if KMP_OS_LINUX
 # if KMP_ARCH_ARM || KMP_ARCH_AARCH64
 .section .note.GNU-stack,"",%progbits
-# else
+# elif !KMP_ARCH_WASM
 .section .note.GNU-stack,"",@progbits
 # endif
+#endif
+
+#if KMP_ARCH_WASM
+.data
+.global .gomp_critical_user_
+.global .gomp_critical_user_.var
+.global .gomp_critical_user_.reduction.var
+.global __kmp_unnamed_critical_addr
+.gomp_critical_user_:
+.zero 4
+.size .gomp_critical_user_, 4
+.gomp_critical_user_.var:
+.zero 4
+.size .gomp_critical_user_.var, 4
+.gomp_critical_user_.reduction.var:
+.zero 4
+.size .gomp_critical_user_.reduction.var, 4
+__kmp_unnamed_critical_addr:
+    .4byte .gomp_critical_user_
+    .size __kmp_unnamed_critical_addr, 4
 #endif

@@ -81,7 +81,7 @@ class TailDuplication : public BinaryFunctionPass {
   /// Returns true if Reg is used by Inst
   bool regIsUsed(const MCInst &Inst, unsigned Reg, BinaryContext &BC) const;
 
-  /// Returns true if Reg is overwritten before its used by StartBB's sucessors
+  /// Returns true if Reg is overwritten before its used by StartBB's successors
   bool isOverwrittenBeforeUsed(BinaryBasicBlock &StartBB, unsigned Reg) const;
 
   /// Constant and Copy Propagate for the block formed by OriginalBB and

@@ -51,6 +51,12 @@ public:
     return false;
   }
 
+  virtual bool RegisterWriteCausesReconfigure(const llvm::StringRef name) {
+    return false;
+  }
+
+  virtual bool ReconfigureRegisterInfo() { return false; }
+
   // These two functions are used to implement "push" and "pop" of register
   // states.  They are used primarily for expression evaluation, where we need
   // to push a new state (storing the old one in data_sp) and then restoring

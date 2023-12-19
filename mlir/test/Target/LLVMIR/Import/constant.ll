@@ -219,10 +219,10 @@ define i64 @const_exprs_with_duplicate() {
 
 ; Verify the import of constant expressions with cyclic dependencies.
 
-@cyclic = internal constant i64 mul (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
+@cyclic = internal constant i64 add (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
 
 ; CHECK-LABEL: @cyclic
 ; CHECK:  %[[ADDR:.+]] = llvm.mlir.addressof @cyclic
 ; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
-; CHECK:  %[[VAL1:.+]] = llvm.mul %[[VAL0]], %[[VAL0]]
+; CHECK:  %[[VAL1:.+]] = llvm.add %[[VAL0]], %[[VAL0]]
 ; CHECK:  llvm.return %[[VAL1]]

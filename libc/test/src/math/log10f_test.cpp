@@ -16,11 +16,11 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcLog10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcLog10fTest, SpecialNumbers) {
+TEST_F(LlvmLibcLog10fTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log10f(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log10f(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(neg_inf), FE_INVALID);
@@ -32,7 +32,7 @@ TEST(LlvmLibcLog10fTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log10f(1.0f));
 }
 
-TEST(LlvmLibcLog10fTest, TrickyInputs) {
+TEST_F(LlvmLibcLog10fTest, TrickyInputs) {
   constexpr int N = 21;
   constexpr uint32_t INPUTS[N] = {
       0x3f800000U /*1.0f*/,
@@ -65,7 +65,7 @@ TEST(LlvmLibcLog10fTest, TrickyInputs) {
   }
 }
 
-TEST(LlvmLibcLog10fTest, InFloatRange) {
+TEST_F(LlvmLibcLog10fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {

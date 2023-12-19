@@ -176,7 +176,7 @@ NativeSession::searchForPdb(const PdbSearchOptions &Opts) {
   if (!PathOrErr)
     return PathOrErr.takeError();
   StringRef PathFromExe = PathOrErr.get();
-  sys::path::Style Style = PathFromExe.startswith("/")
+  sys::path::Style Style = PathFromExe.starts_with("/")
                                ? sys::path::Style::posix
                                : sys::path::Style::windows;
   StringRef PdbName = sys::path::filename(PathFromExe, Style);

@@ -12,7 +12,6 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=cortex-x1  | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-e1 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1 | FileCheck %s
-; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n2 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v1 | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-512tvb | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=exynos-m3  | FileCheck %s

@@ -36,7 +36,7 @@
 #include "test_macros.h"
 
 #include "../ConvertibleToIntegral.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 
 // Clang 16 does not support argument packs as input to operator []
 #if defined(__clang_major__) && __clang_major__ < 17
@@ -120,7 +120,7 @@ constexpr void test_layout() {
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, D>(7)));
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, 7>()));
   test_iteration(construct_mapping(Layout(), std::extents<unsigned, 7, 8>()));
-  test_iteration(construct_mapping(Layout(), std::extents<char, D, D, D, D>(1, 1, 1, 1)));
+  test_iteration(construct_mapping(Layout(), std::extents<signed char, D, D, D, D>(1, 1, 1, 1)));
 
 // TODO enable for GCC 13, when the CI pipeline is switched, doesn't work with GCC 12
 #if defined(__clang_major__) && __clang_major__ >= 17

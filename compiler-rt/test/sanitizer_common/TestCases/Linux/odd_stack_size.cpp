@@ -5,6 +5,8 @@
 // AddressSanitizer: CHECK failed: asan_thread.cpp:315 "((AddrIsInStack((uptr)&local))) != (0)"
 // https://lab.llvm.org/buildbot/#/builders/18/builds/8162
 // UNSUPPORTED: target=powerpc64{{.*}}
+/// Occasionally fail on loongarch64 machine
+// UNSUPPORTED: target=loongarch64{{.*}}
 
 #include <assert.h>
 #include <stdlib.h>

@@ -465,6 +465,7 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printI64(int64_t i);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printU64(uint64_t u);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printF32(float f);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printF64(double d);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void printString(char const *s);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printOpen();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printClose();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printComma();

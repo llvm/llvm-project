@@ -19,4 +19,4 @@
 # RUN: echo '%{continue-equals}'
 # CHECK:# | FileCheck -input-file=test.txt -implicit-check-not=foobar -check-prefixes=FOO,BAR
 
-# CHECK: Passed: 1
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}

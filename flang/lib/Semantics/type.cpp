@@ -37,6 +37,10 @@ void DerivedTypeSpec::ReplaceScope(const Scope &scope) {
   scope_ = &scope;
 }
 
+const Scope *DerivedTypeSpec::GetScope() const {
+  return scope_ ? scope_ : typeSymbol_.scope();
+}
+
 void DerivedTypeSpec::AddRawParamValue(
     const parser::Keyword *keyword, ParamValue &&value) {
   CHECK(parameters_.empty());

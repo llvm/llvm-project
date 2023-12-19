@@ -1003,6 +1003,18 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::LiteOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("x86_64-pc-serenity");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Serenity, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("aarch64-pc-serenity");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Serenity, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -2025,6 +2037,13 @@ TEST(TripleTest, FileFormat) {
   T.setObjectFormat(Triple::SPIRV);
   EXPECT_EQ(Triple::SPIRV, T.getObjectFormat());
   EXPECT_EQ("spirv", Triple::getObjectFormatTypeName(T.getObjectFormat()));
+
+  EXPECT_EQ(Triple::ELF, Triple("amdgcn-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("r600-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {

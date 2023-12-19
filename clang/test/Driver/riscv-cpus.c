@@ -20,6 +20,17 @@
 // MCPU-SYNTACORE-SCR1-MAX: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xiangshan-nanhu | FileCheck -check-prefix=MCPU-XIANGSHAN-NANHU %s
+// MCPU-XIANGSHAN-NANHU: "-nostdsysteminc" "-target-cpu" "xiangshan-nanhu"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+c"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zicbom" "-target-feature" "+zicboz" "-target-feature" "+zicsr" "-target-feature" "+zifencei"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zba" "-target-feature" "+zbb" "-target-feature" "+zbc"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zbkb" "-target-feature" "+zbkc" "-target-feature" "+zbkx" "-target-feature" "+zbs"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zkn" "-target-feature" "+zknd" "-target-feature" "+zkne" "-target-feature" "+zknh"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zks" "-target-feature" "+zksed" "-target-feature" "+zksh" "-target-feature" "+svinval"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-abi" "lp64d"
+
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
 // RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
@@ -62,6 +73,9 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=veyron-v1 | FileCheck -check-prefix=MTUNE-VEYRON-V1 %s
 // MTUNE-VEYRON-V1: "-tune-cpu" "veyron-v1"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=xiangshan-nanhu | FileCheck -check-prefix=MTUNE-XIANGSHAN-NANHU %s
+// MTUNE-XIANGSHAN-NANHU: "-tune-cpu" "xiangshan-nanhu"
+
 // Check mtune alias CPU has resolved to the right CPU according XLEN.
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=generic | FileCheck -check-prefix=MTUNE-GENERIC-32 %s
 // MTUNE-GENERIC-32: "-tune-cpu" "generic"
@@ -99,7 +113,7 @@
 // MCPU-SIFIVE-E24: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E24: "-target-feature" "+c"
 // MCPU-SIFIVE-E24: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-E24: "-target-abi" "ilp32"
+// MCPU-SIFIVE-E24: "-target-abi" "ilp32f"
 
 // mcpu with default march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e34 | FileCheck -check-prefix=MCPU-SIFIVE-E34 %s
@@ -107,7 +121,7 @@
 // MCPU-SIFIVE-E34: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E34: "-target-feature" "+c"
 // MCPU-SIFIVE-E34: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-E34: "-target-abi" "ilp32"
+// MCPU-SIFIVE-E34: "-target-abi" "ilp32f"
 
 // mcpu with mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s21 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S21 %s
@@ -164,7 +178,7 @@
 // MCPU-SIFIVE-E76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E76: "-target-feature" "+c"
 // MCPU-SIFIVE-E76: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-E76: "-target-abi" "ilp32"
+// MCPU-SIFIVE-E76: "-target-abi" "ilp32f"
 
 // mcpu with mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u74 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U74 %s

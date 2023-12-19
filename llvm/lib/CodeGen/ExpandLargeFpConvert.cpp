@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -652,6 +653,13 @@ public:
   }
 };
 } // namespace
+
+PreservedAnalyses ExpandLargeFpConvertPass::run(Function &F,
+                                                FunctionAnalysisManager &FAM) {
+  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
+  return runImpl(F, *STI->getTargetLowering()) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
+}
 
 char ExpandLargeFpConvertLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandLargeFpConvertLegacyPass, "expand-large-fp-convert",

@@ -68,7 +68,7 @@ class GoogleTest(TestFormat):
                     self.seen_executables.add(execpath)
                 num_tests = self.get_num_tests(execpath, litConfig, localConfig)
                 if num_tests is not None:
-                    if not litConfig.disableGTestSharding:
+                    if litConfig.gtest_sharding:
                         # Compute the number of shards.
                         shard_size = init_shard_size
                         nshard = int(math.ceil(num_tests / shard_size))
@@ -151,7 +151,7 @@ class GoogleTest(TestFormat):
             "GTEST_OUTPUT": "json:" + test.gtest_json_file,
             "GTEST_SHUFFLE": "1" if use_shuffle else "0",
         }
-        if not litConfig.disableGTestSharding:
+        if litConfig.gtest_sharding:
             testPath, testName = os.path.split(test.getSourcePath())
             while not os.path.exists(testPath):
                 # Handle GTest parameterized and typed tests, whose name includes

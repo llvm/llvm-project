@@ -17,6 +17,7 @@
 #include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
+#include "lldb/Core/ValueObjectVTable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -397,13 +398,16 @@ ValueObject::GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
   if (idxs.size() == 0)
     return GetSP();
   ValueObjectSP root(GetSP());
+
+  size_t current_index = 0;
   for (size_t idx : idxs) {
     root = root->GetChildAtIndex(idx);
     if (!root) {
       if (index_of_error)
-        *index_of_error = idx;
+        *index_of_error = current_index;
       return root;
     }
+    current_index += 1;
   }
   return root;
 }
@@ -413,13 +417,17 @@ lldb::ValueObjectSP ValueObject::GetChildAtIndexPath(
   if (idxs.size() == 0)
     return GetSP();
   ValueObjectSP root(GetSP());
+
+  size_t current_index = 0;
   for (std::pair<size_t, bool> idx : idxs) {
     root = root->GetChildAtIndex(idx.first, idx.second);
     if (!root) {
       if (index_of_error)
-        *index_of_error = idx.first;
+        *index_of_error = current_index;
       return root;
     }
+
+    current_index += 1;
   }
   return root;
 }
@@ -2104,7 +2112,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
         return ValueObjectSP();
       }
-      if (!temp_expression.startswith(">")) {
+      if (!temp_expression.starts_with(">")) {
         *reason_to_stop =
             ValueObject::eExpressionPathScanEndReasonUnexpectedSymbol;
         *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
@@ -2593,34 +2601,30 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
 
 ValueObjectSP ValueObject::GetQualifiedRepresentationIfAvailable(
     lldb::DynamicValueType dynValue, bool synthValue) {
-  ValueObjectSP result_sp(GetSP());
-
+  ValueObjectSP result_sp;
   switch (dynValue) {
   case lldb::eDynamicCanRunTarget:
   case lldb::eDynamicDontRunTarget: {
-    if (!result_sp->IsDynamic()) {
-      if (result_sp->GetDynamicValue(dynValue))
-        result_sp = result_sp->GetDynamicValue(dynValue);
-    }
+    if (!IsDynamic())
+      result_sp = GetDynamicValue(dynValue);
   } break;
   case lldb::eNoDynamicValues: {
-    if (result_sp->IsDynamic()) {
-      if (result_sp->GetStaticValue())
-        result_sp = result_sp->GetStaticValue();
-    }
+    if (IsDynamic())
+      result_sp = GetStaticValue();
   } break;
   }
+  if (!result_sp)
+    result_sp = GetSP();
+  assert(result_sp);
 
-  if (synthValue) {
-    if (!result_sp->IsSynthetic()) {
-      if (result_sp->GetSyntheticValue())
-        result_sp = result_sp->GetSyntheticValue();
-    }
-  } else {
-    if (result_sp->IsSynthetic()) {
-      if (result_sp->GetNonSyntheticValue())
-        result_sp = result_sp->GetNonSyntheticValue();
-    }
+  bool is_synthetic = result_sp->IsSynthetic();
+  if (synthValue && !is_synthetic) {
+    if (auto synth_sp = result_sp->GetSyntheticValue())
+      return synth_sp;
+  }
+  if (!synthValue && is_synthetic) {
+    if (auto non_synth_sp = result_sp->GetNonSyntheticValue())
+      return non_synth_sp;
   }
 
   return result_sp;
@@ -3154,4 +3158,8 @@ ValueObjectSP ValueObject::Persist() {
   persistent_var_sp->m_flags |= ExpressionVariable::EVIsProgramReference;
 
   return persistent_var_sp->GetValueObject();
+}
+
+lldb::ValueObjectSP ValueObject::GetVTable() {
+  return ValueObjectVTable::Create(*this);
 }

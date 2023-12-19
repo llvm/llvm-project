@@ -89,7 +89,7 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
   // where both are valid examples of the same platform+environment but in the
   // variant (2) the simulator is hardcoded as part of the platform name. Both
   // forms above should match for "iossimulator" requirement.
-  if (Target.getTriple().isOSDarwin() && PlatformEnv.endswith("simulator"))
+  if (Target.getTriple().isOSDarwin() && PlatformEnv.ends_with("simulator"))
     return PlatformEnv == Feature || CmpPlatformEnv(PlatformEnv, Feature);
 
   return PlatformEnv == Feature;
@@ -161,11 +161,13 @@ bool Module::isForBuilding(const LangOptions &LangOpts) const {
   StringRef TopLevelName = getTopLevelModuleName();
   StringRef CurrentModule = LangOpts.CurrentModule;
 
-  // When building framework Foo, we want to make sure that Foo *and*
-  // Foo_Private are textually included and no modules are built for both.
-  if (getTopLevelModule()->IsFramework &&
+  // When building the implementation of framework Foo, we want to make sure
+  // that Foo *and* Foo_Private are textually included and no modules are built
+  // for either.
+  if (!LangOpts.isCompilingModule() && getTopLevelModule()->IsFramework &&
       CurrentModule == LangOpts.ModuleName &&
-      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+      !CurrentModule.ends_with("_Private") &&
+      TopLevelName.ends_with("_Private"))
     TopLevelName = TopLevelName.drop_back(8);
 
   return TopLevelName == CurrentModule;
@@ -265,10 +267,10 @@ bool Module::fullModuleNameIs(ArrayRef<StringRef> nameParts) const {
 }
 
 OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
-  if (Umbrella && Umbrella.is<FileEntryRef>())
-    return Umbrella.get<FileEntryRef>().getDir();
-  if (Umbrella && Umbrella.is<DirectoryEntryRef>())
-    return Umbrella.get<DirectoryEntryRef>();
+  if (const auto *Hdr = std::get_if<FileEntryRef>(&Umbrella))
+    return Hdr->getDir();
+  if (const auto *Dir = std::get_if<DirectoryEntryRef>(&Umbrella))
+    return *Dir;
   return std::nullopt;
 }
 

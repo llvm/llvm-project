@@ -39,15 +39,23 @@ struct TestFn {
     {
       A a(T(1));
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
-      auto f = [&]() {
+
+      std::atomic<bool> is_ready[2];
+      is_ready[0] = false;
+      is_ready[1] = false;
+      auto f      = [&](int index) {
         assert(std::atomic_load(&a) == T(1));
+        is_ready[index].store(true);
+
         std::atomic_wait(&a, T(1));
         assert(std::atomic_load(&a) == T(3));
       };
-      std::thread t1 = support::make_test_thread(f);
-      std::thread t2 = support::make_test_thread(f);
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread t1 = support::make_test_thread(f, /*index=*/0);
+      std::thread t2 = support::make_test_thread(f, /*index=*/1);
 
+      while (!is_ready[0] || !is_ready[1]) {
+        // Spin
+      }
       std::atomic_store(&a, T(3));
       std::atomic_notify_all(&a);
       t1.join();
@@ -56,15 +64,23 @@ struct TestFn {
     {
       volatile A a(T(2));
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
-      auto f = [&]() {
+
+      std::atomic<bool> is_ready[2];
+      is_ready[0] = false;
+      is_ready[1] = false;
+      auto f      = [&](int index) {
         assert(std::atomic_load(&a) == T(2));
+        is_ready[index].store(true);
+
         std::atomic_wait(&a, T(2));
         assert(std::atomic_load(&a) == T(4));
       };
-      std::thread t1 = support::make_test_thread(f);
-      std::thread t2 = support::make_test_thread(f);
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread t1 = support::make_test_thread(f, /*index=*/0);
+      std::thread t2 = support::make_test_thread(f, /*index=*/1);
 
+      while (!is_ready[0] || !is_ready[1]) {
+        // Spin
+      }
       std::atomic_store(&a, T(4));
       std::atomic_notify_all(&a);
       t1.join();

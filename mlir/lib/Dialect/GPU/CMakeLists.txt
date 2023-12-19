@@ -1,4 +1,4 @@
-if (MLIR_ENABLE_CUDA_CONVERSIONS)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(NVPTX_LIBS
     NVPTXCodeGen
     NVPTXDesc
@@ -60,7 +60,9 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
   Transforms/ShuffleRewriter.cpp
+  Transforms/SPIRVAttachTarget.cpp
   Transforms/ROCDLAttachTarget.cpp
+  Transforms/EliminateBarriers.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -95,12 +97,15 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRPass
   MLIRSCFDialect
   MLIRSideEffectInterfaces
+  MLIRSPIRVTarget
   MLIRSupport
   MLIRROCDLTarget
   MLIRTransformUtils
+  MLIRVectorDialect
   )
 
 add_subdirectory(TransformOps)
+add_subdirectory(Pipelines)
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   if(NOT MLIR_ENABLE_CUDA_CONVERSIONS)
@@ -131,11 +136,15 @@ if(MLIR_ENABLE_CUDA_RUNNER)
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
 
+  # Add link path for the cuda driver library.
   find_library(CUDA_DRIVER_LIBRARY cuda HINTS ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES} REQUIRED)
+  get_filename_component(CUDA_DRIVER_LIBRARY_PATH "${CUDA_DRIVER_LIBRARY}" DIRECTORY)
+  target_link_directories(MLIRGPUTransforms PRIVATE ${CUDA_DRIVER_LIBRARY_PATH})
+
   target_link_libraries(MLIRGPUTransforms
     PRIVATE
     MLIRNVVMToLLVMIRTranslation
-    ${CUDA_DRIVER_LIBRARY}
+    cuda
   )
 
 endif()

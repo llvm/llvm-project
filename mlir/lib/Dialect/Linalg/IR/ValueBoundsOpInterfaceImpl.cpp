@@ -29,10 +29,10 @@ struct IndexOpInterface
     cstr.bound(value) >= 0;
 
     // index < dim size
-    int64_t flatDimPos = linalgOp.getShapesToLoopsMap()
-                             .getResult(indexOp.getDim())
-                             .cast<AffineDimExpr>()
-                             .getPosition();
+    int64_t flatDimPos =
+        cast<AffineDimExpr>(
+            linalgOp.getShapesToLoopsMap().getResult(indexOp.getDim()))
+            .getPosition();
     // Find the `flatDimPos`-th operand dimension.
     int64_t flatDimCtr = 0;
     for (Value operand : linalgOp->getOperands()) {

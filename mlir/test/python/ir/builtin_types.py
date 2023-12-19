@@ -3,6 +3,7 @@
 import gc
 from mlir.ir import *
 from mlir.dialects import arith, tensor, func, memref
+import mlir.extras.types as T
 
 
 def run(f):
@@ -300,10 +301,50 @@ def testVectorType():
 
         none = NoneType.get()
         try:
-            vector_invalid = VectorType.get(shape, none)
+            VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
             # CHECK: error: unknown: vector elements must be int/index/float type but got 'none'
+            print(e)
+        else:
+            print("Exception not produced")
+
+        scalable_1 = VectorType.get(shape, f32, scalable=[False, True])
+        scalable_2 = VectorType.get([2, 3, 4], f32, scalable=[True, False, True])
+        assert scalable_1.scalable
+        assert scalable_2.scalable
+        assert scalable_1.scalable_dims == [False, True]
+        assert scalable_2.scalable_dims == [True, False, True]
+        # CHECK: scalable 1: vector<2x[3]xf32>
+        print("scalable 1: ", scalable_1)
+        # CHECK: scalable 2: vector<[2]x3x[4]xf32>
+        print("scalable 2: ", scalable_2)
+
+        scalable_3 = VectorType.get(shape, f32, scalable_dims=[1])
+        scalable_4 = VectorType.get([2, 3, 4], f32, scalable_dims=[0, 2])
+        assert scalable_3 == scalable_1
+        assert scalable_4 == scalable_2
+
+        try:
+            VectorType.get(shape, f32, scalable=[False, True, True])
+        except ValueError as e:
+            # CHECK: Expected len(scalable) == len(shape).
+            print(e)
+        else:
+            print("Exception not produced")
+
+        try:
+            VectorType.get(shape, f32, scalable=[False, True], scalable_dims=[1])
+        except ValueError as e:
+            # CHECK: kwargs are mutually exclusive.
+            print(e)
+        else:
+            print("Exception not produced")
+
+        try:
+            VectorType.get(shape, f32, scalable_dims=[42])
+        except ValueError as e:
+            # CHECK: Scalable dimension index out of bounds.
             print(e)
         else:
             print("Exception not produced")
@@ -335,7 +376,6 @@ def testRankedTensorType():
 
         # Encoding should be None.
         assert RankedTensorType.get(shape, f32).encoding is None
-
 
 
 # CHECK-LABEL: TEST: testUnrankedTensorType
@@ -733,3 +773,101 @@ def testCustomTypeTypeCaster():
         print(t)
         # CHECK: OperationType(!transform.op<"foo.bar">)
         print(repr(t))
+
+
+# CHECK-LABEL: TEST: testTypeWrappers
+@run
+def testTypeWrappers():
+    def stride(strides, offset=0):
+        return StridedLayoutAttr.get(offset, strides)
+
+    with Context(), Location.unknown():
+        ia = T.i(5)
+        sia = T.si(6)
+        uia = T.ui(7)
+        assert repr(ia) == "IntegerType(i5)"
+        assert repr(sia) == "IntegerType(si6)"
+        assert repr(uia) == "IntegerType(ui7)"
+
+        assert T.i(16) == T.i16()
+        assert T.si(16) == T.si16()
+        assert T.ui(16) == T.ui16()
+
+        c1 = T.complex(T.f16())
+        c2 = T.complex(T.i32())
+        assert repr(c1) == "ComplexType(complex<f16>)"
+        assert repr(c2) == "ComplexType(complex<i32>)"
+
+        vec_1 = T.vector(2, 3, T.f32())
+        vec_2 = T.vector(2, 3, 4, T.f32())
+        assert repr(vec_1) == "VectorType(vector<2x3xf32>)"
+        assert repr(vec_2) == "VectorType(vector<2x3x4xf32>)"
+
+        m1 = T.memref(2, 3, 4, T.f64())
+        assert repr(m1) == "MemRefType(memref<2x3x4xf64>)"
+
+        m2 = T.memref(2, 3, 4, T.f64(), memory_space=1)
+        assert repr(m2) == "MemRefType(memref<2x3x4xf64, 1>)"
+
+        m3 = T.memref(2, 3, 4, T.f64(), memory_space=1, layout=stride([5, 7, 13]))
+        assert repr(m3) == "MemRefType(memref<2x3x4xf64, strided<[5, 7, 13]>, 1>)"
+
+        m4 = T.memref(2, 3, 4, T.f64(), memory_space=1, layout=stride([5, 7, 13], 42))
+        assert (
+            repr(m4)
+            == "MemRefType(memref<2x3x4xf64, strided<[5, 7, 13], offset: 42>, 1>)"
+        )
+
+        S = ShapedType.get_dynamic_size()
+
+        t1 = T.tensor(S, 3, S, T.f64())
+        assert repr(t1) == "RankedTensorType(tensor<?x3x?xf64>)"
+        ut1 = T.tensor(T.f64())
+        assert repr(ut1) == "UnrankedTensorType(tensor<*xf64>)"
+        t2 = T.tensor(S, 3, S, element_type=T.f64())
+        assert repr(t2) == "RankedTensorType(tensor<?x3x?xf64>)"
+        ut2 = T.tensor(element_type=T.f64())
+        assert repr(ut2) == "UnrankedTensorType(tensor<*xf64>)"
+
+        t3 = T.tensor(S, 3, S, T.f64(), encoding="encoding")
+        assert repr(t3) == 'RankedTensorType(tensor<?x3x?xf64, "encoding">)'
+
+        v = T.vector(3, 3, 3, T.f64())
+        assert repr(v) == "VectorType(vector<3x3x3xf64>)"
+
+        m5 = T.memref(S, 3, S, T.f64())
+        assert repr(m5) == "MemRefType(memref<?x3x?xf64>)"
+        um1 = T.memref(T.f64())
+        assert repr(um1) == "UnrankedMemRefType(memref<*xf64>)"
+        m6 = T.memref(S, 3, S, element_type=T.f64())
+        assert repr(m6) == "MemRefType(memref<?x3x?xf64>)"
+        um2 = T.memref(element_type=T.f64())
+        assert repr(um2) == "UnrankedMemRefType(memref<*xf64>)"
+
+        m7 = T.memref(S, 3, S, T.f64())
+        assert repr(m7) == "MemRefType(memref<?x3x?xf64>)"
+        um3 = T.memref(T.f64())
+        assert repr(um3) == "UnrankedMemRefType(memref<*xf64>)"
+
+        scalable_1 = T.vector(2, 3, T.f32(), scalable=[False, True])
+        scalable_2 = T.vector(2, 3, 4, T.f32(), scalable=[True, False, True])
+        assert repr(scalable_1) == "VectorType(vector<2x[3]xf32>)"
+        assert repr(scalable_2) == "VectorType(vector<[2]x3x[4]xf32>)"
+
+        scalable_3 = T.vector(2, 3, T.f32(), scalable_dims=[1])
+        scalable_4 = T.vector(2, 3, 4, T.f32(), scalable_dims=[0, 2])
+        assert scalable_3 == scalable_1
+        assert scalable_4 == scalable_2
+
+        opaq = T.opaque("scf", "placeholder")
+        assert repr(opaq) == "OpaqueType(!scf.placeholder)"
+
+        tup1 = T.tuple(T.i16(), T.i32(), T.i64())
+        tup2 = T.tuple(T.f16(), T.f32(), T.f64())
+        assert repr(tup1) == "TupleType(tuple<i16, i32, i64>)"
+        assert repr(tup2) == "TupleType(tuple<f16, f32, f64>)"
+
+        func = T.function(
+            inputs=(T.i16(), T.i32(), T.i64()), results=(T.f16(), T.f32(), T.f64())
+        )
+        assert repr(func) == "FunctionType((i16, i32, i64) -> (f16, f32, f64))"

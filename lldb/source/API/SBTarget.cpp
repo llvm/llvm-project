@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-public.h"
@@ -38,6 +37,7 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -1525,8 +1525,9 @@ lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
                                                  true /* notify */));
     if (!sb_module.IsValid() && module_spec.m_opaque_up->GetUUID().IsValid()) {
       Status error;
-      if (Symbols::DownloadObjectAndSymbolFile(*module_spec.m_opaque_up, error,
-                                               /* force_lookup */ true)) {
+      if (PluginManager::DownloadObjectAndSymbolFile(*module_spec.m_opaque_up,
+                                                     error,
+                                                     /* force_lookup */ true)) {
         if (FileSystem::Instance().Exists(
                 module_spec.m_opaque_up->GetFileSpec())) {
           sb_module.SetSP(target_sp->GetOrCreateModule(*module_spec.m_opaque_up,
@@ -1803,21 +1804,13 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
   TargetSP target_sp(GetSP());
   if (typename_cstr && typename_cstr[0] && target_sp) {
     ConstString const_typename(typename_cstr);
-    SymbolContext sc;
-    const bool exact_match = false;
-
-    const ModuleList &module_list = target_sp->GetImages();
-    size_t count = module_list.GetSize();
-    for (size_t idx = 0; idx < count; idx++) {
-      ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
-      if (module_sp) {
-        TypeSP type_sp(
-            module_sp->FindFirstType(sc, const_typename, exact_match));
-        if (type_sp)
-          return SBType(type_sp);
-      }
-    }
-
+    TypeQuery query(const_typename.GetStringRef(),
+                    TypeQueryOptions::e_find_one);
+    TypeResults results;
+    target_sp->GetImages().FindTypes(/*search_first=*/nullptr, query, results);
+    TypeSP type_sp = results.GetFirstType();
+    if (type_sp)
+      return SBType(type_sp);
     // Didn't find the type in the symbols; Try the loaded language runtimes.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
@@ -1858,17 +1851,11 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
   if (typename_cstr && typename_cstr[0] && target_sp) {
     ModuleList &images = target_sp->GetImages();
     ConstString const_typename(typename_cstr);
-    bool exact_match = false;
-    TypeList type_list;
-    llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    images.FindTypes(nullptr, const_typename, exact_match, UINT32_MAX,
-                     searched_symbol_files, type_list);
-
-    for (size_t idx = 0; idx < type_list.GetSize(); idx++) {
-      TypeSP type_sp(type_list.GetTypeAtIndex(idx));
-      if (type_sp)
-        sb_type_list.Append(SBType(type_sp));
-    }
+    TypeQuery query(typename_cstr);
+    TypeResults results;
+    images.FindTypes(nullptr, query, results);
+    for (const TypeSP &type_sp : results.GetTypeMap().Types())
+      sb_type_list.Append(SBType(type_sp));
 
     // Try the loaded language runtimes
     if (auto process_sp = target_sp->GetProcessSP()) {

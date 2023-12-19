@@ -16,12 +16,18 @@
 !CHECK:    %[[PRIVATE_Y_REF:.*]] = fir.alloca f32 {bindc_name = "y", pinned, uniq_name = "_QFlastprivate_commonEy"}
 !CHECK:    %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y_REF]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:    omp.wsloop   for  (%[[I:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
-!CHECK:      %[[LAST_ITER:.*]] = arith.cmpi eq, %[[I]], %{{.*}} : i32
+!CHECK:      %[[V:.*]] = arith.addi %[[I]], %{{.*}} : i32
+!CHECK:      %[[C0:.*]] = arith.constant 0 : i32
+!CHECK:      %[[NEG_STEP:.*]] = arith.cmpi slt, %{{.*}}, %[[C0]] : i32
+!CHECK:      %[[V_LT:.*]] = arith.cmpi slt, %[[V]], %{{.*}} : i32
+!CHECK:      %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
+!CHECK:      %[[LAST_ITER:.*]] = arith.select %[[NEG_STEP]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:      fir.if %[[LAST_ITER]] {
-!CHECK:        %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#1 : !fir.ref<f32>
-!CHECK:        fir.store %[[PRIVATE_X_VAL]] to %[[X_DECL]]#1 : !fir.ref<f32>
-!CHECK:        %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#1 : !fir.ref<f32>
-!CHECK:        fir.store %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#1 : !fir.ref<f32>
+!CHECK:        fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK:        %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<f32>
+!CHECK:        hlfir.assign %[[PRIVATE_X_VAL]] to %[[X_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
+!CHECK:        %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<f32>
+!CHECK:        hlfir.assign %[[PRIVATE_Y_VAL]] to %[[Y_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
 !CHECK:      }
 !CHECK:      omp.yield
 !CHECK:    }

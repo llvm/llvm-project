@@ -722,11 +722,9 @@ declare void @__kmpc_kernel_prepare_parallel(ptr);
 
 declare i32 @__kmpc_masked(ptr, i32, i32);
 
-declare void @__kmpc_nvptx_end_reduce_nowait(i32);
+declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr);
 
-declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr);
-
-declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr);
+declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr);
 
 declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr);
 
@@ -738,7 +736,7 @@ declare i64 @__kmpc_shuffle_int64(i64, i16, i16);
 
 declare void @__kmpc_target_deinit();
 
-declare i32 @__kmpc_target_init(ptr);
+declare i32 @__kmpc_target_init(ptr, ptr);
 
 declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32);
 
@@ -1368,13 +1366,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: declare i32 @__kmpc_masked(ptr, i32, i32)
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare void @__kmpc_nvptx_end_reduce_nowait(i32)
+; CHECK: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr)
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr)
-
-; CHECK-NOT: Function Attrs
-; CHECK: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; CHECK: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr)
@@ -1392,7 +1387,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: declare void @__kmpc_target_deinit()
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare i32 @__kmpc_target_init(ptr)
+; CHECK: declare i32 @__kmpc_target_init(ptr, ptr)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
@@ -2016,13 +2011,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: declare i32 @__kmpc_masked(ptr nocapture nofree readonly, i32, i32)
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare void @__kmpc_nvptx_end_reduce_nowait(i32)
+; OPTIMISTIC: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr)
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr)
-
-; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; OPTIMISTIC: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; OPTIMISTIC: nofree nosync nounwind willreturn
 ; OPTIMISTIC: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr nocapture nofree readonly, i32, ptr nocapture nofree readonly, i32, ptr nocapture nofree readonly)
@@ -2040,7 +2032,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: declare void @__kmpc_target_deinit()
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare i32 @__kmpc_target_init(ptr)
+; OPTIMISTIC: declare i32 @__kmpc_target_init(ptr, ptr)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
@@ -2677,13 +2669,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare signext i32 @__kmpc_masked(ptr, i32 signext, i32 signext)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare void @__kmpc_nvptx_end_reduce_nowait(i32 signext)
+; EXT: declare signext i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare signext i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32 signext, i32 signext, i64, ptr, ptr, ptr)
-
-; EXT-NOT: Function Attrs
-; EXT: declare signext i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32 signext, ptr, i32 zeroext, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; EXT: declare signext i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32 zeroext, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT: declare signext i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32 signext, ptr, i32 signext, ptr)
@@ -2701,7 +2690,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare void @__kmpc_target_deinit()
 
 ; EXT-NOT: Function Attrs
-; EXT: declare signext i32 @__kmpc_target_init(ptr)
+; EXT: declare signext i32 @__kmpc_target_init(ptr, ptr)
 
 ; EXT-NOT: Function Attrs
 ; EXT: declare void @__tgt_interop_destroy(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)

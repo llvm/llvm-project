@@ -7,18 +7,21 @@ include(AddMLIRPython)
 declare_mlir_python_sources(MLIRPythonSources)
 declare_mlir_python_sources(MLIRPythonSources.Dialects
   ADD_TO_PARENT MLIRPythonSources)
+declare_mlir_python_sources(MLIRPythonSources.Core
+  ADD_TO_PARENT MLIRPythonSources)
 
 ################################################################################
 # Pure python sources and generated code
 ################################################################################
 
-declare_mlir_python_sources(MLIRPythonSources.Core
+declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  ADD_TO_PARENT MLIRPythonSources
+  ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
+    extras/types.py
     dialects/_ods_common.py
 
     # The main _mlir module has submodules: include stubs from each.
@@ -52,7 +55,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/AffineOps.td
   SOURCES
     dialects/affine.py
-    dialects/_affine_ops_ext.py
   DIALECT_NAME affine
   GEN_ENUM_BINDINGS)
 
@@ -78,7 +80,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/BufferizationOps.td
   SOURCES
     dialects/bufferization.py
-    dialects/_bufferization_ops_ext.py
   DIALECT_NAME bufferization
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
@@ -90,7 +91,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/BuiltinOps.td
   SOURCES
     dialects/builtin.py
-    dialects/_builtin_ops_ext.py
   DIALECT_NAME builtin)
 
 declare_mlir_dialect_python_bindings(
@@ -115,7 +115,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/FuncOps.td
   SOURCES
     dialects/func.py
-    dialects/_func_ops_ext.py
   DIALECT_NAME func)
 
 declare_mlir_dialect_python_bindings(
@@ -131,7 +130,6 @@ declare_mlir_dialect_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/LinalgOps.td
   SOURCES
-    dialects/_linalg_ops_ext.py
   SOURCES_GLOB
     dialects/linalg/*.py
   DIALECT_NAME linalg
@@ -152,7 +150,6 @@ ADD_TO_PARENT MLIRPythonSources.Dialects
 ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformPDLExtensionOps.td
   SOURCES
-    dialects/_transform_pdl_extension_ops_ext.py
     dialects/transform/pdl.py
   DIALECT_NAME transform
   EXTENSION_NAME transform_pdl_extension)
@@ -162,7 +159,6 @@ declare_mlir_dialect_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformOps.td
   SOURCES
-    dialects/_transform_ops_ext.py
     dialects/transform/__init__.py
     _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform
@@ -170,12 +166,19 @@ declare_mlir_dialect_python_bindings(
     "../../include/mlir/Dialect/Transform/IR/TransformAttrs.td"
 )
 
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.transform.extras
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  GEN_ENUM_BINDINGS
+  SOURCES
+    extras/dialects/transform/__init__.py)
+
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/BufferizationTransformOps.td
   SOURCES
-    dialects/_bufferization_transform_ops_ext.py
     dialects/transform/bufferization.py
   DIALECT_NAME transform
   EXTENSION_NAME bufferization_transform)
@@ -185,7 +188,6 @@ declare_mlir_dialect_extension_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/GPUTransformOps.td
   SOURCES
-    dialects/_gpu_transform_ops_ext.py
     dialects/transform/gpu.py
   DIALECT_NAME transform
   EXTENSION_NAME gpu_transform)
@@ -195,7 +197,6 @@ declare_mlir_dialect_extension_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/SCFLoopTransformOps.td
   SOURCES
-    dialects/_loop_transform_ops_ext.py
     dialects/transform/loop.py
   DIALECT_NAME transform
   EXTENSION_NAME loop_transform)
@@ -205,7 +206,6 @@ declare_mlir_dialect_extension_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MemRefTransformOps.td
   SOURCES
-    dialects/_memref_transform_ops_ext.py
     dialects/transform/memref.py
   DIALECT_NAME transform
   EXTENSION_NAME memref_transform)
@@ -224,7 +224,6 @@ declare_mlir_dialect_extension_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/LinalgStructuredTransformOps.td
   SOURCES
-    dialects/_structured_transform_ops_ext.py
     dialects/transform/structured.py
   DIALECT_NAME transform
   EXTENSION_NAME structured_transform
@@ -246,7 +245,6 @@ declare_mlir_dialect_extension_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TensorTransformOps.td
   SOURCES
-    dialects/_tensor_transform_ops_ext.py
     dialects/transform/tensor.py
   DIALECT_NAME transform
   EXTENSION_NAME tensor_transform)
@@ -276,7 +274,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/ArithOps.td
   SOURCES
     dialects/arith.py
-    dialects/_arith_ops_ext.py
   DIALECT_NAME arith
   GEN_ENUM_BINDINGS)
 
@@ -286,7 +283,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/MemRefOps.td
   SOURCES
     dialects/memref.py
-    dialects/_memref_ops_ext.py
   DIALECT_NAME memref)
 
 declare_mlir_dialect_python_bindings(
@@ -295,7 +291,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/MLProgramOps.td
   SOURCES
     dialects/ml_program.py
-    dialects/_ml_program_ops_ext.py
   DIALECT_NAME ml_program)
 
 declare_mlir_dialect_python_bindings(
@@ -339,7 +334,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/PDLOps.td
   SOURCES
     dialects/pdl.py
-    dialects/_pdl_ops_ext.py
     _mlir_libs/_mlir/dialects/pdl.pyi
   DIALECT_NAME pdl)
 
@@ -349,7 +343,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/OpenMPOps.td
   SOURCES
     dialects/openmp.py
-  DIALECT_NAME omp)
+  DIALECT_NAME omp
+  DEPENDS omp_common_td)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -357,7 +352,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/SCFOps.td
   SOURCES
     dialects/scf.py
-    dialects/_scf_ops_ext.py
   DIALECT_NAME scf)
 
 declare_mlir_dialect_python_bindings(
@@ -383,7 +377,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TensorOps.td
   SOURCES
     dialects/tensor.py
-    dialects/_tensor_ops_ext.py
   DIALECT_NAME tensor)
 
 declare_mlir_dialect_python_bindings(

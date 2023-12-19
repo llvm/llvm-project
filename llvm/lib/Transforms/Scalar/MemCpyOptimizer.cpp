@@ -880,8 +880,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     return false;
 
   const DataLayout &DL = cpyLoad->getModule()->getDataLayout();
-  uint64_t srcSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType()) *
-                     srcArraySize->getZExtValue();
+  TypeSize SrcAllocaSize = DL.getTypeAllocSize(srcAlloca->getAllocatedType());
+  // We can't optimize scalable types.
+  if (SrcAllocaSize.isScalable())
+    return false;
+  uint64_t srcSize = SrcAllocaSize * srcArraySize->getZExtValue();
 
   if (cpySize < srcSize)
     return false;
@@ -925,10 +928,12 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
       return false;
   }
 
-  // Check that accessing the first srcSize bytes of dest will not cause a
-  // trap.  Otherwise the transform is invalid since it might cause a trap
-  // to occur earlier than it otherwise would.
-  if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
+  // Check that storing to the first srcSize bytes of dest will not cause a
+  // trap or data race.
+  bool ExplicitlyDereferenceableOnly;
+  if (!isWritableObject(getUnderlyingObject(cpyDest),
+                        ExplicitlyDereferenceableOnly) ||
+      !isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
                                           DL, C, AC, DT)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
@@ -1068,29 +1073,19 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // We can't create address space casts here because we don't know if they're
   // safe for the target.
-  if (cpySrc->getType()->getPointerAddressSpace() !=
-      cpyDest->getType()->getPointerAddressSpace())
+  if (cpySrc->getType() != cpyDest->getType())
     return false;
   for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
     if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc &&
-        cpySrc->getType()->getPointerAddressSpace() !=
-            C->getArgOperand(ArgI)->getType()->getPointerAddressSpace())
+        cpySrc->getType() != C->getArgOperand(ArgI)->getType())
       return false;
 
   // All the checks have passed, so do the transformation.
   bool changedArgument = false;
   for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
     if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc) {
-      Value *Dest = cpySrc->getType() == cpyDest->getType() ?  cpyDest
-        : CastInst::CreatePointerCast(cpyDest, cpySrc->getType(),
-                                      cpyDest->getName(), C);
       changedArgument = true;
-      if (C->getArgOperand(ArgI)->getType() == Dest->getType())
-        C->setArgOperand(ArgI, Dest);
-      else
-        C->setArgOperand(ArgI, CastInst::CreatePointerCast(
-                                   Dest, C->getArgOperand(ArgI)->getType(),
-                                   Dest->getName(), C));
+      C->setArgOperand(ArgI, cpyDest);
     }
 
   if (!changedArgument)
@@ -1677,6 +1672,11 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     return true;
   }
 
+  MemoryUseOrDef *MA = MSSA->getMemoryAccess(M);
+  if (!MA)
+    // Degenerate case: memcpy marked as not accessing memory.
+    return false;
+
   // If copying from a constant, try to turn the memcpy into a memset.
   if (auto *GV = dyn_cast<GlobalVariable>(M->getSource()))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
@@ -1685,8 +1685,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         IRBuilder<> Builder(M);
         Instruction *NewM = Builder.CreateMemSet(
             M->getRawDest(), ByteVal, M->getLength(), M->getDestAlign(), false);
-        auto *LastDef =
-            cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(M));
+        auto *LastDef = cast<MemoryDef>(MA);
         auto *NewAccess =
             MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
         MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1697,7 +1696,6 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       }
 
   BatchAAResults BAA(*AA);
-  MemoryUseOrDef *MA = MSSA->getMemoryAccess(M);
   // FIXME: Not using getClobberingMemoryAccess() here due to PR54682.
   MemoryAccess *AnyClobber = MA->getDefiningAccess();
   MemoryLocation DestLoc = MemoryLocation::getForDest(M);
@@ -1855,9 +1853,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                                  DT) < *ByValAlign)
     return false;
 
-  // The address space of the memcpy source must match the byval argument
-  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
-      ByValArg->getType()->getPointerAddressSpace())
+  // The type of the memcpy source must match the byval argument
+  if (MDep->getSource()->getType() != ByValArg->getType())
     return false;
 
   // Verify that the copied-from memory doesn't change in between the memcpy and
@@ -1875,6 +1872,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                     << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the byval argument.
+  combineAAMetadata(&CB, MDep);
   CB.setArgOperand(ArgNo, MDep->getSource());
   ++NumMemCpyInstr;
   return true;
@@ -1931,9 +1929,8 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   if (!MDep || MDep->isVolatile() || AI != MDep->getDest())
     return false;
 
-  // The address space of the memcpy source must match the immut argument
-  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
-      ImmutArg->getType()->getPointerAddressSpace())
+  // The type of the memcpy source must match the immut argument
+  if (MDep->getSource()->getType() != ImmutArg->getType())
     return false;
 
   // 2-1. The length of the memcpy must be equal to the size of the alloca.

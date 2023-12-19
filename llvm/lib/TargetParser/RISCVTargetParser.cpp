@@ -20,7 +20,7 @@ namespace llvm {
 namespace RISCV {
 
 enum CPUKind : unsigned {
-#define PROC(ENUM, NAME, DEFAULT_MARCH) CK_##ENUM,
+#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGN) CK_##ENUM,
 #define TUNE_PROC(ENUM, NAME) CK_##ENUM,
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
@@ -28,12 +28,13 @@ enum CPUKind : unsigned {
 struct CPUInfo {
   StringLiteral Name;
   StringLiteral DefaultMarch;
+  bool FastUnalignedAccess;
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
 constexpr CPUInfo RISCVCPUInfo[] = {
-#define PROC(ENUM, NAME, DEFAULT_MARCH)                              \
-  {NAME, DEFAULT_MARCH},
+#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGN)                          \
+  {NAME, DEFAULT_MARCH, FAST_UNALIGN},
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
@@ -42,6 +43,11 @@ static const CPUInfo *getCPUInfoByName(StringRef CPU) {
     if (C.Name == CPU)
       return &C;
   return nullptr;
+}
+
+bool hasFastUnalignedAccess(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  return Info && Info->FastUnalignedAccess;
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {

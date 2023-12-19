@@ -14,8 +14,8 @@
 #ifndef MLIR_TESTTYPES_H
 #define MLIR_TESTTYPES_H
 
-#include <tuple>
 #include <optional>
+#include <tuple>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"
@@ -131,6 +131,8 @@ class TestRecursiveType
                                     ::mlir::TypeTrait::IsMutable> {
 public:
   using Base::Base;
+
+  static constexpr ::mlir::StringLiteral name = "test.recursive";
 
   static TestRecursiveType get(::mlir::MLIRContext *ctx,
                                ::llvm::StringRef name) {

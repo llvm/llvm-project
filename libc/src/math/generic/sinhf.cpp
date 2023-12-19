@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
-  uint32_t x_abs = xbits.uintval() & FPBits::FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.uintval() & FPBits::EXP_MANT_MASK;
 
   // When |x| >= 90, or x is inf or nan
   if (LIBC_UNLIKELY(x_abs >= 0x42b4'0000U || x_abs <= 0x3da0'0000U)) {
@@ -57,8 +57,7 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     int rounding = fputil::quick_get_round();
     if (sign) {
       if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
-        return FPBits(FPBits::MAX_NORMAL | FPBits::FloatProp::SIGN_MASK)
-            .get_val();
+        return FPBits(FPBits::MAX_NORMAL | FPBits::SIGN_MASK).get_val();
     } else {
       if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
         return FPBits(FPBits::MAX_NORMAL).get_val();
@@ -67,7 +66,7 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
 
-    return x + FPBits::inf(sign).get_val();
+    return x + FPBits::inf(sign);
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.

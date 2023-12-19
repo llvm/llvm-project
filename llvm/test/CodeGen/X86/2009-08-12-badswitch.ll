@@ -45,80 +45,80 @@ define internal fastcc i32 @foo(i64 %bar) nounwind ssp {
 ; CHECK-NEXT:  LBB0_3: ## %RRETURN_6
 ; CHECK-NEXT:    callq _f2
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_2: ## %RETURN
-; CHECK-NEXT:    callq _f1
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_4: ## %RRETURN_7
-; CHECK-NEXT:    callq _f3
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_5: ## %RRETURN_14
-; CHECK-NEXT:    callq _f4
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_6: ## %RRETURN_15
-; CHECK-NEXT:    callq _f5
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_7: ## %RRETURN_16
-; CHECK-NEXT:    callq _f6
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_8: ## %RRETURN_17
-; CHECK-NEXT:    callq _f7
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_9: ## %RRETURN_18
-; CHECK-NEXT:    callq _f8
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_10: ## %RRETURN_19
-; CHECK-NEXT:    callq _f9
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_11: ## %RRETURN_20
-; CHECK-NEXT:    callq _f10
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_12: ## %RRETURN_21
-; CHECK-NEXT:    callq _f11
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_13: ## %RRETURN_22
-; CHECK-NEXT:    callq _f12
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_14: ## %RRETURN_24
-; CHECK-NEXT:    callq _f13
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_15: ## %RRETURN_26
-; CHECK-NEXT:    callq _f14
+; CHECK-NEXT:  LBB0_18: ## %RRETURN_29
+; CHECK-NEXT:    callq _f17
 ; CHECK-NEXT:    jmp LBB0_28
 ; CHECK-NEXT:  LBB0_16: ## %RRETURN_27
 ; CHECK-NEXT:    callq _f15
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_17: ## %RRETURN_28
-; CHECK-NEXT:    callq _f16
+; CHECK-NEXT:  LBB0_13: ## %RRETURN_22
+; CHECK-NEXT:    callq _f12
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_18: ## %RRETURN_29
-; CHECK-NEXT:    callq _f17
+; CHECK-NEXT:  LBB0_6: ## %RRETURN_15
+; CHECK-NEXT:    callq _f5
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_19: ## %RRETURN_30
-; CHECK-NEXT:    callq _f18
+; CHECK-NEXT:  LBB0_14: ## %RRETURN_24
+; CHECK-NEXT:    callq _f13
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_20: ## %RRETURN_31
-; CHECK-NEXT:    callq _f19
+; CHECK-NEXT:  LBB0_11: ## %RRETURN_20
+; CHECK-NEXT:    callq _f10
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_21: ## %RRETURN_38
-; CHECK-NEXT:    callq _f20
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_22: ## %RRETURN_40
-; CHECK-NEXT:    callq _f21
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_23: ## %RRETURN_42
-; CHECK-NEXT:    callq _f22
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_24: ## %RRETURN_44
-; CHECK-NEXT:    callq _f23
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_25: ## %RRETURN_48
-; CHECK-NEXT:    callq _f24
+; CHECK-NEXT:  LBB0_27: ## %RRETURN_1
+; CHECK-NEXT:    callq _f26
 ; CHECK-NEXT:    jmp LBB0_28
 ; CHECK-NEXT:  LBB0_26: ## %RRETURN_52
 ; CHECK-NEXT:    callq _f25
 ; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_27: ## %RRETURN_1
-; CHECK-NEXT:    callq _f26
+; CHECK-NEXT:  LBB0_4: ## %RRETURN_7
+; CHECK-NEXT:    callq _f3
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_17: ## %RRETURN_28
+; CHECK-NEXT:    callq _f16
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_5: ## %RRETURN_14
+; CHECK-NEXT:    callq _f4
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_9: ## %RRETURN_18
+; CHECK-NEXT:    callq _f8
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_19: ## %RRETURN_30
+; CHECK-NEXT:    callq _f18
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_22: ## %RRETURN_40
+; CHECK-NEXT:    callq _f21
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_7: ## %RRETURN_16
+; CHECK-NEXT:    callq _f6
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_23: ## %RRETURN_42
+; CHECK-NEXT:    callq _f22
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_15: ## %RRETURN_26
+; CHECK-NEXT:    callq _f14
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_8: ## %RRETURN_17
+; CHECK-NEXT:    callq _f7
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_20: ## %RRETURN_31
+; CHECK-NEXT:    callq _f19
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_12: ## %RRETURN_21
+; CHECK-NEXT:    callq _f11
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_10: ## %RRETURN_19
+; CHECK-NEXT:    callq _f9
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_24: ## %RRETURN_44
+; CHECK-NEXT:    callq _f23
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_21: ## %RRETURN_38
+; CHECK-NEXT:    callq _f20
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_25: ## %RRETURN_48
+; CHECK-NEXT:    callq _f24
+; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:  LBB0_2: ## %RETURN
+; CHECK-NEXT:    callq _f1
 ; CHECK-NEXT:  LBB0_28: ## %EXIT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx

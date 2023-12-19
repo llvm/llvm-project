@@ -239,7 +239,7 @@ RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
 
 void RecordInfo::merge(RecordInfo &&Other) {
   assert(mergeable(Other));
-  if (!TagType)
+  if (!llvm::to_underlying(TagType))
     TagType = Other.TagType;
   IsTypeDef = IsTypeDef || Other.IsTypeDef;
   if (Members.empty())

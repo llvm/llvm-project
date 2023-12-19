@@ -23,7 +23,7 @@ StringRef ELFAttrs::attrTypeAsString(unsigned attr, TagNameMap tagNameMap,
 
 std::optional<unsigned> ELFAttrs::attrTypeFromString(StringRef tag,
                                                      TagNameMap tagNameMap) {
-  bool hasTagPrefix = tag.startswith("Tag_");
+  bool hasTagPrefix = tag.starts_with("Tag_");
   auto tagNameIt =
       find_if(tagNameMap, [tag, hasTagPrefix](const TagNameItem item) {
         return item.tagName.drop_front(hasTagPrefix ? 0 : 4) == tag;

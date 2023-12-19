@@ -6,55 +6,53 @@ define void @eggs(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg
 ; CHECK:       ## %bb.0: ## %bb
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r12
-; CHECK-NEXT:    leaq (%r12,%r14,8), %r14
-; CHECK-NEXT:    leaq (%r12,%r15,8), %r15
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
+; CHECK-NEXT:    leaq (%rbx,%r10,8), %r10
+; CHECK-NEXT:    leaq (%rbx,%r11,8), %r11
 ; CHECK-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    xorl %r12d, %r12d
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; CHECK-NEXT:    addq %rbx, %r13
-; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rbx
-; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    vmovupd (%r14,%r15,8), %zmm1
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
+; CHECK-NEXT:    addq %r12, %r15
+; CHECK-NEXT:    vmovupd (%r14,%r15,8), %zmm2
+; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %r12
+; CHECK-NEXT:    vmovupd (%r14,%r12,8), %zmm8
 ; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vxorpd %xmm5, %xmm5, %xmm5
+; CHECK-NEXT:    vxorpd %xmm6, %xmm6, %xmm6
+; CHECK-NEXT:    vxorpd %xmm7, %xmm7, %xmm7
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_1: ## %bb15
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovupd (%rax,%r11,8), %zmm6
-; CHECK-NEXT:    vmovupd (%rax,%r13,8), %zmm7
-; CHECK-NEXT:    vmovupd (%rax,%rbx,8), %zmm8
-; CHECK-NEXT:    vbroadcastsd (%r15,%r12,8), %zmm9
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm6 * zmm9) + zmm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm1 = (zmm7 * zmm9) + zmm1
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm2 = (zmm8 * zmm9) + zmm2
-; CHECK-NEXT:    vbroadcastsd (%r14,%r12,8), %zmm9
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm3 = (zmm9 * zmm6) + zmm3
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm4 = (zmm9 * zmm7) + zmm4
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm5 = (zmm8 * zmm9) + zmm5
-; CHECK-NEXT:    incq %r12
-; CHECK-NEXT:    cmpq %r12, %r10
+; CHECK-NEXT:    vbroadcastsd (%r11,%rbx,8), %zmm9
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm1 * zmm9) + zmm0
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm3 = (zmm2 * zmm9) + zmm3
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm4 = (zmm8 * zmm9) + zmm4
+; CHECK-NEXT:    vbroadcastsd (%r10,%rbx,8), %zmm9
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm5 = (zmm1 * zmm9) + zmm5
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm6 = (zmm2 * zmm9) + zmm6
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm7 = (zmm8 * zmm9) + zmm7
+; CHECK-NEXT:    incq %rbx
+; CHECK-NEXT:    cmpq %rbx, %rax
 ; CHECK-NEXT:    jne LBB0_1
 ; CHECK-NEXT:  ## %bb.2: ## %bb51
 ; CHECK-NEXT:    vmovapd %zmm0, (%rdi)
-; CHECK-NEXT:    vmovapd %zmm1, (%rsi)
-; CHECK-NEXT:    vmovapd %zmm2, (%rdx)
-; CHECK-NEXT:    vmovapd %zmm3, (%rcx)
-; CHECK-NEXT:    vmovapd %zmm4, (%r8)
-; CHECK-NEXT:    vmovapd %zmm5, (%r9)
+; CHECK-NEXT:    vmovapd %zmm3, (%rsi)
+; CHECK-NEXT:    vmovapd %zmm4, (%rdx)
+; CHECK-NEXT:    vmovapd %zmm5, (%rcx)
+; CHECK-NEXT:    vmovapd %zmm6, (%r8)
+; CHECK-NEXT:    vmovapd %zmm7, (%r9)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    vzeroupper

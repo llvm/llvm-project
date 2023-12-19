@@ -37,7 +37,7 @@ using AT = A<int[3], int, int, short>;
 // CHECK:   | | `-Var {{.*}} 'arr1' 'int[3]'
 // CHECK:   | `-TemplateArgument decl
 // CHECK:   |   `-Var {{.*}} 'arr2' 'int[3]'
-// CHECK:   |-ParmVarDecl {{.*}} 'X<&arr1, &arr2>':'X<&arr1, &arr2>'
+// CHECK:   |-ParmVarDecl {{.*}} 'X<&arr1, &arr2>'
 // CHECK:   |-ParmVarDecl {{.*}} 'int (*)[3]'
 // CHECK:   |-ParmVarDecl {{.*}} 'int (*)[3]'
 // CHECK:   `-ParmVarDecl {{.*}} 'short (*)[4]'
@@ -76,7 +76,7 @@ using BT = B<char, 'x'>;
 // CHECK:   |-TemplateArgument integral 120
 // CHECK:   |-TemplateArgument type 'std::nullptr_t'
 // CHECK:   |-TemplateArgument nullptr
-// CHECK:   `-ParmVarDecl {{.*}} 'X<nullptr, 'x'>':'X<nullptr, 'x'>'
+// CHECK:   `-ParmVarDecl {{.*}} 'X<nullptr, 'x'>'
 // CHECK: FunctionProtoType {{.*}} 'auto (X<W, V>) -> B<T, V>' dependent trailing_return
 // CHECK: |-InjectedClassNameType {{.*}} 'B<T, V>' dependent
 // CHECK: `-TemplateSpecializationType {{.*}} 'X<W, V>' dependent X
@@ -111,9 +111,9 @@ using CT = C<int>;
 // CHECK:  |-TemplateArgument template B
 // CHECK:  |-TemplateArgument type 'int'
 // CHECK:  |-TemplateArgument integral 0
-// CHECK:  |-ParmVarDecl {{.*}} 'int':'int'
-// CHECK:  |-ParmVarDecl {{.*}} 'Y<B>':'Y<B>'
-// CHECK:  `-ParmVarDecl {{.*}} 'int':'int'
+// CHECK:  |-ParmVarDecl {{.*}} 'int'
+// CHECK:  |-ParmVarDecl {{.*}} 'Y<B>'
+// CHECK:  `-ParmVarDecl {{.*}} 'int'
 // CHECK: FunctionProtoType {{.*}} 'auto (A, Y<>, type-parameter-0-2) -> C<A>' dependent trailing_return cdecl
 // CHECK: |-InjectedClassNameType {{.*}} 'C<A>' dependent
 // CHECK: |-TemplateTypeParmType {{.*}} 'A' dependent depth 0 index 0
@@ -234,7 +234,7 @@ F s(0);
 // CHECK:   |-TemplateArgument integral 120
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'
-// CHECK:   `-ParmVarDecl {{.*}} 'int':'int'
+// CHECK:   `-ParmVarDecl {{.*}} 'int'
 // CHECK: FunctionProtoType {{.*}} 'auto (type-parameter-0-1) -> F<>' dependent trailing_return cdecl
 // CHECK: |-InjectedClassNameType {{.*}} 'F<>' dependent
 // CHECK: | `-CXXRecord {{.*}} 'F'

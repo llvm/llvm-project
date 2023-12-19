@@ -69,6 +69,13 @@ def LinalgLowerToAffineLoops : Pass<"convert-linalg-to-affine-loops"> {
 
 def LinalgLowerToLoops : Pass<"convert-linalg-to-loops"> {
   let summary = "Lower the operations from the linalg dialect into loops";
+  let description = [{
+    Lowers the `linalg` ops to loop nests using `scf.for`.
+
+    Pre-condition: the operands used by the `linalg` ops have buffer semantics,
+    i.e., tensor operands and results must be converted to memrefs via
+    bufferization.
+  }];
   let constructor = "mlir::createConvertLinalgToLoopsPass()";
   let dependentDialects = [
     "linalg::LinalgDialect",

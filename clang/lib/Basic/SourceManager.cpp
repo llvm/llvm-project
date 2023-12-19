@@ -605,7 +605,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   unsigned FileSize = File.getSize();
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
-    Diag.Report(IncludePos, diag::err_include_too_large);
+    Diag.Report(IncludePos, diag::err_sloc_space_too_large);
     noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
@@ -663,10 +663,16 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
-  // FIXME: Produce a proper diagnostic for this case.
-  assert(NextLocalOffset + Length + 1 > NextLocalOffset &&
-         NextLocalOffset + Length + 1 <= CurrentLoadedOffset &&
-         "Ran out of source locations!");
+  if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
+      NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
+    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
+    // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
+    // use a source location from `Info` to point at an error.
+    // Currently, both cause Clang to run indefinitely, this needs to be fixed.
+    // FIXME: return an error instead of crashing. Returning invalid source
+    // locations causes compiler to run indefinitely.
+    llvm::report_fatal_error("ran out of source locations");
+  }
   // See createFileID for that +1.
   NextLocalOffset += Length + 1;
   return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));
@@ -2115,14 +2121,16 @@ void SourceManager::PrintStats() const {
   llvm::errs() << "\n*** Source Manager Stats:\n";
   llvm::errs() << FileInfos.size() << " files mapped, " << MemBufferInfos.size()
                << " mem buffers mapped.\n";
-  llvm::errs() << LocalSLocEntryTable.size() << " local SLocEntry's allocated ("
+  llvm::errs() << LocalSLocEntryTable.size() << " local SLocEntries allocated ("
                << llvm::capacity_in_bytes(LocalSLocEntryTable)
-               << " bytes of capacity), "
-               << NextLocalOffset << "B of Sloc address space used.\n";
+               << " bytes of capacity), " << NextLocalOffset
+               << "B of SLoc address space used.\n";
   llvm::errs() << LoadedSLocEntryTable.size()
-               << " loaded SLocEntries allocated, "
+               << " loaded SLocEntries allocated ("
+               << llvm::capacity_in_bytes(LoadedSLocEntryTable)
+               << " bytes of capacity), "
                << MaxLoadedOffset - CurrentLoadedOffset
-               << "B of Sloc address space used.\n";
+               << "B of SLoc address space used.\n";
 
   unsigned NumLineNumsComputed = 0;
   unsigned NumFileBytesMapped = 0;

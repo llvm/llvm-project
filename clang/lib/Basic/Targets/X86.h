@@ -168,6 +168,12 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasUINTR = false;
   bool HasCRC32 = false;
   bool HasX87 = false;
+  bool HasEGPR = false;
+  bool HasPush2Pop2 = false;
+  bool HasPPX = false;
+  bool HasNDD = false;
+  bool HasCCMP = false;
+  bool HasCF = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;

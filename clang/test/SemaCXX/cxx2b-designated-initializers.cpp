@@ -9,16 +9,35 @@ union S {
 };
 
 void f(int x, auto) {
-  const S result { // expected-error {{field designator (null) does not refer to any field in type 'const S'}}
+  const S result {
     .a = x
   };
 }
 
 void g(void) {
-  f(0, 0); // expected-note {{in instantiation of function template specialization 'PR61118::f<int>' requested here}}
+  f(0, 0);
 }
 
 } // end namespace PR61118
+
+namespace GH65143 {
+struct Inner {
+  int a;
+};
+
+struct Outer {
+  struct {
+    Inner inner;
+  };
+};
+
+template <int val> void f() {
+  constexpr Outer x{.inner = {val}};
+  static_assert(x.inner.a == val);
+}
+
+void bar() { f<4>(); }
+}
 
 namespace GH62156 {
 union U1 {

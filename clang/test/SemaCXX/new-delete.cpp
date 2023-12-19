@@ -644,4 +644,5 @@ int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
 #elif __cplusplus < 201103L
 // expected-error@-5 {{cannot allocate object of variably modified type}}
+// expected-warning@-6 {{variable length arrays in C++ are a Clang extension}}
 #endif

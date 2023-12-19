@@ -50,39 +50,6 @@ void transform::ApplySCFStructuralConversionPatternsOp::
 }
 
 //===----------------------------------------------------------------------===//
-// GetParentForOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::GetParentForOp::apply(transform::TransformRewriter &rewriter,
-                                 transform::TransformResults &results,
-                                 transform::TransformState &state) {
-  SetVector<Operation *> parents;
-  for (Operation *target : state.getPayloadOps(getTarget())) {
-    Operation *loop, *current = target;
-    for (unsigned i = 0, e = getNumLoops(); i < e; ++i) {
-      loop = getAffine()
-                 ? current->getParentOfType<AffineForOp>().getOperation()
-                 : current->getParentOfType<scf::ForOp>().getOperation();
-      if (!loop) {
-        DiagnosedSilenceableFailure diag =
-            emitSilenceableError()
-            << "could not find an '"
-            << (getAffine() ? AffineForOp::getOperationName()
-                            : scf::ForOp::getOperationName())
-            << "' parent";
-        diag.attachNote(target->getLoc()) << "target op";
-        return diag;
-      }
-      current = loop;
-    }
-    parents.insert(loop);
-  }
-  results.set(cast<OpResult>(getResult()), parents.getArrayRef());
-  return DiagnosedSilenceableFailure::success();
-}
-
-//===----------------------------------------------------------------------===//
 // ForallToForOp
 //===----------------------------------------------------------------------===//
 
@@ -226,13 +193,24 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   scf::ForOp result;
-  LogicalResult status =
-      scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
-  if (failed(status)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                       << "failed to peel";
-    return diag;
+  if (getPeelFront()) {
+    LogicalResult status =
+        scf::peelForLoopFirstIteration(rewriter, target, result);
+    if (failed(status)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "failed to peel the first iteration";
+      return diag;
+    }
+  } else {
+    LogicalResult status =
+        scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
+    if (failed(status)) {
+      DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                         << "failed to peel the last iteration";
+      return diag;
+    }
   }
+
   results.push_back(target);
   results.push_back(result);
 

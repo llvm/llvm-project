@@ -163,7 +163,7 @@ define ptr @expr(i64 %a, i64 %b, ptr %out) {
 ; CHECK-NEXT:    [[I2:%.*]] = add i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[I2]], i64 0
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 160
-; CHECK-NEXT:    store i64 [[B5]], ptr [[OUT]], align 4
+; CHECK-NEXT:    store i64 [[B5]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
 entry:
@@ -358,8 +358,8 @@ define ptr @sign_mod_unsign(ptr %ptr, i64 %idx) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR22:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP0]], i64 -3
-; CHECK-NEXT:    ret ptr [[PTR22]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 -64
+; CHECK-NEXT:    ret ptr [[UGLYGEP]]
 ;
 entry:
   %arrayidx = add nsw i64 %idx, -2
@@ -373,7 +373,7 @@ define ptr @trunk_explicit(ptr %ptr, i64 %idx) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP0]], i64 151
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP0]], i64 134
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:
@@ -390,7 +390,7 @@ define ptr @trunk_long_idx(ptr %ptr, i64 %idx) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP0]], i64 151
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP0]], i64 134
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:

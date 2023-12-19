@@ -78,10 +78,12 @@ private:
 
       port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
       port->send([&](rpc::Buffer *buffer, uint32_t id) {
-        buffer->data[0] = fwrite(strs[id], 1, sizes[id], files[id]);
+        flockfile(files[id]);
+        buffer->data[0] = fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
         if (port->get_opcode() == RPC_WRITE_TO_STDOUT_NEWLINE &&
             buffer->data[0] == sizes[id])
-          buffer->data[0] += fwrite("\n", 1, 1, files[id]);
+          buffer->data[0] += fwrite_unlocked("\n", 1, 1, files[id]);
+        funlockfile(files[id]);
         delete[] reinterpret_cast<uint8_t *>(strs[id]);
       });
       break;
@@ -99,6 +101,22 @@ private:
         delete[] reinterpret_cast<uint8_t *>(data[id]);
         std::memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
       });
+      break;
+    }
+    case RPC_READ_FGETS: {
+      uint64_t sizes[lane_size] = {0};
+      void *data[lane_size] = {nullptr};
+      port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+        data[id] = new char[buffer->data[0]];
+        const char *str =
+            fgets(reinterpret_cast<char *>(data[id]), buffer->data[0],
+                  file::to_stream(buffer->data[1]));
+        sizes[id] = !str ? 0 : std::strlen(str) + 1;
+      });
+      port->send_n(data, sizes);
+      for (uint32_t id = 0; id < lane_size; ++id)
+        if (data[id])
+          delete[] reinterpret_cast<uint8_t *>(data[id]);
       break;
     }
     case RPC_OPEN_FILE: {

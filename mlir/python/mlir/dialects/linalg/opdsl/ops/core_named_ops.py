@@ -296,35 +296,39 @@ def quantized_matmul(
 
 
 @linalg_structured_op
-def matmul_transpose_a(A=TensorDef(T1, S.K, S.N),
-                       B=TensorDef(T2, S.K, S.M),
-                       C=TensorDef(U, S.M, S.N, output=True),
-                       cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
-  """Performs a matrix multiplication of two 2D inputs with lhs operand
-  transposed.
+def matmul_transpose_a(
+    A=TensorDef(T1, S.K, S.N),
+    B=TensorDef(T2, S.K, S.M),
+    C=TensorDef(U, S.M, S.N, output=True),
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
+):
+    """Performs a matrix multiplication of two 2D inputs with lhs operand
+    transposed.
 
-  Numeric casting is performed on the operands to the inner multiply, promoting
-  them to the same data type as the accumulator/output.
-  """
-  domain(D.m, D.n, D.k)
-  implements(ContractionOpInterface)
-  C[D.m, D.n] += cast(U, A[D.k, D.m]) * cast(U, B[D.k, D.n])
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    domain(D.m, D.n, D.k)
+    implements(ContractionOpInterface)
+    C[D.m, D.n] += cast(U, A[D.k, D.m]) * cast(U, B[D.k, D.n])
 
 
 @linalg_structured_op
-def matmul_transpose_b(A=TensorDef(T1, S.M, S.K),
-                       B=TensorDef(T2, S.N, S.K),
-                       C=TensorDef(U, S.M, S.N, output=True),
-                       cast=TypeFnAttrDef(default=TypeFn.cast_signed)):
-  """Performs a matrix multiplication of two 2D inputs with rhs operand
-  transposed.
+def matmul_transpose_b(
+    A=TensorDef(T1, S.M, S.K),
+    B=TensorDef(T2, S.N, S.K),
+    C=TensorDef(U, S.M, S.N, output=True),
+    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
+):
+    """Performs a matrix multiplication of two 2D inputs with rhs operand
+    transposed.
 
-  Numeric casting is performed on the operands to the inner multiply, promoting
-  them to the same data type as the accumulator/output.
-  """
-  domain(D.m, D.n, D.k)
-  implements(ContractionOpInterface)
-  C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.n, D.k])
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    domain(D.m, D.n, D.k)
+    implements(ContractionOpInterface)
+    C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.n, D.k])
 
 
 @linalg_structured_op
@@ -390,36 +394,41 @@ def batch_matmul(
 
 
 @linalg_structured_op
-def batch_matmul_transpose_a(A=TensorDef(T1, Batch, S.K, S.M),
-                             B=TensorDef(T2, Batch, S.K, S.N),
-                             C=TensorDef(U, Batch, S.M, S.N, output=True)):
-  """Performs a batched matrix multiplication of two 3D inputs where lhs operand
-  has its non-batch dimensions transposed.
+def batch_matmul_transpose_a(
+    A=TensorDef(T1, Batch, S.K, S.M),
+    B=TensorDef(T2, Batch, S.K, S.N),
+    C=TensorDef(U, Batch, S.M, S.N, output=True),
+):
+    """Performs a batched matrix multiplication of two 3D inputs where lhs operand
+    has its non-batch dimensions transposed.
 
-  Numeric casting is performed on the operands to the inner multiply, promoting
-  them to the same data type as the accumulator/output.
-  """
-  domain(D.b, D.m, D.n, D.k)
-  implements(ContractionOpInterface)
-  C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.k, D.m]) \
-                    * TypeFn.cast_signed(U, B[D.b, D.k, D.n])
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    domain(D.b, D.m, D.n, D.k)
+    implements(ContractionOpInterface)
+    C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.k, D.m]) * TypeFn.cast_signed(
+        U, B[D.b, D.k, D.n]
+    )
 
 
 @linalg_structured_op
-def batch_matmul_transpose_b(A=TensorDef(T1, Batch, S.M, S.K),
-                             B=TensorDef(T2, Batch, S.N, S.K),
-                             C=TensorDef(U, Batch, S.M, S.N, output=True)):
-  """Performs a batched matrix multiplication of two 3D inputs where rhs operand
-  has its non-batch dimensions transposed.
+def batch_matmul_transpose_b(
+    A=TensorDef(T1, Batch, S.M, S.K),
+    B=TensorDef(T2, Batch, S.N, S.K),
+    C=TensorDef(U, Batch, S.M, S.N, output=True),
+):
+    """Performs a batched matrix multiplication of two 3D inputs where rhs operand
+    has its non-batch dimensions transposed.
 
-  Numeric casting is performed on the operands to the inner multiply, promoting
-  them to the same data type as the accumulator/output.
-  """
-  domain(D.b, D.m, D.n, D.k)
-  implements(ContractionOpInterface)
-  C[D.b, D.m,
-    D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
-        U, B[D.b, D.n, D.k])
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    domain(D.b, D.m, D.n, D.k)
+    implements(ContractionOpInterface)
+    C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
+        U, B[D.b, D.n, D.k]
+    )
 
 
 @linalg_structured_op
@@ -505,6 +514,24 @@ def batch_matvec(
     implements(ContractionOpInterface)
     C[D.b, D.m] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
         U, B[D.b, D.k]
+    )
+
+
+@linalg_structured_op
+def batch_vecmat(
+    A=TensorDef(T1, Batch, S.K),
+    B=TensorDef(T2, Batch, S.K, S.N),
+    C=TensorDef(U, Batch, S.N, output=True),
+):
+    """Performs a batched matrix-vector multiplication.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    domain(D.b, D.n, D.k)
+    implements(ContractionOpInterface)
+    C[D.b, D.n] += TypeFn.cast_signed(U, A[D.b, D.k]) * TypeFn.cast_signed(
+        U, B[D.b, D.k, D.n]
     )
 
 
@@ -753,7 +780,7 @@ def conv_2d_ngchw_fgchw(
         T1, S.N, S.G, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW
     ),
     K=TensorDef(T2, S.FG, S.G, S.C, S.KH, S.KW),
-    O=TensorDef(U, S.N, S.FG, S.G, S.OH, S.OW, output=True),
+    O=TensorDef(U, S.N, S.G, S.FG, S.OH, S.OW, output=True),
     strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
     dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
 ):
@@ -762,6 +789,32 @@ def conv_2d_ngchw_fgchw(
     Layout:
       * Input: NGCHW.
       * Kernel: FGCHW.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.g, D.fg, D.oh, D.ow, D.c, D.kh, D.kw)
+    O[D.n, D.g, D.fg, D.oh, D.ow] += TypeFn.cast_signed(
+        U, I[D.n, D.g, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
+    ) * TypeFn.cast_signed(U, K[D.fg, D.g, D.c, D.kh, D.kw])
+
+
+@linalg_structured_op
+def conv_2d_ngchw_gfchw(
+    I=TensorDef(
+        T1, S.N, S.G, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.C, S.KH, S.KW),
+    O=TensorDef(U, S.N, S.G, S.FG, S.OH, S.OW, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution.
+
+    Layout:
+      * Input: NGCHW.
+      * Kernel: GFCHW.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.

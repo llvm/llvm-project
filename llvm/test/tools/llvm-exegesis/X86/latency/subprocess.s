@@ -5,9 +5,6 @@
 # CHECK: measurements:
 # CHECK-NEXT: value: {{.*}}, per_snippet_value: {{.*}}
 
-# TODO: Sometimes transiently fails on PTRACE_ATTACH
-# ALLOW_RETRIES: 2
-
 # LLVM-EXEGESIS-DEFREG XMM1 42
 # LLVM-EXEGESIS-DEFREG XMM2 42
 # LLVM-EXEGESIS-DEFREG XMM3 42

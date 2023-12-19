@@ -16,7 +16,9 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -27,6 +29,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,6 +47,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 #include <optional>
 #include <tuple>
@@ -223,6 +227,12 @@ OpPrintingFlags::OpPrintingFlags()
 OpPrintingFlags &
 OpPrintingFlags::elideLargeElementsAttrs(int64_t largeElementLimit) {
   elementsAttrElementLimit = largeElementLimit;
+  return *this;
+}
+
+OpPrintingFlags &
+OpPrintingFlags::elideLargeResourceString(int64_t largeResourceLimit) {
+  resourceStringCharLimit = largeResourceLimit;
   return *this;
 }
 
@@ -418,6 +428,8 @@ public:
   LogicalResult pushCyclicPrinting(const void *opaquePointer);
 
   void popCyclicPrinting();
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
 protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
@@ -1854,6 +1866,20 @@ private:
   // Allow direct access to the impl fields.
   friend AsmState;
 };
+
+template <typename Range>
+void printDimensionList(raw_ostream &stream, Range &&shape) {
+  llvm::interleave(
+      shape, stream,
+      [&stream](const auto &dimSize) {
+        if (ShapedType::isDynamic(dimSize))
+          stream << "?";
+        else
+          stream << dimSize;
+      },
+      "x");
+}
+
 } // namespace detail
 } // namespace mlir
 
@@ -2570,13 +2596,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
         os << "tensor<";
-        for (int64_t dim : tensorTy.getShape()) {
-          if (ShapedType::isDynamic(dim))
-            os << '?';
-          else
-            os << dim;
+        printDimensionList(tensorTy.getShape());
+        if (!tensorTy.getShape().empty())
           os << 'x';
-        }
         printType(tensorTy.getElementType());
         // Only print the encoding attribute value if set.
         if (tensorTy.getEncoding()) {
@@ -2592,13 +2614,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<MemRefType>([&](MemRefType memrefTy) {
         os << "memref<";
-        for (int64_t dim : memrefTy.getShape()) {
-          if (ShapedType::isDynamic(dim))
-            os << '?';
-          else
-            os << dim;
+        printDimensionList(memrefTy.getShape());
+        if (!memrefTy.getShape().empty())
           os << 'x';
-        }
         printType(memrefTy.getElementType());
         MemRefLayoutAttrInterface layout = memrefTy.getLayout();
         if (!llvm::isa<AffineMapAttr>(layout) || !layout.isIdentity()) {
@@ -2729,6 +2747,10 @@ LogicalResult AsmPrinter::Impl::pushCyclicPrinting(const void *opaquePointer) {
 
 void AsmPrinter::Impl::popCyclicPrinting() { state.popCyclicPrinting(); }
 
+void AsmPrinter::Impl::printDimensionList(ArrayRef<int64_t> shape) {
+  detail::printDimensionList(os, shape);
+}
+
 //===--------------------------------------------------------------------===//
 // AsmPrinter
 //===--------------------------------------------------------------------===//
@@ -2794,6 +2816,10 @@ void AsmPrinter::printResourceHandle(const AsmDialectResourceHandle &resource) {
   impl->printResourceHandle(resource);
 }
 
+void AsmPrinter::printDimensionList(ArrayRef<int64_t> shape) {
+  detail::printDimensionList(getStream(), shape);
+}
+
 LogicalResult AsmPrinter::pushCyclicPrinting(const void *opaquePointer) {
   return impl->pushCyclicPrinting(opaquePointer);
 }
@@ -2815,7 +2841,7 @@ void AsmPrinter::Impl::printAffineExprInternal(
   const char *binopSpelling = nullptr;
   switch (expr.getKind()) {
   case AffineExprKind::SymbolId: {
-    unsigned pos = expr.cast<AffineSymbolExpr>().getPosition();
+    unsigned pos = cast<AffineSymbolExpr>(expr).getPosition();
     if (printValueName)
       printValueName(pos, /*isSymbol=*/true);
     else
@@ -2823,7 +2849,7 @@ void AsmPrinter::Impl::printAffineExprInternal(
     return;
   }
   case AffineExprKind::DimId: {
-    unsigned pos = expr.cast<AffineDimExpr>().getPosition();
+    unsigned pos = cast<AffineDimExpr>(expr).getPosition();
     if (printValueName)
       printValueName(pos, /*isSymbol=*/false);
     else
@@ -2831,7 +2857,7 @@ void AsmPrinter::Impl::printAffineExprInternal(
     return;
   }
   case AffineExprKind::Constant:
-    os << expr.cast<AffineConstantExpr>().getValue();
+    os << cast<AffineConstantExpr>(expr).getValue();
     return;
   case AffineExprKind::Add:
     binopSpelling = " + ";
@@ -2850,7 +2876,7 @@ void AsmPrinter::Impl::printAffineExprInternal(
     break;
   }
 
-  auto binOp = expr.cast<AffineBinaryOpExpr>();
+  auto binOp = cast<AffineBinaryOpExpr>(expr);
   AffineExpr lhsExpr = binOp.getLHS();
   AffineExpr rhsExpr = binOp.getRHS();
 
@@ -2860,7 +2886,7 @@ void AsmPrinter::Impl::printAffineExprInternal(
       os << '(';
 
     // Pretty print multiplication with -1.
-    auto rhsConst = rhsExpr.dyn_cast<AffineConstantExpr>();
+    auto rhsConst = dyn_cast<AffineConstantExpr>(rhsExpr);
     if (rhsConst && binOp.getKind() == AffineExprKind::Mul &&
         rhsConst.getValue() == -1) {
       os << "-";
@@ -2886,10 +2912,10 @@ void AsmPrinter::Impl::printAffineExprInternal(
 
   // Pretty print addition to a product that has a negative operand as a
   // subtraction.
-  if (auto rhs = rhsExpr.dyn_cast<AffineBinaryOpExpr>()) {
+  if (auto rhs = dyn_cast<AffineBinaryOpExpr>(rhsExpr)) {
     if (rhs.getKind() == AffineExprKind::Mul) {
       AffineExpr rrhsExpr = rhs.getRHS();
-      if (auto rrhs = rrhsExpr.dyn_cast<AffineConstantExpr>()) {
+      if (auto rrhs = dyn_cast<AffineConstantExpr>(rrhsExpr)) {
         if (rrhs.getValue() == -1) {
           printAffineExprInternal(lhsExpr, BindingStrength::Weak,
                                   printValueName);
@@ -2923,7 +2949,7 @@ void AsmPrinter::Impl::printAffineExprInternal(
   }
 
   // Pretty print addition to a negative number as a subtraction.
-  if (auto rhsConst = rhsExpr.dyn_cast<AffineConstantExpr>()) {
+  if (auto rhsConst = dyn_cast<AffineConstantExpr>(rhsExpr)) {
     if (rhsConst.getValue() < 0) {
       printAffineExprInternal(lhsExpr, BindingStrength::Weak, printValueName);
       os << " - " << -rhsConst.getValue();
@@ -3775,8 +3801,8 @@ void IntegerSet::print(raw_ostream &os) const {
   AsmPrinter::Impl(os, state.getImpl()).printIntegerSet(*this);
 }
 
-void Value::print(raw_ostream &os) { print(os, OpPrintingFlags()); }
-void Value::print(raw_ostream &os, const OpPrintingFlags &flags) {
+void Value::print(raw_ostream &os) const { print(os, OpPrintingFlags()); }
+void Value::print(raw_ostream &os, const OpPrintingFlags &flags) const {
   if (!impl) {
     os << "<<NULL VALUE>>";
     return;
@@ -3789,7 +3815,7 @@ void Value::print(raw_ostream &os, const OpPrintingFlags &flags) {
   os << "<block argument> of type '" << arg.getType()
      << "' at index: " << arg.getArgNumber();
 }
-void Value::print(raw_ostream &os, AsmState &state) {
+void Value::print(raw_ostream &os, AsmState &state) const {
   if (!impl) {
     os << "<<NULL VALUE>>";
     return;
@@ -3804,12 +3830,12 @@ void Value::print(raw_ostream &os, AsmState &state) {
      << "' at index: " << arg.getArgNumber();
 }
 
-void Value::dump() {
+void Value::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
 
-void Value::printAsOperand(raw_ostream &os, AsmState &state) {
+void Value::printAsOperand(raw_ostream &os, AsmState &state) const {
   // TODO: This doesn't necessarily capture all potential cases.
   // Currently, region arguments can be shadowed when printing the main
   // operation. If the IR hasn't been printed, this will produce the old SSA
@@ -3834,7 +3860,8 @@ static Operation *findParent(Operation *op, bool shouldUseLocalScope) {
   return op;
 }
 
-void Value::printAsOperand(raw_ostream &os, const OpPrintingFlags &flags) {
+void Value::printAsOperand(raw_ostream &os,
+                           const OpPrintingFlags &flags) const {
   Operation *op;
   if (auto result = llvm::dyn_cast<OpResult>(*this)) {
     op = result.getOwner();
@@ -3904,3 +3931,47 @@ void Block::printAsOperand(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
   printer.printBlockName(this);
 }
+
+//===--------------------------------------------------------------------===//
+// Custom printers
+//===--------------------------------------------------------------------===//
+namespace mlir {
+
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions) {
+  if (dimensions.empty())
+    printer << "[";
+  printer.printDimensionList(dimensions);
+  if (dimensions.empty())
+    printer << "]";
+}
+
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions) {
+  // Empty list case denoted by "[]".
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseRSquare())) {
+      return parser.emitError(parser.getCurrentLocation())
+             << "Failed parsing dimension list.";
+    }
+    dimensions =
+        DenseI64ArrayAttr::get(parser.getContext(), ArrayRef<int64_t>());
+    return success();
+  }
+
+  // Non-empty list case.
+  SmallVector<int64_t> shapeArr;
+  if (failed(parser.parseDimensionList(shapeArr, true, false))) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing dimension list.";
+  }
+  if (shapeArr.empty()) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing dimension list. Did you mean an empty list? It "
+              "must be denoted by \"[]\".";
+  }
+  dimensions = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
+  return success();
+}
+
+} // namespace mlir

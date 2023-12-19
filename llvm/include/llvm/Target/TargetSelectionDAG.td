@@ -617,6 +617,9 @@ def strict_uint_to_fp : SDNode<"ISD::STRICT_UINT_TO_FP",
 def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
 def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
 
+def get_fpenv      : SDNode<"ISD::GET_FPENV", SDTGetFPStateOp, [SDNPHasChain]>;
+def set_fpenv      : SDNode<"ISD::SET_FPENV", SDTSetFPStateOp, [SDNPHasChain]>;
+def reset_fpenv    : SDNode<"ISD::RESET_FPENV", SDTNone, [SDNPHasChain]>;
 def get_fpmode     : SDNode<"ISD::GET_FPMODE", SDTGetFPStateOp, [SDNPHasChain]>;
 def set_fpmode     : SDNode<"ISD::SET_FPMODE", SDTSetFPStateOp, [SDNPHasChain]>;
 def reset_fpmode   : SDNode<"ISD::RESET_FPMODE", SDTNone, [SDNPHasChain]>;
@@ -1060,6 +1063,10 @@ def extloadi32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = i32;
 }
+def extloadi64 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
+}
 def extloadf16 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = f16;
@@ -1089,6 +1096,10 @@ def sextloadi32 : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = i32;
 }
+def sextloadi64 : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
+}
 
 def zextloadi1  : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
   let IsLoad = true;
@@ -1105,6 +1116,10 @@ def zextloadi16 : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
 def zextloadi32 : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
   let IsLoad = true;
   let MemoryVT = i32;
+}
+def zextloadi64 : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
 }
 
 def extloadvi1  : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
@@ -1204,6 +1219,12 @@ def truncstorei32 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i32;
+  let IsTruncStore = true;
+}
+def truncstorei64 : PatFrag<(ops node:$val, node:$ptr),
+                            (truncstore node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i64;
   let IsTruncStore = true;
 }
 def truncstoref16 : PatFrag<(ops node:$val, node:$ptr),

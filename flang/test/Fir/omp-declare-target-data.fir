@@ -63,7 +63,7 @@ module attributes {omp.is_target_device = false} {
     fir.has_value %c5_i32 : i32
   }
 
-  // CHECK: llvm.mlir.global external @_QMtest_0Ept1() {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>{{.*}}} : !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)> {
+  // CHECK: llvm.mlir.global external @_QMtest_0Ept1() {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>{{.*}}} : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {
   fir.global @_QMtest_0Ept1 {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !fir.box<!fir.ptr<i32>> {
     %0 = fir.zero_bits !fir.ptr<i32>
     %1 = fir.embox %0 : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>

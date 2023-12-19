@@ -222,13 +222,12 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   // desirability of the front call site decreases, an updated one would be
   // pushed right back into the heap. For simplicity, those cases where the
   // desirability of a call site increases are ignored here.
-  void adjust() {
+  void pop_heap_adjust() {
     std::pop_heap(Heap.begin(), Heap.end(), isLess);
     while (updateAndCheckDecreased(Heap.back())) {
       std::push_heap(Heap.begin(), Heap.end(), isLess);
       std::pop_heap(Heap.begin(), Heap.end(), isLess);
     }
-    std::push_heap(Heap.begin(), Heap.end(), isLess);
   }
 
 public:
@@ -253,9 +252,8 @@ public:
 
   T pop() override {
     assert(size() > 0);
-    adjust();
+    pop_heap_adjust();
 
-    std::pop_heap(Heap.begin(), Heap.end(), isLess);
     CallBase *CB = Heap.pop_back_val();
     T Result = std::make_pair(CB, InlineHistoryMap[CB]);
     InlineHistoryMap.erase(CB);

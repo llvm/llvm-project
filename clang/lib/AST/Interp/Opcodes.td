@@ -687,3 +687,5 @@ def InvalidCast : Opcode {
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
+
+def ArrayDecay : Opcode;

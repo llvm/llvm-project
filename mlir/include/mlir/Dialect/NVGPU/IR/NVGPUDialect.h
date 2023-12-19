@@ -25,6 +25,8 @@ constexpr int kWarpSize = 32;
 
 /// M size of wgmma.mma_async instruction
 constexpr int kWgmmaSizeM = 64;
+/// Maximum tensor dimension that TMA supports
+constexpr int kMaxTMATensorDimension = 5;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"

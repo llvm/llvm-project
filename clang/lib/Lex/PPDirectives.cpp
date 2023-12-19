@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -21,6 +22,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
@@ -162,13 +164,13 @@ static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
     return false;
   // C defines macros starting with __STDC, and C++ defines macros starting with
   // __STDCPP
-  if (MacroName.startswith("__STDC"))
+  if (MacroName.starts_with("__STDC"))
     return true;
   // C++ defines the __cplusplus macro
   if (MacroName == "__cplusplus")
     return true;
   // C++ defines various feature-test macros starting with __cpp
-  if (MacroName.startswith("__cpp"))
+  if (MacroName.starts_with("__cpp"))
     return true;
   // Anything else isn't language-defined
   return false;
@@ -644,7 +646,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
       Directive = StringRef(DirectiveBuf, IdLen);
     }
 
-    if (Directive.startswith("if")) {
+    if (Directive.starts_with("if")) {
       StringRef Sub = Directive.substr(2);
       if (Sub.empty() ||   // "if"
           Sub == "def" ||   // "ifdef"
@@ -958,7 +960,6 @@ OptionalFileEntryRef Preprocessor::LookupFile(
 
   Module *RequestingModule = getModuleForLocation(
       FilenameLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
-  bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
@@ -982,7 +983,12 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     // map file.
     if (!FileEnt) {
       if (FID == SourceMgr.getMainFileID() && MainFileDir) {
-        Includers.push_back(std::make_pair(std::nullopt, *MainFileDir));
+        auto IncludeDir =
+            HeaderInfo.getModuleMap().shouldImportRelativeToBuiltinIncludeDir(
+                Filename, getCurrentModule())
+                ? HeaderInfo.getModuleMap().getBuiltinDir()
+                : MainFileDir;
+        Includers.push_back(std::make_pair(std::nullopt, *IncludeDir));
         BuildSystemModule = getCurrentModule()->IsSystem;
       } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
                       SourceMgr.getMainFileID()))) {
@@ -1034,13 +1040,8 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, &CurDir, Includers, SearchPath,
       RelativePath, RequestingModule, SuggestedModule, IsMapped,
       IsFrameworkFound, SkipCache, BuildSystemModule, OpenFile, CacheFailures);
-  if (FE) {
-    if (SuggestedModule && !LangOpts.AsmPreprocessor)
-      HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-          RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-          Filename, *FE);
+  if (FE)
     return FE;
-  }
 
   OptionalFileEntryRef CurFileEnt;
   // Otherwise, see if this is a subframework header.  If so, this is relative
@@ -1051,10 +1052,6 @@ OptionalFileEntryRef Preprocessor::LookupFile(
       if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
               Filename, *CurFileEnt, SearchPath, RelativePath, RequestingModule,
               SuggestedModule)) {
-        if (SuggestedModule && !LangOpts.AsmPreprocessor)
-          HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-              RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-              Filename, *FE);
         return FE;
       }
     }
@@ -1066,10 +1063,6 @@ OptionalFileEntryRef Preprocessor::LookupFile(
         if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
                 Filename, *CurFileEnt, SearchPath, RelativePath,
                 RequestingModule, SuggestedModule)) {
-          if (SuggestedModule && !LangOpts.AsmPreprocessor)
-            HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-                RequestingModule, RequestingModuleIsModuleInterface,
-                FilenameLoc, Filename, *FE);
           return FE;
         }
       }
@@ -1865,11 +1858,18 @@ static void diagnoseAutoModuleImport(
 // path to the file, build a properly-cased replacement in the vector,
 // and return true if the replacement should be suggested.
 static bool trySimplifyPath(SmallVectorImpl<StringRef> &Components,
-                            StringRef RealPathName) {
+                            StringRef RealPathName,
+                            llvm::sys::path::Style Separator) {
   auto RealPathComponentIter = llvm::sys::path::rbegin(RealPathName);
   auto RealPathComponentEnd = llvm::sys::path::rend(RealPathName);
   int Cnt = 0;
   bool SuggestReplacement = false;
+
+  auto IsSep = [Separator](StringRef Component) {
+    return Component.size() == 1 &&
+           llvm::sys::path::is_separator(Component[0], Separator);
+  };
+
   // Below is a best-effort to handle ".." in paths. It is admittedly
   // not 100% correct in the presence of symlinks.
   for (auto &Component : llvm::reverse(Components)) {
@@ -1879,10 +1879,11 @@ static bool trySimplifyPath(SmallVectorImpl<StringRef> &Components,
     } else if (Cnt) {
       --Cnt;
     } else if (RealPathComponentIter != RealPathComponentEnd) {
-      if (Component != *RealPathComponentIter) {
-        // If these path components differ by more than just case, then we
-        // may be looking at symlinked paths. Bail on this diagnostic to avoid
-        // noisy false positives.
+      if (!IsSep(Component) && !IsSep(*RealPathComponentIter) &&
+          Component != *RealPathComponentIter) {
+        // If these non-separator path components differ by more than just case,
+        // then we may be looking at symlinked paths. Bail on this diagnostic to
+        // avoid noisy false positives.
         SuggestReplacement =
             RealPathComponentIter->equals_insensitive(Component);
         if (!SuggestReplacement)
@@ -1941,7 +1942,8 @@ Preprocessor::getIncludeNextStart(const Token &IncludeNextTok) const {
     // Start looking up in the directory *after* the one in which the current
     // file would be found, if any.
     assert(CurPPLexer && "#include_next directive in macro?");
-    LookupFromFile = CurPPLexer->getFileEntry();
+    if (auto FE = CurPPLexer->getFileEntry())
+      LookupFromFile = *FE;
     Lookup = nullptr;
   } else if (!Lookup) {
     // The current file was not found by walking the include path. Either it
@@ -2020,12 +2022,28 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
     const FileEntry *LookupFromFile, StringRef &LookupFilename,
     SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
     ModuleMap::KnownHeader &SuggestedModule, bool isAngled) {
+  auto DiagnoseHeaderInclusion = [&](FileEntryRef FE) {
+    if (LangOpts.AsmPreprocessor)
+      return;
+
+    Module *RequestingModule = getModuleForLocation(
+        FilenameLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
+    bool RequestingModuleIsModuleInterface =
+        !SourceMgr.isInMainFile(FilenameLoc);
+
+    HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
+        RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
+        Filename, FE);
+  };
+
   OptionalFileEntryRef File = LookupFile(
       FilenameLoc, LookupFilename, isAngled, LookupFrom, LookupFromFile, CurDir,
       Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
       &SuggestedModule, &IsMapped, &IsFrameworkFound);
-  if (File)
+  if (File) {
+    DiagnoseHeaderInclusion(*File);
     return File;
+  }
 
   // Give the clients a chance to silently skip this include.
   if (Callbacks && Callbacks->FileNotFound(Filename))
@@ -2044,6 +2062,7 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
         &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
     if (File) {
+      DiagnoseHeaderInclusion(*File);
       Diag(FilenameTok, diag::err_pp_file_not_found_angled_include_not_fatal)
           << Filename << IsImportDecl
           << FixItHint::CreateReplacement(FilenameRange,
@@ -2074,6 +2093,7 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
         Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
         /*IsFrameworkFound=*/nullptr);
     if (File) {
+      DiagnoseHeaderInclusion(*File);
       auto Hint =
           isAngled ? FixItHint::CreateReplacement(
                          FilenameRange, "<" + TypoCorrectionName.str() + ">")
@@ -2439,7 +2459,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     }
 #endif
 
-    if (trySimplifyPath(Components, RealPathName)) {
+    if (trySimplifyPath(Components, RealPathName, BackslashStyle)) {
       SmallString<128> Path;
       Path.reserve(Name.size()+2);
       Path.push_back(isAngled ? '<' : '"');
@@ -2462,7 +2482,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
         // got copied when the C: was processed and we want to skip that entry.
         if (!(Component.size() == 1 && IsSep(Component[0])))
           Path.append(Component);
-        else if (!Path.empty())
+        else if (Path.size() != 1)
           continue;
 
         // Append the separator(s) the user used, or the close quote
@@ -2529,6 +2549,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     HasReachedMaxIncludeDepth = true;
     return {ImportAction::None};
   }
+
+  if (isAngled && isInNamedModule())
+    Diag(FilenameTok, diag::warn_pp_include_angled_in_module_purview)
+        << getNamedModuleName();
 
   // Look up the file, create a File ID for it.
   SourceLocation IncludePos = FilenameTok.getLocation();
@@ -2772,14 +2796,14 @@ static bool isConfigurationPattern(Token &MacroName, MacroInfo *MI,
         return false;
       StringRef ValueText = II->getName();
       StringRef TrimmedValue = ValueText;
-      if (!ValueText.startswith("__")) {
-        if (ValueText.startswith("_"))
+      if (!ValueText.starts_with("__")) {
+        if (ValueText.starts_with("_"))
           TrimmedValue = TrimmedValue.drop_front(1);
         else
           return false;
       } else {
         TrimmedValue = TrimmedValue.drop_front(2);
-        if (TrimmedValue.endswith("__"))
+        if (TrimmedValue.ends_with("__"))
           TrimmedValue = TrimmedValue.drop_back(2);
       }
       return TrimmedValue.equals(MacroText);

@@ -16,11 +16,11 @@
 
 #include <stdint.h>
 
+using LlvmLibcExpm1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcExpm1fTest, SpecialNumbers) {
+TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1f(aNaN));
@@ -39,7 +39,7 @@ TEST(LlvmLibcExpm1fTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcExpm1fTest, Overflow) {
+TEST_F(LlvmLibcExpm1fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::expm1f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
@@ -54,7 +54,7 @@ TEST(LlvmLibcExpm1fTest, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExpm1fTest, Underflow) {
+TEST_F(LlvmLibcExpm1fTest, Underflow) {
   libc_errno = 0;
   EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::expm1f(float(FPBits(0xff7fffffU))));
 
@@ -67,7 +67,7 @@ TEST(LlvmLibcExpm1fTest, Underflow) {
 
 // Test with inputs which are the borders of underflow/overflow but still
 // produce valid results without setting errno.
-TEST(LlvmLibcExpm1fTest, Borderline) {
+TEST_F(LlvmLibcExpm1fTest, Borderline) {
   float x;
 
   libc_errno = 0;
@@ -112,7 +112,7 @@ TEST(LlvmLibcExpm1fTest, Borderline) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcExpm1fTest, InFloatRange) {
+TEST_F(LlvmLibcExpm1fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {

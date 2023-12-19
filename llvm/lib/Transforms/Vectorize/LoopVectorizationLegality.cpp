@@ -289,7 +289,7 @@ void LoopVectorizeHints::getHintsFromMetadata() {
 }
 
 void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
-  if (!Name.startswith(Prefix()))
+  if (!Name.starts_with(Prefix()))
     return;
   Name = Name.substr(Prefix().size(), StringRef::npos);
 
@@ -942,6 +942,11 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             }
           }
       }
+
+      // If we found a vectorized variant of a function, note that so LV can
+      // make better decisions about maximum VF.
+      if (CI && !VFDatabase::getMappings(*CI).empty())
+        VecCallVariantsFound = true;
 
       // Check that the instruction return type is vectorizable.
       // Also, we can't vectorize extractelement instructions.

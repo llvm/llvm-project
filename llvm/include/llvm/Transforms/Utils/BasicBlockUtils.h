@@ -378,27 +378,6 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-///
-/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-void SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                 ArrayRef<BasicBlock *> Preds,
-                                 const char *Suffix, const char *Suffix2,
-                                 SmallVectorImpl<BasicBlock *> &NewBBs,
-                                 DominatorTree *DT, LoopInfo *LI = nullptr,
-                                 MemorySSAUpdater *MSSAU = nullptr,
-                                 bool PreserveLCSSA = false);
-
-/// This method transforms the landing pad, OrigBB, by introducing two new basic
-/// blocks into the function. One of those new basic blocks gets the
-/// predecessors listed in Preds. The other basic block gets the remaining
-/// predecessors of OrigBB. The landingpad instruction OrigBB is clone into both
-/// of the new basic blocks. The new blocks are given the suffixes 'Suffix1' and
-/// 'Suffix2', and are returned in the NewBBs vector.
-///
-/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
-/// no other analyses. In particular, it does not preserve LoopSimplify
-/// (because it's complicated to handle the case where one of the edges being
-/// split is an exit of a loop with other exits).
 void SplitLandingPadPredecessors(
     BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
@@ -702,6 +681,28 @@ BasicBlock *CreateControlFlowHub(
 // successors
 void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
+// Check whether the function only has simple terminator:
+// br/brcond/unreachable/ret
+bool hasOnlySimpleTerminator(const Function &F);
+
+// Returns true if these basic blocks belong to a presplit coroutine and the
+// edge corresponds to the 'default' case in the switch statement in the
+// pattern:
+//
+// %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+// switch i8 %0, label %suspend [i8 0, label %resume
+//                               i8 1, label %cleanup]
+//
+// i.e. the edge to the `%suspend` BB. This edge is special in that it will
+// be elided by coroutine lowering (coro-split), and the `%suspend` BB needs
+// to be kept as-is. It's not a real CFG edge - post-lowering, it will end
+// up being a `ret`, and it must be thus lowerable to support symmetric
+// transfer. For example:
+//  - this edge is not a loop exit edge if encountered in a loop (and should
+//    be ignored)
+//  - must not be split for PGO instrumentation, for example.
+bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                   const BasicBlock &Dest);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

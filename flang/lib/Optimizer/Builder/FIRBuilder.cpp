@@ -966,13 +966,13 @@ std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
     llvm::SmallString<32> str;
     llvm::MD5::stringifyResult(result, str);
     std::string hashName = prefix.str();
-    hashName.append(".").append(str.c_str());
+    hashName.append("X").append(str.c_str());
     return fir::NameUniquer::doGenerated(hashName);
   }
   // "Short" identifiers use a reversible hex string
   std::string nm = prefix.str();
   return fir::NameUniquer::doGenerated(
-      nm.append(".").append(llvm::toHex(name)));
+      nm.append("X").append(llvm::toHex(name)));
 }
 
 mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
@@ -1515,4 +1515,15 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
   mlir::Value cPtrAddr =
       fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
   return builder.create<fir::LoadOp>(loc, cPtrAddr);
+}
+
+mlir::Value fir::factory::createNullBoxProc(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxType) {
+  auto boxTy{boxType.dyn_cast<fir::BoxProcType>()};
+  if (!boxTy)
+    fir::emitFatalError(loc, "Procedure pointer must be of BoxProcType");
+  auto boxEleTy{fir::unwrapRefType(boxTy.getEleTy())};
+  mlir::Value initVal{builder.create<fir::ZeroOp>(loc, boxEleTy)};
+  return builder.create<fir::EmboxProcOp>(loc, boxTy, initVal);
 }
