@@ -1867,10 +1867,10 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     PoisonElts &= PoisonElts2;
   }
 
-  // If we've proven all of the lanes undef, return an undef value.
+  // If we've proven all of the lanes poison, return a poison value.
   // TODO: Intersect w/demanded lanes
   if (PoisonElts.isAllOnes())
-    return UndefValue::get(I->getType());
+    return PoisonValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
 }

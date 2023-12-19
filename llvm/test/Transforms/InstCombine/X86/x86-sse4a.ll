@@ -322,7 +322,7 @@ define <2 x i64> @test_extrq_args01(<2 x i64> %x, <16 x i8> %y) {
 
 define <2 x i64> @test_extrq_ret(<2 x i64> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @test_extrq_ret(
-; CHECK-NEXT:    ret <2 x i64> undef
+; CHECK-NEXT:    ret <2 x i64> poison
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> %y) nounwind
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
@@ -341,7 +341,7 @@ define <2 x i64> @test_extrqi_arg0(<2 x i64> %x) {
 
 define <2 x i64> @test_extrqi_ret(<2 x i64> %x) {
 ; CHECK-LABEL: @test_extrqi_ret(
-; CHECK-NEXT:    ret <2 x i64> undef
+; CHECK-NEXT:    ret <2 x i64> poison
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %x, i8 3, i8 2) nounwind
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
@@ -360,7 +360,7 @@ define <2 x i64> @test_insertq_arg0(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertq_ret(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertq_ret(
-; CHECK-NEXT:    ret <2 x i64> undef
+; CHECK-NEXT:    ret <2 x i64> poison
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> %y) nounwind
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
@@ -400,7 +400,7 @@ define <2 x i64> @test_insertqi_args01(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @test_insertqi_ret(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @test_insertqi_ret(
-; CHECK-NEXT:    ret <2 x i64> undef
+; CHECK-NEXT:    ret <2 x i64> poison
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> %y, i8 3, i8 2) nounwind
   %2 = shufflevector <2 x i64> %1, <2 x i64> undef, <2 x i32> <i32 1, i32 1>
