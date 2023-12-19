@@ -232,13 +232,13 @@ struct FormatStyle {
     ///   unsigned i;
     ///   int     &r;
     ///   int     *p;
-    ///   int     *(f)();
+    ///   int      (*f)();
     ///
     ///   false:
     ///   unsigned i;
     ///   int     &r;
     ///   int     *p;
-    ///   int *(f)();
+    ///   int (*f)();
     /// \endcode
     bool AlignFunctionPointers;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
