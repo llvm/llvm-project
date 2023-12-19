@@ -1154,12 +1154,10 @@ bool TargetLibraryInfoImpl::getLibFunc(const Instruction &I, LibFunc &F) const {
     return false;
 
   Type *ScalarTy = I.getType()->getScalarType();
-  if (ScalarTy->isDoubleTy())
-    F = LibFunc_fmod;
-  else if (ScalarTy->isFloatTy())
-    F = LibFunc_fmodf;
-  else
+  if (!ScalarTy->isDoubleTy() && !ScalarTy->isFloatTy())
     return false;
+
+  F = ScalarTy->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
   return true;
 }
 
