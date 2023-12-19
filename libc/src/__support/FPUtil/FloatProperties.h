@@ -143,16 +143,6 @@ private:
     return StorageType(1) << position;
   }
 
-  LIBC_INLINE_VAR static constexpr StorageType QNAN_MASK =
-      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
-          ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 2) // 0b1100...
-          : bit_at(SIG_LEN - 1);                      // 0b1000...
-
-  LIBC_INLINE_VAR static constexpr StorageType SNAN_MASK =
-      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
-          ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
-          : bit_at(SIG_LEN - 2);                      // 0b0100...
-
 public:
   // The number of bits after the decimal dot when the number is in normal form.
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN =
@@ -165,10 +155,20 @@ public:
   LIBC_INLINE_VAR static constexpr StorageType EXP_MANT_MASK =
       EXP_MASK | SIG_MASK;
 
+protected:
   // If a number x is a NAN, then it is a quiet NAN if:
-  //   QuietNaNMask & bits(x) != 0
-  // Else, it is a signalling NAN.
-  static constexpr StorageType QUIET_NAN_MASK = QNAN_MASK;
+  //   QUIET_NAN_MASK & bits(x) != 0
+  LIBC_INLINE_VAR static constexpr StorageType QUIET_NAN_MASK =
+      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
+          ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 2) // 0b1100...
+          : bit_at(SIG_LEN - 1);                      // 0b1000...
+
+  // If a number x is a NAN, then it is a signalling NAN if:
+  //   SIGNALING_NAN_MASK & bits(x) != 0
+  LIBC_INLINE_VAR static constexpr StorageType SIGNALING_NAN_MASK =
+      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
+          ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
+          : bit_at(SIG_LEN - 2);                      // 0b0100...
 };
 
 //-----------------------------------------------------------------------------
