@@ -3,7 +3,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/raw_socket_stream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
