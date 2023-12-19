@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -620,4 +621,64 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     Function *F = M->getFunction(TLI.getName(LF));
     EXPECT_TRUE(isLibFunc(F, LF));
   }
+}
+
+namespace {
+
+// Creates TLI for AArch64 and VecLibrary ARmPL, and uses it to get the TLI
+// names for different FRem Instructions.
+class TLITestAarch64ArmPl : public ::testing::Test {
+private:
+  SMDiagnostic Err;
+  const Triple TargetTriple;
+  const TargetLibraryInfoImpl::VectorLibrary VecLib;
+
+protected:
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M;
+  std::unique_ptr<TargetLibraryInfoImpl> TLII;
+  std::unique_ptr<TargetLibraryInfo> TLI;
+
+  /// Create TLI for AArch64 with VecLib ArmPL.
+  TLITestAarch64ArmPl()
+      : TargetTriple(Triple("aarch64-unknown-linux-gnu")),
+        VecLib(TargetLibraryInfoImpl::ArmPL) {
+    TLII = std::make_unique<TargetLibraryInfoImpl>(
+        TargetLibraryInfoImpl(TargetTriple));
+    TLII->addVectorizableFunctionsFromVecLib(VecLib, TargetTriple);
+    TLI = std::make_unique<TargetLibraryInfo>(TargetLibraryInfo(*TLII));
+    // Create a dummy module needed for tests.
+    M = parseAssemblyString("declare void @dummy()", Err, Ctx);
+    EXPECT_NE(M.get(), nullptr)
+        << "Loading an invalid module.\n " << Err.getMessage() << "\n";
+  }
+
+  /// Creates an FRem Instruction of Type \p Ty, and uses it to get the TLI
+  /// function name.
+  StringRef getFremScalarName(Type *Ty) {
+    // Use a dummy function and a BB to create an FRem Instruction.
+    FunctionType *FTy = FunctionType::get(Ty, {Ty, Ty}, false);
+    Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", *M);
+    BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+    IRBuilder<> Builder(BB);
+    Builder.SetInsertPoint(BB);
+    auto *FRem =
+        dyn_cast<Instruction>(Builder.CreateFRem(F->getArg(0), F->getArg(1)));
+
+    // Use TLI to get LibFunc and then the TLI name.
+    LibFunc Func;
+    if (!TLI->getLibFunc(*FRem, Func))
+      return "";
+    auto FuncName = TLI->getName(Func);
+    // Erase tmp function to prepare for the next test.
+    F->eraseFromParent();
+    return FuncName;
+  }
+};
+} // end anonymous namespace
+
+TEST_F(TLITestAarch64ArmPl, TestFrem) {
+  EXPECT_EQ(getFremScalarName(Type::getDoubleTy(Ctx)), "fmod");
+  EXPECT_EQ(getFremScalarName(Type::getFloatTy(Ctx)), "fmodf");
+  EXPECT_EQ(getFremScalarName(Type::getFP128Ty(Ctx)), "fmodl");
 }

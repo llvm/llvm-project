@@ -1149,6 +1149,22 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   return isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
 }
 
+bool TargetLibraryInfoImpl::getLibFunc(const Instruction &I, LibFunc &F) const {
+  if (I.getOpcode() != Instruction::FRem)
+    return false;
+
+  Type *ScalarTy = I.getType()->getScalarType();
+  if (ScalarTy->isDoubleTy())
+    F = LibFunc_fmod;
+  else if (ScalarTy->isFloatTy())
+    F = LibFunc_fmodf;
+  else if (ScalarTy->isFP128Ty())
+    F = LibFunc_fmodl;
+  else
+    return false;
+  return true;
+}
+
 void TargetLibraryInfoImpl::disableAllFunctions() {
   memset(AvailableArray, 0, sizeof(AvailableArray));
 }

@@ -156,6 +156,10 @@ public:
   /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
 
+  /// Searches for a function name using the opcode of \p I. Currently, only the
+  /// frem instruction is supported.
+  bool getLibFunc(const Instruction &I, LibFunc &F) const;
+
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
     setState(F, Unavailable);
@@ -358,6 +362,12 @@ public:
   bool getLibFunc(const CallBase &CB, LibFunc &F) const {
     return !CB.isNoBuiltin() && CB.getCalledFunction() &&
            getLibFunc(*(CB.getCalledFunction()), F);
+  }
+
+  /// Searches for a function name using the opcode of \p I. Currently, only the
+  /// frem instruction is supported.
+  bool getLibFunc(const Instruction &I, LibFunc &F) const {
+    return Impl->getLibFunc(I, F);
   }
 
   /// Disables all builtins.
