@@ -5260,6 +5260,9 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
 
+let Defs = [CR7], Itinerary = IIC_LdStSync in
+def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
+
 // Now both high word and low word are reversed, next
 // swap the high word and low word.
 def : Pat<(i64 (bitreverse i64:$A)),
@@ -5313,3 +5316,4 @@ def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
 
 def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
           (STFIWX f64:$XT, ForceXForm:$dst)>;
+
