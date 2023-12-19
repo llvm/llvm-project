@@ -731,7 +731,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         // Comparing just AA info does not guarantee memoperands are equal
         // in general, but this is so for LDS DMA in practice.
         auto AAI = MemOp->getAAInfo();
-        if (!AAI)
+        // Alias scope information gives a way to definitely identify an
+        // original memory object and practically produced in the module LDS
+        // lowering pass.
+        if (!AAI || !AAI.Scope)
           break;
         for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
           for (const auto *MemOp : LDSDMAStores[I]->memoperands()) {
@@ -1229,7 +1232,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         // VM_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         bool FoundAliasingStore = false;
-        if (Ptr && Memop->getAAInfo()) {
+        if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
             if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
