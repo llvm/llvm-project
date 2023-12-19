@@ -2,13 +2,18 @@
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t
 ; RUN: yaml2obj %S/Inputs/macho.yaml -o %t/macho.dylib
-; RUN: llvm-readtapi %t/macho.dylib -o %t/out.tbd 2>&1 | FileCheck %s --allow-empty 
-; RUN: llvm-readtapi -compare %t/out.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: not llvm-readtapi --compare %t/macho.tbd %t/macho.dylib 2>&1 | FileCheck %s
 
-; CHECK-NOT: error
-; CHECK-NOT: warning  
+; CHECK:      macho.tbd
+; CHECK-NEXT: macho.dylib
+; CHECK:      Current Version
+; CHECK-NEXT: 	< 1.2
+; CHECK-NEXT: 	> 1
+; CHECK-NEXT: Compatibility Version
+; CHECK-NEXT: 	< 3.1
+; CHECK-NEXT: 	> 1
 
-;--- expected.tbd
+;--- macho.tbd
 {
   "main_library": {
     "flags": [
@@ -18,6 +23,8 @@
         ]
       }
     ],
+    "current_versions":[{"version": "1.2"}],
+    "compatibility_versions":[{ "version": "3.1"}],
     "install_names": [
       {
         "name": "macho-no-exports.dylib"
