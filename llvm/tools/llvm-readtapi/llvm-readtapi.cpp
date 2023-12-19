@@ -215,9 +215,9 @@ static bool handleStubifyAction(Context &Ctx) {
       replace_extension(OutputLoc, ".tbd");
       Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);
       if (EC)
-        reportError("error opening file '" + OutputLoc + EC.message());
+        reportError("opening file '" + OutputLoc + ": " + EC.message());
       if (auto Err = sys::fs::remove(FileName))
-        reportError("error deleting file '" + FileName + EC.message());
+        reportError("deleting file '" + FileName + ": " + EC.message());
     }
     handleWriteAction(Ctx, std::move(IF));
   }

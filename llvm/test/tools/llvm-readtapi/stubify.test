@@ -4,10 +4,12 @@
 ; RUN: yaml2obj %S/Inputs/thread_local.yaml -o %t/thread_local.dylib
 ; RUN: yaml2obj %S/Inputs/universal.yaml -o %t/fat.dylib
 ; RUN: yaml2obj %S/Inputs/objc.yaml -o %t/objc.dylib
+; RUN: llvm-readtapi -stubify %t/objc.dylib -o %t/new_objc.tbd 2>&1 | FileCheck %s --allow-empty 
 ; RUN: llvm-readtapi -stubify %t/objc.dylib %t/flat_namespace.dylib %t/thread_local.dylib %t/fat.dylib -delete-input 2>&1 | FileCheck %s --allow-empty 
-; RUN: llvm-readtapi -compare %t/expected_flat.tbd %t/flat_namespace.tbd -delete-input 2>&1 | FileCheck %s --allow-empty 
-; RUN: llvm-readtapi -compare %t/expected_tl.tbd %t/thread_local.tbd -delete-input 2>&1 | FileCheck %s --allow-empty 
-; RUN: llvm-readtapi -compare %t/objc.tbd %t/expected_objc.tbd -delete-input 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/expected_flat.tbd %t/flat_namespace.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/expected_tl.tbd %t/thread_local.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/objc.tbd %t/expected_objc.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/new_objc.tbd %t/expected_objc.tbd 2>&1 | FileCheck %s --allow-empty 
 
 ; CHECK-NOT: error: 
 ; CHECK-NOT: warning: 
