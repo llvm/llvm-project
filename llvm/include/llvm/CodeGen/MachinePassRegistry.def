@@ -25,6 +25,7 @@ MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #endif
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass, ())
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass, ())
+MODULE_PASS("lower-emutls", LowerEmuTLSPass, ())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -135,12 +136,6 @@ DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 #undef DUMMY_FUNCTION_PASS
-
-#ifndef DUMMY_MODULE_PASS
-#define DUMMY_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)
-#endif
-DUMMY_MODULE_PASS("lower-emutls", LowerEmuTLSPass, ())
-#undef DUMMY_MODULE_PASS
 
 #ifndef DUMMY_MACHINE_MODULE_PASS
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)
