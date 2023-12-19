@@ -77,6 +77,12 @@ _LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
   return __output_iter;
 }
 
+template <class _AlgPolicy,
+          class _PopulationIterator,
+          class _PopulationSentinel,
+          class _SampleIterator,
+          class _Distance,
+          class _UniformRandomNumberGenerator>
 _LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
     _PopulationIterator __first,
     _PopulationSentinel __last,
