@@ -508,6 +508,7 @@ public:
 
   std::string ClangIRLifetimeCheckOpts;
   std::string ClangIRIdiomRecognizerOpts;
+  std::string ClangIRLibOptOpts;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.

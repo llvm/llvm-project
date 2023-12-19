@@ -170,19 +170,19 @@ public:
     auto setupCIRPipelineAndExecute = [&] {
       // Sanitize passes options. MLIR uses spaces between pass options
       // and since that's hard to fly in clang, we currently use ';'.
-      std::string lifetimeOpts;
-      std::string idiomRecognizerOpts;
+      std::string lifetimeOpts, idiomRecognizerOpts, libOptOpts;
       if (feOptions.ClangIRLifetimeCheck)
         lifetimeOpts = sanitizePassOptions(feOptions.ClangIRLifetimeCheckOpts);
       idiomRecognizerOpts =
           sanitizePassOptions(feOptions.ClangIRIdiomRecognizerOpts);
+      libOptOpts = sanitizePassOptions(feOptions.ClangIRLibOptOpts);
 
       // Setup and run CIR pipeline.
       bool passOptParsingFailure = false;
-      if (runCIRToCIRPasses(mlirMod, mlirCtx.get(), C,
-                            !feOptions.ClangIRDisableCIRVerifier,
-                            feOptions.ClangIRLifetimeCheck, lifetimeOpts,
-                            idiomRecognizerOpts, passOptParsingFailure)
+      if (runCIRToCIRPasses(
+              mlirMod, mlirCtx.get(), C, !feOptions.ClangIRDisableCIRVerifier,
+              feOptions.ClangIRLifetimeCheck, lifetimeOpts, idiomRecognizerOpts,
+              libOptOpts, passOptParsingFailure)
               .failed()) {
         if (passOptParsingFailure)
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)
