@@ -4266,6 +4266,12 @@ unsigned ResourceSegments::getFirstAvailableAt(
   assert(std::is_sorted(std::begin(_Intervals), std::end(_Intervals),
                         sortIntervals) &&
          "Cannot execute on an un-sorted set of intervals.");
+
+  // Zero resource usage is allowed by TargetSchedule.td but we do not construct
+  // a ResourceSegment interval for that situation.
+  if (AcquireAtCycle == Cycle)
+    return Cycle;
+
   unsigned RetCycle = CurrCycle;
   ResourceSegments::IntervalTy NewInterval =
       IntervalBuilder(RetCycle, AcquireAtCycle, Cycle);
@@ -4285,8 +4291,16 @@ unsigned ResourceSegments::getFirstAvailableAt(
 
 void ResourceSegments::add(ResourceSegments::IntervalTy A,
                            const unsigned CutOff) {
-  assert(A.first < A.second && "Cannot add empty resource usage");
-  assert(CutOff > 0 && "0-size interval history has no use.");
+  assert(A.first <= A.second && "Cannot add negative resource usage");
+
+  // Zero resource usage is allowed by TargetSchedule.td, in the case that the
+  // instruction needed the resource to be available but does not use it.
+  // However, ResourceSegment represents an interval that is closed on the left
+  // and open on the right. It is impossible to represent an empty interval when
+  // the left is closed. Do not add it to Intervals.
+  if (A.first == A.second || CutOff == 0)
+    return;
+
   assert(all_of(_Intervals,
                 [&A](const ResourceSegments::IntervalTy &Interval) -> bool {
                   return !intersects(A, Interval);
