@@ -51,9 +51,52 @@ define i32 @lower_lshr(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <
   %l693 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %l692)
   ret i32 %l693
 }
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 
-define <8 x i16> @lower_trunc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
-; CHECK-LABEL: lower_trunc:
+define <16 x i8> @lower_trunc_16xi8(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i16 %g, i16 %h, i16 %i, i16 %j, i16 %k, i16 %l, i16 %m, i16 %n, i16 %o, i16 %p) {
+; CHECK-LABEL: lower_trunc_16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    add x8, sp, #56
+; CHECK-NEXT:    ld1r { v1.8h }, [x8]
+; CHECK-NEXT:    mov v0.h[1], w1
+; CHECK-NEXT:    add v3.8h, v1.8h, v1.8h
+; CHECK-NEXT:    mov v0.h[2], w2
+; CHECK-NEXT:    mov v0.h[3], w3
+; CHECK-NEXT:    mov v0.h[4], w4
+; CHECK-NEXT:    mov v0.h[5], w5
+; CHECK-NEXT:    mov v0.h[6], w6
+; CHECK-NEXT:    add v2.8h, v0.8h, v0.8h
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a1 = insertelement <16 x i16> poison, i16 %a, i16 0
+  %b1 = insertelement <16 x i16> %a1, i16 %b, i16 1
+  %c1 = insertelement <16 x i16> %b1, i16 %c, i16 2
+  %d1 = insertelement <16 x i16> %c1, i16 %d, i16 3
+  %e1 = insertelement <16 x i16> %d1, i16 %e, i16 4
+  %f1 = insertelement <16 x i16> %e1, i16 %f, i16 5
+  %g1 = insertelement <16 x i16> %f1, i16 %g, i16 6
+  %h1 = insertelement <16 x i16> %g1, i16 %h, i16 7
+  %i1 = insertelement <16 x i16> %f1, i16 %i, i16 8
+  %j1 = insertelement <16 x i16> %g1, i16 %j, i16 9
+  %k1 = insertelement <16 x i16> %f1, i16 %k, i16 10
+  %l1 = insertelement <16 x i16> %g1, i16 %l, i16 11
+  %m1 = insertelement <16 x i16> %f1, i16 %m, i16 12
+  %n1 = insertelement <16 x i16> %g1, i16 %n, i16 13
+  %o1 = insertelement <16 x i16> %f1, i16 %o, i16 14
+  %p1 = insertelement <16 x i16> %g1, i16 %p, i16 15
+  %t = trunc <16 x i16> %p1 to <16 x i8>
+  %s = add <16 x i16> %p1, %p1
+  %t2 = trunc <16 x i16> %s to <16 x i8>
+  %pro = xor <16 x i8> %t, %t2
+  ret <16 x i8> %pro
+}
+
+define <8 x i16> @lower_trunc_8xi16(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
+; CHECK-LABEL: lower_trunc_8xi16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w4
 ; CHECK-NEXT:    fmov s1, w0
@@ -84,5 +127,63 @@ define <8 x i16> @lower_trunc(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i3
   ret <8 x i16> %o
 }
 
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
+define <4 x i32> @lower_trunc_4xi32(i64 %a, i64 %b, i64 %c, i64 %d) {
+; CHECK-LABEL: lower_trunc_4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x2
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    mov v0.d[1], x3
+; CHECK-NEXT:    mov v1.d[1], x1
+; CHECK-NEXT:    add v2.2d, v0.2d, v0.2d
+; CHECK-NEXT:    add v3.2d, v1.2d, v1.2d
+; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a1 = insertelement <4 x i64> poison, i64 %a, i64 0
+  %b1 = insertelement <4 x i64> %a1, i64 %b, i64 1
+  %c1 = insertelement <4 x i64> %b1, i64 %c, i64 2
+  %d1 = insertelement <4 x i64> %c1, i64 %d, i64 3
+  %t = trunc <4 x i64> %d1 to <4 x i32>
+  %s = add <4 x i64> %d1, %d1
+  %t2 = trunc <4 x i64> %s to <4 x i32>
+  %o = xor <4 x i32> %t, %t2
+  ret <4 x i32> %o
+}
+
+define <8 x i32> @lower_trunc_8xi32(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) {
+; CHECK-LABEL: lower_trunc_8xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x2
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    fmov d2, x6
+; CHECK-NEXT:    fmov d3, x4
+; CHECK-NEXT:    mov v0.d[1], x3
+; CHECK-NEXT:    mov v1.d[1], x1
+; CHECK-NEXT:    mov v2.d[1], x7
+; CHECK-NEXT:    mov v3.d[1], x5
+; CHECK-NEXT:    add v4.2d, v0.2d, v0.2d
+; CHECK-NEXT:    add v5.2d, v1.2d, v1.2d
+; CHECK-NEXT:    add v6.2d, v2.2d, v2.2d
+; CHECK-NEXT:    add v7.2d, v3.2d, v3.2d
+; CHECK-NEXT:    uzp1 v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uzp1 v3.4s, v5.4s, v4.4s
+; CHECK-NEXT:    uzp1 v1.4s, v7.4s, v6.4s
+; CHECK-NEXT:    eor v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    eor v1.16b, v2.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a1 = insertelement <8 x i64> poison, i64 %a, i64 0
+  %b1 = insertelement <8 x i64> %a1, i64 %b, i64 1
+  %c1 = insertelement <8 x i64> %b1, i64 %c, i64 2
+  %d1 = insertelement <8 x i64> %c1, i64 %d, i64 3
+  %e1 = insertelement <8 x i64> %d1, i64 %e, i64 4
+  %f1 = insertelement <8 x i64> %e1, i64 %f, i64 5
+  %g1 = insertelement <8 x i64> %f1, i64 %g, i64 6
+  %h1 = insertelement <8 x i64> %g1, i64 %h, i64 7
+  %t = trunc <8 x i64> %h1 to <8 x i32>
+  %s = add <8 x i64> %h1, %h1
+  %t2 = trunc <8 x i64> %s to <8 x i32>
+  %o = xor <8 x i32> %t, %t2
+  ret <8 x i32> %o
+}
