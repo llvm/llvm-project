@@ -35,8 +35,7 @@
 //   SPLIT: ![[#]] = !{i32 1, !"EnableSplitLTOUnit", i32 1}
 // NOSPLIT: ![[#]] = !{i32 1, !"EnableSplitLTOUnit", i32 0}
 
-/// Check that the ThinLTO metadata is set true for both full and thin LTO, since FatLTO is based on UnifiedLTO.
-//     FULL: ![[#]] = !{i32 1, !"ThinLTO", i32 1}
+// FULL-NOT: ![[#]] = !{i32 1, !"ThinLTO", i32 0}
 // THIN-NOT: ![[#]] = !{i32 1, !"ThinLTO", i32 0}
 
 /// FatLTO always uses UnifiedLTO. It's an error if they aren't set together

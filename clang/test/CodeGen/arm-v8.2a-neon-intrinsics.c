@@ -793,7 +793,7 @@ float16x8_t test_vmulq_lane_f16(float16x8_t a, float16x4_t b) {
 }
 
 // CHECK-LABEL: test_vmul_n_f16
-// CHECK: [[TMP0:%.*]] = insertelement <4 x half> undef, half [[b:%.*]], i32 0
+// CHECK: [[TMP0:%.*]] = insertelement <4 x half> poison, half [[b:%.*]], i32 0
 // CHECK: [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[b]], i32 1
 // CHECK: [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[b]], i32 2
 // CHECK: [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[b]], i32 3
@@ -804,7 +804,7 @@ float16x4_t test_vmul_n_f16(float16x4_t a, float16_t b) {
 }
 
 // CHECK-LABEL: test_vmulq_n_f16
-// CHECK: [[TMP0:%.*]] = insertelement <8 x half> undef, half [[b:%.*]], i32 0
+// CHECK: [[TMP0:%.*]] = insertelement <8 x half> poison, half [[b:%.*]], i32 0
 // CHECK: [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[b]], i32 1
 // CHECK: [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[b]], i32 2
 // CHECK: [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[b]], i32 3
@@ -895,7 +895,7 @@ float16x8x2_t test_vtrnq_f16(float16x8_t a, float16x8_t b) {
 }
 
 // CHECK-LABEL: test_vmov_n_f16
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x half> undef, half [[ARG:%.*]], i32 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x half> poison, half [[ARG:%.*]], i32 0
 // CHECK:   [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[ARG]], i32 1
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[ARG]], i32 2
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[ARG]], i32 3
@@ -905,7 +905,7 @@ float16x4_t test_vmov_n_f16(float16_t a) {
 }
 
 // CHECK-LABEL: test_vmovq_n_f16
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x half> undef, half [[ARG:%.*]], i32 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x half> poison, half [[ARG:%.*]], i32 0
 // CHECK:   [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[ARG]], i32 1
 // CHECK:   [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[ARG]], i32 2
 // CHECK:   [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[ARG]], i32 3
@@ -919,7 +919,7 @@ float16x8_t test_vmovq_n_f16(float16_t a) {
 }
 
 // CHECK-LABEL: test_vdup_n_f16
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x half> undef, half [[ARG:%.*]], i32 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x half> poison, half [[ARG:%.*]], i32 0
 // CHECK:   [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[ARG]], i32 1
 // CHECK:   [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[ARG]], i32 2
 // CHECK:   [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[ARG]], i32 3
@@ -929,7 +929,7 @@ float16x4_t test_vdup_n_f16(float16_t a) {
 }
 
 // CHECK-LABEL: test_vdupq_n_f16
-// CHECK:   [[TMP0:%.*]] = insertelement <8 x half> undef, half [[ARG:%.*]], i32 0
+// CHECK:   [[TMP0:%.*]] = insertelement <8 x half> poison, half [[ARG:%.*]], i32 0
 // CHECK:   [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half [[ARG]], i32 1
 // CHECK:   [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[ARG]], i32 2
 // CHECK:   [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[ARG]], i32 3

@@ -87,6 +87,11 @@ bool Fortran::lower::CallerInterface::isIndirectCall() const {
 }
 
 bool Fortran::lower::CallerInterface::requireDispatchCall() const {
+  // Procedure pointer component reference do not require dispatch, but
+  // have PASS/NOPASS argument.
+  if (const Fortran::semantics::Symbol *sym = procRef.proc().GetSymbol())
+    if (Fortran::semantics::IsPointer(*sym))
+      return false;
   // calls with NOPASS attribute still have their component so check if it is
   // polymorphic.
   if (const Fortran::evaluate::Component *component =
@@ -127,12 +132,21 @@ Fortran::lower::CallerInterface::getPassArgIndex() const {
   return passArg;
 }
 
-const Fortran::semantics::Symbol *
-Fortran::lower::CallerInterface::getIfIndirectCallSymbol() const {
+mlir::Value Fortran::lower::CallerInterface::getIfPassedArg() const {
+  if (std::optional<unsigned> passArg = getPassArgIndex()) {
+    assert(actualInputs.size() > *passArg && actualInputs[*passArg] &&
+           "passed arg was not set yet");
+    return actualInputs[*passArg];
+  }
+  return {};
+}
+
+const Fortran::evaluate::ProcedureDesignator *
+Fortran::lower::CallerInterface::getIfIndirectCall() const {
   if (const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol())
     if (Fortran::semantics::IsPointer(*symbol) ||
         Fortran::semantics::IsDummy(*symbol))
-      return symbol;
+      return &procRef.proc();
   return nullptr;
 }
 

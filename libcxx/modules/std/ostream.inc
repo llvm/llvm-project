@@ -27,13 +27,14 @@ export namespace std {
 #  endif
   using std::operator<<;
 
-#  if 0
+#  if _LIBCPP_STD_VER >= 23
   // [ostream.formatted.print], print functions
   using std::print;
   using std::println;
 
   using std::vprint_nonunicode;
   using std::vprint_unicode;
-#  endif
+#  endif // _LIBCPP_STD_VER >= 23
+
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
 } // namespace std

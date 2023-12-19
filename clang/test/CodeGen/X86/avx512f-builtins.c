@@ -10077,7 +10077,7 @@ __m512i test_mm512_maskz_min_epu64 (__mmask8 __M, __m512i __A, __m512i __B)
 __m512i test_mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
 {
   // CHECK-LABEL: @test_mm512_mask_set1_epi32
-  // CHECK: insertelement <16 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -10100,7 +10100,7 @@ __m512i test_mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
 __m512i test_mm512_maskz_set1_epi32(__mmask16 __M, int __A)
 {     
   // CHECK-LABEL: @test_mm512_maskz_set1_epi32
-  // CHECK: insertelement <16 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <16 x i32> poison, i32 %{{.*}}, i32 0
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}, i32 1
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}, i32 2
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}, i32 3
@@ -10319,7 +10319,7 @@ __m512i test_mm512_setr_epi32 (int __A, int __B, int __C, int __D,
 __m512i test_mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
 {
   // CHECK-LABEL: @test_mm512_mask_set1_epi64
-  // CHECK: insertelement <8 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 3
@@ -10334,7 +10334,7 @@ __m512i test_mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
 __m512i test_mm512_maskz_set1_epi64 (__mmask8 __M, long long __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_set1_epi64
-  // CHECK: insertelement <8 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 3
