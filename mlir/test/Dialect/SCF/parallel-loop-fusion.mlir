@@ -693,7 +693,7 @@ func.func @reductions_use_res_inside(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -
   return %res1, %res2 : f32, f32
 }
 
-// %res1 is used inside second scf.parallel arg, cannot fuse
+// %res1 is used inside second scf.parallel, cannot fuse
 // CHECK-LABEL: func @reductions_use_res_inside
 // CHECK:      scf.parallel
 // CHECK:      scf.parallel
