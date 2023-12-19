@@ -258,3 +258,19 @@ void sw11(int a) {
 //CHECK-NEXT:   cir.yield break
 //CHECK-NEXT: }
 
+void sw12(int a) {
+  switch (a)
+  {
+  case 3:
+    return;
+    break;
+  }
+}
+//      CHECK: cir.func @_Z4sw12i
+//      CHECK:   cir.scope {
+//      CHECK:     cir.switch
+// CHECK-NEXT:     case (equal, 3) {
+// CHECK-NEXT:       cir.return
+// CHECK-NEXT:     ^bb1:  // no predecessors
+// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:     }

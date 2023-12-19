@@ -105,4 +105,35 @@ module {
     // CHECK-NOT: llvm.switch
     cir.return
   }
+
+  cir.func @shouldLowerMultiBlockCase(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.scope {
+      %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+      cir.switch (%1 : !s32i) [
+      case (equal, 3) {
+        cir.return
+      ^bb1:  // no predecessors
+        cir.yield break
+      }
+      ] 
+    }
+    cir.return
+  }
+  // CHECK: llvm.func @shouldLowerMultiBlockCase
+  // CHECK: ^bb1:  // pred: ^bb0
+  // CHECK:   llvm.switch {{.*}} : i32, ^bb4 [
+  // CHECK:     3: ^bb2
+  // CHECK:   ]
+  // CHECK: ^bb2:  // pred: ^bb1
+  // CHECK:   llvm.return
+  // CHECK: ^bb3:  // no predecessors
+  // CHECK:   llvm.br ^bb4
+  // CHECK: ^bb4:  // 2 preds: ^bb1, ^bb3
+  // CHECK:   llvm.br ^bb5
+  // CHECK: ^bb5:  // pred: ^bb4
+  // CHECK:   llvm.return
+  // CHECK: }
+
 }
