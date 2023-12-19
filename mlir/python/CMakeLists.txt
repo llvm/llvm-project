@@ -72,7 +72,7 @@ declare_mlir_dialect_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/AsyncOps.td
   SOURCES_GLOB dialects/async_dialect/*.py
-  DIALECT_NAME async_dialect)
+  DIALECT_NAME async)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -522,7 +522,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
 
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
   MODULE_NAME _mlirAsyncPasses
-  ADD_TO_PARENT MLIRPythonSources.Dialects.async_dialect
+  ADD_TO_PARENT MLIRPythonSources.Dialects.async
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     AsyncPasses.cpp
@@ -664,11 +664,10 @@ if(NOT LLVM_ENABLE_IDE)
     COMPONENT mlir-python-sources
   )
 endif()
-
-################################################################################
+# ###############################################################################
 # The fully assembled package of modules.
 # This must come last.
-################################################################################
+# ###############################################################################
 
 add_mlir_python_modules(MLIRPythonModules
   ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir"
