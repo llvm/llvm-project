@@ -29,7 +29,6 @@ namespace fputil {
 template <> struct FPBits<long double> : private FloatProperties<long double> {
   using typename FloatProperties<long double>::StorageType;
   using FloatProperties<long double>::TOTAL_LEN;
-  using FloatProperties<long double>::EXP_MANT_MASK;
   using FloatProperties<long double>::EXP_MASK;
   using FloatProperties<long double>::EXP_BIAS;
   using FloatProperties<long double>::EXP_LEN;
