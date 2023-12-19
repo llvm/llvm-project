@@ -1379,7 +1379,7 @@ TEST(SymtabTest, instr_prof_symtab_compression_test) {
 
 TEST_P(MaybeSparseInstrProfTest, remapping_test) {
   Writer.addRecord({"_Z3fooi", 0x1234, {1, 2, 3, 4}}, Err);
-  Writer.addRecord({"file;_Z3barf", 0x567, {5, 6, 7}}, Err);
+  Writer.addRecord({"file:_Z3barf", 0x567, {5, 6, 7}}, Err);
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile), llvm::MemoryBuffer::getMemBuffer(R"(
     type i l
@@ -1397,7 +1397,7 @@ TEST_P(MaybeSparseInstrProfTest, remapping_test) {
     EXPECT_EQ(4u, Counts[3]);
   }
 
-  for (StringRef BarName : {"file;_Z3barf", "file;_Z4quuxf"}) {
+  for (StringRef BarName : {"file:_Z3barf", "file:_Z4quuxf"}) {
     EXPECT_THAT_ERROR(Reader->getFunctionCounts(BarName, 0x567, Counts),
                       Succeeded());
     ASSERT_EQ(3u, Counts.size());
