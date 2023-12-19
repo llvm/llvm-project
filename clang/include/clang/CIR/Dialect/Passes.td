@@ -81,6 +81,9 @@ def IdiomRecognizer : Pass<"cir-idiom-recognizer"> {
     This pass recognize idiomatic C++ usage and incorporate C++ standard
     containers, library functions calls, and types into CIR operation,
     attributes and types.
+
+    Detections done by this pass can be inspected by users by using
+    remarks. Currently supported are `all` and `found-calls`.
   }];
   let constructor = "mlir::createIdiomRecognizerPass()";
   let dependentDialects = ["cir::CIRDialect"];
@@ -89,8 +92,6 @@ def IdiomRecognizer : Pass<"cir-idiom-recognizer"> {
     ListOption<"remarksList", "remarks", "std::string",
                "Diagnostic remarks to enable"
                " Supported styles: {all|found-calls}", "llvm::cl::ZeroOrMore">,
-    Option<"historyLimit", "history_limit", "unsigned", /*default=*/"1",
-           "Max amount of diagnostics to emit on pointer history">
   ];
 }
 
