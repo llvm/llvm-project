@@ -123,7 +123,7 @@ float32x4_t test_vfmlslq_high_f16(float32x4_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 0
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 0
@@ -167,7 +167,7 @@ float32x2_t test_vfmlal_lane_low_f16(float32x2_t a, float16x4_t b, float16x4_t c
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 1
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 1
@@ -219,7 +219,7 @@ float32x2_t test_vfmlal_lane_high_f16(float32x2_t a, float16x4_t b, float16x4_t 
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 2
@@ -295,7 +295,7 @@ float32x4_t test_vfmlalq_lane_low_f16(float32x4_t a, float16x8_t b, float16x4_t 
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 3
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 3
@@ -363,7 +363,7 @@ float32x4_t test_vfmlalq_lane_high_f16(float32x4_t a, float16x8_t b, float16x4_t
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 4
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 4
@@ -407,7 +407,7 @@ float32x2_t test_vfmlal_laneq_low_f16(float32x2_t a, float16x4_t b, float16x8_t 
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 5
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 5
@@ -459,7 +459,7 @@ float32x2_t test_vfmlal_laneq_high_f16(float32x2_t a, float16x4_t b, float16x8_t
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 6
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 6
@@ -535,7 +535,7 @@ float32x4_t test_vfmlalq_laneq_low_f16(float32x4_t a, float16x8_t b, float16x8_t
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 7
@@ -603,7 +603,7 @@ float32x4_t test_vfmlalq_laneq_high_f16(float32x4_t a, float16x8_t b, float16x8_
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 0
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 0
@@ -647,7 +647,7 @@ float32x2_t test_vfmlsl_lane_low_f16(float32x2_t a, float16x4_t b, float16x4_t c
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 1
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 1
@@ -699,7 +699,7 @@ float32x2_t test_vfmlsl_lane_high_f16(float32x2_t a, float16x4_t b, float16x4_t 
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 2
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 2
@@ -775,7 +775,7 @@ float32x4_t test_vfmlslq_lane_low_f16(float32x4_t a, float16x8_t b, float16x4_t 
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 3
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <4 x half> [[C]], ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[__REINT_8474]], align 8
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x i16> [[TMP2]], i32 3
@@ -843,7 +843,7 @@ float32x4_t test_vfmlslq_lane_high_f16(float32x4_t a, float16x8_t b, float16x4_t
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 4
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 4
@@ -887,7 +887,7 @@ float32x2_t test_vfmlsl_laneq_low_f16(float32x2_t a, float16x4_t b, float16x8_t 
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 5
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 5
@@ -939,7 +939,7 @@ float32x2_t test_vfmlsl_laneq_high_f16(float32x2_t a, float16x4_t b, float16x8_t
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 6
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 6
@@ -1015,7 +1015,7 @@ float32x4_t test_vfmlslq_laneq_low_f16(float32x4_t a, float16x8_t b, float16x8_t
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP1]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP1]], i32 0
 // CHECK-NEXT:    store <8 x half> [[C]], ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[__REINT_8504]], align 16
 // CHECK-NEXT:    [[VGETQ_LANE8:%.*]] = extractelement <8 x i16> [[TMP2]], i32 7
