@@ -197,6 +197,12 @@ driver) or use Flang with the `-fno-fortran-main` flag.  This flag removes
 `Fortran_main` from the linker stage and hence requires one of the C/C++
 translation units to provide a definition of the `main` function.
 
+When creating shared or static libraries, `Fortran_main` is automatically
+removed from the linker stage.  It is assumed that when creating a static or
+shared library, the generated library does not need a `main` function, as a
+final link stage will occur that will provide the `Fortran_main` library when
+creating the final executable.
+
 ## Frontend Driver
 Flang's frontend driver is the main interface between compiler developers and
 the Flang frontend. The high-level design is similar to Clang's frontend
