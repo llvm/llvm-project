@@ -1090,23 +1090,19 @@ template <class T>
 struct ProxyDiffTBase {};
 
 template <class T>
-    requires requires { std::iter_difference_t<T>{}; }
+  requires requires { std::iter_difference_t<T>{}; }
 struct ProxyDiffTBase<T> {
-    using difference_type = std::iter_difference_t<T>;
+  using difference_type = std::iter_difference_t<T>;
 };
 
 // These concepts allow us to conditionally add the pre-/postfix operators
-// when T also supports those member functions. Like ProxyDiffTBase, this 
+// when T also supports those member functions. Like ProxyDiffTBase, this
 // is necessary when we want std::weakly_incrementable<Proxy<T>> to be true.
 template <class T>
-concept HasPreIncrementOp = requires(T const& obj) {
-    ++obj;
-};
+concept HasPreIncrementOp = requires(T const& obj) { ++obj; };
 
 template <class T>
-concept HasPostIncrementOp = requires(T const& obj) {
-    obj++;
-};
+concept HasPostIncrementOp = requires(T const& obj) { obj++; };
 
 // Proxy
 // ======================================================================
@@ -1176,7 +1172,7 @@ struct Proxy : ProxyDiffTBase<T> {
 
   // Compare operators are defined for the convenience of the tests
   friend constexpr bool operator==(const Proxy& lhs, const Proxy& rhs)
-    requires (std::equality_comparable<T> && !std::is_reference_v<T>)
+    requires(std::equality_comparable<T> && !std::is_reference_v<T>)
   {
     return lhs.data == rhs.data;
   };
@@ -1190,7 +1186,7 @@ struct Proxy : ProxyDiffTBase<T> {
   }
 
   friend constexpr auto operator<=>(const Proxy& lhs, const Proxy& rhs)
-    requires (std::three_way_comparable<T> && !std::is_reference_v<T>)
+    requires(std::three_way_comparable<T> && !std::is_reference_v<T>)
   {
     return lhs.data <=> rhs.data;
   };
@@ -1205,18 +1201,18 @@ struct Proxy : ProxyDiffTBase<T> {
 
   // Needed to allow certain types to be weakly_incremental
   constexpr Proxy& operator++()
-      requires(HasPreIncrementOp<T>)
+    requires(HasPreIncrementOp<T>)
   {
-      ++data;
-      return *this;
+    ++data;
+    return *this;
   }
 
   constexpr Proxy operator++(int)
-      requires(HasPostIncrementOp<T>)
+    requires(HasPostIncrementOp<T>)
   {
-      Proxy tmp = *this;
-      operator++();
-      return tmp;
+    Proxy tmp = *this;
+    operator++();
+    return tmp;
   }
 };
 
