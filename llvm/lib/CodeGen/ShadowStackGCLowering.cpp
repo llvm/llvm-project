@@ -173,7 +173,7 @@ Type *ShadowStackGCLowering::GetConcreteStackEntryType(Function &F) {
 bool ShadowStackGCLowering::doInitialization(Module &M) {
   bool Active = false;
   for (Function &F : M) {
-    if (F.hasGC() && F.getGC() == std::string("shadow-stack")) {
+    if (F.hasGC() && F.getGC() == "shadow-stack") {
       Active = true;
       break;
     }
@@ -292,8 +292,7 @@ void ShadowStackGCLowering::getAnalysisUsage(AnalysisUsage &AU) const {
 /// runOnFunction - Insert code to maintain the shadow stack.
 bool ShadowStackGCLowering::runOnFunction(Function &F) {
   // Quick exit for functions that do not use the shadow stack GC.
-  if (!F.hasGC() ||
-      F.getGC() != std::string("shadow-stack"))
+  if (!F.hasGC() || F.getGC() != "shadow-stack")
     return false;
 
   LLVMContext &Context = F.getContext();
