@@ -108,7 +108,7 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
 
   llvm::erase_if(DiagOpts.Remarks, [](StringRef Remark) -> bool {
     // These are intended for caching introspection, they are not cached.
-    return Remark.startswith("compile-job-cache");
+    return Remark.starts_with("compile-job-cache");
   });
 
   // Generate a new command-line in case Invocation has been canonicalized.
@@ -254,7 +254,7 @@ static Error printCompileJobCacheKey(ObjectStore &CAS, ObjectProxy Node,
       StringRef Trailing;
       do {
         std::tie(Arg, Data) = Data.split('\0');
-        if (Arg.startswith("-")) {
+        if (Arg.starts_with("-")) {
           OS << Trailing << "\n  " << Arg;
         } else {
           OS << " " << Arg;
