@@ -27,6 +27,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace ore;
@@ -43,6 +44,12 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     return false;
 
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  const TargetMachine &TM = MMI.getTarget();
+  MCSymbol *Symbol = TM.getSymbol(&F);
+  // Don't codegen the weak function when there is a defined non-weak symbol.
+  if (Symbol->isDefined() && !Symbol->isWeak() && F.hasWeakLinkage()) {
+    return false;
+  }
   MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
   MachineFunctionProperties &MFProps = MF.getProperties();

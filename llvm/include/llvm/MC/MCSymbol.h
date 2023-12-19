@@ -104,6 +104,9 @@ protected:
   /// This symbol is weak external.
   mutable unsigned IsWeakExternal : 1;
 
+  /// This symbol is weak.
+  mutable unsigned IsWeak : 1;
+
   /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
   /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
   unsigned Kind : 3;
@@ -163,7 +166,7 @@ protected:
   MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
         IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
-        IsWeakExternal(false), Kind(Kind), IsUsedInReloc(false),
+        IsWeakExternal(false), IsWeak(false), Kind(Kind), IsUsedInReloc(false),
         SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
@@ -410,6 +413,9 @@ public:
   void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
 
   bool isWeakExternal() const { return IsWeakExternal; }
+
+  bool isWeak() const { return IsWeak; }
+  void setWeak(bool Value) const { IsWeak = Value; }
 
   /// print - Print the value to the stream \p OS.
   void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
