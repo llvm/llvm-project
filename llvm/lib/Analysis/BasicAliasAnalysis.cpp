@@ -672,7 +672,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       // however in the 1st case, CastedValue is of type constant, hence another
       // flag in VariableGEPIndex is created in this case, IsVScale If GEP is
       // Scalable type, e.g. <4 x vscale x i32>, the first index will have
-      // vscale as a variable index, create a LE in this case
+      // vscale as a variable index, create a LE in this case.
       LinearExpression LE(CastedValue(Index, 0, SExtBits, TruncBits));
       if (ScalableGEP) {
         if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
@@ -691,9 +691,10 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           Decomposed.Base = V;
           return Decomposed;
         }
-      } else
+      } else {
         LE = GetLinearExpression(CastedValue(Index, 0, SExtBits, TruncBits), DL,
                                  0, AC, DT);
+      }
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getKnownMinValue();
@@ -707,7 +708,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       //   A[x][x] -> x*16 + x*4 -> x*20
       // This also ensures that 'x' only appears in the index list once.
       // Only add to IsVScale VariableGEPIndex if it's @llvm.vscale or gep
-      // vscale index
+      // vscale index.
       for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
         if (Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val) &&
             ((Decomposed.VarIndices[i].IsVScale &&
@@ -721,7 +722,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       }
 
       // Make sure that we have a scale that makes sense for this target's
-      // index size.Only allow variableGEP decomposition for constants, in the
+      // index size. Only allow variableGEP decomposition for constants, in the
       // case of vscale
       adjustToIndexSize(Scale, IndexSize);
       bool InvalidVarVScale = (ScalableGEP && LEhasVscale) ||
@@ -1119,7 +1120,7 @@ AliasResult BasicAAResult::aliasGEP(
   // If an inbounds GEP would have to start from an out of bounds address
   // for the two to alias, then we can assume noalias.
   if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
-      V2Size.hasValue() &&
+      V2Size.hasValue() && !V2Size.isScalable() &&
       DecompGEP1.Offset.sge(V2Size.getValue().getKnownMinValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
@@ -1127,7 +1128,7 @@ AliasResult BasicAAResult::aliasGEP(
   if (isa<GEPOperator>(V2)) {
     // Symmetric case to above.
     if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
-        V1Size.hasValue() &&
+        V1Size.hasValue() && !V1Size.isScalable() &&
         DecompGEP1.Offset.sle(-V1Size.getValue().getKnownMinValue()) &&
         isBaseOfObject(DecompGEP1.Base))
       return AliasResult::NoAlias;
@@ -1205,54 +1206,38 @@ AliasResult BasicAAResult::aliasGEP(
 
   // VScale Alias Analysis
   // GEPs with Vscale will have the expression A*Vscale + B (1 variable index
-  // and constant offset) The difference between two GEPs and Scalable
+  // and constant offset). The difference between two GEPs and Scalable
   // LocationSize can then be analysed as they have the form of
-  //     LSize                SubtractDecomposedGEP output
-  //   A * Vscale                   B * Vscale + C
+  //     Size                SubtractDecomposedGEP output
+  //   V1Size [* Vscale]         Scale * Vscale + Off
   // Since VScale is strictly a positive number (Vscale >= 1), the larger GEP
   // can be known
   // TODO: Use knowledge of vscale_range to make the analysis more accurate
-  if (DecompGEP1.VarIndices.size() == 1 && DecompGEP1.VarIndices[0].IsVScale &&
-      (V1Size.isScalable() || V2Size.isScalable())) {
+  if (DecompGEP1.VarIndices.size() == 1 && DecompGEP1.VarIndices[0].IsVScale) {
     const VariableGEPIndex &ScalableVar = DecompGEP1.VarIndices[0];
-    bool StrictlyPos = false, StrictlyNeg = false;
-    APInt &Off = DecompGEP1.Offset;
-    if (!ScalableVar.IsNegated) {
-      if (Off.isNegative())
-        StrictlyPos = ScalableVar.Scale.ugt(Off.abs());
-      else
-        StrictlyPos = true;
-    } else
-      StrictlyPos = Off.isNonNegative();
+    const APInt &Off = DecompGEP1.Offset;
+    APInt Scale =
+        ScalableVar.IsNegated ? -ScalableVar.Scale : ScalableVar.Scale;
 
-    if (ScalableVar.IsNegated) {
-      if (Off.isNonNegative())
-        StrictlyNeg = Off.ult(ScalableVar.Scale.abs());
-      else
-        StrictlyNeg = true;
-    } else
-      StrictlyNeg = Off.isNegative();
+    // Lower limit
+    // V1Size not scalable => Scale*v <= -V1Size-Off providing Scale<=0
+    if (!V1Size.isScalable() && Scale.isNonPositive() &&
+        Scale.sle(-V1Size.getValue().getKnownMinValue() - Off))
+      return AliasResult::NoAlias;
+    // V1Size is scalable => Off <= (-V1Size-Scale)*v => given V1Size-Scale>=0
+    APInt TS = (-V1Size.getValue().getKnownMinValue() - Scale);
+    if (V1Size.isScalable() && TS.isNonNegative() && Off.sle(TS))
+      return AliasResult::NoAlias;
 
-    if (StrictlyPos || StrictlyNeg) {
-      LocationSize VLeftSize = V2Size;
-      LocationSize VRightSize = V1Size;
-      const bool Swapped = StrictlyNeg;
-
-      if (Swapped) {
-        std::swap(VLeftSize, VRightSize);
-        Off = -Off;
-      }
-
-      const uint64_t LSize = VLeftSize.getValue().getKnownMinValue();
-      if (VLeftSize.isScalable() && ScalableVar.Scale.ult(LSize) &&
-          (ScalableVar.Scale + DecompGEP1.Offset).ult(LSize))
-        return AliasResult::PartialAlias;
-
-      if ((ScalableVar.Scale.uge(LSize) && VLeftSize.isScalable()) ||
-          ((ScalableVar.Scale + DecompGEP1.Offset).uge(LSize) &&
-           !VLeftSize.isScalable()))
-        return AliasResult::NoAlias;
-    }
+    // Upper limit
+    // V2Size not scalable => Scale*v >= V2Size-Off
+    if (!V2Size.isScalable() && Scale.isNonNegative() &&
+        Scale.sge(V2Size.getValue().getKnownMinValue() - Off))
+      return AliasResult::NoAlias;
+    // V2Size is scalable => Off >= (V2Size-Scale)*v => Off>=0, V2Size-Scale<=0
+    TS = (V2Size.getValue().getKnownMinValue() - Scale);
+    if (V2Size.isScalable() && TS.isNonPositive() && Off.sge(TS))
+      return AliasResult::NoAlias;
   }
 
   // Bail on Scalable location size from now onwards
@@ -1265,9 +1250,6 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
     const APInt &Scale = Index.Scale;
     APInt ScaleForGCD = Scale;
-    assert((!Index.IsVScale || match(Index.Val.V, m_VScale()) ||
-            isa<ConstantInt>(Index.Val.V)) &&
-           "Not allowed to have non-constant values if IsVScale is set");
     if (!Index.IsNSW)
       ScaleForGCD =
           APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
@@ -1277,10 +1259,17 @@ AliasResult BasicAAResult::aliasGEP(
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
-                                            true, &AC, Index.CxtI);
-    KnownBits Known =
-        computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
+    // FIXME: This could be expanded to use a more precise range for vscale.
+    ConstantRange CR =
+        Index.IsVScale
+            ? ConstantRange::getNonEmpty(
+                  APInt(OffsetRange.getBitWidth(), 1),
+                  APInt::getMaxValue(OffsetRange.getBitWidth()))
+            : computeConstantRange(Index.Val.V, /* ForSigned */ false, true,
+                                   &AC, Index.CxtI);
+    KnownBits Known = Index.IsVScale ? KnownBits(OffsetRange.getBitWidth())
+                                     : computeKnownBits(Index.Val.V, DL, 0, &AC,
+                                                        Index.CxtI, DT);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
@@ -1313,7 +1302,7 @@ AliasResult BasicAAResult::aliasGEP(
     return AliasResult::NoAlias;
 
   // Compute ranges of potentially accessed bytes for both accesses. If the
-  // interseciton is empty, there can be no overlap.
+  // intersection is empty, there can be no overlap.
   unsigned BW = OffsetRange.getBitWidth();
   ConstantRange Range1 = OffsetRange.add(
       ConstantRange(APInt(BW, 0), APInt(BW, V1Size.getValue())));
@@ -1851,9 +1840,8 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
       VariableGEPIndex &Dest = I.value();
       if (Dest.IsVScale != Src.IsVScale)
         continue;
-      const bool SrcDestAreVScale = Dest.IsVScale && Src.IsVScale;
       // Suppress base value checks if Src and Dst are of constant VScale
-      if ((!SrcDestAreVScale &&
+      if ((!Dest.IsVScale &&
            !isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI)) ||
           !Dest.Val.hasSameCastsAs(Src.Val))
         continue;
