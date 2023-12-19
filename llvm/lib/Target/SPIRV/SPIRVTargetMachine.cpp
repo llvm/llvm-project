@@ -152,10 +152,12 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
-  // Once legalized, we need to structurize the CFG to follow the spec.
-  // This is done through the following 8 steps.
-  // TODO(#75801): add the remaining steps.
-  addPass(createLoopSimplifyPass());
+  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+    // Once legalized, we need to structurize the CFG to follow the spec.
+    // This is done through the following 8 steps.
+    // TODO(#75801): add the remaining steps.
+    addPass(createLoopSimplifyPass());
+  }
 
   TargetPassConfig::addIRPasses();
   addPass(createSPIRVRegularizerPass());
