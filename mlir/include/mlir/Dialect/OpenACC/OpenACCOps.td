@@ -331,9 +331,7 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
 def OpenACC_ReductionOp : OpenACC_DataEntryOp<"reduction",
-    "mlir::acc::DataClause::acc_reduction", "",
-    [MemoryEffects<[MemRead<OpenACC_RuntimeCounters>,
-                    MemWrite<OpenACC_RuntimeCounters>]>],
+    "mlir::acc::DataClause::acc_reduction", "", [],
     (ins Arg<OpenACC_PointerLikeTypeInterface,"Address of variable",[MemRead]>:$varPtr)> {
   let summary = "Represents reduction semantics for acc reduction clause.";
   let results = (outs Arg<OpenACC_PointerLikeTypeInterface,
