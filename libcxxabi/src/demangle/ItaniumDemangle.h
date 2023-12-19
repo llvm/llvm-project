@@ -5431,7 +5431,10 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding(bool ParseParams) {
   if (IsEndOfEncoding())
     return Name;
 
-  // ParseParams may be false in top-level only, when called from parse().
+  // ParseParams maybe false at the top level only, when called from parse().
+  // For example in the mangled name _Z3fooILZ3BarEET_f, ParseParams may be
+  // false when demangling 3fooILZ3BarEET_f but is always true when demangling
+  // 3Bar.
   if (!ParseParams) {
     while (consume())
       ;
