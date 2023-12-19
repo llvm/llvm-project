@@ -41,6 +41,10 @@ namespace Intrinsic {
 typedef unsigned ID;
 } // end namespace Intrinsic
 
+// Choose ';' as the delimiter. ':' was used once but it doesn't work well for
+// Objective-C functions which commonly have :'s in their names.
+inline constexpr char kGlobalIdentifierDelimiter = ';';
+
 class GlobalValue : public Constant {
 public:
   /// An enumeration for the kinds of linkage for global values.
