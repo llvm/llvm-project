@@ -146,11 +146,14 @@ getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString) {
       OriginalLiteralString.str().find('E') != std::string::npos ? 'E' : 'e';
   const std::string::size_type EPosition =
       OriginalLiteralString.str().find(EChar);
-  const std::string SignSymbol = OriginalLiteralString[EPosition + 1] == '-' ? "-" : (OriginalLiteralString[EPosition + 1] == '+' ? "+" : "");
+  const std::string SignSymbol =
+      OriginalLiteralString[EPosition + 1] == '-'
+          ? "-"
+          : (OriginalLiteralString[EPosition + 1] == '+' ? "+" : "");
   const llvm::StringRef MantissaSubString =
       OriginalLiteralString.substr(0, EPosition);
-  const llvm::StringRef ExponentSubString =
-      OriginalLiteralString.substr(EPosition + SignSymbol.size() + 1, OriginalLiteralString.size());
+  const llvm::StringRef ExponentSubString = OriginalLiteralString.substr(
+      EPosition + SignSymbol.size() + 1, OriginalLiteralString.size());
 
   // Get formatting literal text
   const std::string FormatedMantissaString = getFormatedFloatString(
