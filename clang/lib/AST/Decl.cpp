@@ -1088,11 +1088,11 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
     return false;
   if (isa<FieldDecl>(this))
     return true;
-  if (auto *IFD = dyn_cast<IndirectFieldDecl>(this)) {
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(this)) {
     if (!getDeclContext()->isFunctionOrMethod() &&
         !getDeclContext()->isRecord())
       return false;
-    VarDecl *VD = IFD->getVarDecl();
+    const VarDecl *VD = IFD->getVarDecl();
     return !VD || VD->getStorageDuration() == SD_Automatic;
   }
   // and it declares a variable with automatic storage duration
@@ -1105,7 +1105,7 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
   }
   if (const auto *BD = dyn_cast<BindingDecl>(this);
       BD && getDeclContext()->isFunctionOrMethod()) {
-    VarDecl *VD = BD->getHoldingVar();
+    const VarDecl *VD = BD->getHoldingVar();
     return !VD || VD->getStorageDuration() == StorageDuration::SD_Automatic;
   }
   return false;
