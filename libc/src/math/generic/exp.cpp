@@ -199,7 +199,7 @@ double set_exceptional(double x) {
       return x;
 
     if (fputil::quick_get_round() == FE_UPWARD)
-      return static_cast<double>(FPBits(FPBits::MIN_SUBNORMAL));
+      return FPBits::min_denormal();
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW);
     return 0.0;
@@ -210,7 +210,7 @@ double set_exceptional(double x) {
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return static_cast<double>(FPBits(FPBits::MAX_NORMAL));
+      return FPBits::max_normal();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
