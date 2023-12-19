@@ -1633,7 +1633,8 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
     //   bitcast (inselt undef, ScalarSrc, IdxOp)
     Type *ScalarTy = ScalarSrc->getType();
     Type *VecTy = VectorType::get(ScalarTy, IE.getType()->getElementCount());
-    UndefValue *NewUndef = UndefValue::get(VecTy);
+    Constant *NewUndef = isa<PoisonValue>(VecOp) ? PoisonValue::get(VecTy)
+                                                 : UndefValue::get(VecTy);
     Value *NewInsElt = Builder.CreateInsertElement(NewUndef, ScalarSrc, IdxOp);
     return new BitCastInst(NewInsElt, IE.getType());
   }
