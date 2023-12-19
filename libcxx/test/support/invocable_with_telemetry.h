@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <functional>
 #include <utility>
 
 #if TEST_STD_VER < 20
@@ -73,7 +74,7 @@ public:
   constexpr decltype(auto) operator()(Args&&... args) noexcept(std::is_nothrow_invocable_v<F&, Args...>) {
     assert(telemetry_);
     ++telemetry_->invocations;
-    return f_(std::forward<Args>(args)...);
+    return std::invoke(f_, std::forward<Args>(args)...);
   }
 
 private:

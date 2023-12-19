@@ -52,6 +52,16 @@ concept is_in_value_result =
 template <class Result, class T>
 concept is_dangling_with = std::same_as<Result, std::ranges::fold_left_with_iter_result<std::ranges::dangling, T>>;
 
+struct Long {
+  int value;
+
+  constexpr Long(int value) : value(value) {}
+
+  constexpr Long plus(int x) const { return Long{value + x}; }
+
+  friend constexpr bool operator==(Long const& x, Long const& y) = default;
+};
+
 template <std::ranges::input_range R, class T, class F, std::equality_comparable Expected>
   requires std::copyable<R>
 constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected) {
@@ -163,45 +173,50 @@ constexpr void check(R r, T const& init, F f, Expected const& expected) {
   check_rvalue_range(r, init, f, expected);
 }
 
-constexpr bool check() {
-  {
-    auto const data = std::vector<int>{};
-    check(data, 100, std::plus(), 100);
-    check(data, -100, std::multiplies(), -100);
-  }
+constexpr void empty_range_test_case() {
+  auto const data = std::vector<int>{};
+  check(data, 100, std::plus(), 100);
+  check(data, -100, std::multiplies(), -100);
 
-  {
-    auto const data = std::vector<int>{1, 2, 3, 4};
-    check(data, 0, std::plus(), triangular_sum(data));
-    check(data, 1, std::multiplies(), factorial(data.back()));
+  check(data | std::views::take_while([](auto) { return false; }), 1.23, std::plus(), 1.23);
+  check(data, Long(52), &Long::plus, Long(52));
+}
 
-    auto multiply_with_prev = [n = 1](auto const x, auto const y) mutable {
-      auto const result = x * y * n;
-      n                 = y;
-      return static_cast<std::size_t>(result);
-    };
-    check(data, 1, multiply_with_prev, factorial(data.size()) * factorial(data.size() - 1));
+constexpr void common_range_test_case() {
+  auto const data = std::vector<int>{1, 2, 3, 4};
+  check(data, 0, std::plus(), triangular_sum(data));
+  check(data, 1, std::multiplies(), factorial(data.back()));
 
-    auto fib = [n = 1](auto x, auto) mutable {
-      auto old_x = x;
-      x += n;
-      n = old_x;
-      return x;
-    };
-    check(data, 0, fib, fibonacci(data.back()));
-  }
+  auto multiply_with_prev = [n = 1](auto const x, auto const y) mutable {
+    auto const result = x * y * n;
+    n                 = y;
+    return static_cast<std::size_t>(result);
+  };
+  check(data, 1, multiply_with_prev, factorial(data.size()) * factorial(data.size() - 1));
 
-  auto parse = [](std::string_view const s) -> double {
-    return s == "zero"  ? 0
-         : s == "one"   ? 1
-         : s == "two"   ? 2
-         : s == "three" ? 3
-         : s == "four"  ? 4
-         : s == "five"  ? 5
-         : s == "six"   ? 6
-         : s == "seven" ? 7
-         : s == "eight" ? 8
-         : s == "nine"  ? 9
+  auto fib = [n = 1](auto x, auto) mutable {
+    auto old_x = x;
+    x += n;
+    n = old_x;
+    return x;
+  };
+  check(data, 0, fib, fibonacci(data.back()));
+
+  check(data, Long(0), &Long::plus, Long(triangular_sum(data)));
+}
+
+constexpr void non_common_range_test_case() {
+  auto parse = [](std::string_view const s) {
+    return s == "zero"  ? 0.0
+         : s == "one"   ? 1.0
+         : s == "two"   ? 2.0
+         : s == "three" ? 3.0
+         : s == "four"  ? 4.0
+         : s == "five"  ? 5.0
+         : s == "six"   ? 6.0
+         : s == "seven" ? 7.0
+         : s == "eight" ? 8.0
+         : s == "nine"  ? 9.0
                         : throw std::runtime_error("parse error");
   };
 
@@ -210,6 +225,7 @@ constexpr bool check() {
     auto range = data | std::views::transform(parse);
     check(range, 0, std::plus(), triangular_sum(range));
   }
+
   {
     auto data           = std::string("five three two six one four");
     auto to_string_view = [](auto&& r) {
@@ -220,12 +236,17 @@ constexpr bool check() {
         std::views::lazy_split(data, ' ') | std::views::transform(to_string_view) | std::views::transform(parse);
     check(range, 0, std::plus(), triangular_sum(range));
   }
+}
 
+constexpr bool test_case() {
+  empty_range_test_case();
+  common_range_test_case();
+  non_common_range_test_case();
   return true;
 }
 
 // Most containers aren't constexpr
-void runtime_only_test() {
+void runtime_only_test_case() {
   { // istream_view is a genuine input range and needs specific handling.
     constexpr auto raw_data = "Shells Orange Syrup Baratie Cocoyashi Loguetown";
     constexpr auto expected = "WindmillShellsOrangeSyrupBaratieCocoyashiLoguetown";
@@ -287,8 +308,8 @@ void runtime_only_test() {
 }
 
 int main(int, char**) {
-  check();
-  static_assert(check());
-  runtime_only_test();
+  test_case();
+  static_assert(test_case());
+  runtime_only_test_case();
   return 0;
 }

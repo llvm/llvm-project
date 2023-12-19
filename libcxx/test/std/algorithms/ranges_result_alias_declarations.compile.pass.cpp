@@ -16,6 +16,8 @@
 #include <memory>
 #include <type_traits>
 
+#include "test_macros.h"
+
 using namespace std::ranges;
 
 static_assert(std::is_same_v<in_fun_result<int, long>, for_each_result<int, long>>);
