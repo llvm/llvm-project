@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-use-digit-separator %t
 
+
 // Long not formatted literals
 
 int NotFormattedInteger = 1234567;
@@ -98,21 +99,38 @@ double MinusPostfixNotFormattedFloat1 = -1234.569f;
 // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569f
 
-double ScientificNotFormattedFloat = 1.2345678e10;
-// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
-// CHECK-FIXES: 1.234'567'8e10
-
-double ScientificNotFormattedFloat1 = 1.2345678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+double ScientificNotFormattedFloat = 1.2345678E10;
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10
 
-double ScientificNotFormattedFloat2 = -1.2345678E+10;
-// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+double MinusScientificNotFormattedFloat = -1.2345678E10;
+// CHECK-MESSAGES: :[[@LINE-1]]:44: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8E10
+
+double ScientificNotFormattedFloat1 = 1.2345678e10;
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8e10
+
+double MinusScientificNotFormattedFloat1 = -1.2345678e10;
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8e10
+
+double ScientificNotFormattedFloat2 = 1.2345678E+10;
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E+10
 
-double ScientificNotFormattedFloat3 = +1.2345678e-10;
-// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of float literal '1.2345678e-10' [modernize-use-digit-separator]
-// CHECK-FIXES: 1.234'567'8e-10
+double MinusScientificNotFormattedFloat2 = -1.2345678E+10;
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8E+10
+
+double ScientificNotFormattedFloat3 = 1.2345678e+10;
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678e+10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8e+10
+
+double MinusScientificNotFormattedFloat3 = -1.2345678e+10;
+// CHECK-MESSAGES: :[[@LINE-1]]:45: warning: unformatted representation of float literal '1.2345678e+10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8e+10
+
 
 // Short literals
 
@@ -140,6 +158,18 @@ float PostfixShortFloat = 1.23F;
 float MinusPostfixShortFloat = -1.23F;
 float PostfixShortFloat1 = 1.23f;
 float MinusPostfixShortFloat1 = -1.23f;
+float ScientificShortFloat = 1.23E10;
+float MinusScientificShortFloat = -1.23E10;
+float ScientificShortFloat1 = 1.23e10;
+float MinusScientificShortFloat1 = -1.23e10;
+float ScientificShortFloat2 = 1.23E+10;
+float MinusScientificShortFloat2 = -1.23E+10;
+float ScientificShortFloat3 = 1.23e+10;
+float MinusScientificShortFloat3 = -1.23e+10;
+float ScientificShortFloat4 = 1.23E-10;
+float MinusScientificShortFloat4 = -1.23E-10;
+float ScientificShortFloat5 = 1.23e+10;
+float MinusScientificShortFloat5 = -1.23e-10;
 
 // FIXME:
 // error: expected ';' after top level declarator [clang-diagnostic-error]
