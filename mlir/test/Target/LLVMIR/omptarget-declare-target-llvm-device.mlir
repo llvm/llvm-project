@@ -8,7 +8,7 @@
 // file created by the host and appended as an attribute to the module.
 
 module attributes {omp.is_target_device = true} {
-  // CHECK-DAG: @_QMtest_0Esp_decl_tgt_ref_ptr = weak global ptr null, align 8
+  // CHECK-DAG: @_QMtest_0Esp_decl_tgt_ref_ptr = weak dso_local global ptr null, align 8
   llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
     %0 = llvm.mlir.constant(0 : i32) : i32
     llvm.return %0 : i32

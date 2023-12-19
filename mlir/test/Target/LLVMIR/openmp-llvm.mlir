@@ -2166,7 +2166,7 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // -----
 
 // CHECK: @_QFsubEx = internal global i32 undef
-// CHECK: @_QFsubEx.cache = common global ptr null
+// CHECK: @_QFsubEx.cache = common dso_local global ptr null
 
 // CHECK-LABEL: @omp_threadprivate
 llvm.func @omp_threadprivate() {

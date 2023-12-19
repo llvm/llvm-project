@@ -33,10 +33,10 @@
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { ptr @bbb,
 // CHECK-DAG: @ccc = external global i32,
 // CHECK-DAG: @ddd = {{protected | }}global i32 0,
-// CHECK-DAG: @hhh_decl_tgt_ref_ptr = weak global ptr null
-// CHECK-DAG: @ggg_decl_tgt_ref_ptr = weak global ptr null
-// CHECK-DAG: @fff_decl_tgt_ref_ptr = weak global ptr null
-// CHECK-DAG: @eee_decl_tgt_ref_ptr = weak global ptr null
+// CHECK-DAG: @hhh_decl_tgt_ref_ptr = weak dso_local global ptr null
+// CHECK-DAG: @ggg_decl_tgt_ref_ptr = weak dso_local global ptr null
+// CHECK-DAG: @fff_decl_tgt_ref_ptr = weak dso_local global ptr null
+// CHECK-DAG: @eee_decl_tgt_ref_ptr = weak dso_local global ptr null
 // CHECK-DAG: @{{.*}}maini1{{.*}}aaa = internal global i64 23,
 // CHECK-DAG: @pair = {{.*}}addrspace(3) global %struct.PAIR undef
 // CHECK-DAG: @_ZN2SS3SSSE ={{ protected | }}global i32 1,

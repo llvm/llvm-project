@@ -5,14 +5,14 @@
 module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_target_device = false} {
 
   // CHECK-DAG: @_QMtest_0Earray_1d = global [3 x i32] [i32 1, i32 2, i32 3]
-  // CHECK-DAG: @_QMtest_0Earray_1d_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Earray_1d
+  // CHECK-DAG: @_QMtest_0Earray_1d_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Earray_1d
   // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Earray_1d_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.omp_offloading.entry._QMtest_0Earray_1d_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Earray_1d_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Earray_1d_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Earray_1d(dense<[1, 2, 3]> : tensor<3xi32>) {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !llvm.array<3 x i32>
 
   // CHECK-DAG: @_QMtest_0Earray_2d = global [2 x [2 x i32]] {{.*}}
-  // CHECK-DAG: @_QMtest_0Earray_2d_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Earray_2d
+  // CHECK-DAG: @_QMtest_0Earray_2d_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Earray_2d
   // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Earray_2d_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.omp_offloading.entry._QMtest_0Earray_2d_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Earray_2d_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Earray_2d_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
@@ -32,7 +32,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   }
 
   // CHECK-DAG:  @_QMtest_0Edata_extended_link_1 = global float 2.000000e+00
-  // CHECK-DAG:  @_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Edata_extended_link_1
+  // CHECK-DAG:  @_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Edata_extended_link_1
   // CHECK-DAG:  @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [48 x i8] c"_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr\00"
   // CHECK-DAG:  @.omp_offloading.entry._QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG:  !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
@@ -42,7 +42,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   }
 
   // CHECK-DAG:  @_QMtest_0Edata_extended_link_2 = global float 3.000000e+00
-  // CHECK-DAG:  @_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Edata_extended_link_2
+  // CHECK-DAG:  @_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Edata_extended_link_2
   // CHECK-DAG:  @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [48 x i8] c"_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr\00"
   // CHECK-DAG:  @.omp_offloading.entry._QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG:  !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
@@ -88,7 +88,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   }
 
   // CHECK-DAG: @_QMtest_0Edata_int = global i32 1
-  // CHECK-DAG: @_QMtest_0Edata_int_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Edata_int
+  // CHECK-DAG: @_QMtest_0Edata_int_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Edata_int
   // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Edata_int_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.omp_offloading.entry._QMtest_0Edata_int_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
@@ -134,7 +134,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   }
 
   // CHECK-DAG: @_QMtest_0Ept1 = global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 9, i8 1, i8 0 }
-  // CHECK-DAG: @_QMtest_0Ept1_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Ept1
+  // CHECK-DAG: @_QMtest_0Ept1_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Ept1
   // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [31 x i8] c"_QMtest_0Ept1_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.omp_offloading.entry._QMtest_0Ept1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept1_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Ept1_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
@@ -165,7 +165,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   }
 
   // CHECK-DAG: @_QMtest_0Ept2_tar = global i32 5
-  // CHECK-DAG: @_QMtest_0Ept2_tar_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Ept2_tar
+  // CHECK-DAG: @_QMtest_0Ept2_tar_decl_tgt_ref_ptr = weak dso_local global ptr @_QMtest_0Ept2_tar
   // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [35 x i8] c"_QMtest_0Ept2_tar_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.omp_offloading.entry._QMtest_0Ept2_tar_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept2_tar_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Ept2_tar_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}

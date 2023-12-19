@@ -5225,7 +5225,7 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);
     GV->setAlignment(std::max(TypeAlign, PtrAlign));
 
-    if (!GV->isDSOLocal() && !GV->isThreadLocal()) {
+    if (!GV->isDSOLocal()) {
       bool IsPIE = GV->getParent()->getPIELevel() != llvm::PIELevel::Default;
       bool IsPIC = GV->getParent()->getPICLevel() != llvm::PICLevel::NotPIC;
       GV->setDSOLocal(!IsPIC || IsPIE);
@@ -6690,8 +6690,6 @@ Constant *OpenMPIRBuilder::getAddrOfDeclareTargetVar(
 
       auto *GV = cast<GlobalVariable>(Ptr);
       GV->setLinkage(GlobalValue::WeakAnyLinkage);
-      /// reset dso_local for weak linkage.
-      GV->setDSOLocal(false);
 
       if (!Config.isTargetDevice()) {
         if (GlobalInitializer)
