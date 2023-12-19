@@ -1536,7 +1536,7 @@ StringRef sys::detail::getHostCPUNameForSPARC(StringRef ProcCpuinfoContent) {
   // Look for cpu line to determine cpu name
   StringRef Cpu;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("cpu")) {
+    if (Lines[I].starts_with("cpu")) {
       Cpu = Lines[I].substr(5).ltrim("\t :");
       break;
     }
@@ -1853,7 +1853,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   // Look for the CPU features.
   for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].startswith("Features")) {
+    if (Lines[I].starts_with("Features")) {
       Lines[I].split(CPUFeatures, ' ');
       break;
     }

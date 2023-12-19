@@ -1982,7 +1982,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     // (corresponding to .dwo) so we simply skip it.
     if (m_objfile_sp->GetFileSpec().GetFileNameExtension() == ".dwo" &&
         llvm::StringRef(m_objfile_sp->GetFileSpec().GetPath())
-            .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
+            .ends_with(dwo_module_spec.GetFileSpec().GetPath())) {
       continue;
     }
 

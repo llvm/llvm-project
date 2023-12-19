@@ -143,192 +143,147 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_EXPORTED_FROM_ABI condition_variable_any
-{
-    condition_variable __cv_;
-    shared_ptr<mutex>  __mut_;
+class _LIBCPP_EXPORTED_FROM_ABI condition_variable_any {
+  condition_variable __cv_;
+  shared_ptr<mutex> __mut_;
+
 public:
-    _LIBCPP_HIDE_FROM_ABI
-    condition_variable_any();
+  _LIBCPP_HIDE_FROM_ABI condition_variable_any();
 
-    _LIBCPP_HIDE_FROM_ABI
-    void notify_one() _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI
-    void notify_all() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI void notify_one() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI void notify_all() _NOEXCEPT;
 
-    template <class _Lock>
-        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-        void wait(_Lock& __lock);
-    template <class _Lock, class _Predicate>
-        _LIBCPP_HIDE_FROM_ABI
-        void wait(_Lock& __lock, _Predicate __pred);
+  template <class _Lock>
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS void wait(_Lock& __lock);
+  template <class _Lock, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI void wait(_Lock& __lock, _Predicate __pred);
 
-    template <class _Lock, class _Clock, class _Duration>
-        _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
-        cv_status
-        wait_until(_Lock& __lock,
-                   const chrono::time_point<_Clock, _Duration>& __t);
+  template <class _Lock, class _Clock, class _Duration>
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS cv_status
+  wait_until(_Lock& __lock, const chrono::time_point<_Clock, _Duration>& __t);
 
-    template <class _Lock, class _Clock, class _Duration, class _Predicate>
-        bool
-        _LIBCPP_HIDE_FROM_ABI
-        wait_until(_Lock& __lock,
-                   const chrono::time_point<_Clock, _Duration>& __t,
-                   _Predicate __pred);
+  template <class _Lock, class _Clock, class _Duration, class _Predicate>
+  bool _LIBCPP_HIDE_FROM_ABI
+  wait_until(_Lock& __lock, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred);
 
-    template <class _Lock, class _Rep, class _Period>
-        cv_status
-        _LIBCPP_HIDE_FROM_ABI
-        wait_for(_Lock& __lock,
-                 const chrono::duration<_Rep, _Period>& __d);
+  template <class _Lock, class _Rep, class _Period>
+  cv_status _LIBCPP_HIDE_FROM_ABI wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d);
 
-    template <class _Lock, class _Rep, class _Period, class _Predicate>
-        bool
-        _LIBCPP_HIDE_FROM_ABI
-        wait_for(_Lock& __lock,
-                 const chrono::duration<_Rep, _Period>& __d,
-                 _Predicate __pred);
+  template <class _Lock, class _Rep, class _Period, class _Predicate>
+  bool _LIBCPP_HIDE_FROM_ABI wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
-    template <class _Lock, class _Predicate>
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait(_Lock& __lock, stop_token __stoken, _Predicate __pred);
+  template <class _Lock, class _Predicate>
+  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait(_Lock& __lock, stop_token __stoken, _Predicate __pred);
 
-    template <class _Lock, class _Clock, class _Duration, class _Predicate>
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait_until(_Lock& __lock, stop_token __stoken,
-                const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred);
+  template <class _Lock, class _Clock, class _Duration, class _Predicate>
+  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait_until(
+      _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred);
 
-    template <class _Lock, class _Rep, class _Period, class _Predicate>
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait_for(_Lock& __lock, stop_token __stoken,
-                const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred);
+  template <class _Lock, class _Rep, class _Period, class _Predicate>
+  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
+  wait_for(_Lock& __lock, stop_token __stoken, const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred);
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 };
 
-inline
-condition_variable_any::condition_variable_any()
-    : __mut_(make_shared<mutex>()) {}
+inline condition_variable_any::condition_variable_any() : __mut_(make_shared<mutex>()) {}
 
-inline
-void
-condition_variable_any::notify_one() _NOEXCEPT
-{
-    {lock_guard<mutex> __lx(*__mut_);}
-    __cv_.notify_one();
+inline void condition_variable_any::notify_one() _NOEXCEPT {
+  { lock_guard<mutex> __lx(*__mut_); }
+  __cv_.notify_one();
 }
 
-inline
-void
-condition_variable_any::notify_all() _NOEXCEPT
-{
-    {lock_guard<mutex> __lx(*__mut_);}
-    __cv_.notify_all();
+inline void condition_variable_any::notify_all() _NOEXCEPT {
+  { lock_guard<mutex> __lx(*__mut_); }
+  __cv_.notify_all();
 }
 
-struct __lock_external
-{
-    template <class _Lock>
-    _LIBCPP_HIDE_FROM_ABI void operator()(_Lock* __m) {__m->lock();}
+struct __lock_external {
+  template <class _Lock>
+  _LIBCPP_HIDE_FROM_ABI void operator()(_Lock* __m) {
+    __m->lock();
+  }
 };
 
 template <class _Lock>
-void
-condition_variable_any::wait(_Lock& __lock)
-{
-    shared_ptr<mutex> __mut = __mut_;
-    unique_lock<mutex> __lk(*__mut);
-    __lock.unlock();
-    unique_ptr<_Lock, __lock_external> __lxx(&__lock);
-    lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
-    __cv_.wait(__lk);
-}  // __mut_.unlock(), __lock.lock()
+void condition_variable_any::wait(_Lock& __lock) {
+  shared_ptr<mutex> __mut = __mut_;
+  unique_lock<mutex> __lk(*__mut);
+  __lock.unlock();
+  unique_ptr<_Lock, __lock_external> __lxx(&__lock);
+  lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
+  __cv_.wait(__lk);
+} // __mut_.unlock(), __lock.lock()
 
 template <class _Lock, class _Predicate>
-inline
-void
-condition_variable_any::wait(_Lock& __lock, _Predicate __pred)
-{
-    while (!__pred())
-        wait(__lock);
+inline void condition_variable_any::wait(_Lock& __lock, _Predicate __pred) {
+  while (!__pred())
+    wait(__lock);
 }
 
 template <class _Lock, class _Clock, class _Duration>
-cv_status
-condition_variable_any::wait_until(_Lock& __lock,
-                                   const chrono::time_point<_Clock, _Duration>& __t)
-{
-    shared_ptr<mutex> __mut = __mut_;
-    unique_lock<mutex> __lk(*__mut);
-    __lock.unlock();
-    unique_ptr<_Lock, __lock_external> __lxx(&__lock);
-    lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
-    return __cv_.wait_until(__lk, __t);
-}  // __mut_.unlock(), __lock.lock()
+cv_status condition_variable_any::wait_until(_Lock& __lock, const chrono::time_point<_Clock, _Duration>& __t) {
+  shared_ptr<mutex> __mut = __mut_;
+  unique_lock<mutex> __lk(*__mut);
+  __lock.unlock();
+  unique_ptr<_Lock, __lock_external> __lxx(&__lock);
+  lock_guard<unique_lock<mutex> > __lx(__lk, adopt_lock_t());
+  return __cv_.wait_until(__lk, __t);
+} // __mut_.unlock(), __lock.lock()
 
 template <class _Lock, class _Clock, class _Duration, class _Predicate>
-inline
-bool
-condition_variable_any::wait_until(_Lock& __lock,
-                                   const chrono::time_point<_Clock, _Duration>& __t,
-                                   _Predicate __pred)
-{
-    while (!__pred())
-        if (wait_until(__lock, __t) == cv_status::timeout)
-            return __pred();
-    return true;
+inline bool
+condition_variable_any::wait_until(_Lock& __lock, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred) {
+  while (!__pred())
+    if (wait_until(__lock, __t) == cv_status::timeout)
+      return __pred();
+  return true;
 }
 
 template <class _Lock, class _Rep, class _Period>
-inline
-cv_status
-condition_variable_any::wait_for(_Lock& __lock,
-                                 const chrono::duration<_Rep, _Period>& __d)
-{
-    return wait_until(__lock, chrono::steady_clock::now() + __d);
+inline cv_status condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d) {
+  return wait_until(__lock, chrono::steady_clock::now() + __d);
 }
 
 template <class _Lock, class _Rep, class _Period, class _Predicate>
-inline
-bool
-condition_variable_any::wait_for(_Lock& __lock,
-                                 const chrono::duration<_Rep, _Period>& __d,
-                                 _Predicate __pred)
-{
-    return wait_until(__lock, chrono::steady_clock::now() + __d,
-                      std::move(__pred));
+inline bool
+condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred) {
+  return wait_until(__lock, chrono::steady_clock::now() + __d, std::move(__pred));
 }
 
-#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 template <class _Lock, class _Predicate>
 bool condition_variable_any::wait(_Lock& __lock, stop_token __stoken, _Predicate __pred) {
-    while (!__stoken.stop_requested()) {
-        if (__pred())
-            return true;
-        wait(__lock);
-    }
-    return __pred();
+  while (!__stoken.stop_requested()) {
+    if (__pred())
+      return true;
+    wait(__lock);
+  }
+  return __pred();
 }
 
 template <class _Lock, class _Clock, class _Duration, class _Predicate>
 bool condition_variable_any::wait_until(
     _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred) {
-    while (!__stoken.stop_requested()) {
-        if (__pred())
-            return true;
-        if (wait_until(__lock, __abs_time) == cv_status::timeout)
-            return __pred();
-    }
-    return __pred();
+  while (!__stoken.stop_requested()) {
+    if (__pred())
+      return true;
+    if (wait_until(__lock, __abs_time) == cv_status::timeout)
+      return __pred();
+  }
+  return __pred();
 }
 
 template <class _Lock, class _Rep, class _Period, class _Predicate>
 bool condition_variable_any::wait_for(
     _Lock& __lock, stop_token __stoken, const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred) {
-    return wait_until(__lock, std::move(__stoken), chrono::steady_clock::now() + __rel_time, std::move(__pred));
+  return wait_until(__lock, std::move(__stoken), chrono::steady_clock::now() + __rel_time, std::move(__pred));
 }
 
-#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
+#  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 _LIBCPP_EXPORTED_FROM_ABI void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
 

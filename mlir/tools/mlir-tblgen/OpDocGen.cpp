@@ -79,7 +79,7 @@ void mlir::tblgen::emitDescriptionComment(StringRef description,
   raw_indented_ostream ros(os);
   StringRef trimmed = description.rtrim(" \t");
   ros.printReindented(trimmed, (Twine(prefix) + "/// ").str());
-  if (!trimmed.endswith("\n"))
+  if (!trimmed.ends_with("\n"))
     ros << "\n";
 }
 
@@ -137,7 +137,7 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
     StringRef traitName = trait.getDef().getValueAsString("trait");
     traitName.consume_back("::Trait");
     traitName.consume_back("::Impl");
-    if (ref.startswith("anonymous_"))
+    if (ref.starts_with("anonymous_"))
       name = traitName.str();
     if (isa<InterfaceTrait>(&trait)) {
       if (trait.getDef().isSubClassOf("SideEffectsTraitBase")) {

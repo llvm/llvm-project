@@ -385,6 +385,9 @@ public:
   /// Emit all the range checks for the immediates.
   void createSMERangeChecks(raw_ostream &o);
 
+  /// Create a table for a builtin's requirement for PSTATE.ZA.
+  void createBuiltinZAState(raw_ostream &OS);
+
   /// Create intrinsic and add it to \p Out
   void createIntrinsic(Record *R,
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
@@ -1705,17 +1708,36 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
-void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
+void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
-  // The mappings must be sorted based on BuiltinID.
-  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-    return A->getMangledName() < B->getMangledName();
-  });
+  std::map<bool, std::set<std::string>> DefsZAState;
+
+  uint64_t IsSharedZAFlag = getEnumValueForFlag("IsSharedZA");
+  for (auto &Def : Defs) {
+    bool HasZAState = Def->isFlagSet(IsSharedZAFlag);
+    DefsZAState[HasZAState].insert(Def->getMangledName());
+  }
+
+  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
+
+  for (auto HasZA : {true, false}) {
+    auto Names = DefsZAState[HasZA];
+    for (auto Name : Names)
+      OS << "case SME::BI__builtin_sme_" << Name << ":\n";
+    OS << "  return " << (HasZA ? "true" : "false") << ";\n";
+  }
+  OS << "#endif\n\n";
+}
+
+void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
 
   StringRef ExtensionKind;
   switch (Kind) {
@@ -1729,29 +1751,28 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 
   OS << "#ifdef GET_" << ExtensionKind << "_STREAMING_ATTRS\n";
 
-  // Ensure these are only emitted once.
-  std::set<std::string> Emitted;
+  llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
-    if (Emitted.find(Def->getMangledName()) != Emitted.end())
-      continue;
-
-    OS << "case " << ExtensionKind << "::BI__builtin_" << ExtensionKind.lower()
-       << "_";
-    OS << Def->getMangledName() << ":\n";
-
     if (Def->isFlagSet(IsStreamingFlag))
-      OS << "  BuiltinType = ArmStreaming;\n";
+      StreamingMap["ArmStreaming"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
-      OS << "  BuiltinType = ArmStreamingCompatible;\n";
+      StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else
-      OS << "  BuiltinType = ArmNonStreaming;\n";
-    OS << "  break;\n";
+      StreamingMap["ArmNonStreaming"].insert(Def->getMangledName());
+  }
 
-    Emitted.insert(Def->getMangledName());
+  for (auto BuiltinType : StreamingMap.keys()) {
+    for (auto Name : StreamingMap[BuiltinType]) {
+      OS << "case " << ExtensionKind << "::BI__builtin_"
+         << ExtensionKind.lower() << "_";
+      OS << Name << ":\n";
+    }
+    OS << "  BuiltinType = " << BuiltinType << ";\n";
+    OS << "  break;\n";
   }
 
   OS << "#endif\n\n";
@@ -1800,5 +1821,9 @@ void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitSmeStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SME);
+}
+
+void EmitSmeBuiltinZAState(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createBuiltinZAState(OS);
 }
 } // End namespace clang

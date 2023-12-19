@@ -66,20 +66,24 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-if (LIBUNWIND_USE_COMPILER_RT)
-  add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  add_link_flags_if_supported(-nostdlib++)
 else()
-  add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
-  add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
-endif()
-if (NOT APPLE) # On Apple platforms, we don't need to link explicitly against system libraries
-  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
-  add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
-
-  if (LIBUNWIND_ENABLE_THREADS)
-    add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
-    add_compile_flags_if(LIBUNWIND_WEAK_PTHREAD_LIB -DLIBUNWIND_USE_WEAK_PTHREAD=1)
+  if (LIBUNWIND_USE_COMPILER_RT)
+    add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
+  else()
+    add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
+    add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
   endif()
+  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
+endif()
+
+if (NOT APPLE)
+  add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
+endif()
+
+if (LIBUNWIND_ENABLE_THREADS AND NOT APPLE)
+    add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
 endif()
 
 if (LIBUNWIND_ENABLE_THREADS)
