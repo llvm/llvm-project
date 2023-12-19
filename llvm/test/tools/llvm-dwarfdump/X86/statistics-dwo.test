@@ -15,39 +15,39 @@ RUN: llvm-dwarfdump --statistics statistics-fib.split-dwarf.o | FileCheck %s
 # real_fib (int x, int answers[11])
 # {
 #   int result;
-#
+# 
 #   if ((answers)[x] != -1)
 #     return (answers)[x];
-#
+# 
 #   result = real_fib(x-1, answers) + real_fib(x-2, answers);
 #   (answers)[x] = result;
-#
+# 
 #   return result;
 # }
-#
+# 
 # int
 # fib (int x)
 # {
 #   int answers[11];
 #   int i;
-#
+# 
 #   if (x > 10)
 #     return -1;
-#
+# 
 #   for (i = 0; i < 11; i++)
 #     answers[i] = -1;
-#
+# 
 #   answers[0] = 0;
 #   answers[1] = 1;
 #   answers[2] = 1;
-#
+# 
 #   return real_fib(x, answers);
 # }
-#
+# 
 # int main (int argc, char **argv)
 # {
 #   int result;
-#
+# 
 #   result = fib(3);
 #   printf ("fibonacci(3) = %d\n", result);
 #   result = fib(4);
@@ -64,7 +64,7 @@ RUN: llvm-dwarfdump --statistics statistics-fib.split-dwarf.o | FileCheck %s
 #   printf ("fibonacci(9) = %d\n", result);
 #   result = fib(10);
 #   printf ("fibonacci(10) = %d\n", result);
-#
+# 
 #   return 0;
 # }
 #

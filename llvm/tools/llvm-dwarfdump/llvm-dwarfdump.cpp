@@ -181,13 +181,12 @@ static opt<bool> FindAllApple(
 static opt<bool> IgnoreCase("ignore-case",
                             desc("Ignore case distinctions when using --name."),
                             value_desc("i"), cat(DwarfDumpCategory));
-static opt<bool> DumpNonSkeleton("dwo",
-                            desc("Dump the non skeleton DIE in the .dwo or "
-                                 ".dwp file after dumping the skeleton DIE "
-                                 "from the main executable. This allows "
-                                 "dumping the .dwo files with resolved "
-                                 "addresses."),
-                            value_desc("d"), cat(DwarfDumpCategory));
+static opt<bool> DumpNonSkeleton(
+    "dwo",
+    desc("Dump the non skeleton DIE in the .dwo or .dwp file after dumping the "
+         "skeleton DIE from the main executable. This allows dumping the .dwo "
+         "files with resolved addresses."),
+    value_desc("d"), cat(DwarfDumpCategory));
 
 static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
@@ -399,29 +398,25 @@ static void filterByName(
     const StringSet<> &Names, DWARFContext::unit_iterator_range CUs,
     raw_ostream &OS,
     std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
-  for (const auto &CU : CUs) {
-    for (const auto &Entry : CU->dies()) {
-      DWARFDie Die = {CU.get(), &Entry};
+  auto filterDieNames = [&](DWARFUnit *Unit) {
+    for (const auto &Entry : Unit->dies()) {
+      DWARFDie Die = {Unit, &Entry};
       if (const char *Name = Die.getName(DINameKind::ShortName))
         if (filterByName(Names, Die, Name, OS, GetNameForDWARFReg))
           continue;
       if (const char *Name = Die.getName(DINameKind::LinkageName))
         filterByName(Names, Die, Name, OS, GetNameForDWARFReg);
     }
+
+  };
+  for (const auto &CU : CUs) {
+    filterDieNames(CU.get());
     // If we have split DWARF, then recurse down into the .dwo files as well.
     DWARFDie CUDie = CU->getUnitDIE(false);
     DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
-    if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie) {
-      // We have a DWO file, we need to search it as well
-      for (const auto &Entry : CUNonSkeletonDie.getDwarfUnit()->dies()) {
-        DWARFDie Die = {CUNonSkeletonDie.getDwarfUnit(), &Entry};
-        if (const char *Name = Die.getShortName())
-          if (filterByName(Names, Die, Name, OS, GetNameForDWARFReg))
-            continue;
-        if (const char *Name = Die.getLinkageName())
-          filterByName(Names, Die, Name, OS, GetNameForDWARFReg);
-      }
-    }
+    // If we have a DWO file, we need to search it as well
+    if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
+      filterDieNames(CUNonSkeletonDie.getDwarfUnit());
   }
 }
 
