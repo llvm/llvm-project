@@ -247,6 +247,7 @@ bool EditIntegerInput(
     // The value is stored in the lower order bits on big endian platform.
     // When memcpy, shift the value to the higher order bit.
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
+    // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
     if (!isHostLittleEndian && shft >= 0) {
       auto l{value.low() << (8 * shft)};
       std::memcpy(n, &l, kind);
