@@ -20,7 +20,7 @@ TEST(LlvmLibcStackChkFail, Smash) {
   EXPECT_DEATH(
       [] {
         int arr[20];
-        LIBC_NAMESPACE::memset(arr, 0xAA, 9001);
+        LIBC_NAMESPACE::memset(arr, 0xAA, 2001);
       },
       WITH_SIGNAL(SIGABRT));
 }
