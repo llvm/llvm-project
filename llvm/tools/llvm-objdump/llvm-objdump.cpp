@@ -2235,9 +2235,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   // If we have a valid relocation, try to print its
                   // corresponding symbol name. Multiple relocations on the
                   // same instruction are not handled.
-                  // Branches to fixup code will have the RelFixedUp flag set in the RLD.
-                  // For these instructions, we print the correct branch target, but print
-                  // the referenced symbol as a comment.
+                  // Branches to fixup code will have the RelFixedUp flag set in
+                  // the RLD. For these instructions, we print the correct
+                  // branch target, but print the referenced symbol as a
+                  // comment.
                   if (Error E = getRelocationValueString(*RelCur, false, Val)) {
                     // If -r was used, this error will be printed later.
                     // Otherwise, we ignore the error and print what
