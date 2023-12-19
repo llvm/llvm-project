@@ -35,7 +35,11 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   using FloatProperties<long double>::EXP_LEN;
   using FloatProperties<long double>::FRACTION_MASK;
   using FloatProperties<long double>::FRACTION_LEN;
-  using FloatProperties<long double>::QUIET_NAN_MASK;
+
+private:
+  using FloatProperties<long double>::QNAN_MASK;
+
+public:
   using FloatProperties<long double>::SIGN_MASK;
 
   static constexpr int MAX_EXPONENT = 0x7FFF;
@@ -196,7 +200,7 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   }
 
   LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
-    return build_nan(QUIET_NAN_MASK | v);
+    return build_nan(QNAN_MASK | v);
   }
 
   LIBC_INLINE static constexpr long double min_normal() {

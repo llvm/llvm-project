@@ -39,7 +39,11 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   using FloatProperties<T>::EXP_LEN;
   using FloatProperties<T>::FRACTION_MASK;
   using FloatProperties<T>::FRACTION_LEN;
-  using FloatProperties<T>::QUIET_NAN_MASK;
+
+private:
+  using FloatProperties<T>::QNAN_MASK;
+
+public:
   using FloatProperties<T>::SIGN_MASK;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
@@ -90,7 +94,6 @@ template <typename T> struct FPBits : private FloatProperties<T> {
                 "Data type and integral representation have different sizes.");
 
   static constexpr int MAX_EXPONENT = (1 << EXP_LEN) - 1;
-
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
   static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);
@@ -154,7 +157,7 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_MANT_MASK) == (EXP_MASK | QUIET_NAN_MASK);
+    return (bits & EXP_MANT_MASK) == (EXP_MASK | QNAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
@@ -196,7 +199,7 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   }
 
   LIBC_INLINE static constexpr T build_quiet_nan(StorageType v) {
-    return build_nan(QUIET_NAN_MASK | v);
+    return build_nan(QNAN_MASK | v);
   }
 
   // The function convert integer number and unbiased exponent to proper float
