@@ -1521,12 +1521,13 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k) {
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp& map<_Key, _Tp, _Compare, _Allocator>::operator[](key_type&& __k) {
   // TODO investigate this clang-tidy warning.
-  // NOLINTNEXTLINE(bugprone-use-after-move)
+  // NOLINTBEGIN(bugprone-use-after-move)
   return __tree_
       .__emplace_unique_key_args(
           __k, std::piecewise_construct, std::forward_as_tuple(std::move(__k)), std::forward_as_tuple())
       .first->__get_value()
       .second;
+  // NOLINTEND(bugprone-use-after-move)
 }
 
 #else // _LIBCPP_CXX03_LANG
