@@ -46,10 +46,11 @@ using std::ranges::fold_left;
 using std::ranges::fold_left_with_iter;
 
 template <class Result, class Range, class T>
-concept is_in_value_result = std::same_as<Result, std::ranges::in_value_result<std::ranges::iterator_t<Range>, T>>;
+concept is_in_value_result =
+    std::same_as<Result, std::ranges::fold_left_with_iter_result<std::ranges::iterator_t<Range>, T>>;
 
 template <class Result, class T>
-concept is_dangling_with = std::same_as<Result, std::ranges::in_value_result<std::ranges::dangling, T>>;
+concept is_dangling_with = std::same_as<Result, std::ranges::fold_left_with_iter_result<std::ranges::dangling, T>>;
 
 template <std::ranges::input_range R, class T, class F, std::equality_comparable Expected>
   requires std::copyable<R>
@@ -57,7 +58,7 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
   {
     is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r.begin(), r.end(), init, f);
     assert(result.in == r.end());
-    assert(result.result == expected);
+    assert(result.value == expected);
   }
   {
     auto invocations                                      = 0;
@@ -66,7 +67,7 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
     auto f2                                               = invocable_with_telemetry(f, invocations, moves, copies);
     is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r.begin(), r.end(), init, f2);
     assert(result.in == r.end());
-    assert(result.result == expected);
+    assert(result.value == expected);
     assert(invocations == std::ranges::distance(r));
     assert(moves == 0);
     assert(copies == 1);
@@ -95,7 +96,7 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
   {
     is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r, init, f);
     assert(result.in == r.end());
-    assert(result.result == expected);
+    assert(result.value == expected);
   }
   {
     auto invocations                             = 0;
@@ -132,7 +133,7 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
   {
     auto r2                                          = r;
     is_dangling_with<Expected> decltype(auto) result = fold_left_with_iter(std::move(r2), init, f);
-    assert(result.result == expected);
+    assert(result.value == expected);
   }
   {
     auto invocations                                 = 0;
@@ -141,7 +142,7 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
     auto f2                                          = invocable_with_telemetry(f, invocations, moves, copies);
     auto r2                                          = r;
     is_dangling_with<Expected> decltype(auto) result = fold_left_with_iter(std::move(r2), init, f2);
-    assert(result.result == expected);
+    assert(result.value == expected);
     assert(invocations == std::ranges::distance(r));
     assert(moves == 0);
     assert(copies == 1);
@@ -249,7 +250,7 @@ void runtime_only_test() {
           fold_left_with_iter(data.begin(), data.end(), init, std::plus());
 
       assert(result.in == data.end());
-      assert(result.result == expected);
+      assert(result.value == expected);
     }
     {
       auto input = std::istringstream(raw_data);
@@ -257,7 +258,7 @@ void runtime_only_test() {
       is_in_value_result<std::ranges::basic_istream_view<std::string, char>, std::string> decltype(auto) result =
           fold_left_with_iter(data, init, std::plus());
       assert(result.in == data.end());
-      assert(result.result == expected);
+      assert(result.value == expected);
     }
     {
       auto input = std::istringstream(raw_data);
