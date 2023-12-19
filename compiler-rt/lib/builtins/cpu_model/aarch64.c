@@ -36,7 +36,7 @@ _Bool __aarch64_have_lse_atomics
 #if defined(__FreeBSD__)
 #include "lse_atomics/freebsd.inc"
 #elif defined(__Fuchsia__)
-#include "lse_atomics/fucsia.inc"
+#include "lse_atomics/fuchsia.inc"
 #elif defined(__ANDROID__)
 #include "lse_atomics/android.inc"
 #elif __has_include(<sys/auxv.h>)
@@ -130,7 +130,7 @@ struct {
 #include "aarch64/fmv/freebsd.inc"
 #elif defined(__Fuchsia__)
 #include "aarch64/fmv/mrs.inc"
-#include "aarch64/fmv/fucsia.inc"
+#include "aarch64/fmv/fuchsia.inc"
 #elif defined(__ANDROID__)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/android.inc"
