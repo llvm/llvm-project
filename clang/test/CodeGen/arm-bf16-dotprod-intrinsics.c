@@ -162,7 +162,7 @@ float32x4_t test_vbfmlaltq_f32(float32x4_t r, bfloat16x8_t a, bfloat16x8_t b) {
 // CHECK-LABEL: @test_vbfmlalbq_lane_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x bfloat> [[B:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> undef, bfloat [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> poison, bfloat [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE3:%.*]] = extractelement <4 x bfloat> [[B]], i32 0
 // CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x bfloat> [[VECINIT]], bfloat [[VGET_LANE3]], i32 1
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x bfloat> [[B]], i32 0
@@ -191,7 +191,7 @@ float32x4_t test_vbfmlalbq_lane_f32(float32x4_t r, bfloat16x8_t a, bfloat16x4_t 
 // CHECK-LABEL: @test_vbfmlalbq_laneq_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <8 x bfloat> [[B:%.*]], i32 3
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> undef, bfloat [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> poison, bfloat [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE3:%.*]] = extractelement <8 x bfloat> [[B]], i32 3
 // CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x bfloat> [[VECINIT]], bfloat [[VGET_LANE3]], i32 1
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <8 x bfloat> [[B]], i32 3
@@ -220,7 +220,7 @@ float32x4_t test_vbfmlalbq_laneq_f32(float32x4_t r, bfloat16x8_t a, bfloat16x8_t
 // CHECK-LABEL: @test_vbfmlaltq_lane_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x bfloat> [[B:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> undef, bfloat [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> poison, bfloat [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE3:%.*]] = extractelement <4 x bfloat> [[B]], i32 0
 // CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x bfloat> [[VECINIT]], bfloat [[VGET_LANE3]], i32 1
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <4 x bfloat> [[B]], i32 0
@@ -249,7 +249,7 @@ float32x4_t test_vbfmlaltq_lane_f32(float32x4_t r, bfloat16x8_t a, bfloat16x4_t 
 // CHECK-LABEL: @test_vbfmlaltq_laneq_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <8 x bfloat> [[B:%.*]], i32 3
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> undef, bfloat [[VGET_LANE]], i32 0
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x bfloat> poison, bfloat [[VGET_LANE]], i32 0
 // CHECK-NEXT:    [[VGET_LANE3:%.*]] = extractelement <8 x bfloat> [[B]], i32 3
 // CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x bfloat> [[VECINIT]], bfloat [[VGET_LANE3]], i32 1
 // CHECK-NEXT:    [[VGET_LANE8:%.*]] = extractelement <8 x bfloat> [[B]], i32 3
