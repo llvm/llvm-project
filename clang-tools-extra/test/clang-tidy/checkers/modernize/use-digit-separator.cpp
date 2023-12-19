@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s modernize-use-digit-separator %t
 
+// Long not formatted literals
+
 int NotFormattedInteger = 1234567;
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: unformatted representation of integer literal '1234567' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234'567
@@ -84,6 +86,18 @@ double PostfixNotFormattedFloat = 1234.569F;
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unformatted representation of float literal '1234.569F' [modernize-use-digit-separator]
 // CHECK-FIXES: 1'234.569F
 
+double MinusPostfixNotFormattedFloat = -1234.569F;
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: unformatted representation of float literal '1234.569F' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234.569F
+
+double PostfixNotFormattedFloat1 = 1234.569f;
+// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234.569f
+
+double MinusPostfixNotFormattedFloat1 = -1234.569f;
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: unformatted representation of float literal '1234.569f' [modernize-use-digit-separator]
+// CHECK-FIXES: 1'234.569f
+
 double ScientificNotFormattedFloat = 1.2345678e10;
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of float literal '1.2345678e10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e10
@@ -99,6 +113,33 @@ double ScientificNotFormattedFloat2 = -1.2345678E+10;
 double ScientificNotFormattedFloat3 = +1.2345678e-10;
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of float literal '1.2345678e-10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8e-10
+
+// Short literals
+
+int ShortInteger = 123;
+int MinusShortInteger = -123;
+int ShortBinaryInteger = 0b10;
+int MinusShortBinaryInteger = 0b10;
+int ShortOctInteger = 037;
+int MinusShortOctInteger = -037;
+int ShortHexInteger = 0x3F0;
+int MinusShortHexInteger = -0x3F0;
+unsigned int UnsignedShortInteger = 123U;
+unsigned int MinusUnsignedShortInteger = -123U;
+unsigned int UnsignedShortInteger1 = 123u;
+unsigned int MinusUnsignedShortInteger1 = -123u;
+long LongShortInteger = 123L;
+long MinusLongShortInteger = -123L;
+long LongShortInteger1 = 123l;
+long MinusLongShortInteger1 = -123l;
+unsigned long UnsignedLongShortInteger = 123uL;
+unsigned long MinusUnsignedLongShortInteger = -123uL;
+float ShortFloat = 1.23;
+float MinusShortFloat = -1.23;
+float PostfixShortFloat = 1.23F;
+float MinusPostfixShortFloat = -1.23F;
+float PostfixShortFloat1 = 1.23f;
+float MinusPostfixShortFloat1 = -1.23f;
 
 // FIXME:
 // error: expected ';' after top level declarator [clang-diagnostic-error]
