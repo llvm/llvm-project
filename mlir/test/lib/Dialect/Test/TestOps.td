@@ -480,6 +480,12 @@ def IsolatedRegionsOp : TEST_Op<"isolated_regions", [IsolatedFromAbove]> {
   let assemblyFormat = "attr-dict-with-keyword $regions";
 }
 
+def AllocaScopeRegionOp : TEST_Op<"alloca_scope_region",
+                                  [AutomaticAllocationScope]> {
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
