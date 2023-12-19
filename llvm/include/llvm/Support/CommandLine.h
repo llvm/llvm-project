@@ -314,10 +314,6 @@ public:
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
   }
 
-  bool isInAllSubCommands() const {
-    return Subs.contains(&SubCommand::getAll());
-  }
-
   //-------------------------------------------------------------------------===
   // Accessor functions set by OptionModifiers
   //
