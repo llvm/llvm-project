@@ -897,7 +897,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   }
 
   // NULL() actual to procedure pointer dummy
-  if (Fortran::evaluate::IsNullProcedurePointer(expr) &&
+  if (arg.entity->UnwrapExpr() /* TYPE(*) dummy */ &&
+      Fortran::evaluate::IsNullProcedurePointer(expr) &&
       hlfir::isBoxProcAddressType(dummyType)) {
     auto boxTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
     auto tempBoxProc{builder.createTemporary(loc, boxTy)};
@@ -1172,8 +1173,6 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       continue;
     }
     const auto *expr = arg.entity->UnwrapExpr();
-    if (!expr)
-      TODO(loc, "assumed type actual argument");
 
     switch (arg.passBy) {
     case PassBy::Value: {
@@ -2207,8 +2206,22 @@ genProcedureRef(CallContext &callContext) {
        caller.getPassedArguments())
     if (const auto *actual = arg.entity) {
       const auto *expr = actual->UnwrapExpr();
-      if (!expr)
-        TODO(loc, "assumed type actual argument");
+      if (!expr) {
+        // TYPE(*) dummy. They are only allowed as argument of a few intrinsics
+        // that do not take optional arguments: see Fortran 2018 standard C710.
+        const Fortran::evaluate::Symbol *assumedTypeSym =
+            actual->GetAssumedTypeDummy();
+        if (!assumedTypeSym)
+          fir::emitFatalError(
+              loc, "expected assumed-type symbol as actual argument");
+        std::optional<fir::FortranVariableOpInterface> var =
+            callContext.symMap.lookupVariableDefinition(*assumedTypeSym);
+        if (!var)
+          fir::emitFatalError(loc, "assumed-type symbol was not lowered");
+        loweredActuals.push_back(Fortran::lower::PreparedActualArgument{
+            hlfir::Entity{*var}, /*isPresent=*/std::nullopt});
+        continue;
+      }
       if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
               *expr)) {
         if ((arg.passBy !=
