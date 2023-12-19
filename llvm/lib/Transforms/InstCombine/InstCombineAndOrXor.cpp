@@ -3756,6 +3756,35 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  /// Res, Overflow = xxx_with_overflow X, C1
+  /// Try to canonicalize the pattern "Overflow | icmp pred Res, C2" into
+  /// "Overflow | icmp pred X, C2 +/- C1".
+  const WithOverflowInst *WO;
+  const Value *WOV;
+  const APInt *C1, *C2;
+  if (match(&I, m_c_Or(m_CombineAnd(m_ExtractValue<1>(m_CombineAnd(
+                                        m_WithOverflowInst(WO), m_Value(WOV))),
+                                    m_Value(Ov)),
+                       m_OneUse(m_ICmp(Pred, m_ExtractValue<0>(m_Deferred(WOV)),
+                                       m_APInt(C2))))) &&
+      (WO->getBinaryOp() == Instruction::Add ||
+       WO->getBinaryOp() == Instruction::Sub) &&
+      (ICmpInst::isEquality(Pred) ||
+       WO->isSigned() == ICmpInst::isSigned(Pred)) &&
+      match(WO->getRHS(), m_APInt(C1))) {
+    bool Overflow;
+    APInt NewC = WO->getBinaryOp() == Instruction::Add
+                     ? (ICmpInst::isSigned(Pred) ? C2->ssub_ov(*C1, Overflow)
+                                                 : C2->usub_ov(*C1, Overflow))
+                     : (ICmpInst::isSigned(Pred) ? C2->sadd_ov(*C1, Overflow)
+                                                 : C2->uadd_ov(*C1, Overflow));
+    if (!Overflow || ICmpInst::isEquality(Pred)) {
+      Value *NewCmp = Builder.CreateICmp(
+          Pred, WO->getLHS(), ConstantInt::get(WO->getLHS()->getType(), NewC));
+      return BinaryOperator::CreateOr(Ov, NewCmp);
+    }
+  }
+
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
   if (sinkNotIntoOtherHandOfLogicalOp(I))
     return &I;
@@ -4278,6 +4307,12 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 
     // ~(~X >>s Y) --> (X >>s Y)
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
+      return BinaryOperator::CreateAShr(X, Y);
+
+    // Treat lshr with non-negative operand as ashr.
+    // ~(~X >>u Y) --> (X >>s Y) iff X is known negative
+    if (match(NotVal, m_LShr(m_Not(m_Value(X)), m_Value(Y))) &&
+        isKnownNegative(X, SQ.getWithInstruction(NotVal)))
       return BinaryOperator::CreateAShr(X, Y);
 
     // Bit-hack form of a signbit test for iN type:

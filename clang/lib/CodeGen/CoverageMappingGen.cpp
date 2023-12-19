@@ -1623,7 +1623,11 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       OS << "Gap,";
       break;
     case CounterMappingRegion::BranchRegion:
+    case CounterMappingRegion::MCDCBranchRegion:
       OS << "Branch,";
+      break;
+    case CounterMappingRegion::MCDCDecisionRegion:
+      OS << "Decision,";
       break;
     }
 

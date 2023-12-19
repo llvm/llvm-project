@@ -1219,7 +1219,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     if (IsChkVariant) {
       FunctionName = FunctionName.drop_front(std::strlen("__builtin___"));
       FunctionName = FunctionName.drop_back(std::strlen("_chk"));
-    } else if (FunctionName.startswith("__builtin_")) {
+    } else if (FunctionName.starts_with("__builtin_")) {
       FunctionName = FunctionName.drop_front(std::strlen("__builtin_"));
     }
     return FunctionName;
@@ -3156,7 +3156,6 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
                                      ArmStreamingType BuiltinType) {
   ArmStreamingType FnType = getArmStreamingFnType(FD);
-
   if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
@@ -3168,9 +3167,77 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
         << TheCall->getSourceRange() << "streaming compatible";
     return;
   }
+
+  if (FnType == ArmNonStreaming && BuiltinType == ArmStreaming) {
+    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "non-streaming";
+  }
+}
+
+static bool hasSMEZAState(const FunctionDecl *FD) {
+  if (FD->hasAttr<ArmNewZAAttr>())
+    return true;
+  if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask)
+      return true;
+  return false;
+}
+
+static bool hasSMEZAState(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  default:
+    return false;
+#define GET_SME_BUILTIN_HAS_ZA_STATE
+#include "clang/Basic/arm_sme_builtins_za_state.inc"
+#undef GET_SME_BUILTIN_HAS_ZA_STATE
+  }
+}
+
+bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+    std::optional<ArmStreamingType> BuiltinType;
+
+    switch (BuiltinID) {
+#define GET_SME_STREAMING_ATTRS
+#include "clang/Basic/arm_sme_streaming_attrs.inc"
+#undef GET_SME_STREAMING_ATTRS
+    }
+
+    if (BuiltinType)
+      checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
+
+    if (hasSMEZAState(BuiltinID) && !hasSMEZAState(FD))
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_attribute_arm_za_builtin_no_za_state)
+          << TheCall->getSourceRange();
+  }
+
+  // Range check SME intrinsics that take immediate values.
+  SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
+
+  switch (BuiltinID) {
+  default:
+    return false;
+#define GET_SME_IMMEDIATE_CHECK
+#include "clang/Basic/arm_sme_sema_rangechecks.inc"
+#undef GET_SME_IMMEDIATE_CHECK
+  }
+
+  return ParseSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+    std::optional<ArmStreamingType> BuiltinType;
+
+    switch (BuiltinID) {
+#define GET_SVE_STREAMING_ATTRS
+#include "clang/Basic/arm_sve_streaming_attrs.inc"
+#undef GET_SVE_STREAMING_ATTRS
+    }
+    if (BuiltinType)
+      checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
+  }
   // Range check SVE intrinsics that take immediate values.
   SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
 
@@ -3180,9 +3247,6 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 #define GET_SVE_IMMEDIATE_CHECK
 #include "clang/Basic/arm_sve_sema_rangechecks.inc"
 #undef GET_SVE_IMMEDIATE_CHECK
-#define GET_SME_IMMEDIATE_CHECK
-#include "clang/Basic/arm_sme_sema_rangechecks.inc"
-#undef GET_SME_IMMEDIATE_CHECK
   }
 
   return ParseSVEImmChecks(TheCall, ImmChecks);
@@ -3567,6 +3631,9 @@ bool Sema::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
     return true;
 
   if (CheckSVEBuiltinFunctionCall(BuiltinID, TheCall))
+    return true;
+
+  if (CheckSMEBuiltinFunctionCall(BuiltinID, TheCall))
     return true;
 
   // For intrinsics which take an immediate value as part of the instruction,
@@ -5030,14 +5097,14 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),
                 diag::warn_atomic_op_has_invalid_memory_order)
-           << ArgExpr->getSourceRange();
+           << 0 << ArgExpr->getSourceRange();
   switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
   case llvm::AtomicOrderingCABI::relaxed:
   case llvm::AtomicOrderingCABI::consume:
     if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
       return Diag(ArgExpr->getBeginLoc(),
                   diag::warn_atomic_op_has_invalid_memory_order)
-             << ArgExpr->getSourceRange();
+             << 0 << ArgExpr->getSourceRange();
     break;
   case llvm::AtomicOrderingCABI::acquire:
   case llvm::AtomicOrderingCABI::release:
@@ -5322,10 +5389,10 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     QualType Op2Type = TheCall->getArg(1)->getType();
     QualType Op3Type = TheCall->getArg(2)->getType();
     uint64_t ElemSize = Op1Type->isRVVType(32, false) ? 32 : 64;
-    if (ElemSize == 64 && !TI.hasFeature("experimental-zvknhb"))
-      return
-          Diag(TheCall->getBeginLoc(), diag::err_riscv_type_requires_extension)
-              << Op1Type << "experimental-zvknhb";
+    if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_type_requires_extension)
+             << Op1Type << "zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, ElemSize << 2) ||
            CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, ElemSize << 2) ||
@@ -8177,13 +8244,31 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     break;
   }
 
+  // If the memory orders are constants, check they are valid.
   if (SubExprs.size() >= 2 && Form != Init) {
-    if (std::optional<llvm::APSInt> Result =
-            SubExprs[1]->getIntegerConstantExpr(Context))
-      if (!isValidOrderingForOp(Result->getSExtValue(), Op))
-        Diag(SubExprs[1]->getBeginLoc(),
-             diag::warn_atomic_op_has_invalid_memory_order)
-            << SubExprs[1]->getSourceRange();
+    std::optional<llvm::APSInt> Success =
+        SubExprs[1]->getIntegerConstantExpr(Context);
+    if (Success && !isValidOrderingForOp(Success->getSExtValue(), Op)) {
+      Diag(SubExprs[1]->getBeginLoc(),
+           diag::warn_atomic_op_has_invalid_memory_order)
+          << /*success=*/(Form == C11CmpXchg || Form == GNUCmpXchg)
+          << SubExprs[1]->getSourceRange();
+    }
+    if (SubExprs.size() >= 5) {
+      if (std::optional<llvm::APSInt> Failure =
+              SubExprs[3]->getIntegerConstantExpr(Context)) {
+        if (!llvm::is_contained(
+                {llvm::AtomicOrderingCABI::relaxed,
+                 llvm::AtomicOrderingCABI::consume,
+                 llvm::AtomicOrderingCABI::acquire,
+                 llvm::AtomicOrderingCABI::seq_cst},
+                (llvm::AtomicOrderingCABI)Failure->getSExtValue())) {
+          Diag(SubExprs[3]->getBeginLoc(),
+               diag::warn_atomic_op_has_invalid_memory_order)
+              << /*failure=*/2 << SubExprs[3]->getSourceRange();
+        }
+      }
+    }
   }
 
   if (auto ScopeModel = AtomicExpr::getScopeModel(Op)) {
@@ -18270,15 +18355,14 @@ static bool isSetterLikeSelector(Selector sel) {
 
   StringRef str = sel.getNameForSlot(0);
   while (!str.empty() && str.front() == '_') str = str.substr(1);
-  if (str.startswith("set"))
+  if (str.starts_with("set"))
     str = str.substr(3);
-  else if (str.startswith("add")) {
+  else if (str.starts_with("add")) {
     // Specially allow 'addOperationWithBlock:'.
-    if (sel.getNumArgs() == 1 && str.startswith("addOperationWithBlock"))
+    if (sel.getNumArgs() == 1 && str.starts_with("addOperationWithBlock"))
       return false;
     str = str.substr(3);
-  }
-  else
+  } else
     return false;
 
   if (str.empty()) return true;

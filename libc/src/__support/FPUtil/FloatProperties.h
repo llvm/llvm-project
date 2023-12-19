@@ -41,42 +41,42 @@ enum class FPEncoding {
 template <FPType> struct FPBaseProperties {};
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary16> {
-  using UIntType = uint16_t;
-  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 16;
-  LIBC_INLINE_VAR static constexpr int SIG_BITS = 10;
-  LIBC_INLINE_VAR static constexpr int EXP_BITS = 5;
+  using StorageType = uint16_t;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 16;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 10;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 5;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary32> {
-  using UIntType = uint32_t;
-  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 32;
-  LIBC_INLINE_VAR static constexpr int SIG_BITS = 23;
-  LIBC_INLINE_VAR static constexpr int EXP_BITS = 8;
+  using StorageType = uint32_t;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 32;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 23;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary64> {
-  using UIntType = uint64_t;
-  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 64;
-  LIBC_INLINE_VAR static constexpr int SIG_BITS = 52;
-  LIBC_INLINE_VAR static constexpr int EXP_BITS = 11;
+  using StorageType = uint64_t;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 64;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 52;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 11;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPBaseProperties<FPType::IEEE754_Binary128> {
-  using UIntType = UInt128;
-  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 128;
-  LIBC_INLINE_VAR static constexpr int SIG_BITS = 112;
-  LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
+  using StorageType = UInt128;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 128;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING = FPEncoding::IEEE754;
 };
 
 template <> struct FPBaseProperties<FPType::X86_Binary80> {
-  using UIntType = UInt128;
-  LIBC_INLINE_VAR static constexpr int TOTAL_BITS = 80;
-  LIBC_INLINE_VAR static constexpr int SIG_BITS = 64;
-  LIBC_INLINE_VAR static constexpr int EXP_BITS = 15;
+  using StorageType = UInt128;
+  LIBC_INLINE_VAR static constexpr int TOTAL_LEN = 80;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr auto ENCODING =
       FPEncoding::X86_ExtendedPrecision;
 };
@@ -87,92 +87,88 @@ template <FPType fp_type>
 struct FPProperties : public internal::FPBaseProperties<fp_type> {
 private:
   using UP = internal::FPBaseProperties<fp_type>;
-  // The number of bits to represent sign. For documentation purpose, always 1.
-  LIBC_INLINE_VAR static constexpr int SIGN_BITS = 1;
-  using UP::EXP_BITS;   // The number of bits for the *exponent* part
-  using UP::SIG_BITS;   // The number of bits for the *significand* part
-  using UP::TOTAL_BITS; // For convenience, the sum of `SIG_BITS`, `EXP_BITS`,
-                        // and `SIGN_BITS`.
-  static_assert(SIGN_BITS + EXP_BITS + SIG_BITS == TOTAL_BITS);
 
 public:
+  // The number of bits to represent sign. For documentation purpose, always 1.
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
+  using UP::EXP_LEN;   // The number of bits for the *exponent* part
+  using UP::SIG_LEN;   // The number of bits for the *significand* part
+  using UP::TOTAL_LEN; // For convenience, the sum of `SIG_LEN`, `EXP_LEN`,
+                       // and `SIGN_LEN`.
+  static_assert(SIGN_LEN + EXP_LEN + SIG_LEN == TOTAL_LEN);
+
   // An unsigned integer that is wide enough to contain all of the floating
   // point bits.
-  using UIntType = typename UP::UIntType;
+  using StorageType = typename UP::StorageType;
 
-  // The number of bits in UIntType.
-  LIBC_INLINE_VAR static constexpr int UINTTYPE_BITS =
-      sizeof(UIntType) * CHAR_BIT;
-  static_assert(UINTTYPE_BITS >= TOTAL_BITS);
+  // The number of bits in StorageType.
+  LIBC_INLINE_VAR static constexpr int STORAGE_LEN =
+      sizeof(StorageType) * CHAR_BIT;
+  static_assert(STORAGE_LEN >= TOTAL_LEN);
 
-private:
   // The exponent bias. Always positive.
   LIBC_INLINE_VAR static constexpr int32_t EXP_BIAS =
-      (1U << (EXP_BITS - 1U)) - 1U;
+      (1U << (EXP_LEN - 1U)) - 1U;
   static_assert(EXP_BIAS > 0);
 
+private:
   // The shift amount to get the *significand* part to the least significant
   // bit. Always `0` but kept for consistency.
   LIBC_INLINE_VAR static constexpr int SIG_MASK_SHIFT = 0;
   // The shift amount to get the *exponent* part to the least significant bit.
-  LIBC_INLINE_VAR static constexpr int EXP_MASK_SHIFT = SIG_BITS;
+  LIBC_INLINE_VAR static constexpr int EXP_MASK_SHIFT = SIG_LEN;
   // The shift amount to get the *sign* part to the least significant bit.
-  LIBC_INLINE_VAR static constexpr int SIGN_MASK_SHIFT = SIG_BITS + EXP_BITS;
+  LIBC_INLINE_VAR static constexpr int SIGN_MASK_SHIFT = SIG_LEN + EXP_LEN;
 
   // The bit pattern that keeps only the *significand* part.
-  LIBC_INLINE_VAR static constexpr UIntType SIG_MASK =
-      mask_trailing_ones<UIntType, SIG_BITS>() << SIG_MASK_SHIFT;
-  // The bit pattern that keeps only the *exponent* part.
-  LIBC_INLINE_VAR static constexpr UIntType EXP_MASK =
-      mask_trailing_ones<UIntType, EXP_BITS>() << EXP_MASK_SHIFT;
+  LIBC_INLINE_VAR static constexpr StorageType SIG_MASK =
+      mask_trailing_ones<StorageType, SIG_LEN>() << SIG_MASK_SHIFT;
 
 public:
+  // The bit pattern that keeps only the *exponent* part.
+  LIBC_INLINE_VAR static constexpr StorageType EXP_MASK =
+      mask_trailing_ones<StorageType, EXP_LEN>() << EXP_MASK_SHIFT;
   // The bit pattern that keeps only the *sign* part.
-  LIBC_INLINE_VAR static constexpr UIntType SIGN_MASK =
-      mask_trailing_ones<UIntType, SIGN_BITS>() << SIGN_MASK_SHIFT;
+  LIBC_INLINE_VAR static constexpr StorageType SIGN_MASK =
+      mask_trailing_ones<StorageType, SIGN_LEN>() << SIGN_MASK_SHIFT;
   // The bit pattern that keeps only the *sign + exponent + significand* part.
-  LIBC_INLINE_VAR static constexpr UIntType FP_MASK =
-      mask_trailing_ones<UIntType, TOTAL_BITS>();
+  LIBC_INLINE_VAR static constexpr StorageType FP_MASK =
+      mask_trailing_ones<StorageType, TOTAL_LEN>();
 
   static_assert((SIG_MASK & EXP_MASK & SIGN_MASK) == 0, "masks disjoint");
   static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
 
 private:
-  LIBC_INLINE static constexpr UIntType bit_at(int position) {
-    return UIntType(1) << position;
+  LIBC_INLINE static constexpr StorageType bit_at(int position) {
+    return StorageType(1) << position;
   }
 
-  LIBC_INLINE_VAR static constexpr UIntType QNAN_MASK =
+  LIBC_INLINE_VAR static constexpr StorageType QNAN_MASK =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
-          ? bit_at(SIG_BITS - 1) | bit_at(SIG_BITS - 2) // 0b1100...
-          : bit_at(SIG_BITS - 1);                       // 0b1000...
+          ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 2) // 0b1100...
+          : bit_at(SIG_LEN - 1);                      // 0b1000...
 
-  LIBC_INLINE_VAR static constexpr UIntType SNAN_MASK =
+  LIBC_INLINE_VAR static constexpr StorageType SNAN_MASK =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
-          ? bit_at(SIG_BITS - 1) | bit_at(SIG_BITS - 3) // 0b1010...
-          : bit_at(SIG_BITS - 2);                       // 0b0100...
-
-  // The number of bits after the decimal dot when the number if in normal form.
-  LIBC_INLINE_VAR static constexpr int FRACTION_BITS =
-      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision ? SIG_BITS - 1
-                                                                  : SIG_BITS;
+          ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
+          : bit_at(SIG_LEN - 2);                      // 0b0100...
 
 public:
-  LIBC_INLINE_VAR static constexpr uint32_t BIT_WIDTH = TOTAL_BITS;
-  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_WIDTH = FRACTION_BITS;
+  // The number of bits after the decimal dot when the number is in normal form.
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN =
+      UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision ? SIG_LEN - 1
+                                                                  : SIG_LEN;
   LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
-      MANTISSA_WIDTH + 1;
-  LIBC_INLINE_VAR static constexpr UIntType MANTISSA_MASK =
-      mask_trailing_ones<UIntType, MANTISSA_WIDTH>();
-  LIBC_INLINE_VAR static constexpr uint32_t EXPONENT_WIDTH = EXP_BITS;
-  LIBC_INLINE_VAR static constexpr int32_t EXPONENT_BIAS = EXP_BIAS;
-  LIBC_INLINE_VAR static constexpr UIntType EXPONENT_MASK = EXP_MASK;
-  LIBC_INLINE_VAR static constexpr UIntType EXP_MANT_MASK = EXP_MASK | SIG_MASK;
+      FRACTION_LEN + 1;
+  LIBC_INLINE_VAR static constexpr StorageType FRACTION_MASK =
+      mask_trailing_ones<StorageType, FRACTION_LEN>();
+  LIBC_INLINE_VAR static constexpr StorageType EXP_MANT_MASK =
+      EXP_MASK | SIG_MASK;
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
   // Else, it is a signalling NAN.
-  static constexpr UIntType QUIET_NAN_MASK = QNAN_MASK;
+  static constexpr StorageType QUIET_NAN_MASK = QNAN_MASK;
 };
 
 //-----------------------------------------------------------------------------
