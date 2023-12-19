@@ -9,10 +9,8 @@
 #ifndef LLVM_LIBC_SRC_COMPILER___STACK_CHK_FAIL_H
 #define LLVM_LIBC_SRC_COMPILER___STACK_CHK_FAIL_H
 
-namespace LIBC_NAMESPACE {
-
+extern "C" {
 [[noreturn]] void __stack_chk_fail();
-
-} // namespace LIBC_NAMESPACE
+} // extern "C"
 
 #endif // LLVM_LIBC_SRC_COMPILER___STACK_CHK_FAIL_H

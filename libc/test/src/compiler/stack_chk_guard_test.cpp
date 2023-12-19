@@ -12,7 +12,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStackChkFail, Death) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::__stack_chk_fail(); },
+  EXPECT_DEATH([] { __stack_chk_fail(); },
                WITH_SIGNAL(SIGABRT));
 }
 

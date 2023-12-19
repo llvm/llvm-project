@@ -10,11 +10,11 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/stdlib/abort.h"
 
-namespace LIBC_NAMESPACE {
+extern "C" {
 
-LLVM_LIBC_FUNCTION(void, __stack_chk_fail, (void)) {
+void __stack_chk_fail(void) {
   LIBC_NAMESPACE::write_to_stderr("stack smashing detected");
   LIBC_NAMESPACE::abort();
 }
 
-} // namespace LIBC_NAMESPACE
+} // extern "C"
