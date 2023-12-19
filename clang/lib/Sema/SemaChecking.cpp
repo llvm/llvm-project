@@ -5389,7 +5389,7 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     QualType Op2Type = TheCall->getArg(1)->getType();
     QualType Op3Type = TheCall->getArg(2)->getType();
     uint64_t ElemSize = Op1Type->isRVVType(32, false) ? 32 : 64;
-    if (ElemSize == 64 && !TI.hasFeature("experimental-zvknhb"))
+    if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_type_requires_extension)
              << Op1Type << "zvknhb";
