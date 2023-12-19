@@ -3100,10 +3100,32 @@ struct DIEVisitor {
     SmallVector<AbbrevContent> AbbrevContents;
   };
 
+  DIEVisitor() = delete;
+
+  DIEVisitor(ArrayRef<StringRef> AbbrevEntries,
+             BinaryStreamReader DistinctReader, StringRef DistinctData,
+             std::function<void(StringRef)> HeaderCallback,
+             std::function<void(dwarf::Tag, uint64_t)> StartTagCallback,
+             std::function<void(dwarf::Attribute, dwarf::Form, StringRef, bool)>
+                 AttrCallback,
+             std::function<void(bool)> EndTagCallback,
+             std::function<void(StringRef)> NewBlockCallback)
+      : AbbrevEntries(AbbrevEntries), DistinctReader(DistinctReader),
+        DistinctData(DistinctData), HeaderCallback(HeaderCallback),
+        StartTagCallback(StartTagCallback), AttrCallback(AttrCallback),
+        EndTagCallback(EndTagCallback), NewBlockCallback(NewBlockCallback) {
+    AbbrevEntryCache.reserve(AbbrevEntries.size());
+    for (unsigned I = 0; I < AbbrevEntries.size(); I++) {
+      if (Error E = materializeAbbrevDIE(encodeAbbrevIndex(I)))
+        report_fatal_error(std::move(E));
+    }
+  }
+
   Error visitDIERef(DIEDedupeTopLevelRef Ref);
   Error visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack);
-  Error visitDIEAttrs(AbbrevEntryReader &AbbrevReader,
-                      BinaryStreamReader &Reader, StringRef DIEData);
+  Error visitDIEAttrs(BinaryStreamReader &DataReader, StringRef DIEData,
+                      ArrayRef<AbbrevContent> DIEContents);
+  Error materializeAbbrevDIE(unsigned AbbrevIdx);
 
   SmallVector<AbbrevEntry> AbbrevEntryCache;
   ArrayRef<StringRef> AbbrevEntries;
@@ -3118,38 +3140,31 @@ struct DIEVisitor {
   std::function<void(StringRef)> NewBlockCallback;
 };
 
-Error DIEVisitor::visitDIEAttrs(AbbrevEntryReader &AbbrevReader,
-                                BinaryStreamReader &DataReader,
-                                StringRef DIEData) {
+Error DIEVisitor::visitDIEAttrs(BinaryStreamReader &DataReader,
+                                StringRef DIEData,
+                                ArrayRef<AbbrevContent> DIEContents) {
   constexpr auto IsLittleEndian = true;
   constexpr auto AddrSize = 8;
   constexpr auto FormParams =
       dwarf::FormParams{4 /*Version*/, AddrSize, dwarf::DwarfFormat::DWARF32};
 
-  while (true) {
-    Expected<dwarf::Attribute> Attr = AbbrevReader.readAttr();
-    if (!Attr)
-      return Attr.takeError();
-    if (*Attr == getEndOfAttributesMarker())
-      break;
-
-    Expected<dwarf::Form> Form = AbbrevReader.readForm();
-    if (!Form)
-      return Form.takeError();
-
-    bool DataInDistinct = doesntDedup(*Form, *Attr);
+  for (auto Contents : DIEContents) {
+    bool DataInDistinct = Contents.FormInDistinctData;
     auto &ReaderForData = DataInDistinct ? DistinctReader : DataReader;
     StringRef DataToUse = DataInDistinct ? DistinctData : DIEData;
     Expected<uint64_t> FormSize =
-        getFormSize(*Form, FormParams, DataToUse, ReaderForData.getOffset(),
-                    IsLittleEndian, AddrSize);
+        Contents.FormSize
+            ? *Contents.FormSize
+            : getFormSize(Contents.Form, FormParams, DataToUse,
+                          ReaderForData.getOffset(), IsLittleEndian, AddrSize);
     if (!FormSize)
       return FormSize.takeError();
 
     ArrayRef<char> RawBytes;
     if (auto E = ReaderForData.readArray(RawBytes, *FormSize))
       return E;
-    AttrCallback(*Attr, *Form, toStringRef(RawBytes), DataInDistinct);
+    AttrCallback(Contents.Attr, Contents.Form, toStringRef(RawBytes),
+                 DataInDistinct);
   }
   return Error::success();
 }
@@ -3166,6 +3181,111 @@ static AbbrevEntryReader getAbbrevEntryReader(ArrayRef<StringRef> AbbrevEntries,
   StringRef AbbrevData =
       AbbrevEntries[decodeAbbrevIndexAsAbbrevSetIdx(AbbrevIdx)];
   return AbbrevEntryReader(AbbrevData);
+}
+
+static std::optional<uint8_t> getNonULEBFormSize(dwarf::Form Form,
+                                                 dwarf::FormParams FP) {
+  switch (Form) {
+  case dwarf::DW_FORM_addr:
+    return FP.AddrSize;
+  case dwarf::DW_FORM_ref_addr:
+    return FP.getRefAddrByteSize();
+  case dwarf::DW_FORM_exprloc:
+  case dwarf::DW_FORM_block:
+  case dwarf::DW_FORM_block1:
+  case dwarf::DW_FORM_block2:
+  case dwarf::DW_FORM_block4:
+  case dwarf::DW_FORM_sdata:
+  case dwarf::DW_FORM_udata:
+  case dwarf::DW_FORM_ref_udata:
+  case dwarf::DW_FORM_ref4_cas:
+  case dwarf::DW_FORM_strp_cas:
+  case dwarf::DW_FORM_rnglistx:
+  case dwarf::DW_FORM_loclistx:
+  case dwarf::DW_FORM_GNU_addr_index:
+  case dwarf::DW_FORM_GNU_str_index:
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_strx:
+  case dwarf::DW_FORM_LLVM_addrx_offset:
+  case dwarf::DW_FORM_string:
+  case dwarf::DW_FORM_indirect:
+    return std::nullopt;
+
+  case dwarf::DW_FORM_implicit_const:
+  case dwarf::DW_FORM_flag_present:
+    return 0;
+  case dwarf::DW_FORM_data1:
+  case dwarf::DW_FORM_ref1:
+  case dwarf::DW_FORM_flag:
+  case dwarf::DW_FORM_strx1:
+  case dwarf::DW_FORM_addrx1:
+    return 1;
+  case dwarf::DW_FORM_data2:
+  case dwarf::DW_FORM_ref2:
+  case dwarf::DW_FORM_strx2:
+  case dwarf::DW_FORM_addrx2:
+    return 2;
+  case dwarf::DW_FORM_strx3:
+    return 3;
+  case dwarf::DW_FORM_data4:
+  case dwarf::DW_FORM_ref4:
+  case dwarf::DW_FORM_ref_sup4:
+  case dwarf::DW_FORM_strx4:
+  case dwarf::DW_FORM_addrx4:
+    return 4;
+  case dwarf::DW_FORM_ref_sig8:
+  case dwarf::DW_FORM_data8:
+  case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_sup8:
+    return 8;
+  case dwarf::DW_FORM_data16:
+    return 16;
+  case dwarf::DW_FORM_strp:
+  case dwarf::DW_FORM_sec_offset:
+  case dwarf::DW_FORM_GNU_ref_alt:
+  case dwarf::DW_FORM_GNU_strp_alt:
+  case dwarf::DW_FORM_line_strp:
+  case dwarf::DW_FORM_strp_sup:
+    return FP.getDwarfOffsetByteSize();
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_lo_user:
+    llvm_unreachable("usupported form");
+    break;
+  }
+}
+
+Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
+  constexpr auto AddrSize = 8;
+  constexpr auto FormParams =
+      dwarf::FormParams{4 /*Version*/, AddrSize, dwarf::DwarfFormat::DWARF32};
+
+  AbbrevEntryReader AbbrevReader =
+      getAbbrevEntryReader(AbbrevEntries, AbbrevIdx);
+  Expected<dwarf::Tag> MaybeTag = AbbrevReader.readTag();
+  if (!MaybeTag)
+    return MaybeTag.takeError();
+
+  Expected<bool> MaybeHasChildren = AbbrevReader.readHasChildren();
+  if (!MaybeHasChildren)
+    return MaybeHasChildren.takeError();
+
+  SmallVector<AbbrevContent> AbbrevVector;
+  while (true) {
+    Expected<dwarf::Attribute> Attr = AbbrevReader.readAttr();
+    if (!Attr)
+      return Attr.takeError();
+    if (*Attr == getEndOfAttributesMarker())
+      break;
+
+    Expected<dwarf::Form> Form = AbbrevReader.readForm();
+    if (!Form)
+      return Form.takeError();
+    AbbrevVector.push_back({*Attr, *Form, doesntDedup(*Form, *Attr),
+                            getNonULEBFormSize(*Form, FormParams)});
+  }
+  AbbrevEntryCache.push_back(
+      {*MaybeTag, *MaybeHasChildren, std::move(AbbrevVector)});
+  return Error::success();
 }
 
 /// Restores the state of the \p Reader and \p Data
@@ -3220,25 +3340,18 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     }
 
     // If we have a legitimate AbbrevIdx, materialize the current DIE.
-    AbbrevEntryReader AbbrevReader =
-        getAbbrevEntryReader(AbbrevEntries, AbbrevIdx);
+    auto &AbbrevEntryCacheVal =
+        AbbrevEntryCache[decodeAbbrevIndexAsAbbrevSetIdx(AbbrevIdx)];
+    StartTagCallback(AbbrevEntryCacheVal.Tag, AbbrevIdx);
 
-    if (Expected<dwarf::Tag> MaybeTag = AbbrevReader.readTag())
-      StartTagCallback(*MaybeTag, AbbrevIdx);
-    else
-      return MaybeTag.takeError();
-
-    Expected<bool> MaybeHasChildren = AbbrevReader.readHasChildren();
-    if (!MaybeHasChildren)
-      return MaybeHasChildren.takeError();
-
-    if (auto E = visitDIEAttrs(AbbrevReader, Reader, Data))
+    if (auto E =
+            visitDIEAttrs(Reader, Data, AbbrevEntryCacheVal.AbbrevContents))
       return E;
 
     // If the current DIE doesn't have any children, the current CAS Object will
     // not contain any more data, pop the stack to continue materializing its
     // parent's siblings that may exist.
-    if (!*MaybeHasChildren) {
+    if (!AbbrevEntryCacheVal.HasChildren) {
       if (!StackOfNodes.empty() && Reader.empty())
         popStack(Reader, Data, StackOfNodes);
       EndTagCallback(false /*HadChildren*/);
@@ -3310,8 +3423,8 @@ Error mccasformats::v1::visitDebugInfo(
   HeaderCallback(toStringRef(HeaderData));
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{{},           TotAbbrevEntries, DistinctReader,
-                     DistinctData, HeaderCallback,   StartTagCallback,
-                     AttrCallback, EndTagCallback,   NewBlockCallback};
+  DIEVisitor Visitor{TotAbbrevEntries, DistinctReader,   DistinctData,
+                     HeaderCallback,   StartTagCallback, AttrCallback,
+                     EndTagCallback,   NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
 }
