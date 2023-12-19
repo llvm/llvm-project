@@ -2211,10 +2211,9 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
       return;
     // In C++, don't warn for record types that don't have WarnUnusedAttr, to
     // mimic gcc's behavior.
-    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Tag)) {
-      if (!RD->hasAttr<WarnUnusedAttr>())
-        return;
-    }
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Tag);
+        RD && !RD->hasAttr<WarnUnusedAttr>())
+      return;
   }
 
   // Don't warn about __block Objective-C pointer variables, as they might
