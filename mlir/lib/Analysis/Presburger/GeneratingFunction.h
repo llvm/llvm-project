@@ -73,12 +73,16 @@ public:
     assert(numParam == gf.getNumParams() &&
            "two generating functions with different numbers of parameters "
            "cannot be added!");
-    signs.append(gf.signs);
-    numerators.insert(numerators.end(), gf.numerators.begin(),
-                      gf.numerators.end());
-    denominators.insert(denominators.end(), gf.denominators.begin(),
+    SmallVector<int> sumSigns(signs);
+    sumSigns.append(gf.signs);
+
+    std::vector<ParamPoint> sumNumerators(numerators);
+    sumNumerators.insert(sumNumerators.end(), gf.numerators.begin(), gf.numerators.end());
+
+    std::vector<std::vector<Point>> sumDenominators(denominators);
+    sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
                         gf.denominators.end());
-    return *this;
+    return GeneratingFunction(sumSigns, sumNumerators, sumDenominators);
   }
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
