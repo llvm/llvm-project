@@ -107,15 +107,15 @@ def HasStdExtZfhmin : Predicate<"Subtarget->hasStdExtZfhmin()">,
 def FeatureStdExtZfh
     : SubtargetFeature<"zfh", "HasStdExtZfh", "true",
                        "'Zfh' (Half-Precision Floating-Point)",
-                       [FeatureStdExtF]>;
+                       [FeatureStdExtZfhmin]>;
 def HasStdExtZfh : Predicate<"Subtarget->hasStdExtZfh()">,
                              AssemblerPredicate<(all_of FeatureStdExtZfh),
                              "'Zfh' (Half-Precision Floating-Point)">;
 def NoStdExtZfh : Predicate<"!Subtarget->hasStdExtZfh()">;
 
 def HasStdExtZfhOrZfhmin
-    : Predicate<"Subtarget->hasStdExtZfhOrZfhmin()">,
-                AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin),
+    : Predicate<"Subtarget->hasStdExtZfhmin()">,
+                AssemblerPredicate<(all_of FeatureStdExtZfhmin),
                                    "'Zfh' (Half-Precision Floating-Point) or "
                                    "'Zfhmin' (Half-Precision Floating-Point Minimal)">;
 
@@ -146,15 +146,15 @@ def HasStdExtZhinxmin : Predicate<"Subtarget->hasStdExtZhinxmin()">,
 def FeatureStdExtZhinx
     : SubtargetFeature<"zhinx", "HasStdExtZhinx", "true",
                        "'Zhinx' (Half Float in Integer)",
-                       [FeatureStdExtZfinx]>;
+                       [FeatureStdExtZhinxmin]>;
 def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
                                AssemblerPredicate<(all_of FeatureStdExtZhinx),
                                "'Zhinx' (Half Float in Integer)">;
 def NoStdExtZhinx : Predicate<"!Subtarget->hasStdExtZhinx()">;
 
 def HasStdExtZhinxOrZhinxmin
-    : Predicate<"Subtarget->hasStdExtZhinx() || Subtarget->hasStdExtZhinxmin()">,
-                AssemblerPredicate<(any_of FeatureStdExtZhinx, FeatureStdExtZhinxmin),
+    : Predicate<"Subtarget->hasStdExtZhinxmin()">,
+                AssemblerPredicate<(all_of FeatureStdExtZhinxmin),
                                    "'Zhinx' (Half Float in Integer) or "
                                    "'Zhinxmin' (Half Float in Integer Minimal)">;
 
@@ -487,15 +487,15 @@ def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
 
 def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
 
-def FeatureStdExtZvfh
-    : SubtargetFeature<"zvfh", "HasStdExtZvfh", "true",
-                       "'Zvfh' (Vector Half-Precision Floating-Point)",
-                       [FeatureStdExtZve32f, FeatureStdExtZfhmin]>;
-
 def FeatureStdExtZvfhmin
     : SubtargetFeature<"zvfhmin", "HasStdExtZvfhmin", "true",
                        "'Zvfhmin' (Vector Half-Precision Floating-Point Minimal)",
                        [FeatureStdExtZve32f]>;
+
+def FeatureStdExtZvfh
+    : SubtargetFeature<"zvfh", "HasStdExtZvfh", "true",
+                       "'Zvfh' (Vector Half-Precision Floating-Point)",
+                       [FeatureStdExtZvfhmin, FeatureStdExtZfhmin]>;
 
 def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
 
