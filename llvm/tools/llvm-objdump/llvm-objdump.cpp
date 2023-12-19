@@ -3320,10 +3320,13 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
         DisassemblerOptions.push_back(V.str());
     }
   }
-  if (AsmSyntax) {
-    const char *Argv[] = {"llvm-objdump", AsmSyntax};
-    llvm::cl::ParseCommandLineOptions(2, Argv);
-  }
+  SmallVector<const char *> Args = {"llvm-objdump"};
+  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_mllvm))
+    Args.push_back(A->getValue());
+  if (AsmSyntax)
+    Args.push_back(AsmSyntax);
+  if (Args.size() > 1)
+    llvm::cl::ParseCommandLineOptions(Args.size(), Args.data());
 
   // Look up any provided build IDs, then append them to the input filenames.
   for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {
