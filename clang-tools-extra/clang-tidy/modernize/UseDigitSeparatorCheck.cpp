@@ -142,10 +142,10 @@ std::string getFormatedFloatString(const llvm::StringRef OriginalLiteralString, 
 std::string
 getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString) {
   // Split string to mantissa and exponent
-  const std::string::size_type EPosition =
-      OriginalLiteralString.str().find('E') != std::string::npos
-          ? OriginalLiteralString.str().find('E')
-          : OriginalLiteralString.str().find('e');
+  const char EChar = OriginalLiteralString.str().find('E') != std::string::npos
+                         ? 'E'
+                         : 'e';
+  const std::string::size_type EPosition = OriginalLiteralString.str().find(EChar);
   const llvm::StringRef MantissaSubString =
       OriginalLiteralString.substr(0, EPosition);
   const llvm::StringRef ExponentSubString =
@@ -157,8 +157,7 @@ getFormatedScientificFloatString(const llvm::StringRef OriginalLiteralString) {
   const std::string FormatedExponentString = getFormatedIntegerString(
       ExponentSubString, llvm::APInt(128, std::stoll(ExponentSubString.str())));
   return FormatedMantissaString +
-         (OriginalLiteralString.str().find('E') != std::string::npos ? 'E'
-                                                                     : 'e') +
+         EChar +
          FormatedExponentString;
 }
 } // namespace
