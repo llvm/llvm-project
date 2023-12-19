@@ -13,6 +13,7 @@
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -35,20 +36,33 @@ public:
   /// correlate.
   enum ProfCorrelatorKind { NONE, DEBUG_INFO, BINARY };
 
+  struct AtomicWarningCounter {
+    AtomicWarningCounter(uint64_t MaxWarnings)
+        : MaxWarnings(MaxWarnings), WarningCount(0){};
+    bool shouldEmitWarning();
+    ~AtomicWarningCounter();
+
+  private:
+    const uint64_t MaxWarnings;
+    std::atomic<uint64_t> WarningCount;
+  };
+
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-  get(StringRef Filename, ProfCorrelatorKind FileKind);
+  get(StringRef Filename, ProfCorrelatorKind FileKind,
+      std::mutex &CorrelateLock, std::mutex &WarnLock,
+      AtomicWarningCounter *WarnCounter);
 
   /// Construct a ProfileData vector used to correlate raw instrumentation data
   /// to their functions.
-  /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
-  virtual Error correlateProfileData(int MaxWarnings) = 0;
+  virtual Error correlateProfileData() = 0;
 
   /// Process debug info and dump the correlation data.
-  /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
-  virtual Error dumpYaml(int MaxWarnings, raw_ostream &OS) = 0;
+  virtual Error dumpYaml(raw_ostream &OS) = 0;
+
+  virtual const char *getDataPointer() const = 0;
 
   /// Return the number of ProfileData elements.
-  std::optional<size_t> getDataSize() const;
+  size_t getDataSize() const;
 
   /// Return a pointer to the names string that this class constructs.
   const char *getNamesPointer() const { return Names.c_str(); }
@@ -60,6 +74,8 @@ public:
   uint64_t getCountersSectionSize() const {
     return Ctx->CountersSectionEnd - Ctx->CountersSectionStart;
   }
+
+  object::BuildIDRef getBuildID() const { return Ctx->BuildID; }
 
   static const char *FunctionNameAttributeName;
   static const char *CFGHashAttributeName;
@@ -84,16 +100,25 @@ protected:
     const char *DataEnd;
     const char *NameStart;
     size_t NameSize;
+    object::BuildIDRef BuildID;
     /// True if target and host have different endian orders.
     bool ShouldSwapBytes;
   };
   const std::unique_ptr<Context> Ctx;
 
-  InstrProfCorrelator(InstrProfCorrelatorKind K, std::unique_ptr<Context> Ctx)
-      : Ctx(std::move(Ctx)), Kind(K) {}
+  InstrProfCorrelator(InstrProfCorrelatorKind K, std::unique_ptr<Context> Ctx,
+                      std::mutex &CorrelateLock, std::mutex &WarnLock,
+                      AtomicWarningCounter *WarnCounter)
+      : Ctx(std::move(Ctx)), IsCorrelated(false), CorrelateLock(CorrelateLock),
+        WarnLock(WarnLock), WarnCounter(WarnCounter), Kind(K) {}
 
   std::string Names;
-  std::vector<std::string> NamesVec;
+  /// True if correlation is already done.
+  bool IsCorrelated;
+  std::mutex &CorrelateLock;
+  std::mutex &WarnLock;
+
+  bool shouldEmitWarning();
 
   struct Probe {
     std::string FunctionName;
@@ -115,8 +140,11 @@ protected:
 
 private:
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-  get(std::unique_ptr<MemoryBuffer> Buffer, ProfCorrelatorKind FileKind);
+  get(std::unique_ptr<MemoryBuffer> Buffer, ProfCorrelatorKind FileKind,
+      std::mutex &CorrelateLock, std::mutex &WarnLock,
+      AtomicWarningCounter *WarnCounter);
 
+  AtomicWarningCounter *WarnCounter;
   const InstrProfCorrelatorKind Kind;
 };
 
@@ -125,13 +153,15 @@ private:
 template <class IntPtrT>
 class InstrProfCorrelatorImpl : public InstrProfCorrelator {
 public:
-  InstrProfCorrelatorImpl(std::unique_ptr<InstrProfCorrelator::Context> Ctx);
+  InstrProfCorrelatorImpl(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
+                          std::mutex &CorrelateLock, std::mutex &WarnLock,
+                          AtomicWarningCounter *WarnCounter);
   static bool classof(const InstrProfCorrelator *C);
 
   /// Return a pointer to the underlying ProfileData vector that this class
   /// constructs.
-  const RawInstrProf::ProfileData<IntPtrT> *getDataPointer() const {
-    return Data.empty() ? nullptr : Data.data();
+  const char *getDataPointer() const override {
+    return Data.empty() ? nullptr : (const char *)Data.data();
   }
 
   /// Return the number of ProfileData elements.
@@ -139,19 +169,20 @@ public:
 
   static llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
   get(std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-      const object::ObjectFile &Obj, ProfCorrelatorKind FileKind);
+      const object::ObjectFile &Obj, ProfCorrelatorKind FileKind,
+      std::mutex &CorrelateLock, std::mutex &WarnLock,
+      AtomicWarningCounter *WarnCounter);
 
 protected:
   std::vector<RawInstrProf::ProfileData<IntPtrT>> Data;
 
-  Error correlateProfileData(int MaxWarnings) override;
+  Error correlateProfileData() override;
   virtual void correlateProfileDataImpl(
-      int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) = 0;
 
   virtual Error correlateProfileNameImpl() = 0;
 
-  Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
+  Error dumpYaml(raw_ostream &OS) override;
 
   void addDataProbe(uint64_t FunctionName, uint64_t CFGHash,
                     IntPtrT CounterOffset, IntPtrT FunctionPtr,
@@ -164,8 +195,11 @@ protected:
 
 private:
   InstrProfCorrelatorImpl(InstrProfCorrelatorKind Kind,
-                          std::unique_ptr<InstrProfCorrelator::Context> Ctx)
-      : InstrProfCorrelator(Kind, std::move(Ctx)){};
+                          std::unique_ptr<InstrProfCorrelator::Context> Ctx,
+                          std::mutex &CorrelateLock, std::mutex &WarnLock,
+                          AtomicWarningCounter *WarnCounter)
+      : InstrProfCorrelator(Kind, std::move(Ctx), CorrelateLock, WarnLock,
+                            WarnCounter){};
   llvm::DenseSet<IntPtrT> CounterOffsets;
 };
 
@@ -174,13 +208,18 @@ private:
 template <class IntPtrT>
 class DwarfInstrProfCorrelator : public InstrProfCorrelatorImpl<IntPtrT> {
 public:
-  DwarfInstrProfCorrelator(std::unique_ptr<DWARFContext> DICtx,
-                           std::unique_ptr<InstrProfCorrelator::Context> Ctx)
-      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx)),
+  DwarfInstrProfCorrelator(
+      std::unique_ptr<DWARFContext> DICtx,
+      std::unique_ptr<InstrProfCorrelator::Context> Ctx,
+      std::mutex &CorrelateLock, std::mutex &WarnLock,
+      InstrProfCorrelator::AtomicWarningCounter *WarnCounter)
+      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx), CorrelateLock,
+                                         WarnLock, WarnCounter),
         DICtx(std::move(DICtx)) {}
 
 private:
   std::unique_ptr<DWARFContext> DICtx;
+  std::vector<std::string> NamesVec;
 
   /// Return the address of the object that the provided DIE symbolizes.
   std::optional<uint64_t> getLocation(const DWARFDie &Die) const;
@@ -217,7 +256,6 @@ private:
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   /// \param Data if provided, populate with the correlation data found
   void correlateProfileDataImpl(
-      int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;
 
   Error correlateProfileNameImpl() override;
@@ -228,8 +266,12 @@ private:
 template <class IntPtrT>
 class BinaryInstrProfCorrelator : public InstrProfCorrelatorImpl<IntPtrT> {
 public:
-  BinaryInstrProfCorrelator(std::unique_ptr<InstrProfCorrelator::Context> Ctx)
-      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx)) {}
+  BinaryInstrProfCorrelator(
+      std::unique_ptr<InstrProfCorrelator::Context> Ctx,
+      std::mutex &CorrelateLock, std::mutex &WarnLock,
+      InstrProfCorrelator::AtomicWarningCounter *WarnCounter)
+      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx), CorrelateLock,
+                                         WarnLock, WarnCounter) {}
 
   /// Return a pointer to the names string that this class constructs.
   const char *getNamesPointer() const { return this->Ctx.NameStart; }
@@ -239,12 +281,42 @@ public:
 
 private:
   void correlateProfileDataImpl(
-      int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;
 
   Error correlateProfileNameImpl() override;
 };
 
+// InstrProfCorrelators contains a map from BuildID to InstrProfCorrelator and
+// correlate profile on-demand when users call getCorrelator.
+class InstrProfCorrelators {
+public:
+  static llvm::Expected<std::unique_ptr<InstrProfCorrelators>>
+  get(ArrayRef<std::pair<StringRef, InstrProfCorrelator::ProfCorrelatorKind>>
+          CorrelateInputs,
+      uint32_t MaxWarnings);
+
+  InstrProfCorrelators(
+      StringMap<std::unique_ptr<InstrProfCorrelator>> &&CorrelatorMap,
+      std::unique_ptr<std::mutex> CorrelateLock,
+      std::unique_ptr<std::mutex> WarnLock,
+      std::unique_ptr<InstrProfCorrelator::AtomicWarningCounter> WarnCounter)
+      : CorrelatorMap(std::move(CorrelatorMap)),
+        CorrelateLock(std::move(CorrelateLock)), WarnLock(std::move(WarnLock)),
+        WarnCounter(std::move(WarnCounter)) {}
+
+  llvm::Expected<const InstrProfCorrelator *>
+  getCorrelator(object::BuildIDRef BuildID) const;
+
+  bool empty() const { return CorrelatorMap.empty(); }
+  Error dumpYaml(raw_ostream &OS);
+
+private:
+  // A map from BuildID to correlator.
+  const StringMap<std::unique_ptr<InstrProfCorrelator>> CorrelatorMap;
+  std::unique_ptr<std::mutex> CorrelateLock;
+  std::unique_ptr<std::mutex> WarnLock;
+  std::unique_ptr<InstrProfCorrelator::AtomicWarningCounter> WarnCounter;
+};
 } // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
