@@ -2574,19 +2574,6 @@ bool X86FastISel::TryEmitSmallMemcpy(X86AddressMode DestAM,
   return true;
 }
 
-// Add an annotation to an intrinsic instruction, specifying whether the
-// intrinsic has been inlined or not.
-//
-// This is only necessary for intrinsics which may emit machine code.
-void annotateIntrinsic(const IntrinsicInst *II, bool Inlined) {
-  IntrinsicInst *CI = const_cast<IntrinsicInst *>(II);
-  LLVMContext &C = CI->getContext();
-  ConstantInt *CInt;
-  CInt = ConstantInt::get(C, APInt(1, Inlined ? 1 : 0));
-  MDNode *N = MDNode::get(C, ConstantAsMetadata::get(CInt));
-  CI->setMetadata("yk.intrinsic.inlined", N);
-}
-
 bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   // FIXME: Handle more intrinsics.
   switch (II->getIntrinsicID()) {
@@ -2724,7 +2711,6 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       // without a call if possible.
       uint64_t Len = cast<ConstantInt>(MCI->getLength())->getZExtValue();
       if (IsMemcpySmall(Len)) {
-        annotateIntrinsic(II, true);
         X86AddressMode DestAM, SrcAM;
         if (!X86SelectAddress(MCI->getRawDest(), DestAM) ||
             !X86SelectAddress(MCI->getRawSource(), SrcAM))
@@ -2741,7 +2727,6 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (MCI->getSourceAddressSpace() > 255 || MCI->getDestAddressSpace() > 255)
       return false;
 
-    annotateIntrinsic(II, false);
     return lowerCallTo(II, "memcpy", II->arg_size() - 1);
   }
   case Intrinsic::memset: {
