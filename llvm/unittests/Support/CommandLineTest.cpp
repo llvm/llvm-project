@@ -2274,4 +2274,31 @@ TEST(CommandLineTest, UnknownCommands) {
   EXPECT_EQ(Errs, "prog: Unknown subcommand 'faz'.  Try: 'prog --help'\n");
 }
 
+TEST(CommandLineTest, SubCommandGroups) {
+  // Check that options in subcommand groups are associated with expected
+  // subcommands.
+
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "SC1 subcommand");
+  StackSubCommand SC2("sc2", "SC2 subcommand");
+  StackSubCommand SC3("sc3", "SC3 subcommand");
+  cl::SubCommandGroup Group12 = {&SC1, &SC2};
+
+  StackOption<bool> Opt12("opt12", cl::sub(Group12), cl::init(false));
+  StackOption<bool> Opt3("opt3", cl::sub(SC3), cl::init(false));
+
+  // The "--opt12" option is expected to be added to both subcommands in the
+  // group, but not to the top-level "no subcommand" pseudo-subcommand or the
+  // "sc3" subcommand.
+  EXPECT_EQ(1, SC1.OptionsMap.size());
+  EXPECT_TRUE(SC1.OptionsMap.contains("opt12"));
+
+  EXPECT_EQ(1, SC2.OptionsMap.size());
+  EXPECT_TRUE(SC2.OptionsMap.contains("opt12"));
+
+  EXPECT_FALSE(cl::SubCommand::getTopLevel().OptionsMap.contains("opt12"));
+  EXPECT_FALSE(SC3.OptionsMap.contains("opt12"));
+}
+
 } // anonymous namespace
