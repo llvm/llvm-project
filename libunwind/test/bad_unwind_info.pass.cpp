@@ -26,7 +26,7 @@
 __attribute__((naked)) void bad_unwind_info() {
 #if defined(__aarch64__)
   __asm__("// not using 0 because unwinder was already resilient to that\n"
-          "mov     x8, #12\n"
+          "mov     x8, #4\n"
           "stp     x30, x8, [sp, #-16]!\n"
           ".cfi_def_cfa_offset 16\n"
           "// purposely use incorrect offset for x30\n"
