@@ -5691,13 +5691,14 @@ public:
 
     // Check every mask operand
     for (auto [opIdx, operand] : llvm::enumerate(createMaskOp.getOperands())) {
-      // Most basic case - this operand is a constant value. Note that for
-      // scalable dimensions, CreateMaskOp can be folded only if the
-      // corresponding operand is negative or zero.
       if (getConstantIntValue(operand)) {
+        // Most basic case - this operand is a constant value. Note that for
+        // scalable dimensions, CreateMaskOp can be folded only if the
+        // corresponding operand is negative or zero.
         APInt intVal;
-        if (isScalable && !(matchPattern(operand, m_ConstantInt(&intVal)) ||
-                            intVal.isStrictlyPositive()))
+        if (retTy.getScalableDims()[opIdx] &&
+            (!matchPattern(operand, m_ConstantInt(&intVal)) ||
+             intVal.isStrictlyPositive()))
           return failure();
 
         continue;
