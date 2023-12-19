@@ -48,13 +48,6 @@ export namespace std {
   } // namespace ranges
 #endif
 
-  // [alg.fold], fold
-  namespace ranges {
-    using std::ranges::fold_left;
-    using std::ranges::fold_left_with_iter;
-    using std::ranges::fold_left_with_iter_result;
-  } // namespace ranges
-
   // [alg.foreach], for each
   using std::for_each;
 
@@ -167,11 +160,11 @@ export namespace std {
     // [alg.fold], fold
     using std::ranges::fold_left;
     using std::ranges::fold_left_with_iter;
+    using std::ranges::fold_left_with_iter_result;
 #  if 0
     using std::ranges::fold_left_first;
     using std::ranges::fold_right;
     using std::ranges::fold_right_last;
-    using std::ranges::fold_left_with_iter_result;
     using std::ranges::fold_left_with_iter;
     using std::ranges::fold_left_first_with_iter;
     using std::ranges::fold_left_first_with_iter;
