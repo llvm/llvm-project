@@ -155,6 +155,7 @@ public:
   LIBC_INLINE_VAR static constexpr StorageType EXP_MANT_MASK =
       EXP_MASK | SIG_MASK;
 
+protected:
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QNAN_MASK & bits(x) != 0
   LIBC_INLINE_VAR static constexpr StorageType QNAN_MASK =
