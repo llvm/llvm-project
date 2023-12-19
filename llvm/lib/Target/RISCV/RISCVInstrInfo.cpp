@@ -1575,7 +1575,6 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 
 bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
-
   if (TargetInstrInfo::isReallyTriviallyReMaterializable(MI))
     return true;
 
@@ -1590,8 +1589,8 @@ bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     MachineInstr *UseMI = &*MRI.use_instr_begin(Dest.getReg());
     MachineBasicBlock::const_iterator DefItr(MI);
     MachineBasicBlock::const_iterator UseItr(UseMI);
-    const MachineBasicBlock *MBB = nullptr;
-    if ((MBB = MI.getParent()) != UseMI->getParent())
+    const MachineBasicBlock *MBB = MI.getParent();
+    if (MBB != UseMI->getParent())
       return false;
 
     for (; DefItr != UseItr && DefItr != MBB->end(); DefItr++) {

@@ -759,6 +759,7 @@ def CSRRCI : CSR_ii<0b111, "csrrci">;
 
 let Predicates = [IsRV64] in {
 def LWU   : Load_ri<0b110, "lwu">, Sched<[WriteLDW, ReadMemBase]>;
+let isReMaterializable = 1 in
 def LD    : Load_ri<0b011, "ld">, Sched<[WriteLDD, ReadMemBase]>;
 def SD    : Store_rri<0b011, "sd">, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
 

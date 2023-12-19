@@ -4639,8 +4639,8 @@ define i128 @cmpxchg128(ptr %p) nounwind {
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a3, 0
 ; RV64-NEXT:    call __atomic_compare_exchange_16@plt
-; RV64-NEXT:    ld a1, 8(sp)
 ; RV64-NEXT:    ld a0, 0(sp)
+; RV64-NEXT:    ld a1, 8(sp)
 ; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
