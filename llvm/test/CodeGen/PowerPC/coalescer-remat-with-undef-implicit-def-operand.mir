@@ -6,9 +6,6 @@ alignment:       16
 tracksRegLiveness: true
 frameInfo:
   maxAlignment:    128
-stack:
-  - { id: 0, size: 128, alignment: 128, local-offset: -128 }
-  - { id: 1, size: 4096, alignment: 16, local-offset: -4224 }
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name:            _Z13testTransposeIfLj31ELj17EEvv
