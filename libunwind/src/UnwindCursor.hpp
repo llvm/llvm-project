@@ -2704,7 +2704,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(pc) || !isReadableAddr(pc + 4))
+  if (!isReadableAddr(pc))
     return false;
   auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
@@ -2759,7 +2759,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(pc) || !isReadableAddr(pc + 4))
+  if (!isReadableAddr(pc))
     return false;
   const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for the two instructions used in the sigreturn trampoline
@@ -2817,7 +2817,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
-  if (!isReadableAddr(pc) || !isReadableAddr(pc + 2))
+  if (!isReadableAddr(pc))
     return false;
   const auto inst = *reinterpret_cast<const uint16_t *>(pc);
   if (inst == 0x0a77 || inst == 0x0aad) {
@@ -2972,9 +2972,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
   // This code is heavily based on Abseil's 'address_is_readable.cc',
   // which is Copyright Abseil Authors (2017).
 
-  // Align to 8-bytes.
-  const auto alignedAddr = addr & ~pint_t{7};
-  const auto sigsetAddr = reinterpret_cast<sigset_t *>(alignedAddr);
+  const auto sigsetAddr = reinterpret_cast<sigset_t *>(addr);
   // We have to check that addr is nullptr because sigprocmask allows that
   // as an argument without failure.
   if (!sigsetAddr)
