@@ -12,15 +12,14 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStackChkFail, Death) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::__stack_chk_fail(); },
-               WITH_SIGNAL(SIGABRT));
+  EXPECT_DEATH([] { __stack_chk_fail(); }, WITH_SIGNAL(SIGABRT));
 }
 
 TEST(LlvmLibcStackChkFail, Smash) {
   EXPECT_DEATH(
       [] {
         int arr[20];
-        LIBC_NAMESPACE::memset(arr, 0xAA, 9001);
+        LIBC_NAMESPACE::memset(arr, 0xAA, 2001);
       },
       WITH_SIGNAL(SIGABRT));
 }
