@@ -260,6 +260,7 @@ add_llvm_component_library(LLVMSupport
   raw_os_ostream.cpp
   raw_ostream.cpp
   raw_ostream_proxy.cpp
+  raw_socket_stream.cpp
   regcomp.c
   regerror.c
   regexec.c
