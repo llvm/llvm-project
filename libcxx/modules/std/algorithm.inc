@@ -164,20 +164,20 @@ export namespace std {
     // [alg.ends.with], ends with
     using std::ranges::ends_with;
 
-#  if 0
     // [alg.fold], fold
     using std::ranges::fold_left;
+    using std::ranges::fold_left_with_iter;
+#  if 0
     using std::ranges::fold_left_first;
     using std::ranges::fold_right;
     using std::ranges::fold_right_last;
-    using std::ranges::fold_left_with_iter;
     using std::ranges::fold_left_with_iter_result;
     using std::ranges::fold_left_with_iter;
     using std::ranges::fold_left_first_with_iter;
     using std::ranges::fold_left_first_with_iter;
 #  endif
 #endif // _LIBCPP_STD_VER >= 23
-  }    // namespace ranges
+  } // namespace ranges
 
   // [alg.modifying.operations], mutating sequence operations
   // [alg.copy], copy

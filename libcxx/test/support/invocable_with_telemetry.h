@@ -77,7 +77,7 @@ public:
   }
 
 private:
-  F f_              = F();
+  F f_                            = F();
   invocable_telemetry* telemetry_ = nullptr;
 };
 

@@ -15,7 +15,7 @@
 #include "test_iterators.h"
 
 #if TEST_STD_VER < 17
-#error "test/support/test_range.h" can only be included in builds supporting ranges
+#  error "test/support/test_range.h" can only be included in builds supporting ranges
 #endif
 
 struct sentinel {
