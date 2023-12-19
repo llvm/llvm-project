@@ -410,12 +410,14 @@ static void filterByName(
   };
   for (const auto &CU : CUs) {
     filterDieNames(CU.get());
-    // If we have split DWARF, then recurse down into the .dwo files as well.
-    DWARFDie CUDie = CU->getUnitDIE(false);
-    DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
-    // If we have a DWO file, we need to search it as well
-    if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
-      filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+    if (DumpNonSkeleton) {
+      // If we have split DWARF, then recurse down into the .dwo files as well.
+      DWARFDie CUDie = CU->getUnitDIE(false);
+      DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
+      // If we have a DWO file, we need to search it as well
+      if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
+        filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+    }
   }
 }
 
@@ -517,7 +519,7 @@ static void findAllApple(
 /// information or probably display all matched entries, or something else...
 static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
                    raw_ostream &OS) {
-  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup);
+  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup, DumpNonSkeleton);
 
   if (!DIEsForAddr)
     return false;
