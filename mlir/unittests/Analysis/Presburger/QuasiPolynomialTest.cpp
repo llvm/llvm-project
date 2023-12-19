@@ -95,4 +95,16 @@ TEST(QuasiPolynomialTest, arith) {
             {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4), Fraction(0, 1)},
             {Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1),
              Fraction(0, 1)}}}));
+
+  QuasiPolynomial quot = qp1 / 2;
+  EXPECT_EQ_QUASIPOLYNOMIAL(
+      quot,
+      QuasiPolynomial(
+          3, {Fraction(1, 6), Fraction(1, 2), Fraction(1, 4)},
+          {{{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
+            {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)}},
+           {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)}},
+           {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+            {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4),
+             Fraction(0, 1)}}}));
 }
