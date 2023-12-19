@@ -51,6 +51,8 @@ struct DeviceTy {
   PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
+  bool IsInit;
+
   bool HasMappedGlobalData = false;
 
   PendingCtorsDtorsPerLibrary PendingCtorsDtors;
