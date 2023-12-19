@@ -5,10 +5,6 @@ SoName: somelib.so
 IfsVersion: 3.0
 Target: { ObjectFormat: ELF, Arch: Aarch64, Endianness: little, BitWidth: 64 }
 Symbols:
-  - { Name: foo, Type: Func }
-  - { Name: bar, Type: Object, Size: 42 }
-  - { Name: baz, Type: Object, Size: 8 }
-  - { Name: not, Type: Object, Size: 128, Undefined: true }
   - { Name: nor, Type: bogus, Undefined: true }
 ...
 

@@ -56,6 +56,21 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
   EXPECT_STREQ(Stub->NeededLibs[2].c_str(), "libbar.so");
 }
 
+TEST(ElfYamlTextAPI, YAMLReadsInvalidSymbols) {
+  const char Data[] =
+      "--- !ifs-v1\n"
+      "IfsVersion: 1.0\n"
+      "SoName: test.so\n"
+      "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, "
+      "BitWidth: 64 }\n"
+      "Symbols:\n"
+      "  - { Name: not, Type: File, Undefined: true, Size: 111, "
+      "Weak: true, Warning: \'All fields populated!\' }\n"
+      "...\n";
+  Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
+  ASSERT_THAT_ERROR(StubOrErr.takeError(), Failed());
+}
+
 TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   const char Data[] =
       "--- !ifs-v1\n"
