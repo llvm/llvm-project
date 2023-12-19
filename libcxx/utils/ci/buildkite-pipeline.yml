@@ -224,6 +224,13 @@ steps:
       arch: aarch64
     <<: *common
 
+  - label: Armv7-M picolibc -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc-no-exceptions
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
+
 - group: AIX
   steps:
   - label: AIX (32-bit)
