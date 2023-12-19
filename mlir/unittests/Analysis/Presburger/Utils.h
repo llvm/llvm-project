@@ -75,12 +75,14 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
 inline void EXPECT_EQ_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
   EXPECT_EQ(a.getNumParams(), b.getNumParams());
 
-  SmallVector<Fraction> aCoeffs = a.getCoefficients(), bCoeffs = b.getCoefficients();
+  SmallVector<Fraction> aCoeffs = a.getCoefficients(),
+                        bCoeffs = b.getCoefficients();
   EXPECT_EQ(aCoeffs.size(), bCoeffs.size());
   for (unsigned i = 0, e = aCoeffs.size(); i < e; i++)
     EXPECT_EQ(aCoeffs[i], bCoeffs[i]);
   
-  std::vector<std::vector<SmallVector<Fraction>>> aAff = a.getAffine(), bAff = b.getAffine();
+  std::vector<std::vector<SmallVector<Fraction>>> aAff = a.getAffine(),
+                                                  bAff = b.getAffine();
   EXPECT_EQ(aAff.size(), bAff.size());
   for (unsigned i = 0, e = aAff.size(); i < e; i++) {
     EXPECT_EQ(aAff[i].size(), bAff[i].size());
