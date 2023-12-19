@@ -177,7 +177,7 @@ export namespace std {
     using std::ranges::fold_left_first_with_iter;
 #  endif
 #endif // _LIBCPP_STD_VER >= 23
-  } // namespace ranges
+  }    // namespace ranges
 
   // [alg.modifying.operations], mutating sequence operations
   // [alg.copy], copy
