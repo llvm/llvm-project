@@ -11,15 +11,9 @@ define amdgpu_kernel void @global_load_tr_b64(ptr addrspace(1) %addr, ptr addrsp
 ; GFX12-SDAG-W32:       ; %bb.0: ; %entry
 ; GFX12-SDAG-W32-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-SDAG-W32-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-SDAG-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-W32-NEXT:    global_load_tr_b64 v[0:1], v2, s[0:1] offset:32 th:TH_LOAD_NT
-; GFX12-SDAG-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-W32-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-W32-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-SDAG-W32-NEXT:    s_nop 0
@@ -30,15 +24,9 @@ define amdgpu_kernel void @global_load_tr_b64(ptr addrspace(1) %addr, ptr addrsp
 ; GFX12-GISEL-W32:       ; %bb.0: ; %entry
 ; GFX12-GISEL-W32-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-GISEL-W32-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-GISEL-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-W32-NEXT:    global_load_tr_b64 v[0:1], v2, s[0:1] offset:32 th:TH_LOAD_NT
-; GFX12-GISEL-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-W32-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-W32-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-GISEL-W32-NEXT:    s_nop 0
@@ -56,15 +44,9 @@ define amdgpu_kernel void @global_load_tr_b128_i16(ptr addrspace(1) %addr, ptr a
 ; GFX12-SDAG-W32:       ; %bb.0: ; %entry
 ; GFX12-SDAG-W32-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-SDAG-W32-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-SDAG-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-W32-NEXT:    global_load_tr_b128 v[0:3], v4, s[0:1] offset:32 th:TH_LOAD_NT
-; GFX12-SDAG-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-W32-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-W32-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX12-SDAG-W32-NEXT:    s_nop 0
@@ -75,15 +57,9 @@ define amdgpu_kernel void @global_load_tr_b128_i16(ptr addrspace(1) %addr, ptr a
 ; GFX12-GISEL-W32:       ; %bb.0: ; %entry
 ; GFX12-GISEL-W32-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-GISEL-W32-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-GISEL-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-W32-NEXT:    global_load_tr_b128 v[0:3], v4, s[0:1] offset:32 th:TH_LOAD_NT
-; GFX12-GISEL-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-W32-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-W32-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX12-GISEL-W32-NEXT:    s_nop 0
@@ -101,15 +77,9 @@ define amdgpu_kernel void @global_load_tr_b128_half(ptr addrspace(1) %addr, ptr 
 ; GFX12-SDAG-W32:       ; %bb.0: ; %entry
 ; GFX12-SDAG-W32-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-SDAG-W32-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-SDAG-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-W32-NEXT:    global_load_tr_b128 v[0:3], v4, s[0:1] offset:32 th:TH_LOAD_NT
-; GFX12-SDAG-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-W32-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-W32-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX12-SDAG-W32-NEXT:    s_nop 0
@@ -120,15 +90,9 @@ define amdgpu_kernel void @global_load_tr_b128_half(ptr addrspace(1) %addr, ptr 
 ; GFX12-GISEL-W32:       ; %bb.0: ; %entry
 ; GFX12-GISEL-W32-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-GISEL-W32-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-GISEL-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-W32-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-W32-NEXT:    global_load_tr_b128 v[0:3], v4, s[0:1] offset:32 th:TH_LOAD_NT
-; GFX12-GISEL-W32-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-W32-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-W32-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-W32-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX12-GISEL-W32-NEXT:    s_nop 0

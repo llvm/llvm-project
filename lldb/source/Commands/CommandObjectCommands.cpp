@@ -411,7 +411,7 @@ protected:
     // Get the alias command.
 
     auto alias_command = args[0].ref();
-    if (alias_command.startswith("-")) {
+    if (alias_command.starts_with("-")) {
       result.AppendError("aliases starting with a dash are not supported");
       if (alias_command == "--help" || alias_command == "--long-help") {
         result.AppendWarning("if trying to pass options to 'command alias' add "

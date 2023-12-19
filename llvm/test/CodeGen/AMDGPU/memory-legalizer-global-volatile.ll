@@ -103,8 +103,6 @@ define amdgpu_kernel void @global_volatile_load_0(
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    global_load_b32 v1, v0, s[0:1] scope:SCOPE_SYS
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX12-WGP-NEXT:    s_nop 0
@@ -117,8 +115,6 @@ define amdgpu_kernel void @global_volatile_load_0(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    global_load_b32 v1, v0, s[0:1] scope:SCOPE_SYS
-; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX12-CU-NEXT:    s_nop 0
@@ -233,8 +229,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    global_load_b32 v0, v0, s[0:1] scope:SCOPE_SYS
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX12-WGP-NEXT:    s_nop 0
@@ -247,8 +241,6 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    global_load_b32 v0, v0, s[0:1] scope:SCOPE_SYS
-; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX12-CU-NEXT:    s_nop 0
@@ -617,8 +609,6 @@ define amdgpu_kernel void @global_volatile_workgroup_acquire_load(
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    global_load_b32 v1, v0, s[0:1] th:TH_LOAD_NT
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
@@ -653,7 +643,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -665,7 +654,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s2
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -677,8 +665,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WGP-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-WGP-NEXT:    s_endpgm
 ;
@@ -690,7 +676,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -702,7 +687,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
-; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -713,8 +697,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX11-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-WGP-NEXT:    s_nop 0
 ; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -727,7 +709,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX11-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-CU-NEXT:    s_nop 0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -740,10 +721,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
-; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-WGP-NEXT:    s_nop 0
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -756,7 +733,6 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_nop 0
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

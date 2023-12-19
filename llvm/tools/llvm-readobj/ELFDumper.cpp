@@ -57,6 +57,7 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -1500,7 +1501,7 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
     return Seg.str();
 
   // E.g. "PT_LOAD" -> "LOAD".
-  assert(Seg.startswith("PT_"));
+  assert(Seg.starts_with("PT_"));
   return Seg.drop_front(3).str();
 }
 
@@ -1690,6 +1691,19 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
     LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ANY_V4),
     LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_OFF_V4),
     LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ON_V4),
+};
+
+const EnumEntry<unsigned> ElfHeaderNVPTXFlags[] = {
+    ENUM_ENT(EF_CUDA_SM20, "sm_20"), ENUM_ENT(EF_CUDA_SM21, "sm_21"),
+    ENUM_ENT(EF_CUDA_SM30, "sm_30"), ENUM_ENT(EF_CUDA_SM32, "sm_32"),
+    ENUM_ENT(EF_CUDA_SM35, "sm_35"), ENUM_ENT(EF_CUDA_SM37, "sm_37"),
+    ENUM_ENT(EF_CUDA_SM50, "sm_50"), ENUM_ENT(EF_CUDA_SM52, "sm_52"),
+    ENUM_ENT(EF_CUDA_SM53, "sm_53"), ENUM_ENT(EF_CUDA_SM60, "sm_60"),
+    ENUM_ENT(EF_CUDA_SM61, "sm_61"), ENUM_ENT(EF_CUDA_SM62, "sm_62"),
+    ENUM_ENT(EF_CUDA_SM70, "sm_70"), ENUM_ENT(EF_CUDA_SM72, "sm_72"),
+    ENUM_ENT(EF_CUDA_SM75, "sm_75"), ENUM_ENT(EF_CUDA_SM80, "sm_80"),
+    ENUM_ENT(EF_CUDA_SM86, "sm_86"), ENUM_ENT(EF_CUDA_SM87, "sm_87"),
+    ENUM_ENT(EF_CUDA_SM89, "sm_89"), ENUM_ENT(EF_CUDA_SM90, "sm_90"),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
@@ -2581,7 +2595,7 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
   llvm::sort(Libs);
 
   for (StringRef L : Libs)
-    W.startLine() << L << "\n";
+    W.printString(L);
 }
 
 template <class ELFT>
@@ -3629,6 +3643,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   else if (e.e_machine == EM_XTENSA)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                           unsigned(ELF::EF_XTENSA_MACH));
+  else if (e.e_machine == EM_CUDA)
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
+                          unsigned(ELF::EF_CUDA_SM));
   Str = "0x" + utohexstr(e.e_flags);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
@@ -5129,6 +5146,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_PAC, "PAC");
+      DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_GCS, "GCS");
     } else {
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
@@ -5862,13 +5880,13 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
       return FindNote(FreeBSDNoteTypes);
     }
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("NetBSD-CORE")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("NetBSD-CORE")) {
     StringRef Result = FindNote(NetBSDCoreNoteTypes);
     if (!Result.empty())
       return Result;
     return FindNote(CoreNoteTypes);
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("OpenBSD")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("OpenBSD")) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.
     StringRef Result = FindNote(OpenBSDCoreNoteTypes);
     if (!Result.empty())
@@ -6910,6 +6928,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_XTENSA)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                    unsigned(ELF::EF_XTENSA_MACH));
+    else if (E.e_machine == EM_CUDA)
+      W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
+                   unsigned(ELF::EF_CUDA_SM));
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);

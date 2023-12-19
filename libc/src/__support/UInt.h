@@ -903,6 +903,7 @@ public:
     return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
   }
   LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>(0); }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 template <> class numeric_limits<Int<128>> {
@@ -913,6 +914,7 @@ public:
   LIBC_INLINE static constexpr Int<128> min() {
     return Int<128>({0, 0x8000'0000'0000'0000});
   }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 // Provides is_integral of U/Int<128>, U/Int<192>, U/Int<256>.

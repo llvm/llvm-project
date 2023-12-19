@@ -514,8 +514,17 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
 public:
-  explicit SpecialBoolAnalysis(ASTContext &Context)
-      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {}
+  explicit SpecialBoolAnalysis(ASTContext &Context, Environment &Env)
+      : DataflowAnalysis<SpecialBoolAnalysis, NoopLattice>(Context) {
+    Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
+        [](QualType Ty) -> llvm::StringMap<QualType> {
+          RecordDecl *RD = Ty->getAsRecordDecl();
+          if (RD == nullptr || RD->getIdentifier() == nullptr ||
+              RD->getName() != "SpecialBool")
+            return {};
+          return {{"is_set", RD->getASTContext().BoolTy}};
+        });
+  }
 
   static NoopLattice initialElement() { return {}; }
 
@@ -530,66 +539,17 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
                           getASTContext()))) {
-      cast<RecordValue>(Env.getValue(*E))
-          ->setProperty("is_set", Env.getBoolLiteralValue(false));
+      Env.setValue(Env.getResultObjectLocation(*E).getSyntheticField("is_set"),
+                   Env.getBoolLiteralValue(false));
     } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
                    "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
                                                        SpecialBoolRecordDecl))))
                                      .bind("call"),
                                  *S, getASTContext()))) {
-      auto &ObjectLoc =
-          *cast<RecordStorageLocation>(getImplicitObjectLocation(*E, Env));
-
-      refreshRecordValue(ObjectLoc, Env)
-          .setProperty("is_set", Env.getBoolLiteralValue(true));
+      if (RecordStorageLocation *ObjectLoc = getImplicitObjectLocation(*E, Env))
+        Env.setValue(ObjectLoc->getSyntheticField("is_set"),
+                     Env.getBoolLiteralValue(true));
     }
-  }
-
-  ComparisonResult compare(QualType Type, const Value &Val1,
-                           const Environment &Env1, const Value &Val2,
-                           const Environment &Env2) override {
-    const auto *Decl = Type->getAsCXXRecordDecl();
-    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
-        Decl->getName() != "SpecialBool")
-      return ComparisonResult::Unknown;
-
-    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return IsSet2 == nullptr ? ComparisonResult::Same
-                               : ComparisonResult::Different;
-
-    if (IsSet2 == nullptr)
-      return ComparisonResult::Different;
-
-    return Env1.proves(IsSet1->formula()) == Env2.proves(IsSet2->formula())
-               ? ComparisonResult::Same
-               : ComparisonResult::Different;
-  }
-
-  // Always returns `true` to accept the `MergedVal`.
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override {
-    const auto *Decl = Type->getAsCXXRecordDecl();
-    if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
-        Decl->getName() != "SpecialBool")
-      return true;
-
-    auto *IsSet1 = cast_or_null<BoolValue>(Val1.getProperty("is_set"));
-    if (IsSet1 == nullptr)
-      return true;
-
-    auto *IsSet2 = cast_or_null<BoolValue>(Val2.getProperty("is_set"));
-    if (IsSet2 == nullptr)
-      return true;
-
-    auto &IsSet = MergedEnv.makeAtomicBoolValue();
-    MergedVal.setProperty("is_set", IsSet);
-    if (Env1.proves(IsSet1->formula()) && Env2.proves(IsSet2->formula()))
-      MergedEnv.assume(IsSet.formula());
-
-    return true;
   }
 };
 
@@ -602,7 +562,7 @@ protected:
             AnalysisInputs<SpecialBoolAnalysis>(
                 Code, ast_matchers::hasName("target"),
                 [](ASTContext &Context, Environment &Env) {
-                  return SpecialBoolAnalysis(Context);
+                  return SpecialBoolAnalysis(Context, Env);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
             /*VerifyResults=*/[&Match](const llvm::StringMap<
@@ -650,7 +610,9 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
         ASSERT_THAT(FooDecl, NotNull());
 
         auto GetFoo = [FooDecl](const Environment &Env) -> const Formula & {
-          return cast<BoolValue>(Env.getValue(*FooDecl)->getProperty("is_set"))
+          auto *Loc =
+              cast<RecordStorageLocation>(Env.getStorageLocation(*FooDecl));
+          return cast<BoolValue>(Env.getValue(Loc->getSyntheticField("is_set")))
               ->formula();
         };
 

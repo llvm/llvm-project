@@ -232,19 +232,19 @@ static Value *MakeBinaryAtomicValue(
 
 static Value *EmitNontemporalStore(CodeGenFunction &CGF, const CallExpr *E) {
   Value *Val = CGF.EmitScalarExpr(E->getArg(0));
-  Value *Address = CGF.EmitScalarExpr(E->getArg(1));
+  Address Addr = CGF.EmitPointerWithAlignment(E->getArg(1));
 
   Val = CGF.EmitToMemory(Val, E->getArg(0)->getType());
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(Address, E->getArg(0)->getType());
+  LValue LV = CGF.MakeAddrLValue(Addr, E->getArg(0)->getType());
   LV.setNontemporal(true);
   CGF.EmitStoreOfScalar(Val, LV, false);
   return nullptr;
 }
 
 static Value *EmitNontemporalLoad(CodeGenFunction &CGF, const CallExpr *E) {
-  Value *Address = CGF.EmitScalarExpr(E->getArg(0));
+  Address Addr = CGF.EmitPointerWithAlignment(E->getArg(0));
 
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(Address, E->getType());
+  LValue LV = CGF.MakeAddrLValue(Addr, E->getType());
   LV.setNontemporal(true);
   return CGF.EmitLoadOfScalar(LV, E->getExprLoc());
 }
@@ -3410,9 +3410,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    { Src0->getType(), Src1->getType() });
     return RValue::get(Builder.CreateCall(F, { Src0, Src1 }));
   }
+  case Builtin::BI__builtin_frexpl: {
+    // Linux PPC will not be adding additional PPCDoubleDouble support.
+    // WIP to switch default to IEEE long double. Will emit libcall for
+    // frexpl instead of legalizing this type in the BE.
+    if (&getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
+      break;
+    LLVM_FALLTHROUGH;
+  }
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
-  case Builtin::BI__builtin_frexpl:
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
@@ -9984,6 +9991,10 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
 
   if (TypeFlags.isOverloadCvt())
     return {Ops[0]->getType(), Ops.back()->getType()};
+
+  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
+      ResultType->isVectorTy())
+    return {ResultType, Ops[1]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
@@ -18204,6 +18215,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     //             D = A * B + C
     // We need to specify one type for matrices AB and one for matrices CD.
     SmallVector<unsigned, 2> ArgsForMatchingMatrixTypes;
+    // Some intrinsics expect "false" as an extra bool argument.
+    bool AppendExtraBoolArg = false;
     unsigned BuiltinWMMAOp;
 
     switch (BuiltinID) {
@@ -18221,17 +18234,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ArgsForMatchingMatrixTypes = {0, 2};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_bf16;
       break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
-    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12:
+      AppendExtraBoolArg = true;
+      LLVM_FALLTHROUGH;
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
       ArgsForMatchingMatrixTypes = {0, 2};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16;
       break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
-    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12:
+      AppendExtraBoolArg = true;
+      LLVM_FALLTHROUGH;
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
+    case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
       ArgsForMatchingMatrixTypes = {0, 2};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16;
       break;
@@ -18344,6 +18361,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *, 6> Args;
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
+    if (AppendExtraBoolArg)
+      Args.push_back(Builder.getFalse());
 
     SmallVector<llvm::Type *, 6> ArgTypes;
     for (auto ArgIdx : ArgsForMatchingMatrixTypes)

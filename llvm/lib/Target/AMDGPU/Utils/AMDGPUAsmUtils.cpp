@@ -36,6 +36,7 @@ namespace SendMsg {
 
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
+// clang-format off
 const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{""}},
   {{"MSG_INTERRUPT"},           ID_INTERRUPT},
@@ -61,6 +62,7 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
 };
+// clang-format on
 // NOLINTEND
 
 const int MSG_SIZE = static_cast<int>(

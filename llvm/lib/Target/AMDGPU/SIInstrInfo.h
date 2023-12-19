@@ -134,9 +134,6 @@ private:
   void splitScalar64BitUnaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                unsigned Opcode, bool Swap = false) const;
 
-  void splitScalar64BitAddSub(SIInstrWorklist &Worklist, MachineInstr &Inst,
-                              MachineDominatorTree *MDT = nullptr) const;
-
   void splitScalar64BitBinaryOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
                                 unsigned Opcode,
                                 MachineDominatorTree *MDT = nullptr) const;
@@ -555,6 +552,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DS;
   }
 
+  static bool isLDSDMA(const MachineInstr &MI) {
+    return isVALU(MI) && (isMUBUF(MI) || isFLAT(MI));
+  }
+
+  bool isLDSDMA(uint16_t Opcode) {
+    return isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode));
+  }
+
   static bool isGWS(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::GWS;
   }
@@ -674,6 +679,10 @@ public:
   bool isAtomic(uint16_t Opcode) const {
     return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
                                   SIInstrFlags::IsAtomicNoRet);
+  }
+
+  static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
+    return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
   }
 
   static bool isWQM(const MachineInstr &MI) {
@@ -898,6 +907,27 @@ public:
 
   bool doesNotReadTiedSource(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
+  }
+
+  static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
+    switch (Opcode) {
+    case AMDGPU::S_WAITCNT_soft:
+      return AMDGPU::S_WAITCNT;
+    case AMDGPU::S_WAITCNT_VSCNT_soft:
+      return AMDGPU::S_WAITCNT_VSCNT;
+    case AMDGPU::S_WAIT_LOADCNT_soft:
+      return AMDGPU::S_WAIT_LOADCNT;
+    case AMDGPU::S_WAIT_STORECNT_soft:
+      return AMDGPU::S_WAIT_STORECNT;
+    case AMDGPU::S_WAIT_SAMPLECNT_soft:
+      return AMDGPU::S_WAIT_SAMPLECNT;
+    case AMDGPU::S_WAIT_BVHCNT_soft:
+      return AMDGPU::S_WAIT_BVHCNT;
+    case AMDGPU::S_WAIT_DSCNT_soft:
+      return AMDGPU::S_WAIT_DSCNT;
+    default:
+      return Opcode;
+    }
   }
 
   bool isVGPRCopy(const MachineInstr &MI) const {

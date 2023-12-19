@@ -1,5 +1,5 @@
-# RUN: llc -O2 -march=amdgcn -mcpu=gfx1200 -run-pass=si-insert-waitcnts -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=CHECK,DEFAULT
-# RUN: llc -O2 -march=amdgcn -mcpu=gfx1200 -mattr=+dynamic-vgpr -run-pass=si-insert-waitcnts -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=CHECK,DVGPR
+# RUN: llc -O2 -march=amdgcn -mcpu=gfx1200 -run-pass=si-insert-waitcnts -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -O2 -march=amdgcn -mcpu=gfx1200 -mattr=+dynamic-vgpr -run-pass=si-insert-waitcnts -verify-machineinstrs -o - %s | FileCheck %s
 
 # Check that we send the DEALLOC_VGPRS message only when appropriate. In
 # particular, we should never send it in dynamic VGPR mode.
@@ -30,13 +30,9 @@
 name:            tbuffer_store1
 body:             |
   bb.0:
-    ; DEFAULT-LABEL: name: tbuffer_store1
-    ; DEFAULT: S_NOP 0
-    ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-    ; DEFAULT-NEXT: S_ENDPGM 0
-    ; DVGPR-LABEL: name: tbuffer_store1
-    ; DVGPR-NOT: S_SENDMSG 3
-    ; DVGPR: S_ENDPGM 0
+    ; CHECK-LABEL: name: tbuffer_store1
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     TBUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, killed renamable $sgpr4, 42, 117, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
@@ -45,13 +41,9 @@ body:             |
 name:            tbuffer_store2
 body:             |
   bb.0:
-    ; DEFAULT-LABEL: name: tbuffer_store2
-    ; DEFAULT: S_NOP 0
-    ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-    ; DEFAULT-NEXT: S_ENDPGM 0
-    ; DVGPR-LABEL: name: tbuffer_store2
-    ; DVGPR-NOT: S_SENDMSG 3
-    ; DVGPR: S_ENDPGM 0
+    ; CHECK-LABEL: name: tbuffer_store2
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     TBUFFER_STORE_FORMAT_XYZW_OFFEN_exact killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed renamable $vgpr4, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 115, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 7)
     S_ENDPGM 0
 ...
@@ -71,13 +63,9 @@ body:             |
 name:            global_store
 body:             |
   bb.0:
-    ; DEFAULT-LABEL: name: global_store
-    ; DEFAULT: S_NOP 0
-    ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-    ; DEFAULT-NEXT: S_ENDPGM 0
-    ; DVGPR-LABEL: name: global_store
-    ; DVGPR-NOT: S_SENDMSG 3
-    ; DVGPR: S_ENDPGM 0
+    ; CHECK-LABEL: name: global_store
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
     S_WAIT_STORECNT 0
     S_ENDPGM 0
@@ -87,13 +75,9 @@ body:             |
 name:            buffer_store_format
 body:             |
   bb.0:
-    ; DEFAULT-LABEL: name: buffer_store_format
-    ; DEFAULT: S_NOP 0
-    ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-    ; DEFAULT-NEXT: S_ENDPGM 0
-    ; DVGPR-LABEL: name: buffer_store_format
-    ; DVGPR-NOT: S_SENDMSG 3
-    ; DVGPR: S_ENDPGM 0
+    ; CHECK-LABEL: name: buffer_store_format
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     BUFFER_STORE_FORMAT_D16_X_OFFEN_exact killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, killed renamable $sgpr4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
@@ -117,13 +101,9 @@ body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    ; DEFAULT-LABEL: name: global_store_dword
-    ; DEFAULT: S_NOP 0
-    ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-    ; DEFAULT-NEXT: S_ENDPGM 0
-    ; DVGPR-LABEL: name: global_store_dword
-    ; DVGPR-NOT: S_SENDMSG 3
-    ; DVGPR: S_ENDPGM 0
+    ; CHECK-LABEL: name: global_store_dword
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     renamable $vgpr0 = V_MAD_I32_I24_e64 killed $vgpr1, killed $vgpr0, killed $sgpr2, 0, implicit $exec
     GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr2, killed renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec
     S_ENDPGM 0
@@ -160,14 +140,9 @@ body:             |
 ---
 name:            multiple_basic_blocks2
 body:             |
-  ; DEFAULT-LABEL: name: multiple_basic_blocks2
-  ; DEFAULT: bb.2:
-  ; DEFAULT-NEXT:   S_NOP 0
-  ; DEFAULT-NEXT:   S_SENDMSG 3, implicit $exec, implicit $m0
-  ; DEFAULT-NEXT:   S_ENDPGM 0
-  ; DVGPR-LABEL: name: multiple_basic_blocks2
-  ; DVGPR-NOT: S_SENDMSG 3
-  ; DVGPR: S_ENDPGM 0
+  ; CHECK-LABEL: name: multiple_basic_blocks2
+  ; CHECK-NOT: S_SENDMSG 3
+  ; CHECK: S_ENDPGM 0
   bb.0:
     successors: %bb.2
 
@@ -191,14 +166,9 @@ body:             |
 ---
 name:            multiple_basic_blocks3
 body:             |
-  ; DEFAULT-LABEL: name: multiple_basic_blocks3
-  ; DEFAULT: bb.4:
-  ; DEFAULT-NEXT:   S_NOP 0
-  ; DEFAULT-NEXT:   S_SENDMSG 3, implicit $exec, implicit $m0
-  ; DEFAULT-NEXT:   S_ENDPGM 0
-  ; DVGPR-LABEL: name: multiple_basic_blocks3
-  ; DVGPR-NOT: S_SENDMSG 3
-  ; DVGPR: S_ENDPGM 0
+  ; CHECK-LABEL: name: multiple_basic_blocks3
+  ; CHECK-NOT: S_SENDMSG 3
+  ; CHECK: S_ENDPGM 0
   bb.0:
     successors: %bb.2
 
@@ -253,13 +223,9 @@ body:             |
 ---
 name:            recursive_loop_vmem
 body:             |
-  ; DEFAULT-LABEL: name: recursive_loop_vmem
-  ; DEFAULT:   S_NOP 0
-  ; DEFAULT-NEXT:   S_SENDMSG 3, implicit $exec, implicit $m0
-  ; DEFAULT-NEXT:   S_ENDPGM 0
-  ; DVGPR-LABEL: name: recursive_loop_vmem
-  ; DVGPR-NOT: S_SENDMSG 3
-  ; DVGPR: S_ENDPGM 0
+  ; CHECK-LABEL: name: recursive_loop_vmem
+  ; CHECK-NOT: S_SENDMSG 3
+  ; CHECK: S_ENDPGM 0
   bb.0:
     successors: %bb.1
 
@@ -282,13 +248,9 @@ body:             |
 name:            image_store
 body:             |
   bb.0:
-  ; DEFAULT-LABEL: name: image_store
-  ; DEFAULT: S_NOP 0
-  ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-  ; DEFAULT-NEXT: S_ENDPGM 0
-  ; DVGPR-LABEL: name: image_store
-  ; DVGPR-NOT: S_SENDMSG 3
-  ; DVGPR: S_ENDPGM 0
+  ; CHECK-LABEL: name: image_store
+  ; CHECK-NOT: S_SENDMSG 3
+  ; CHECK: S_ENDPGM 0
   IMAGE_STORE_V2_V1_gfx11 killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 12, 0, 1, 0, 0, -1, 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x s32>), addrspace 7)
   S_ENDPGM 0
 ...
@@ -309,13 +271,9 @@ body:             |
 name:            buffer_atomic
 body:             |
   bb.0:
-    ; DEFAULT-LABEL: name: buffer_atomic
-    ; DEFAULT: S_NOP 0
-    ; DEFAULT-NEXT: S_SENDMSG 3, implicit $exec, implicit $m0
-    ; DEFAULT-NEXT: S_ENDPGM 0
-    ; DVGPR-LABEL: name: buffer_atomic
-    ; DVGPR-NOT: S_SENDMSG 3
-    ; DVGPR: S_ENDPGM 0
+    ; CHECK-LABEL: name: buffer_atomic
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
     BUFFER_ATOMIC_ADD_F32_OFFEN killed renamable $vgpr0, killed renamable $vgpr2, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 7)
     S_ENDPGM 0
 ...

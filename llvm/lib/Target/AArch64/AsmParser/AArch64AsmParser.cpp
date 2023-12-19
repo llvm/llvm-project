@@ -3250,7 +3250,7 @@ ParseStatus AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
   }
 
   // Parse hexadecimal representation.
-  if (Tok.is(AsmToken::Integer) && Tok.getString().startswith("0x")) {
+  if (Tok.is(AsmToken::Integer) && Tok.getString().starts_with("0x")) {
     if (Tok.getIntVal() > 255 || isNegative)
       return TokError("encoded floating point value out of range");
 
@@ -7524,7 +7524,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   AsmToken Tok = Parser.getTok();
 
   // Look for '_sym@AUTH' ...
-  if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().endswith("@AUTH")) {
+  if (Tok.is(AsmToken::Identifier) && Tok.getIdentifier().ends_with("@AUTH")) {
     StringRef SymName = Tok.getIdentifier().drop_back(strlen("@AUTH"));
     if (SymName.contains('@'))
       return TokError(

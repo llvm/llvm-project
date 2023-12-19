@@ -131,6 +131,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_cv.h>
+#include <__utility/empty.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
@@ -280,10 +281,10 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     typedef std::reverse_iterator<iterator>       reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    typedef __conditional_t<is_const<_Tp>::value, const char, char> _CharType;
+    typedef __conditional_t<is_const<_Tp>::value, const __empty, __empty> _EmptyType;
 
     struct  _ArrayInStructT { _Tp __data_[1]; };
-    _ALIGNAS_TYPE(_ArrayInStructT) _CharType __elems_[sizeof(_ArrayInStructT)];
+    _ALIGNAS_TYPE(_ArrayInStructT) _EmptyType __elems_[sizeof(_ArrayInStructT)];
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
     value_type* data() _NOEXCEPT {return nullptr;}

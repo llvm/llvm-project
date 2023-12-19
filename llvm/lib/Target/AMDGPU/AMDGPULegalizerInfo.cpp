@@ -633,6 +633,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
   const LLT BufferFatPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_FAT_POINTER);
   const LLT RsrcPtr = GetAddrSpacePtr(AMDGPUAS::BUFFER_RESOURCE);
+  const LLT BufferStridedPtr =
+      GetAddrSpacePtr(AMDGPUAS::BUFFER_STRIDED_POINTER);
 
   const LLT CodePtr = FlatPtr;
 
@@ -681,7 +683,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    if (ST.hasScalarAddSub64())
+    if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S64, S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -689,7 +691,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .minScalar(0, S16)
           .widenScalarToNextMultipleOf(0, 32)
           .maxScalar(0, S32);
-    else
+    } else {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -697,6 +699,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .minScalar(0, S16)
           .widenScalarToNextMultipleOf(0, 32)
           .maxScalar(0, S32);
+    }
     if (ST.hasScalarSMulU64())
       getActionDefinitionsBuilder(G_MUL)
           .legalFor({S64, S32, S16, V2S16})
@@ -713,6 +716,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .minScalar(0, S16)
           .widenScalarToNextMultipleOf(0, 32)
           .custom();
+
+    getActionDefinitionsBuilder(G_MUL)
+      .legalFor({S32, S16, V2S16})
+      .clampMaxNumElementsStrict(0, S16, 2)
+      .scalarize(0)
+      .minScalar(0, S16)
+      .widenScalarToNextMultipleOf(0, 32)
+      .custom();
     assert(ST.hasMad64_32());
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
@@ -1120,7 +1131,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .unsupportedFor({BufferFatPtr, RsrcPtr})
+      .unsupportedFor({BufferFatPtr, BufferStridedPtr, RsrcPtr})
       .legalIf(all(isPointer(0), sameSize(0, 1)))
       .scalarize(0)
       .scalarSameSizeAs(1, 0);
@@ -1410,7 +1421,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // The custom pointers (fat pointers, buffer resources) don't work with load
     // and store at this level. Fat pointers should have been lowered to
     // intrinsics before the translation to MIR.
-    Actions.unsupportedIf(typeInSet(1, {BufferFatPtr, RsrcPtr}));
+    Actions.unsupportedIf(
+        typeInSet(1, {BufferFatPtr, BufferStridedPtr, RsrcPtr}));
 
     // Address space 8 pointers are handled by a 4xs32 load, bitcast, and
     // ptrtoint. This is needed to account for the fact that we can't have i128
@@ -1966,17 +1978,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0)
       .scalarize(0);
 
-  getActionDefinitionsBuilder({
-      // TODO: Verify V_BFI_B32 is generated from expanded bit ops
-      G_FCOPYSIGN,
+  getActionDefinitionsBuilder(
+      {// TODO: Verify V_BFI_B32 is generated from expanded bit ops
+       G_FCOPYSIGN,
 
-      G_ATOMIC_CMPXCHG_WITH_SUCCESS,
-      G_ATOMICRMW_NAND,
-      G_ATOMICRMW_FSUB,
-      G_READ_REGISTER,
-      G_WRITE_REGISTER,
+       G_ATOMIC_CMPXCHG_WITH_SUCCESS, G_ATOMICRMW_NAND, G_ATOMICRMW_FSUB,
+       G_READ_REGISTER, G_WRITE_REGISTER,
 
-      G_SADDO, G_SSUBO}).lower();
+       G_SADDO, G_SSUBO})
+      .lower();
 
   if (ST.hasIEEEMinMax()) {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
@@ -1985,8 +1995,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0);
   } else {
     // TODO: Implement
-    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
-        .lower();
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
   }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
@@ -1996,6 +2005,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
         G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
     .unsupported();
+
+  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -6708,12 +6719,11 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16}};
   int Opcode;
   if (UseNSA) {
-    Opcode =
-        AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                              IsGFX12Plus ? AMDGPU::MIMGEncGfx12 :
-                              IsGFX11 ? AMDGPU::MIMGEncGfx11NSA :
-                                        AMDGPU::MIMGEncGfx10NSA,
-                              NumVDataDwords, NumVAddrDwords);
+    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                   IsGFX12Plus ? AMDGPU::MIMGEncGfx12
+                                   : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
+                                               : AMDGPU::MIMGEncGfx10NSA,
+                                   NumVDataDwords, NumVAddrDwords);
   } else {
     assert(!IsGFX12Plus);
     Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
@@ -6806,8 +6816,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   }
 
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
-    .addDef(DstReg)
-    .addImm(Opcode);
+                 .addDef(DstReg)
+                 .addImm(Opcode);
 
   for (Register R : Ops) {
     MIB.addUse(R);
@@ -6815,8 +6825,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
 
   MIB.addUse(TDescr);
 
-  MIB.addImm(IsA16 ? 1 : 0)
-     .cloneMemRefs(MI);
+  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;
@@ -6865,18 +6874,17 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Ops.push_back(RayDir);
   Ops.push_back(Offsets);
 
-  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY :
-                            AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
-    .addDef(DstReg)
-    .addDef(DstOrigin)
-    .addDef(DstDir)
-    .addImm(Opcode);
+  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                                 : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addDef(DstOrigin)
+                 .addDef(DstDir)
+                 .addImm(Opcode);
 
   for (Register R : Ops)
     MIB.addUse(R);
 
-  MIB.addUse(TDescr)
-     .cloneMemRefs(MI);
+  MIB.addUse(TDescr).cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;

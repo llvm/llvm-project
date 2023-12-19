@@ -368,7 +368,8 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
       AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
-      AddrSpace == AMDGPUAS::BUFFER_RESOURCE) {
+      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
+      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
     return 512;
   }
 
@@ -892,7 +893,7 @@ bool GCNTTIImpl::isReadRegisterSourceOfDivergence(
     return true;
 
   // Special case scalar registers that start with 'v'.
-  if (RegName.startswith("vcc") || RegName.empty())
+  if (RegName.starts_with("vcc") || RegName.empty())
     return false;
 
   // VGPR or AGPR is divergent. There aren't any specially named vector

@@ -592,12 +592,9 @@ protected:
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
 
-  bool insertWait(MachineBasicBlock::iterator &MI,
-                  SIAtomicScope Scope,
-                  SIAtomicAddrSpace AddrSpace,
-                  SIMemOp Op,
-                  bool IsCrossAddrSpaceOrdering,
-                  Position Pos) const override;
+  bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                  SIAtomicAddrSpace AddrSpace, SIMemOp Op,
+                  bool IsCrossAddrSpaceOrdering, Position Pos) const override;
 
   bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, Position Pos) const override;
@@ -1092,7 +1089,8 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             VMCnt ? 0 : getVmcntBitMask(IV),
                             getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(WaitCntImmediate);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
+        .addImm(WaitCntImmediate);
     Changed = true;
   }
 
@@ -2000,14 +1998,15 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             VMCnt ? 0 : getVmcntBitMask(IV),
                             getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(WaitCntImmediate);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
+        .addImm(WaitCntImmediate);
     Changed = true;
   }
 
   if (VSCnt) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
-      .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-      .addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
+        .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+        .addImm(0);
     Changed = true;
   }
 
@@ -2199,8 +2198,7 @@ bool SIGfx12CacheControl::setScope(const MachineBasicBlock::iterator MI,
 
 bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                      SIAtomicScope Scope,
-                                     SIAtomicAddrSpace AddrSpace,
-                                     SIMemOp Op,
+                                     SIAtomicAddrSpace AddrSpace, SIMemOp Op,
                                      bool IsCrossAddrSpaceOrdering,
                                      Position Pos) const {
   bool Changed = false;
@@ -2272,34 +2270,19 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if (LOADCnt) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT)).addImm(0);
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT)).addImm(0);
-
-    unsigned WaitFor = AMDGPU::S_WAIT_LOADCNT;
-
-    if (DSCnt) {
-      WaitFor = AMDGPU::S_WAIT_LOADCNT_DSCNT;
-      DSCnt = false;
-    }
-
-    BuildMI(MBB, MI, DL, TII->get(WaitFor)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT_soft)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT_soft)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft)).addImm(0);
     Changed = true;
   }
 
   if (STORECnt) {
-    unsigned WaitFor = AMDGPU::S_WAIT_STORECNT;
-
-    if (DSCnt) {
-      WaitFor = AMDGPU::S_WAIT_STORECNT_DSCNT;
-      DSCnt = false;
-    }
-
-    BuildMI(MBB, MI, DL, TII->get(WaitFor)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_STORECNT_soft)).addImm(0);
     Changed = true;
   }
 
   if (DSCnt) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft)).addImm(0);
     Changed = true;
   }
 

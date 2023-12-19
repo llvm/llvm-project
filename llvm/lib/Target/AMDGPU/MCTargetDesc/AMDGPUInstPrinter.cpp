@@ -90,7 +90,7 @@ void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
-  const auto& RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_32RegClassID];
+  const auto &RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_32RegClassID];
   unsigned Idx = MI->getOperand(OpNo).getImm();
   assert(Idx < RegCl.getNumRegs());
   O << getRegisterName(RegCl.getRegister(Idx));
@@ -99,7 +99,7 @@ void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printGlobalSReg64(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
-  const auto& RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_64RegClassID];
+  const auto &RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_64RegClassID];
   unsigned Idx = MI->getOperand(OpNo).getImm();
   assert(Idx % 2 == 0);
   assert(Idx / 2 < RegCl.getNumRegs());
@@ -1316,10 +1316,9 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
                                    const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
   unsigned Opc = MI->getOpcode();
-  if (isPermlane16(Opc) ||
-      (isVOP1Cvt_F32_Fp8_Bf8_e64(Opc) &&
-       Opc != AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 &&
-       Opc != AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12)) {
+  if (isPermlane16(Opc) || (isVOP1Cvt_F32_Fp8_Bf8_e64(Opc) &&
+                            Opc != AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 &&
+                            Opc != AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12)) {
     auto FIN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
     auto BCN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);
     unsigned FI = !!(MI->getOperand(FIN).getImm() & SISrcMods::OP_SEL_0);

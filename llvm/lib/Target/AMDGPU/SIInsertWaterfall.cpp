@@ -605,33 +605,37 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
     // EXEC mask handling
     Register Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    unsigned SaveExecOpc =
-      ST->isWave32() ? AMDGPU::S_AND_SAVEEXEC_B32 : AMDGPU::S_AND_SAVEEXEC_B64;
+    unsigned SaveExecOpc = ST->isWave32() ? AMDGPU::S_AND_SAVEEXEC_B32
+                                          : AMDGPU::S_AND_SAVEEXEC_B64;
     unsigned XorTermOpc =
-      ST->isWave32() ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
-    unsigned MovOpc =
-      ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+        ST->isWave32() ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
+    unsigned MovOpc = ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     const auto *BoolXExecRC = RI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
-    Register SaveExec = MRI->createVirtualRegister(BoolXExecRC);
-    Register TmpExec = MRI->createVirtualRegister(BoolXExecRC);
-
-    BuildMI(*CurrMBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), TmpExec);
-
-    // Save the EXEC mask
-    BuildMI(*CurrMBB, I, DL, TII->get(MovOpc), SaveExec)
-        .addReg(Exec);
-
+    MachineBasicBlock &LoopHeaderBB = *MF.CreateMachineBasicBlock();
     MachineBasicBlock &LoopBB = *MF.CreateMachineBasicBlock();
     MachineBasicBlock &RemainderBB = *MF.CreateMachineBasicBlock();
     MachineFunction::iterator MBBI(*CurrMBB);
     ++MBBI;
 
+    MF.insert(MBBI, &LoopHeaderBB);
     MF.insert(MBBI, &LoopBB);
     MF.insert(MBBI, &RemainderBB);
 
+    LoopHeaderBB.addSuccessor(&LoopBB);
     LoopBB.addSuccessor(&LoopBB);
     LoopBB.addSuccessor(&RemainderBB);
+
+    Register SaveExec = MRI->createVirtualRegister(BoolXExecRC);
+    Register TmpExec = MRI->createVirtualRegister(BoolXExecRC);
+
+    // Put TmpExec and SaveExec in the loop header.
+    MachineBasicBlock::iterator LH = LoopHeaderBB.begin();
+    BuildMI(LoopHeaderBB, LH, DL, TII->get(TargetOpcode::IMPLICIT_DEF),
+            TmpExec);
+
+    // Save the EXEC mask
+    BuildMI(LoopHeaderBB, LH, DL, TII->get(MovOpc), SaveExec).addReg(Exec);
 
     // Move all instructions from the SI_WATERFALL_BEGIN to the last
     // SI_WATERFALL_END or last use tagged from SI_WATERFALL_LAST_USE
@@ -651,7 +655,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     MachineBasicBlock::iterator E(Item.Final);
     ++E;
 
-    CurrMBB->addSuccessor(&LoopBB);
+    CurrMBB->addSuccessor(&LoopHeaderBB);
 
     MachineBasicBlock::iterator J = LoopBB.begin();
 
@@ -663,7 +667,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
     BuildMI(LoopBB, J, DL, TII->get(TargetOpcode::PHI), PhiExec)
         .addReg(TmpExec)
-        .addMBB(CurrMBB)
+        .addMBB(&LoopHeaderBB)
         .addReg(NewExec)
         .addMBB(&LoopBB);
 

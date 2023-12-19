@@ -2119,12 +2119,12 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   }
 
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), Dst0)
-    .addDef(Dst1)
-    .addUse(Addr)
-    .addUse(Data0)
-    .addUse(Data1)
-    .addImm(Offset)
-    .cloneMemRefs(MI);
+                 .addDef(Dst1)
+                 .addUse(Addr)
+                 .addUse(Data0)
+                 .addUse(Data1)
+                 .addImm(Offset)
+                 .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
@@ -3313,7 +3313,7 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   MIB.add(MI.getOperand(5 + OpOffset)); // soffset
   MIB.add(MI.getOperand(6 + OpOffset)); // imm offset
   unsigned Aux = MI.getOperand(7 + OpOffset).getImm();
-  MIB.addImm(Aux & AMDGPU::CPol::ALL);  // cpol
+  MIB.addImm(Aux & AMDGPU::CPol::ALL);                  // cpol
   MIB.addImm(Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0); // swz
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
@@ -5650,7 +5650,6 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   I.eraseFromParent();
   return true;
 }
-
 
 bool AMDGPUInstructionSelector::selectSBarrierLeave(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();

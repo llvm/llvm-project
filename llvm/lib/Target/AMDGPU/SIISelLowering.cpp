@@ -766,12 +766,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
+  if (Subtarget->hasPrefetch())
+    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+
   if (Subtarget->hasIEEEMinMax())
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
-
-  if (Subtarget->hasPrefetch())
-    setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
@@ -1052,12 +1052,20 @@ static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
 MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
   if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
     return MVT::v5i32;
+  if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+      DL.getPointerSizeInBits(AS) == 192)
+    return MVT::v6i32;
   return AMDGPUTargetLowering::getPointerTy(DL, AS);
 }
 /// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
 /// v8i32 when padding is added.
+/// The in-memory representation of a p9 is {p8, i32, i32}, which is
+/// also v8i32 with padding.
 MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
-  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+  if ((AMDGPUAS::BUFFER_FAT_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 160) ||
+      (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
+       DL.getPointerSizeInBits(AS) == 192))
     return MVT::v8i32;
   return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
 }
@@ -1229,10 +1237,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
   case Intrinsic::amdgcn_image_bvh8_intersect_ray: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(
-      IntrID == Intrinsic::amdgcn_image_bvh_intersect_ray ?
-        CI.getType() :
-        cast<StructType>(CI.getType())->getElementType(0)); // XXX: what is correct VT?
+    Info.memVT =
+        MVT::getVT(IntrID == Intrinsic::amdgcn_image_bvh_intersect_ray
+                       ? CI.getType()
+                       : cast<StructType>(CI.getType())
+                             ->getElementType(0)); // XXX: what is correct VT?
 
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
@@ -1467,7 +1476,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE) {
+      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
+      AS == AMDGPUAS::BUFFER_STRIDED_POINTER) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -1859,7 +1869,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   // We may not have the kernarg segment argument if we have no kernel
   // arguments.
   if (!InputPtrReg)
-    return DAG.getConstant(0, SL, PtrVT);
+    return DAG.getConstant(Offset, SL, PtrVT);
 
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
@@ -8857,9 +8867,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     SmallVector<SDValue, 16> Ops;
     Ops.push_back(NodePtr);
-    Ops.push_back(DAG.getBuildVector(MVT::v2i32, DL,
-                  {DAG.getBitcast(MVT::i32, RayExtent),
-                   DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, InstanceMask)}));
+    Ops.push_back(DAG.getBuildVector(
+        MVT::v2i32, DL,
+        {DAG.getBitcast(MVT::i32, RayExtent),
+         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, InstanceMask)}));
     Ops.push_back(RayOrigin);
     Ops.push_back(RayDir);
     Ops.push_back(Offsets);
@@ -8908,17 +8919,16 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX12Plus ? AMDGPU::MIMGEncGfx12 :
-                                     IsGFX11 ? AMDGPU::MIMGEncGfx11NSA :
-                                               AMDGPU::MIMGEncGfx10NSA,
+                                     IsGFX12Plus ? AMDGPU::MIMGEncGfx12
+                                     : IsGFX11   ? AMDGPU::MIMGEncGfx11NSA
+                                                 : AMDGPU::MIMGEncGfx10NSA,
                                      NumVDataDwords, NumVAddrDwords);
     } else {
       assert(!IsGFX12Plus);
-      Opcode =
-          AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                IsGFX11 ? AMDGPU::MIMGEncGfx11Default
-                                        : AMDGPU::MIMGEncGfx10Default,
-                                NumVDataDwords, NumVAddrDwords);
+      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                     IsGFX11 ? AMDGPU::MIMGEncGfx11Default
+                                             : AMDGPU::MIMGEncGfx10Default,
+                                     NumVDataDwords, NumVAddrDwords);
     }
     assert(Opcode != -1);
 
@@ -15071,7 +15081,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::pair(0U, RC);
   }
 
-  if (Constraint.startswith("{") && Constraint.endswith("}")) {
+  if (Constraint.starts_with("{") && Constraint.ends_with("}")) {
     StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
     if (RegName.consume_front("v")) {
       RC = &AMDGPU::VGPR_32RegClass;

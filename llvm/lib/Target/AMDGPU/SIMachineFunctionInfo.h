@@ -98,18 +98,12 @@ public:
   }
 
   // These are inaccessible memory from IR.
-  bool isAliased(const MachineFrameInfo *) const override {
-    return false;
-  }
+  bool isAliased(const MachineFrameInfo *) const override { return false; }
 
   // These are inaccessible memory from IR.
-  bool mayAlias(const MachineFrameInfo *) const override {
-    return false;
-  }
+  bool mayAlias(const MachineFrameInfo *) const override { return false; }
 
-  void printCustom(raw_ostream &OS) const override {
-    OS << "GlobalRegister";
-  }
+  void printCustom(raw_ostream &OS) const override { OS << "GlobalRegister"; }
 };
 
 namespace yaml {
@@ -549,6 +543,7 @@ private:
   unsigned NumVirtualVGPRSpillLanes = 0;
   unsigned NumPhysicalVGPRSpillLanes = 0;
   SmallVector<Register, 2> SpillVGPRs;
+  SmallVector<Register, 2> SpillPhysVGPRs;
   using WWMSpillsMap = MapVector<Register, int>;
   // To track the registers used in instructions that can potentially modify the
   // inactive lanes. The WWM instructions and the writelane instructions for

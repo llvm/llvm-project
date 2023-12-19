@@ -14,7 +14,6 @@ def MUBUFScratchOffset : ComplexPattern<iPTR, 3, "SelectMUBUFScratchOffset", [],
 
 def BUFSOffset   : ComplexPattern<iPTR, 1, "SelectBUFSOffset">;
 
-
 def BUFAddrKind {
   int Offset = 0;
   int OffEn  = 1;
@@ -1345,7 +1344,7 @@ def BUFFER_GL1_INV : MUBUF_Invalidate<"buffer_gl1_inv">;
 //===----------------------------------------------------------------------===//
 
 multiclass MUBUF_LoadIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
-                                         string opcode, ValueType memoryVt = vt> {
+                                  string opcode, ValueType memoryVt = vt> {
   defvar st = !if(!eq(memoryVt, vt), name, mubuf_intrinsic_load<name, memoryVt>);
 
   def : GCNPat<
@@ -1792,7 +1791,7 @@ multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
 }
 
 let OtherPredicates = [HasAtomicFaddNoRtnInsts] in
-defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32, "BUFFER_ATOMIC_ADD_F32", ["noret"]>;
+  defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32, "BUFFER_ATOMIC_ADD_F32", ["noret"]>;
 
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts] in {
   let SubtargetPredicate = isGFX9Only in
@@ -1803,7 +1802,7 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts] in {
 } // End OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts]
 
 let OtherPredicates = [HasAtomicFaddRtnInsts] in
-defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32, "BUFFER_ATOMIC_ADD_F32", ["ret"]>;
+  defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32, "BUFFER_ATOMIC_ADD_F32", ["ret"]>;
 
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in {
   let SubtargetPredicate = isGFX9Only in
@@ -2062,7 +2061,7 @@ defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORDX2_ADDR64, BUFFER_STORE_DWOR
 
 
 multiclass MUBUFStore_PatternOffset_Common <string Instr, ValueType vt,
-                                            PatFrag st> {
+                                     PatFrag st> {
 
   def : GCNPat <
     (st vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset)),
@@ -2140,7 +2139,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE_D16_HI", i32, truncstorei8_hi16_
 //===----------------------------------------------------------------------===//
 
 multiclass MTBUF_LoadIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
-                                         string opcode, ValueType memoryVt = vt> {
+                                  string opcode, ValueType memoryVt = vt> {
   defvar st = !if(!eq(memoryVt, vt), name, mtbuf_intrinsic_load<name, memoryVt>);
 
   def : GCNPat<
