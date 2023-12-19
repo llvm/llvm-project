@@ -57,10 +57,10 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     int rounding = fputil::quick_get_round();
     if (sign) {
       if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
-        return FPBits(FPBits::MAX_NORMAL | FPBits::SIGN_MASK).get_val();
+        return -FPBits::max_normal();
     } else {
       if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-        return FPBits(FPBits::MAX_NORMAL).get_val();
+        return FPBits::max_normal();
     }
 
     fputil::set_errno_if_required(ERANGE);
