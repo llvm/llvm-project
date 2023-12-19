@@ -161,29 +161,63 @@ static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
 }
 
 /// Prepends operations of firstPloop's body into secondPloop's body.
-static void fuseIfLegal(ParallelOp firstPloop, ParallelOp secondPloop,
-                        OpBuilder b,
+/// Updates secondPloop with new loop.
+static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
+                        OpBuilder builder,
                         llvm::function_ref<bool(Value, Value)> mayAlias) {
+  Block *block1 = firstPloop.getBody();
+  Block *block2 = secondPloop.getBody();
   IRMapping firstToSecondPloopIndices;
-  firstToSecondPloopIndices.map(firstPloop.getBody()->getArguments(),
-                                secondPloop.getBody()->getArguments());
+  firstToSecondPloopIndices.map(block1->getArguments(), block2->getArguments());
 
   if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
                      mayAlias))
     return;
 
-  b.setInsertionPointToStart(secondPloop.getBody());
-  for (auto &op : firstPloop.getBody()->without_terminator())
-    b.clone(op, firstToSecondPloopIndices);
+  DominanceInfo dom;
+  for (Operation *user : firstPloop->getUsers())
+    if (!dom.properlyDominates(secondPloop, user, /*enclosingOpOk*/ false))
+      return;
+
+  ValueRange inits1 = firstPloop.getInitVals();
+  ValueRange inits2 = secondPloop.getInitVals();
+
+  SmallVector<Value> newInitVars(inits1.begin(), inits1.end());
+  newInitVars.append(inits2.begin(), inits2.end());
+
+  IRRewriter b(builder);
+  b.setInsertionPoint(secondPloop);
+  auto newSecondPloop = b.create<ParallelOp>(
+      secondPloop.getLoc(), secondPloop.getLowerBound(),
+      secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
+
+  Block *newBlock = newSecondPloop.getBody();
+  newBlock->getTerminator()->erase();
+
+  block1->getTerminator()->erase();
+
+  b.inlineBlockBefore(block1, newBlock, newBlock->end(),
+                      newBlock->getArguments());
+  b.inlineBlockBefore(block2, newBlock, newBlock->end(),
+                      newBlock->getArguments());
+
+  ValueRange results = newSecondPloop.getResults();
+  firstPloop.replaceAllUsesWith(results.take_front(inits1.size()));
+  secondPloop.replaceAllUsesWith(results.take_back(inits2.size()));
   firstPloop.erase();
+  secondPloop.erase();
+  secondPloop = newSecondPloop;
 }
 
 void mlir::scf::naivelyFuseParallelOps(
     Region &region, llvm::function_ref<bool(Value, Value)> mayAlias) {
   OpBuilder b(region);
   // Consider every single block and attempt to fuse adjacent loops.
+  SmallVector<SmallVector<ParallelOp>, 1> ploopChains;
   for (auto &block : region) {
-    SmallVector<SmallVector<ParallelOp, 8>, 1> ploopChains{{}};
+    ploopChains.clear();
+    ploopChains.push_back({});
+
     // Not using `walk()` to traverse only top-level parallel loops and also
     // make sure that there are no side-effecting ops between the parallel
     // loops.
@@ -201,7 +235,7 @@ void mlir::scf::naivelyFuseParallelOps(
       // TODO: Handle region side effects properly.
       noSideEffects &= isMemoryEffectFree(&op) && op.getNumRegions() == 0;
     }
-    for (ArrayRef<ParallelOp> ploops : ploopChains) {
+    for (MutableArrayRef<ParallelOp> ploops : ploopChains) {
       for (int i = 0, e = ploops.size(); i + 1 < e; ++i)
         fuseIfLegal(ploops[i], ploops[i + 1], b, mayAlias);
     }
