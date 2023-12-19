@@ -1545,6 +1545,11 @@ struct BubbleUpShapeCastForElementwiseOps final
 
     VectorType sourceType = op.getSourceVectorType();
     VectorType resultType = op.getResultVectorType();
+    if (resultType.getShape().size() == 0) {
+      // Some elementwise ops don't support zero dim. For now skip this case.
+      return failure();
+    }
+
     auto loc = op.getLoc();
 
     SmallVector<Value> newOperands;
