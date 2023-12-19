@@ -12,8 +12,12 @@ class TestSBValueSynthetic(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
+        self.runCmd("command script import formatter.py")
+        self.runCmd(
+            "type synthetic add --python-class formatter.FooSyntheticProvider Foo"
+        )
 
-        vector = self.frame().FindVariable("vector")
-        has_vector = self.frame().FindVariable("has_vector")
-        self.expect(str(vector), exe=False, substrs=["42", "47"])
-        self.expect(str(has_vector), exe=False, substrs=["42", "47"])
+        formatted = self.frame().FindVariable("foo")
+        has_formatted = self.frame().FindVariable("has_foo")
+        self.expect(str(formatted), exe=False, substrs=["synth_child"])
+        self.expect(str(has_formatted), exe=False, substrs=["synth_child"])
