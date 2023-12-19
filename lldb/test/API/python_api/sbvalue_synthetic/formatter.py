@@ -6,7 +6,7 @@ class FooSyntheticProvider:
         target = valobj.GetTarget()
         data = lldb.SBData.CreateDataFromCString(lldb.eByteOrderLittle, 8, "S")
         self._child = valobj.CreateValueFromData(
-                "synth_child", data, target.GetBasicType(lldb.eBasicTypeChar)
+            "synth_child", data, target.GetBasicType(lldb.eBasicTypeChar)
         )
 
     def num_children(self):

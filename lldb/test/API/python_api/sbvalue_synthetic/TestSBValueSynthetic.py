@@ -13,7 +13,9 @@ class TestSBValueSynthetic(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp")
         )
         self.runCmd("command script import formatter.py")
-        self.runCmd("type synthetic add --python-class formatter.FooSyntheticProvider Foo")
+        self.runCmd(
+            "type synthetic add --python-class formatter.FooSyntheticProvider Foo"
+        )
 
         formatted = self.frame().FindVariable("foo")
         has_formatted = self.frame().FindVariable("has_foo")
