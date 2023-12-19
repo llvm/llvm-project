@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Implementations of well-known functions in mathematics that are useful for
+// testing algorithms.
+
 #ifndef LIBCXX_TEST_MATHS_H
 #define LIBCXX_TEST_MATHS_H
 

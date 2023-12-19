@@ -61,16 +61,14 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
     assert(result.value == expected);
   }
   {
-    auto invocations                                      = 0;
-    auto moves                                            = 0;
-    auto copies                                           = 0;
-    auto f2                                               = invocable_with_telemetry(f, invocations, moves, copies);
+    auto telemetry                                        = invocable_telemetry();
+    auto f2                                               = invocable_with_telemetry(f, telemetry);
     is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r.begin(), r.end(), init, f2);
     assert(result.in == r.end());
     assert(result.value == expected);
-    assert(invocations == std::ranges::distance(r));
-    assert(moves == 0);
-    assert(copies == 1);
+    assert(telemetry.invocations == std::ranges::distance(r));
+    assert(telemetry.moves == 0);
+    assert(telemetry.copies == 1);
   }
 
   {
@@ -78,15 +76,13 @@ constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected
     assert(result == expected);
   }
   {
-    auto invocations                             = 0;
-    auto moves                                   = 0;
-    auto copies                                  = 0;
-    auto f2                                      = invocable_with_telemetry(f, invocations, moves, copies);
+    auto telemetry                               = invocable_telemetry();
+    auto f2                                      = invocable_with_telemetry(f, telemetry);
     std::same_as<Expected> decltype(auto) result = fold_left(r.begin(), r.end(), init, f2);
     assert(result == expected);
-    assert(invocations == std::ranges::distance(r));
-    assert(moves == 0);
-    assert(copies == 1);
+    assert(telemetry.invocations == std::ranges::distance(r));
+    assert(telemetry.moves == 0);
+    assert(telemetry.copies == 1);
   }
 }
 
@@ -99,15 +95,13 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
     assert(result.value == expected);
   }
   {
-    auto invocations                             = 0;
-    auto moves                                   = 0;
-    auto copies                                  = 0;
-    auto f2                                      = invocable_with_telemetry(f, invocations, moves, copies);
+    auto telemetry                               = invocable_telemetry();
+    auto f2                                      = invocable_with_telemetry(f, telemetry);
     std::same_as<Expected> decltype(auto) result = fold_left(r, init, f2);
     assert(result == expected);
-    assert(invocations == std::ranges::distance(r));
-    assert(moves == 0);
-    assert(copies == 1);
+    assert(telemetry.invocations == std::ranges::distance(r));
+    assert(telemetry.moves == 0);
+    assert(telemetry.copies == 1);
   }
 
   {
@@ -115,15 +109,13 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
     assert(result == expected);
   }
   {
-    auto invocations                             = 0;
-    auto moves                                   = 0;
-    auto copies                                  = 0;
-    auto f2                                      = invocable_with_telemetry(f, invocations, moves, copies);
+    auto telemetry                               = invocable_telemetry();
+    auto f2                                      = invocable_with_telemetry(f, telemetry);
     std::same_as<Expected> decltype(auto) result = fold_left(r, init, f2);
     assert(result == expected);
-    assert(invocations == std::ranges::distance(r));
-    assert(moves == 0);
-    assert(copies == 1);
+    assert(telemetry.invocations == std::ranges::distance(r));
+    assert(telemetry.moves == 0);
+    assert(telemetry.copies == 1);
   }
 }
 
@@ -136,16 +128,14 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
     assert(result.value == expected);
   }
   {
-    auto invocations                                 = 0;
-    auto moves                                       = 0;
-    auto copies                                      = 0;
-    auto f2                                          = invocable_with_telemetry(f, invocations, moves, copies);
+    auto telemetry                                   = invocable_telemetry();
+    auto f2                                          = invocable_with_telemetry(f, telemetry);
     auto r2                                          = r;
     is_dangling_with<Expected> decltype(auto) result = fold_left_with_iter(std::move(r2), init, f2);
     assert(result.value == expected);
-    assert(invocations == std::ranges::distance(r));
-    assert(moves == 0);
-    assert(copies == 1);
+    assert(telemetry.invocations == std::ranges::distance(r));
+    assert(telemetry.moves == 0);
+    assert(telemetry.copies == 1);
   }
 
   {
@@ -154,16 +144,14 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
     assert(result == expected);
   }
   {
-    auto invocations                             = 0;
-    auto moves                                   = 0;
-    auto copies                                  = 0;
-    auto f2                                      = invocable_with_telemetry(f, invocations, moves, copies);
+    auto telemetry                               = invocable_telemetry();
+    auto f2                                      = invocable_with_telemetry(f, telemetry);
     auto r2                                      = r;
     std::same_as<Expected> decltype(auto) result = fold_left(std::move(r2), init, f2);
     assert(result == expected);
-    assert(invocations == std::ranges::distance(r));
-    assert(moves == 0);
-    assert(copies == 1);
+    assert(telemetry.invocations == std::ranges::distance(r));
+    assert(telemetry.moves == 0);
+    assert(telemetry.copies == 1);
   }
 }
 
