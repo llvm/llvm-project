@@ -27,7 +27,7 @@
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmls.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]], <vscale x 8 x bfloat> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svmls_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, svbfloat16_t op3)
+svbfloat16_t test_svmls_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, svbfloat16_t op3) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svmls, _bf16, _m)(pg, op1, op2, op3);
 }
@@ -46,7 +46,7 @@ svbfloat16_t test_svmls_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, 
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmls.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[OP2:%.*]], <vscale x 8 x bfloat> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
-svbfloat16_t test_svmls_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, svbfloat16_t op3)
+svbfloat16_t test_svmls_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, svbfloat16_t op3) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svmls, _bf16, _z)(pg, op1, op2, op3);
 }
@@ -63,7 +63,7 @@ svbfloat16_t test_svmls_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmls.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]], <vscale x 8 x bfloat> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svmls_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, svbfloat16_t op3)
+svbfloat16_t test_svmls_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, svbfloat16_t op3) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svmls, _bf16, _x)(pg, op1, op2, op3);
 }
@@ -84,7 +84,7 @@ svbfloat16_t test_svmls_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmls.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svmls_n_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, bfloat16_t op3)
+svbfloat16_t test_svmls_n_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, bfloat16_t op3) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svmls, _n_bf16, _m)(pg, op1, op2, op3);
 }
@@ -107,7 +107,7 @@ svbfloat16_t test_svmls_n_bf16_m(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmls.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[OP2:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
-svbfloat16_t test_svmls_n_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, bfloat16_t op3)
+svbfloat16_t test_svmls_n_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, bfloat16_t op3) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svmls, _n_bf16, _z)(pg, op1, op2, op3);
 }
@@ -128,7 +128,7 @@ svbfloat16_t test_svmls_n_bf16_z(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmls.u.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svmls_n_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, bfloat16_t op3)
+svbfloat16_t test_svmls_n_bf16_x(svbool_t pg, svbfloat16_t op1, svbfloat16_t op2, bfloat16_t op3) __arm_streaming_compatible
 {
   return SVE_ACLE_FUNC(svmls, _n_bf16, _x)(pg, op1, op2, op3);
 }
