@@ -28,12 +28,9 @@ using namespace llvm::object;
 using namespace llvm::MachO;
 using namespace llvm::MachO::DylibReader;
 
-auto TripleCmp = [](const Triple &LHS, const Triple &RHS) {
-  return LHS.getTriple() < RHS.getTriple();
-};
-using TripleSet = std::set<Triple, decltype(TripleCmp)>;
+using TripleVec = std::vector<Triple>;
 
-static TripleSet constructTriples(MachOObjectFile *Obj,
+static TripleVec constructTriples(MachOObjectFile *Obj,
                                   const Architecture ArchT) {
   auto getOSVersionStr = [](uint32_t V) {
     PackedVersion OSVersion(V);
@@ -47,8 +44,7 @@ static TripleSet constructTriples(MachOObjectFile *Obj,
     return getOSVersionStr(Vers.version);
   };
 
-  // FIXME: Can remove TripleCmp arg when building in c++20.
-  TripleSet Triples(TripleCmp);
+  TripleVec Triples;
   bool IsIntel = ArchitectureSet(ArchT).hasX86();
   auto Arch = getArchitectureName(ArchT);
 
@@ -57,61 +53,61 @@ static TripleSet constructTriples(MachOObjectFile *Obj,
     switch (cmd.C.cmd) {
     case MachO::LC_VERSION_MIN_MACOSX:
       OSVersion = getOSVersion(cmd);
-      Triples.emplace(Arch, "apple", "macos" + OSVersion);
+      Triples.emplace_back(Arch, "apple", "macos" + OSVersion);
       break;
     case MachO::LC_VERSION_MIN_IPHONEOS:
       OSVersion = getOSVersion(cmd);
       if (IsIntel)
-        Triples.emplace(Arch, "apple", "ios" + OSVersion, "simulator");
+        Triples.emplace_back(Arch, "apple", "ios" + OSVersion, "simulator");
       else
-        Triples.emplace(Arch, "apple", "ios" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "ios" + OSVersion);
       break;
     case MachO::LC_VERSION_MIN_TVOS:
       OSVersion = getOSVersion(cmd);
       if (IsIntel)
-        Triples.emplace(Arch, "apple", "tvos" + OSVersion, "simulator");
+        Triples.emplace_back(Arch, "apple", "tvos" + OSVersion, "simulator");
       else
-        Triples.emplace(Arch, "apple", "tvos" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "tvos" + OSVersion);
       break;
     case MachO::LC_VERSION_MIN_WATCHOS:
       OSVersion = getOSVersion(cmd);
       if (IsIntel)
-        Triples.emplace(Arch, "apple", "watchos" + OSVersion, "simulator");
+        Triples.emplace_back(Arch, "apple", "watchos" + OSVersion, "simulator");
       else
-        Triples.emplace(Arch, "apple", "watchos" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "watchos" + OSVersion);
       break;
     case MachO::LC_BUILD_VERSION: {
       OSVersion = getOSVersionStr(Obj->getBuildVersionLoadCommand(cmd).minos);
       switch (Obj->getBuildVersionLoadCommand(cmd).platform) {
       case MachO::PLATFORM_MACOS:
-        Triples.emplace(Arch, "apple", "macos" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "macos" + OSVersion);
         break;
       case MachO::PLATFORM_IOS:
-        Triples.emplace(Arch, "apple", "ios" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "ios" + OSVersion);
         break;
       case MachO::PLATFORM_TVOS:
-        Triples.emplace(Arch, "apple", "tvos" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "tvos" + OSVersion);
         break;
       case MachO::PLATFORM_WATCHOS:
-        Triples.emplace(Arch, "apple", "watchos" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "watchos" + OSVersion);
         break;
       case MachO::PLATFORM_BRIDGEOS:
-        Triples.emplace(Arch, "apple", "bridgeos" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "bridgeos" + OSVersion);
         break;
       case MachO::PLATFORM_MACCATALYST:
-        Triples.emplace(Arch, "apple", "ios" + OSVersion, "macabi");
+        Triples.emplace_back(Arch, "apple", "ios" + OSVersion, "macabi");
         break;
       case MachO::PLATFORM_IOSSIMULATOR:
-        Triples.emplace(Arch, "apple", "ios" + OSVersion, "simulator");
+        Triples.emplace_back(Arch, "apple", "ios" + OSVersion, "simulator");
         break;
       case MachO::PLATFORM_TVOSSIMULATOR:
-        Triples.emplace(Arch, "apple", "tvos" + OSVersion, "simulator");
+        Triples.emplace_back(Arch, "apple", "tvos" + OSVersion, "simulator");
         break;
       case MachO::PLATFORM_WATCHOSSIMULATOR:
-        Triples.emplace(Arch, "apple", "watchos" + OSVersion, "simulator");
+        Triples.emplace_back(Arch, "apple", "watchos" + OSVersion, "simulator");
         break;
       case MachO::PLATFORM_DRIVERKIT:
-        Triples.emplace(Arch, "apple", "driverkit" + OSVersion);
+        Triples.emplace_back(Arch, "apple", "driverkit" + OSVersion);
         break;
       default:
         break; // Skip any others.
@@ -126,7 +122,7 @@ static TripleSet constructTriples(MachOObjectFile *Obj,
   // Record unknown platform for older binaries that don't enforce platform
   // load commands.
   if (Triples.empty())
-    Triples.emplace(Arch, "apple", "unknown");
+    Triples.emplace_back(Arch, "apple", "unknown");
 
   return Triples;
 }
