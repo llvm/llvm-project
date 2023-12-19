@@ -123,7 +123,7 @@ public:
     // situation.
     if (!CCC.getBaseType().isNull() || !CCC.getPreferredType().isNull())
       return;
-    if (StringRef(Result.Keyword).startswith(Prefix))
+    if (StringRef(Result.Keyword).starts_with(Prefix))
       Results.push_back(Result.Keyword);
   }
 
@@ -186,7 +186,7 @@ void ReplCompletionConsumer::ProcessCodeCompleteResults(
         break;
       }
       if (!Result.Declaration->getDeclName().isIdentifier() ||
-          !Result.Declaration->getName().startswith(Prefix)) {
+          !Result.Declaration->getName().starts_with(Prefix)) {
         break;
       }
       CCH->handleDeclaration(Result);
