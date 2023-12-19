@@ -41,7 +41,7 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   using FloatProperties<T>::FRACTION_LEN;
 
 private:
-  using FloatProperties<T>::QNAN_MASK;
+  using FloatProperties<T>::QUIET_NAN_MASK;
 
 public:
   using FloatProperties<T>::SIGN_MASK;
@@ -157,7 +157,7 @@ public:
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_MANT_MASK) == (EXP_MASK | QNAN_MASK);
+    return (bits & EXP_MANT_MASK) == (EXP_MASK | QUIET_NAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {
@@ -199,7 +199,7 @@ public:
   }
 
   LIBC_INLINE static constexpr T build_quiet_nan(StorageType v) {
-    return build_nan(QNAN_MASK | v);
+    return build_nan(QUIET_NAN_MASK | v);
   }
 
   // The function convert integer number and unbiased exponent to proper float

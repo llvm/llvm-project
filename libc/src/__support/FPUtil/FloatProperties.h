@@ -157,15 +157,15 @@ public:
 
 protected:
   // If a number x is a NAN, then it is a quiet NAN if:
-  //   QNAN_MASK & bits(x) != 0
-  LIBC_INLINE_VAR static constexpr StorageType QNAN_MASK =
+  //   QUIET_NAN_MASK & bits(x) != 0
+  LIBC_INLINE_VAR static constexpr StorageType QUIET_NAN_MASK =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 2) // 0b1100...
           : bit_at(SIG_LEN - 1);                      // 0b1000...
 
   // If a number x is a NAN, then it is a signalling NAN if:
-  //   SNAN_MASK & bits(x) != 0
-  LIBC_INLINE_VAR static constexpr StorageType SNAN_MASK =
+  //   SIGNALING_NAN_MASK & bits(x) != 0
+  LIBC_INLINE_VAR static constexpr StorageType SIGNALING_NAN_MASK =
       UP::ENCODING == internal::FPEncoding::X86_ExtendedPrecision
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
           : bit_at(SIG_LEN - 2);                      // 0b0100...

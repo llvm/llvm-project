@@ -37,7 +37,7 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   using FloatProperties<long double>::FRACTION_LEN;
 
 private:
-  using FloatProperties<long double>::QNAN_MASK;
+  using FloatProperties<long double>::QUIET_NAN_MASK;
 
 public:
   using FloatProperties<long double>::SIGN_MASK;
@@ -200,7 +200,7 @@ public:
   }
 
   LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
-    return build_nan(QNAN_MASK | v);
+    return build_nan(QUIET_NAN_MASK | v);
   }
 
   LIBC_INLINE static constexpr long double min_normal() {
