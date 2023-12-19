@@ -31,13 +31,13 @@
 // RUN: %clang_pgogen -o %t -g -mllvm --debug-info-correlate -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-foo.cpp -c -fpic -shared -Wl,--build-id -o %t-libfoo.so
 // RUN: %clang_pgogen -o %t -g -mllvm --debug-info-correlate -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp %t-libfoo.so -Wl,--build-id -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.proflite %run %t
-// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t,%t-libfoo.o %t.proflite
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t,%t-libfoo.so %t.proflite
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
 // One binary is built without build id.
 // RUN: %clang_pgogen -o %t -g -mllvm --debug-info-correlate -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp %t-libfoo.so -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.proflite %run %t
-// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t,%t-libfoo.o %t.proflite
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t,%t-libfoo.so %t.proflite
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
 // Warning about multiple correlate files have the same build id.
