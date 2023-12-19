@@ -45,9 +45,13 @@ public:
     assert(numParam == x.getNumParams() &&
            "two quasi-polynomials with different numbers of parameters cannot "
            "be added!");
-    coefficients.append(x.coefficients);
-    affine.insert(affine.end(), x.affine.begin(), x.affine.end());
-    return *this;
+    SmallVector<Fraction> sumCoeffs;
+    sumCoeffs.append(coefficients);
+    sumCoeffs.append(x.coefficients);
+    std::vector<std::vector<SmallVector<Fraction>>> sumAff;
+    sumAff.insert(sumAff.end(), affine.begin(), affine.end());
+    sumAff.insert(sumAff.end(), x.affine.begin(), x.affine.end());
+    return QuasiPolynomial(numParam, sumCoeffs, sumAff);
   }
 
   QuasiPolynomial operator-(QuasiPolynomial &x) {
@@ -83,9 +87,10 @@ public:
 
   QuasiPolynomial operator/(Fraction x) {
     assert(x != 0 && "division by zero!");
-    for (Fraction &coeff : coefficients)
+    QuasiPolynomial qp(*this);
+    for (Fraction &coeff : qp.coefficients)
       coeff /= x;
-    return *this;
+    return qp;
   };
 
   // Removes terms which evaluate to zero from the expression.
