@@ -160,7 +160,7 @@ public:
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr _ConstIterator
   __parse_chrono_specs(_ConstIterator __begin, _ConstIterator __end, __flags __flags) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "When called with an empty input the function will cause "
         "undefined behavior by evaluating data not in the input");
