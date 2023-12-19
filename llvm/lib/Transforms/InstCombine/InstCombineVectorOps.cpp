@@ -777,10 +777,10 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
   assert(V->getType()->isVectorTy() && "Invalid shuffle!");
   unsigned NumElts = cast<FixedVectorType>(V->getType())->getNumElements();
 
-  if (match(V, m_Undef())) {
+  if (match(V, m_Poison())) {
     Mask.assign(NumElts, -1);
     return std::make_pair(
-        PermittedRHS ? UndefValue::get(PermittedRHS->getType()) : V, nullptr);
+        PermittedRHS ? PoisonValue::get(PermittedRHS->getType()) : V, nullptr);
   }
 
   if (isa<ConstantAggregateZero>(V)) {
