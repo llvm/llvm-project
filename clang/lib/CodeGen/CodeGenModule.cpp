@@ -6867,6 +6867,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
         if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
           DI->completeUnusedClass(*CRD);
     }
+    // If we're emitting a dynamic class from the importable module we're
+    // emitting, we always need to emit the virtual table according to the ABI
+    // requirement.
+    if (CRD->getDefinition() && CRD->isDynamicClass() &&
+        CRD->isInCurrentModuleUnit())
+      EmitVTable(CRD);
+
     // Emit any static data members, they may be definitions.
     for (auto *I : CRD->decls())
       if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I))
