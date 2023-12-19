@@ -105,6 +105,26 @@ TEST(QuasiPolynomialTest, arith) {
             {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)}},
            {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)}},
            {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+            {Fraction(1, 4), Fraction(2, 1), Fraction(6, 5), Fraction(-9, 8)},
             {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4),
              Fraction(0, 1)}}}));
+}
+
+TEST(QuasiPolynomialTest, simplify) {
+  QuasiPolynomial qp(2,
+                     {Fraction(2, 3), Fraction(0, 1), Fraction(1, 1),
+                      Fraction(1, 2), Fraction(0, 1)},
+                     {{{Fraction(1, 1), Fraction(3, 4), Fraction(5, 3)},
+                       {Fraction(2, 1), Fraction(0, 1), Fraction(0, 1)}},
+                      {{Fraction(1, 3), Fraction(8, 5), Fraction(2, 5)}},
+                      {{Fraction(2, 7), Fraction(9, 5), Fraction(0, 1)},
+                       {Fraction(0, 1), Fraction(0, 1), Fraction(0, 1)}},
+                      {{Fraction(1, 1), Fraction(4, 5), Fraction(6, 5)}},
+                      {{Fraction(1, 3), Fraction(4, 3), Fraction(7, 8)}}});
+  EXPECT_EQ_QUASIPOLYNOMIAL(
+      qp.simplify(),
+      QuasiPolynomial(2, {Fraction(2, 3), Fraction(1, 2)},
+                      {{{Fraction(1, 1), Fraction(3, 4), Fraction(5, 3)},
+                        {Fraction(2, 1), Fraction(0, 1), Fraction(0, 1)}},
+                       {{Fraction(1, 1), Fraction(4, 5), Fraction(6, 5)}}}));
 }
