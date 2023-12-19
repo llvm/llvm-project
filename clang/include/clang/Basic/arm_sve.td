@@ -1993,24 +1993,24 @@ def SVWHILEHS_COUNT  : SInst<"svwhilehs_{d}",  "}nni", "QcQsQiQl", MergeNone, "a
 }
 
 multiclass MultiVecLoad<string i> {
-  // FIXME: Add IsStreamingOrHasSVE2p1 when available (SME2 requires __arm_streaming)
-  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "cUc",   [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # H_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # W_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "iUif",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # D_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "lUld",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "cUc",   [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # H_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # W_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "iUif",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # D_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "lUld",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  // FIXME: Replace IsStreamingCompatible with IsStreamingOrHasSVE2p1 when available (SME2 requires __arm_streaming)
+  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "cUc",   [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # H_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "sUshb", [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # W_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "iUif",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # D_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "lUld",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "cUc",   [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # H_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "sUshb", [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # W_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "iUif",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # D_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "lUld",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
 
-  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "cUc",   [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # H_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # W_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "iUif",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # D_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "lUld",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "cUc",   [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # H_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "sUshb", [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # W_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "iUif",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # D_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "lUld",  [IsStructLoad], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "cUc",   [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # H_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "sUshb", [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # W_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "iUif",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # D_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "lUld",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "cUc",   [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # H_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "sUshb", [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # W_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "iUif",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # D_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "lUld",  [IsStructLoad, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
 }
 
 let TargetGuard = "sve2p1|sme2" in {
@@ -2019,24 +2019,24 @@ let TargetGuard = "sve2p1|sme2" in {
 }
 
 multiclass MultiVecStore<string i> {
-  // FIXME: Add IsStreamingOrHasSVE2p1 when available (SME2 requires __arm_streaming)
-  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "cUc",   [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # H_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # W_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "iUif",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # D_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "lUld",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "cUc",   [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # H_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # W_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "iUif",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # D_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "lUld",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  // FIXME: Replace IsStreamingCompatible with IsStreamingOrHasSVE2p1 when available (SME2 requires __arm_streaming)
+  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "cUc",   [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # H_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "sUshb", [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # W_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "iUif",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # D_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "lUld",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "cUc",   [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # H_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "sUshb", [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # W_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "iUif",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # D_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "lUld",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
 
-  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "cUc",   [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # H_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # W_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "iUif",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # D_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "lUld",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "cUc",   [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # H_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "sUshb", [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # W_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "iUif",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
-  def SV # NAME # D_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "lUld",  [IsStructStore], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "cUc",   [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # H_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "sUshb", [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # W_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "iUif",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # D_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "lUld",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "cUc",   [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # H_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "sUshb", [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # W_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "iUif",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # D_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "lUld",  [IsStructStore, IsStreamingCompatible], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
 }
 
 let TargetGuard = "sve2p1|sme2" in {
