@@ -117,15 +117,15 @@ bool isaCopyOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
-// Common implementation for ConvolutionOpInterface
-namespace convolution_impl {
-DenseIntElementsAttr getStridesAttr(ConvolutionOpInterface op);
-DenseIntElementsAttr getDilationsAttr(ConvolutionOpInterface op);
-} // namespace convolution_impl
 
 // Common implementations for DepthwiseConvolutionOpInterface
 namespace depthwise_convolution_impl {
-ArrayAttr getIndexingMaps(DepthwiseConvolutionOpInterface op);
+DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
+DenseIntElementsAttr getDilationsAttr(DepthwiseConvolutionOpInterface op);
+ArrayAttr createBasicIndexingMaps(MLIRContext *ctx, int64_t numSpatial,
+                                  int64_t channelPos,
+                                  const SmallVectorImpl<int64_t> &strides,
+                                  SmallVectorImpl<int64_t> &dilations);
 ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
 void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
                    ArrayRef<NamedAttribute> attrs);

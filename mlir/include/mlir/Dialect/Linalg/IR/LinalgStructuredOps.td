@@ -483,8 +483,14 @@ def DepthwiseConvNDOp : LinalgStructuredBase_Op<"depthwise_conv_nd",
       }
       // Implement functions necessary for DestinationStyleOpInterface.
       MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
-      // DepthwiseConvolutionInterface implementations
-      bool isQuantized() {return false; }
+
+      // Implement functions necessary for LinalgOp.
+      ArrayAttr getIndexingMaps();
+
+      // Implement functions necessary for DepthwiseConvolutionOpInterface
+      int64_t getChannelPosition() {
+          return (getChannelFirstAttr().getValue()) ? 1 : getNumSpatialDims() + 1;
+      }
     }];
 }
 
@@ -590,8 +596,14 @@ def DepthwiseConvNDQOp : LinalgStructuredBase_Op<"depthwise_conv_nd_q",
       }
       // Implement functions necessary for DestinationStyleOpInterface.
       MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
-      // DepthwiseConvolutionInterface implementations
-      bool isQuantized() { return true; }
+
+      // Implement functions necessary for LinalgOp.
+      ArrayAttr getIndexingMaps();
+
+      // Implement functions necessary for DepthwiseConvolutionOpInterface
+      int64_t getChannelPosition() {
+          return (getChannelFirstAttr().getValue()) ? 1 : getNumSpatialDims() + 1;
+      }
     }];
 }
 

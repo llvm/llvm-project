@@ -176,16 +176,6 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
       }]
     >
   ];
-  let extraSharedClassDeclaration = [{
-    // Returns strides attribute.
-    ::mlir::DenseIntElementsAttr getStridesAttr() {
-        return detail::convolution_impl::getStridesAttr($_op);
-    }
-    // Returns dilations attribute.
-    ::mlir::DenseIntElementsAttr getDilationsAttr() {
-        return detail::convolution_impl::getDilationsAttr($_op);
-    }
-  }];
 }
 
 
@@ -888,23 +878,27 @@ def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
 
 def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpInterface", [
   LinalgConvolutionOpInterface]> {
-  let description = [{
-    A depthwise convolution is defined in general terms:
+  let description = [{"
+    A depthwise convolution is defined in general terms":
     1. It is a convolution as defined by `ConvolutionOpInterface`.
-    2. The channel and multiplier dimensions are consecutive and always in `CM` order
-    3. `input_rank == kernel_rank == output_rank + 1` (including batch dim in input and output)
+    2. Operands have the following properties
+       i) `image` has a batch, channel, and spatial dims
+       ii) `kernel` has channel, multipier, and spatial dims
+       iii) `init` has a batch, channel, multiplier, and spatial dims
+    3. The channel and multiplier dimensions are consecutive and always in `CM` order.
+    4. There is a notion of channel position.
+    5. `input_rank == kernel_rank == output_rank + 1` (including batch dim in input and output).
+    6. Number of spatial dimensions is always `input_rank - 2`.
+    7. Optional `strides` and `dilations` attrs.
   }];
   let cppNamespace = "::mlir::linalg";
   let verify = [{ return detail::verifyDepthwiseConvolutionInterface($_op); }];
   let methods = [
     InterfaceMethod<[{
-      Returns indexing maps for any spatial dimension.
+      Returns the channel position.
     }],
-    "::mlir::ArrayAttr", "getIndexingMaps", (ins),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{
-        return detail::depthwise_convolution_impl::getIndexingMaps($_op);
-      }]>,
+    "int64_t", "getChannelPosition", (ins)
+    >,
     InterfaceMethod<[{
       Returns indexing maps for any spatial dimension.
     }],
@@ -912,18 +906,23 @@ def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpI
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
         return detail::depthwise_convolution_impl::getIteratorTypes($_op);
-      }]>,
-    InterfaceMethod<[{
-      Returns whether op is quantized or not.
-    }],
-    "bool", "isQuantized", (ins)
-    >
+    }]>
   ];
 
-  let extraClassDeclaration = [{
-    // Returns channel first attribute.
-    bool getChannelFirst() {
-        return (*this)->getAttrOfType<BoolAttr>("channel_first").getValue();
+  let extraSharedClassDeclaration = [{
+    // TODO (before merge): Figure out how to make `getStridesAttr`
+    // to not conflict with the getter for explicit attr args.
+    // Returns strides attribute.
+    ::mlir::DenseIntElementsAttr getStrides1Attr() {
+        return detail::depthwise_convolution_impl::getStridesAttr($_op);
+    }
+    // Returns dilations attribute.
+    ::mlir::DenseIntElementsAttr getDilations1Attr() {
+        return detail::depthwise_convolution_impl::getDilationsAttr($_op);
+    }
+    // Returns number of spatial dimensions
+    int64_t getNumSpatialDims() {
+      return ::llvm::cast<ShapedType>(this->getOperation()->getOperand(0).getType()).getRank() - 2;
     }
   }];
 }

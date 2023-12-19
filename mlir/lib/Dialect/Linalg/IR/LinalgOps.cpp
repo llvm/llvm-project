@@ -1727,7 +1727,23 @@ void mlir::linalg::detail::depthwise_convolution_impl::quantizedRegionBuilder(
   helper.yieldOutputs({value8});
 }
 
-// TODO: Figure out how to move this to interface
+ArrayAttr DepthwiseConvNDOp::getIndexingMaps() {
+  ArrayAttr cached = (*this)->getAttrOfType<ArrayAttr>(
+      LinalgDialect::kMemoizedIndexingMapsAttrName);
+  if (cached)
+    return cached;
+
+  auto numSpatial = getNumSpatialDims();
+  int64_t channelPos = getChannelPosition();
+  SmallVector<int64_t> strides(getStrides1Attr().getValues<int64_t>());
+  SmallVector<int64_t> dilations(getDilations1Attr().getValues<int64_t>());
+  cached = detail::depthwise_convolution_impl::createBasicIndexingMaps(
+      getContext(), numSpatial, channelPos, strides, dilations);
+
+  (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+  return cached;
+}
+
 void DepthwiseConvNDOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -1736,6 +1752,30 @@ void DepthwiseConvNDOp::getEffects(
   getGenericEffectsImpl(effects, getOperation()->getResults(), getDpsInputs(),
                         getDpsInits());
 }
+
+ArrayAttr DepthwiseConvNDQOp::getIndexingMaps() {
+  ArrayAttr cached = (*this)->getAttrOfType<ArrayAttr>(
+      LinalgDialect::kMemoizedIndexingMapsAttrName);
+  if (cached)
+    return cached;
+
+  MLIRContext *ctx = getContext();
+  auto numSpatial = getNumSpatialDims();
+  int64_t channelPos = getChannelPosition();
+  SmallVector<int64_t> strides(getStrides1Attr().getValues<int64_t>());
+  SmallVector<int64_t> dilations(getDilations1Attr().getValues<int64_t>());
+  SmallVector<Attribute> maps(
+      detail::depthwise_convolution_impl::createBasicIndexingMaps(
+          ctx, numSpatial, channelPos, strides, dilations)
+          .getValue());
+  SmallVector<Attribute> scalarMaps(
+      2, AffineMapAttr::get(AffineMap::get(3 + 2 * numSpatial, 0, {}, ctx)));
+  maps.insert(maps.end() - 1, scalarMaps.begin(), scalarMaps.end());
+  cached = Builder(ctx).getArrayAttr(maps);
+  (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+  return cached;
+}
+
 void DepthwiseConvNDQOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {

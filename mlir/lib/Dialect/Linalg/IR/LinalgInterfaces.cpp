@@ -638,13 +638,13 @@ enum class MatchConvolutionResult {
 };
 } // namespace mlir::linalg::detail
 
-DenseIntElementsAttr mlir::linalg::detail::convolution_impl::getStridesAttr(
-    ConvolutionOpInterface op) {
+DenseIntElementsAttr
+mlir::linalg::detail::depthwise_convolution_impl::getStridesAttr(
+    DepthwiseConvolutionOpInterface op) {
   auto maybeStridesAttr = op->getAttrOfType<DenseIntElementsAttr>("strides");
   if (!maybeStridesAttr) {
     OpBuilder builder(op.getContext());
-    int64_t numSpatialDims =
-        op.image().getType().cast<ShapedType>().getRank() - 2;
+    int64_t numSpatialDims = op.getNumSpatialDims();
     auto type = RankedTensorType::get({static_cast<int64_t>(numSpatialDims)},
                                       builder.getI64Type());
     SmallVector<int64_t> strides(numSpatialDims, 1);
@@ -653,14 +653,14 @@ DenseIntElementsAttr mlir::linalg::detail::convolution_impl::getStridesAttr(
   return maybeStridesAttr;
 }
 
-DenseIntElementsAttr mlir::linalg::detail::convolution_impl::getDilationsAttr(
-    ConvolutionOpInterface op) {
+DenseIntElementsAttr
+mlir::linalg::detail::depthwise_convolution_impl::getDilationsAttr(
+    DepthwiseConvolutionOpInterface op) {
   auto maybeDilationsAttr =
       op->getAttrOfType<DenseIntElementsAttr>("dilations");
   if (!maybeDilationsAttr) {
     OpBuilder builder(op.getContext());
-    int64_t numSpatialDims =
-        op.image().getType().cast<ShapedType>().getRank() - 2;
+    int64_t numSpatialDims = op.getNumSpatialDims();
     auto type = RankedTensorType::get({static_cast<int64_t>(numSpatialDims)},
                                       builder.getI64Type());
     SmallVector<int64_t> strides(numSpatialDims, 1);
@@ -671,8 +671,7 @@ DenseIntElementsAttr mlir::linalg::detail::convolution_impl::getDilationsAttr(
 
 ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIteratorTypes(
     DepthwiseConvolutionOpInterface op) {
-  int64_t numSpatialDims =
-      op.image().getType().cast<ShapedType>().getRank() - 2;
+  int64_t numSpatialDims = op.getNumSpatialDims();
   SmallVector<Attribute> iteratorTypes(
       3 + numSpatialDims, IteratorTypeAttr::get(op.getContext(), par));
   SmallVector<Attribute> reductions(
@@ -683,15 +682,11 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIteratorTypes(
   return Builder(op.getContext()).getArrayAttr(iteratorTypes);
 }
 
-ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
-    DepthwiseConvolutionOpInterface op) {
-  ArrayAttr cached = op->getAttrOfType<ArrayAttr>(
-      LinalgDialect::kMemoizedIndexingMapsAttrName);
-  if (cached)
-    return cached;
-
-  MLIRContext *ctx = op.getContext();
-  auto numSpatial = op.image().getType().cast<ShapedType>().getRank() - 2;
+ArrayAttr
+mlir::linalg::detail::depthwise_convolution_impl::createBasicIndexingMaps(
+    MLIRContext *ctx, int64_t numSpatial, int64_t channelPos,
+    const SmallVectorImpl<int64_t> &strides,
+    SmallVectorImpl<int64_t> &dilations) {
   // Domain: (n, w, c, m, kw)
   AffineExpr n = getAffineDimExpr(0, ctx);
   SmallVector<AffineExpr> s(
@@ -703,15 +698,12 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
       llvm::seq<int64_t>(numSpatial + 3, 2 * (numSpatial + 1) + 1),
       [&](int64_t d) { return getAffineDimExpr(d, ctx); }));
   // Temp subsitute for channel position attr
-  int64_t channelPos = (op.getChannelFirst()) ? 1 : numSpatial + 1;
 
   // Initialze operand accesses in nw order and insert c according to channel
   // position
   SmallVector<AffineExpr> inExprs = {n}, outExprs = {n};
   SmallVector<AffineExpr> cm = {c, m};
-  for (const auto &[sp, ksp, st, di] :
-       llvm::zip(s, ks, op.getStridesAttr().getValues<int64_t>(),
-                 op.getDilationsAttr().getValues<int64_t>())) {
+  for (const auto &[sp, ksp, st, di] : llvm::zip(s, ks, strides, dilations)) {
     inExprs.push_back(sp * st + ksp * di);
     outExprs.push_back(sp);
   }
@@ -727,15 +719,7 @@ ArrayAttr mlir::linalg::detail::depthwise_convolution_impl::getIndexingMaps(
        AffineMap::get(3 + 2 * numSpatial, 0, kExprs, ctx),
        AffineMap::get(3 + 2 * numSpatial, 0, outExprs, ctx)});
 
-  if (op.isQuantized()) {
-    SmallVector<AffineMap> scalarMaps(
-        2, AffineMap::get(3 + 2 * numSpatial, 0, {}, ctx));
-    maps.insert(maps.end() - 1, scalarMaps.begin(), scalarMaps.end());
-  }
-
-  cached = Builder(ctx).getAffineMapArrayAttr(maps);
-  op->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
-  return cached;
+  return Builder(ctx).getAffineMapArrayAttr(maps);
 }
 
 LogicalResult
