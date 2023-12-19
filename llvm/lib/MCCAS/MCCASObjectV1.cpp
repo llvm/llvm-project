@@ -3086,11 +3086,26 @@ mccasformats::v1::loadDIETopLevel(DIETopLevelRef TopLevelRef) {
 }
 
 struct DIEVisitor {
+
+  struct AbbrevContent {
+    dwarf::Attribute Attr;
+    dwarf::Form Form;
+    bool FormInDistinctData;
+    std::optional<uint8_t> FormSize;
+  };
+
+  struct AbbrevEntry {
+    dwarf::Tag Tag;
+    bool HasChildren;
+    SmallVector<AbbrevContent> AbbrevContents;
+  };
+
   Error visitDIERef(DIEDedupeTopLevelRef Ref);
   Error visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack);
   Error visitDIEAttrs(AbbrevEntryReader &AbbrevReader,
                       BinaryStreamReader &Reader, StringRef DIEData);
 
+  SmallVector<AbbrevEntry> AbbrevEntryCache;
   ArrayRef<StringRef> AbbrevEntries;
   BinaryStreamReader DistinctReader;
   StringRef DistinctData;
@@ -3295,8 +3310,8 @@ Error mccasformats::v1::visitDebugInfo(
   HeaderCallback(toStringRef(HeaderData));
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{TotAbbrevEntries, DistinctReader,   DistinctData,
-                     HeaderCallback,   StartTagCallback, AttrCallback,
-                     EndTagCallback,   NewBlockCallback};
+  DIEVisitor Visitor{{},           TotAbbrevEntries, DistinctReader,
+                     DistinctData, HeaderCallback,   StartTagCallback,
+                     AttrCallback, EndTagCallback,   NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
 }
