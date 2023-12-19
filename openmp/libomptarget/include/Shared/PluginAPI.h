@@ -219,6 +219,9 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                            void *VAddr, bool isRecord,
                                            bool SaveOutput,
                                            uint64_t &ReqPtrArgOffset);
+
+// Returns true if the device \p DeviceId suggests to use auto zero-copy.
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
 }
 
 #endif // OMPTARGET_SHARED_PLUGIN_API_H

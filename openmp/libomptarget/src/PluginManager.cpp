@@ -144,18 +144,32 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
 
   int32_t NumPD = getNumberOfPluginDevices();
   ExclusiveDevicesAccessor->reserve(DeviceOffset + NumPD);
+  // Auto zero-copy is a per-device property. We need to ensure
+  // that all devices are suggesting to use it.
+  bool UseAutoZeroCopy = true;
+  if (NumPD == 0)
+    UseAutoZeroCopy = false;
   for (int32_t PDevI = 0, UserDevId = DeviceOffset; PDevI < NumPD; PDevI++) {
     auto Device = std::make_unique<DeviceTy>(this, UserDevId, PDevI);
+
     if (auto Err = Device->init()) {
       DP("Skip plugin known device %d: %s\n", PDevI,
          toString(std::move(Err)).c_str());
       continue;
     }
+    UseAutoZeroCopy = UseAutoZeroCopy && Device->useAutoZeroCopy();
 
     ExclusiveDevicesAccessor->push_back(std::move(Device));
     ++NumberOfUserDevices;
     ++UserDevId;
   }
+
+  // Auto Zero-Copy can only be currently triggered when the system is an
+  // homogeneous APU architecture without attached discrete GPUs.
+  // If all devices suggest to use it, change requirment flags to trigger
+  // zero-copy behavior when mapping memory.
+  if (UseAutoZeroCopy)
+    PM.addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
 
   DP("Plugin adaptor " DPxMOD " has index %d, exposes %d out of %d devices!\n",
      DPxPTR(LibraryHandler.get()), DeviceOffset, NumberOfUserDevices,
