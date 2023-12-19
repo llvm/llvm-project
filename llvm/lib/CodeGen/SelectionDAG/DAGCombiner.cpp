@@ -15166,8 +15166,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
                                     *LN0->getMemOperand())) {
       SDValue Load =
           DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
-                      LN0->getPointerInfo(), LN0->getAlign(),
-                      LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
+                      LN0->getMemOperand());
       DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
       return Load;
     }
