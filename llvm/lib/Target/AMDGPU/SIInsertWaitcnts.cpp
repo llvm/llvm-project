@@ -302,9 +302,7 @@ public:
     PendingEvents |= WaitEventMaskForInst[VS_CNT];
   }
 
-  ArrayRef<const MDNode *> getLDSDMAScopes() const {
-    return LDSDMAScopes;
-  }
+  ArrayRef<const MDNode *> getLDSDMAScopes() const { return LDSDMAScopes; }
 
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
