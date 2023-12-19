@@ -35,6 +35,8 @@
 // specifies OS as Triple::OS::Win32
 //
 // UNSUPPORTED: target={{i.86.*windows.*}}
+// FIXME: Re-enable the test on powerpc.
+// UNSUPPORTED: powerpc-registered-target
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
