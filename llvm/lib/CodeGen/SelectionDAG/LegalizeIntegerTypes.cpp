@@ -349,6 +349,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
                               N->getMemoryVT(), ResVT,
                               N->getChain(), N->getBasePtr(),
                               N->getMemOperand());
+  if (N->getOpcode() == ISD::ATOMIC_LOAD) {
+    ISD::LoadExtType ETy = cast<AtomicSDNode>(N)->getExtensionType();
+    if (ETy == ISD::NON_EXTLOAD) {
+      if (TLI.getExtendForAtomicOps() == ISD::SIGN_EXTEND)
+        ETy = ISD::SEXTLOAD;
+      else if (TLI.getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+        ETy = ISD::ZEXTLOAD;
+      else
+        ETy = ISD::EXTLOAD;
+    }
+    cast<AtomicSDNode>(Res)->setExtensionType(ETy);
+  }
+
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));

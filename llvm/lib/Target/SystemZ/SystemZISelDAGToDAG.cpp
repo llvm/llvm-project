@@ -347,6 +347,9 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // Try to expand a boolean SELECT_CCMASK using an IPM sequence.
   SDValue expandSelectBoolean(SDNode *Node);
 
+  // Convert ATOMIC_LOADs to LOADs to facilitate instruction selection.
+  void convertATOMIC_LOADs(SDNode *Node, unsigned Depth = 0);
+
 public:
   static char ID;
 
@@ -1513,6 +1516,10 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
   MachineMemOperand *MMO = MemAccess->getMemOperand();
   assert(MMO && "Expected a memory operand.");
 
+  // These instructions are not atomic.
+  if (MMO->isAtomic())
+    return false;
+
   // The memory access must have a proper alignment and no index register.
   if (MemAccess->getAlign().value() < StoreSize ||
       !MemAccess->getOffset().isUndef())
@@ -1545,6 +1552,37 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
   return true;
 }
 
+// This is a hack to convert ATOMIC_LOADs to LOADs in the last minute just
+// before instruction selection begins. It would have been easier if
+// ATOMIC_LOAD nodes would instead always be built by SelectionDAGBuilder as
+// LOADs with an atomic MMO and properly handled as such in DAGCombiner, but
+// until that changes they need to remain as ATOMIC_LOADs until all
+// DAGCombining is done.  Convert Node or any of its operands from
+// ATOMIC_LOAD to LOAD.
+void SystemZDAGToDAGISel::convertATOMIC_LOADs(SDNode *Node, unsigned Depth) {
+  if (Depth > 1) // Chain operands are also followed so this seems enough.
+    return;
+  if (Node->getOpcode() == ISD::ATOMIC_LOAD) {
+    auto *ALoad = cast<AtomicSDNode>(Node);
+    // It seems necessary to morph the node as it is not yet being selected.
+    LoadSDNode *Ld = cast<LoadSDNode>(CurDAG->MorphNodeTo(
+        ALoad, ISD::LOAD, CurDAG->getVTList(ALoad->getValueType(0), MVT::Other),
+        {ALoad->getChain(), ALoad->getBasePtr()}));
+    // Sanity check the morph.  The extension type for an extending load
+    // should have been set prior to instruction selection and remain in the
+    // morphed node.
+    assert(((SDNode *)Ld) == ((SDNode *)ALoad) && "Bad CSE on atomic load.");
+    assert(Ld->getMemOperand()->isAtomic() && "Broken MMO.");
+    ISD::LoadExtType ETy = Ld->getExtensionType();
+    bool IsNonExt = Ld->getMemoryVT().getSizeInBits() ==
+                    Ld->getValueType(0).getSizeInBits();
+    assert(IsNonExt == (ETy == ISD::NON_EXTLOAD) && "Bad extension type.");
+    return;
+  }
+  for (SDValue Op : Node->ops())
+    convertATOMIC_LOADs(Op.getNode(), ++Depth);
+}
+
 void SystemZDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -1552,6 +1590,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     Node->setNodeId(-1);
     return;
   }
+
+  // Prepare any ATOMIC_LOAD to be selected as a LOAD with an atomic MMO.
+  convertATOMIC_LOADs(Node);
 
   unsigned Opcode = Node->getOpcode();
   switch (Opcode) {
@@ -1741,6 +1782,31 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
         return;
     }
     break;
+  }
+
+  case ISD::ATOMIC_STORE: {
+    auto *AtomOp = cast<AtomicSDNode>(Node);
+    // Store FP values directly without first moving to a GPR.
+    EVT SVT = AtomOp->getMemoryVT();
+    SDValue StoredVal = AtomOp->getVal();
+    if (SVT.isInteger() && StoredVal->getOpcode() == ISD::BITCAST &&
+        StoredVal->getOperand(0).getValueType().isFloatingPoint()) {
+      StoredVal = StoredVal->getOperand(0);
+      SVT = StoredVal.getValueType();
+    }
+    StoreSDNode *St = cast<StoreSDNode>(CurDAG->getTruncStore(
+        AtomOp->getChain(), SDLoc(AtomOp), StoredVal, AtomOp->getBasePtr(), SVT,
+        AtomOp->getMemOperand()));
+    assert(St->getMemOperand()->isAtomic() && "Broken MMO.");
+    SDNode *Chain = St;
+    // We have to enforce sequential consistency by performing a
+    // serialization operation after the store.
+    if (AtomOp->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent)
+      Chain = CurDAG->getMachineNode(SystemZ::Serialize, SDLoc(AtomOp),
+                                     MVT::Other, SDValue(Chain, 0));
+    ReplaceNode(Node, Chain);
+    SelectCode(St);
+    return;
   }
   }
 
