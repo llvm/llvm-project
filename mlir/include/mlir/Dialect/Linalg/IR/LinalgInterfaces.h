@@ -117,7 +117,6 @@ bool isaCopyOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
-
 // Common implementations for DepthwiseConvolutionOpInterface
 namespace depthwise_convolution_impl {
 DenseIntElementsAttr getStridesAttr(DepthwiseConvolutionOpInterface op);
