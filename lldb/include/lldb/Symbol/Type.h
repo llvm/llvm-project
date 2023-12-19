@@ -247,6 +247,10 @@ public:
   /// match.
   void AddLanguage(lldb::LanguageType language);
 
+  /// Set the list of languages that should produce a match to only the ones
+  /// specified in \ref languages.
+  void SetLanguages(LanguageSet languages);
+
   /// Check if the language matches any languages that have been added to this
   /// match object.
   ///
