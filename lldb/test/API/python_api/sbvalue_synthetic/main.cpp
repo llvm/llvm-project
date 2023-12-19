@@ -1,11 +1,13 @@
-#include <vector>
+struct Foo {
+  int real_child = 47;
+};
 
-struct HasVector {
-  std::vector<int> v;
+struct HasFoo {
+  Foo f;
 };
 
 int main() {
-  std::vector<int> vector = {42, 47};
-  HasVector has_vector = {vector};
+  Foo foo;
+  HasFoo has_foo;
   return 0; // break here
 }
