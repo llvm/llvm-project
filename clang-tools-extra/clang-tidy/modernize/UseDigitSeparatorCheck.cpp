@@ -64,7 +64,9 @@ std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString
 
   for (const char &Character : OriginalLiteralString.substr(
            Prefix.size(), OriginalLiteralString.size())) {
-    if (((Prefix == "0x" && !std::isxdigit(Character)) || (Prefix != "0x" && !std::isdigit(Character))) && Character != '\'') {
+    if (((Prefix == "0x" && !std::isxdigit(Character)) ||
+         (Prefix != "0x" && !std::isdigit(Character))) &&
+        Character != '\'') {
       Postfix += Character;
     }
   }
