@@ -1292,10 +1292,9 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                           uint64_t Start, uint64_t End,
                           std::unordered_map<uint64_t, std::string> &Labels) {
   // So far only supports PowerPC and X86.
-  if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
-    return;
-  const bool isXCOFF = STI->getTargetTriple().isOSBinFormatXCOFF();
   const bool isPPC = STI->getTargetTriple().isPPC();
+  if (!isPPC && !STI->getTargetTriple().isX86())
+    return;
 
   if (MIA)
     MIA->resetState();
@@ -1304,8 +1303,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   unsigned LabelCount = 0;
   Start += SectionAddr;
   End += SectionAddr;
-  uint64_t Index = Start;
-  while (Index < End) {
+  const bool isXCOFF = STI->getTargetTriple().isOSBinFormatXCOFF();
+  for (uint64_t Index = Start; Index < End;) {
     // Disassemble a real instruction and record function-local branch labels.
     MCInst Inst;
     uint64_t Size;
@@ -2205,24 +2204,51 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 uint64_t Disp = Target - TargetAddress;
                 std::string TargetName = Demangle ? demangle(TargetSym->Name)
                                                   : TargetSym->Name.str();
+                bool RelFixedUp = false;
+                SmallString<32> Val;
 
                 *TargetOS << " <";
                 // On XCOFF, we use relocations, even without -r, so we
                 // can print the correct name for an extern function call.
                 if (Obj.isXCOFF() && findRel()) {
-                  SmallString<32> Val;
+                  // Check for possible branch relocations and
+                  // branches to fixup code.
+                  bool BranchRelocationType = true;
+                  XCOFF::RelocationType RelocType;
+                  if (Obj.is64Bit()) {
+                    const XCOFFRelocation64 *Reloc =
+                        reinterpret_cast<XCOFFRelocation64 *>(
+                            RelCur->getRawDataRefImpl().p);
+                    RelFixedUp = Reloc->isFixupIndicated();
+                    RelocType = Reloc->Type;
+                  } else {
+                    const XCOFFRelocation32 *Reloc =
+                        reinterpret_cast<XCOFFRelocation32 *>(
+                            RelCur->getRawDataRefImpl().p);
+                    RelFixedUp = Reloc->isFixupIndicated();
+                    RelocType = Reloc->Type;
+                  }
+                  BranchRelocationType =
+                      RelocType == XCOFF::R_BA || RelocType == XCOFF::R_BR ||
+                      RelocType == XCOFF::R_RBA || RelocType == XCOFF::R_RBR;
 
-                  // If we have a valid relocation, try to print the
+                  // If we have a valid relocation, try to print its
                   // corresponding symbol name. Multiple relocations on the
                   // same instruction are not handled.
+                  // Branches to fixup code will have the RelFixedUp flag set in the RLD.
+                  // For these instructions, we print the correct branch target, but print
+                  // the referenced symbol as a comment.
                   if (Error E = getRelocationValueString(*RelCur, false, Val)) {
                     // If -r was used, this error will be printed later.
                     // Otherwise, we ignore the error and print what
                     // would have been printed without using relocations.
                     consumeError(std::move(E));
                     *TargetOS << TargetName;
-                  } else
+                    RelFixedUp = false; // Suppress comment for RLD sym name
+                  } else if (BranchRelocationType && !RelFixedUp)
                     *TargetOS << Val;
+                  else
+                    *TargetOS << TargetName;
                   if (Disp)
                     *TargetOS << "+0x" << Twine::utohexstr(Disp);
                 } else if (!Disp) {
@@ -2237,6 +2263,12 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   *TargetOS << TargetName << "+0x" << Twine::utohexstr(Disp);
                 }
                 *TargetOS << ">";
+                if (RelFixedUp && !InlineRelocs) {
+                  // We have fixup code for a relocation. We print the
+                  // referenced symbol as a comment.
+                  *TargetOS << "\t# " << Val;
+                }
+
               } else if (BBAddrMapLabelAvailable) {
                 *TargetOS << " <" << BBAddrMapLabels[Target].front() << ">";
               } else if (LabelAvailable) {
