@@ -606,7 +606,7 @@ func.func @fuse_reductions(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -> (f32, f3
 }
 
 // CHECK-LABEL: func @fuse_reductions
-//  CHECK-SAME:  (%[[A:.*]]: memref<2x2xf32>, %[[B:.*]]: memref<2x2xf32>)
+//  CHECK-SAME:  (%[[A:.*]]: memref<2x2xf32>, %[[B:.*]]: memref<2x2xf32>) -> (f32, f32)
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
@@ -628,7 +628,7 @@ func.func @fuse_reductions(%A: memref<2x2xf32>, %B: memref<2x2xf32>) -> (f32, f3
 //       CHECK:     scf.reduce.return %[[R]] : f32
 //       CHECK:   }
 //       CHECK:   scf.yield
-//       CHECK:   return %[[RES]]#0, %[[RES]]#1
+//       CHECK:   return %[[RES]]#0, %[[RES]]#1 : f32, f32
 
 // -----
 
