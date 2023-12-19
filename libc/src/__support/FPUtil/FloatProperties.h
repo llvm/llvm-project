@@ -131,6 +131,9 @@ public:
   // The bit pattern that keeps only the *sign* part.
   LIBC_INLINE_VAR static constexpr StorageType SIGN_MASK =
       mask_trailing_ones<StorageType, SIGN_LEN>() << SIGN_MASK_SHIFT;
+  // The bit pattern that keeps only the *exponent + significand* part.
+  LIBC_INLINE_VAR static constexpr StorageType EXP_SIG_MASK =
+      mask_trailing_ones<StorageType, EXP_LEN + SIG_LEN>();
   // The bit pattern that keeps only the *sign + exponent + significand* part.
   LIBC_INLINE_VAR static constexpr StorageType FP_MASK =
       mask_trailing_ones<StorageType, TOTAL_LEN>();
@@ -152,8 +155,6 @@ public:
       FRACTION_LEN + 1;
   LIBC_INLINE_VAR static constexpr StorageType FRACTION_MASK =
       mask_trailing_ones<StorageType, FRACTION_LEN>();
-  LIBC_INLINE_VAR static constexpr StorageType EXP_MANT_MASK =
-      EXP_MASK | SIG_MASK;
 
 protected:
   // If a number x is a NAN, then it is a quiet NAN if:
