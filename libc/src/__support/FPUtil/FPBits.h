@@ -39,7 +39,11 @@ template <typename T> struct FPBits : private FloatProperties<T> {
   using FloatProperties<T>::EXP_LEN;
   using FloatProperties<T>::FRACTION_MASK;
   using FloatProperties<T>::FRACTION_LEN;
+
+private:
   using FloatProperties<T>::QUIET_NAN_MASK;
+
+public:
   using FloatProperties<T>::SIGN_MASK;
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
@@ -90,7 +94,6 @@ template <typename T> struct FPBits : private FloatProperties<T> {
                 "Data type and integral representation have different sizes.");
 
   static constexpr int MAX_EXPONENT = (1 << EXP_LEN) - 1;
-
   static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
   static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
   static constexpr StorageType MIN_NORMAL = (StorageType(1) << FRACTION_LEN);

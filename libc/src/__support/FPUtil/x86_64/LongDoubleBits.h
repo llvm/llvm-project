@@ -35,7 +35,11 @@ template <> struct FPBits<long double> : private FloatProperties<long double> {
   using FloatProperties<long double>::EXP_LEN;
   using FloatProperties<long double>::FRACTION_MASK;
   using FloatProperties<long double>::FRACTION_LEN;
+
+private:
   using FloatProperties<long double>::QUIET_NAN_MASK;
+
+public:
   using FloatProperties<long double>::SIGN_MASK;
 
   static constexpr int MAX_EXPONENT = 0x7FFF;
