@@ -9,8 +9,16 @@
 #include "llvm-libc-macros/signal-macros.h"
 #include "src/compiler/__stack_chk_fail.h"
 #include "test/UnitTest/Test.h"
+#include "src/string/memset.h"
 
 TEST(LlvmLibcStackChkFail, Death) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::__stack_chk_fail(); },
                WITH_SIGNAL(SIGABRT));
+}
+
+TEST(LlvmLibcStackChkFail, Smash) {
+  EXPECT_DEATH([] {
+    int arr [20];
+    LIBC_NAMESPACE::memset(arr, 0xAA, 9001);
+  }, WITH_SIGNAL(SIGABRT));
 }

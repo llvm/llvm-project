@@ -8,4 +8,7 @@ add_libc_unittest(
     stack_chk_guard_test.cpp
   DEPENDS
     libc.src.compiler.__stack_chk_fail
+    libc.src.string.memset
+  COMPILE_OPTIONS
+    -fstack-protector-all
   )
