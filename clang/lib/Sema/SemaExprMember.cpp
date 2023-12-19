@@ -255,7 +255,7 @@ static void diagnoseInstanceReference(Sema &SemaRef,
   else {
     if (auto *Tpl = dyn_cast<FunctionTemplateDecl>(Rep))
       Rep = Tpl->getTemplatedDecl();
-    const auto *Callee = dyn_cast<CXXMethodDecl>(Rep);
+    const auto *Callee = cast<CXXMethodDecl>(Rep);
     auto Diag = SemaRef.Diag(Loc, diag::err_member_call_without_object)
                 << Range << Callee->isExplicitObjectMemberFunction();
     if (!Replacement.empty())
