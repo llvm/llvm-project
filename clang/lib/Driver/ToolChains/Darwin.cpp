@@ -592,7 +592,7 @@ const char **VirtualEnvironment::findName(const char **I, StringRef Name,
   std::string Prefix = (Name + Twine("=")).str();
   for (; *I; ++I) {
     StringRef NameValue = *I;
-    if (!NameValue.startswith(Prefix))
+    if (!NameValue.starts_with(Prefix))
       continue;
     Existing = NameValue;
     break;
