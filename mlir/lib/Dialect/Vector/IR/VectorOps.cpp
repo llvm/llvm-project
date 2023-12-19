@@ -5719,8 +5719,7 @@ public:
            isa<vector::VectorScaleOp>(mulRHS.getDefiningOp()));
 
       auto isConstantValMatchingDim =
-          [=, dim = createMaskOp.getResult().getType().getShape()[opIdx]](
-              Value operand) {
+          [=, dim = retTy.getShape()[opIdx]](Value operand) {
             auto constantVal = getConstantIntValue(operand);
             return (constantVal.has_value() && constantVal.value() == dim);
           };
@@ -5755,7 +5754,7 @@ public:
 
     // Replace 'createMaskOp' with ConstantMaskOp.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
-        createMaskOp, createMaskOp.getResult().getType(),
+        createMaskOp, retTy,
         vector::getVectorSubscriptAttr(rewriter, maskDimSizes));
     return success();
   }
