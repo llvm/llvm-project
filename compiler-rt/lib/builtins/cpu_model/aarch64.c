@@ -123,7 +123,9 @@ struct {
 
 // The formatter wants to re-order these includes, but doing so is incorrect:
 // clang-format off
-#if defined(__FreeBSD__)
+#if defined(__APPLE__)
+#include "aarch64/fmv/apple.inc"
+#elif defined(__FreeBSD__)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/freebsd.inc"
 #elif defined(__Fuchsia__)
