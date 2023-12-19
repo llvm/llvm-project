@@ -1233,7 +1233,11 @@ unsigned AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
       isValueAvailable(RHS)) {
     if (const auto *SI = dyn_cast<BinaryOperator>(RHS))
       if (const auto *C = dyn_cast<ConstantInt>(SI->getOperand(1)))
-        if ((SI->getOpcode() == Instruction::Shl) && (C->getZExtValue() < 4)) {
+        if ((SI->getOpcode() == Instruction::Shl) && (C->getZExtValue() < 4) &&
+            !NeedExtend) {
+          // We can only fold instructions that doesn't need extension because
+          // in add/sub instruction, the instruction is first extended, then
+          // shifted
           Register RHSReg = getRegForValue(SI->getOperand(0));
           if (!RHSReg)
             return 0;
@@ -2426,7 +2430,7 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
       }
 
       // Emit the cmp.
-      if (!emitCmp(CI->getOperand(0), CI->getOperand(1), CI->isUnsigned()))
+      if (!emitCmp(CI->getOperand(0), CI->getOperand(1), !CI->isSigned()))
         return false;
 
       // FCMP_UEQ and FCMP_ONE cannot be checked with a single branch
