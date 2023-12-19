@@ -6,9 +6,9 @@
 
 ; GCN-LABEL: {{^}}load_fma_store:
 ; OCC:    NumVgprs: 32
-; RELAX:    NumVgprs: 64
+; RELAX:    NumVgprs: 62
 ; OCC: NumVGPRsForWavesPerEU: 32
-; RELAX: NumVGPRsForWavesPerEU: 64
+; RELAX: NumVGPRsForWavesPerEU: 62
 ; OCC:    Occupancy: 8
 ; RELAX: Occupancy: 4
 
