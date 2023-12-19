@@ -17,11 +17,11 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
 // RUN: llvm-profdata show --binary-ids  %t.profdir/default_*.profraw > %t.profraw.out
-// RUN: FileCheck %s --check-prefix=BINARY-ID-MERGE-PROF < %t.profraw.out
+// RUN: FileCheck %s --check-prefix=ONE-BINARY-ID < %t.profraw.out
 
 // RUN: llvm-profdata merge -o %t.profdata %t.profdir/default_*.profraw
 // RUN: llvm-profdata show --binary-ids %t.profdata > %t.profdata.out
-// RUN: FileCheck %s --check-prefix=BINARY-ID-INDEXED-PROF < %t.profdata.out
+// RUN: FileCheck %s --check-prefix=ONE-BINARY-ID < %t.profdata.out
 
 // Test raw profiles with DLLs.
 // RUN: rm -rf %t.dir && split-file %s %t.dir
@@ -31,11 +31,11 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.dir/main.exe
 // RUN: llvm-profdata show --binary-ids %t.profraw > %t.profraw.out
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: FileCheck %s --check-prefix=BINARY-ID-SHARE-RAW-PROF < %t.profraw.out
+// RUN: FileCheck %s --check-prefix=MULTI-BINARY-ID < %t.profraw.out
 
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata show --binary-ids %t.profdata > %t.profdata.out
-// RUN: FileCheck %s --check-prefix=BINARY-ID-SHARE-INDEXED-PROF < %t.profraw.out
+// RUN: FileCheck %s --check-prefix=MULTI-BINARY-ID < %t.profraw.out
 
 //--- foo.c
 __declspec(dllexport) void foo() {}
@@ -65,34 +65,18 @@ int main() {
 // BINARY-ID-RAW-PROF-NEXT: Binary IDs:
 // BINARY-ID-RAW-PROF-NEXT: {{[0-9a-f]+}}
 
-// BINARY-ID-MERGE-PROF: Instrumentation level: Front-end
-// BINARY-ID-MERGE-PROF-NEXT: Total functions: 3
-// BINARY-ID-MERGE-PROF-NEXT: Maximum function count: 3
-// BINARY-ID-MERGE-PROF-NEXT: Maximum internal block count: 0
-// BINARY-ID-MERGE-PROF-NEXT: Binary IDs:
-// BINARY-ID-MERGE-PROF-NEXT: {{[0-9a-f]+}}
+// ONE-BINARY-ID: Instrumentation level: Front-end
+// ONE-BINARY-ID-NEXT: Total functions: 3
+// ONE-BINARY-ID-NEXT: Maximum function count: 3
+// ONE-BINARY-ID-NEXT: Maximum internal block count: 0
+// ONE-BINARY-ID-NEXT: Binary IDs:
+// ONE-BINARY-ID-NEXT: {{[0-9a-f]+}}
 
-// BINARY-ID-INDEXED-PROF: Instrumentation level: Front-end
-// BINARY-ID-INDEXED-PROF-NEXT: Total functions: 3
-// BINARY-ID-INDEXED-PROF-NEXT: Maximum function count: 3
-// BINARY-ID-INDEXED-PROF-NEXT: Maximum internal block count: 0
-// BINARY-ID-INDEXED-PROF-NEXT: Binary IDs:
-// BINARY-ID-INDEXED-PROF-NEXT: {{[0-9a-f]+}}
-
-// BINARY-ID-SHARE-RAW-PROF: Instrumentation level: Front-end
-// BINARY-ID-SHARE-RAW-PROF-NEXT: Total functions: 3
-// BINARY-ID-SHARE-RAW-PROF-NEXT: Maximum function count: 1
-// BINARY-ID-SHARE-RAW-PROF-NEXT: Maximum internal block count: 0
-// BINARY-ID-SHARE-RAW-PROF-NEXT: Binary IDs:
-// BINARY-ID-SHARE-RAW-PROF-NEXT: {{[0-9a-f]+}}
-// BINARY-ID-SHARE-RAW-PROF-NEXT: {{[0-9a-f]+}}
-// BINARY-ID-SHARE-RAW-PROF-NEXT: {{[0-9a-f]+}}
-
-// BINARY-ID-SHARE-INDEXED-PROF: Instrumentation level: Front-end
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: Total functions: 3
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: Maximum function count: 1
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: Maximum internal block count: 0
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: Binary IDs:
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: {{[0-9a-f]+}}
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: {{[0-9a-f]+}}
-// BINARY-ID-SHARE-INDEXED-PROF-NEXT: {{[0-9a-f]+}}
+// MULTI-BINARY-ID: Instrumentation level: Front-end
+// MULTI-BINARY-ID-NEXT: Total functions: 3
+// MULTI-BINARY-ID-NEXT: Maximum function count: 1
+// MULTI-BINARY-ID-NEXT: Maximum internal block count: 0
+// MULTI-BINARY-ID-NEXT: Binary IDs:
+// MULTI-BINARY-ID-NEXT: {{[0-9a-f]+}}
+// MULTI-BINARY-ID-NEXT: {{[0-9a-f]+}}
+// MULTI-BINARY-ID-NEXT: {{[0-9a-f]+}}
