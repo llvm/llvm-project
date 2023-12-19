@@ -875,7 +875,6 @@ feature_test_macros = [
             "name": "__cpp_lib_print",
             "values": {"c++23": 202207},
             "headers": ["ostream", "print"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_quoted_string_io",
