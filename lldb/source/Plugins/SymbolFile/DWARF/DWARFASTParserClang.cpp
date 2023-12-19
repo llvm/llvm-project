@@ -175,7 +175,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
         *sc.comp_unit, results.GetSearchedSymbolFiles(), [&](Module &module) {
           module.FindTypes(query, results);
           pcm_type_sp = results.GetTypeMap().FirstType();
-          return !pcm_type_sp;
+          return (bool)pcm_type_sp;
         });
   }
 
