@@ -131,8 +131,8 @@ View the diff from {self.name} here.
         if diff is None:
             if should_update_gh:
                 comment_text = f"""
-    :white_check_mark: With the latest revision this PR passed the {self.friendly_name}.
-    """
+:white_check_mark: With the latest revision this PR passed the {self.friendly_name}.
+"""
                 self.update_pr(comment_text, args, create_new=False)
             return True
         elif len(diff) > 0:

@@ -298,7 +298,7 @@ define i4 @shuf_bitcast_twice_4bits(i4 %x) {
 ; Negative tests - not reverse
 define i4 @shuf_4bits_not_reverse(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_not_reverse(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
 ; CHECK-NEXT:    ret i4 [[CAST]]
 ;
@@ -312,7 +312,7 @@ declare void @use(<4 x i1>)
 
 define i4 @shuf_4bits_extra_use(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_extra_use(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use(<4 x i1> [[BITREVERSE]])
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
 ; CHECK-NEXT:    ret i4 [[CAST]]

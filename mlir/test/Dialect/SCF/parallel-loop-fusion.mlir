@@ -357,3 +357,33 @@ func.func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
 // CHECK:        }
 // CHECK:      }
 // CHECK:      memref.dealloc [[SUM]]
+
+// -----
+
+func.func @do_not_fuse_alias(%A: memref<2x2xf32>, %B: memref<2x2xf32>,
+                             %C: memref<2x2xf32>, %result: memref<2x2xf32>,
+                             %sum: memref<2x2xf32>) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    %B_elem = memref.load %B[%i, %j] : memref<2x2xf32>
+    %C_elem = memref.load %C[%i, %j] : memref<2x2xf32>
+    %sum_elem = arith.addf %B_elem, %C_elem : f32
+    memref.store %sum_elem, %sum[%i, %j] : memref<2x2xf32>
+    scf.yield
+  }
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    %sum_elem = memref.load %sum[%i, %j] : memref<2x2xf32>
+    %A_elem = memref.load %A[%i, %j] : memref<2x2xf32>
+    %product_elem = arith.mulf %sum_elem, %A_elem : f32
+    memref.store %product_elem, %result[%i, %j] : memref<2x2xf32>
+    scf.yield
+  }
+  return
+}
+
+// %sum and %result may alias with other args, do not fuse loops
+// CHECK-LABEL: func @do_not_fuse_alias
+// CHECK:      scf.parallel
+// CHECK:      scf.parallel

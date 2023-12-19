@@ -209,7 +209,7 @@ struct RcOptions {
   bool Preprocess = true;
   bool PrintCmdAndExit = false;
   std::string Triple;
-  std::vector<std::string> PreprocessCmd;
+  std::optional<std::string> Preprocessor;
   std::vector<std::string> PreprocessArgs;
 
   std::string InputFile;
@@ -229,7 +229,7 @@ struct RcOptions {
 void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
                 const char *Argv0) {
   std::string Clang;
-  if (Opts.PrintCmdAndExit || !Opts.PreprocessCmd.empty()) {
+  if (Opts.PrintCmdAndExit || Opts.Preprocessor) {
     Clang = "clang";
   } else {
     ErrorOr<std::string> ClangOrErr = findClang(Argv0, Opts.Triple);
@@ -249,10 +249,9 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
       Clang, "--driver-mode=gcc", "-target", Opts.Triple, "-E",
       "-xc", "-DRC_INVOKED"};
   std::string PreprocessorExecutable;
-  if (!Opts.PreprocessCmd.empty()) {
+  if (Opts.Preprocessor) {
     Args.clear();
-    for (const auto &S : Opts.PreprocessCmd)
-      Args.push_back(S);
+    Args.push_back(*Opts.Preprocessor);
     if (!sys::fs::can_execute(Args[0])) {
       if (auto P = sys::findProgramByName(Args[0])) {
         PreprocessorExecutable = *P;
@@ -340,36 +339,6 @@ std::string unescape(StringRef S) {
     Out.push_back(S[I]);
   }
   return Out;
-}
-
-std::vector<std::string> unescapeSplit(StringRef S) {
-  std::vector<std::string> OutArgs;
-  std::string Out;
-  bool InQuote = false;
-  for (int I = 0, E = S.size(); I < E; I++) {
-    if (S[I] == '\\') {
-      if (I + 1 < E)
-        Out.push_back(S[++I]);
-      else
-        fatalError("Unterminated escape");
-      continue;
-    }
-    if (S[I] == '"') {
-      InQuote = !InQuote;
-      continue;
-    }
-    if (S[I] == ' ' && !InQuote) {
-      OutArgs.push_back(Out);
-      Out.clear();
-      continue;
-    }
-    Out.push_back(S[I]);
-  }
-  if (InQuote)
-    fatalError("Unterminated quote");
-  if (!Out.empty())
-    OutArgs.push_back(Out);
-  return OutArgs;
 }
 
 RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
@@ -506,11 +475,8 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
       break;
     }
   }
-  // TODO: If --use-temp-file is set, we shouldn't be unescaping
-  // the --preprocessor argument either, only splitting it.
   if (InputArgs.hasArg(WINDRES_preprocessor))
-    Opts.PreprocessCmd =
-        unescapeSplit(InputArgs.getLastArgValue(WINDRES_preprocessor));
+    Opts.Preprocessor = InputArgs.getLastArgValue(WINDRES_preprocessor);
 
   Opts.Params.CodePage = CpWin1252; // Different default
   if (InputArgs.hasArg(WINDRES_codepage)) {
