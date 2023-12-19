@@ -407,7 +407,6 @@ static void filterByName(
       if (const char *Name = Die.getName(DINameKind::LinkageName))
         filterByName(Names, Die, Name, OS, GetNameForDWARFReg);
     }
-
   };
   for (const auto &CU : CUs) {
     filterDieNames(CU.get());
