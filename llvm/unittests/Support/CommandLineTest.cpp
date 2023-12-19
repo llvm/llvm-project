@@ -2291,10 +2291,10 @@ TEST(CommandLineTest, SubCommandGroups) {
   // The "--opt12" option is expected to be added to both subcommands in the
   // group, but not to the top-level "no subcommand" pseudo-subcommand or the
   // "sc3" subcommand.
-  EXPECT_EQ(1, SC1.OptionsMap.size());
+  EXPECT_EQ(1U, SC1.OptionsMap.size());
   EXPECT_TRUE(SC1.OptionsMap.contains("opt12"));
 
-  EXPECT_EQ(1, SC2.OptionsMap.size());
+  EXPECT_EQ(1U, SC2.OptionsMap.size());
   EXPECT_TRUE(SC2.OptionsMap.contains("opt12"));
 
   EXPECT_FALSE(cl::SubCommand::getTopLevel().OptionsMap.contains("opt12"));
