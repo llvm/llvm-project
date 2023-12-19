@@ -303,6 +303,10 @@ void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
 void populateDropUnitDimWithShapeCastPatterns(RewritePatternSet &patterns,
                                               PatternBenefit benefit = 1);
 
+/// TODO
+void populateBubbleShapeCastPatterns(RewritePatternSet &patterns,
+                                     PatternBenefit benefit = 1);
+
 /// Collect a set of patterns to flatten n-D vector transfers on contiguous
 /// memref.
 ///

@@ -1532,6 +1532,40 @@ struct DropUnitDimFromElementwiseOps final
   }
 };
 
+struct BubbleUpShapeCastForElementwiseOps final
+    : public OpRewritePattern<vector::ShapeCastOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *sourceOp = op.getSource().getDefiningOp();
+    if (!(sourceOp && OpTrait::hasElementwiseMappableTraits(sourceOp) &&
+          sourceOp->getNumResults() == 1 && sourceOp->getNumRegions() == 0)) {
+      return failure();
+    }
+
+    VectorType sourceType = op.getSourceVectorType();
+    VectorType resultType = op.getResultVectorType();
+    auto loc = op.getLoc();
+
+    SmallVector<Value> newOperands;
+    for (Value operand : sourceOp->getOperands()) {
+      Type elementType = operand.getType().cast<VectorType>().getElementType();
+      VectorType newOperandType =
+          VectorType::Builder(resultType).setElementType(elementType);
+      auto castOp =
+          rewriter.create<vector::ShapeCastOp>(loc, newOperandType, operand);
+      newOperands.push_back(castOp);
+    }
+
+    Operation *elementwiseOp =
+        rewriter.create(loc, sourceOp->getName().getIdentifier(), newOperands,
+                        resultType, sourceOp->getAttrs());
+    rewriter.replaceOp(op, elementwiseOp);
+
+    return success();
+  }
+};
+
 /// Pattern to eliminate redundant zero-constants added to reduction operands.
 /// It's enough for there to be one initial zero value, so we can eliminate the
 /// extra ones that feed into `vector.reduction <add>`. These get created by the
@@ -1603,6 +1637,12 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropUnitDimFromElementwiseOps, ShapeCastOpFolder>(
+      patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateBubbleShapeCastPatterns(RewritePatternSet &patterns,
+                                                   PatternBenefit benefit) {
+  patterns.add<BubbleUpShapeCastForElementwiseOps, ShapeCastOpFolder>(
       patterns.getContext(), benefit);
 }
 
