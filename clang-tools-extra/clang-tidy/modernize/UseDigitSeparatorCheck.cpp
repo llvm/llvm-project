@@ -62,7 +62,8 @@ std::string getFormatedIntegerString(const llvm::StringRef OriginalLiteralString
     GroupSize = 3;
   }
 
-  for (const char &Character : OriginalLiteralString.substr(Prefix.size(), OriginalLiteralString.size())) {
+  for (const char &Character : OriginalLiteralString.substr(
+           Prefix.size(), OriginalLiteralString.size())) {
     if (!std::isxdigit(Character) && Character != '\'') {
       Postfix += Character;
     }
