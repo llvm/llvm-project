@@ -1379,6 +1379,9 @@ checkAndOpImpliedByOther(FactOrCheck &CB, ConstraintInfo &Info,
   CmpInst *CmpToCheck = cast<CmpInst>(CB.getInstructionToSimplify());
   unsigned OtherOpIdx = And->getOperand(0) == CmpToCheck ? 1 : 0;
 
+  // Don't try to simplify the first condition of a select by the second, as
+  // this may make the select more poisonous than the original one.
+  // TODO: check if the first operand may be poison.
   if (OtherOpIdx != 0 && isa<SelectInst>(And))
     return false;
 
@@ -1621,8 +1624,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalAnd(m_Value(), m_Value()))) {
           Simplified =
-              checkAndOpImpliedByByOther(CB, Info, ReproducerModule.get(),
-                                         ReproducerCondStack, DFSInStack);
+              checkAndOpImpliedByOther(CB, Info, ReproducerModule.get(),
+                                       ReproducerCondStack, DFSInStack);
         }
         Changed |= Simplified;
       }
