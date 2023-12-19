@@ -392,7 +392,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations''. Whether function pointers
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers
     are aligned.
 
     .. code-block:: c++
@@ -534,7 +534,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations''. Whether function pointers
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers
     are aligned.
 
     .. code-block:: c++
@@ -676,7 +676,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations''. Whether function pointers
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers
     are aligned.
 
     .. code-block:: c++
@@ -819,7 +819,7 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations''. Whether function pointers
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers
     are aligned.
 
     .. code-block:: c++
