@@ -4633,7 +4633,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   bool Op0HasNSW = false, Op1HasNSW = false;
   // Analyze the case when either Op0 or Op1 is an add instruction.
   // Op0 = A + B (or A and B are null); Op1 = C + D (or C and D are null).
-  Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
   auto hasNoWrapProblem = [](const BinaryOperator &BO, CmpInst::Predicate Pred,
                              bool &HasNSW, bool &HasNUW) -> bool {
     if (isa<OverflowingBinaryOperator>(BO)) {
@@ -4650,6 +4649,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       return false;
     }
   };
+  Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
 
   if (BO0) {
     match(BO0, m_AddLike(m_Value(A), m_Value(B)));
@@ -4660,6 +4660,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     NoOp1WrapProblem = hasNoWrapProblem(*BO1, Pred, Op1HasNSW, Op1HasNUW);
   }
 
+  // icmp (A+B), A -> icmp B, 0 for equalities or if there is no overflow.
+  // icmp (A+B), B -> icmp A, 0 for equalities or if there is no overflow.
   if ((A == Op1 || B == Op1) && NoOp0WrapProblem)
     return new ICmpInst(Pred, A == Op1 ? B : A,
                         Constant::getNullValue(Op1->getType()));
