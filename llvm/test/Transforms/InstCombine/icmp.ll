@@ -4904,3 +4904,80 @@ define i1 @or_positive_sgt_zero_multi_use(i8 %a) {
   %cmp = icmp sgt i8 %b, 0
   ret i1 %cmp
 }
+
+
+define i1 @disjoint_or_sgt_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @disjoint_or_sgt_1(
+; CHECK-NEXT:    [[B1:%.*]] = add nsw i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp sle i8 [[B1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+  %a1 = or disjoint i8 %a, 1
+  %b1 = add nsw i8 %b, 2
+  %icmp_ = icmp sgt i8 %a1, %b1
+  ret i1 %icmp_
+}
+
+define i1 @disjoint_or_sgt_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @disjoint_or_sgt_2(
+; CHECK-NEXT:    [[A1:%.*]] = or disjoint i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[B1:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp sgt i8 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+  %a1 = or disjoint i8 %a, 2
+  %b1 = add i8 %b, 1
+  %icmp_ = icmp sgt i8 %a1, %b1
+  ret i1 %icmp_
+}
+
+define i1 @disjoint_or_sgt_3(i8 %a, i8 %b) {
+; CHECK-LABEL: @disjoint_or_sgt_3(
+; CHECK-NEXT:    [[A1:%.*]] = or disjoint i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[B1:%.*]] = add nuw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp sgt i8 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+  %a1 = or disjoint i8 %a, 2
+  %b1 = add nuw i8 %b, 1
+  %icmp_ = icmp sgt i8 %a1, %b1
+  ret i1 %icmp_
+}
+
+define i1 @disjoint_or_ugt_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @disjoint_or_ugt_1(
+; CHECK-NEXT:    [[B1:%.*]] = add nsw i8 [[B:%.*]], 2
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp ule i8 [[B1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+  %a1 = or disjoint i8 %a, 1
+  %b1 = add nsw i8 %b, 2
+  %icmp_ = icmp ugt i8 %a1, %b1
+  ret i1 %icmp_
+}
+
+define i1 @disjoint_or_ugt_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @disjoint_or_ugt_2(
+; CHECK-NEXT:    [[A1:%.*]] = or disjoint i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[B1:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp ugt i8 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+  %a1 = or disjoint i8 %a, 2
+  %b1 = add i8 %b, 1
+  %icmp_ = icmp ugt i8 %a1, %b1
+  ret i1 %icmp_
+}
+
+define i1 @disjoint_or_ugt_3(i8 %a, i8 %b) {
+; CHECK-LABEL: @disjoint_or_ugt_3(
+; CHECK-NEXT:    [[A1:%.*]] = or disjoint i8 [[A:%.*]], 2
+; CHECK-NEXT:    [[B1:%.*]] = add nuw i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[ICMP_:%.*]] = icmp ugt i8 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i1 [[ICMP_]]
+;
+  %a1 = or disjoint i8 %a, 2
+  %b1 = add nuw i8 %b, 1
+  %icmp_ = icmp ugt i8 %a1, %b1
+  ret i1 %icmp_
+}
