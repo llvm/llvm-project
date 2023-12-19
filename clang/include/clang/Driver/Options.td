@@ -3067,6 +3067,14 @@ def fclangir_idiom_recognizer_EQ : Joined<["-"], "fclangir-idiom-recognizer=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   HelpText<"Pass configuration options to CIR idiom recognizer">,
   MarshallingInfoString<FrontendOpts<"ClangIRIdiomRecognizerOpts">>;
+def fclangir_lib_opt_EQ : Joined<["-"], "fclangir-lib-opt=">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Enable C/C++ library based optimizations (with options)">,
+  MarshallingInfoString<FrontendOpts<"ClangIRLibOptOpts">>;
+def fclangir_lib_opt : Flag<["-"], "fclangir-lib-opt">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  Alias<fclangir_lib_opt_EQ>, AliasArgs<[""]>,
+  HelpText<"Enable C/C++ library based optimizations">;
 
 def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   Visibility<[ClangOption, CC1Option]>,
