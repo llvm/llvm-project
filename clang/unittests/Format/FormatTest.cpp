@@ -2046,6 +2046,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int *c;\n"
                "const unsigned int *d;\n"
                "Const unsigned int &e;\n"
@@ -2054,6 +2055,16 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "double             *(*f2)(int *a, double &&b);\n"
                "const unsigned    &&g;\n"
                "Const unsigned      h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int &e;\n"
+               "const unsigned int &f;\n"
+               "int                *f1(int *a, int &b, int &&c);\n"
+               "double *(*f2)(int *a, double &&b);\n"
+               "const unsigned &&g;\n"
+               "Const unsigned   h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -2093,6 +2104,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int* c;\n"
                "const unsigned int* d;\n"
                "Const unsigned int& e;\n"
@@ -2101,6 +2113,16 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "double*             (*f2)(int* a, double&& b);\n"
                "const unsigned&&    g;\n"
                "Const unsigned      h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int* c;\n"
+               "const unsigned int* d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "int*                f1(int* a, int& b, int&& c);\n"
+               "double* (*f2)(int* a, double&& b);\n"
+               "const unsigned&& g;\n"
+               "Const unsigned   h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Right;
@@ -2120,14 +2142,25 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("for (int a = 0, b++; const Foo *c : {1, 2, 3})", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int *c;\n"
                "const unsigned int *d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
                "int                *f1(int *a, int& b, int&& c);\n"
                "double             *(*f2)(int *a, double&& b);\n"
-               "const unsigned      g;\n"
+               "const unsigned&&    g;\n"
                "Const unsigned      h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "int                *f1(int *a, int& b, int&& c);\n"
+               "double *(*f2)(int *a, double&& b);\n"
+               "const unsigned&& g;\n"
+               "Const unsigned   h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -2162,6 +2195,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int*  c;\n"
                "const unsigned int*  d;\n"
                "Const unsigned int & e;\n"
@@ -2170,6 +2204,16 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "double*              (*f2)(int* a, double && b);\n"
                "const unsigned &&    g;\n"
                "Const unsigned       h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int*  c;\n"
+               "const unsigned int*  d;\n"
+               "Const unsigned int & e;\n"
+               "const unsigned int & f;\n"
+               "int*                 f1(int* a, int & b, int && c);\n"
+               "double* (*f2)(int* a, double && b);\n"
+               "const unsigned && g;\n"
+               "Const unsigned    h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Middle;
@@ -2189,6 +2233,7 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("for (int a = 0, b++; const Foo * c : {1, 2, 3})", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int * c;\n"
                "const unsigned int * d;\n"
                "Const unsigned int  &e;\n"
@@ -2197,6 +2242,16 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "double *             (*f2)(int * a, double &&b);\n"
                "const unsigned     &&g;\n"
                "Const unsigned       h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int * c;\n"
+               "const unsigned int * d;\n"
+               "Const unsigned int  &e;\n"
+               "const unsigned int  &f;\n"
+               "int *                f1(int * a, int &b, int &&c);\n"
+               "double * (*f2)(int * a, double &&b);\n"
+               "const unsigned &&g;\n"
+               "Const unsigned   h;",
                Style);
 
   // FIXME: we don't handle this yet, so output may be arbitrary until it's
@@ -19589,7 +19644,7 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*PadOperators=*/true}));
+                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle({}));
   verifyFormat("void foo() {\n"
