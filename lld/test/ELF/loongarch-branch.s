@@ -1,7 +1,7 @@
 # REQUIRES: loongarch
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32-unknown-elf %s -o %t.la32.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-elf %s -o %t.la64.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32-unknown-elf -loongarch-asm-relax-branches=0 %s -o %t.la32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64-unknown-elf -loongarch-asm-relax-branches=0 %s -o %t.la64.o
 
 # RUN: ld.lld %t.la32.o --defsym foo16=b16+4 --defsym bar16=b16 --defsym foo21=b21+4 --defsym bar21=b21 --defsym foo26=b26+4 --defsym bar26=b26 -o %t.la32
 # RUN: ld.lld %t.la64.o --defsym foo16=b16+4 --defsym bar16=b16 --defsym foo21=b21+4 --defsym bar21=b21 --defsym foo26=b26+4 --defsym bar26=b26 -o %t.la64

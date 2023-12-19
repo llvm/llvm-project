@@ -48,6 +48,10 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  void expandLongCondBr(const MCInst &MI, SmallVectorImpl<char> &CB,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const;
+
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
@@ -300,6 +304,74 @@ void LoongArchMCCodeEmitter::expandToVectorLDI(
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
+static unsigned getInvertedBranchOp(unsigned BrOp) {
+  switch (BrOp) {
+  default:
+    llvm_unreachable("Unexpected branch opcode!");
+  case LoongArch::PseudoLongBEQ:
+    return LoongArch::BNE;
+  case LoongArch::PseudoLongBNE:
+    return LoongArch::BEQ;
+  case LoongArch::PseudoLongBLT:
+    return LoongArch::BGE;
+  case LoongArch::PseudoLongBGE:
+    return LoongArch::BLT;
+  case LoongArch::PseudoLongBLTU:
+    return LoongArch::BGEU;
+  case LoongArch::PseudoLongBGEU:
+    return LoongArch::BLTU;
+  case LoongArch::PseudoLongBEQZ:
+    return LoongArch::BNEZ;
+  case LoongArch::PseudoLongBNEZ:
+    return LoongArch::BEQZ;
+  case LoongArch::PseudoLongBCEQZ:
+    return LoongArch::BCNEZ;
+  case LoongArch::PseudoLongBCNEZ:
+    return LoongArch::BCEQZ;
+  }
+}
+
+// Expand PseudoLongBxx to an inverted conditional branch and an unconditional
+// jump.
+void LoongArchMCCodeEmitter::expandLongCondBr(
+    const MCInst &MI, SmallVectorImpl<char> &CB,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  uint32_t Binary;
+  MCInst TmpInst;
+  MCRegister SrcReg1, SrcReg2;
+  MCOperand SrcSymbol;
+  unsigned InvOpc = getInvertedBranchOp(MI.getOpcode());
+  bool IsSingleReg = InvOpc == LoongArch::BEQZ || InvOpc == LoongArch::BNEZ ||
+                     InvOpc == LoongArch::BCEQZ || InvOpc == LoongArch::BCNEZ;
+
+  // Emit an inverted conditional jump out of this branch
+  if (IsSingleReg) {
+    SrcReg1 = MI.getOperand(0).getReg();
+    SrcSymbol = MI.getOperand(1);
+    TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(8);
+  } else {
+    SrcReg1 = MI.getOperand(0).getReg();
+    SrcReg2 = MI.getOperand(1).getReg();
+    SrcSymbol = MI.getOperand(2);
+    TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addReg(SrcReg2).addImm(8);
+  }
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+
+  // Emit an unconditional jump to the destination.
+  TmpInst = MCInstBuilder(LoongArch::B).addOperand(SrcSymbol);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+
+  Fixups.clear();
+  if (!SrcSymbol.isExpr())
+    return;
+
+  Fixups.push_back(MCFixup::create(4, SrcSymbol.getExpr(),
+                                   MCFixupKind(LoongArch::fixup_loongarch_b26),
+                                   MI.getLoc()));
+}
+
 void LoongArchMCCodeEmitter::encodeInstruction(
     const MCInst &MI, SmallVectorImpl<char> &CB,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
@@ -320,6 +392,17 @@ void LoongArchMCCodeEmitter::encodeInstruction(
   case LoongArch::PseudoXVREPLI_W:
   case LoongArch::PseudoXVREPLI_D:
     return expandToVectorLDI<LoongArch::XVLDI>(MI, CB, Fixups, STI);
+  case LoongArch::PseudoLongBEQ:
+  case LoongArch::PseudoLongBNE:
+  case LoongArch::PseudoLongBLT:
+  case LoongArch::PseudoLongBGE:
+  case LoongArch::PseudoLongBLTU:
+  case LoongArch::PseudoLongBGEU:
+  case LoongArch::PseudoLongBCEQZ:
+  case LoongArch::PseudoLongBCNEZ:
+  case LoongArch::PseudoLongBEQZ:
+  case LoongArch::PseudoLongBNEZ:
+    return expandLongCondBr(MI, CB, Fixups, STI);
   }
 
   switch (Size) {

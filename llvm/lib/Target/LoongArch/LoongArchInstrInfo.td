@@ -1439,6 +1439,25 @@ def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
 
+// Pseduo conditional long jump instructions.
+let isBarrier = 1, isBranch = 1, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0, isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
+def PseudoLongBEQ : Pseudo<(outs),
+                           (ins GPR:$rs1, GPR:$rs2, simm26_b:$imm26), []>;
+def PseudoLongBNE : Pseudo<(outs),
+                           (ins GPR:$rs1, GPR:$rs2, simm26_b:$imm26), []>;
+def PseudoLongBLT : Pseudo<(outs),
+                           (ins GPR:$rs1, GPR:$rs2, simm26_b:$imm26), []>;
+def PseudoLongBGE : Pseudo<(outs),
+                           (ins GPR:$rs1, GPR:$rs2, simm26_b:$imm26), []>;
+def PseudoLongBLTU : Pseudo<(outs),
+                           (ins GPR:$rs1, GPR:$rs2, simm26_b:$imm26), []>;
+def PseudoLongBGEU : Pseudo<(outs),
+                           (ins GPR:$rs1, GPR:$rs2, simm26_b:$imm26), []>;
+def PseudoLongBEQZ : Pseudo<(outs), (ins GPR:$rs1, simm26_b:$imm26), []>;
+def PseudoLongBNEZ : Pseudo<(outs), (ins GPR:$rs1, simm26_b:$imm26), []>;
+}
+
 /// Load address (la*) macro instructions.
 
 // Define isCodeGenOnly = 0 to expose them to tablegened assembly parser.

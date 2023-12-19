@@ -17,11 +17,15 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 
 #define DEBUG_TYPE "loongarch-asmbackend"
 
 using namespace llvm;
+
+static cl::opt<bool> RelaxBranches("loongarch-asm-relax-branches",
+                                   cl::init(true), cl::Hidden);
 
 std::optional<MCFixupKind>
 LoongArchAsmBackend::getFixupKind(StringRef Name) const {
@@ -175,6 +179,91 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case FK_Data_8:
     return !Target.isAbsolute();
   }
+}
+
+bool LoongArchAsmBackend::fixupNeedsRelaxationAdvanced(
+    const MCFixup &Fixup, bool Resolved, uint64_t Value,
+    const MCRelaxableFragment *DF, const MCAsmLayout &Layout,
+    const bool WasForced) const {
+  if (!RelaxBranches)
+    return false;
+
+  int64_t Offset = int64_t(Value);
+  unsigned Kind = Fixup.getTargetKind();
+
+  // Do not relax unresolved conditional branch to consist with GAS.
+  if (!Resolved)
+    return false;
+
+  switch (Kind) {
+  default:
+    return false;
+  case LoongArch::fixup_loongarch_b16:
+    return !isInt<18>(Offset);
+  case LoongArch::fixup_loongarch_b21:
+    return !isInt<23>(Offset);
+  }
+}
+
+static unsigned getRelaxedOpcode(unsigned Op) {
+  switch (Op) {
+  default:
+    return Op;
+  case LoongArch::BEQ:
+    return LoongArch::PseudoLongBEQ;
+  case LoongArch::BNE:
+    return LoongArch::PseudoLongBNE;
+  case LoongArch::BLT:
+    return LoongArch::PseudoLongBLT;
+  case LoongArch::BGE:
+    return LoongArch::PseudoLongBGE;
+  case LoongArch::BLTU:
+    return LoongArch::PseudoLongBLTU;
+  case LoongArch::BGEU:
+    return LoongArch::PseudoLongBGEU;
+  case LoongArch::BEQZ:
+    return LoongArch::PseudoLongBEQZ;
+  case LoongArch::BNEZ:
+    return LoongArch::PseudoLongBNEZ;
+  case LoongArch::BCEQZ:
+    return LoongArch::PseudoLongBCEQZ;
+  case LoongArch::BCNEZ:
+    return LoongArch::PseudoLongBCNEZ;
+  }
+}
+
+void LoongArchAsmBackend::relaxInstruction(MCInst &Inst,
+                                           const MCSubtargetInfo &STI) const {
+  MCInst Res;
+  switch (Inst.getOpcode()) {
+  default:
+    llvm_unreachable("Opcode not expected!");
+  case LoongArch::BEQ:
+  case LoongArch::BNE:
+  case LoongArch::BLT:
+  case LoongArch::BGE:
+  case LoongArch::BLTU:
+  case LoongArch::BGEU:
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    Res.addOperand(Inst.getOperand(2));
+    break;
+  case LoongArch::BEQZ:
+  case LoongArch::BNEZ:
+  case LoongArch::BCEQZ:
+  case LoongArch::BCNEZ:
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
+    Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    break;
+  }
+  Inst = std::move(Res);
+}
+
+bool LoongArchAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                            const MCSubtargetInfo &STI) const {
+  return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
 bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
