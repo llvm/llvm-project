@@ -1158,8 +1158,6 @@ bool TargetLibraryInfoImpl::getLibFunc(const Instruction &I, LibFunc &F) const {
     F = LibFunc_fmod;
   else if (ScalarTy->isFloatTy())
     F = LibFunc_fmodf;
-  else if (ScalarTy->isFP128Ty())
-    F = LibFunc_fmodl;
   else
     return false;
   return true;

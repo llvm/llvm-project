@@ -680,5 +680,4 @@ protected:
 TEST_F(TLITestAarch64ArmPl, TestFrem) {
   EXPECT_EQ(getFremScalarName(Type::getDoubleTy(Ctx)), "fmod");
   EXPECT_EQ(getFremScalarName(Type::getFloatTy(Ctx)), "fmodf");
-  EXPECT_EQ(getFremScalarName(Type::getFP128Ty(Ctx)), "fmodl");
 }
