@@ -3,6 +3,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx810 -o - %s | FileCheck -check-prefix=GFX81 %s
 ; FIXME: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - %s | FileCheck -check-prefix=GFX9 %s
 ; FIXME: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - %s | FileCheck -check-prefix=GFX10 %s
+; FIXME: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - %s | FileCheck -check-prefix=GFX11 %s
+; FIXME: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -o - %s | FileCheck -check-prefix=GFX12 %s
 
 define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, half %data) {
 ; UNPACKED-LABEL: image_store_f16:

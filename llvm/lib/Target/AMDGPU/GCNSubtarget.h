@@ -119,6 +119,7 @@ protected:
   bool HasFmaMixInsts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
+  bool HasScalarDwordx3Loads = false;
   bool HasScalarStores = false;
   bool HasScalarAtomics = false;
   bool HasSDWAOmod = false;
@@ -197,6 +198,8 @@ protected:
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
   bool HasVGPRSingleUseHintInsts = false;
+  bool HasPseudoScalarTrans = false;
+  bool HasRestrictedSOffset = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -830,6 +833,11 @@ public:
 
   bool hasInstPrefetch() const { return getGeneration() >= GFX10; }
 
+  bool hasPrefetch() const { return GFX12Insts; }
+
+  // Has s_cmpk_* instructions.
+  bool hasSCmpK() const { return getGeneration() < GFX12; }
+
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this
   // is 4-byte aligned.
@@ -885,6 +893,8 @@ public:
   bool hasScalarCompareEq64() const {
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
+
+  bool hasScalarDwordx3Loads() const { return HasScalarDwordx3Loads; }
 
   bool hasScalarStores() const {
     return HasScalarStores;
@@ -1153,6 +1163,10 @@ public:
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+
+  bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
+
+  bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
+#include <cassert>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -44,6 +45,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "vector-to-vector"
@@ -1480,17 +1482,17 @@ struct DropUnitDimFromElementwiseOps final
   using OpTraitRewritePattern::OpTraitRewritePattern;
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (op->getNumResults() != 1)
+    if (op->getNumResults() != 1 || op->getNumRegions() != 0)
       return failure();
 
-    // Check the pre-condiitions. For `Elementwise` Ops all operands
-    // are guaranteed to have identical shapes and it suffices to only check the
+    auto resultVectorType = dyn_cast<VectorType>(op->getResult(0).getType());
+    if (!resultVectorType)
+      return failure();
+
+    // Check the pre-conditions. For `Elementwise` Ops all operands are
+    // guaranteed to have identical shapes and it suffices to only check the
     // first one.
-    auto op1 = op->getOperands()[0];
-    auto sourceVectorType = dyn_cast<VectorType>(op1.getType());
-    if (!sourceVectorType)
-      return failure();
-
+    auto sourceVectorType = cast<VectorType>(op->getOperands()[0].getType());
     if (sourceVectorType.getRank() < 2)
       return failure();
 
@@ -1506,23 +1508,26 @@ struct DropUnitDimFromElementwiseOps final
     // Drop leading/trailing unit dim by applying vector.shape_cast to all
     // operands
     int64_t dim = hasLeadingDimUnitFixed ? 0 : sourceVectorType.getRank() - 1;
-    VectorType newVType = VectorType::Builder(sourceVectorType).dropDim(dim);
 
     SmallVector<Value> newOperands;
     auto loc = op->getLoc();
     for (auto operand : op->getOperands()) {
+      auto opVectorType = cast<VectorType>(operand.getType());
+      VectorType newVType = VectorType::Builder(opVectorType).dropDim(dim);
       auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
       newOperands.push_back(opSC);
     }
 
+    VectorType newResultVectorType =
+        VectorType::Builder(resultVectorType).dropDim(dim);
     // Create an updated elementwise Op without leading/trailing unit dim
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
-                        newVType, op->getAttrs());
+                        newResultVectorType, op->getAttrs());
 
-    // Restore the leading/trailing unit dim by applying vector.shape_cast to
-    // the result
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(op, sourceVectorType,
+    // Restore the leading/trailing unit dim by applying vector.shape_cast
+    // to the result
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(op, resultVectorType,
                                              elementwiseOp->getResult(0));
 
     return success();
@@ -1573,6 +1578,60 @@ struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
                                                      op.getAcc());
     return success();
   }
+};
+
+/// Example:
+/// ```
+/// %a = vector.reduction <add> %x : vector<2xf32> into f32
+/// ```
+/// is transformed into:
+/// ```
+/// %y = vector.extract %x[0] : f32 from vector<2xf32>
+/// %z = vector.extract %x[1] : f32 from vector<2xf32>
+/// %a = arith.addf %y, %z : f32
+/// ```
+struct BreakDownVectorReduction final : OpRewritePattern<vector::ReductionOp> {
+  BreakDownVectorReduction(MLIRContext *context,
+                           unsigned maxNumElementsToExtract,
+                           PatternBenefit benefit)
+      : OpRewritePattern(context, benefit),
+        maxNumElementsToExtract(maxNumElementsToExtract) {}
+
+  LogicalResult matchAndRewrite(vector::ReductionOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType type = op.getSourceVectorType();
+    if (type.isScalable() || op.isMasked())
+      return failure();
+    assert(type.getRank() == 1 && "Expected a 1-d vector");
+
+    int64_t numElems = type.getNumElements();
+    if (numElems > maxNumElementsToExtract) {
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv("has too many vector elements ({0}) to break down "
+                            "(max allowed: {1})",
+                            numElems, maxNumElementsToExtract));
+    }
+
+    Location loc = op.getLoc();
+    SmallVector<Value> extracted(numElems, nullptr);
+    for (auto [idx, extractedElem] : llvm::enumerate(extracted))
+      extractedElem = rewriter.create<vector::ExtractOp>(
+          loc, op.getVector(), static_cast<int64_t>(idx));
+
+    Value res = extracted.front();
+    for (auto extractedElem : llvm::drop_begin(extracted))
+      res = vector::makeArithReduction(rewriter, loc, op.getKind(), res,
+                                       extractedElem, op.getFastmathAttr());
+    if (Value acc = op.getAcc())
+      res = vector::makeArithReduction(rewriter, loc, op.getKind(), res, acc,
+                                       op.getFastmathAttr());
+
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+
+private:
+  unsigned maxNumElementsToExtract = 0;
 };
 
 } // namespace
@@ -1651,6 +1710,13 @@ void mlir::vector::populateChainedVectorReductionFoldingPatterns(
   patterns.add<ChainedReduction>(patterns.getContext(), benefit);
   patterns.add<ReduceRedundantZero>(patterns.getContext(),
                                     PatternBenefit(benefit.getBenefit() + 1));
+}
+
+void mlir::vector::populateBreakDownVectorReductionPatterns(
+    RewritePatternSet &patterns, unsigned maxNumElementsToExtract,
+    PatternBenefit benefit) {
+  patterns.add<BreakDownVectorReduction>(patterns.getContext(),
+                                         maxNumElementsToExtract, benefit);
 }
 
 //===----------------------------------------------------------------------===//

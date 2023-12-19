@@ -3317,7 +3317,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    unsigned MCK);\n\n";
   }
 
-  OS << "#endif // GET_ASSEMBLER_HEADER_INFO\n\n";
+  OS << "#endif // GET_ASSEMBLER_HEADER\n\n";
 
   // Emit the operand match diagnostic enum names.
   OS << "\n#ifdef GET_OPERAND_DIAGNOSTIC_TYPES\n";

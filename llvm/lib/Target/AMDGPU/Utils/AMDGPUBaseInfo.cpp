@@ -498,7 +498,9 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11 ||
          Opc == AMDGPU::V_PERMLANE16_B32_e64_gfx12 ||
-         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12;
+         Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANE16_VAR_B32_e64_gfx12 ||
+         Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12;
 }
 
 bool isGenericAtomic(unsigned Opc) {

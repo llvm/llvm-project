@@ -455,6 +455,9 @@ def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch6
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
+def TargetELFOrMachO : TargetSpec {
+  let ObjectFormats = ["ELF", "MachO"];
+}
 
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
@@ -1665,7 +1668,7 @@ def IBOutletCollection : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def IFunc : Attr, TargetSpecificAttr<TargetELF> {
+def IFunc : Attr, TargetSpecificAttr<TargetELFOrMachO> {
   let Spellings = [GCC<"ifunc">];
   let Args = [StringArgument<"Resolver">];
   let Subjects = SubjectList<[Function]>;
@@ -4326,24 +4329,6 @@ def AvailableOnlyInDefaultEvalMethod : InheritableAttr {
   let Spellings = [Clang<"available_only_in_default_eval_method">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
   let Documentation = [Undocumented];
-}
-
-def CountedBy : InheritableAttr {
-  let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field]>;
-  let Args = [IdentifierArgument<"CountedByField">];
-  let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
-  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
-  // isn't yet available due to the fact that we're still parsing the
-  // structure. Maybe that code could be changed sometime in the future.
-  code AdditionalMembers = [{
-    private:
-      SourceRange CountedByFieldLoc;
-    public:
-      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
-      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
-  }];
 }
 
 def PreferredType: InheritableAttr {

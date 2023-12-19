@@ -158,3 +158,9 @@ scratch_store_b128 off, v[2:5], s0 offset:8000000
 
 flat_atomic_add_f32 v1, v[0:1], v2 offset:-1
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 12-bit unsigned offset
+
+s_load_b96 s[20:22], s[2:3], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_buffer_load_b96 s[20:22], s[4:7], s0
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

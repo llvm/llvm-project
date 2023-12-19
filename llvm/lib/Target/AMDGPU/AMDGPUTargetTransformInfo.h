@@ -254,6 +254,16 @@ public:
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
+
+  /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
+  unsigned getCacheLineSize() const override { return 128; }
+
+  /// How much before a load we should place the prefetch instruction.
+  /// This is currently measured in number of IR instructions.
+  unsigned getPrefetchDistance() const override;
+
+  /// \return if target want to issue a prefetch in address space \p AS.
+  bool shouldPrefetchAddressSpace(unsigned AS) const override;
 };
 
 } // end namespace llvm
