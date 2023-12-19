@@ -39,16 +39,17 @@ For parameters that are output (or input and output), a temporary value is
 created in the caller. The temporary value is then passed by-address. For
 output-only parameters, the temporary is uninitialized when passed (if the
 parameter is not explicitly initialized inside the function an undefined value
-is stored back to the argument expression). For input and output parameters, the
-temporary is initialized from  the lvalue argument expression through implicit
-or explicit casting from the lvalue argument type to the parameter type.
+is stored back to the argument expression). For parameters that are both input
+and output, the temporary is initialized from the lvalue argument expression
+through implicit  or explicit casting from the lvalue argument type to the
+parameter type.
 
 On return of the function, the values of any parameter temporaries are written
 back to the argument expression through an inverted conversion sequence (if an
 ``out`` parameter was not initialized in the function, the uninitialized value
 may be written back).
 
-Parameters of constant-sized array type, are also passed with value semantics.
+Parameters of constant-sized array type are also passed with value semantics.
 This requires input parameters of arrays to construct temporaries and the
 temporaries go through array-to-pointer decay when initializing parameters.
 
@@ -78,7 +79,7 @@ so modifications inside ``fn`` do not propagate out.
 
 .. note::
 
-  DXC supports unsized arrays passed directly as decayed pointers, which is an
+  DXC may pass unsized arrays directly as decayed pointers, which is an
   unfortunate behavior divergence.
 
 Out Parameter Temporaries
@@ -93,18 +94,19 @@ Out Parameter Temporaries
 
   void main() {
     int V;
-    Init(V, V); // MSVC ABI V == 2, Itanium V == 1
+    Init(V, V); // MSVC (or clang-cl) V == 2, Clang V == 1
   }
 
-In the above example the ``Init`` function's behavior depends on the C++ ABI
-implementation. In the MSVC C++ ABI (used for the HLSL DXIL target), call
-arguments are emitted right-to-left and destroyed left-to-right. This means that
-the parameter initialization and destruction occurs in the order: {``Y``,
-``X``, ``~X``, ``~Y``}. This causes the write-back of the value of ``Y`` to occur
-last, so the resulting value of ``V`` is ``2``. In the Itanium C++ ABI, the
-parameter ordering is reversed, so the initialization and destruction occurs in
-the order: {``X``, ``Y``, ``~Y``, ``X``}. This causes the write-back of the
-value ``X`` to occur last, resulting in the value of ``V`` being set to ``1``.
+In the above example the ``Init`` function's behavior depends on the C++
+implementation. C++ does not define the order in which parameters are
+initialized or destroyed. In MSVC and Clang's MSVC compatibility mode, arguments
+are emitted right-to-left and destroyed left-to-right. This means that  the
+parameter initialization and destruction occurs in the order: {``Y``, ``X``,
+``~X``, ``~Y``}. This causes the write-back of the value of ``Y`` to occur last,
+so the resulting value of ``V`` is ``2``. In the Itanium C++ ABI, the  parameter
+ordering is reversed, so the initialization and destruction occurs in the order:
+{``X``, ``Y``, ``~Y``, ``X``}. This causes the write-back of the value ``X`` to
+occur last, resulting in the value of ``V`` being set to ``1``.
 
 .. code-block:: c++
 
