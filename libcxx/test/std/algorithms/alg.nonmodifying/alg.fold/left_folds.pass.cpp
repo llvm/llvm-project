@@ -55,9 +55,9 @@ concept is_dangling_with = std::same_as<Result, std::ranges::fold_left_with_iter
 struct Long {
   int value;
 
-  constexpr Long(int value) : value(value) {}
+  constexpr Long(int const x) : value(x) {}
 
-  constexpr Long plus(int x) const { return Long{value + x}; }
+  constexpr Long plus(int const x) const { return Long{value + x}; }
 
   friend constexpr bool operator==(Long const& x, Long const& y) = default;
 };
