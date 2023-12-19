@@ -108,7 +108,7 @@ Sections:
     Content:         'AABBCCDDFEDCBA'
   - Name:            .zero_size
     Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Flags:           [ SHF_ALLOC ]
     Address:         0x0110
     Size:            0
   - Name:            .space2
