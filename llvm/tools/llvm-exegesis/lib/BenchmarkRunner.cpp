@@ -13,6 +13,7 @@
 #include "BenchmarkRunner.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
+#include "MmapUtils.h"
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -43,13 +45,6 @@
 #if defined(RSEQ_SIG) && defined(SYS_rseq)
 #define GLIBC_INITS_RSEQ
 #endif
-#endif
-
-// Before kernel 4.17, Linux did not support MAP_FIXED_NOREPLACE, so if it is
-// not available, simplfy define it as MAP_FIXED which performs the same
-// function but does not guarantee existing mappings won't get clobbered.
-#ifndef MAP_FIXED_NOREPLACE
-#define MAP_FIXED_NOREPLACE MAP_FIXED
 #endif
 #endif // __linux__
 
@@ -147,17 +142,16 @@ private:
       CrashRecoveryContext::Disable();
       PS.reset();
       if (Crashed) {
-        std::string Msg = "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
         // See "Exit Status for Commands":
         // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
         constexpr const int kSigOffset = 128;
-        if (const char *const SigName = strsignal(CRC.RetCode - kSigOffset)) {
-          Msg += ": ";
-          Msg += SigName;
-        }
-#endif
-        return make_error<SnippetCrash>(std::move(Msg));
+        return make_error<SnippetSignal>(CRC.RetCode - kSigOffset);
+#else
+        // The exit code of the process on windows is not meaningful as a
+        // signal, so simply pass in -1 as the signal into the error.
+        return make_error<SnippetSignal>(-1);
+#endif // LLVM_ON_UNIX
       }
     }
 
@@ -366,7 +360,7 @@ private:
         return Error::success();
       }
       // The child exited, but not successfully
-      return make_error<SnippetCrash>(
+      return make_error<Failure>(
           "Child benchmarking process exited with non-zero exit code: " +
           childProcessExitCodeToString(ChildExitCode));
     }
@@ -379,9 +373,11 @@ private:
                                  Twine(strerror(errno)));
     }
 
-    return make_error<SnippetCrash>(
-        "The benchmarking subprocess sent unexpected signal: " +
-        Twine(strsignal(ChildSignalInfo.si_signo)));
+    if (ChildSignalInfo.si_signo == SIGSEGV)
+      return make_error<SnippetSegmentationFault>(
+          reinterpret_cast<intptr_t>(ChildSignalInfo.si_addr));
+
+    return make_error<SnippetSignal>(ChildSignalInfo.si_signo);
   }
 
   void disableCoreDumps() const {
@@ -421,6 +417,12 @@ private:
     if (RseqDisableOutput != 0)
       exit(ChildProcessExitCodeE::RSeqDisableFailed);
 #endif // GLIBC_INITS_RSEQ
+
+    // The frontend that generates the memory annotation structures should
+    // validate that the address to map the snippet in at is a multiple of
+    // the page size. Assert that this is true here.
+    assert(Key.SnippetAddress % getpagesize() == 0 &&
+           "The snippet address needs to be aligned to a page boundary.");
 
     size_t FunctionDataCopySize = this->Function.FunctionBytes.size();
     void *MapAddress = NULL;

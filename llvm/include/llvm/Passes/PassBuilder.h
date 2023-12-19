@@ -720,10 +720,10 @@ template <typename AnalysisT, typename IRUnitT, typename AnalysisManagerT,
 bool parseAnalysisUtilityPasses(
     StringRef AnalysisName, StringRef PipelineName,
     PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...> &PM) {
-  if (!PipelineName.endswith(">"))
+  if (!PipelineName.ends_with(">"))
     return false;
   // See if this is an invalidate<> pass name
-  if (PipelineName.startswith("invalidate<")) {
+  if (PipelineName.starts_with("invalidate<")) {
     PipelineName = PipelineName.substr(11, PipelineName.size() - 12);
     if (PipelineName != AnalysisName)
       return false;
@@ -732,7 +732,7 @@ bool parseAnalysisUtilityPasses(
   }
 
   // See if this is a require<> pass name
-  if (PipelineName.startswith("require<")) {
+  if (PipelineName.starts_with("require<")) {
     PipelineName = PipelineName.substr(8, PipelineName.size() - 9);
     if (PipelineName != AnalysisName)
       return false;

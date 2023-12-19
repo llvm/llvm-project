@@ -47,9 +47,7 @@
 #include <utility>
 
 namespace llvm {
-class AssumptionCache;
 class DataLayout;
-class DominatorTree;
 class LLVMContext;
 } // namespace llvm
 

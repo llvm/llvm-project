@@ -69,11 +69,11 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
+  CodeModel::Model CM = TM.getCodeModel();
   // Tagged globals have non-zero upper bits, which makes direct references
-  // require a 64-bit immediate.  On the small code model this causes relocation
-  // errors, so we go through the GOT instead.
-  if (AllowTaggedGlobals && TM.getCodeModel() == CodeModel::Small && GV &&
-      !isa<Function>(GV))
+  // require a 64-bit immediate. With the small/medium code models this causes
+  // relocation errors, so we go through the GOT instead.
+  if (AllowTaggedGlobals && CM != CodeModel::Large && GV && !isa<Function>(GV))
     return X86II::MO_GOTPCREL_NORELAX;
 
   // If we're not PIC, it's not very interesting.
@@ -83,19 +83,18 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   if (is64Bit()) {
     // 64-bit ELF PIC local references may use GOTOFF relocations.
     if (isTargetELF()) {
-      CodeModel::Model CM = TM.getCodeModel();
       assert(CM != CodeModel::Tiny &&
              "Tiny codesize model not supported on X86");
-      // In the large code model, even referencing a global under the large data
-      // threshold which is considered "small", we need to use GOTOFF.
+      // In the large code model, all text is far from any global data, so we
+      // use GOTOFF.
       if (CM == CodeModel::Large)
         return X86II::MO_GOTOFF;
-      // Large objects use GOTOFF, otherwise use RIP-rel access.
-      if (auto *GO = dyn_cast_or_null<GlobalObject>(GV))
-        return TM.isLargeGlobalObject(GO) ? X86II::MO_GOTOFF
-                                          : X86II::MO_NO_FLAG;
-      // For non-GlobalObjects, the small and medium code models treat them as
-      // accessible with a RIP-rel access.
+      // Large GlobalValues use GOTOFF, otherwise use RIP-rel access.
+      if (GV)
+        return TM.isLargeGlobalValue(GV) ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
+      // GV == nullptr is for all other non-GlobalValue global data like the
+      // constant pool, jump tables, labels, etc. The small and medium code
+      // models treat these as accessible with a RIP-rel access.
       return X86II::MO_NO_FLAG;
     }
 
@@ -267,8 +266,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (CPU == "generic" || CPU == "pentium4" || CPU == "x86-64") {
     size_t posNoEVEX512 = FS.rfind("-evex512");
     // Make sure we won't be cheated by "-avx512fp16".
-    size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
-                                                  : FS.rfind("-avx512f,");
+    size_t posNoAVX512F =
+        FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
     size_t posEVEX512 = FS.rfind("+evex512");
     // Any AVX512XXX will enable AVX512F.
     size_t posAVX512F = FS.rfind("+avx512");

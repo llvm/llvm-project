@@ -199,11 +199,6 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
-- Clang now supports the C-only attribute ``counted_by``. When applied to a
-  struct's flexible array member, it points to the struct field that holds the
-  number of elements in the flexible array member. This information can improve
-  the results of the array bound sanitizer and the
-  ``__builtin_dynamic_object_size`` builtin.
 - Enums will now be represented in TBAA metadata using their actual underlying
   integer type. Previously they were treated as chars, which meant they could
   alias with all other types.
@@ -263,6 +258,16 @@ New Compiler Flags
   potentially-throwing destructor will lead to an error.
 
 * ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
+
+* ``-fcx-limited-range`` enables the naive mathematical formulas for complex
+  division and multiplication with no NaN checking of results. The default is
+  ``-fno-cx-limited-range``, but this option is enabled by ``-ffast-math``.
+
+* ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
+  multiplication and enables application of Smith's algorithm for complex
+  division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
+  (1962). The default is ``-fno-cx-fortran-rules``.
+
 
 Deprecated Compiler Flags
 -------------------------
@@ -391,9 +396,6 @@ Improvements to Clang's diagnostics
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
-- The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
-  enumeration's underlying type into account instead of suggesting a type just
-  based on the format string specifier being used.
 - Clang now displays an improved diagnostic and a note when a defaulted special
   member is marked ``constexpr`` in a class with a virtual base class
   (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
@@ -512,6 +514,10 @@ Improvements to Clang's diagnostics
     note: expression evaluates to '16 == 15'
        48 | static_assert(1 << 4 == 15);
           |               ~~~~~~~^~~~~
+
+- Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
+- Clang now diagnoses narrowing conversions involving const references.
+  (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
 
 
 Improvements to Clang's time-trace
@@ -677,6 +683,9 @@ Bug Fixes in This Version
   (`#62157 <https://github.com/llvm/llvm-project/issues/62157>`_) and
   (`#64885 <https://github.com/llvm/llvm-project/issues/64885>`_) and
   (`#65568 <https://github.com/llvm/llvm-project/issues/65568>`_)
+- Fix an issue where clang doesn't respect detault template arguments that
+  are added in a later redeclaration for CTAD.
+  Fixes (#69987 <https://github.com/llvm/llvm-project/issues/69987>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -862,6 +871,10 @@ Miscellaneous Clang Crashes Fixed
   `Issue 41302 <https://github.com/llvm/llvm-project/issues/41302>`_
 - Fixed a crash when ``-ast-dump=json`` was used for code using class
   template deduction guides.
+- Fixed a crash when a lambda marked as ``static`` referenced a captured
+  variable in an expression.
+  `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+
 
 OpenACC Specific Changes
 ------------------------
@@ -956,11 +969,17 @@ RISC-V Support
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
 
+- Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
+  for RV64.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 CUDA Support
 ^^^^^^^^^^^^
+
+- Clang now supports CUDA SDK up to 12.3
+- Added support for sm_90a
 
 AIX Support
 ^^^^^^^^^^^
@@ -1001,6 +1020,9 @@ Floating Point Support in Clang
   ``__builtin_exp10f128`` builtins.
 - Add ``__builtin_iszero``, ``__builtin_issignaling`` and
   ``__builtin_issubnormal``.
+- Add support for C99's ``#pragma STDC CX_LIMITED_RANGE`` feature.  This
+  enables the naive mathematical formulas for complex multiplication and
+  division, which are faster but do not correctly handle overflow and infinities.
 
 AST Matchers
 ------------
@@ -1054,6 +1076,9 @@ Static Analyzer
   `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
   `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
   `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
+
+- Move checker ``alpha.cplusplus.EnumCastOutOfRange`` out of the ``alpha``
+  package to ``optin.core.EnumCastOutOfRange``.
 
 .. _release-notes-sanitizers:
 

@@ -142,11 +142,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
-  // If we don't have cmpxchg8b(meaing this is a 386/486), limit atomic size to
-  // 32 bits so the AtomicExpandPass will expand it so we don't need cmpxchg8b.
-  // FIXME: Should we be limiting the atomic size on other configs? Default is
-  // 1024.
-  if (!Subtarget.canUseCMPXCHG8B())
+  if (Subtarget.canUseCMPXCHG16B())
+    setMaxAtomicSizeInBitsSupported(128);
+  else if (Subtarget.canUseCMPXCHG8B())
+    setMaxAtomicSizeInBitsSupported(64);
+  else
     setMaxAtomicSizeInBitsSupported(32);
 
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
@@ -7038,6 +7038,31 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
   assert(Elts.size() == VT.getVectorNumElements());
   return EltsFromConsecutiveLoads(VT, Elts, DL, DAG, Subtarget,
                                   IsAfterLegalize);
+}
+
+static Constant *getConstantVector(MVT VT, ArrayRef<APInt> Bits,
+                                   const APInt &Undefs, LLVMContext &C) {
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  Type *Ty = EVT(VT.getScalarType()).getTypeForEVT(C);
+
+  auto getConstantScalar = [&](const APInt &Val) -> Constant * {
+    if (VT.isFloatingPoint()) {
+      if (ScalarSize == 16)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEhalf(), Val));
+      if (ScalarSize == 32)
+        return ConstantFP::get(C, APFloat(APFloat::IEEEsingle(), Val));
+      assert(ScalarSize == 64 && "Unsupported floating point scalar size");
+      return ConstantFP::get(C, APFloat(APFloat::IEEEdouble(), Val));
+    }
+    return Constant::getIntegerValue(Ty, Val);
+  };
+
+  SmallVector<Constant *, 32> ConstantVec;
+  for (unsigned I = 0, E = Bits.size(); I != E; ++I)
+    ConstantVec.push_back(Undefs[I] ? UndefValue::get(Ty)
+                                    : getConstantScalar(Bits[I]));
+
+  return ConstantVector::get(ArrayRef<Constant *>(ConstantVec));
 }
 
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
@@ -18302,13 +18327,6 @@ unsigned X86TargetLowering::getGlobalWrapperKind(
   if (Subtarget.isPICStyleRIPRel() &&
       (OpFlags == X86II::MO_NO_FLAG || OpFlags == X86II::MO_COFFSTUB ||
        OpFlags == X86II::MO_DLLIMPORT))
-    return X86ISD::WrapperRIP;
-
-  // In the medium model, functions can always be referenced RIP-relatively,
-  // since they must be within 2GiB. This is also possible in non-PIC mode, and
-  // shorter than the 64-bit absolute immediate that would otherwise be emitted.
-  if (getTargetMachine().getCodeModel() == CodeModel::Medium &&
-      isa_and_nonnull<Function>(GV))
     return X86ISD::WrapperRIP;
 
   // GOTPCREL references must always use RIP.
@@ -39562,9 +39580,21 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
   return SDValue();
 }
 
+// TODO - move this to TLI like isBinOp?
+static bool isUnaryOp(unsigned Opcode) {
+  switch (Opcode) {
+  case ISD::CTLZ:
+  case ISD::CTTZ:
+  case ISD::CTPOP:
+    return true;
+  }
+  return false;
+}
+
+// Canonicalize SHUFFLE(UNARYOP(X)) -> UNARYOP(SHUFFLE(X)).
 // Canonicalize SHUFFLE(BINOP(X,Y)) -> BINOP(SHUFFLE(X),SHUFFLE(Y)).
-static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
-                                             const SDLoc &DL) {
+static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
+                                         const SDLoc &DL) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT ShuffleVT = N.getValueType();
 
@@ -39690,6 +39720,25 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
                                             DAG.getBitcast(OpVT, LHS),
                                             DAG.getBitcast(OpVT, RHS)));
         }
+      }
+      if (isUnaryOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
+          N0.getValueType() == N1.getValueType() &&
+          IsSafeToMoveShuffle(N0, SrcOpcode) &&
+          IsSafeToMoveShuffle(N1, SrcOpcode)) {
+        SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
+        SDValue Op10 = peekThroughOneUseBitcasts(N1.getOperand(0));
+        SDValue Res;
+        Op00 = DAG.getBitcast(ShuffleVT, Op00);
+        Op10 = DAG.getBitcast(ShuffleVT, Op10);
+        if (N.getNumOperands() == 3) {
+          Res = DAG.getNode(Opc, DL, ShuffleVT, Op00, Op10, N.getOperand(2));
+        } else {
+          Res = DAG.getNode(Opc, DL, ShuffleVT, Op00, Op10);
+        }
+        EVT OpVT = N0.getValueType();
+        return DAG.getBitcast(
+            ShuffleVT,
+            DAG.getNode(SrcOpcode, DL, OpVT, DAG.getBitcast(OpVT, Res)));
       }
     }
     break;
@@ -40772,10 +40821,11 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     if (TLI.SimplifyDemandedVectorElts(Op, DemandedElts, DCI))
       return SDValue(N, 0);
 
+    // Canonicalize SHUFFLE(UNARYOP(X)) -> UNARYOP(SHUFFLE(X)).
     // Canonicalize SHUFFLE(BINOP(X,Y)) -> BINOP(SHUFFLE(X),SHUFFLE(Y)).
     // Perform this after other shuffle combines to allow inner shuffles to be
     // combined away first.
-    if (SDValue BinOp = canonicalizeShuffleWithBinOps(Op, DAG, dl))
+    if (SDValue BinOp = canonicalizeShuffleWithOp(Op, DAG, dl))
       return BinOp;
   }
 
@@ -49894,41 +49944,35 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           Extract = DAG.getBitcast(RegVT, Extract);
           return DCI.CombineTo(N, Extract, SDValue(User, 1));
         }
-        if (User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
-            getTargetConstantFromBasePtr(Ptr)) {
-          // See if we are loading a constant that has also been broadcast.
-          APInt Undefs, UserUndefs;
-          SmallVector<APInt> Bits, UserBits;
-          if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-              getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                            UserBits)) {
-            UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-            UserBits.truncate(Bits.size());
-            if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
-              SDValue Extract = extractSubVector(
-                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
-              Extract = DAG.getBitcast(RegVT, Extract);
-              return DCI.CombineTo(N, Extract, SDValue(User, 1));
-            }
+        auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
+                               ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
+          for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
+            if (Undefs[I])
+              continue;
+            if (UserUndefs[I] || Bits[I] != UserBits[I])
+              return false;
           }
-        }
-        if (ISD::isNormalLoad(User)) {
-          // See if we are loading a constant that matches in the lower
-          // bits of a longer constant (but from a different constant pool ptr).
-          SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
-          const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
-          const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
-          if (LdC && UserC && UserPtr != Ptr &&
-              LdC->getType()->getPrimitiveSizeInBits() <
-                  UserC->getType()->getPrimitiveSizeInBits()) {
+          return true;
+        };
+        // See if we are loading a constant that matches in the lower
+        // bits of a longer constant (but from a different constant pool ptr).
+        EVT UserVT = User->getValueType(0);
+        SDValue UserPtr = cast<MemSDNode>(User)->getBasePtr();
+        const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+        const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
+        if (LdC && UserC && UserPtr != Ptr) {
+          unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
+          unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
+          if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
             APInt Undefs, UserUndefs;
             SmallVector<APInt> Bits, UserBits;
-            if (getTargetConstantBitsFromNode(SDValue(N, 0), 8, Undefs, Bits) &&
-                getTargetConstantBitsFromNode(SDValue(User, 0), 8, UserUndefs,
-                                              UserBits)) {
-              UserUndefs = UserUndefs.trunc(Undefs.getBitWidth());
-              UserBits.truncate(Bits.size());
-              if (Bits == UserBits && UserUndefs.isSubsetOf(Undefs)) {
+            unsigned NumBits = std::min(RegVT.getScalarSizeInBits(),
+                                        UserVT.getScalarSizeInBits());
+            if (getTargetConstantBitsFromNode(SDValue(N, 0), NumBits, Undefs,
+                                              Bits) &&
+                getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
+                                              UserUndefs, UserBits)) {
+              if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
                 SDValue Extract = extractSubVector(
                     SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
                 Extract = DAG.getBitcast(RegVT, Extract);
@@ -54483,6 +54527,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   bool IsSplat = llvm::all_equal(Ops);
   unsigned NumOps = Ops.size();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  LLVMContext &Ctx = *DAG.getContext();
 
   // Repeated subvectors.
   if (IsSplat &&
@@ -54780,7 +54825,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             Subtarget.useAVX512Regs() &&
             Subtarget.getPreferVectorWidth() >= 512 &&
             (SrcVT.getScalarSizeInBits() > 16 || Subtarget.useBWIRegs())) {
-          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+          EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(Ctx);
           return DAG.getNode(ISD::TRUNCATE, DL, VT,
                              ConcatSubOperand(NewSrcVT, Ops, 0));
         }
@@ -54937,7 +54982,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           (EltSizeInBits >= 32 || Subtarget.hasBWI())) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
         if (SelVT.getVectorElementType() == MVT::i1) {
-          SelVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+          SelVT = EVT::getVectorVT(Ctx, MVT::i1,
                                    NumOps * SelVT.getVectorNumElements());
           if (TLI.isTypeLegal(SelVT))
             return DAG.getNode(Op0.getOpcode(), DL, VT,
@@ -54952,7 +54997,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
           IsConcatFree(VT, Ops, 1) && IsConcatFree(VT, Ops, 2)) {
         EVT SelVT = Ops[0].getOperand(0).getValueType();
-        SelVT = SelVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+        SelVT = SelVT.getDoubleNumVectorElementsVT(Ctx);
         if (TLI.isTypeLegal(SelVT))
           return DAG.getNode(Op0.getOpcode(), DL, VT,
                              ConcatSubOperand(SelVT.getSimpleVT(), Ops, 0),
@@ -54968,12 +55013,38 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(Op0))) {
     unsigned Fast;
     const X86TargetLowering *TLI = Subtarget.getTargetLowering();
-    if (TLI->allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+    if (TLI->allowsMemoryAccess(Ctx, DAG.getDataLayout(), VT,
                                 *FirstLd->getMemOperand(), &Fast) &&
         Fast) {
       if (SDValue Ld =
               EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))
         return Ld;
+    }
+  }
+
+  // Attempt to fold target constant loads.
+  if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
+    SmallVector<APInt> EltBits;
+    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
+    for (unsigned I = 0; I != NumOps; ++I) {
+      APInt OpUndefElts;
+      SmallVector<APInt> OpEltBits;
+      if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
+                                         OpEltBits, true, false))
+        break;
+      EltBits.append(OpEltBits);
+      UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
+    }
+    if (EltBits.size() == VT.getVectorNumElements()) {
+      Constant *C = getConstantVector(VT, EltBits, UndefElts, Ctx);
+      MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
+      SDValue CV = DAG.getConstantPool(C, PVT);
+      MachineFunction &MF = DAG.getMachineFunction();
+      MachinePointerInfo MPI = MachinePointerInfo::getConstantPool(MF);
+      SDValue Ld = DAG.getLoad(VT, DL, DAG.getEntryNode(), CV, MPI);
+      SDValue Sub = extractSubVector(Ld, 0, DAG, DL, Op0.getValueSizeInBits());
+      DAG.ReplaceAllUsesOfValueWith(Op0, Sub);
+      return Ld;
     }
   }
 
@@ -54997,23 +55068,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return BcastLd;
       }
     }
-  }
-
-  // Attempt to fold target constant loads.
-  if (all_of(Ops, [](SDValue Op) { return getTargetConstantFromNode(Op); })) {
-    SmallVector<APInt> EltBits;
-    APInt UndefElts = APInt::getZero(VT.getVectorNumElements());
-    for (unsigned I = 0; I != NumOps; ++I) {
-      APInt OpUndefElts;
-      SmallVector<APInt> OpEltBits;
-      if (!getTargetConstantBitsFromNode(Ops[I], EltSizeInBits, OpUndefElts,
-                                        OpEltBits, true, false))
-          break;
-      EltBits.append(OpEltBits);
-      UndefElts.insertBits(OpUndefElts, I * OpUndefElts.getBitWidth());
-    }
-    if (EltBits.size() == VT.getVectorNumElements())
-      return getConstVector(EltBits, UndefElts, VT, DAG, DL);
   }
 
   // If we're splatting a 128-bit subvector to 512-bits, use SHUF128 directly.
