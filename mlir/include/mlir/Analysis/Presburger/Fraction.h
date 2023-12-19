@@ -131,10 +131,7 @@ inline Fraction operator-(const Fraction &x, const Fraction &y) {
 
 // Find the integer nearest to a given fraction.
 inline MPInt round(const Fraction &f) {
-  MPInt rem = f.num % f.den;
-  if (rem < Fraction(f.den, 2))
-    return (f.num - rem) / f.den;
-  return (f.num + f.den - rem) / f.den;
+  return (f.num / f.den) + (f.num > f.den / 2);
 }
 
 inline Fraction &operator+=(Fraction &x, const Fraction &y) {
