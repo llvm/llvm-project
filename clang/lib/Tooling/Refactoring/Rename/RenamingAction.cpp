@@ -82,7 +82,7 @@ RenameOccurrences::createSourceReplacements(RefactoringRuleContext &Context) {
   if (!Occurrences)
     return Occurrences.takeError();
   // FIXME: Verify that the new name is valid.
-  SymbolName Name(NewName);
+  SymbolName Name(NewName, /*IsObjectiveCSelector=*/false);
   return createRenameReplacements(
       *Occurrences, Context.getASTContext().getSourceManager(), Name);
 }
@@ -219,7 +219,7 @@ public:
     }
     // FIXME: Support multi-piece names.
     // FIXME: better error handling (propagate error out).
-    SymbolName NewNameRef(NewName);
+    SymbolName NewNameRef(NewName, /*IsObjectiveCSelector=*/false);
     Expected<std::vector<AtomicChange>> Change =
         createRenameReplacements(Occurrences, SourceMgr, NewNameRef);
     if (!Change) {
