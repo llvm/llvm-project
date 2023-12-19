@@ -872,11 +872,9 @@ static void runIslScheduleOptimizer(
       IslMaxOperationsGuard MaxOpGuard(Ctx, ScheduleComputeOut);
       Schedule = SC.compute_schedule();
 
-      if (MaxOpGuard.hasQuotaExceeded()) {
+      if (MaxOpGuard.hasQuotaExceeded())
         LLVM_DEBUG(
             dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
-        return;
-      }
     }
 
     isl_options_set_on_error(Ctx, OnErrorStatus);
