@@ -2980,11 +2980,11 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
   // We MUST use a raw syscall here, as wrappers may try to access
   // sigsetAddr which may cause a SIGSEGV. A raw syscall however is
   // safe. Additionally, we need to pass the kernel_sigset_size, which is
-  // different from libc sizeof(sigset_t). 8 seems to work for both 64bit and
-  // 32bit archs.
-  const auto approxKernelSigsetSize = 8;
-  int Result = syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, nullptr,
-                       approxKernelSigsetSize);
+  // different from libc sizeof(sigset_t). For the majority of architectures,
+  // it's 64 bits (_NSIG), and libc NSIG is _NSIG + 1.
+  const auto kernelSigsetSize = NSIG / 8;
+  const int Result = syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr,
+                             nullptr, kernelSigsetSize);
   (void)Result;
   // Because our "how" is invalid, this syscall should always fail, and our
   // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
