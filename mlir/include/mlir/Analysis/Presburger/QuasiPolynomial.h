@@ -65,24 +65,29 @@ public:
   }
 
   QuasiPolynomial operator*(QuasiPolynomial &x) {
-    assert(numParam = x.getNumParams() &&
-                      "two quasi-polynomials with different numbers of "
-                      "parameters cannot be multiplied!");
-    QuasiPolynomial qp(numParam);
-    std::vector<SmallVector<Fraction>> product;
-    for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
-      for (unsigned j = 0, e = x.coefficients.size(); j < e; j++) {
-        qp.coefficients.append({coefficients[i] * x.coefficients[j]});
+    assert(numParam == x.getNumParams() &&
+           "two quasi-polynomials with different numbers of "
+           "parameters cannot be multiplied!");
 
-        product.clear();
-        product.insert(product.end(), affine[i].begin(), affine[i].end());
-        product.insert(product.end(), x.affine[j].begin(), x.affine[j].end());
-
-        qp.affine.push_back(product);
+    SmallVector<Fraction> coeffs;
+    for (const Fraction &coeff : coefficients) {
+      for (const Fraction &xcoeff : x.coefficients) {
+        coeffs.append({coeff * xcoeff});
       }
     }
 
-    return qp;
+    std::vector<SmallVector<Fraction>> product;
+    std::vector<std::vector<SmallVector<Fraction>>> aff;
+    for (const std::vector<SmallVector<Fraction>> &term : affine) {
+      for (const std::vector<SmallVector<Fraction>> &xterm : x.affine) {
+        product.clear();
+        product.insert(product.end(), term.begin(), term.end());
+        product.insert(product.end(), xterm.begin(), xterm.end());
+        aff.push_back(product);
+      }
+    }
+
+    return QuasiPolynomial(numParam, coeffs, aff);
   }
 
   QuasiPolynomial operator/(Fraction x) {
