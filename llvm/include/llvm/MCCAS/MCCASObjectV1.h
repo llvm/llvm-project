@@ -681,44 +681,10 @@ private:
   explicit DebugInfoSectionRef(SpecificRefT Ref) : SpecificRefT(Ref) {}
 };
 
-class DIEDataRef : public SpecificRef<DIEDataRef> {
-  using SpecificRefT = SpecificRef<DIEDataRef>;
-  friend class SpecificRef<DIEDataRef>;
-
-public:
-  static constexpr StringLiteral KindString = "mc:debug_DIE_data";
-  static Expected<DIEDataRef> create(MCCASBuilder &MB,
-                                     ArrayRef<cas::ObjectRef> Children,
-                                     ArrayRef<char> Contents);
-
-  static Expected<DIEDataRef> get(Expected<MCObjectProxy> Ref) {
-    auto Specific = SpecificRefT::getSpecific(std::move(Ref));
-    if (!Specific)
-      return Specific.takeError();
-    return DIEDataRef(*Specific);
-  }
-  static Expected<DIEDataRef> get(const MCSchema &Schema, cas::ObjectRef ID) {
-    return get(Schema.get(ID));
-  }
-  static std::optional<DIEDataRef> Cast(MCObjectProxy Ref) {
-    auto Specific = SpecificRefT::Cast(Ref);
-    if (!Specific)
-      return std::nullopt;
-    return DIEDataRef(*Specific);
-  }
-  Expected<uint64_t> materialize(MCCASReader &Reader,
-                                 ArrayRef<char> AbbrevSectionContents,
-                                 ArrayRef<uint32_t> SecOffsetVals,
-                                 raw_ostream *Stream = nullptr) const;
-
-private:
-  explicit DIEDataRef(SpecificRefT Ref) : SpecificRefT(Ref) {}
-};
-
 struct LoadedDIETopLevel {
   SmallVector<StringRef, 0> AbbrevEntries;
   DIEDistinctDataRef DistinctData;
-  DIEDataRef RootDIE;
+  DIEDedupeTopLevelRef RootDIE;
 };
 
 /// Helper function to load the relevant information from a DIETopLevelRef:
