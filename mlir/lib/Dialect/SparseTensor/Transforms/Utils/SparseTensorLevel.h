@@ -21,42 +21,203 @@ class SparseTensorLevel {
   SparseTensorLevel &operator=(const SparseTensorLevel &) = delete;
 
 public:
-  SparseTensorLevel() : SparseTensorLevel(LevelType::Undef, nullptr){};
   virtual ~SparseTensorLevel() = default;
 
-  virtual Value peekCrdAt(OpBuilder &b, Location l, Value p) const = 0;
+  virtual Value peekCrdAt(OpBuilder &b, Location l, Value iv) const = 0;
 
   /// Peeks the lower and upper bound to *fully* traverse the level with
   /// the given position `p` that the immediate parent level is current at.
+  /// Returns a pair of values for *posLo* and *loopHi* respectively.
+  ///
+  /// For dense level, the *posLo* is the linearized position at beginning,
+  /// while *loopHi* is the largest *coordinate*, it also implies that the
+  /// smallest *coordinate* to start the loop is 0.
+  ///
+  /// For sparse level, [posLo, loopHi) specifies the range of index pointer to
+  /// load coordinate from the coordinate buffer.
+  ///
   /// `bound` is only used when the level is `non-unique` and deduplication is
   /// required. It specifies the max upper bound of the non-unique segment.
   virtual std::pair<Value, Value> peekRangeAt(OpBuilder &b, Location l, Value p,
-                                              Value bound = Value()) const = 0;
+                                              Value segHi = Value()) const = 0;
 
+  Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
-  Value getPos() const { return pos; }
-  Value getCrd() const { return crd; }
-  Value getLoopHi() const { return loopHi; }
-  Value getLoopLo() const { return loopLo; }
+  Value size() const { return lvlSize; }
+
+  //
+  // Level properties
+  //
+  bool isUnique() const { return isUniqueLT(lt); }
 
 protected:
-  SparseTensorLevel(LevelType lt, Value lvlSize)
-      : lt(lt), lvlSize(lvlSize), pos(nullptr), crd(nullptr), loopHi(nullptr),
-        loopLo(nullptr){};
+  SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize)
+      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize){};
 
+public:
+  const unsigned tid, lvl;
   const LevelType lt;
   const Value lvlSize;
+};
 
-public: // TODO: make these values private upon feature complete.
-  Value pos;
-  Value crd;
-  Value loopHi;
-  Value loopLo;
+enum class IterKind : uint8_t {
+  kTrivial,
+  kDedup,
+  kSubSect,
+  kNonEmptySubSect,
+  kFilter,
+};
+
+/// Helper class that helps generating loop conditions, etc, to traverse a
+/// sparse tensor level.
+class SparseIterator {
+  SparseIterator(SparseIterator &&) = delete;
+  SparseIterator(const SparseIterator &) = delete;
+  SparseIterator &operator=(SparseIterator &&) = delete;
+  SparseIterator &operator=(const SparseIterator &) = delete;
+
+protected:
+  SparseIterator(IterKind kind, unsigned tid, unsigned lvl,
+                 MutableArrayRef<Value> itVals)
+      : kind(kind), tid(tid), lvl(lvl), crd(nullptr), itVals(itVals){};
+
+  SparseIterator(IterKind kind, const SparseIterator *wrap)
+      : kind(kind), tid(wrap->tid), lvl(wrap->lvl), crd(nullptr),
+        itVals(wrap->itVals){};
+
+public:
+  virtual ~SparseIterator() = default;
+
+  Value getCrd() const { return crd; }
+
+  ValueRange getItVals() const { return itVals; };
+  void seek(ValueRange vals) {
+    assert(vals.size() == itVals.size());
+    for (unsigned i = 0, e = vals.size(); i < e; i++)
+      itVals[i] = vals[i];
+    // Now that the iterator is re-positioned, the coordinate becomes invalid.
+    crd = nullptr;
+  }
+
+  //
+  // Iterator properties.
+  //
+
+  // Whether the iterator support random access (i.e., support look up by
+  // *coordinate*).
+  // A random access iterator also traverses a dense space.
+  virtual bool randomAccessible() const = 0;
+  // Whether the iterator can simply traversed by a for loop.
+  virtual bool iteratableByFor() const { return false; };
+
+  //
+  // Core functions.
+  //
+
+  // Peeks the range to iterate on child level at the current position.
+  // See SparseTensorLevel::peekRangeAt();
+  //
+  // Not every type of iterator supports the operations, e.g., non-empty
+  // subsection iterator does not.
+  virtual std::pair<Value, Value>
+  peekNxLvlRange(OpBuilder &, Location, const SparseTensorLevel &) const {
+    llvm_unreachable("unsupported");
+  };
+
+  // Initialize the iterator according to the parent iterator's state.
+  virtual void genInit(OpBuilder &, Location, const SparseIterator *) = 0;
+
+  // Return a tuple of values for *upper*, *lower* bound and *step*
+  // respectively.
+  virtual std::pair<Value, Value> genForCond(OpBuilder &, Location) {
+    llvm_unreachable("Unsupported");
+  }
+
+  virtual Value genIsEnd(OpBuilder &b, Location l) = 0;
+  std::pair<Value, ValueRange> genWhileCond(OpBuilder &b, Location l,
+                                            ValueRange vs) {
+    seek(vs.take_front(itVals.size()));
+    return std::make_pair(genIsEnd(b, l), vs.drop_front(itVals.size()));
+  }
+
+  // Dereference the iterator, loads the coordinate at the current position.
+  //
+  // The method assumes that the iterator is not currently exhausted (i.e.,
+  // it != it.end()).
+  virtual Value deref(OpBuilder &b, Location l) = 0;
+
+  virtual ValueRange forward(OpBuilder &b, Location l) = 0;
+
+  // Generate a conditional it.next() in the following form
+  //
+  // if (crd == it.crd)
+  //    yield it.next
+  // else
+  //    yield it
+  //
+  // The function is virtual to allow alternative implementation. For example,
+  // if it.next() is trivial to compute, we can use a select operation instead.
+  // E.g.,
+  //
+  //  it = select crd == it.crd ? it+1 : it
+  virtual ValueRange forwardIf(OpBuilder &b, Location l, Value cond);
+
+  // Locate the iterator to the position specified by *crd*, this can only
+  // be done on an iterator that supports randm access.
+  virtual void locate(OpBuilder &b, Location l, Value crd) {
+    llvm_unreachable("Unsupported");
+  }
+
+  // Update the SSA value for the iterator after entering a new scope.
+  ValueRange linkNewScope(ValueRange pos) {
+    assert(!randomAccessible() && "random accessible iterators are traversed "
+                                  "by coordinate, call locate() instead.");
+    seek(pos.take_front(itVals.size()));
+    return pos.drop_front(itVals.size());
+  };
+
+protected:
+  void updateCrd(Value crd) { this->crd = crd; }
+
+public:
+  const IterKind kind;     // For LLVM-style RTTI.
+  const unsigned tid, lvl; // tensor level identifier.
+
+private:
+  Value crd; // The sparse coordinate used to coiterate;
+
+  // A range of value that together defines the current state of the
+  // iterator.
+  //
+  // For trivial iterators, it is the position; for dedup iterators, it consists
+  // of the positon and the segment high, for non-empty subsection iterator, it
+  // is the metadata that specifies the subsection.
+  MutableArrayRef<Value> itVals;
 };
 
 /// Helper function to create a TensorLevel object from given `tensor`.
-std::unique_ptr<SparseTensorLevel>
-makeSparseTensorLevel(OpBuilder &builder, Location loc, Value t, Level l);
+std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
+                                                         Location loc, Value t,
+                                                         unsigned tid, Level l);
+
+/// Helper function to create a SparseIterator object.
+std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
+                                                   bool dedup);
+
+std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>
+makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl);
+
+std::unique_ptr<SparseIterator>
+makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit, Value offset,
+                        Value stride, Value size);
+
+std::unique_ptr<SparseIterator> makeNonEmptySubSectIterator(
+    OpBuilder &b, Location l, const SparseIterator *parent,
+    std::unique_ptr<SparseIterator> &&lvlIt, Value size, unsigned stride);
+
+std::unique_ptr<SparseIterator>
+makeTraverseSubSectIterator(const SparseIterator *parent,
+                            std::unique_ptr<SparseIterator> &&lvlIt);
 
 } // namespace sparse_tensor
 } // namespace mlir

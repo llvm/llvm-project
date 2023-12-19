@@ -294,7 +294,7 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
           .createLoopRanges(builder, loc);
 
   env.emitter().initializeLoopEmit(
-      builder, loc,
+      builder, loc, /*genDedup=*/true,
       /// Generates buffer for the output tensor.
       /// Note that all sparse kernels assume that when all elements are written
       /// to (viz. x(i) = y(i) * z(i)), the output buffer is already initialized
@@ -815,8 +815,7 @@ static Operation *genCoIteration(CodegenEnv &env, OpBuilder &builder,
   Operation *loop = *env.genLoopBoundary([&](MutableArrayRef<Value> reduc) {
     // Construct while-loop with a parameter for each index.
     return env.emitter().enterCoIterationOverTensorsAtLvls(
-        builder, env.op().getLoc(), tidLvls, reduc, tryParallel,
-        /*genDedup=*/true, needsUniv);
+        builder, env.op().getLoc(), tidLvls, reduc, tryParallel, needsUniv);
   });
   assert(loop);
   return loop;
@@ -1032,10 +1031,12 @@ static bool getAllTidLvlsInLatPoints(
       });
 
   if (isDenseLT(env.lt(outTid, curr))) {
+    auto stt = getSparseTensorType(env.op().getOutputs().front());
     // Note that we generate dense indices of the output tensor
     // unconditionally, since they may not appear in the lattice, but may be
     // needed for linearized env.
-    callback(env.makeTensorLevel(outTid, *outLvl), nullptr);
+    if (stt.hasEncoding() && stt.isAllDense())
+      callback(env.makeTensorLevel(outTid, *outLvl), nullptr);
   }
 
   if (numloopCond == 0) {

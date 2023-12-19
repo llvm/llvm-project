@@ -1105,7 +1105,7 @@ public:
     LoopEmitter loopEmitter(
         ValueRange{input},
         StringAttr::get(getContext(), ForeachOp::getOperationName()));
-    loopEmitter.initializeLoopEmit(rewriter, loc);
+    loopEmitter.initializeLoopEmit(rewriter, loc, /*genDedup=*/false);
     for (Level l = 0; l < lvlRank; l++) {
       // TODO: provide utility function for loop sequences that only contains
       // one for loop?

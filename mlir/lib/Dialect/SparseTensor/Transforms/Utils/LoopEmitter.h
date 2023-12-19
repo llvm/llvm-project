@@ -95,7 +95,7 @@ public:
 
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.
-  void initializeLoopEmit(OpBuilder &builder, Location loc,
+  void initializeLoopEmit(OpBuilder &builder, Location loc, bool genDedup,
                           OutputUpdater updater = nullptr,
                           SynTensorBoundSetter synSetter = nullptr);
 
@@ -153,7 +153,7 @@ public:
   Operation *enterCoIterationOverTensorsAtLvls(
       OpBuilder &builder, Location loc, ArrayRef<TensorLevel> tidLvls,
       MutableArrayRef<Value> reduc = {}, bool isParallel = false,
-      bool genDedup = false, bool needsUniv = false);
+      bool needsUniv = false);
 
   /// Generates code to exit the current loop (e.g., generates yields, forwards
   /// loop induction variables, etc).
@@ -310,6 +310,7 @@ private:
 
   ///
   /// Enums for different kinds of loop conditions.
+  /// TODO: remove the enum after fully migrating to SparseTensorLevel.
   ///
 
   // The bit indicating whether the loop conditions is sparse.
@@ -392,6 +393,9 @@ private:
                                SmallVectorImpl<TensorLvlCond> &dnConds,
                                SmallVectorImpl<TensorLvlCond> &spConds);
 
+  void categorizeIterators(ArrayRef<TensorLevel> tidLvls,
+                           SmallVectorImpl<SparseIterator *> &raIters,
+                           SmallVectorImpl<SparseIterator *> &spIters);
   ///
   /// LoopEmitter internal helper functions.
   ///
@@ -400,7 +404,7 @@ private:
                                                   MutableArrayRef<Value>)>;
 
   /// Whether the list of the sparse condition should be iterated by for loop.
-  bool shouldIteratedByForLoop(ArrayRef<TensorLvlCond> spConds, bool genDedup);
+  bool shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters);
 
   /// Linearizes address for dense dimension (i.e., p = (i * d0) + j).
   Value genAddress(OpBuilder &builder, Location loc, TensorId tid, Level lvl,
@@ -441,7 +445,7 @@ private:
   }
 
   bool isValidLevel(TensorId tid, Level lvl) const {
-    return tid < lvlTypes.size() && lvl < lvlTypes[tid].size();
+    return tid < lvls.size() && lvl < lvls[tid].size();
   }
 
   /// Prepares loop for iterating over `tensor[lvl]`, under the assumption
@@ -453,7 +457,7 @@ private:
   /// optimized from the loop condition, we need to compute the
   /// positions/coordinates inside the loop body.
   void enterTensorsAtDenseLvls(OpBuilder &builder, Location loc,
-                               ArrayRef<TensorLvlCond> dnConds, Value iv,
+                               ArrayRef<SparseIterator *> dnConds, Value iv,
                                SmallVectorImpl<SliceLoopInfo> &sliceInfo);
 
   /// Emits a for loop to iterate over a tensor level with the provided
@@ -463,9 +467,9 @@ private:
   /// Returns a pair: the loop generated and the value for the induction
   /// variable.
   std::pair<Operation *, Value>
-  emitForLoopOverTensorAtLvl(OpBuilder &builder, Location loc, TensorId tid,
-                             Level lvl, Value lo, Value hi,
-                             MutableArrayRef<Value> reduc, bool isParallel);
+  emitForLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
+                             SparseIterator &iter, MutableArrayRef<Value> reduc,
+                             bool isParallel);
 
   /// Emits a while loop to co-iterate over a list of sparse condition, or
   /// (complex) single sparse condition that can not be handled by for loop
@@ -475,7 +479,7 @@ private:
   /// iterated).
   std::pair<Operation *, Value>
   emitWhileLoopOverTensorsAtLvls(OpBuilder &builder, Location loc,
-                                 ArrayRef<TensorLvlCond> spConds,
+                                 ArrayRef<SparseIterator *> iters,
                                  MutableArrayRef<Value> reduc, bool needsUniv);
 
   /// Generates the while loop condition for the given tensor level condition.
@@ -530,6 +534,8 @@ private:
   // Slice-driven loop related methods.
   //
 
+  void initSubSectIterator(OpBuilder &builder, Location loc);
+  // TODO: remove below.
   void initSliceDriven(OpBuilder &builder, Location loc);
 
   /// Retrieves the most recent slice on lvl. To reduce affine expression like
@@ -602,6 +608,10 @@ private:
   /// return true if has already been resolved.
   bool genSliceBegin(OpBuilder &builder, Location loc, TensorId tid, Level lvl);
 
+  std::unique_ptr<SparseIterator> makeLevelIterator(OpBuilder &builder,
+                                                    Location loc, TensorId tid,
+                                                    Level l, bool genDedup);
+
   /// Generates code to get the next non-empty slices of tid on lvl.
   /// Returns a tuple of values for <NonEmpty, MinCrd, AbsOffset> (see
   /// SliceInfo) respectively.
@@ -622,15 +632,18 @@ private:
   //
   // Fields which have `numTensor` many entries.
   //
-  // TODO: switch to an AOS style to avoid any possible mismatches.
-  //
 
   /// Input and (optional) output tensors.
   std::vector<Value> tensors;
+  std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
+  std::vector<std::vector<std::vector<std::unique_ptr<SparseIterator>>>> iters;
+  std::vector<Value> valBuffer; // to_value
+
+  // TODO: remove all below.
   /// Level-types for each `(TensorId, Level)` pair.
-  std::vector<std::vector<LevelType>> lvlTypes;
   // Sparse iteration information for each `(TensorId, Level)` pair.
   // These arrays are updated to remain current within the current loop.
+  std::vector<std::vector<LevelType>> lvlTypes;
   std::vector<std::vector<Value>> posits;
   /// The collection of coordinates for a given element (one such
   /// collection for each tensor).
@@ -639,8 +652,7 @@ private:
   std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
-  std::vector<Value> valBuffer; // to_value
+  bool genDedup; // TODO: remove it.
 
   //
   // Slice-driven loops related fields.
@@ -659,8 +671,8 @@ private:
 
   // The cached position buffer for the slices, they serve the same purpose as
   // ptrBuffer for compressed dimensions.
-  // But they always starts with the first pidx pointing to coord > slice.offset
-  // to avoid iteration from the beginning.
+  // But they always starts with the first pidx pointing to coord >
+  // slice.offset to avoid iteration from the beginning.
   std::vector<std::vector<std::vector<Value>>> slicePosBuffer;
   std::vector<std::vector<Value>> sliceTupleNxStartIdx;
   std::vector<std::vector<Value>> sliceTupleFwdCnt;
