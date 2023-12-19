@@ -89,8 +89,16 @@ double ScientificNotFormattedFloat = 1.2345678e10;
 // CHECK-FIXES: 1.234'567'8e10
 
 double ScientificNotFormattedFloat1 = 1.2345678E10;
-// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: unformatted representation of float literal '1.2345678E10' [modernize-use-digit-separator]
 // CHECK-FIXES: 1.234'567'8E10
+
+double ScientificNotFormattedFloat2 = -1.2345678E+10;
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of float literal '1.2345678E+10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8E+10
+
+double ScientificNotFormattedFloat3 = +1.2345678e-10;
+// CHECK-MESSAGES: :[[@LINE-1]]:40: warning: unformatted representation of float literal '1.2345678e-10' [modernize-use-digit-separator]
+// CHECK-FIXES: 1.234'567'8e-10
 
 // FIXME:
 // error: expected ';' after top level declarator [clang-diagnostic-error]
