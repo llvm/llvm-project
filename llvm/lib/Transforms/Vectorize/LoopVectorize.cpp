@@ -2055,7 +2055,7 @@ public:
     }
   }
 
-  InstructionCost getCost() {
+  InstructionCost getCost(Loop *OuterLoop) {
     if (SCEVCheckBlock || MemCheckBlock)
       LLVM_DEBUG(dbgs() << "Calculating cost of runtime checks:\n");
 
@@ -2076,15 +2076,44 @@ public:
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         RTCheckCost += C;
       }
-    if (MemCheckBlock)
+    if (MemCheckBlock) {
+      InstructionCost MemCheckCost = 0;
       for (Instruction &I : *MemCheckBlock) {
         if (MemCheckBlock->getTerminator() == &I)
           continue;
         InstructionCost C =
             TTI->getInstructionCost(&I, TTI::TCK_RecipThroughput);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
-        RTCheckCost += C;
+        MemCheckCost += C;
       }
+
+      // If the runtime memory checks are being created inside an outer loop
+      // we should find out if these checks are outer loop invariant. If so,
+      // the checks will be hoisted out and so the effective cost will reduce
+      // according to the outer loop trip count.
+      if (OuterLoop) {
+        ScalarEvolution *SE = MemCheckExp.getSE();
+        const SCEV *Cond = SE->getSCEV(MemRuntimeCheckCond);
+        if (SE->isLoopInvariant(Cond, OuterLoop)) {
+          if (std::optional<unsigned> OuterTC =
+                  getSmallBestKnownTC(*SE, OuterLoop))
+            MemCheckCost /= *OuterTC;
+          else {
+            // It seems reasonable to assume that we can reduce the effective
+            // cost of the checks even when we know nothing about the trip
+            // count. Here I've assumed that the outer loop executes at least
+            // twice.
+            MemCheckCost /= 2;
+          }
+
+          // Let's ensure the cost is always at least 1.
+          if (MemCheckCost == 0)
+            MemCheckCost = 1;
+        }
+      }
+
+      RTCheckCost += MemCheckCost;
+    }
 
     if (SCEVCheckBlock || MemCheckBlock)
       LLVM_DEBUG(dbgs() << "Total cost of runtime checks: " << RTCheckCost
@@ -9658,7 +9687,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
                                        std::optional<unsigned> VScale, Loop *L,
                                        ScalarEvolution &SE,
                                        ScalarEpilogueLowering SEL) {
-  InstructionCost CheckCost = Checks.getCost();
+  InstructionCost CheckCost = Checks.getCost(L->getParentLoop());
   if (!CheckCost.isValid())
     return false;
 
