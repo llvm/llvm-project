@@ -2005,12 +2005,12 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
   if (D->isInvalidDecl())
     return false;
 
-  if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
+  if (const auto *DD = dyn_cast<DecompositionDecl>(D)) {
     // For a decomposition declaration, warn if none of the bindings are
     // referenced, instead of if the variable itself is referenced (which
     // it is, by the bindings' expressions).
     bool IsAllPlaceholders = true;
-    for (auto *BD : DD->bindings()) {
+    for (const auto *BD : DD->bindings()) {
       if (BD->isReferenced())
         return false;
       IsAllPlaceholders = IsAllPlaceholders && BD->isPlaceholderVar(LangOpts);
@@ -2054,7 +2054,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
   if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
 
     const Expr *Init = VD->getInit();
-    if (const auto *Cleanups = dyn_cast_or_null<ExprWithCleanups>(Init))
+    if (const auto *Cleanups = dyn_cast_if_present<ExprWithCleanups>(Init))
       Init = Cleanups->getSubExpr();
 
     const auto *Ty = VD->getType().getTypePtr();
@@ -2068,11 +2068,10 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
 
     // Warn for reference variables whose initializtion performs lifetime
     // extension.
-    if (const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(Init)) {
-      if (MTE->getExtendingDecl()) {
-        Ty = VD->getType().getNonReferenceType().getTypePtr();
-        Init = MTE->getSubExpr()->IgnoreImplicitAsWritten();
-      }
+    if (const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(Init);
+        MTE && MTE->getExtendingDecl()) {
+      Ty = VD->getType().getNonReferenceType().getTypePtr();
+      Init = MTE->getSubExpr()->IgnoreImplicitAsWritten();
     }
 
     // If we failed to complete the type for some reason, or if the type is
@@ -2089,15 +2088,14 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
       if (Tag->hasAttr<UnusedAttr>())
         return false;
 
-      if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Tag)) {
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(Tag)) {
         if (!RD->hasTrivialDestructor() && !RD->hasAttr<WarnUnusedAttr>())
           return false;
 
         if (Init) {
-          const CXXConstructExpr *Construct =
-            dyn_cast<CXXConstructExpr>(Init);
+          const auto *Construct = dyn_cast<CXXConstructExpr>(Init);
           if (Construct && !Construct->isElidable()) {
-            CXXConstructorDecl *CD = Construct->getConstructor();
+            const CXXConstructorDecl *CD = Construct->getConstructor();
             if (!CD->isTrivial() && !RD->hasAttr<WarnUnusedAttr>() &&
                 (VD->getInit()->isValueDependent() || !VD->evaluateValue()))
               return false;
