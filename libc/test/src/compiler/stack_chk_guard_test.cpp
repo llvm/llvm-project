@@ -17,7 +17,7 @@ TEST(LlvmLibcStackChkFail, Death) {
 
 TEST(LlvmLibcStackChkFail, Smash) {
   EXPECT_DEATH(
-      [] {
+      [] [[gnu::no_sanitize]] {
         int arr[20];
         LIBC_NAMESPACE::memset(arr, 0xAA, 2001);
       },
