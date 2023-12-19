@@ -1538,7 +1538,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // __mh_(execute|dylib|dylinker|bundle|preload|object)_header are special
       // symbols that support MachO header introspection. They do not bind to
       // code locations and are irrelevant for disassembly.
-      if (NameOrErr->startswith("__mh_") && NameOrErr->endswith("_header"))
+      if (NameOrErr->starts_with("__mh_") && NameOrErr->ends_with("_header"))
         continue;
       // Don't ask a Mach-O STAB symbol for its section unless you know that
       // STAB symbol's section field refers to a valid section index. Otherwise
@@ -1948,6 +1948,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         continue;
       }
 
+      // Skip relocations from symbols that are not dumped.
+      for (; RelCur != RelEnd; ++RelCur) {
+        uint64_t Offset = RelCur->getOffset() - RelAdjustment;
+        if (Index <= Offset)
+          break;
+      }
+
       bool DumpARMELFData = false;
       bool DumpTracebackTableForXCOFFFunction =
           Obj.isXCOFF() && Section.isText() && TracebackTable &&
@@ -2214,7 +2221,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           while (RelCur != RelEnd) {
             uint64_t Offset = RelCur->getOffset() - RelAdjustment;
             // If this relocation is hidden, skip it.
-            if (getHidden(*RelCur) || SectionAddr + Offset < StartAddress) {
+            if (getHidden(*RelCur)) {
               ++RelCur;
               continue;
             }

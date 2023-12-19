@@ -59,7 +59,7 @@ define <2 x double> @load_lane0(ptr %ptr, double %pt)  {
 define double @load_all(ptr %base, double %pt)  {
 ; CHECK-LABEL: @load_all(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, ptr [[BASE:%.*]], <4 x i64> <i64 0, i64 poison, i64 2, i64 3>
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x double> undef)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x double> poison)
 ; CHECK-NEXT:    [[ELT:%.*]] = extractelement <4 x double> [[RES]], i64 2
 ; CHECK-NEXT:    ret double [[ELT]]
 ;
@@ -71,7 +71,7 @@ define double @load_all(ptr %base, double %pt)  {
 
 define <2 x double> @load_generic(ptr %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_generic(
-; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0(ptr [[PTR:%.*]], i32 4, <2 x i1> [[MASK:%.*]], <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -84,7 +84,7 @@ define <2 x double> @load_generic(ptr %ptr, double %pt, <2 x i1> %mask)  {
 
 define <2 x double> @load_speculative(ptr dereferenceable(16) align 4 %ptr, double %pt, <2 x i1> %mask) nofree nosync {
 ; CHECK-LABEL: @load_speculative(
-; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[MASK:%.*]], <2 x double> [[UNMASKEDLOAD]], <2 x double> [[PTV2]]
@@ -98,7 +98,7 @@ define <2 x double> @load_speculative(ptr dereferenceable(16) align 4 %ptr, doub
 
 define <2 x double> @load_speculative_less_aligned(ptr dereferenceable(16) %ptr, double %pt, <2 x i1> %mask) nofree nosync {
 ; CHECK-LABEL: @load_speculative_less_aligned(
-; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[MASK:%.*]], <2 x double> [[UNMASKEDLOAD]], <2 x double> [[PTV2]]
@@ -114,7 +114,7 @@ define <2 x double> @load_speculative_less_aligned(ptr dereferenceable(16) %ptr,
 
 define <2 x double> @load_spec_neg_size(ptr dereferenceable(8) %ptr, double %pt, <2 x i1> %mask) nofree nosync {
 ; CHECK-LABEL: @load_spec_neg_size(
-; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0(ptr nonnull [[PTR:%.*]], i32 4, <2 x i1> [[MASK:%.*]], <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -128,7 +128,7 @@ define <2 x double> @load_spec_neg_size(ptr dereferenceable(8) %ptr, double %pt,
 ; Can only speculate one lane (but it's the only one active)
 define <2 x double> @load_spec_lan0(ptr dereferenceable(8) %ptr, double %pt, <2 x i1> %mask) nofree nosync {
 ; CHECK-LABEL: @load_spec_lan0(
-; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MASK2:%.*]] = insertelement <2 x i1> [[MASK:%.*]], i1 false, i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0(ptr nonnull [[PTR:%.*]], i32 4, <2 x i1> [[MASK2]], <2 x double> [[PTV2]])
@@ -160,7 +160,7 @@ define void @store_onemask(ptr %ptr, <2 x double> %val)  {
 
 define void @store_demandedelts(ptr %ptr, double %val)  {
 ; CHECK-LABEL: @store_demandedelts(
-; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i64 0
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> poison, double [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v2f64.p0(<2 x double> [[VALVEC1]], ptr [[PTR:%.*]], i32 4, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
@@ -201,8 +201,8 @@ define <2 x double> @gather_onemask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 define <4 x double> @gather_lane2(ptr %base, double %pt)  {
 ; CHECK-LABEL: @gather_lane2(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, ptr [[BASE:%.*]], <4 x i64> <i64 poison, i64 poison, i64 2, i64 poison>
-; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <4 x double> undef, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <4 x double> [[PT_V1]], <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 poison, i32 0>
+; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <4 x double> poison, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <4 x double> [[PT_V1]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x double> [[PT_V2]])
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
@@ -216,7 +216,7 @@ define <4 x double> @gather_lane2(ptr %base, double %pt)  {
 define <2 x double> @gather_lane0_maybe(ptr %base, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @gather_lane0_maybe(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, ptr [[BASE:%.*]], <2 x i64> <i64 0, i64 1>
-; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MASK2:%.*]] = insertelement <2 x i1> [[MASK:%.*]], i1 false, i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS]], i32 4, <2 x i1> [[MASK2]], <2 x double> [[PT_V2]])
@@ -233,7 +233,7 @@ define <2 x double> @gather_lane0_maybe(ptr %base, double %pt, <2 x i1> %mask)  
 define <2 x double> @gather_lane0_maybe_spec(ptr %base, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @gather_lane0_maybe_spec(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, ptr [[BASE:%.*]], <2 x i64> <i64 0, i64 1>
-; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 0
+; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
 ; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MASK2:%.*]] = insertelement <2 x i1> [[MASK:%.*]], i1 false, i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS]], i32 4, <2 x i1> [[MASK2]], <2 x double> [[PT_V2]])
@@ -259,7 +259,7 @@ define void @scatter_zeromask(<2 x ptr> %ptrs, <2 x double> %val)  {
 define void @scatter_demandedelts(ptr %ptr, double %val)  {
 ; CHECK-LABEL: @scatter_demandedelts(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, ptr [[PTR:%.*]], <2 x i64> <i64 0, i64 poison>
-; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> undef, double [[VAL:%.*]], i64 0
+; CHECK-NEXT:    [[VALVEC1:%.*]] = insertelement <2 x double> poison, double [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[VALVEC1]], <2 x ptr> [[PTRS]], i32 8, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
@@ -412,7 +412,7 @@ define <2 x i64> @gather_v2i64_uniform_ptrs_all_active_mask(ptr %src) {
 define <2 x i64> @negative_gather_v2i64_non_uniform_ptrs_all_active_mask(<2 x ptr> %inVal, ptr %src ) {
 ; CHECK-LABEL: @negative_gather_v2i64_non_uniform_ptrs_all_active_mask(
 ; CHECK-NEXT:    [[INSERT_VALUE:%.*]] = insertelement <2 x ptr> [[INVAL:%.*]], ptr [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> [[INSERT_VALUE]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> undef)
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> [[INSERT_VALUE]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> poison)
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %insert.value = insertelement <2 x ptr> %inVal, ptr %src, i32 1

@@ -113,11 +113,11 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::malformed:
     OS << "malformed instrumentation profile data";
     break;
-  case instrprof_error::missing_debug_info_for_correlation:
-    OS << "debug info for correlation is required";
+  case instrprof_error::missing_correlation_info:
+    OS << "debug info/binary for correlation is required";
     break;
-  case instrprof_error::unexpected_debug_info_for_correlation:
-    OS << "debug info for correlation is not necessary";
+  case instrprof_error::unexpected_correlation_info:
+    OS << "debug info/binary for correlation is not necessary";
     break;
   case instrprof_error::unable_to_correlate_profile:
     OS << "unable to correlate profile";
@@ -385,7 +385,7 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
     return PGOFuncName;
   // Drop the file name including ':'. See also getPGOFuncName.
-  if (PGOFuncName.startswith(FileName))
+  if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;
 }

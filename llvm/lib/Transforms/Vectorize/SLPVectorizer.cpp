@@ -391,8 +391,10 @@ static SmallBitVector isUndefVector(const Value *V,
         if (isa<T>(II->getOperand(1)))
           continue;
         std::optional<unsigned> Idx = getInsertIndex(II);
-        if (!Idx)
-          continue;
+        if (!Idx) {
+          Res.reset();
+          return Res;
+        }
         if (*Idx < UseMask.size() && !UseMask.test(*Idx))
           Res.reset(*Idx);
       }
@@ -13680,8 +13682,10 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     // constant index, or a pointer operand that doesn't point to a scalar
     // type.
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      if (GEP->getNumIndices() != 1)
+        continue;
       Value *Idx = GEP->idx_begin()->get();
-      if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
+      if (isa<Constant>(Idx))
         continue;
       if (!isValidElementType(Idx->getType()))
         continue;
@@ -15726,6 +15730,8 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   assert(isValidElementType(V->getType()) &&
          isValidElementType(V2->getType()) &&
          "Expected valid element types only.");
+  if (V == V2)
+    return IsCompatibility;
   auto *CI1 = cast<CmpInst>(V);
   auto *CI2 = cast<CmpInst>(V2);
   if (CI1->getOperand(0)->getType()->getTypeID() <
@@ -15750,6 +15756,8 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   for (int I = 0, E = CI1->getNumOperands(); I < E; ++I) {
     auto *Op1 = CI1->getOperand(CI1Preds ? I : E - I - 1);
     auto *Op2 = CI2->getOperand(CI2Preds ? I : E - I - 1);
+    if (Op1 == Op2)
+      continue;
     if (Op1->getValueID() < Op2->getValueID())
       return !IsCompatibility;
     if (Op1->getValueID() > Op2->getValueID())
@@ -15776,7 +15784,10 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
         InstructionsState S = getSameOpcode({I1, I2}, TLI);
         if (S.getOpcode() && (IsCompatibility || !S.isAltShuffle()))
           continue;
-        return !IsCompatibility && I1->getOpcode() < I2->getOpcode();
+        if (IsCompatibility)
+          return false;
+        if (I1->getOpcode() != I2->getOpcode())
+          return I1->getOpcode() < I2->getOpcode();
       }
   }
   return IsCompatibility;

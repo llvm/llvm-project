@@ -1960,7 +1960,7 @@ static std::string generateTypeForGetter(const NamedTypeConstraint &value) {
   /// Adaptor will have values that are not from the type of their operation and
   /// this is expected, so we dont generate TypedValue for Adaptor
   if (value.constraint.getCPPClassName() != "::mlir::Type" &&
-      StringRef(value.constraint.getCPPClassName()).startswith("::"))
+      StringRef(value.constraint.getCPPClassName()).starts_with("::"))
     str = llvm::formatv("::mlir::TypedValue<{0}>",
                         value.constraint.getCPPClassName())
               .str();

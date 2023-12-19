@@ -1809,8 +1809,8 @@ static void handleAssumumptionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 /// Normalize the attribute, __foo__ becomes foo.
 /// Returns true if normalization was applied.
 static bool normalizeName(StringRef &AttrName) {
-  if (AttrName.size() > 4 && AttrName.startswith("__") &&
-      AttrName.endswith("__")) {
+  if (AttrName.size() > 4 && AttrName.starts_with("__") &&
+      AttrName.ends_with("__")) {
     AttrName = AttrName.drop_front(2).drop_back(2);
     return true;
   }
@@ -3605,7 +3605,7 @@ bool Sema::checkTargetClonesAttrString(
       }
     } else {
       // Other targets ( currently X86 )
-      if (Cur.startswith("arch=")) {
+      if (Cur.starts_with("arch=")) {
         if (!Context.getTargetInfo().isValidCPUName(
                 Cur.drop_front(sizeof("arch=") - 1)))
           return Diag(CurLoc, diag::warn_unsupported_target_attribute)
@@ -3623,7 +3623,7 @@ bool Sema::checkTargetClonesAttrString(
       StringsBuffer.push_back(Cur);
     }
   }
-  if (Str.rtrim().endswith(","))
+  if (Str.rtrim().ends_with(","))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "" << TargetClones;
   return false;
@@ -5225,8 +5225,16 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.checkAtLeastNumArgs(S, 1))
+  if (AL.getAttributeSpellingListIndex() == SuppressAttr::CXX11_gsl_suppress) {
+    // Suppression attribute with GSL spelling requires at least 1 argument.
+    if (!AL.checkAtLeastNumArgs(S, 1))
+      return;
+  } else if (!isa<VarDecl>(D)) {
+    // Analyzer suppression applies only to variables and statements.
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
+        << AL << 0 << "variables and statements";
     return;
+  }
 
   std::vector<StringRef> DiagnosticIdentifiers;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
@@ -5235,8 +5243,6 @@ static void handleSuppressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (!S.checkStringLiteralArgumentAttr(AL, I, RuleName, nullptr))
       return;
 
-    // FIXME: Warn if the rule name is unknown. This is tricky because only
-    // clang-tidy knows about available rules.
     DiagnosticIdentifiers.push_back(RuleName);
   }
   D->addAttr(::new (S.Context)
@@ -5819,7 +5825,7 @@ struct IntrinToName {
 static bool ArmBuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
                                  ArrayRef<IntrinToName> Map,
                                  const char *IntrinNames) {
-  if (AliasName.startswith("__arm_"))
+  if (AliasName.starts_with("__arm_"))
     AliasName = AliasName.substr(6);
   const IntrinToName *It =
       llvm::lower_bound(Map, BuiltinID, [](const IntrinToName &L, unsigned Id) {
@@ -6663,10 +6669,10 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
   // Check whether this will be mapped to a getter or setter of a property.
   bool IsGetter = false, IsSetter = false;
-  if (Name.startswith("getter:")) {
+  if (Name.starts_with("getter:")) {
     IsGetter = true;
     Name = Name.substr(7);
-  } else if (Name.startswith("setter:")) {
+  } else if (Name.starts_with("setter:")) {
     IsSetter = true;
     Name = Name.substr(7);
   }
@@ -7292,7 +7298,7 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
     }
   }
 
-  if (!Space.startswith("space")) {
+  if (!Space.starts_with("space")) {
     S.Diag(SpaceArgLoc, diag::err_hlsl_expected_space) << Space;
     return;
   }
@@ -8439,92 +8445,6 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
-static void handleCountedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!AL.isArgIdent(0)) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
-        << AL << AANT_ArgumentIdentifier;
-    return;
-  }
-
-  IdentifierLoc *IL = AL.getArgAsIdent(0);
-  CountedByAttr *CBA =
-      ::new (S.Context) CountedByAttr(S.Context, AL, IL->Ident);
-  CBA->setCountedByFieldLoc(IL->Loc);
-  D->addAttr(CBA);
-}
-
-bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
-  const auto *CBA = FD->getAttr<CountedByAttr>();
-  const IdentifierInfo *FieldName = CBA->getCountedByField();
-  DeclarationNameInfo NameInfo(FieldName,
-                               CBA->getCountedByFieldLoc().getBegin());
-
-  LookupResult MemResult(*this, NameInfo, Sema::LookupMemberName);
-  LookupName(MemResult, S);
-
-  if (MemResult.empty()) {
-    // The "counted_by" field needs to exist within the struct.
-    LookupResult OrdResult(*this, NameInfo, Sema::LookupOrdinaryName);
-    LookupName(OrdResult, S);
-
-    if (!OrdResult.empty()) {
-      SourceRange SR = FD->getLocation();
-      Diag(SR.getBegin(), diag::err_counted_by_must_be_in_structure)
-          << FieldName << SR;
-
-      if (auto *ND = OrdResult.getAsSingle<NamedDecl>()) {
-        SR = ND->getLocation();
-        Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-            << ND << SR;
-      }
-      return true;
-    }
-
-    CXXScopeSpec SS;
-    DeclFilterCCC<FieldDecl> Filter(FieldName);
-    return DiagnoseEmptyLookup(S, SS, MemResult, Filter, nullptr, std::nullopt,
-                               const_cast<DeclContext *>(FD->getDeclContext()));
-  }
-
-  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
-
-  if (!Decl::isFlexibleArrayMemberLike(Context, FD, FD->getType(),
-                                       StrictFlexArraysLevel, true)) {
-    // The "counted_by" attribute must be on a flexible array member.
-    SourceRange SR = FD->getLocation();
-    Diag(SR.getBegin(), diag::err_counted_by_attr_not_on_flexible_array_member)
-        << SR;
-    return true;
-  }
-
-  if (const FieldDecl *Field = MemResult.getAsSingle<FieldDecl>()) {
-    if (Field->hasAttr<CountedByAttr>()) {
-      // The "counted_by" field can't point to the flexible array member.
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(), diag::err_counted_by_attr_refers_to_flexible_array)
-          << CBA->getCountedByField() << SR;
-      return true;
-    }
-
-    if (!Field->getType()->isIntegerType() ||
-        Field->getType()->isBooleanType()) {
-      // The "counted_by" field must have an integer type.
-      SourceRange SR = CBA->getCountedByFieldLoc();
-      Diag(SR.getBegin(),
-           diag::err_flexible_array_counted_by_attr_field_not_integer)
-          << CBA->getCountedByField() << SR;
-
-      SR = Field->getLocation();
-      Diag(SR.getBegin(), diag::note_flexible_array_counted_by_attr_field)
-          << Field << SR;
-      return true;
-    }
-  }
-
-  return false;
-}
-
 static void handleFunctionReturnThunksAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
   StringRef KindStr;
@@ -9480,10 +9400,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:
     handleAvailableOnlyInDefaultEvalMethod(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_CountedBy:
-    handleCountedByAttr(S, D, AL);
     break;
 
   // Microsoft attributes:

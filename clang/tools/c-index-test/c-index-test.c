@@ -8,6 +8,7 @@
 #include "clang-c/Documentation.h"
 #include "clang-c/Index.h"
 #include "clang/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -5149,6 +5150,14 @@ static void flush_atexit(void) {
 
 int main(int argc, const char **argv) {
   thread_info client_data;
+
+#ifdef __MVS__
+  if (enableAutoConversion(fileno(stdout)) == -1)
+    fprintf(stderr, "Setting conversion on stdout failed\n");
+
+  if (enableAutoConversion(fileno(stderr)) == -1)
+    fprintf(stderr, "Setting conversion on stderr failed\n");
+#endif
 
   atexit(flush_atexit);
 
