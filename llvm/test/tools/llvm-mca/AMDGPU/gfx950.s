@@ -1,18 +1,22 @@
 # RUN: llvm-mca -mtriple=amdgcn -mcpu=gfx950 --timeline --iterations=1 --timeline-max-cycles=0 < %s | FileCheck %s
 
 # CHECK: Iterations:        1
-# CHECK: Instructions:      4
-# CHECK: Total Cycles:      25
-# CHECK: Total uOps:        4
+# CHECK: Instructions:      6
+# CHECK: Total Cycles:      41
+# CHECK: Total uOps:        6
 
 
 v_mfma_f32_16x16x32_f16 a[0:3], a[0:3], a[0:3], a[0:3] blgp:1
 v_mfma_f32_16x16x32_f16 a[0:3], v[0:3], v[0:3], a[4:7]
 v_mfma_f32_32x32x16_f16 v[0:15], v[0:3], v[0:3], v[0:15]
 v_mfma_f32_32x32x16_f16 a[0:15], a[0:3], a[0:3], a[0:15] blgp:2
+v_mfma_f32_32x32x16_bf16 v[0:15], v[0:3], v[0:3], v[0:15]
+v_mfma_f32_32x32x16_bf16 a[0:15], a[0:3], a[0:3], a[0:15] blgp:2
 
 # CHECK:     [0]    [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x32_f16 a[0:3], a[0:3], a[0:3], a[0:3] blgp:1
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x32_f16 a[0:3], v[0:3], v[0:3], a[4:7]
 # CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x16_f16 v[0:15], v[0:3], v[0:3], v[0:15]
 # CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x16_f16 a[0:15], a[0:3], a[0:3], a[0:15] blgp:2
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x16_bf16 v[0:15], v[0:3], v[0:3], v[0:15]
+# CHECK-NEXT: -      -      -      -      -      -     8.00  v_mfma_f32_32x32x16_bf16 a[0:15], a[0:3], a[0:3], a[0:15] blgp:2
