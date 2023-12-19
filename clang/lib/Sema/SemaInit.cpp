@@ -10794,7 +10794,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         SynthesizeAggrGuide(ListInit);
       } else if (Inits.size()) { // parenthesized expression-list
         // Inits are expressions inside the parentheses. We don't have
-        // the parentheses source locaitons, use the begin/end of Inits as the
+        // the parentheses source locations, use the begin/end of Inits as the
         // best heuristic.
         InitListExpr TempListInit(getASTContext(), Inits.front()->getBeginLoc(),
                                   Inits, Inits.back()->getEndLoc());
