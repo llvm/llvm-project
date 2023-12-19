@@ -87,14 +87,25 @@ are not recommended to be adjusted except by persons familiar with the Printf
 Ryu Algorithm. Additionally they have no effect when float conversions are
 disabled.
 
+LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
+---------------------------------------
+This flag disables the separate long double conversion implementation. It is
+not based on the Ryu algorithm, instead generating the digits by
+multiplying/dividing the written-out number by 10^9 to get blocks. It's
+significantly faster than INT_CALC, only about 10x slower than MEGA_TABLE,
+and is small in binary size. Its downside is that it always calculates all
+of the digits above the decimal point, making it slightly ineffecient for %e
+calls with large exponents. This is the default. If this flag is not set, no 
+other flags will change the long double behavior.
+
 LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
 When set, the float to string decimal conversion algorithm will use a larger
 table to accelerate long double conversions. This larger table is around 5MB of 
-size when compiled. This flag is enabled by default in the CMake.
+size when compiled.
 
-LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT(_LD)
---------------------------------------------
+LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
+---------------------------------------
 When set, the float to string decimal conversion algorithm will use dyadic
 floats instead of a table when performing floating point conversions. This
 results in ~50 digits of accuracy in the result, then zeroes for the remaining
@@ -107,8 +118,7 @@ LIBC_COPT_FLOAT_TO_STR_USE_INT_CALC
 When set, the float to string decimal conversion algorithm will use wide
 integers instead of a table when performing floating point conversions. This
 gives the same results as the table, but is very slow at the extreme ends of
-the long double range. If no flags are set this is the default behavior for
-long double conversions.
+the long double range.
 
 LIBC_COPT_FLOAT_TO_STR_NO_TABLE
 -------------------------------

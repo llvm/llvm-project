@@ -13,6 +13,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/UInt.h"
 #include "src/__support/common.h"
@@ -20,12 +21,19 @@
 #include "src/__support/macros/attributes.h"
 
 // This file has 5 compile-time flags to allow the user to configure the float
-// to string behavior. These allow the user to select which 2 of the 3 useful
-// properties they want. The useful properties are:
-//  1) Speed of Evaluation
-//  2) Small Size of Binary
-//  3) Centered Output Value
-// These are explained below with the flags that are missing each one.
+// to string behavior. These were used to explore tradeoffs during the design
+// phase, and can still be used to gain specific properties. Unless you
+// specifically know what you're doing, you should leave all these flags off.
+
+// LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
+//  This flag disables the separate long double conversion implementation. It is
+//  not based on the Ryu algorithm, instead generating the digits by
+//  multiplying/dividing the written-out number by 10^9 to get blocks. It's
+//  significantly faster than INT_CALC, only about 10x slower than MEGA_TABLE,
+//  and is small in binary size. Its downside is that it always calculates all
+//  of the digits above the decimal point, making it ineffecient for %e calls
+//  with large exponents. If this flag is not set, no other flags will change
+//  the long double behavior.
 
 // LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 //  The Mega Table is ~5 megabytes when compiled. It lists the constants needed
@@ -34,16 +42,13 @@
 //  exchange for large binary size.
 
 // LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
-// LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT_LD
 //  Dyadic floats are software floating point numbers, and their accuracy can be
 //  as high as necessary. This option uses 256 bit dyadic floats to calculate
 //  the table values that Ryu Printf needs. This is reasonably fast and very
 //  small compared to the Mega Table, but the 256 bit floats only give accurate
 //  results for the first ~50 digits of the output. In practice this shouldn't
 //  be a problem since long doubles are only accurate for ~35 digits, but the
-//  trailing values all being 0s may cause brittle tests to fail. The _LD
-//  version of this flag only effects the long double calculations, and the
-//  other version effects both long double and double.
+//  trailing values all being 0s may cause brittle tests to fail.
 
 // LIBC_COPT_FLOAT_TO_STR_USE_INT_CALC
 //  Integer Calculation uses wide integers to do the calculations for the Ryu
@@ -61,11 +66,8 @@
 
 // Default Config:
 //  If no flags are set, doubles use the normal (and much more reasonably sized)
-//  Ryu Printf table and long doubles use Integer Calculation. This is because
-//  long doubles are rarely used and the normal Ryu Printf table is very fast
-//  for doubles.
-
-#undef LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
+//  Ryu Printf table and long doubles use their specialized implementation. This
+//  provides good performance and binary size.
 
 #ifdef LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 #include "src/__support/ryu_long_double_constants.h"
@@ -155,15 +157,17 @@ LIBC_INLINE constexpr uint32_t ceil_log10_pow2(const uint32_t e) {
   return log10_pow2(e) + 1;
 }
 
+LIBC_INLINE constexpr uint32_t div_ceil(const uint32_t num,
+                                        const uint32_t denom) {
+  return (num + (denom - 1)) / denom;
+}
+
 // Returns the maximum number of 9 digit blocks a number described by the given
 // index (which is ceil(exponent/16)) and mantissa width could need.
 LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
                                               const uint32_t mantissa_width) {
-  //+8 to round up when dividing by 9
-  return (ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width + 1) +
-          (BLOCK_SIZE - 1)) /
-         BLOCK_SIZE;
-  // return (ceil_log10_pow2(16 * idx + mantissa_width) + 8) / 9;
+  return div_ceil(ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width + 1),
+                  BLOCK_SIZE);
 }
 
 // The formula for the table when i is positive (or zero) is as follows:
@@ -451,6 +455,8 @@ public:
       // shift_amount = -(c0 - exponent) = c_0 + 16 * ceil(exponent/16) -
       // exponent
 
+      const uint32_t pos_exp = idx * IDX_SIZE;
+
       cpp::UInt<MID_INT_SIZE> val;
 
 #if defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT)
@@ -461,24 +467,25 @@ public:
 
       // ---------------------------- INT CALC MODE ----------------------------
       const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-
       const uint64_t MAX_POW_2_SIZE =
-          exponent + CALC_SHIFT_CONST - (BLOCK_SIZE * block_index);
+          pos_exp + CALC_SHIFT_CONST - (BLOCK_SIZE * block_index);
       const uint64_t MAX_POW_5_SIZE =
           internal::log2_pow5(BLOCK_SIZE * block_index);
       const uint64_t MAX_INT_SIZE =
           (MAX_POW_2_SIZE > MAX_POW_5_SIZE) ? MAX_POW_2_SIZE : MAX_POW_5_SIZE;
 
       if (MAX_INT_SIZE < 1024) {
-        val = internal::get_table_positive<1024>(IDX_SIZE * idx, block_index);
+        val = internal::get_table_positive<1024>(pos_exp, block_index);
       } else if (MAX_INT_SIZE < 2048) {
-        val = internal::get_table_positive<2048>(IDX_SIZE * idx, block_index);
+        val = internal::get_table_positive<2048>(pos_exp, block_index);
       } else if (MAX_INT_SIZE < 4096) {
-        val = internal::get_table_positive<4096>(IDX_SIZE * idx, block_index);
+        val = internal::get_table_positive<4096>(pos_exp, block_index);
       } else if (MAX_INT_SIZE < 8192) {
-        val = internal::get_table_positive<8192>(IDX_SIZE * idx, block_index);
+        val = internal::get_table_positive<8192>(pos_exp, block_index);
+      } else if (MAX_INT_SIZE < 16384) {
+        val = internal::get_table_positive<16384>(pos_exp, block_index);
       } else {
-        val = internal::get_table_positive<16384>(IDX_SIZE * idx, block_index);
+        val = internal::get_table_positive<16384 + 128>(pos_exp, block_index);
       }
 #else
       // ----------------------------- TABLE MODE ------------------------------
@@ -486,9 +493,9 @@ public:
 
       val = POW10_SPLIT[POW10_OFFSET[idx] + block_index];
 #endif
-      const uint32_t shift_amount =
-          SHIFT_CONST + (static_cast<uint32_t>(IDX_SIZE) * idx) - exponent;
-      const uint32_t digits =
+      const uint32_t shift_amount = SHIFT_CONST + pos_exp - exponent;
+
+      const BlockInt digits =
           internal::mul_shift_mod_1e9(mantissa, val, (int32_t)(shift_amount));
       return digits;
     } else {
@@ -502,35 +509,35 @@ public:
 
       cpp::UInt<MID_INT_SIZE> val;
 
+      const uint32_t pos_exp = idx * IDX_SIZE;
+
 #if defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT)
       // ----------------------- DYADIC FLOAT CALC MODE ------------------------
       const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-      val =
-          internal::get_table_negative_df<256>(idx * IDX_SIZE, block_index + 1);
+      val = internal::get_table_negative_df<256>(pos_exp, block_index + 1);
 #elif defined(LIBC_COPT_FLOAT_TO_STR_USE_INT_CALC)
       // ---------------------------- INT CALC MODE ----------------------------
       const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-      const uint64_t TEN_BLOCKS = (block_index + 1) * BLOCK_SIZE;
-      const uint64_t MAX_INT_SIZE = internal::log2_pow5(TEN_BLOCKS);
+
+      const uint64_t NUM_FIVES = (block_index + 1) * BLOCK_SIZE;
+      // Round MAX_INT_SIZE up to the nearest 64 (adding 1 because log2_pow5
+      // implicitly rounds down).
+      const uint64_t MAX_INT_SIZE =
+          ((internal::log2_pow5(NUM_FIVES) / 64) + 1) * 64;
 
       if (MAX_INT_SIZE < 1024) {
-        val =
-            internal::get_table_negative<1024>(idx * IDX_SIZE, block_index + 1);
+        val = internal::get_table_negative<1024>(pos_exp, block_index + 1);
       } else if (MAX_INT_SIZE < 2048) {
-        val =
-            internal::get_table_negative<2048>(idx * IDX_SIZE, block_index + 1);
+        val = internal::get_table_negative<2048>(pos_exp, block_index + 1);
       } else if (MAX_INT_SIZE < 4096) {
-        val =
-            internal::get_table_negative<4096>(idx * IDX_SIZE, block_index + 1);
+        val = internal::get_table_negative<4096>(pos_exp, block_index + 1);
       } else if (MAX_INT_SIZE < 8192) {
-        val =
-            internal::get_table_negative<8192>(idx * IDX_SIZE, block_index + 1);
+        val = internal::get_table_negative<8192>(pos_exp, block_index + 1);
       } else if (MAX_INT_SIZE < 16384) {
-        val = internal::get_table_negative<16384>(idx * IDX_SIZE,
-                                                  block_index + 1);
+        val = internal::get_table_negative<16384>(pos_exp, block_index + 1);
       } else {
-        val = internal::get_table_negative<32768>(idx * IDX_SIZE,
-                                                  block_index + 1);
+        val = internal::get_table_negative<16384 + 8192>(pos_exp,
+                                                         block_index + 1);
       }
 #else
       // ----------------------------- TABLE MODE ------------------------------
@@ -548,8 +555,8 @@ public:
       val = POW10_SPLIT_2[p];
 #endif
       const int32_t shift_amount =
-          SHIFT_CONST + (-exponent - (static_cast<int32_t>(IDX_SIZE) * idx));
-      uint32_t digits =
+          SHIFT_CONST + (-exponent - static_cast<int32_t>(pos_exp));
+      BlockInt digits =
           internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
       return digits;
     } else {
@@ -581,12 +588,18 @@ public:
 
   // This takes the index of a block after the decimal point (a negative block)
   // and return if it's sure that all of the digits after it are zero.
-  LIBC_INLINE constexpr bool is_lowest_block(size_t block_index) {
+  LIBC_INLINE constexpr bool is_lowest_block(size_t negative_block_index) {
 #ifdef LIBC_COPT_FLOAT_TO_STR_NO_TABLE
-    return false;
+    // The decimal representation of 2**(-i) will have exactly i digits after
+    // the decimal point.
+    int num_requested_digits =
+        static_cast<int>((negative_block_index + 1) * BLOCK_SIZE);
+
+    return num_requested_digits > -exponent;
 #else
     const int32_t idx = -exponent / IDX_SIZE;
-    const size_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
+    const size_t p =
+        POW10_OFFSET_2[idx] + negative_block_index - MIN_BLOCK_2[idx];
     // If the remaining digits are all 0, then this is the lowest block.
     return p >= POW10_OFFSET_2[idx + 1];
 #endif
@@ -594,16 +607,26 @@ public:
 
   LIBC_INLINE constexpr size_t zero_blocks_after_point() {
 #ifdef LIBC_COPT_FLOAT_TO_STR_NO_TABLE
+    if (exponent < -MANT_WIDTH) {
+      const int pos_exp = -exponent - 1;
+      const uint32_t pos_idx =
+          static_cast<uint32_t>(pos_exp + (IDX_SIZE - 1)) / IDX_SIZE;
+      const int32_t pos_len = ((internal::ceil_log10_pow2(pos_idx * IDX_SIZE) -
+                                internal::ceil_log10_pow2(MANT_WIDTH + 1)) /
+                               BLOCK_SIZE) -
+                              1;
+      const uint32_t len = static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
+      return len;
+    }
     return 0;
-    // TODO (michaelrj): Find a good algorithm for this that doesn't use a
-    // table.
 #else
     return MIN_BLOCK_2[-exponent / IDX_SIZE];
 #endif
   }
 };
 
-#ifndef LIBC_LONG_DOUBLE_IS_FLOAT64
+#if !defined(LIBC_LONG_DOUBLE_IS_FLOAT64) &&                                   \
+    !defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 
 template <> class FloatToString<long double> {
@@ -615,13 +638,21 @@ template <> class FloatToString<long double> {
   static constexpr int FRACTION_LEN = fputil::FPBits<long double>::FRACTION_LEN;
   static constexpr int EXP_BIAS = fputil::FPBits<long double>::EXP_BIAS;
 
-  static constexpr size_t FLOAT_AS_INT_WIDTH = 16384;
-  static constexpr size_t EXTRA_INT_WIDTH = 128;
+  // static constexpr size_t FLOAT_AS_INT_WIDTH = 16384;
+  static constexpr size_t FLOAT_AS_INT_WIDTH =
+      internal::div_ceil(fputil::FPBits<long double>::MAX_EXPONENT -
+                             fputil::FPBits<long double>::EXPONENT_BIAS,
+                         64) *
+      64;
+  // static constexpr size_t EXTRA_INT_WIDTH = 128;
+  static constexpr size_t EXTRA_INT_WIDTH =
+      internal::div_ceil(sizeof(long double) * 8, 64) * 64;
 
   cpp::BigInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH, false> float_as_int = 0;
   int int_block_index = 0;
 
-  static constexpr size_t BLOCK_BUFFER_LEN = 560;
+  static constexpr size_t BLOCK_BUFFER_LEN =
+      internal::div_ceil(internal::log10_pow2(FLOAT_AS_INT_WIDTH), BLOCK_SIZE);
   BlockInt block_buffer[BLOCK_BUFFER_LEN] = {0};
   size_t block_buffer_valid = 0;
 
@@ -782,7 +813,7 @@ public:
       init_convert();
     }
 
-    // LIBC_ASSERT(block_index >= int_block_index);
+    LIBC_ASSERT(block_index <= int_block_index);
 
     // If we are currently before the requested block. Step until we reach the
     // requested block. This is likely to only be one step.
@@ -807,131 +838,8 @@ public:
   }
 };
 
-/*
-template <>
-LIBC_INLINE constexpr BlockInt
-FloatToString<long double>::get_positive_block(int block_index) {
-  if (exponent >= -FRACTION_LEN) {
-
-    // idx is ceil(exponent/16) or 0 if exponent is negative. This is used to
-    // find the coarse section of the POW10_SPLIT table that will be used to
-    // calculate the 9 digit window, as well as some other related values.
-    const uint32_t idx =
-        exponent < 0
-            ? 0
-            : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-    const uint32_t pos_exp = idx * IDX_SIZE;
-
-    // shift_amount = -(c0 - exponent) = c_0 + 16 * ceil(exponent/16) - exponent
-
-    cpp::UInt<MID_INT_SIZE> val;
-#ifdef LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
-    // ------------------------------ TABLE MODE -------------------------------
-    const int32_t SHIFT_CONST = TABLE_SHIFT_CONST;
-    val = POW10_SPLIT[POW10_OFFSET[idx] + block_index];
-
-#elif defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT) ||                      \
-    defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT_LD)
-    // ------------------------ DYADIC FLOAT CALC MODE -------------------------
-    const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-    val = internal::get_table_positive_df<256>(pos_exp, block_index);
-#else
-    // ----------------------------- INT CALC MODE -----------------------------
-    const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-    const uint64_t MAX_POW_2_SIZE =
-        pos_exp + CALC_SHIFT_CONST - (BLOCK_SIZE * block_index);
-    const uint64_t MAX_POW_5_SIZE =
-        internal::log2_pow5(BLOCK_SIZE * block_index);
-    const uint64_t MAX_INT_SIZE =
-        (MAX_POW_2_SIZE > MAX_POW_5_SIZE) ? MAX_POW_2_SIZE : MAX_POW_5_SIZE;
-
-    if (MAX_INT_SIZE < 1024) {
-      val = internal::get_table_positive<1024>(pos_exp, block_index);
-    } else if (MAX_INT_SIZE < 2048) {
-      val = internal::get_table_positive<2048>(pos_exp, block_index);
-    } else if (MAX_INT_SIZE < 4096) {
-      val = internal::get_table_positive<4096>(pos_exp, block_index);
-    } else if (MAX_INT_SIZE < 8192) {
-      val = internal::get_table_positive<8192>(pos_exp, block_index);
-    } else if (MAX_INT_SIZE < 16384) {
-      val = internal::get_table_positive<16384>(pos_exp, block_index);
-    } else {
-      val = internal::get_table_positive<16384 + 128>(pos_exp, block_index);
-    }
-#endif
-    const uint32_t shift_amount = SHIFT_CONST + pos_exp - exponent;
-
-    const BlockInt digits =
-        internal::mul_shift_mod_1e9(mantissa, val, (int32_t)(shift_amount));
-    return digits;
-  } else {
-    return 0;
-  }
-}
-
-template <>
-LIBC_INLINE constexpr BlockInt
-FloatToString<long double>::get_negative_block(int block_index) {
-  if (exponent < 0) {
-    const int32_t idx = -exponent / IDX_SIZE;
-
-    cpp::UInt<MID_INT_SIZE> val;
-#ifdef LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
-    // ------------------------------ TABLE MODE -------------------------------
-    const int32_t SHIFT_CONST = TABLE_SHIFT_CONST;
-
-    // if the requested block is zero
-    if (block_index < MIN_BLOCK_2[idx]) {
-      return 0;
-    }
-    const uint32_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
-    // If every digit after the requested block is zero.
-    if (p >= POW10_OFFSET_2[idx + 1]) {
-      return 0;
-    }
-    val = POW10_SPLIT_2[p];
-#elif defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT) ||                      \
-    defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT_LD)
-    // ------------------------ DYADIC FLOAT CALC MODE -------------------------
-    const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-
-    val = internal::get_table_negative_df<256>(idx * IDX_SIZE, block_index + 1);
-#else // table mode
-    // ----------------------------- INT CALC MODE -----------------------------
-    const int32_t SHIFT_CONST = CALC_SHIFT_CONST;
-
-    const uint64_t NUM_FIVES = (block_index + 1) * BLOCK_SIZE;
-    // Round MAX_INT_SIZE up to the nearest 64 (adding 1 because log2_pow5
-    // implicitly rounds down).
-    const uint64_t MAX_INT_SIZE =
-        ((internal::log2_pow5(NUM_FIVES) / 64) + 1) * 64;
-
-    if (MAX_INT_SIZE < 1024) {
-      val = internal::get_table_negative<1024>(idx * IDX_SIZE, block_index + 1);
-    } else if (MAX_INT_SIZE < 2048) {
-      val = internal::get_table_negative<2048>(idx * IDX_SIZE, block_index + 1);
-    } else if (MAX_INT_SIZE < 4096) {
-      val = internal::get_table_negative<4096>(idx * IDX_SIZE, block_index + 1);
-    } else if (MAX_INT_SIZE < 8192) {
-      val = internal::get_table_negative<8192>(idx * IDX_SIZE, block_index + 1);
-    } else if (MAX_INT_SIZE < 16384) {
-      val =
-          internal::get_table_negative<16384>(idx * IDX_SIZE, block_index + 1);
-    } else {
-      val = internal::get_table_negative<16384 + 8192>(idx * IDX_SIZE,
-                                                       block_index + 1);
-    }
-#endif
-    const int32_t shift_amount =
-        SHIFT_CONST + (-exponent - static_cast<int>(IDX_SIZE * idx));
-    BlockInt digits = internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
-    return digits;
-  } else {
-    return 0;
-  }
-}
-*/
-#endif // LIBC_LONG_DOUBLE_IS_FLOAT64
+#endif // !LIBC_LONG_DOUBLE_IS_FLOAT64 &&
+       // !LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
 
 } // namespace LIBC_NAMESPACE
 
