@@ -11,8 +11,6 @@ target datalayout = "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; Test case to make sure calling an outlined function does not clobber LR used
 ; by a tail call in caller.
-; FIXME: Currently bl OUTLINED_FUNCTION_0 clobbers LR, which in turn is used
-;        by the later call to memcpy to return to the caller.
 define void @test(ptr nocapture noundef writeonly %arg, i32 noundef %arg1, i8 noundef zeroext %arg2) unnamed_addr #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %bb
