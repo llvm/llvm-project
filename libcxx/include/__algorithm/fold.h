@@ -39,18 +39,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <class _Ip, class _Tp>
 struct in_value_result {
-  [[no_unique_address]] _Ip in;
-  [[no_unique_address]] _Tp value;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Ip in;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Tp value;
 
   template <class _I2, class _T2>
     requires convertible_to<const _Ip&, _I2> && convertible_to<const _Tp&, _T2>
-  constexpr operator in_value_result<_I2, _T2>() const& {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_value_result<_I2, _T2>() const& {
     return {in, value};
   }
 
   template <class _I2, class _T2>
     requires convertible_to<_Ip, _I2> && convertible_to<_Tp, _T2>
-  constexpr operator in_value_result<_I2, _T2>() && {
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_value_result<_I2, _T2>() && {
     return {std::move(in), std::move(value)};
   }
 };
