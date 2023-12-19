@@ -1032,7 +1032,6 @@ void DWARFContext::dump(
         if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie) {
           CUNonSkeletonDie.getDwarfUnit()->getDIEForOffset(*DumpOffset)
               .dump(OS, 0, DumpOpts.noImplicitRecursion());
-
         }
       }
     else
