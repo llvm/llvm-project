@@ -1427,9 +1427,13 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         IsSwiftAsyncFunction = true;
         if (TTracker)
           TTracker->IsSwiftAsyncFunction = true;
-        if (!Expr || !Expr->isEntryValue()) {
-          if (TTracker)
-            TTracker->recoverAsEntryValue(V, Properties, RegId);
+        if (!Expr || Expr->isEntryValue()) {
+          if (TTracker) {
+            const DILocalVariable *Var = MI.getDebugVariable();
+            const DILocation *InlinedAt = MI.getDebugLoc()->getInlinedAt();
+            DebugVariable V(Var, Expr, InlinedAt);
+            TTracker->recoverAsEntryValue(V, DbgValueProperties(MI), RegId);
+          }
         }
       }
     }
