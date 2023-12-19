@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"

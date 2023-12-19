@@ -8,6 +8,8 @@
 
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"

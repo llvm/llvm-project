@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/Basic/DebugOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"

@@ -11,6 +11,7 @@
 
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ModuleBuilder.h"
