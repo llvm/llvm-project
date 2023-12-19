@@ -5006,7 +5006,6 @@ define i1 @or_positive_sgt_zero_multi_use(i8 %a) {
   ret i1 %cmp
 }
 
-
 define i1 @disjoint_or_sgt_1(i8 %a, i8 %b) {
 ; CHECK-LABEL: @disjoint_or_sgt_1(
 ; CHECK-NEXT:    [[B1:%.*]] = add nsw i8 [[B:%.*]], 2
@@ -5137,4 +5136,14 @@ entry:
   %add2 = add i8 %a, -1
   %cmp = icmp eq i8 %add2, %add1
   ret i1 %cmp
+}
+
+define i1 @icmp_disjoint_or(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 35
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %or_ = or disjoint i32 %x, 6
+  %C = icmp sgt i32 %or_, 41
+  ret i1 %C
 }

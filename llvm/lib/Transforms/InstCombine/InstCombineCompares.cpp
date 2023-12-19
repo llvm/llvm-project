@@ -2923,19 +2923,21 @@ static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
 }
 
 /// Fold icmp (add X, Y), C.
-Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
-                                                   BinaryOperator *Add,
-                                                   const APInt &C) {
-  Value *Y = Add->getOperand(1);
-  Value *X = Add->getOperand(0);
+Instruction *InstCombinerImpl::foldICmpAddLikeConstant(ICmpInst &Cmp,
+                                                       BinaryOperator *AddLike,
+                                                       const APInt &C) {
+  Value *X = nullptr;
+  Value *Y = nullptr;
+  if (!match(AddLike, m_AddLike(m_Value(X), m_Value(Y))))
+    return nullptr;
 
   Value *Op0, *Op1;
   Instruction *Ext0, *Ext1;
   const CmpInst::Predicate Pred = Cmp.getPredicate();
-  if (match(Add,
-            m_Add(m_CombineAnd(m_Instruction(Ext0), m_ZExtOrSExt(m_Value(Op0))),
-                  m_CombineAnd(m_Instruction(Ext1),
-                               m_ZExtOrSExt(m_Value(Op1))))) &&
+  if (match(AddLike, m_AddLike(m_CombineAnd(m_Instruction(Ext0),
+                                            m_ZExtOrSExt(m_Value(Op0))),
+                               m_CombineAnd(m_Instruction(Ext1),
+                                            m_ZExtOrSExt(m_Value(Op1))))) &&
       Op0->getType()->isIntOrIntVectorTy(1) &&
       Op1->getType()->isIntOrIntVectorTy(1)) {
     unsigned BW = C.getBitWidth();
@@ -2953,8 +2955,8 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     Table[1] = ComputeTable(false, true);
     Table[2] = ComputeTable(true, false);
     Table[3] = ComputeTable(true, true);
-    if (auto *Cond =
-            createLogicFromTable(Table, Op0, Op1, Builder, Add->hasOneUse()))
+    if (auto *Cond = createLogicFromTable(Table, Op0, Op1, Builder,
+                                          AddLike->hasOneUse()))
       return replaceInstUsesWith(Cmp, Cond);
   }
   const APInt *C2;
@@ -2962,14 +2964,15 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     return nullptr;
 
   // Fold icmp pred (add X, C2), C.
-  Type *Ty = Add->getType();
+  Type *Ty = AddLike->getType();
 
   // If the add does not wrap, we can always adjust the compare by subtracting
   // the constants. Equality comparisons are handled elsewhere. SGE/SLE/UGE/ULE
   // are canonicalized to SGT/SLT/UGT/ULT.
-  if ((Add->hasNoSignedWrap() &&
+  if (AddLike->getOpcode() == Instruction::Or ||
+      (AddLike->hasNoSignedWrap() &&
        (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) ||
-      (Add->hasNoUnsignedWrap() &&
+      (AddLike->hasNoUnsignedWrap() &&
        (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT))) {
     bool Overflow;
     APInt NewC =
@@ -3026,7 +3029,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return new ICmpInst(ICmpInst::ICMP_ULE, X, ConstantInt::get(Ty, C));
   }
 
-  if (!Add->hasOneUse())
+  if (!AddLike->hasOneUse())
     return nullptr;
 
   // X+C <u C2 -> (X & -C2) == C
@@ -3679,6 +3682,9 @@ InstCombinerImpl::foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
                                                          BinaryOperator *BO,
                                                          const APInt &C) {
+  if (Instruction *I = foldICmpAddLikeConstant(Cmp, BO, C))
+    return I;
+
   switch (BO->getOpcode()) {
   case Instruction::Xor:
     if (Instruction *I = foldICmpXorConstant(Cmp, BO, C))
@@ -3719,10 +3725,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
     break;
   case Instruction::Sub:
     if (Instruction *I = foldICmpSubConstant(Cmp, BO, C))
-      return I;
-    break;
-  case Instruction::Add:
-    if (Instruction *I = foldICmpAddConstant(Cmp, BO, C))
       return I;
     break;
   default:
