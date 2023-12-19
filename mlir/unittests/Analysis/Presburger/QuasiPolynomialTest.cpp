@@ -1,0 +1,98 @@
+//===- MatrixTest.cpp - Tests for QuasiPolynomial -------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Analysis/Presburger/QuasiPolynomial.h"
+#include "./Utils.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+using namespace mlir;
+using namespace presburger;
+
+TEST(QuasiPolynomialTest, arith) {
+  QuasiPolynomial qp1(
+      3, {Fraction(1, 3), Fraction(1, 1), Fraction(1, 2)},
+      {{{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
+        {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)}},
+       {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)}},
+       {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+        {Fraction(1, 4), Fraction(2, 1), Fraction(6, 5), Fraction(-9, 8)},
+        {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4), Fraction(0, 1)}}});
+  QuasiPolynomial qp2(
+      3, {Fraction(1, 1), Fraction(2, 1)},
+      {{{Fraction(1, 2), Fraction(0, 1), Fraction(-1, 3), Fraction(5, 3)},
+        {Fraction(2, 1), Fraction(5, 4), Fraction(9, 7), Fraction(-1, 5)}},
+       {{Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1), Fraction(0, 1)}}});
+
+  QuasiPolynomial sum = qp1 + qp2;
+  EXPECT_EQ_QUASIPOLYNOMIAL(
+      sum,
+      QuasiPolynomial(
+          3,
+          {Fraction(1, 3), Fraction(1, 1), Fraction(1, 2), Fraction(1, 1),
+           Fraction(2, 1)},
+          {{{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
+            {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)}},
+           {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)}},
+           {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+            {Fraction(1, 4), Fraction(2, 1), Fraction(6, 5), Fraction(-9, 8)},
+            {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1), Fraction(-1, 3), Fraction(5, 3)},
+            {Fraction(2, 1), Fraction(5, 4), Fraction(9, 7), Fraction(-1, 5)}},
+           {{Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1),
+             Fraction(0, 1)}}}));
+
+  QuasiPolynomial diff = qp1 - qp2;
+  EXPECT_EQ_QUASIPOLYNOMIAL(
+      diff,
+      QuasiPolynomial(
+          3,
+          {Fraction(1, 3), Fraction(1, 1), Fraction(1, 2), Fraction(-1, 1),
+           Fraction(-2, 1)},
+          {{{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
+            {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)}},
+           {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)}},
+           {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+            {Fraction(1, 4), Fraction(2, 1), Fraction(6, 5), Fraction(-9, 8)},
+            {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1), Fraction(-1, 3), Fraction(5, 3)},
+            {Fraction(2, 1), Fraction(5, 4), Fraction(9, 7), Fraction(-1, 5)}},
+           {{Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1),
+             Fraction(0, 1)}}}));
+
+  QuasiPolynomial prod = qp1 * qp2;
+  EXPECT_EQ_QUASIPOLYNOMIAL(
+      prod,
+      QuasiPolynomial(
+          3,
+          {Fraction(1, 3), Fraction(2, 3), Fraction(1, 1), Fraction(2, 1),
+           Fraction(1, 2), Fraction(1, 1)},
+          {{{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
+            {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)},
+            {Fraction(1, 2), Fraction(0, 1), Fraction(-1, 3), Fraction(5, 3)},
+            {Fraction(2, 1), Fraction(5, 4), Fraction(9, 7), Fraction(-1, 5)}},
+           {{Fraction(1, 1), Fraction(-1, 2), Fraction(4, 5), Fraction(0, 1)},
+            {Fraction(2, 3), Fraction(3, 4), Fraction(-1, 1), Fraction(5, 7)},
+            {Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)},
+            {Fraction(1, 2), Fraction(0, 1), Fraction(-1, 3), Fraction(5, 3)},
+            {Fraction(2, 1), Fraction(5, 4), Fraction(9, 7), Fraction(-1, 5)}},
+           {{Fraction(1, 2), Fraction(1, 1), Fraction(4, 5), Fraction(1, 1)},
+            {Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1), Fraction(0, 1)}},
+           {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+            {Fraction(1, 4), Fraction(2, 1), Fraction(6, 5), Fraction(-9, 8)},
+            {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4), Fraction(0, 1)},
+            {Fraction(1, 2), Fraction(0, 1), Fraction(-1, 3), Fraction(5, 3)},
+            {Fraction(2, 1), Fraction(5, 4), Fraction(9, 7), Fraction(-1, 5)}},
+           {{Fraction(-3, 2), Fraction(1, 1), Fraction(5, 6), Fraction(7, 5)},
+            {Fraction(1, 4), Fraction(2, 1), Fraction(6, 5), Fraction(-9, 8)},
+            {Fraction(3, 2), Fraction(2, 5), Fraction(-7, 4), Fraction(0, 1)},
+            {Fraction(1, 3), Fraction(-2, 3), Fraction(1, 1),
+             Fraction(0, 1)}}}));
+}
