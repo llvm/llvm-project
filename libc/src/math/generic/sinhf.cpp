@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
-  uint32_t x_abs = xbits.uintval() & FPBits::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
 
   // When |x| >= 90, or x is inf or nan
   if (LIBC_UNLIKELY(x_abs >= 0x42b4'0000U || x_abs <= 0x3da0'0000U)) {

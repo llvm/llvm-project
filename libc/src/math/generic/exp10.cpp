@@ -221,11 +221,10 @@ double exp10_denorm(double x) {
 //  * x is inf or nan
 double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
-  uint64_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint64_t x_abs = xbits.abs().uintval();
 
   // |x| < log10(1 + 2^-53)
   if (x_abs <= 0x3c8bcb7b1526e50e) {
