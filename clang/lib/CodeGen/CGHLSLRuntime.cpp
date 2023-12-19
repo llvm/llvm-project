@@ -182,10 +182,8 @@ void CGHLSLRuntime::finishCodeGen() {
     llvm::hlsl::ResourceKind RK = Buf.IsCBuffer
                                       ? llvm::hlsl::ResourceKind::CBuffer
                                       : llvm::hlsl::ResourceKind::TBuffer;
-    std::string TyName =
-        Buf.Name.str() + (Buf.IsCBuffer ? ".cb." : ".tb.") + "ty";
-    addBufferResourceAnnotation(GV, TyName, RC, RK, /*IsROV=*/false,
-                                Buf.Binding);
+    addBufferResourceAnnotation(GV, RC, RK, /*IsROV=*/false,
+                                llvm::hlsl::ElementType::Invalid, Buf.Binding);
   }
 }
 
@@ -194,10 +192,10 @@ CGHLSLRuntime::Buffer::Buffer(const HLSLBufferDecl *D)
       Binding(D->getAttr<HLSLResourceBindingAttr>()) {}
 
 void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                                llvm::StringRef TyName,
                                                 llvm::hlsl::ResourceClass RC,
                                                 llvm::hlsl::ResourceKind RK,
                                                 bool IsROV,
+                                                llvm::hlsl::ElementType ET,
                                                 BufferResBinding &Binding) {
   llvm::Module &M = CGM.getModule();
 
@@ -216,13 +214,60 @@ void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
     assert(false && "Unsupported buffer type!");
     return;
   }
-
   assert(ResourceMD != nullptr &&
          "ResourceMD must have been set by the switch above.");
 
   llvm::hlsl::FrontendResource Res(
-      GV, TyName, RK, IsROV, Binding.Reg.value_or(UINT_MAX), Binding.Space);
+      GV, RK, ET, IsROV, Binding.Reg.value_or(UINT_MAX), Binding.Space);
   ResourceMD->addOperand(Res.getMetadata());
+}
+
+static llvm::hlsl::ElementType
+calculateElementType(const ASTContext &Context, const clang::Type *ResourceTy) {
+  using llvm::hlsl::ElementType;
+
+  // TODO: We may need to update this when we add things like ByteAddressBuffer
+  // that don't have a template parameter (or, indeed, an element type).
+  const auto *TST = ResourceTy->getAs<TemplateSpecializationType>();
+  assert(TST && "Resource types must be template specializations");
+  ArrayRef<TemplateArgument> Args = TST->template_arguments();
+  assert(!Args.empty() && "Resource has no element type");
+
+  // At this point we have a resource with an element type, so we can assume
+  // that it's valid or we would have diagnosed the error earlier.
+  QualType ElTy = Args[0].getAsType();
+
+  // We should either have a basic type or a vector of a basic type.
+  if (const auto *VecTy = ElTy->getAs<clang::VectorType>())
+    ElTy = VecTy->getElementType();
+
+  if (ElTy->isSignedIntegerType()) {
+    switch (Context.getTypeSize(ElTy)) {
+    case 16:
+      return ElementType::I16;
+    case 32:
+      return ElementType::I32;
+    case 64:
+      return ElementType::I64;
+    }
+  } else if (ElTy->isUnsignedIntegerType()) {
+    switch (Context.getTypeSize(ElTy)) {
+    case 16:
+      return ElementType::U16;
+    case 32:
+      return ElementType::U32;
+    case 64:
+      return ElementType::U64;
+    }
+  } else if (ElTy->isSpecificBuiltinType(BuiltinType::Half))
+    return ElementType::F16;
+  else if (ElTy->isSpecificBuiltinType(BuiltinType::Float))
+    return ElementType::F32;
+  else if (ElTy->isSpecificBuiltinType(BuiltinType::Double))
+    return ElementType::F64;
+
+  // TODO: We need to handle unorm/snorm float types here once we support them
+  llvm_unreachable("Invalid element type for resource");
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
@@ -239,10 +284,10 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   llvm::hlsl::ResourceClass RC = Attr->getResourceClass();
   llvm::hlsl::ResourceKind RK = Attr->getResourceKind();
   bool IsROV = Attr->getIsROV();
+  llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
 
-  QualType QT(Ty, 0);
   BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
-  addBufferResourceAnnotation(GV, QT.getAsString(), RC, RK, IsROV, Binding);
+  addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
 }
 
 CGHLSLRuntime::BufferResBinding::BufferResBinding(

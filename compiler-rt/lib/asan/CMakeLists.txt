@@ -71,7 +71,6 @@ SET(ASAN_HEADERS
   asan_interface.inc
   asan_interface_internal.h
   asan_internal.h
-  asan_lock.h
   asan_mapping.h
   asan_poisoning.h
   asan_premap_shadow.h

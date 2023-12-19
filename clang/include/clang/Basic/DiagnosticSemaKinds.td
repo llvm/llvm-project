@@ -3155,6 +3155,9 @@ def err_attribute_arm_feature_sve_bits_unsupported : Error<
 def warn_attribute_arm_sm_incompat_builtin : Warning<
   "builtin call has undefined behaviour when called from a %0 function">,
   InGroup<DiagGroup<"undefined-arm-streaming">>;
+def warn_attribute_arm_za_builtin_no_za_state : Warning<
+  "builtin call is not valid when calling from a function without active ZA state">,
+  InGroup<DiagGroup<"undefined-arm-za">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -6425,17 +6428,6 @@ def warn_variable_sized_ivar_visibility : Warning<
 def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
-
-def err_counted_by_attr_not_on_flexible_array_member : Error<
-  "'counted_by' only applies to C99 flexible array members">;
-def err_counted_by_attr_refers_to_flexible_array : Error<
-  "'counted_by' cannot refer to the flexible array %0">;
-def err_counted_by_must_be_in_structure : Error<
-  "field %0 in 'counted_by' not inside structure">;
-def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' must be a non-boolean integer type">;
-def note_flexible_array_counted_by_attr_field : Note<
-  "field %0 declared here">;
 
 let CategoryName = "ARC Semantic Issue" in {
 
@@ -11368,6 +11360,8 @@ def err_openmp_vla_in_task_untied : Error<
 def warn_omp_unterminated_declare_target : Warning<
   "expected '#pragma omp end declare target' at end of file to match '#pragma omp %0'">,
   InGroup<SourceUsesOpenMP>;
+def err_ompx_bare_no_grid : Error<
+  "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

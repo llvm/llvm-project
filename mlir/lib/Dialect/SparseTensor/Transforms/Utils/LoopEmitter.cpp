@@ -126,15 +126,15 @@ static std::pair<Value, Value> fromSliceCrd(OpBuilder &builder, Location loc,
 // Generates a bool value for while loop condition that tries to iterate over a
 // fully reduced level with affine index expression.
 static Value genSparseReducedAffineCond(OpBuilder &builder, Location loc,
-                                        Value crdBuf, Value crdHi, Value posit,
-                                        Value posHi) {
+                                        const SparseTensorLevel &level,
+                                        Value crdHi, Value posit, Value posHi) {
   Value inBound = CMPI(ult, posit, posHi);
   auto ifOp =
       builder.create<scf::IfOp>(loc, builder.getI1Type(), inBound, true);
   // if (inbound)
   //   yield coord < crdHi
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  Value crd = genIndexLoad(builder, loc, crdBuf, posit);
+  Value crd = level.peekCrdAt(builder, loc, posit);
   YIELD(CMPI(ult, crd, crdHi));
   // else
   //   yield false
@@ -244,13 +244,12 @@ Value LoopEmitter::genAddress(OpBuilder &builder, Location loc, TensorId tid,
 Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
                                   TensorId tid, Level lvl, Value pLo,
                                   Value pHi) {
-  const auto coordinates = coordinatesBuffers[tid][lvl];
-  const auto sameCrd = genIndexLoad(builder, loc, coordinates, pLo);
+  SparseTensorLevel &stl = *lvls[tid][lvl];
+  const Value sameCrd = stl.peekCrdAt(builder, loc, pLo);
   auto whileOp = builder.create<scf::WhileOp>(
       loc, builder.getIndexType(), pLo,
       /*beforeBuilder=*/
-      [pHi, coordinates, sameCrd](OpBuilder &builder, Location loc,
-                                  ValueRange ivs) {
+      [pHi, &stl, sameCrd](OpBuilder &builder, Location loc, ValueRange ivs) {
         const auto pos = ivs[0];
         Value inBound = builder.create<arith::CmpIOp>(
             loc, arith::CmpIPredicate::ult, pos, pHi);
@@ -261,7 +260,7 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
           // Load the next coordinates only when inbound (to avoid OOB
           // accesses).
           builder.setInsertionPointToStart(ifInBound.thenBlock());
-          Value crd = genIndexLoad(builder, loc, coordinates, pos);
+          Value crd = stl.peekCrdAt(builder, loc, pos);
           Value isSameCrd = builder.create<arith::CmpIOp>(
               loc, arith::CmpIPredicate::eq, crd, sameCrd);
           YIELD(isSameCrd);
@@ -284,11 +283,8 @@ Value LoopEmitter::genSegmentHigh(OpBuilder &builder, Location loc,
 
 Value LoopEmitter::genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
                                 Level lvl) {
-  // A load on the coordinates array yields the coordinate.
-  const Value mem = coordinatesBuffers[tid][lvl];
-  /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
   const Value pos = posits[tid][lvl];
-  const Value crd = genIndexLoad(builder, loc, mem, pos);
+  const Value crd = lvls[tid][lvl]->peekCrdAt(builder, loc, pos);
   return crd;
 }
 
@@ -318,9 +314,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->segHi.assign(numTensors, std::vector<Value>());
   this->posits.assign(numTensors, std::vector<Value>());
   this->coords.assign(numTensors, std::vector<Value>());
-  this->positionsBuffers.assign(numTensors, std::vector<Value>());
-  this->coordinatesBuffers.assign(numTensors, std::vector<Value>());
   this->valBuffer.assign(numTensors, nullptr);
+  this->lvls.resize(numTensors);
   this->isSparseSlices.assign(numTensors, false);
   this->sliceOffsets.assign(numTensors, std::vector<Value>());
   this->sliceStrides.assign(numTensors, std::vector<Value>());
@@ -377,8 +372,8 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     segHi[tid].assign(lvlRank, Value());
     posits[tid].assign(lvlRank, Value());
     coords[tid].assign(lvlRank, Value());
-    positionsBuffers[tid].assign(lvlRank, Value());
-    coordinatesBuffers[tid].assign(lvlRank, Value());
+    lvls[tid].resize(lvlRank);
+
     sliceOffsets[tid].assign(lvlRank, Value());
     sliceStrides[tid].assign(lvlRank, Value());
 
@@ -448,22 +443,7 @@ void LoopEmitter::initializeLoopEmit(
 
     // Scan all levels of current tensor.
     for (Level l = 0; l < lvlRank; l++) {
-      // This should be called only once at beginning.
-      assert(!positionsBuffers[t][l] && !coordinatesBuffers[t][l] &&
-             !highs[t][l]);
-      const auto lvlTp = lvlTypes[t][l];
-      // Handle sparse storage schemes.
-      if (isCompressedLT(lvlTp) || isLooseCompressedLT(lvlTp)) {
-        // Generate sparse primitives to obtain positions and coordinates.
-        positionsBuffers[t][l] = genToPositions(builder, loc, tensor, l);
-        coordinatesBuffers[t][l] = genToCoordinates(builder, loc, tensor, l);
-      } else if (isSingletonLT(lvlTp) || is2OutOf4LT(lvlTp)) {
-        // Singleton level, fetch coordinates.
-        coordinatesBuffers[t][l] = genToCoordinates(builder, loc, tensor, l);
-      } else {
-        // Dense level, nothing to fetch.
-        assert(isDenseLT(lvlTp));
-      }
+      lvls[t][l] = makeSparseTensorLevel(builder, loc, tensor, l);
 
       // Find upper bound in current dimension.
       highs[t][l] = lvlSizes[t][l] = lvlSzs[l];
@@ -756,8 +736,7 @@ Value LoopEmitter::genWhileLoopConditions(OpBuilder &builder, Location loc,
       crdHi = ADDI(getMostRecentSliceOnLvl(tid, lvl).offset, remSz);
     }
     assert(crdHi);
-    return genSparseReducedAffineCond(builder, loc,
-                                      coordinatesBuffers[tid][lvl], crdHi,
+    return genSparseReducedAffineCond(builder, loc, *lvls[tid][lvl], crdHi,
                                       ivs[0], highs[tid][lvl]);
   }
   case LoopCondKind::SparseAffineUnRedCond: {
@@ -802,10 +781,9 @@ std::optional<Value> LoopEmitter::genWhileLoopBody(OpBuilder &builder,
     sliceTupleFwdCnt[tid][lvl] = SUBI(ivs[0], posits[tid][lvl]);
     // Update c = absOffset[lvl][depth] - absOffset[lvl][depth - 1]
     Value posit = ivs[0];
-    Value crdBuf = coordinatesBuffers[tid][lvl];
     // We need to substract the offset to get relative coordinates.
     // TODO: Maybe assert relC >=0 during runtime in debug build?
-    Value absC = genIndexLoad(builder, loc, crdBuf, posit);
+    Value absC = lvls[tid][lvl]->peekCrdAt(builder, loc, posit);
     auto relC = SUBI(absC, getFinalSliceOnLvl(tid, lvl).offset);
     posits[tid][lvl] = posit;
     coords[tid][lvl] = relC;
@@ -1189,9 +1167,7 @@ Operation *LoopEmitter::enterFilterLoopOverTensorAtLvl(
   // The induction variable gives the position.
   const Value pos = forOp.getInductionVar();
   posits[tid][lvl] = pos;
-  // Generating a load on the coordinates array yields the crd.
-  const Value mem = coordinatesBuffers[tid][lvl];
-  const Value crd = genIndexLoad(builder, loc, mem, pos);
+  const Value crd = lvls[tid][lvl]->peekCrdAt(builder, loc, pos);
   coords[tid][lvl] = crd;
 
   // Generate an if-condition to filter out coordinates that are not
@@ -1250,23 +1226,19 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
 
   const Value c0 = C_IDX(0);
   const Value c1 = C_IDX(1);
-  const Value c2 = C_IDX(2);
   // Either the first level, or the previous level has been set.
   /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
   assert(lvl == 0 || posits[tid][lvl - 1]);
-  if (isCompressedLT(lvlTp) || isLooseCompressedLT(lvlTp)) {
-    const Value mem = positionsBuffers[tid][lvl];
+  if (isCompressedLT(lvlTp) || isLooseCompressedLT(lvlTp) ||
+      is2OutOf4LT(lvlTp)) {
 
-    Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
-    if (isLooseCompressedLT(lvlTp))
-      pLo = builder.create<arith::MulIOp>(loc, pLo, c2);
-    posits[tid][lvl] = genIndexLoad(builder, loc, mem, pLo);
-
-    const Value pHi = ADDI(pLo, c1);
-    highs[tid][lvl] = genIndexLoad(builder, loc, mem, pHi);
+    Value pos = lvl == 0 ? c0 : posits[tid][lvl - 1];
+    std::tie(posits[tid][lvl], highs[tid][lvl]) =
+        lvls[tid][lvl]->peekRangeAt(builder, loc, pos);
     return;
   }
   if (isSingletonLT(lvlTp)) {
+    // TODO: merge this as well when SparseTensorLevel support dedup.
     const Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
     posits[tid][lvl] = pLo;
 
@@ -1280,13 +1252,6 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
     highs[tid][lvl] = (!isUniqueLT(lvlTypes[tid][lvl - 1]) && parentSegHi)
                           ? parentSegHi
                           : ADDI(pLo, c1);
-    return;
-  }
-  if (is2OutOf4LT(lvlTp)) {
-    const Value pLo = lvl == 0 ? c0 : posits[tid][lvl - 1];
-    // Each 2:4 block has exactly two specified elements.
-    posits[tid][lvl] = MULI(pLo, c2);
-    highs[tid][lvl] = ADDI(posits[tid][lvl], c2);
     return;
   }
   llvm_unreachable("Unrecognized level-type!");
@@ -1623,8 +1588,7 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
       /*beforeBuilder=*/
       [this, posHi, sliceHi, tid, lvl](OpBuilder &builder, Location loc,
                                        ValueRange args) {
-        Value cond = genSparseReducedAffineCond(builder, loc,
-                                                coordinatesBuffers[tid][lvl],
+        Value cond = genSparseReducedAffineCond(builder, loc, *lvls[tid][lvl],
                                                 sliceHi, args[0], posHi);
         // continue if not yet break nor out of bound.
         builder.create<scf::ConditionOp>(loc, cond, args);
@@ -1845,16 +1809,11 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
   auto [nxSz, stride] = sliceMeta[tid][lvl][1];
   assert(stride == 1 && "Not yet implemented");
   Value sPtrBuf = slicePosBuffer[tid][lvl][0];
-  Value pHi, pLo;
-  if (lvl == 0) {
-    pLo = c0;
-    pHi = genIndexLoad(builder, loc, positionsBuffers[tid][0], c1);
-  } else {
-    pLo = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
-                       posits[tid][lvl - 1]);
-    pHi = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
-                       ADDI(posits[tid][lvl - 1], c1));
-  }
+  const SparseTensorLevel &stl = *lvls[tid][lvl];
+
+  Value p = lvl == 0 ? c0 : posits[tid][lvl - 1];
+  auto [pLo, pHi] = stl.peekRangeAt(builder, loc, p);
+
   // Fills out pIdxBuffer[tid][lvl][0] with [pLo, pHi]
   updateSlicePos(builder, loc, sPtrBuf, pLo, c0, SlicePosKind::kLo);
   updateSlicePos(builder, loc, sPtrBuf, pHi, c0, SlicePosKind::kHi);
@@ -1868,7 +1827,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
   // nonempty. though we assume that even on empty sparse tensors, a non-empty
   // ptr/idx buffer is allocated for each level so it would not cause OOB to
   // avoid generating a ifOp here.
-  Value minCrd = genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], pLo);
+  Value minCrd = stl.peekCrdAt(builder, loc, pLo);
 
   // FIXME: We need the relative offset related to the base slice.
   Value absOffset = offsetFromMinCoord(builder, loc, minCrd, nxSz, isNonEmpty);
@@ -1898,7 +1857,7 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
 // }
 void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
                                           TensorId tid, Level lvl) {
-  Value c0 = C_IDX(0), c1 = C_IDX(1);
+  Value c0 = C_IDX(0);
   unsigned depth = levelReducedDep[tid][lvl];
   // The remaining slice size after reduction.
   Value remSz = sliceMeta[tid][lvl][depth + 1].first;
@@ -1948,16 +1907,14 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
 
   ValueRange result = genUnResolvedSliceTreeTraverse(
       builder, loc, tid, unResSlices, firstResLvl, reduc,
-      [this, c1, tid, lvl, sPtrBuf](OpBuilder &builder, Location loc, Value iv,
-                                    MutableArrayRef<Value> reduc) {
+      [this, tid, lvl, sPtrBuf](OpBuilder &builder, Location loc, Value iv,
+                                MutableArrayRef<Value> reduc) {
         Value &nonEmpty = reduc[0];
         Value &minCrd = reduc[1];
         Value &curTupleCnt = reduc[2];
 
-        Value pHi = ADDI(iv, c1);
-        Value sPLo = genIndexLoad(builder, loc, positionsBuffers[tid][lvl], iv);
-        Value sPHi =
-            genIndexLoad(builder, loc, positionsBuffers[tid][lvl], pHi);
+        const SparseTensorLevel &stl = *lvls[tid][lvl];
+        auto [sPLo, sPHi] = stl.peekRangeAt(builder, loc, iv);
 
         // isNonEmpty = isNonEmpty || lvlNonEmpty, i.e., as long as there is
         // one non-empty lvl, the slice is non-empty.
@@ -1975,8 +1932,7 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
           // }
           OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPointToStart(ifNonEmpty.thenBlock());
-          Value curC =
-              genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], sPLo);
+          Value curC = stl.peekCrdAt(builder, loc, sPLo);
           Value isSmaller = CMPI(ult, curC, minCrd);
           Value newMin = SELECT(isSmaller, curC, minCrd);
           YIELD(newMin);
@@ -2176,8 +2132,7 @@ LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
           /* if pLo < pHi */ {
             builder.setInsertionPointToStart(&advPLo.getThenRegion().front());
             // coord = load[pLo]
-            Value coord =
-                genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], pLo);
+            Value coord = lvls[tid][lvl]->peekCrdAt(builder, loc, pLo);
             Value pred = CMPI(eq, coord, info.minCrd);
             auto ifEqual = builder.create<scf::IfOp>(loc, idxTp, pred, true);
             /* if coord == minCrd */ {
@@ -2209,7 +2164,7 @@ LoopEmitter::genSliceNextInduction(OpBuilder &builder, Location loc,
           auto newMin =
               builder.create<scf::IfOp>(loc, idxTp, lvlNonEmpty, true);
           builder.setInsertionPointToStart(&newMin.getThenRegion().front());
-          YIELD(genIndexLoad(builder, loc, coordinatesBuffers[tid][lvl], pLo));
+          YIELD(lvls[tid][lvl]->peekCrdAt(builder, loc, pLo));
 
           builder.setInsertionPointToStart(&newMin.getElseRegion().front());
           YIELD(curMinCrd);
