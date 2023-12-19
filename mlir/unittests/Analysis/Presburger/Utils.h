@@ -80,7 +80,7 @@ inline void EXPECT_EQ_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
   EXPECT_EQ(aCoeffs.size(), bCoeffs.size());
   for (unsigned i = 0, e = aCoeffs.size(); i < e; i++)
     EXPECT_EQ(aCoeffs[i], bCoeffs[i]);
-  
+
   std::vector<std::vector<SmallVector<Fraction>>> aAff = a.getAffine(),
                                                   bAff = b.getAffine();
   EXPECT_EQ(aAff.size(), bAff.size());
