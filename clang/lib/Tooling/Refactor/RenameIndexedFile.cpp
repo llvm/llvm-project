@@ -31,7 +31,7 @@ IndexedFileOccurrenceProducer::IndexedFileOccurrenceProducer(
     : Symbols(Symbols), Consumer(Consumer), Lock(Lock), Options(Options) {
   IsMultiPiece = false;
   for (const auto &Symbol : Symbols) {
-    if (Symbol.Name.size() > 1) {
+    if (Symbol.Name.getNamePieces().size() > 1) {
       IsMultiPiece = true;
       break;
     }
@@ -39,7 +39,7 @@ IndexedFileOccurrenceProducer::IndexedFileOccurrenceProducer(
   if (IsMultiPiece) {
     for (const auto &Symbol : Symbols) {
       (void)Symbol;
-      assert(Symbol.Name.size() > 1 &&
+      assert(Symbol.Name.getNamePieces().size() > 1 &&
              "Mixed multi-piece and single piece symbols "
              "are unsupported");
     }
@@ -80,7 +80,7 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
       SM.getMainFileID(), Occurrence.Line, Occurrence.Column);
   if (BeginLoc.isInvalid())
     return MatchKind::None;
-  StringRef SymbolNameStart = Symbol.Name[0];
+  StringRef SymbolNameStart = Symbol.Name.getNamePieces()[0];
   // Extract the token at the location.
   auto DecomposedLoc = SM.getDecomposedLoc(BeginLoc);
   const auto File = SM.getBufferOrFake(DecomposedLoc.first);
@@ -137,7 +137,7 @@ class SelectorParser {
     Success
   };
   ParseState State = None;
-  const OldSymbolName &Name;
+  const SymbolName &Name;
 
   ParseState stateForToken(const Token &RawTok);
 
@@ -145,7 +145,7 @@ public:
   unsigned SymbolIndex;
   llvm::SmallVector<SourceLocation, 8> SelectorLocations;
 
-  SelectorParser(const OldSymbolName &Name, unsigned SymbolIndex)
+  SelectorParser(const SymbolName &Name, unsigned SymbolIndex)
       : Name(Name), SymbolIndex(SymbolIndex) {}
 
   /// Returns true if the parses has found a '@selector' expression.
@@ -163,14 +163,15 @@ public:
 
 /// Finds matching textual occurrences in string literals.
 class StringLiteralTextualParser {
-  const OldSymbolName &Name;
+  const SymbolName &Name;
 
 public:
   unsigned SymbolIndex;
 
-  StringLiteralTextualParser(const OldSymbolName &Name, unsigned SymbolIndex)
+  StringLiteralTextualParser(const SymbolName &Name, unsigned SymbolIndex)
       : Name(Name), SymbolIndex(SymbolIndex) {
-    assert(Name.size() == 1 && "can't search for multi-piece names in strings");
+    assert(Name.getNamePieces().size() == 1 &&
+           "can't search for multi-piece names in strings");
   }
 
   /// Returns the name's location if the parses has found a matching textual
@@ -196,16 +197,16 @@ SelectorParser::ParseState SelectorParser::stateForToken(const Token &RawTok) {
     SelectorLocations.clear();
     return ExpectingSelectorPiece;
   case ExpectingSelectorPiece: {
-    assert(SelectorLocations.size() < Name.size() &&
+    assert(SelectorLocations.size() < Name.getNamePieces().size() &&
            "Expecting invalid selector piece");
-    StringRef NamePiece = Name[SelectorLocations.size()];
+    StringRef NamePiece = Name.getNamePieces()[SelectorLocations.size()];
     if ((RawTok.isNot(tok::raw_identifier) ||
          RawTok.getRawIdentifier() != NamePiece) &&
         !(NamePiece.empty() && RawTok.is(tok::colon))) {
       break;
     }
     SelectorLocations.push_back(RawTok.getLocation());
-    if (SelectorLocations.size() == Name.size()) {
+    if (SelectorLocations.size() == Name.getNamePieces().size()) {
       // We found the selector that we were looking for, now check for ')'.
       return NamePiece.empty() ? ExpectingRParen : ExpectingRParenOrColon;
     }
@@ -256,28 +257,36 @@ SourceLocation StringLiteralTextualParser::handleToken(const Token &RawTok,
   StringLiteralParser Literal(RawTok, PP);
   if (Literal.hadError)
     return SourceLocation();
-  return Literal.GetString() == Name[0]
+  return Literal.GetString() == Name.getNamePieces()[0]
              ? RawTok.getLocation().getLocWithOffset(
                    Literal.getOffsetOfStringByte(RawTok, 0))
              : SourceLocation();
+}
+
+static bool containsEmptyPiece(const SymbolName &Name) {
+  for (const auto &String : Name.getNamePieces()) {
+    if (String.empty())
+      return true;
+  }
+  return false;
 }
 
 static void collectTextualMatchesInComment(
     ArrayRef<IndexedSymbol> Symbols, SourceLocation CommentLoc,
     StringRef Comment, llvm::SmallVectorImpl<TextualMatchOccurrence> &Result) {
   for (const auto &Symbol : llvm::enumerate(Symbols)) {
-    const OldSymbolName &Name = Symbol.value().Name;
-    if (Name.containsEmptyPiece()) // Ignore Objective-C selectors with empty
-                                   // pieces.
+    const SymbolName &Name = Symbol.value().Name;
+    if (containsEmptyPiece(Name)) // Ignore Objective-C selectors with empty
+                                  // pieces.
       continue;
     size_t Offset = 0;
     while (true) {
-      Offset = Comment.find(Name[0], /*From=*/Offset);
+      Offset = Comment.find(Name.getNamePieces()[0], /*From=*/Offset);
       if (Offset == StringRef::npos)
         break;
       Result.push_back(
           {CommentLoc.getLocWithOffset(Offset), (unsigned)Symbol.index()});
-      Offset += Name[0].size();
+      Offset += Name.getNamePieces()[0].size();
     }
   }
 }
@@ -323,7 +332,7 @@ static void findTextualMatchesInComment(
       // multi-piece selectors we only look for the first selector piece as we
       // assume that textual matches correspond to a match of the first selector
       // piece.
-      if (TokenName == Symbols[It->SymbolIndex].Name[0])
+      if (TokenName == Symbols[It->SymbolIndex].Name.getNamePieces()[0])
         MatchHandler(Kind, It->Location, It->SymbolIndex);
     }
     RawLex.LexFromRawLexer(RawTok);
@@ -422,7 +431,8 @@ static void findInclusionDirectiveOccurrence(
       StringRef(RawTok.getLiteralData(), RawTok.getLength())
           .drop_front()
           .drop_back());
-  size_t NameOffset = Filename.rfind_insensitive(Symbol.Name[0]);
+  size_t NameOffset =
+      Filename.rfind_insensitive(Symbol.Name.getNamePieces()[0]);
   if (NameOffset == StringRef::npos)
     return;
   OldSymbolOccurrence Result(
@@ -505,12 +515,13 @@ static bool isMatchingSelectorName(const Token &Tok, const Token &Next,
 }
 
 static bool
-findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const OldSymbolName &Name,
+findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const SymbolName &Name,
                              SmallVectorImpl<SourceLocation> &Pieces,
                              ObjCSymbolSelectorKind Kind) {
   assert(!Tokens.empty() && "no tokens");
-  assert(Name[0].empty() || Tokens[0].getRawIdentifier() == Name[0]);
-  assert(Name.size() > 1);
+  assert(Name.getNamePieces()[0].empty() ||
+         Tokens[0].getRawIdentifier() == Name.getNamePieces()[0]);
+  assert(Name.getNamePieces().size() > 1);
   assert(Pieces.empty());
 
   Pieces.push_back(Tokens[0].getLocation());
@@ -525,20 +536,22 @@ findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const OldSymbolName &Name,
   // Start looking for the next selector piece.
   unsigned Last = Tokens.size() - 1;
   // Skip the ':' or any other token after the first selector piece token.
-  for (unsigned Index = Name[0].empty() ? 1 : 2; Index < Last; ++Index) {
+  for (unsigned Index = Name.getNamePieces()[0].empty() ? 1 : 2; Index < Last;
+       ++Index) {
     const auto &Tok = Tokens[Index];
 
     bool NoScoping = SquareCount == 0 && BraceCount == 0 && ParenCount == 0;
     if (NoScoping &&
-        isMatchingSelectorName(Tok, Tokens[Index + 1], Name[Pieces.size()])) {
-      if (!Name[Pieces.size()].empty()) {
+        isMatchingSelectorName(Tok, Tokens[Index + 1],
+                               Name.getNamePieces()[Pieces.size()])) {
+      if (!Name.getNamePieces()[Pieces.size()].empty()) {
         // Skip the ':' after the name. This ensures that it won't match a
         // follow-up selector piece with an empty name.
         ++Index;
       }
       Pieces.push_back(Tok.getLocation());
       // All the selector pieces have been found.
-      if (Pieces.size() == Name.size())
+      if (Pieces.size() == Name.getNamePieces().size())
         return true;
     } else if (Tok.is(tok::r_square)) {
       // Stop scanning at the end of the message send.
@@ -584,7 +597,8 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
                                       IndexedFileOccurrenceConsumer &Consumer) {
   for (const auto &Symbol : Symbols) {
     (void)Symbol;
-    assert(Symbol.Name.size() > 1 && "Not a multi-piece symbol!");
+    assert(Symbol.Name.getNamePieces().size() > 1 &&
+           "Not a multi-piece symbol!");
   }
 
   SourceManager &SM = CI.getSourceManager();
@@ -644,7 +658,8 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
       continue;
     unsigned SymbolIndex = It->second.second;
     if (Tok.getKind() != tok::raw_identifier &&
-        !(Symbols[SymbolIndex].Name[0].empty() && Tok.is(tok::colon)))
+        !(Symbols[SymbolIndex].Name.getNamePieces()[0].empty() &&
+          Tok.is(tok::colon)))
       continue;
     const IndexedOccurrence &Occurrence = It->second.first;
 
