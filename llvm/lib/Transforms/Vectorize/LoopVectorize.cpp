@@ -6885,7 +6885,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     auto *Phi = cast<PHINode>(I);
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
-    if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
+    // However, if the Phi is a scalar after vectorization, don't get shuffle
+    // cost.
+    if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi) &&
+        !isScalarAfterVectorization(Phi, VF)) {
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
