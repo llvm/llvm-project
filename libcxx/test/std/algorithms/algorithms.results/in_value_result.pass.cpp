@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// template <class I1, class I2>
+// template <class I, class T>
 // struct in_value_result;
 
 #include <algorithm>
