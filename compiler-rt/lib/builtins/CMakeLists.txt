@@ -271,7 +271,7 @@ endif()
 
 # These files are used on 32-bit and 64-bit x86.
 set(x86_ARCH_SOURCES
-  cpu_model/x86.c
+  cpu_model.c
   )
 
 if (NOT MSVC)
@@ -556,7 +556,7 @@ endif()
 set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
-  cpu_model/aarch64.c
+  cpu_model.c
   aarch64/fp_mode.c
 )
 
