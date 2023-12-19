@@ -484,9 +484,10 @@ if(APPLE)
       set(MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
     endif()
 
-    set(SANITIZER_MIN_OSX_VERSION "${MIN_OSX_VERSION}" CACHE STRING
-        "Minimum OS X version to target (e.g. 10.10) for sanitizers.")
   endif()
+
+  set(SANITIZER_MIN_OSX_VERSION "${MIN_OSX_VERSION}" CACHE STRING
+    "Minimum OS X version to target (e.g. 10.10) for sanitizers.")
 
   # We're setting the flag manually for each target OS
   set(CMAKE_OSX_DEPLOYMENT_TARGET "")
