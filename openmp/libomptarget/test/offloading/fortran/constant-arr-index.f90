@@ -2,7 +2,8 @@
 ! that checks constant indexing on device
 ! correctly works (regression test for prior
 ! bug).
-! REQUIRES: flang
+! REQUIRES: flang, amdgcn-amd-amdhsa
+! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
 ! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
