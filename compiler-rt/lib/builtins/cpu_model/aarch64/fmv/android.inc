@@ -25,7 +25,7 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   if (__isExynos9810())
     return;
 
-  unsgined long hwcap = getauxval(AT_HWCAP);
+  unsigned long hwcap = getauxval(AT_HWCAP);
   unsigned long hwcap2 = getauxval(AT_HWCAP2);
 
   __ifunc_arg_t arg;
