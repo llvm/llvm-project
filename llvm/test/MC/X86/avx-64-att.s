@@ -1,4 +1,5 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck --check-prefixes=CHECK,OPT %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding -x86-asm-optimize=false %s | FileCheck --check-prefixes=CHECK,NOOPT %s
 
 // CHECK: vaddss  %xmm8, %xmm9, %xmm10
 // CHECK:  encoding: [0xc4,0x41,0x32,0x58,0xd0]
@@ -3168,20 +3169,28 @@ vdivpd  -4(%rcx,%rbx,8), %xmm10, %xmm11
 // CHECK: encoding: [0xc4,0xc1,0x5d,0x5e,0xf4]
           vdivpd  %ymm12, %ymm4, %ymm6
 
-// CHECK: vaddps  %ymm4, %ymm12, %ymm6
-// CHECK: encoding: [0xc5,0x9c,0x58,0xf4]
+// OPT:   vaddps  %ymm4, %ymm12, %ymm6
+// OPT:   encoding: [0xc5,0x9c,0x58,0xf4]
+// NOOPT: vaddps  %ymm12, %ymm4, %ymm6
+// NOOPT: encoding: [0xc4,0xc1,0x5c,0x58,0xf4]
           vaddps  %ymm12, %ymm4, %ymm6
 
-// CHECK: vaddpd  %ymm4, %ymm12, %ymm6
-// CHECK: encoding: [0xc5,0x9d,0x58,0xf4]
+// OPT:   vaddpd  %ymm4, %ymm12, %ymm6
+// OPT:   encoding: [0xc5,0x9d,0x58,0xf4]
+// NOOPT: vaddpd  %ymm12, %ymm4, %ymm6
+// NOOPT: encoding: [0xc4,0xc1,0x5d,0x58,0xf4]
           vaddpd  %ymm12, %ymm4, %ymm6
 
-// CHECK: vmulps  %ymm4, %ymm12, %ymm6
-// CHECK: encoding: [0xc5,0x9c,0x59,0xf4]
+// OPT:   vmulps  %ymm4, %ymm12, %ymm6
+// OPT:   encoding: [0xc5,0x9c,0x59,0xf4]
+// NOOPT: vmulps  %ymm12, %ymm4, %ymm6
+// NOOPT: encoding: [0xc4,0xc1,0x5c,0x59,0xf4]
           vmulps  %ymm12, %ymm4, %ymm6
 
-// CHECK: vmulpd  %ymm4, %ymm12, %ymm6
-// CHECK: encoding: [0xc5,0x9d,0x59,0xf4]
+// OPT:   vmulpd  %ymm4, %ymm12, %ymm6
+// OPT:   encoding: [0xc5,0x9d,0x59,0xf4]
+// NOOPT: vmulpd  %ymm12, %ymm4, %ymm6
+// NOOPT: encoding: [0xc4,0xc1,0x5d,0x59,0xf4]
           vmulpd  %ymm12, %ymm4, %ymm6
 
 // CHECK: vmaxps  (%rax), %ymm4, %ymm6
@@ -4203,7 +4212,8 @@ _foo2:
           {vex3} vmovq %xmm0, %xmm8
 
 // CHECK: vmovq %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x79,0xd6,0xc0]
+// OPT:   encoding: [0xc5,0x79,0xd6,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x7a,0x7e,0xc0]
           vmovq %xmm8, %xmm0
 
 // CHECK: vmovq %xmm8, %xmm0
@@ -4219,7 +4229,8 @@ _foo2:
           {vex3} vmovdqa %xmm0, %xmm8
 
 // CHECK: vmovdqa %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x79,0x7f,0xc0]
+// OPT:   encoding: [0xc5,0x79,0x7f,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x79,0x6f,0xc0]
           vmovdqa %xmm8, %xmm0
 
 // CHECK: vmovdqa %xmm8, %xmm0
@@ -4235,7 +4246,8 @@ _foo2:
           {vex3} vmovdqu %xmm0, %xmm8
 
 // CHECK: vmovdqu %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x7a,0x7f,0xc0]
+// OPT:   encoding: [0xc5,0x7a,0x7f,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x7a,0x6f,0xc0]
           vmovdqu %xmm8, %xmm0
 
 // CHECK: vmovdqu %xmm8, %xmm0
@@ -4251,7 +4263,8 @@ _foo2:
           {vex3} vmovaps %xmm0, %xmm8
 
 // CHECK: vmovaps %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x78,0x29,0xc0]
+// OPT:   encoding: [0xc5,0x78,0x29,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x78,0x28,0xc0]
           vmovaps %xmm8, %xmm0
 
 // CHECK: vmovaps %xmm8, %xmm0
@@ -4267,7 +4280,8 @@ _foo2:
           {vex3} vmovaps %ymm0, %ymm8
 
 // CHECK: vmovaps %ymm8, %ymm0
-// CHECK: encoding: [0xc5,0x7c,0x29,0xc0]
+// OPT:   encoding: [0xc5,0x7c,0x29,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x7c,0x28,0xc0]
           vmovaps %ymm8, %ymm0
 
 // CHECK: vmovaps %ymm8, %ymm0
@@ -4283,7 +4297,8 @@ _foo2:
           {vex3} vmovups %xmm0, %xmm8
 
 // CHECK: vmovups %xmm8, %xmm0
-// CHECK: encoding: [0xc5,0x78,0x11,0xc0]
+// OPT:   encoding: [0xc5,0x78,0x11,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x78,0x10,0xc0]
           vmovups %xmm8, %xmm0
 
 // CHECK: vmovups %xmm8, %xmm0
@@ -4299,7 +4314,8 @@ _foo2:
           {vex3} vmovups %ymm0, %ymm8
 
 // CHECK: vmovups %ymm8, %ymm0
-// CHECK: encoding: [0xc5,0x7c,0x11,0xc0]
+// OPT:   encoding: [0xc5,0x7c,0x11,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x7c,0x10,0xc0]
           vmovups %ymm8, %ymm0
 
 // CHECK: vmovups %ymm8, %ymm0
@@ -4323,7 +4339,8 @@ _foo2:
           {vex3} vmovss %xmm0, %xmm8, %xmm0
 
 // CHECK: vmovss %xmm8, %xmm0, %xmm0
-// CHECK: encoding: [0xc5,0x7a,0x11,0xc0]
+// OPT:   encoding: [0xc5,0x7a,0x11,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x7a,0x10,0xc0]
           vmovss %xmm8, %xmm0, %xmm0
 
 // CHECK: vmovss %xmm8, %xmm0, %xmm0
@@ -4347,7 +4364,8 @@ _foo2:
           {vex3} vmovsd %xmm0, %xmm8, %xmm0
 
 // CHECK: vmovsd %xmm8, %xmm0, %xmm0
-// CHECK: encoding: [0xc5,0x7b,0x11,0xc0]
+// OPT:   encoding: [0xc5,0x7b,0x11,0xc0]
+// NOOPT: encoding: [0xc4,0xc1,0x7b,0x10,0xc0]
           vmovsd %xmm8, %xmm0, %xmm0
 
 // CHECK: vmovsd %xmm8, %xmm0, %xmm0

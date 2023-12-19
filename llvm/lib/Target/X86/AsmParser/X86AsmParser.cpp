@@ -48,6 +48,10 @@ static cl::opt<bool> LVIInlineAsmHardening(
     cl::desc("Harden inline assembly code that may be vulnerable to Load Value"
              " Injection (LVI). This feature is experimental."), cl::Hidden);
 
+static cl::opt<bool> AsmOptimize("x86-asm-optimize", cl::init(true),
+                                 cl::desc("Optimize X86 assembly code."),
+                                 cl::Hidden);
+
 static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
   if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
     ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
@@ -3670,11 +3674,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  if (ForcedVEXEncoding != VEXEncoding_VEX3 &&
+  if (AsmOptimize && ForcedVEXEncoding != VEXEncoding_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
 
-  if (X86::optimizeShiftRotateWithImmediateOne(Inst))
+  if (AsmOptimize && X86::optimizeShiftRotateWithImmediateOne(Inst))
     return true;
 
   switch (Inst.getOpcode()) {
