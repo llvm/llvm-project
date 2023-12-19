@@ -175,8 +175,7 @@ public:
                                StringRef Overview, raw_ostream *Errs = nullptr,
                                bool LongOptionsUseDoubleDash = false);
 
-  void forEachSubCommand(Option &Opt,
-                         std::function<void(SubCommand &)> Action) {
+  void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
     if (Opt.Subs.empty()) {
       Action(SubCommand::getTopLevel());
       return;
