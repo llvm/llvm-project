@@ -186,6 +186,32 @@ public:
   }
 };
 
+template <typename OpTy, arith::CmpFPredicate pred>
+struct MaxNumMinNumFOpConverter : public OpRewritePattern<OpTy> {
+public:
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const final {
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+
+    Location loc = op.getLoc();
+    // If any operand is NaN, 'cmp' will be true (and 'select' returns 'lhs').
+    static_assert(pred == arith::CmpFPredicate::UGT ||
+                      pred == arith::CmpFPredicate::ULT,
+                  "pred must be either UGT or ULT");
+    Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
+    Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
+
+    // Handle the case where lhs is NaN: 'isNaN(lhs) ? rhs : select'.
+    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
+                                                 lhs, lhs);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
+    return success();
+  }
+};
+
 struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
@@ -319,7 +345,9 @@ struct ArithExpandOpsPass
       arith::CeilDivUIOp,
       arith::FloorDivSIOp,
       arith::MaximumFOp,
-      arith::MinimumFOp
+      arith::MinimumFOp,
+      arith::MaxNumFOp,
+      arith::MinNumFOp
     >();
 
     if (includeBf16) {
@@ -365,7 +393,9 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
-    MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>
+    MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
+    MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,
+    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
 }
