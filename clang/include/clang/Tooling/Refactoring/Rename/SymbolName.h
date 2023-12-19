@@ -15,6 +15,9 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+
+class LangOptions;
+
 namespace tooling {
 
 /// A name of a symbol.
@@ -27,19 +30,22 @@ namespace tooling {
 /// //       ^~ string 0 ~~~~~         ^~ string 1 ~~~~~
 /// \endcode
 class SymbolName {
+  llvm::SmallVector<std::string, 1> NamePieces;
+
 public:
-  explicit SymbolName(StringRef Name) {
-    // While empty symbol names are valid (Objective-C selectors can have empty
-    // name pieces), occurrences Objective-C selectors are created using an
-    // array of strings instead of just one string.
-    assert(!Name.empty() && "Invalid symbol name!");
-    this->Name.push_back(Name.str());
-  }
+  /// Create a new \c SymbolName with the specified pieces.
+  explicit SymbolName(ArrayRef<StringRef> NamePieces);
 
-  ArrayRef<std::string> getNamePieces() const { return Name; }
+  /// Creates a \c SymbolName from the given string representation.
+  ///
+  /// For Objective-C symbol names, this splits a selector into multiple pieces
+  /// on `:`. For all other languages the name is used as the symbol name.
+  SymbolName(StringRef Name, bool IsObjectiveCSelector);
+  SymbolName(StringRef Name, const LangOptions &LangOpts);
 
-private:
-  llvm::SmallVector<std::string, 1> Name;
+  ArrayRef<std::string> getNamePieces() const { return NamePieces; }
+
+  void print(raw_ostream &OS) const;
 };
 
 } // end namespace tooling
