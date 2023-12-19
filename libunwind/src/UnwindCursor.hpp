@@ -2970,8 +2970,7 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
 template <typename A, typename R>
 bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
   // This code is heavily based on Abseil's 'address_is_readable.cc',
-  // which is Copyright Abseil Authors (2017), and provided under
-  // the Apache License 2.0.
+  // which is Copyright Abseil Authors (2017).
 
   // Align to 8-bytes.
   const auto alignedAddr = addr & ~pint_t{7};
@@ -2980,19 +2979,20 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
   // as an argument without failure.
   if (!sigsetAddr)
     return false;
-
-  // We MUST use the raw sigprocmask syscall here, as wrappers may try to
-  // access sigsetAddr which may cause a SIGSEGV. The raw syscall however is
+  // We MUST use a raw syscall here, as wrappers may try to access
+  // sigsetAddr which may cause a SIGSEGV. A raw syscall however is
   // safe. Additionally, we need to pass the kernel_sigset_size, which is
-  // different from libc sizeof(sigset_t). Some archs have sigset_t
-  // defined as unsigned long, so let's use that.
-  const auto approxKernelSigsetSize = sizeof(unsigned long);
-  [[maybe_unused]] const int Result =
-      syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, sigsetAddr,
-              approxKernelSigsetSize);
+  // different from libc sizeof(sigset_t). 8 seems to work for both 64bit and
+  // 32bit archs.
+  const auto approxKernelSigsetSize = 8;
+  int Result = syscall(SYS_rt_sigprocmask, /*how=*/~0, sigsetAddr, nullptr,
+                       approxKernelSigsetSize);
+  (void)Result;
   // Because our "how" is invalid, this syscall should always fail, and our
   // errno should always be EINVAL or an EFAULT. EFAULT is not guaranteed
-  // by the POSIX standard, so this is (for now) Linux specific.
+  // by the POSIX standard. Additionally, this relies on the Linux kernel
+  // to check copy_from_user before checking if the "how" argument is
+  // invalid.
   assert(Result == -1);
   assert(errno == EFAULT || errno == EINVAL);
   return errno != EFAULT;
