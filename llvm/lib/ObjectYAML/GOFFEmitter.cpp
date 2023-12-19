@@ -192,7 +192,8 @@ class GOFFState {
 
   GOFFState(raw_ostream &OS, GOFFYAML::Object &Doc,
             yaml::ErrorHandler ErrHandler)
-      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), SymbolID(0), HasError(false) {}
+      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), SymbolID(0), HasError(false) {
+  }
 
   ~GOFFState() { GW.finalize(); }
 
