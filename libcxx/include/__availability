@@ -149,6 +149,8 @@
 #    define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #  endif
 
+#define _LIBCPP_AVAILABILITY_HAS_BASIC_STRING_RESERVE_V2_EXPLICIT_INSTANTIATIONS_ 1
+
 #elif defined(__APPLE__)
 
 #  define _LIBCPP_AVAILABILITY_HAS_BAD_OPTIONAL_ACCESS                                                                 \
@@ -268,6 +270,9 @@
 #  else
 #    define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 1
 #  endif
+
+// TODO: Update once this is released
+#  define _LIBCPP_AVAILABILITY_HAS_BASIC_STRING_RESERVE_V2_EXPLICIT_INSTANTIATIONS_ 0
 #else
 
 // ...New vendors can add availability markup here...

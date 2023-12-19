@@ -47,7 +47,6 @@
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::size_type basic_string<_CharType>::find_first_of(value_type const*, size_type, size_type) const) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, size_type, value_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::assign(value_type const*, size_type)) \
-  _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::reserve(size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::size_type basic_string<_CharType>::copy(value_type*, size_type, size_type) const) \
@@ -78,6 +77,9 @@
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::iterator basic_string<_CharType>::insert(basic_string::const_iterator, value_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::resize(size_type, value_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::insert(size_type, basic_string const&, size_type, size_type))
+
+#define _LIBCPP_STRING_V1_BASIC_STRING_RESERVE_EXTERN_TEMPLATE_LIST(_Func, _CharType) \
+  _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::reserve(size_type))
 
 #define _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_Func, _CharType) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, value_type const*, size_type)) \
