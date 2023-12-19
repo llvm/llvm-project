@@ -130,8 +130,6 @@
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        Machine Natural Loop Construction
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
-; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O0-NEXT:        Function Alias Analysis Results
 ; GCN-O0-NEXT:        SI insert wait instructions
 ; GCN-O0-NEXT:        Insert required mode register values
 ; GCN-O0-NEXT:        SI Final Branch Preparation

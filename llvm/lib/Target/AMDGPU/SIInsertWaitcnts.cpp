@@ -31,7 +31,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
@@ -303,8 +302,8 @@ public:
     PendingEvents |= WaitEventMaskForInst[VS_CNT];
   }
 
-  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
-    return LDSDMAStores;
+  ArrayRef<const MDNode *> getLDSDMAScopes() const {
+    return LDSDMAScopes;
   }
 
   void print(raw_ostream &);
@@ -369,9 +368,8 @@ private:
   // Bitmask of the VmemTypes of VMEM instructions that might have a pending
   // write to each vgpr.
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
-  // Store representative LDS DMA operations. The only useful info here is
-  // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
+  // Store alias scopes of LDS DMA operations.
+  SmallVector<const MDNode *, NUM_EXTRA_VGPRS - 1> LDSDMAScopes;
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -386,7 +384,6 @@ private:
   DenseMap<MachineBasicBlock *, bool> PreheadersToFlush;
   MachineLoopInfo *MLI;
   MachinePostDominatorTree *PDT;
-  AliasAnalysis *AA = nullptr;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -429,8 +426,6 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfo>();
     AU.addRequired<MachinePostDominatorTree>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -728,26 +723,22 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         if (!MemOp->isStore() ||
             MemOp->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS)
           continue;
-        // Comparing just AA info does not guarantee memoperands are equal
-        // in general, but this is so for LDS DMA in practice.
         auto AAI = MemOp->getAAInfo();
         // Alias scope information gives a way to definitely identify an
         // original memory object and practically produced in the module LDS
         // lowering pass.
         if (!AAI || !AAI.Scope)
           break;
-        for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
-          for (const auto *MemOp : LDSDMAStores[I]->memoperands()) {
-            if (MemOp->isStore() && AAI == MemOp->getAAInfo()) {
-              Slot = I + 1;
-              break;
-            }
+        for (unsigned I = 0, E = LDSDMAScopes.size(); I != E; ++I) {
+          if (AAI.Scope == LDSDMAScopes[I]) {
+            Slot = I + 1;
+            break;
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
+        if (Slot || LDSDMAScopes.size() == NUM_EXTRA_VGPRS - 1)
           break;
-        LDSDMAStores.push_back(&Inst);
-        Slot = LDSDMAStores.size();
+        LDSDMAScopes.push_back(AAI.Scope);
+        Slot = LDSDMAScopes.size();
         break;
       }
       setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS + Slot, T, CurrScore);
@@ -1233,9 +1224,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         bool FoundAliasingStore = false;
         if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
-          const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
-          for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+          const auto &LDSDMAScopes = ScoreBrackets.getLDSDMAScopes();
+          for (unsigned I = 0, E = LDSDMAScopes.size(); I != E; ++I) {
+            if (Memop->getAAInfo().Scope == LDSDMAScopes[I]) {
               FoundAliasingStore = true;
               ScoreBrackets.determineWait(VM_CNT, RegNo + I + 1, Wait);
             }
@@ -1880,7 +1871,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   PDT = &getAnalysis<MachinePostDominatorTree>();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
