@@ -1843,7 +1843,8 @@ static bool isRedeclarable(Decl::Kind K) {
   llvm_unreachable("unknown decl kind");
 }
 
-bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
+bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
+                                    bool IsKnownNewer) const {
   assert(getDeclName() == OldD->getDeclName() && "Declaration name mismatch");
 
   // Never replace one imported declaration with another; we need both results
@@ -1873,13 +1874,13 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
 
   // Using declarations can be replaced if they import the same name from the
   // same context.
-  if (auto *UD = dyn_cast<UsingDecl>(this)) {
+  if (const auto *UD = dyn_cast<UsingDecl>(this)) {
     ASTContext &Context = getASTContext();
     return Context.getCanonicalNestedNameSpecifier(UD->getQualifier()) ==
            Context.getCanonicalNestedNameSpecifier(
                cast<UsingDecl>(OldD)->getQualifier());
   }
-  if (auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
+  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
     ASTContext &Context = getASTContext();
     return Context.getCanonicalNestedNameSpecifier(UUVD->getQualifier()) ==
            Context.getCanonicalNestedNameSpecifier(
@@ -1896,7 +1897,7 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
     // Check whether this is actually newer than OldD. We want to keep the
     // newer declaration. This loop will usually only iterate once, because
     // OldD is usually the previous declaration.
-    for (auto *D : redecls()) {
+    for (const auto *D : redecls()) {
       if (D == OldD)
         break;
 
