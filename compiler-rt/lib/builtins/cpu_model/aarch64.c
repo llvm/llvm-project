@@ -34,12 +34,16 @@ _Bool __aarch64_have_lse_atomics
     __attribute__((visibility("hidden"), nocommon)) = false;
 
 #if defined(__FreeBSD__)
+#include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/freebsd.inc"
 #elif defined(__Fuchsia__)
+#include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/fuchsia.inc"
 #elif defined(__ANDROID__)
+#include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/android.inc"
 #elif __has_include(<sys/auxv.h>)
+#include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/sysauxv.inc"
 #else
 // When unimplemented, we leave __aarch64_have_lse_atomics initialized to false.
